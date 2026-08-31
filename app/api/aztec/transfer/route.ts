@@ -327,36 +327,25 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // 1. Calculate balance WITHIN the serializable transaction lock
-        const receivedAgg = await tx.transaction.aggregate({
-          where: { toAddress: fromAddr, token: 'QDs', status: 'COMPLETED' },
-          _sum: { amount: true },
+        // 1. [PERFORMANCE PATCH] $O(1)$ Balance check using synchronized User creditsBalance
+        const sender = await tx.user.findUnique({
+          where: { walletAddress: fromAddr },
+          select: { creditsBalance: true, id: true }
         });
-        const sentAgg = await tx.transaction.aggregate({
-          where: { fromAddress: fromAddr, token: 'QDs', status: 'COMPLETED' },
-          _sum: { amount: true },
-        });
-        const earnedQdAgg = await tx.qdTransaction.aggregate({
-          where: { aztecAddress: fromAddr, type: { in: ['EARN', 'REWARD', 'UNSTAKE'] } },
-          _sum: { amount: true },
-        });
-        const spentQdAgg = await tx.qdTransaction.aggregate({
-          where: { aztecAddress: fromAddr, type: { in: ['SPEND', 'SLASH', 'STAKE', 'FEE'] } },
-          _sum: { amount: true },
-        });
+        if (!sender) {
+          throw new Error('Sender account not found in ledger.');
+        }
 
-        const received = Number(receivedAgg._sum.amount ?? 0);
-        const sent     = Number(sentAgg._sum.amount     ?? 0);
-        const earned   = Number(earnedQdAgg._sum.amount ?? 0);
-        const spent    = Number(spentQdAgg._sum.amount  ?? 0);
+        const balance = sender.creditsBalance;
 
-        const balance = Math.max(
-          0,
-          Math.round((received + earned - sent - spent) * 1_000_000) / 1_000_000
-        );
+        // 3. [TOKENOMICS PATCH] Anti-DoS Strict Fee
+        // No more free micro-transactions. Minimum fee of 1 QD or 1% (whichever is higher)
+        // to mathematically drain attackers attempting database bloat.
+        const FEE_AMOUNT = Math.max(1, Math.round(roundedAmount * 0.01));
+        const totalRequired = roundedAmount + FEE_AMOUNT;
 
-        if (balance < roundedAmount) {
-          throw new Error(`Insufficient QDs. Available: ${balance.toFixed(6)} QDs.`);
+        if (balance < totalRequired) {
+          throw new Error(`Insufficient QDs. Required: ${totalRequired}, Available: ${balance} QDs.`);
         }
 
         // 2. Record the transfer
@@ -385,41 +374,78 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // 3. [TOKENOMICS] Deduct 1 QD network fee (FPC simulation) - Waived for micro-transactions (e.g., 0.0001 QD chat messages)
-        if (roundedAmount >= 1) {
-          const FEE_AMOUNT = 1;
-          await (tx as any).qdTransaction.create({
-            data: {
-              aztecAddress: fromAddr,
-              type: 'FEE',
-              amount: FEE_AMOUNT,
-              description: `Aztec Network Fee — Transfer ${roundedAmount} QDs`,
-            },
-          });
-        }
-
-        // 4. [TOKENOMICS] Reward sender +50 QDs for completing a ZK transfer (once per UTC day)
-        // [SECURITY PATCH B5]: Prevent 1-QD ping-pong farming by requiring transfer amount >= 50
-        if (roundedAmount >= 50) {
-          const todayIso = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD" - UTC day boundary
-          const existingReward = await (tx as any).qdTransaction.findFirst({
-            where: {
+        // 3. Deduct Fee
+        await (tx as any).qdTransaction.create({
+          data: {
             aztecAddress: fromAddr,
-            type: 'EARN',
-            description: `Aztec ZK Transfer Completed ${todayIso}`,
+            type: 'FEE',
+            amount: FEE_AMOUNT,
+            description: `Aztec Network Fee — Transfer ${roundedAmount} QDs`,
           },
         });
-        if (!existingReward) {
-          await (tx as any).qdTransaction.create({
-            data: {
+
+        // 4. [ANTI-SYBIL PATCH] Prevent 1-QD wash trading
+        // Reward is only given once per UTC day, and ONLY if the sender hasn't already
+        // farmed rewards with this specific recipient (breaks the A->B->A cycle).
+        if (roundedAmount >= 50) {
+          const todayIso = new Date().toISOString().slice(0, 10);
+          
+          // Check if this pair already interacted today
+          const pairInteracted = await tx.transaction.findFirst({
+            where: {
+              OR: [
+                { fromAddress: fromAddr, toAddress: toAddr },
+                { fromAddress: toAddr, toAddress: fromAddr }
+              ],
+              status: 'COMPLETED',
+              createdAt: { gte: new Date(todayIso) }
+            }
+          });
+
+          const existingReward = await (tx as any).qdTransaction.findFirst({
+            where: {
               aztecAddress: fromAddr,
               type: 'EARN',
-              amount: 50,
-              description: `Aztec ZK Transfer Completed ${todayIso}`,
+              description: { startsWith: 'Aztec ZK Transfer Completed' },
+              createdAt: { gte: new Date(todayIso) }
             },
           });
+
+          if (!existingReward && !pairInteracted) {
+            await (tx as any).qdTransaction.create({
+              data: {
+                aztecAddress: fromAddr,
+                type: 'EARN',
+                amount: 50,
+                description: `Aztec ZK Transfer Completed ${todayIso} (Recipient: ${toAddr.slice(0,8)})`,
+              },
+            });
+            // Update sender balance with reward
+            await tx.user.update({
+              where: { walletAddress: fromAddr },
+              data: { creditsBalance: { increment: 50 } }
+            });
+          }
         }
-        }
+
+        // 5. Update atomic balances for Sender and Recipient
+        await tx.user.update({
+          where: { walletAddress: fromAddr },
+          data: { creditsBalance: { decrement: totalRequired } }
+        });
+
+        // Upsert recipient (they might not exist yet)
+        await tx.user.upsert({
+          where: { walletAddress: toAddr },
+          update: { creditsBalance: { increment: roundedAmount } },
+          create: {
+            walletAddress: toAddr,
+            creditsBalance: roundedAmount,
+            tier: 'FREE',
+            humanityScore: 0
+          }
+        });
+
       }, {
         isolationLevel: 'Serializable', // Maximum protection against race conditions
       });

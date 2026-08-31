@@ -59,7 +59,7 @@ export function CookieConsent() {
                                     This platform enforces a <strong className="text-[#050505] font-black">zero-analytics</strong> and <strong className="text-[#050505] font-black">zero-marketing</strong> architecture. 
                                     Your portfolio state and identity are locally encrypted on your device. 
                                     <span className="block mt-1 text-[10px] font-mono text-black/50 uppercase tracking-widest">
-                                        Powered by Aztec Network Privacy Primitives
+                                        Planned Aztec Network Privacy Primitives
                                     </span>
                                 </p>
                             </div>

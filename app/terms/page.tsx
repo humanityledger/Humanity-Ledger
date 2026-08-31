@@ -9,7 +9,7 @@ export default function TermsPage() {
             <DocH1>Terms of Service</DocH1>
             
             <DocP>
-                The definitive legal agreement establishing the parameters of interaction between users and the Humanity Ledger infrastructure, powered by Aztec Network.
+                The definitive legal agreement establishing the parameters of interaction between users and the Humanity Ledger infrastructure, with planned Aztec Network integration.
             </DocP>
 
             <DocCallout type="note" title="EFFECTIVE DATE">

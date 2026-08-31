@@ -19,46 +19,9 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import crypto from 'crypto';
 
-// ── In-memory brute-force tracker (per-process; good enough for single Railway instance) ──
+// ── Brute-force tracker (Migrated to DB for Serverless/Edge persistence) ──
 const ATTEMPT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const MAX_ATTEMPTS = 5;
-const attemptMap = new Map<string, { count: number; firstAt: number }>();
-
-function getBruteforceKey(req: NextRequest, userId: string): string {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
-    || req.headers.get('x-real-ip') 
-    || 'unknown';
-  return `${userId}:${ip}`;
-}
-
-function checkBruteforce(key: string): { blocked: boolean; remaining: number } {
-  const now = Date.now();
-  const entry = attemptMap.get(key);
-  if (!entry) return { blocked: false, remaining: MAX_ATTEMPTS };
-  
-  // Reset window if expired
-  if (now - entry.firstAt > ATTEMPT_WINDOW_MS) {
-    attemptMap.delete(key);
-    return { blocked: false, remaining: MAX_ATTEMPTS };
-  }
-  
-  const remaining = Math.max(0, MAX_ATTEMPTS - entry.count);
-  return { blocked: entry.count >= MAX_ATTEMPTS, remaining };
-}
-
-function recordAttempt(key: string) {
-  const now = Date.now();
-  const entry = attemptMap.get(key);
-  if (!entry || now - entry.firstAt > ATTEMPT_WINDOW_MS) {
-    attemptMap.set(key, { count: 1, firstAt: now });
-  } else {
-    entry.count++;
-  }
-}
-
-function clearAttempts(key: string) {
-  attemptMap.delete(key);
-}
 
 // ── PIN hashing ───────────────────────────────────────────────────────────────
 // We use HMAC-SHA256 with a server-side secret for PIN storage.
@@ -89,15 +52,33 @@ export async function POST(req: NextRequest) {
     }
 
     const userId = session.userId;
-    const bfKey = getBruteforceKey(req, userId);
-    const { blocked, remaining } = checkBruteforce(bfKey);
-
-    if (blocked) {
-      const retryAfterMin = Math.ceil(ATTEMPT_WINDOW_MS / 60000);
-      return NextResponse.json(
-        { error: `Too many attempts. Try again in ${retryAfterMin} minutes.`, blocked: true },
-        { status: 429 }
-      );
+    
+    // Check DB Rate Limit
+    let userRow = await prisma.user.findUnique({
+      where: { walletAddress: userId.toLowerCase() },
+      select: { id: true, enclavePinHash: true, enclaveOtpAttempts: true, enclaveOtpExpiresAt: true } as any,
+    }).catch(() => null);
+    
+    let authUserRow = null;
+    if (!userRow) {
+      authUserRow = await prisma.authUser.findFirst({
+        where: { OR: [{ id: userId }, { walletAddress: userId.toLowerCase() }] },
+        select: { id: true, enclavePinHash: true, enclaveOtpAttempts: true, enclaveOtpExpiresAt: true } as any,
+      }).catch(() => null);
+    }
+    
+    const dbRow = userRow || authUserRow;
+    const isUserTable = !!userRow;
+    
+    // Determine lockout state
+    if (dbRow?.enclaveOtpExpiresAt && new Date() < new Date(dbRow.enclaveOtpExpiresAt)) {
+      if ((dbRow.enclaveOtpAttempts || 0) >= MAX_ATTEMPTS) {
+        const retryAfterMin = Math.ceil((new Date(dbRow.enclaveOtpExpiresAt).getTime() - Date.now()) / 60000);
+        return NextResponse.json(
+          { error: `Too many attempts. Try again in ${retryAfterMin} minutes.`, blocked: true },
+          { status: 429 }
+        );
+      }
     }
 
     const body = await req.json();
@@ -107,35 +88,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'PIN must be exactly 6 digits.' }, { status: 400 });
     }
 
-    // Fetch stored PIN hash from DB (check both User and AuthUser tables)
-    let storedPinHash: string | null = null;
-    
-    // Try User table first (wallet users)
-    const user = await prisma.user.findUnique({
-      where: { walletAddress: userId.toLowerCase() },
-      select: { id: true, enclavePinHash: true } as any,
-    }).catch(() => null);
-    
-    if (user && (user as any).enclavePinHash) {
-      storedPinHash = (user as any).enclavePinHash;
-    } else {
-      // Try AuthUser table (email users)
-      const authUser = await prisma.authUser.findFirst({
-        where: {
-          OR: [
-            { id: userId },
-            { walletAddress: userId.toLowerCase() },
-          ]
-        },
-        select: { id: true, enclavePinHash: true } as any,
-      }).catch(() => null);
-      
-      if (authUser && (authUser as any).enclavePinHash) {
-        storedPinHash = (authUser as any).enclavePinHash;
-      }
-    }
-
-    // If no PIN set yet, compare against default PIN
+    const storedPinHash = dbRow?.enclavePinHash || null;
     const expectedHash = storedPinHash ?? getDefaultPinHash(userId);
     const submittedHash = hashPin(userId, pin);
 
@@ -146,19 +99,48 @@ export async function POST(req: NextRequest) {
     );
 
     if (!isValid) {
-      recordAttempt(bfKey);
-      const newCheck = checkBruteforce(bfKey);
+      const now = new Date();
+      // Reset window if it expired
+      const isWindowExpired = !dbRow?.enclaveOtpExpiresAt || now > new Date(dbRow.enclaveOtpExpiresAt);
+      const newAttempts = isWindowExpired ? 1 : (dbRow?.enclaveOtpAttempts || 0) + 1;
+      const newExpiresAt = isWindowExpired ? new Date(now.getTime() + ATTEMPT_WINDOW_MS) : dbRow?.enclaveOtpExpiresAt;
+      
+      if (isUserTable) {
+        await prisma.user.update({
+          where: { walletAddress: userId.toLowerCase() },
+          data: { enclaveOtpAttempts: newAttempts, enclaveOtpExpiresAt: newExpiresAt }
+        });
+      } else if (authUserRow) {
+        await prisma.authUser.update({
+          where: { id: authUserRow.id },
+          data: { enclaveOtpAttempts: newAttempts, enclaveOtpExpiresAt: newExpiresAt } as any
+        });
+      }
+      
+      const remaining = Math.max(0, MAX_ATTEMPTS - newAttempts);
       return NextResponse.json(
         {
-          error: `Incorrect PIN. ${newCheck.remaining} attempts remaining before lockout.`,
-          attemptsRemaining: newCheck.remaining,
+          error: `Incorrect PIN. ${remaining} attempts remaining before lockout.`,
+          attemptsRemaining: remaining,
         },
         { status: 401 }
       );
     }
 
-    // ✅ Success — clear brute-force counter
-    clearAttempts(bfKey);
+    // ✅ Success — clear DB brute-force counter
+    if ((dbRow?.enclaveOtpAttempts || 0) > 0) {
+      if (isUserTable) {
+        await prisma.user.update({
+          where: { walletAddress: userId.toLowerCase() },
+          data: { enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null }
+        });
+      } else if (authUserRow) {
+        await prisma.authUser.update({
+          where: { id: authUserRow.id },
+          data: { enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null } as any
+        });
+      }
+    }
 
     // Issue a short-lived clearance token (HMAC of userId+timestamp)
     const clearanceTs = Date.now();
@@ -329,12 +311,31 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Current PIN is required to change PIN.' }, { status: 400 });
     }
 
+    let dbOtpAttempts = 0;
+    let dbOtpExpiresAt: Date | null = null;
+    
+    if (userRow) {
+      dbOtpAttempts = (userRow as any).enclaveOtpAttempts || 0;
+      dbOtpExpiresAt = (userRow as any).enclaveOtpExpiresAt || null;
+    } else if (dbTable === 'authUser') {
+      // Need to fetch authUser again if we want attempts because it wasn't selected
+      const authRowRefetched = await prisma.authUser.findUnique({
+        where: { id: dbId as string },
+        select: { enclaveOtpAttempts: true, enclaveOtpExpiresAt: true } as any
+      }).catch(() => null);
+      if (authRowRefetched) {
+        dbOtpAttempts = (authRowRefetched as any).enclaveOtpAttempts || 0;
+        dbOtpExpiresAt = (authRowRefetched as any).enclaveOtpExpiresAt || null;
+      }
+    }
+
     // Verify current PIN before changing
     if (currentPin) {
-      const bfKey = getBruteforceKey(req, userId);
-      const { blocked } = checkBruteforce(bfKey);
-      if (blocked) {
-        return NextResponse.json({ error: 'Too many attempts. Try again in 15 minutes.' }, { status: 429 });
+      if (dbOtpExpiresAt && new Date() < new Date(dbOtpExpiresAt)) {
+        if (dbOtpAttempts >= MAX_ATTEMPTS) {
+          const retryAfterMin = Math.ceil((new Date(dbOtpExpiresAt).getTime() - Date.now()) / 60000);
+          return NextResponse.json({ error: `Too many attempts. Try again in ${retryAfterMin} minutes.` }, { status: 429 });
+        }
       }
 
       const expectedHash  = storedPinHash ?? getDefaultPinHash(userId);
@@ -346,10 +347,40 @@ export async function PUT(req: NextRequest) {
       );
 
       if (!isValid) {
-        recordAttempt(bfKey);
+        const now = new Date();
+        const isWindowExpired = !dbOtpExpiresAt || now > new Date(dbOtpExpiresAt);
+        const newAttempts = isWindowExpired ? 1 : dbOtpAttempts + 1;
+        const newExpiresAt = isWindowExpired ? new Date(now.getTime() + ATTEMPT_WINDOW_MS) : dbOtpExpiresAt;
+        
+        if (dbTable === 'user') {
+          await prisma.user.update({
+            where: { walletAddress: userId.toLowerCase() },
+            data: { enclaveOtpAttempts: newAttempts, enclaveOtpExpiresAt: newExpiresAt }
+          });
+        } else {
+          await prisma.authUser.update({
+            where: { id: dbId as string },
+            data: { enclaveOtpAttempts: newAttempts, enclaveOtpExpiresAt: newExpiresAt } as any
+          });
+        }
+        
         return NextResponse.json({ error: 'Current PIN incorrect.' }, { status: 401 });
       }
-      clearAttempts(bfKey);
+      
+      // Success - clear
+      if (dbOtpAttempts > 0) {
+        if (dbTable === 'user') {
+          await prisma.user.update({
+            where: { walletAddress: userId.toLowerCase() },
+            data: { enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null }
+          });
+        } else {
+          await prisma.authUser.update({
+            where: { id: dbId as string },
+            data: { enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null } as any
+          });
+        }
+      }
     }
 
     const newPinHash = hashPin(userId, newPin);

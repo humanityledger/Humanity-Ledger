@@ -246,21 +246,32 @@ export default function ScanPage() {
     try {
       const result = await completeSessionHandshake(pinScanData, getAddress, signMessageAsync, connector, pinInput);
       if (!result.ok) {
-        setErrMsg(result.message);
-        if ('needsWallet' in result && result.needsWallet) setNeedsWallet(true);
-        setStatus('error');
-        hasScannedRef.current = false;
+        const needsWalletConnect = 'needsWallet' in result && result.needsWallet;
+        if (needsWalletConnect) {
+          // In incognito/fresh tab: user needs to connect their wallet first.
+          // Open AppKit modal automatically so they can sign-in without leaving the page.
+          setNeedsWallet(true);
+          setErrMsg('Connect your wallet first, then tap "Retry" to complete the QR link.');
+          setStatus('error');
+          hasScannedRef.current = false;
+          // Auto-open wallet connect modal after short delay
+          setTimeout(() => openAppKit(), 600);
+        } else {
+          setErrMsg(result.message);
+          setStatus('error');
+          hasScannedRef.current = false;
+        }
         return;
       }
       setSuccessLabel('Session Linked');
       setStatus('success');
-      setTimeout(() => router.push('/terminal'), 1400);
+      setTimeout(() => router.push('/chat'), 1400);
     } catch {
-      setErrMsg('PIN verification failed. Please check the code and try again.');
+      setErrMsg('PIN verification failed. Please check the code shown on the desktop screen and try again.');
       setStatus('error');
       hasScannedRef.current = false;
     }
-  }, [pinInput, pinScanData, getAddress, signMessageAsync, connector, router]);
+  }, [pinInput, pinScanData, getAddress, signMessageAsync, connector, router, openAppKit]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -325,7 +336,7 @@ export default function ScanPage() {
         {/* Logo mark */}
         <div className="w-8 h-8 rounded-lg border border-black/10 bg-black/[0.03] flex items-center justify-center overflow-hidden">
           <img
-            src="/official-ledger-monochrome.png"
+            src="/logo-mark.png"
             alt="HL"
             className="w-6 h-6 object-contain opacity-70 mix-blend-multiply"
           />
@@ -435,16 +446,34 @@ export default function ScanPage() {
               <Shield size={26} className="text-red-500" />
             </div>
             <div>
-              <p className="text-[#050505] font-black text-[15px] mb-1.5 tracking-tight">Scan Failed</p>
+              <p className="text-[#050505] font-black text-[15px] mb-1.5 tracking-tight">
+                {needsWallet ? 'Wallet Required' : 'Scan Failed'}
+              </p>
               <p className="text-black/40 text-[12px] leading-relaxed max-w-[260px]">{errMsg}</p>
             </div>
             {needsWallet ? (
-              <button
-                onClick={() => openAppKit()}
-                className="px-7 py-3 bg-[#050505] text-white text-[10px] font-black uppercase tracking-widest rounded-xl"
-              >
-                Connect Wallet
-              </button>
+              <div className="flex flex-col gap-3 w-full max-w-[240px]">
+                <button
+                  onClick={() => openAppKit()}
+                  className="w-full px-7 py-3.5 bg-[#050505] text-white text-[10px] font-black uppercase tracking-widest rounded-xl"
+                >
+                  Connect Wallet
+                </button>
+                {/* After connecting wallet, allow retrying the PIN without rescanning */}
+                {pinScanData && (
+                  <button
+                    onClick={() => {
+                      setNeedsWallet(false);
+                      setErrMsg('');
+                      setStatus('pin_required');
+                      hasScannedRef.current = true; // keep scan data, just re-enter PIN
+                    }}
+                    className="w-full px-7 py-3 border border-black/15 bg-white text-black/60 text-[10px] font-black uppercase tracking-widest rounded-xl"
+                  >
+                    Retry with PIN
+                  </button>
+                )}
+              </div>
             ) : (
               <button
                 onClick={reset}
@@ -455,6 +484,7 @@ export default function ScanPage() {
             )}
           </div>
         )}
+
 
         {/* ── PIN REQUIRED ── */}
         {status === 'pin_required' && (
@@ -547,7 +577,7 @@ export default function ScanPage() {
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
       >
         <p className="text-[9px] font-mono text-black/25 uppercase tracking-[0.25em]">
-          humanidfi.com · Powered by Aztec Network
+          humanidfi.com • Aztec Integration Planned
         </p>
       </div>
     </div>
