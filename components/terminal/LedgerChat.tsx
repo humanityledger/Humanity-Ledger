@@ -300,6 +300,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
        // Clear URL so it doesn't reopen on refresh
        window.history.replaceState({}, '', window.location.pathname);
     }
+
+    // Deep link: /chat?joinRoom=ROOMID&pwd=PASSWORD → auto-open join modal
+    const joinRoomParam = params.get('joinRoom');
+    if (joinRoomParam && !groupCallActive) {
+      const pwdParam = params.get('pwd') || '';
+      setJoinModalInitialRoomId(joinRoomParam.toUpperCase());
+      setJoinModalInitialPwd(pwdParam);
+      setShowJoinModal(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, [isMounted, address, client]);
 
   const [conversations, setConversations] = useState<ConversationMeta[]>([]);
@@ -466,6 +476,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   
   // -- GROUP CALLS & NEW WEBRTC ENGINE STATE --
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinModalInitialRoomId, setJoinModalInitialRoomId] = useState('');
+  const [joinModalInitialPwd, setJoinModalInitialPwd] = useState('');
   const [groupCallActive, setGroupCallActive] = useState(false);
   const [groupCallRoomId, setGroupCallRoomId] = useState('');
   const [groupCallPassword, setGroupCallPassword] = useState('');
@@ -1673,12 +1685,26 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       setGroupCallModerator('');
       toast('Group call ended');
     };
+
+    const handleTelemetry = (e: Event) => {
+      const { address, rtt, packetLoss } = (e as CustomEvent).detail || {};
+      // Emit quality update — update participant map with network quality
+      if (address && (rtt > 0 || packetLoss > 0)) {
+        setGroupCallParticipants(prev => prev.map(p =>
+          p.address === address
+            ? { ...p, networkRtt: rtt, networkPacketLoss: packetLoss }
+            : p
+        ));
+      }
+    };
     
     window.addEventListener('webrtc_participants_updated', handleParticipantsUpdated);
     window.addEventListener('webrtc_call_ended', handleCallEnded);
+    window.addEventListener('webrtc_telemetry', handleTelemetry);
     return () => {
       window.removeEventListener('webrtc_participants_updated', handleParticipantsUpdated);
       window.removeEventListener('webrtc_call_ended', handleCallEnded);
+      window.removeEventListener('webrtc_telemetry', handleTelemetry);
     };
   }, []);
 
@@ -1736,6 +1762,30 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
     webrtcEngineRef.current?.endCall();
     setGroupCallActive(false);
+    setGroupCallMinimized(false);
+    setGroupCallLocalStream(null);
+    setGroupCallRoomId('');
+    setGroupCallModerator('');
+    setGroupCallPassword('');
+  };
+
+  const endCallForEveryone = async () => {
+    if (!groupCallRoomId) return;
+    try {
+      await fetch(`/api/call/room/${groupCallRoomId}/moderate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'end' }),
+      });
+    } catch { /* ignore */ }
+    webrtcEngineRef.current?.endCall();
+    setGroupCallActive(false);
+    setGroupCallMinimized(false);
+    setGroupCallLocalStream(null);
+    setGroupCallRoomId('');
+    setGroupCallModerator('');
+    setGroupCallPassword('');
+    toast('Call ended for everyone');
   };
 
   const handleKickParticipant = async (targetAddress: string) => {
@@ -3868,6 +3918,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               // Show invite info
             }}
             onEndCall={leaveGroupCall}
+            onEndCallForEveryone={endCallForEveryone}
             onKickParticipant={handleKickParticipant}
             onTransferModerator={handleTransferModerator}
           />
@@ -3878,7 +3929,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       <AnimatePresence>
         {showJoinModal && (
           <JoinCallModal
-            onClose={() => setShowJoinModal(false)}
+            initialRoomId={joinModalInitialRoomId}
+            initialPassword={joinModalInitialPwd}
+            onClose={() => { setShowJoinModal(false); setJoinModalInitialRoomId(''); setJoinModalInitialPwd(''); }}
             onSuccess={handleJoinSuccess}
           />
         )}
@@ -4486,6 +4539,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       formatMessagePreview={formatMessagePreview}
                       onVotePoll={(pollId, idx) => executeSend(`__VOTE__${pollId}__::${idx}`)}
                       onEditMsg={(id, current) => setEditingMsg({ id, content: current })}
+                      onJoinGroupCall={(roomId, pwd) => {
+                        setJoinModalInitialRoomId(roomId);
+                        setJoinModalInitialPwd(pwd);
+                        setShowJoinModal(true);
+                      }}
                     />
                   );
                 });

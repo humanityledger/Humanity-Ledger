@@ -258,6 +258,13 @@ export function GroupCallRoom({
                     {p.address.slice(0, 6)}...{p.address.slice(-4)}
                     {p.isMuted && <MicOff size={14} className="text-red-400" />}
                     {isPeerModerator && <Shield size={12} className="text-yellow-400 ml-1" />}
+                    {/* Network quality dot: green <100ms, yellow 100-250ms, red >250ms */}
+                    {p.networkRtt !== undefined && (
+                      <span
+                        title={`RTT: ${Math.round(p.networkRtt)}ms${p.networkPacketLoss ? ` · Loss: ${p.networkPacketLoss}` : ''}`}
+                        className={`w-2 h-2 rounded-full ml-1 ${p.networkRtt < 100 ? 'bg-green-400' : p.networkRtt < 250 ? 'bg-yellow-400' : 'bg-red-400'}`}
+                      />
+                    )}
                   </div>
                 </div>
 

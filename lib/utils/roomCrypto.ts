@@ -53,13 +53,21 @@ export function verifyJoinToken(token: string, secret: string, maxAgeMs = 4 * 60
   try {
     const decoded = Buffer.from(token, 'base64url').toString('utf-8');
     const parts = decoded.split(':');
-    if (parts.length !== 4) return null;
-    const [roomId, address, peerId, tsStr, sig] = parts;
-    const payload = `${roomId}:${address}:${peerId}:${tsStr}`;
+    // Format: roomId:address:peerId:ts:sig  (5 parts)
+    if (parts.length < 5) return null;
+    // sig is always the last part; reconstruct payload from all prior parts
+    const sig = parts[parts.length - 1];
+    const payload = parts.slice(0, -1).join(':');
+    const payloadParts = payload.split(':');
+    if (payloadParts.length < 4) return null;
+    const [roomId, address, peerId, tsStr] = payloadParts;
     const expected = createHmac('sha256', secret).update(payload).digest('hex');
-    if (sig !== expected) return null;
+    // Use timingSafeEqual to prevent timing attacks on token comparison
+    const sigBuf = Buffer.from(sig, 'hex');
+    const expBuf = Buffer.from(expected, 'hex');
+    if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) return null;
     const ts = parseInt(tsStr, 10);
-    if (Date.now() - ts > maxAgeMs) return null;
+    if (isNaN(ts) || Date.now() - ts > maxAgeMs) return null;
     return { roomId, address, peerId: peerId === 'none' ? '' : peerId, ts };
   } catch {
     return null;

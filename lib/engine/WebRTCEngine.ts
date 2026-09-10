@@ -9,6 +9,8 @@ export interface Participant {
   call: MediaConnection | null;
   isMuted: boolean;
   isCameraOff: boolean;
+  networkRtt?: number;      // ms round-trip time from getStats()
+  networkPacketLoss?: number; // packet loss count
 }
 
 export class WebRTCEngine {

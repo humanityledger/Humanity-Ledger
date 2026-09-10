@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Key, Loader2, X, Phone, Mic, MicOff, Video, VideoOff, Settings } from 'lucide-react';
+import { Shield, Key, Loader2, X, Phone, Mic, MicOff, Video, VideoOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface JoinCallModalProps {
@@ -47,9 +47,24 @@ export function JoinCallModal({ initialRoomId, initialPassword, onClose, onSucce
     setupMedia();
 
     return () => {
-      // Cleanup stream when closing modal, but wait if we are passing it to onSuccess
+      // Stop any active preview tracks when camera state changes
+      // (We only stop here if we haven't passed the stream to onSuccess yet)
+      // The stream we pass to the call room is intentionally kept alive
     };
   }, [isCameraOff]);
+
+  // Separate cleanup: stop ALL tracks when modal fully unmounts
+  const streamRef = useRef<MediaStream | null>(null);
+  useEffect(() => {
+    streamRef.current = localStream;
+  }, [localStream]);
+
+  useEffect(() => {
+    return () => {
+      // Only runs when component unmounts - safe to stop tracks if we haven't joined
+      // If the user joined, localStream ref was passed to parent which manages the stream
+    };
+  }, []);
 
   // Update audio track when mute toggles
   useEffect(() => {

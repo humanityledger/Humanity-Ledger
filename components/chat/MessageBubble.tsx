@@ -21,6 +21,7 @@ export interface MessageProps {
   formatMessagePreview: (c: string) => string;
   onVotePoll?: (pollId: string, optionIndex: number) => void;
   onEditMsg?: (id: string, currentContent: string) => void;
+  onJoinGroupCall?: (roomId: string, password: string) => void;
 }
 
 // iOS-safe spring — no conflicting scale, pure translate
@@ -142,7 +143,7 @@ const CallOfferBubble = React.memo(({ content, isMe }: { content: string; isMe: 
   );
 });
 
-const GroupCallBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
+const GroupCallBubble = React.memo(({ content, isMe, onJoinGroupCall }: { content: string; isMe: boolean; onJoinGroupCall?: (roomId: string, pwd: string) => void }) => {
   const parts = content.split('::');
   const roomId = parts[1] || '';
   const pwd = parts[2] || '';
@@ -154,17 +155,15 @@ const GroupCallBubble = React.memo(({ content, isMe }: { content: string; isMe: 
         </div>
         <div className="flex flex-col">
           <span className={`text-[13px] font-semibold ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>Group Call Started</span>
-          <span className={`text-[11px] ${isMe ? 'text-white/80' : 'text-black/50'}`}>Room ID: <span className="font-mono">{roomId}</span></span>
+          <span className={`text-[11px] font-mono ${isMe ? 'text-white/80' : 'text-black/50'}`}>{roomId}</span>
         </div>
       </div>
-      {!isMe && (
-        <a 
-          href={`/chat?joinRoom=${roomId}&pwd=${pwd}`}
-          className="mt-1 w-full flex items-center justify-center py-2 rounded-xl bg-[#34C759] text-white font-bold text-xs hover:bg-[#30b551] transition-colors"
-        >
-          Join Call
-        </a>
-      )}
+      <button
+        onClick={() => onJoinGroupCall ? onJoinGroupCall(roomId, pwd) : (window.location.href = `/chat?joinRoom=${roomId}&pwd=${encodeURIComponent(pwd)}`)}
+        className="mt-1 w-full flex items-center justify-center py-2 rounded-xl bg-[#34C759] text-white font-bold text-xs hover:bg-[#30b551] active:scale-95 transition-all"
+      >
+        {isMe ? 'Manage Call' : 'Join Call'}
+      </button>
     </div>
   );
 });
@@ -307,7 +306,7 @@ StickerPicker.displayName = 'StickerPicker';
 export const MessageBubble = React.memo(({
   msg, isMe, showDate, dateStr, isSecretChat, fontFamily, fontSizePx,
   clientInboxId, onReply, onReact, onContextMenu, onOpenLightbox,
-  formatMessagePreview, onVotePoll, onEditMsg,
+  formatMessagePreview, onVotePoll, onEditMsg, onJoinGroupCall,
 }: MessageProps) => {
   const controls = useAnimation();
   const [showTapback, setShowTapback] = useState(false);
@@ -487,7 +486,7 @@ export const MessageBubble = React.memo(({
             ) : isCallOffer ? (
               <CallOfferBubble content={content} isMe={isMe} />
             ) : isGroupCall ? (
-              <GroupCallBubble content={content} isMe={isMe} />
+              <GroupCallBubble content={content} isMe={isMe} onJoinGroupCall={onJoinGroupCall} />
             ) : isMissedCall ? (
               <MissedCallBubble content={content} isMe={isMe} />
             ) : isGif && gifUrl ? (
