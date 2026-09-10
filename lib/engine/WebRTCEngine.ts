@@ -17,9 +17,43 @@ export class WebRTCEngine {
   private localStream: MediaStream | null = null;
   private activeCalls: Map<string, MediaConnection> = new Map();
   private participants: Map<string, Participant> = new Map();
+  private telemetryInterval: NodeJS.Timeout | null = null;
 
   constructor(address: string) {
     this.myAddress = address;
+  }
+
+  private startTelemetry() {
+    if (this.telemetryInterval) clearInterval(this.telemetryInterval);
+    this.telemetryInterval = setInterval(async () => {
+      for (const [address, call] of this.activeCalls.entries()) {
+        const pc = (call as any).peerConnection as RTCPeerConnection | undefined;
+        if (!pc) continue;
+        try {
+          const stats = await pc.getStats();
+          let rtt = 0, packetLoss = 0, jitter = 0;
+          stats.forEach(report => {
+            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+              rtt = report.currentRoundTripTime || report.roundTripTime || 0;
+            }
+            if (report.type === 'inbound-rtp' && report.kind === 'video') {
+              packetLoss = report.packetsLost || 0;
+              jitter = report.jitter || 0;
+            }
+          });
+          if (rtt > 0 || packetLoss > 0) {
+            this.emit('webrtc_telemetry', { address, rtt: rtt * 1000, packetLoss, jitter: jitter * 1000 });
+          }
+        } catch (e) { /* ignore stats errors */ }
+      }
+    }, 5000);
+  }
+
+  private stopTelemetry() {
+    if (this.telemetryInterval) {
+      clearInterval(this.telemetryInterval);
+      this.telemetryInterval = null;
+    }
   }
 
   private derivePeerId(walletAddress: string): string {
@@ -33,20 +67,48 @@ export class WebRTCEngine {
   }
 
   public initialize() {
+    this.startTelemetry();
     const peerId = this.derivePeerId(this.myAddress);
     this.peer = new Peer(peerId, {
+      // Use PeerJS cloud signaling — reliable and free for signaling only
+      // (Media goes P2P directly, signaling traffic is minimal)
       config: {
         iceServers: [
+          // Google STUN — most reliable globally
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          // Twilio STUN — good Asian/LatAm coverage
           { urls: 'stun:global.stun.twilio.com:3478' },
+          // Cloudflare STUN
+          { urls: 'stun:stun.cloudflare.com:3478' },
+          // Public TURN relays as fallback for symmetric NAT, hotel WiFi, CGNAT
+          // These handle UDP-blocked networks (airports, corporate firewalls)
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+          },
         ],
+        iceTransportPolicy: 'all', // Try direct first, fall back to TURN
+        iceCandidatePoolSize: 10,  // Gather more candidates upfront
       },
     });
 
     this.peer.on('call', (call) => {
       const incomingAddress = this.peerIdToAddress(call.peer);
       if (this.localStream && this.activeCalls.size > 0) {
+        // Already in a group call — auto-answer new participants
         call.answer(this.localStream);
         this._trackCall(call, incomingAddress);
         this.activeCalls.set(incomingAddress, call);
@@ -58,18 +120,28 @@ export class WebRTCEngine {
     this.peer.on('error', (err) => {
       console.error('[WebRTCEngine] Error:', err);
       this.emit('webrtc_error', { error: err.type });
+      // Auto-reconnect on network errors (not on fatal "unavailable-id")
+      if (err.type !== 'unavailable-id' && err.type !== 'invalid-id') {
+        setTimeout(() => { this.peer?.reconnect(); }, 2000);
+      }
     });
 
     this.peer.on('disconnected', () => {
-      this.peer?.reconnect();
+      console.warn('[WebRTCEngine] Disconnected from signaling server — reconnecting');
+      setTimeout(() => { this.peer?.reconnect(); }, 1000);
     });
   }
+
 
   private peerIdToAddress(peerId: string): string {
     for (const [addr] of this.participants) {
       if (this.derivePeerId(addr) === peerId) return addr;
     }
     return peerId;
+  }
+
+  public setLocalStream(stream: MediaStream) {
+    this.localStream = stream;
   }
 
   public async getLocalStream(isVideo: boolean): Promise<MediaStream> {
@@ -155,6 +227,7 @@ export class WebRTCEngine {
   }
 
   public endCall(): void {
+    this.stopTelemetry();
     for (const [, call] of this.activeCalls) {
       try { call.close(); } catch { /* ignore */ }
     }

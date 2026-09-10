@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, UserPlus, Users, MoreVertical, Shield, ScreenShare, Copy, Check, MessageSquare, X, MonitorUp } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, UserPlus, Users, MoreVertical, Shield, ScreenShare, Copy, Check, MessageSquare, X, MonitorUp, Maximize2, Minimize2 } from 'lucide-react';
 import { Participant } from '@/lib/engine/WebRTCEngine';
 import { toast } from 'sonner';
 
@@ -14,14 +14,18 @@ interface GroupCallRoomProps {
   roomPassword?: string;
   moderatorAddress: string;
   isScreenSharing: boolean;
+  isMinimized: boolean;
   onToggleMute: () => void;
   onToggleCamera: () => void;
-  onEndCall: () => void;
+  onEndCall: () => void;               // Leave — you exit, others stay
+  onEndCallForEveryone: () => void;    // End for all — moderator only
   onAddParticipant: () => void;
   onToggleScreenShare: () => void;
   onKickParticipant: (address: string) => void;
   onTransferModerator: (address: string) => void;
+  onToggleMinimize: () => void;
 }
+
 
 const VideoStream = ({ stream, isLocal, muted, isSpeaking }: { stream: MediaStream | null; isLocal: boolean; muted: boolean; isSpeaking: boolean }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -63,13 +67,16 @@ export function GroupCallRoom({
   roomPassword,
   moderatorAddress,
   isScreenSharing,
+  isMinimized,
   onToggleMute,
   onToggleCamera,
   onEndCall,
+  onEndCallForEveryone,
   onAddParticipant,
   onToggleScreenShare,
   onKickParticipant,
-  onTransferModerator
+  onTransferModerator,
+  onToggleMinimize
 }: GroupCallRoomProps) {
   const [showControls, setShowControls] = useState(true);
   const [showRoomInfo, setShowRoomInfo] = useState(false);
@@ -107,6 +114,45 @@ export function GroupCallRoom({
                    totalParticipants === 2 ? 'grid-cols-1 sm:grid-cols-2' :
                    totalParticipants <= 4 ? 'grid-cols-2' : 'grid-cols-3 md:grid-cols-4';
 
+  // --- PiP View (Minimized) ---
+  if (isMinimized) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.8, y: 50, x: 50 }}
+        animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        className="fixed bottom-24 right-4 md:right-8 w-40 md:w-64 aspect-[3/4] bg-black rounded-3xl shadow-2xl border border-white/20 overflow-hidden z-[500] cursor-pointer flex flex-col"
+        onClick={onToggleMinimize}
+      >
+        <div className="flex-1 relative overflow-hidden">
+          <VideoStream stream={isCameraOff ? null : localStream} isLocal={true} muted={true} isSpeaking={false} />
+          {participants.length > 0 && (
+            <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full text-[10px] text-white font-bold flex items-center gap-1">
+              <Users size={12} /> +{participants.length}
+            </div>
+          )}
+          {isScreenSharing && (
+            <div className="absolute top-2 left-2 bg-green-500/80 backdrop-blur-md px-2 py-1 rounded-full text-[10px] text-white font-bold flex items-center gap-1">
+              <MonitorUp size={12} />
+            </div>
+          )}
+        </div>
+        <div className="h-12 bg-[#111] flex items-center justify-around px-2 border-t border-white/10" onClick={e => e.stopPropagation()}>
+          <button onClick={onToggleMute} className={`p-2 rounded-full transition-colors ${isMuted ? 'text-red-400 bg-red-400/10' : 'text-white hover:bg-white/10'}`}>
+            {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
+          </button>
+          <button onClick={onEndCall} className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors">
+            <PhoneOff size={16} />
+          </button>
+          <button onClick={onToggleMinimize} className="p-2 rounded-full text-white/50 hover:text-white transition-colors hover:bg-white/10">
+            <Maximize2 size={16} />
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // --- Fullscreen View ---
   return (
     <div className="fixed inset-0 z-[1000] bg-black flex flex-col overflow-hidden font-sans">
       {/* Header */}
@@ -295,16 +341,31 @@ export function GroupCallRoom({
 
             <div className="w-px h-8 bg-white/20 mx-2" />
 
+            {/* LEAVE = you exit, others stay in the call */}
             <button 
               onClick={onEndCall}
-              className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#ff3b30] hover:bg-[#ff4b40] text-white flex items-center justify-center transition-all shadow-lg hover:shadow-red-500/50"
-              title="Leave Call"
+              className="flex items-center gap-2 h-14 px-5 rounded-full bg-[#ff9500] hover:bg-[#ffaa22] text-white font-bold text-sm flex items-center justify-center transition-all shadow-lg"
+              title="Leave Call (others stay)"
             >
-              <PhoneOff size={28} />
+              <PhoneOff size={20} />
+              <span className="hidden md:inline">Leave</span>
             </button>
+
+            {/* END FOR EVERYONE = only moderator can do this */}
+            {isModerator && (
+              <button 
+                onClick={onEndCallForEveryone}
+                className="flex items-center gap-2 h-14 px-5 rounded-full bg-[#ff3b30] hover:bg-[#ff4b40] text-white font-bold text-sm flex items-center justify-center transition-all shadow-lg hover:shadow-red-500/50"
+                title="End Call for Everyone (Moderator)"
+              >
+                <PhoneOff size={20} />
+                <span className="hidden md:inline">End All</span>
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 }
+

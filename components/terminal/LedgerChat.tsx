@@ -475,6 +475,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [groupCallMuted, setGroupCallMuted] = useState(false);
   const [groupCallCameraOff, setGroupCallCameraOff] = useState(false);
   const [groupCallScreenSharing, setGroupCallScreenSharing] = useState(false);
+  const [groupCallMinimized, setGroupCallMinimized] = useState(false);
+
   
   // Lazy initialize engine once per component mount
   const webrtcEngineRef = useRef<WebRTCEngine | null>(null);
@@ -1697,22 +1699,33 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       const stream = await webrtcEngineRef.current?.getLocalStream(true);
       if (stream) setGroupCallLocalStream(stream);
       setGroupCallActive(true);
+      setGroupCallMinimized(false);
       toast.success('Secure group call room created');
+      
+      // Drop an invite into the current active chat if available
+      if (activePeer && executeSendRef.current) {
+        executeSendRef.current(`__CALL_GROUP_CREATED__::${data.roomId}::${password || ''}`);
+      }
     } catch (e: any) {
       toast.error(e.message || 'Failed to create room');
     }
   };
 
-  const handleJoinSuccess = async (data: any) => {
+  const handleJoinSuccess = async (data: any, localStream: MediaStream, isMuted: boolean, isCameraOff: boolean) => {
     setShowJoinModal(false);
     setGroupCallRoomId(data.roomId);
     setGroupCallModerator(data.moderatorAddress);
     
+    // Set the state from the pre-join lobby
+    setGroupCallLocalStream(localStream);
+    setGroupCallMuted(isMuted);
+    setGroupCallCameraOff(isCameraOff);
+    setGroupCallActive(true);
+    setGroupCallMinimized(false);
+
     // Call the host to join the mesh
     if (data.hostAddress && data.hostAddress !== effectiveAddress) {
-      const stream = await webrtcEngineRef.current?.getLocalStream(true);
-      if (stream) setGroupCallLocalStream(stream);
-      setGroupCallActive(true);
+      webrtcEngineRef.current?.setLocalStream(localStream); // Update engine's local stream if needed
       webrtcEngineRef.current?.callParticipant(data.hostAddress, true);
     }
   };
@@ -3831,6 +3844,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             roomPassword={groupCallPassword}
             moderatorAddress={groupCallModerator}
             isScreenSharing={groupCallScreenSharing}
+            isMinimized={groupCallMinimized}
+            onToggleMinimize={() => setGroupCallMinimized(!groupCallMinimized)}
             onToggleMute={() => {
               const muted = webrtcEngineRef.current?.toggleMute();
               if (muted !== undefined) setGroupCallMuted(muted);
@@ -4419,8 +4434,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   if (m.burnAtNs && m.burnAtNs <= Date.now()) return false;
                   const c = typeof m.content === 'string' ? m.content : '';
                   if (c.startsWith('__CALL_ANSWER__')) return false;
-                  if (c === '__CALL_DECLINE__') return false;
-                  if (c === '__CALL_HANGUP__') return false;
+                  // Allow __CALL_DECLINE__ and __CALL_HANGUP__ to render as missed/ended call bubbles
                   if (c.startsWith('__REACT__')) return false;
                   if (c.startsWith('__PIN__')) return false;
                   if (c.startsWith('__UNPIN__')) return false;

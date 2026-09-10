@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
-import { FastForward, MapPin, Clock, PhoneOff, Check, CheckCheck, Pencil, Lock } from 'lucide-react';
+import { FastForward, MapPin, Clock, PhoneOff, PhoneMissed, Video, Check, CheckCheck, Pencil, Lock } from 'lucide-react';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 
 export interface MessageProps {
@@ -141,6 +141,48 @@ const CallOfferBubble = React.memo(({ content, isMe }: { content: string; isMe: 
     </div>
   );
 });
+
+const GroupCallBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
+  const parts = content.split('::');
+  const roomId = parts[1] || '';
+  const pwd = parts[2] || '';
+  return (
+    <div className={`flex flex-col gap-2 px-4 py-3 rounded-[18px] min-w-[200px] shadow border ${isMe ? 'bg-[#34C759] border-transparent' : 'bg-white border-black/8'}`}>
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isMe ? 'bg-white/20' : 'bg-[#34C759]/10'}`}>
+          <Video size={20} className={isMe ? 'text-white' : 'text-[#34C759]'} />
+        </div>
+        <div className="flex flex-col">
+          <span className={`text-[13px] font-semibold ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>Group Call Started</span>
+          <span className={`text-[11px] ${isMe ? 'text-white/80' : 'text-black/50'}`}>Room ID: <span className="font-mono">{roomId}</span></span>
+        </div>
+      </div>
+      {!isMe && (
+        <a 
+          href={`/chat?joinRoom=${roomId}&pwd=${pwd}`}
+          className="mt-1 w-full flex items-center justify-center py-2 rounded-xl bg-[#34C759] text-white font-bold text-xs hover:bg-[#30b551] transition-colors"
+        >
+          Join Call
+        </a>
+      )}
+    </div>
+  );
+});
+
+const MissedCallBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
+  return (
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-[18px] min-w-[160px] shadow border ${isMe ? 'bg-[#1c7aff] border-transparent' : 'bg-white border-black/8'}`}>
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isMe ? 'bg-white/20' : 'bg-[#ff3b30]/10'}`}>
+        <PhoneMissed size={16} className={isMe ? 'text-white' : 'text-[#ff3b30]'} />
+      </div>
+      <div className="flex flex-col">
+        <span className={`text-[13px] font-semibold ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>{isMe ? 'Canceled Call' : 'Missed Call'}</span>
+        <span className={`text-[11px] ${isMe ? 'text-white/50' : 'text-[#ff3b30]/80'}`}>Tap to call back</span>
+      </div>
+    </div>
+  );
+});
+
 CallOfferBubble.displayName = 'CallOfferBubble';
 
 // ─── Sticker Bubble ─────────────────────────────────────────────────────────────
@@ -295,7 +337,9 @@ export const MessageBubble = React.memo(({
     }
   }
 
-  const isCallOffer  = content.startsWith('__CALL_OFFER__:');
+  const isCallOffer  = content.startsWith('__CALL_OFFER__:') || content === '__CALL_HANGUP__';
+  const isGroupCall  = content.startsWith('__CALL_GROUP_CREATED__:');
+  const isMissedCall = content.startsWith('__CALL_MISSED__:') || content === '__CALL_DECLINE__';
   const isPoll       = content.startsWith('__POLL__');
   const isPayment    = content.startsWith('__PAYMENT__');
   const isSticker    = content.startsWith('__STICKER__');
@@ -442,6 +486,10 @@ export const MessageBubble = React.memo(({
               <PaymentBubble content={content} isMe={isMe} />
             ) : isCallOffer ? (
               <CallOfferBubble content={content} isMe={isMe} />
+            ) : isGroupCall ? (
+              <GroupCallBubble content={content} isMe={isMe} />
+            ) : isMissedCall ? (
+              <MissedCallBubble content={content} isMe={isMe} />
             ) : isGif && gifUrl ? (
               <button
                 onClick={() => onOpenLightbox(gifUrl)}

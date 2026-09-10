@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createHmac, createHash } from 'crypto';
 import { cookies } from 'next/headers';
+import { verifyRoomPassword, generateJoinToken } from '@/lib/utils/roomCrypto';
 
 const ROOM_SECRET = process.env.CALL_ROOM_SECRET || process.env.NEXTAUTH_SECRET || 'ledger-call-secret-change-in-prod';
-const TOKEN_TTL_MS = 30 * 60 * 1000;
-
-function hashPassword(password: string): string {
-  return createHash('sha256').update(password + ROOM_SECRET).digest('hex');
-}
-
-function generateToken(roomId: string, address: string): string {
-  const ts = Date.now();
-  const payload = `${roomId}:${address}:${ts}`;
-  const sig = createHmac('sha256', ROOM_SECRET).update(payload).digest('hex');
-  return Buffer.from(`${payload}:${sig}`).toString('base64url');
-}
+const TOKEN_TTL_MS = 4 * 60 * 60 * 1000;
 
 function getSessionAddress(req: NextRequest): string | null {
   try {
@@ -43,11 +32,15 @@ function recordJoinFailure(ip: string): void {
   const now = Date.now();
   const entry = joinFailMap.get(ip) || { count: 0, resetAt: now + 300_000 };
   entry.count++;
-  if (entry.count >= 5) entry.lockedUntil = now + 60_000;
+  // Exponential backoff
+  if (entry.count >= 5) {
+    const penaltyMs = Math.pow(2, entry.count - 5) * 60_000; // 1m, 2m, 4m...
+    entry.lockedUntil = now + Math.min(penaltyMs, 3600_000); // max 1hr
+  }
   joinFailMap.set(ip, entry);
 }
 
-// ── POST /api/call/room/[roomId]/join — Validate password & issue join token ─
+// ── POST /api/call/room/[roomId]/join — Validate password & issue token ──
 export async function POST(
   req: NextRequest,
   { params }: { params: { roomId: string } }
@@ -69,6 +62,7 @@ export async function POST(
 
   const body = await req.json().catch(() => ({})) as Record<string, unknown>;
   const password = typeof body.password === 'string' ? body.password : '';
+  const peerId = typeof body.peerId === 'string' ? body.peerId : undefined;
 
   const room = await prisma.callRoom.findFirst({
     where: { roomId, isActive: true, expiresAt: { gt: new Date() } }
@@ -85,15 +79,14 @@ export async function POST(
 
   // Validate password (if room has one)
   if (room.passwordHash) {
-    const hashed = hashPassword(password);
-    if (hashed !== room.passwordHash) {
+    if (!verifyRoomPassword(password, room.passwordHash)) {
       recordJoinFailure(ip);
       return NextResponse.json({ error: 'Incorrect password' }, { status: 403 });
     }
   }
 
   // Issue join token
-  const token = generateToken(roomId, address);
+  const token = generateJoinToken(roomId, address, ROOM_SECRET, peerId);
   const tokenExpiry = new Date(Date.now() + TOKEN_TTL_MS);
   await prisma.callRoomToken.create({
     data: { roomId, address, token, expiresAt: tokenExpiry }
@@ -118,7 +111,7 @@ export async function POST(
   });
 }
 
-// ── DELETE /api/call/room/[roomId]/join — Leave the room ───────────────────
+// ── DELETE /api/call/room/[roomId]/join — Leave the room ──
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { roomId: string } }
