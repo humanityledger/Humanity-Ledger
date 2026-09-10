@@ -49,6 +49,10 @@ import { LedgerChatSettings, useLedgerSettings } from './LedgerChatSettings';
 import { LottieSendButton } from '@/components/chat/LottieSendButton';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
 
+import { GroupCallRoom } from '@/components/chat/GroupCallRoom';
+import { JoinCallModal } from '@/components/chat/JoinCallModal';
+import { WebRTCEngine, Participant } from '@/lib/engine/WebRTCEngine';
+
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
 
@@ -459,6 +463,26 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const peerInitKeyRef = useRef(0); // ref for use inside peer callbacks
 
   const [callState, _setCallState] = useState<'idle'|'calling'|'ringing'|'connecting'|'active'>('idle');
+  
+  // -- GROUP CALLS & NEW WEBRTC ENGINE STATE --
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [groupCallActive, setGroupCallActive] = useState(false);
+  const [groupCallRoomId, setGroupCallRoomId] = useState('');
+  const [groupCallPassword, setGroupCallPassword] = useState('');
+  const [groupCallModerator, setGroupCallModerator] = useState('');
+  const [groupCallParticipants, setGroupCallParticipants] = useState<Participant[]>([]);
+  const [groupCallLocalStream, setGroupCallLocalStream] = useState<MediaStream | null>(null);
+  const [groupCallMuted, setGroupCallMuted] = useState(false);
+  const [groupCallCameraOff, setGroupCallCameraOff] = useState(false);
+  const [groupCallScreenSharing, setGroupCallScreenSharing] = useState(false);
+  
+  // Lazy initialize engine once per component mount
+  const webrtcEngineRef = useRef<WebRTCEngine | null>(null);
+  if (!webrtcEngineRef.current && typeof window !== 'undefined' && effectiveAddress) {
+    webrtcEngineRef.current = new WebRTCEngine(effectiveAddress);
+    webrtcEngineRef.current.initialize();
+  }
+
   const callStateRef = useRef<'idle'|'calling'|'ringing'|'connecting'|'active'>('idle');
   const setCallState = useCallback((s: 'idle'|'calling'|'ringing'|'connecting'|'active') => {
     callStateRef.current = s;
@@ -1634,6 +1658,104 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   };
 
   // ─── answerCall: Receiver accepts incoming call ──────────────────────────────
+  // --- GROUP CALLS LOGIC ---
+  useEffect(() => {
+    const handleParticipantsUpdated = (e: any) => {
+      setGroupCallParticipants(e.detail.participants);
+    };
+    const handleCallEnded = () => {
+      setGroupCallActive(false);
+      setGroupCallParticipants([]);
+      setGroupCallLocalStream(null);
+      setGroupCallRoomId('');
+      setGroupCallModerator('');
+      toast('Group call ended');
+    };
+    
+    window.addEventListener('webrtc_participants_updated', handleParticipantsUpdated);
+    window.addEventListener('webrtc_call_ended', handleCallEnded);
+    return () => {
+      window.removeEventListener('webrtc_participants_updated', handleParticipantsUpdated);
+      window.removeEventListener('webrtc_call_ended', handleCallEnded);
+    };
+  }, []);
+
+  const createGroupCall = async (password: string) => {
+    try {
+      const res = await fetch('/api/call/room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, isVideo: true })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      setGroupCallRoomId(data.roomId);
+      setGroupCallModerator(data.moderatorAddress);
+      setGroupCallPassword(password);
+      
+      const stream = await webrtcEngineRef.current?.getLocalStream(true);
+      if (stream) setGroupCallLocalStream(stream);
+      setGroupCallActive(true);
+      toast.success('Secure group call room created');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to create room');
+    }
+  };
+
+  const handleJoinSuccess = async (data: any) => {
+    setShowJoinModal(false);
+    setGroupCallRoomId(data.roomId);
+    setGroupCallModerator(data.moderatorAddress);
+    
+    // Call the host to join the mesh
+    if (data.hostAddress && data.hostAddress !== effectiveAddress) {
+      const stream = await webrtcEngineRef.current?.getLocalStream(true);
+      if (stream) setGroupCallLocalStream(stream);
+      setGroupCallActive(true);
+      webrtcEngineRef.current?.callParticipant(data.hostAddress, true);
+    }
+  };
+
+  const leaveGroupCall = async () => {
+    if (groupCallRoomId) {
+      await fetch(`/api/call/room/${groupCallRoomId}/join`, { method: 'DELETE' }).catch(() => {});
+    }
+    webrtcEngineRef.current?.endCall();
+    setGroupCallActive(false);
+  };
+
+  const handleKickParticipant = async (targetAddress: string) => {
+    if (!groupCallRoomId) return;
+    try {
+      const res = await fetch(`/api/call/room/${groupCallRoomId}/moderate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'kick', targetAddress })
+      });
+      if (res.ok) {
+        webrtcEngineRef.current?.removeParticipant(targetAddress);
+        toast.success(`Removed ${targetAddress.slice(0,6)} from call`);
+      }
+    } catch { toast.error('Failed to kick participant'); }
+  };
+
+  const handleTransferModerator = async (targetAddress: string) => {
+    if (!groupCallRoomId) return;
+    try {
+      const res = await fetch(`/api/call/room/${groupCallRoomId}/moderate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'transfer', targetAddress })
+      });
+      if (res.ok) {
+        setGroupCallModerator(targetAddress);
+        toast.success(`Moderator transferred`);
+      }
+    } catch { toast.error('Failed to transfer moderator'); }
+  };
+  // -------------------------
+
   // ANDROID FIX: Called directly from the "Answer" onClick — preserves user-gesture
   // context required by Android Chrome for getUserMedia.
   const answerCall = async () => {
@@ -3695,6 +3817,58 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           Without this, TuringShieldGate's Fragment return gives no height context. */}
       <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
       <IncomingCallOverlay />
+
+      {/* ── GROUP CALL FULLSCREEN OVERLAY ── */}
+      <AnimatePresence>
+        {groupCallActive && (
+          <GroupCallRoom
+            localStream={groupCallLocalStream}
+            participants={groupCallParticipants}
+            isMuted={groupCallMuted}
+            isCameraOff={groupCallCameraOff}
+            myAddress={effectiveAddress || ''}
+            roomId={groupCallRoomId}
+            roomPassword={groupCallPassword}
+            moderatorAddress={groupCallModerator}
+            isScreenSharing={groupCallScreenSharing}
+            onToggleMute={() => {
+              const muted = webrtcEngineRef.current?.toggleMute();
+              if (muted !== undefined) setGroupCallMuted(muted);
+            }}
+            onToggleCamera={() => {
+              const off = webrtcEngineRef.current?.toggleCamera();
+              if (off !== undefined) setGroupCallCameraOff(off);
+            }}
+            onToggleScreenShare={async () => {
+              if (groupCallScreenSharing) {
+                // Stop screen share — revert to camera
+                webrtcEngineRef.current?.stopScreenShare();
+                setGroupCallScreenSharing(false);
+              } else {
+                const ok = await webrtcEngineRef.current?.startScreenShare();
+                if (ok) setGroupCallScreenSharing(true);
+              }
+            }}
+            onAddParticipant={() => {
+              // Show invite info
+            }}
+            onEndCall={leaveGroupCall}
+            onKickParticipant={handleKickParticipant}
+            onTransferModerator={handleTransferModerator}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── JOIN CALL MODAL ── */}
+      <AnimatePresence>
+        {showJoinModal && (
+          <JoinCallModal
+            onClose={() => setShowJoinModal(false)}
+            onSuccess={handleJoinSuccess}
+          />
+        )}
+      </AnimatePresence>
+
       {/* FULL SCREEN MODALS */}
       <AnimatePresence>
         {showSettings && (
@@ -3720,6 +3894,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           />
         )}
       </AnimatePresence>
+
 
     {/* ─── WebRTC Ringtone Audio Element ────────────────────────────────────── */}
     <audio ref={ringAudioRef} loop playsInline x-webkit-airplay="allow" src="/sounds/call_ringtone.mp3" style={{ display: 'none' }} />
@@ -3807,6 +3982,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             </button>
             <button onClick={() => window.location.href = '/portfolio'} className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#F2F2F7] text-[#000000] hover:bg-[#E5E5EA] transition-all text-[12px] font-semibold active:scale-95">
               <PieChart size={13} />
+            </button>
+            {/* ── GROUP CALL BUTTONS ── */}
+            <button
+              onClick={() => createGroupCall('')}
+              title="Start Group Video Call"
+              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#34C759]/10 text-[#34C759] hover:bg-[#34C759]/20 transition-all text-[12px] font-semibold active:scale-95"
+            >
+              <Video size={13} />
+            </button>
+            <button
+              onClick={() => setShowJoinModal(true)}
+              title="Join Call by Room ID"
+              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#007AFF]/10 text-[#007AFF] hover:bg-[#007AFF]/20 transition-all text-[12px] font-semibold active:scale-95"
+            >
+              <Radio size={13} />
             </button>
             <button onClick={() => setShowSettings(true)} className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#F2F2F7] text-[#000000] hover:bg-[#E5E5EA] transition-all text-[12px] font-semibold active:scale-95">
               <Settings size={13} />
