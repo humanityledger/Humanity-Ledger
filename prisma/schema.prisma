@@ -464,6 +464,52 @@ model SiweNonce {
 }
 
 // 
+// LEDGER CHAT — CALL ROOMS
+// Ephemeral rooms for group video/audio calls with password protection.
+// Auto-expire after 2h idle. Moderator can transfer control and kick participants.
+// 
+
+model CallRoom {
+  id               String   @id @default(cuid())
+  roomId           String   @unique // 8-char alphanumeric, user-visible
+  passwordHash     String   // SHA-256 of password, never stored plaintext
+  hostAddress      String   // Wallet address of room creator
+  moderatorAddress String   // Current moderator (starts as host, can be transferred)
+  isVideo          Boolean  @default(true)
+  maxParticipants  Int      @default(20)
+  participants     String[] // Array of wallet addresses currently in room
+  createdAt        DateTime @default(now())
+  lastActivityAt   DateTime @default(now())
+  expiresAt        DateTime // createdAt + 2h, enforced server-side
+  isActive         Boolean  @default(true)
+
+  @@index([roomId])
+  @@index([hostAddress])
+  @@index([expiresAt])
+}
+
+// 
+// CALL ROOM JOIN TOKENS
+// Signed tokens issued on successful password validation. Expire in 30min.
+// Prevents replay attacks and unauthorized joins after token expiry.
+// 
+
+model CallRoomToken {
+  id          String   @id @default(cuid())
+  roomId      String
+  address     String
+  token       String   @unique // HMAC-signed, single-use
+  used        Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([roomId, address])
+  @@index([token])
+}
+
+
+
+// 
 // CANONICAL IDENTITY (P2 SIWE MIGRATION)
 // 
 
