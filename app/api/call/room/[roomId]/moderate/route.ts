@@ -1,6 +1,20 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
+
+// Rate-limit: max 30 moderate actions per minute per moderator address
+const moderateRateMap = new Map<string, { count: number; resetAt: number }>();
+function checkModerateRateLimit(address: string): boolean {
+  const now = Date.now();
+  const entry = moderateRateMap.get(address);
+  if (!entry || now > entry.resetAt) {
+    moderateRateMap.set(address, { count: 1, resetAt: now + 60_000 });
+    return true;
+  }
+  if (entry.count >= 30) return false;
+  entry.count++;
+  return true;
+}
 
 function getSessionAddress(req: NextRequest): string | null {
   try {
@@ -24,7 +38,14 @@ export async function POST(
   const address = getSessionAddress(req);
   if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const roomId = params.roomId.toUpperCase();
+  if (!checkModerateRateLimit(address)) {
+    return NextResponse.json({ error: 'Too many moderation actions. Slow down.' }, { status: 429 });
+  }
+
+  const roomId = params.roomId.toUpperCase().slice(0, 12);
+  if (!/^[A-Z0-9]{6,12}$/.test(roomId)) {
+    return NextResponse.json({ error: 'Invalid room ID' }, { status: 400 });
+  }
 
   const room = await prisma.callRoom.findFirst({
     where: { roomId, isActive: true, expiresAt: { gt: new Date() } }

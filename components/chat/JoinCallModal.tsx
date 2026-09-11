@@ -23,27 +23,39 @@ export function JoinCallModal({ initialRoomId, initialPassword, onClose, onSucce
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    // Acquire local media for preview
+    // Acquire local media for preview — triple-tier fallback for Android/iOS
     async function setupMedia() {
+      // Guard: mediaDevices not available in HTTP contexts or very old browsers
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        console.warn('getUserMedia not available — joining without local stream');
+        return;
+      }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: !isCameraOff, 
-          audio: true 
+        // Tier 1: Full video+audio
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: !isCameraOff ? { facingMode: 'user' } : false,
+          audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 48000 },
         });
-        
-        // Mute local audio track initially so we don't hear ourselves
-        stream.getAudioTracks().forEach(t => t.enabled = !isMuted);
-        
+        stream.getAudioTracks().forEach(t => { t.enabled = !isMuted; });
         setLocalStream(stream);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      } catch (videoErr: any) {
+        const name = videoErr?.name || '';
+        // Tier 2: Camera denied/unavailable — fall back to audio-only
+        if (name === 'NotFoundError' || name === 'NotAllowedError' || name === 'OverconstrainedError' || isCameraOff) {
+          try {
+            const audioStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+            audioStream.getAudioTracks().forEach(t => { t.enabled = !isMuted; });
+            setLocalStream(audioStream);
+          } catch (audioErr) {
+            // Tier 3: Full permission denial — join will proceed without local stream
+            console.warn('Audio also denied, joining without media:', audioErr);
+          }
+        } else {
+          console.error('getUserMedia failed:', videoErr);
         }
-      } catch (err) {
-        console.error("Failed to acquire media:", err);
       }
     }
-    
-    // Only fetch video if camera is explicitly turned on
     setupMedia();
 
     return () => {
@@ -98,9 +110,12 @@ export function JoinCallModal({ initialRoomId, initialPassword, onClose, onSucce
 
       toast.success('Joined secure call room');
       
-      // Pass the prepared stream and states to the main chat engine
-      // If we don't have a stream yet, engine will grab one
-      onSuccess(data, localStream!, isMuted, isCameraOff);
+      // Pass the prepared stream to the main chat engine
+      // If permissions were fully denied, create a silent stream so the call UI still works
+      const safeStream = localStream ?? (() => {
+        try { return new MediaStream(); } catch { return null as unknown as MediaStream; }
+      })();
+      onSuccess(data, safeStream, isMuted, isCameraOff);
     } catch (err: any) {
       setError(err.message);
       setLoading(false);

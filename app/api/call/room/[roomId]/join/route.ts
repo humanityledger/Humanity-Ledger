@@ -64,6 +64,10 @@ export async function POST(
   const password = typeof body.password === 'string' ? body.password : '';
   const peerId = typeof body.peerId === 'string' ? body.peerId : undefined;
 
+  if (password.length > 128) {
+    return NextResponse.json({ error: 'Password too long' }, { status: 400 });
+  }
+
   const room = await prisma.callRoom.findFirst({
     where: { roomId, isActive: true, expiresAt: { gt: new Date() } }
   });

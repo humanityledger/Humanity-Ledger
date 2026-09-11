@@ -121,7 +121,12 @@ export function GroupCallRoom({
         initial={{ opacity: 0, scale: 0.8, y: 50, x: 50 }}
         animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
         exit={{ opacity: 0, scale: 0.8 }}
-        className="fixed bottom-24 right-4 md:right-8 w-40 md:w-64 aspect-[3/4] bg-black rounded-3xl shadow-2xl border border-white/20 overflow-hidden z-[500] cursor-pointer flex flex-col"
+        drag
+        dragMomentum={false}
+        dragElastic={0.05}
+        whileDrag={{ scale: 1.05 }}
+        className="fixed bottom-24 right-4 md:right-8 w-40 md:w-64 aspect-[3/4] bg-black rounded-3xl shadow-2xl border border-white/20 overflow-hidden z-[500] cursor-grab active:cursor-grabbing flex flex-col select-none"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         onClick={onToggleMinimize}
       >
         <div className="flex-1 relative overflow-hidden">
@@ -309,6 +314,7 @@ export function GroupCallRoom({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 md:gap-4 bg-[#111]/80 backdrop-blur-xl p-3 md:p-4 rounded-3xl border border-white/10 z-50 shadow-2xl"
+            style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
             <button 
               onClick={onToggleMute}
