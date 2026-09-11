@@ -490,12 +490,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [groupCallMinimized, setGroupCallMinimized] = useState(false);
 
   
-  // Lazy initialize engine once per component mount
+  // Initialize WebRTC engine in an effect — NOT in render body
+  // (render body side-effects cause Strict Mode double-init and first-paint blocking)
   const webrtcEngineRef = useRef<WebRTCEngine | null>(null);
-  if (!webrtcEngineRef.current && typeof window !== 'undefined' && effectiveAddress) {
-    webrtcEngineRef.current = new WebRTCEngine(effectiveAddress);
-    webrtcEngineRef.current.initialize();
-  }
+  useEffect(() => {
+    if (!webrtcEngineRef.current && typeof window !== 'undefined' && effectiveAddress) {
+      webrtcEngineRef.current = new WebRTCEngine(effectiveAddress);
+      webrtcEngineRef.current.initialize();
+    }
+    return () => {
+      // Cleanup on unmount
+      webrtcEngineRef.current?.destroy();
+      webrtcEngineRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveAddress]);
 
   const callStateRef = useRef<'idle'|'calling'|'ringing'|'connecting'|'active'>('idle');
   const setCallState = useCallback((s: 'idle'|'calling'|'ringing'|'connecting'|'active') => {
