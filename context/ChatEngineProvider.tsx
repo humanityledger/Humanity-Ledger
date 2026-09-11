@@ -1,16 +1,33 @@
-﻿"use client";
+"use client";
 import React, { createContext, useContext, useState } from 'react';
-import { ChatSyncEngine } from '@/lib/engine/ChatSyncEngine';
-import { WebRTCEngine } from '@/lib/engine/WebRTCEngine';
-import { LocalMessage } from '@/lib/sync/chatDatabase';
+
+// LocalMessage shape — defined inline to avoid importing idb (which breaks SSR)
+export interface LocalMessage {
+  id: string;
+  peerAddress: string;
+  senderAddress: string;
+  content: string;
+  sentAt: number;
+  status: 'sending' | 'sent' | 'failed';
+  isMine: boolean;
+  isZkVerified?: boolean;
+  type?: 'text' | 'voice' | 'payment' | 'system';
+  senderInboxId?: string;
+  conversationId?: string;
+  burnAtNs?: number;
+  sentAtNs?: bigint | number;
+  reactions?: any[];
+  isPinned?: boolean;
+  isDestructing?: boolean;
+}
 
 interface ChatEngineContextType {
   messages: LocalMessage[];
   sendMessage: (peer: string, content: string) => Promise<void>;
   startCall: (peer: string, isVideo: boolean) => Promise<void>;
   endCall: () => void;
-  syncEngine: ChatSyncEngine | null;
-  rtcEngine: WebRTCEngine | null;
+  syncEngine: null;
+  rtcEngine: null;
   activePeer: string;
   setActivePeer: (peer: string) => void;
 }
@@ -27,21 +44,19 @@ const ChatEngineContext = createContext<ChatEngineContextType>({
 });
 
 /**
- * ChatEngineProvider — lightweight context wrapper.
+ * ChatEngineProvider — lightweight context passthrough.
  *
- * IMPORTANT: XMTP client initialization is intentionally NOT done here.
- * LedgerChat.tsx handles its own XMTP init with the correct wagmi signer
- * (which requires MetaMask interaction). Initializing XMTP here with a
- * plain address string caused an invalid/hung connection attempt that
- * completely froze the page (browser "La pagina no responde").
+ * IMPORTANT: No heavy imports (idb, ChatSyncEngine, WebRTCEngine, XMTP) here.
+ * Those all use browser-only APIs (IndexedDB, PeerJS, WebRTC, WASM) that
+ * crash Next.js SSR when imported at module level, causing a blank page.
+ * LedgerChat.tsx handles all engine initialization inside useEffect (client-only).
  */
 export function ChatEngineProvider({ children }: { children: React.ReactNode }) {
   const [activePeer, setActivePeer] = useState<string>('');
-  const [messages] = useState<LocalMessage[]>([]);
 
   return (
     <ChatEngineContext.Provider value={{
-      messages,
+      messages: [],
       sendMessage: async () => {},
       startCall: async () => {},
       endCall: () => {},
