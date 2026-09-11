@@ -216,13 +216,18 @@ export async function getXMTPClient(
 
   let client: Client;
   try {
-    // Client.create(signer, options)  v5.3.0 signature
-    // [Aztec Point 8] Obfuscate appVersion and disable telemetry at the transport layer
-    client = await Client.create(signer, { 
-      env: XMTP_ENV, 
-      dbEncryptionKey,
-      appVersion: "LedgerNetwork-Privacy-Node/1.0.0-obfuscated", // Mixnet-style anonymity tag
-    });
+    // Client.create wrapped in 12s timeout — WASM load or network hang must NEVER freeze UI
+    const createTimeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('XMTP_INIT_TIMEOUT: Client.create timed out after 12s. WASM or network may be unavailable.')), 12000)
+    );
+    client = await Promise.race([
+      Client.create(signer, {
+        env: XMTP_ENV,
+        dbEncryptionKey,
+        appVersion: 'LedgerNetwork-Privacy-Node/1.0.0-obfuscated',
+      }),
+      createTimeout,
+    ]) as Client;
   } catch (err: any) {
     const errorMsg = err?.message || '';
     if (

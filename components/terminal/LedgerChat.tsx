@@ -2597,15 +2597,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             } else {
                setInitError('Ledger identity not yet synchronized. Please connect your wallet directly via MetaMask and tap "Try Again".');
             }
+          } else if (errorMsg.includes('XMTP_INIT_TIMEOUT')) {
+            setInitError('Connection timed out. MetaMask may be waiting for your approval — open MetaMask, approve the signature, then tap Try Again.');
           } else if (errorMsg.includes('WASM') || errorMsg.includes('wasm')) {
-            setInitError('Cryptographic Engine Failure. Hardware architecture error or restricted browser security settings.');
+            setInitError('Cryptographic Engine Failure. Try clearing cache: open DevTools → Application → Clear Storage, then retry.');
           } else {
-            setInitError(`Humanity Ledger handshake failure: ${errorMsg.slice(0, 80) || 'Unknown Protocol Error'}. Please retry.`);
+            setInitError(`Ledger Chat failed to connect. Please tap Try Again. (${errorMsg.slice(0, 60) || 'Unknown error'})`);
           }
           setIsInitializing(false);
           initInFlight.current = false;
         } else {
-          console.warn(`[Ledger Chat] Init attempt ${attempts} failed due to inactivity/network timeout, retrying...`, err);
+          console.warn(`[Ledger Chat] Init attempt ${attempts} failed, retrying...`, err);
         }
       }
     }
