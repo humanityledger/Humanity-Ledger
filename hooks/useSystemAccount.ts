@@ -265,9 +265,15 @@ export function useSystemAccount() {
 
     //  Priority 1: Direct Wagmi connection (WalletConnect / MetaMask / any injected wallet)
     // ABSOLUTE PRIORITY: a live external wallet connection always wins over any
-    // cached or in-memory Humanity Ledger local-wallet state. This is the single
-    // source-of-truth fix that eliminates the "Access Denied" loop for WalletConnect users.
+    // cached or in-memory Humanity Ledger local-wallet state.
     if (wagmiAccount.isConnected) {
+        // Clear any stale QR/handshake cookie — when MetaMask is live, the cookie
+        // must not interfere with the error message path in LedgerChat.tsx
+        if (typeof document !== 'undefined') {
+            try {
+                document.cookie = 'system_handshake=; Max-Age=0; path=/; SameSite=Lax';
+            } catch {}
+        }
         return {
             address: wagmiAccount.address,
             isConnected: true,

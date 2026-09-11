@@ -2590,10 +2590,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           } else if (err?.name === 'ChunkLoadError' || errorMsg.includes('Loading chunk')) {
             setInitError('Humanity Ledger module failed to load. Please check your network connection and reload the terminal.');
           } else if (errorMsg.includes('No active wallet') || errorMsg.includes('connector') || errorMsg.includes('signMessage') || errorMsg.toLowerCase().includes('unknown signer')) {
-            if (isSystemHandshake) {
-               setInitError('Ledger identity not yet synchronized from desktop. Please keep this browser open while the desktop terminal finishes the handshake.');
+            // If MetaMask/wagmi connector is present → always show the actionable retry message.
+            // Never show "desktop handshake" when the user has a direct wallet connected.
+            if (connector || !isSystemHandshake) {
+               setInitError('MetaMask did not respond to the signature request. Please open MetaMask, check for a pending signature, and tap "Try Again" below.');
             } else {
-               setInitError('Active wallet connection lost or not detected. Please ensure your wallet app is open and connected directly to this browser.');
+               setInitError('Ledger identity not yet synchronized. Please connect your wallet directly via MetaMask and tap "Try Again".');
             }
           } else if (errorMsg.includes('WASM') || errorMsg.includes('wasm')) {
             setInitError('Cryptographic Engine Failure. Hardware architecture error or restricted browser security settings.');
