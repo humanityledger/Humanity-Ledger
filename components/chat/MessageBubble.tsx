@@ -147,17 +147,30 @@ const GroupCallBubble = React.memo(({ content, isMe, onJoinGroupCall }: { conten
   const parts = content.split('::');
   const roomId = parts[1] || '';
   const pwd = parts[2] || '';
+  const isPrivate = pwd.length > 0;
   return (
-    <div className={`flex flex-col gap-2 px-4 py-3 rounded-[18px] min-w-[200px] shadow border ${isMe ? 'bg-[#34C759] border-transparent' : 'bg-white border-black/8'}`}>
+    <div className={`flex flex-col gap-2 px-4 py-3 rounded-[18px] min-w-[220px] shadow border ${isMe ? 'bg-[#34C759] border-transparent' : 'bg-white border-black/8'}`}>
       <div className="flex items-center gap-3">
         <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isMe ? 'bg-white/20' : 'bg-[#34C759]/10'}`}>
           <Video size={20} className={isMe ? 'text-white' : 'text-[#34C759]'} />
         </div>
         <div className="flex flex-col">
-          <span className={`text-[13px] font-semibold ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>Group Call Started</span>
-          <span className={`text-[11px] font-mono ${isMe ? 'text-white/80' : 'text-black/50'}`}>{roomId}</span>
+          <span className={`text-[13px] font-semibold ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>
+            {isPrivate ? '🔒 Private Group Call' : 'Group Call Started'}
+          </span>
+          <span className={`text-[11px] font-mono tracking-widest ${isMe ? 'text-white/80' : 'text-black/50'}`}>{roomId}</span>
         </div>
       </div>
+      {/* Password display — shown to both creator and recipient so they can join */}
+      {isPrivate && (
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${isMe ? 'bg-white/15' : 'bg-black/5'}`}>
+          <span className="text-[10px]">🔑</span>
+          <div className="flex flex-col">
+            <span className={`text-[9px] uppercase tracking-widest font-bold ${isMe ? 'text-white/50' : 'text-black/30'}`}>Password</span>
+            <span className={`text-[13px] font-mono font-bold tracking-wider ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>{pwd}</span>
+          </div>
+        </div>
+      )}
       <button
         onClick={() => onJoinGroupCall ? onJoinGroupCall(roomId, pwd) : (window.location.href = `/chat?joinRoom=${roomId}&pwd=${encodeURIComponent(pwd)}`)}
         className="mt-1 w-full flex items-center justify-center py-2 rounded-xl bg-[#34C759] text-white font-bold text-xs hover:bg-[#30b551] active:scale-95 transition-all"
@@ -167,6 +180,7 @@ const GroupCallBubble = React.memo(({ content, isMe, onJoinGroupCall }: { conten
     </div>
   );
 });
+
 
 const MissedCallBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
   return (

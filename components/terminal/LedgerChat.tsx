@@ -313,7 +313,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, [isMounted, address, client]);
 
   const [conversations, setConversations] = useState<ConversationMeta[]>([]);
-  const [activePeer, setActivePeer] = useState<string | null>(null);
+  // CRITICAL FIX: activePeer is ALWAYS stored lowercase so that stream comparison
+  // (msgConvPeer === currentActivePeer) never fails due to address case mismatch.
+  // XMTP v5.3.0 can return checksummed or lowercase addresses depending on the path.
+  const [activePeer, setActivePeerRaw] = useState<string | null>(null);
+  const setActivePeer = (peer: string | null) => setActivePeerRaw(peer ? peer.toLowerCase() : null);
   const [localContacts, setLocalContacts] = useState<LocalContact[]>([]);
   const [replyingTo, setReplyingTo] = useState<any | null>(null); // Phase 2: Message Quoting
   
@@ -2376,8 +2380,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             if (data.peers && Array.isArray(data.peers)) {
                const serverPeers = data.peers as string[];
                serverPeers.forEach(peer => {
-                 if (!merged.find(c => c.peerAddress.toLowerCase() === peer.toLowerCase())) {
-                   merged.push({ peerAddress: peer, lastMessage: '', lastAt: new Date() });
+                 const peerNorm = peer.toLowerCase();
+                 if (!merged.find(c => c.peerAddress.toLowerCase() === peerNorm)) {
+                   merged.push({ peerAddress: peerNorm, lastMessage: '', lastAt: new Date() });
                  }
                });
             }
@@ -2389,8 +2394,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
              const pData = await pRes.json();
              if (pData.pending && Array.isArray(pData.pending)) {
                  pData.pending.forEach((p: any) => {
-                     const peer = p.sender.toLowerCase() === address.toLowerCase() ? p.recipient : p.sender;
-                     const existing = merged.find(c => c.peerAddress.toLowerCase() === peer.toLowerCase());
+                     const peer = (p.sender.toLowerCase() === address.toLowerCase() ? p.recipient : p.sender).toLowerCase();
+                     const existing = merged.find(c => c.peerAddress.toLowerCase() === peer);
                      if (!existing) {
                          merged.push({ peerAddress: peer, lastMessage: p.content.slice(0, 30), lastAt: new Date(p.timestamp) });
                      } else {
@@ -2686,8 +2691,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const toAdd: ConversationMeta[] = newPeerAddrs
               .filter(a => !prevSet.has(a.toLowerCase()))
               .map(a => ({
-                peerAddress: a,
-                lastMessage: ' New message received',
+                peerAddress: a.toLowerCase(), // ALWAYS store lowercase
+                lastMessage: '🔒 New message received',
                 lastAt: new Date(),
               }));
 
