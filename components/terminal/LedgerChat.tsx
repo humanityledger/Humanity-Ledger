@@ -3039,7 +3039,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (isFetching || cancelled) return;
       isFetching = true;
       try {
-        let raw = [] as any; // await getMessages(client, activePeer);
+        let raw = await getMessages(client, activePeer);
         if (cancelled) return;
         
         const clearTsMs = parseInt(localStorage.getItem(`ledger_cleared_${address}_${activePeer.toLowerCase()}`) || '0', 10);

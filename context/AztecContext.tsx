@@ -101,16 +101,30 @@ export const AztecProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
             const pxeClient = createPXEClient(PXE_URL) as unknown as PXE;
 
-            // waitForPXE polls until the Sandbox is ready (max 10 retries × 1s)
-            await waitForPXE(pxeClient as any, 10);
+            // waitForPXE polls until the Sandbox is ready (max 3 retries × 1s)
+            // Reduced from 10 to 3 — browser must never freeze waiting for PXE
+            await waitForPXE(pxeClient as any, 3);
             return pxeClient;
         };
 
+        // Hard 5-second timeout on the ENTIRE PXE init sequence.
+        // The Aztec WASM dynamic import alone can take 3-8s on slow connections.
+        // We MUST not let this freeze the UI.
+        const pxeInitWithTimeout = () => new Promise<PXE>((resolve, reject) => {
+            const t = setTimeout(() => reject(new Error('Aztec PXE init timed out after 5s')), 5000);
+            (typeof navigator !== 'undefined' && navigator.locks
+                ? navigator.locks.request('aztec-pxe-init', executeInit)
+                : executeInit()
+            ).then((c: PXE) => { clearTimeout(t); resolve(c); }).catch((e: any) => { clearTimeout(t); reject(e); });
+        });
+
         let pxeClient: PXE;
-        if (typeof navigator !== 'undefined' && navigator.locks) {
-            pxeClient = await navigator.locks.request('aztec-pxe-init', executeInit);
-        } else {
-            pxeClient = await executeInit();
+        try {
+            pxeClient = await pxeInitWithTimeout();
+        } catch (pxeErr: any) {
+            console.warn('🟡 [Aztec] PXE init skipped (timeout or unavailable):', pxeErr?.message);
+            setError(pxeErr?.message || 'PXE unavailable');
+            return; // Graceful degradation — app still works without ZK
         }
 
         // Fetch node metadata (May fail if Sequencer is down, but PXE is local)
