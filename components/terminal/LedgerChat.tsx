@@ -2432,12 +2432,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setIsInitializing(true);
     setIsInitTimeout(false);
     setInitError('');
-    // Safety: show 'Retry' UI after 8s if still waiting (MetaMask popup dismissed/ignored)
+    // Safety: show 'Retry' UI after 4s if still waiting (MetaMask popup dismissed/ignored)
     if (initTimeoutRef.current) clearTimeout(initTimeoutRef.current);
-    initTimeoutRef.current = setTimeout(() => setIsInitTimeout(true), 8000);
+    initTimeoutRef.current = setTimeout(() => setIsInitTimeout(true), 4000);
 
     // HARD DEADLINE — guarantees the UI is NEVER permanently frozen.
-    // If XMTP, Aztec, or any await hangs beyond 20s, we force-exit with an error.
+    // If XMTP, WASM, or any await hangs beyond 12s, we force-exit with an actionable error.
     let hardDeadlineCleared = false;
     const hardDeadline = setTimeout(() => {
       if (!hardDeadlineCleared && initInFlight.current) {
@@ -2447,7 +2447,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         if (initTimeoutRef.current) { clearTimeout(initTimeoutRef.current); initTimeoutRef.current = null; }
         setInitError('Connection timed out. Please check your wallet is connected and try again.');
       }
-    }, 20000);
+    }, 12000);
 
     let attempts = 0;
     const maxAttempts = 2; // Reduced from 4 — fewer retries means faster failure feedback
@@ -2598,9 +2598,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                setInitError('Ledger identity not yet synchronized. Please connect your wallet directly via MetaMask and tap "Try Again".');
             }
           } else if (errorMsg.includes('XMTP_INIT_TIMEOUT')) {
-            setInitError('Connection timed out. MetaMask may be waiting for your approval — open MetaMask, approve the signature, then tap Try Again.');
+            setInitError('Connection timed out. MetaMask may be waiting for your approval - open MetaMask, approve the signature, then tap Try Again.');
           } else if (errorMsg.includes('WASM') || errorMsg.includes('wasm')) {
-            setInitError('Cryptographic Engine Failure. Try clearing cache: open DevTools → Application → Clear Storage, then retry.');
+            setInitError('Cryptographic Engine Failure. Try clearing cache: open DevTools -> Application -> Clear Storage, then retry.');
           } else {
             setInitError(`Ledger Chat failed to connect. Please tap Try Again. (${errorMsg.slice(0, 60) || 'Unknown error'})`);
           }
@@ -3744,16 +3744,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           
           <p className="text-[14px] font-medium text-[#555] text-center leading-[1.6] mb-6 max-w-[280px]">
             {isWaitingForSignature 
-              ? <span className="text-blue-600 font-bold">Please check your wallet or extension and sign the request...</span> 
+              ? <span className="text-blue-600 font-bold">Please open MetaMask and sign the request now...</span> 
               : isInitializing 
-                ? "Deriving session keys and verifying hardware enclave..." 
+                ? "Connecting to encrypted network. Check MetaMask for a signature request." 
                 : "Activate your cryptographic identity to access the sovereign network."}
           </p>
 
-          {/* Shown after 15s if still loading — prevents permanent freeze */}
+          {/* Shown after 4s if still loading — prevents permanent freeze */}
           {isInitTimeout && isInitializing && (
             <div className="flex flex-col gap-3 w-full mb-6 animate-in fade-in duration-500">
-              <p className="text-[11px] text-center text-[#999] font-mono uppercase tracking-widest">Taking longer than expected...</p>
+              <div className="w-full bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+                <p className="text-[12px] font-bold text-amber-700 mb-1">MetaMask signature required</p>
+                <p className="text-[11px] text-amber-600">Open MetaMask and look for a pending signature request. If none appears, click Retry below.</p>
+              </div>
               <button
                 onClick={() => {
                   if (initTimeoutRef.current) { clearTimeout(initTimeoutRef.current); initTimeoutRef.current = null; }

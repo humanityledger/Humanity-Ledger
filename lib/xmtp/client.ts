@@ -216,9 +216,9 @@ export async function getXMTPClient(
 
   let client: Client;
   try {
-    // Client.create wrapped in 12s timeout — WASM load or network hang must NEVER freeze UI
+    // Client.create wrapped in 8s timeout — WASM load or network hang must NEVER freeze UI
     const createTimeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('XMTP_INIT_TIMEOUT: Client.create timed out after 12s. WASM or network may be unavailable.')), 12000)
+      setTimeout(() => reject(new Error('XMTP_INIT_TIMEOUT: Client.create timed out after 8s. WASM or network may be unavailable.')), 8000)
     );
     client = await Promise.race([
       Client.create(signer, {
