@@ -2866,6 +2866,42 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             }
           }
 
+          // ─── CALL SIGNAL INTERCEPTION (stream-level) ────────────────────────
+          // CRITICAL FIX: Handle __CALL_ signals directly in the stream so
+          // incoming calls are detected regardless of which conversation is active
+          // or whether messages have loaded yet. Previously these relied on the
+          // messages[] array which had race conditions with fetchHistorical.
+          if (fromPeer && typeof content === 'string' && content.startsWith('__CALL_')) {
+            if (!processedSignalIds.current.has(realId)) {
+              processedSignalIds.current.add(realId);
+              if (content.startsWith('__CALL_OFFER__:')) {
+                const parts = content.split(':');
+                const callerPeerId = parts[1];
+                const offerCallType: 'audio'|'video' = (parts[2] as any) || 'audio';
+                if (callerPeerId) remotePeerIdRef.current = callerPeerId;
+                if (callStateRef.current === 'idle') {
+                  setCallType(offerCallType);
+                  isCallerRef.current = false;
+                  setCallState('ringing');
+                  startRingtone();
+                  console.log('[Stream:CALL] CALL_OFFER received → ringing, caller:', callerPeerId);
+                }
+              } else if (content === '__CALL_DECLINE__') {
+                if (callStateRef.current !== 'idle') {
+                  performEndCallRef.current?.();
+                  toast('📵 Call declined.');
+                }
+              } else if (content === '__CALL_HANGUP__') {
+                if (callStateRef.current !== 'idle') {
+                  performEndCallRef.current?.();
+                  toast('📵 Call ended by peer.');
+                }
+              }
+            }
+            // __CALL_ signals: fall through so they render in messages[] as call bubbles
+            // (CALL_OFFER → "📞 Voice Call", DECLINE/HANGUP → visible in chat)
+          }
+
           // Phase 5: Intercept Payment Signals for Auto-Sync
           if (typeof mappedContent === 'string' && mappedContent.startsWith('__PAYMENT__')) {
             // Reconcile balance from server because the sender just transferred QDs to our address

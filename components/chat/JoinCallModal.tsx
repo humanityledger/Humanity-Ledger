@@ -15,12 +15,43 @@ export function JoinCallModal({ initialRoomId, initialPassword, onClose, onSucce
   const [password, setPassword] = useState(initialPassword || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Whether the room requires a password — null = not yet checked, true/false = checked
+  const [roomRequiresPassword, setRoomRequiresPassword] = useState<boolean | null>(
+    initialRoomId ? null : false
+  );
 
   // Pre-join state
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(true); // Default to camera off for privacy
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Check whether the room requires a password when roomId is known
+  useEffect(() => {
+    if (!roomId || roomId.length < 6) {
+      setRoomRequiresPassword(false);
+      return;
+    }
+    let cancelled = false;
+    const checkRoom = async () => {
+      try {
+        const res = await fetch(`/api/call/room/${roomId.toUpperCase()}`, { method: 'GET' });
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          // Room API returns passwordProtected: true if room has a password hash
+          setRoomRequiresPassword(!!data.passwordProtected);
+        } else {
+          // Room not found yet or error — don't show password field by default
+          setRoomRequiresPassword(false);
+        }
+      } catch {
+        setRoomRequiresPassword(false);
+      }
+    };
+    checkRoom();
+    return () => { cancelled = true; };
+  }, [roomId]);
 
   useEffect(() => {
     // Acquire local media for preview — triple-tier fallback for Android/iOS
@@ -195,21 +226,34 @@ export function JoinCallModal({ initialRoomId, initialPassword, onClose, onSucce
               />
             </div>
             
-            <div>
-              <label className="text-[10px] text-white/50 uppercase tracking-widest font-bold mb-2 block">Password <span className="lowercase text-[9px] font-normal tracking-normal opacity-70">(if required)</span></label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Key size={16} className="text-white/30" />
+            {/* Only show password field if the room actually requires one */}
+            {roomRequiresPassword === true && (
+              <div>
+                <label className="text-[10px] text-white/50 uppercase tracking-widest font-bold mb-2 block">Password <span className="text-[#ff9500] text-[9px] font-normal tracking-normal normal-case ml-1">🔒 Required</span></label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Key size={16} className="text-white/30" />
+                  </div>
+                  <input 
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter room password"
+                    className="w-full bg-black/50 border border-white/10 rounded-xl pl-10 pr-4 py-3.5 text-white focus:outline-none focus:border-white/30 transition-colors"
+                    autoFocus
+                    required
+                  />
                 </div>
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  className="w-full bg-black/50 border border-white/10 rounded-xl pl-10 pr-4 py-3.5 text-white focus:outline-none focus:border-white/30 transition-colors"
-                />
               </div>
-            </div>
+            )}
+            {/* Show a loading state while we check if the room needs a password */}
+            {roomRequiresPassword === null && roomId.length >= 6 && (
+              <div className="flex items-center gap-2 text-white/30 text-xs">
+                <Loader2 size={12} className="animate-spin" />
+                <span>Checking room...</span>
+              </div>
+            )}
+
 
             {error && (
               <div className="text-red-400 text-xs bg-red-400/10 p-3 rounded-lg border border-red-400/20 flex items-start gap-2">
