@@ -10,7 +10,12 @@ export async function POST(request: Request) {
         const { payload_type } = body;
 
         const vaultUrl = process.env.Private_VAULT_URL;
-        const vaultSecret = process.env.Private_VAULT_SECRET || 'Private_QUANTUM_KEY_777';
+        const vaultSecret = process.env.Private_VAULT_SECRET;
+
+        if (!vaultSecret) {
+            console.error('[VaultSync] Private_VAULT_SECRET env var not set — blocking request');
+            return NextResponse.json({ error: 'Vault not configured' }, { status: 500 });
+        }
 
         const authHeader = request.headers.get('authorization');
         if (authHeader !== `Bearer ${vaultSecret}`) {

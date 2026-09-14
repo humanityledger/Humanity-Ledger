@@ -565,24 +565,16 @@ export default async function RootLayout({
     if (isChunkError(msg)) {
       event.preventDefault();
       clearCachesAndReload();
-    } else {
-      var errDiv = document.createElement('div');
-      errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:red;color:white;z-index:999999;padding:20px;word-break:break-all;font-family:monospace;';
-      errDiv.innerHTML = '<b>Unhandled Promise Rejection:</b><br>' + msg + '<br>' + (event.reason && event.reason.stack ? event.reason.stack : '');
-      document.body.appendChild(errDiv);
     }
+    // Non-chunk errors: log to console only — do NOT show visible red divs in production
   });
 
   window.addEventListener('error', function(event) {
     var msg = (event.message || '') + ' ' + (event.filename || '') + ':' + (event.lineno || '');
     if (isChunkError(msg)) {
       clearCachesAndReload();
-    } else {
-      var errDiv = document.createElement('div');
-      errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:darkred;color:white;z-index:999999;padding:20px;word-break:break-all;font-family:monospace;';
-      errDiv.innerHTML = '<b>Global Error:</b><br>' + msg + '<br>' + (event.error && event.error.stack ? event.error.stack : '');
-      document.body.appendChild(errDiv);
     }
+    // Non-chunk errors: log to console only — do NOT show visible red divs in production
   }, true);
 
   // ?????? Nuclear Service Worker Purge ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????

@@ -15,6 +15,18 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Missing recoveryId or email' }, { status: 400 });
         }
 
+        // Validate recoveryId is UUID format to prevent path injection
+        const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!UUID_REGEX.test(recoveryId)) {
+            return NextResponse.json({ error: 'Invalid recovery ID format' }, { status: 400 });
+        }
+
+        // Validate email format
+        const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!EMAIL_REGEX.test(email)) {
+            return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+        }
+
         // 1. Find the guardian
         const guardian = await (prisma as any).guardian.findUnique({
             where: {
