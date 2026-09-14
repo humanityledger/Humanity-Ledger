@@ -556,42 +556,36 @@ export default async function RootLayout({
 
     }
 
+      }
+    }
   }
 
-
-
   window.addEventListener('unhandledrejection', function(event) {
-
     var msg = event.reason ? (event.reason.message || event.reason.name || String(event.reason) || '') : '';
-
     if (isChunkError(msg)) {
-
       event.preventDefault();
-
       clearCachesAndReload();
-
+    } else {
+      var errDiv = document.createElement('div');
+      errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:red;color:white;z-index:999999;padding:20px;word-break:break-all;font-family:monospace;';
+      errDiv.innerHTML = '<b>Unhandled Promise Rejection:</b><br>' + msg + '<br>' + (event.reason && event.reason.stack ? event.reason.stack : '');
+      document.body.appendChild(errDiv);
     }
-
   });
 
-
-
   window.addEventListener('error', function(event) {
-
-    var msg = (event.message || '') + (event.filename || '');
-
+    var msg = (event.message || '') + ' ' + (event.filename || '') + ':' + (event.lineno || '');
     if (isChunkError(msg)) {
-
       clearCachesAndReload();
-
+    } else {
+      var errDiv = document.createElement('div');
+      errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:darkred;color:white;z-index:999999;padding:20px;word-break:break-all;font-family:monospace;';
+      errDiv.innerHTML = '<b>Global Error:</b><br>' + msg + '<br>' + (event.error && event.error.stack ? event.error.stack : '');
+      document.body.appendChild(errDiv);
     }
-
   }, true);
 
-
-
   // ?????? Nuclear Service Worker Purge ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
-
   // If the user is stuck with a broken SW returning HTML for CSS (un-styled page)
 
   // or an old cached HTML, we force an unregister ONCE per session.
