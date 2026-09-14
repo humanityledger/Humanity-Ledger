@@ -2723,8 +2723,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       while (!cancelled) {
         try {
         const abortController = new AbortController();
-          const gen = [] as any; // streamMessages(client, abortController.signal);
-        for await (const msg of gen as any) {
+        const gen = await streamMessages(client, abortController.signal);
+        
+        for await (const msg of gen) {
           if (cancelled) { abortController.abort(); break; }
           
           const fromPeer = msg.senderInboxId !== selfInboxId;
@@ -3014,6 +3015,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             console.warn('[Chat] global stream failed:', e);
           }
           break; // exit while loop for non-recoverable errors
+        }
+        
+        // Critical safety: if stream closes cleanly but cancelled is false, 
+        // wait before restarting to prevent 100% CPU lock in a tight while loop.
+        if (!cancelled) {
+            await new Promise(resolve => setTimeout(resolve, 5000));
         }
       } // end while
     })();
