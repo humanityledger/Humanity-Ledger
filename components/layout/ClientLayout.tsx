@@ -39,9 +39,11 @@ const LinkedGate = dynamic(
 // Do NOT declare or render it here to prevent double-initialization.
 // 
 // 
-// Routes that don't need the gate (public / landing)
+// Routes that don't need the LinkedGate wrapper (public / self-auth)
+// /chat and /hub handle their own auth — wrapping them with LinkedGate causes
+// redirect loops and blank screen bugs.
 // 
-const PUBLIC_PREFIXES = ['/privacy', '/terms', '/connect', '/sign-up', '/login', '/news'];
+const PUBLIC_PREFIXES = ['/privacy', '/terms', '/connect', '/sign-up', '/login', '/news', '/chat', '/hub'];
 
 // 
 // Routes that must NOT get the legacy black Downhead footer

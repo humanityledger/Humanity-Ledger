@@ -28,7 +28,9 @@ export function TitaniumGate({ children, requiredTier = 'PRO' }: TitaniumGatePro
 
     // Pre-compute isPublicPage synchronously so we can use it as the initial state.
     // This prevents the loader flash on /connect after disconnect.
-    const initialIsPublicPage = ['/', '/connect', '/login', '/sign-up', '/terms', '/privacy', '/developers', '/forum', '/news'].some(
+    // NOTE: /chat and /hub handle their own auth internally — they must NEVER be
+    // gated here or TitaniumGate will render null causing a blank white screen.
+    const initialIsPublicPage = ['/', '/connect', '/login', '/sign-up', '/terms', '/privacy', '/developers', '/forum', '/news', '/chat', '/hub'].some(
         path => path === pathname || (path !== '/' && pathname?.startsWith(path))
     );
 
@@ -47,8 +49,9 @@ export function TitaniumGate({ children, requiredTier = 'PRO' }: TitaniumGatePro
         return () => clearTimeout(emergency);
     }, []);
     
-    // Strict Whitelist: ONLY connect, docs, terms, privacy, and developers are visible to unauthenticated users.
-    const isPublicPage = ['/', '/connect', '/login', '/sign-up', '/terms', '/privacy', '/developers', '/forum', '/news'].some(
+    // Strict Whitelist: connect, docs, terms, privacy, developers, chat and hub are always visible.
+    // /chat and /hub handle their own auth — TitaniumGate must not gate them.
+    const isPublicPage = ['/', '/connect', '/login', '/sign-up', '/terms', '/privacy', '/developers', '/forum', '/news', '/chat', '/hub'].some(
         path => path === pathname || (path !== '/' && pathname?.startsWith(path))
     );
 
