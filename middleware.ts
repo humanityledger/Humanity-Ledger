@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 /**
  * middleware.ts — Ledger Network Identity Perimeter
  * ─────────────────────────────────────────────────
@@ -44,6 +44,7 @@ const PUBLIC_PATHS = new Set([
   '/login',
   '/auth',
   '/connect',
+  '/chat',       // LedgerChat handles its own auth internally (XMTP + MetaMask)
   '/manifest.json',
   '/favicon.ico',
   '/robots.txt',
@@ -67,7 +68,11 @@ const PUBLIC_PREFIXES = [
   '/api/status',
   '/api/registry/',
   '/api/humanidfi/',
-  '/api/chat/users/search', // User discovery — can be called before full auth (contact search)
+  '/api/chat/',          // All chat API endpoints (contacts, messages, etc.)
+  '/api/call/',          // Group call room API
+  '/api/provenance/',    // Provenance log API called on XMTP connect
+  '/api/notifications/', // Notification inbox
+  '/api/chat/users/search',
   '/_next/',
   '/connect',
   '/legal/',
@@ -77,9 +82,9 @@ const PUBLIC_PREFIXES = [
   '/icons/',
   '/static/',
   '/opengraph',
-  '/scan',       // QR scanner — must be accessible on mobile without prior session (incognito QR link flow)
-  '/lottie/',    // Lottie animation JSON files (public assets)
-  '/sounds/',    // Audio assets
+  '/scan/',
+  '/lottie/',
+  '/sounds/',
 ];
 
 function isPublicPath(pathname: string): boolean {
