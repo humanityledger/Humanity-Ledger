@@ -1,4 +1,4 @@
-import Peer, { MediaConnection } from 'peerjs';
+import Peer, { MediaConnection, DataConnection } from 'peerjs';
 
 export type CallState = 'idle' | 'calling' | 'ringing' | 'connecting' | 'active';
 
@@ -18,11 +18,38 @@ export class WebRTCEngine {
   private myAddress: string;
   private localStream: MediaStream | null = null;
   private activeCalls: Map<string, MediaConnection> = new Map();
+  private dataConns: Map<string, DataConnection> = new Map();
   private participants: Map<string, Participant> = new Map();
   private telemetryInterval: NodeJS.Timeout | null = null;
 
   constructor(address: string) {
     this.myAddress = address;
+  }
+
+  public broadcastData(type: string, payload: any) {
+    const msg = { type, payload, senderAddress: this.myAddress, timestamp: Date.now() };
+    for (const conn of this.dataConns.values()) {
+      if (conn.open) {
+        conn.send(msg);
+      }
+    }
+  }
+
+  private setupDataConnection(conn: DataConnection) {
+    conn.on('open', () => {
+      this.dataConns.set(conn.peer, conn);
+    });
+    conn.on('data', (data: any) => {
+      if (data && data.type) {
+        this.emit('webrtc_data_message', data);
+      }
+    });
+    conn.on('close', () => {
+      this.dataConns.delete(conn.peer);
+    });
+    conn.on('error', () => {
+      this.dataConns.delete(conn.peer);
+    });
   }
 
   private startTelemetry() {
@@ -107,6 +134,10 @@ export class WebRTCEngine {
       },
     });
 
+    this.peer.on('connection', (conn) => {
+      this.setupDataConnection(conn);
+    });
+
     this.peer.on('call', (call) => {
       const incomingAddress = this.peerIdToAddress(call.peer);
       if (this.localStream && this.activeCalls.size > 0) {
@@ -114,6 +145,9 @@ export class WebRTCEngine {
         call.answer(this.localStream);
         this._trackCall(call, incomingAddress);
         this.activeCalls.set(incomingAddress, call);
+        // Also connect data channel back
+        const dataConn = this.peer!.connect(call.peer);
+        this.setupDataConnection(dataConn);
       } else {
         this.emit('webrtc_incoming_call', { call, fromAddress: incomingAddress });
       }
@@ -170,6 +204,9 @@ export class WebRTCEngine {
     const call = this.peer.call(targetPeerId, localStream, {
       metadata: { callerAddress: this.myAddress, isVideo, isGroup: this.activeCalls.size > 0 },
     });
+
+    const dataConn = this.peer.connect(targetPeerId);
+    this.setupDataConnection(dataConn);
 
     this._trackCall(call, targetAddress);
     this.activeCalls.set(targetAddress, call);

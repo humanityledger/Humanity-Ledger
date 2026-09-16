@@ -53,6 +53,7 @@ const PUBLIC_PATHS = new Set([
 
 const PUBLIC_PREFIXES = [
   '/api/auth/',
+  '/api/metrics/',
   '/api/aztec/airdrop',
   '/api/aztec/balance',
   '/api/aztec/transactions',

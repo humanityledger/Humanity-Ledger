@@ -374,14 +374,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [pinnedMessageId, setPinnedMessageId] = useState<string | null>(null); // Phase 3: Pinned
   const [burnTimer, setBurnTimer] = useState<number | null>(null); // Phase 3: Self-Destruct TTL
   
-    const { messages, sendMessage: engineSendMessage, startCall: engineStartCall, endCall: engineEndCall, setActivePeer: engineSetActivePeer } = useChatEngine();
-    // Dummy setMessages to prevent old effects (like burnTimer) from crashing the syntax or runtime
-    const setMessages = (updater: any) => { console.log('setMessages bypassed by Quantum Engine'); };
+    const [messages, setMessages] = useState<any[]>([]);
 
-    // [AEGIS AUDIT FIX] Sync local activePeer with Quantum Engine
-    useEffect(() => {
-        if (activePeer) engineSetActivePeer(activePeer);
-    }, [activePeer, engineSetActivePeer]);
+    const engineSendMessage = async (to: string, text: string) => {
+      if (!client || !address) throw new Error('Client not ready');
+      await sendMessage(client, to, text, address);
+    };
     
 
 
@@ -1711,11 +1709,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       }
     };
     
-    window.addEventListener('webrtc_participants_updated', handleParticipantsUpdated);
+    const handleBroadcastReq = (e: any) => { webrtcEngineRef.current?.broadcastData(e.detail.type, e.detail.payload); };
+      window.addEventListener('webrtc_broadcast_request', handleBroadcastReq);
+      window.addEventListener('webrtc_participants_updated', handleParticipantsUpdated);
     window.addEventListener('webrtc_call_ended', handleCallEnded);
     window.addEventListener('webrtc_telemetry', handleTelemetry);
     return () => {
-      window.removeEventListener('webrtc_participants_updated', handleParticipantsUpdated);
+      window.removeEventListener('webrtc_broadcast_request', handleBroadcastReq);
+        window.removeEventListener('webrtc_participants_updated', handleParticipantsUpdated);
       window.removeEventListener('webrtc_call_ended', handleCallEnded);
       window.removeEventListener('webrtc_telemetry', handleTelemetry);
     };
@@ -3537,7 +3538,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       return;
 
     } catch (err: any) {
-      throw err;
       // On failure, keep the message but mark it as failed so the user knows what happened
       optimisticContentMap.current.delete(finalContent);
       const errString = err?.message || String(err);
@@ -3771,32 +3771,45 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   //  Loading / Auto-init state 
   if (!client) {
     return (
-      <div className="flex-1 flex flex-col h-full bg-white items-center justify-start p-6 pt-12 relative overflow-hidden">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-black/5 blur-[100px] rounded-full pointer-events-none" />
+      <div key="ledger-loading-ui" className="flex-1 flex flex-col h-full bg-[#050505] items-center justify-center p-6 relative overflow-hidden">
+        {/* Animated Background Gradients */}
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#34C759]/20 blur-[120px] rounded-full pointer-events-none animate-pulse" style={{ animationDuration: "4s" }} />
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-blue-500/20 blur-[100px] rounded-full pointer-events-none animate-pulse" style={{ animationDuration: "5s", animationDelay: "1s" }} />
 
-        <div className="relative z-10 w-full max-w-md bg-white border border-[#EBEBEB] shadow-2xl rounded-3xl p-10 flex flex-col items-center">
+        <div className="relative z-10 w-full max-w-sm bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-[0_0_80px_rgba(52,199,89,0.1)] rounded-[40px] p-10 flex flex-col items-center">
           
-          <div className="w-20 h-20 rounded-full border border-[#EBEBEB] bg-white flex items-center justify-center shadow-sm mb-8">
-            {isInitializing ? (
-              <div className="w-8 h-8 rounded-full border-2 border-black/10 border-t-black animate-spin" />
-            ) : (
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-black">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-              </svg>
+          {/* Elegant Scanner Animation */}
+          <div className="relative w-28 h-28 mb-10 flex items-center justify-center">
+            {isInitializing && (
+              <>
+                <div className="absolute inset-0 rounded-full border border-[#34C759]/30 animate-[spin_3s_linear_infinite]" />
+                <div className="absolute inset-2 rounded-full border border-blue-500/30 animate-[spin_4s_linear_infinite_reverse]" />
+                <div className="absolute inset-4 rounded-full border-t border-[#34C759] animate-[spin_1.5s_ease-in-out_infinite]" />
+              </>
             )}
+            <div className={`w-16 h-16 rounded-full bg-gradient-to-tr from-[#34C759] to-[#20a040] shadow-[0_0_30px_rgba(52,199,89,0.4)] flex items-center justify-center ${isInitializing ? "animate-pulse" : ""}`}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </div>
           </div>
 
-          <h2 className="text-[28px] font-black tracking-tight text-black mb-3 text-center">
-            Zero Knowledge <br /> <span className="text-black/30">Transport.</span>
-          </h2>
+          <div className="flex flex-col items-center gap-2 mb-6">
+            <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/40">SECURE CONNECTION</span>
+            <h2 className="text-[18px] font-light tracking-wide text-white text-center">
+              Entering <span className="font-medium">Ledger Chat</span><span className="animate-pulse">...</span>
+            </h2>
+          </div>
           
-          <p className="text-[14px] font-medium text-[#555] text-center leading-[1.6] mb-6 max-w-[280px]">
-            {isWaitingForSignature 
-              ? <span className="text-blue-600 font-bold">Please open MetaMask and sign the request now...</span> 
-              : isInitializing 
-                ? "Connecting to encrypted network. Check MetaMask for a signature request." 
-                : "Activate your cryptographic identity to access the sovereign network."}
-          </p>
+          <div className="h-[60px] flex items-center justify-center">
+            <p className="text-[13px] font-medium text-white/50 text-center leading-relaxed">
+              {isWaitingForSignature 
+                ? <span className="text-[#34C759] font-bold animate-pulse">Signature Required in MetaMask...</span> 
+                : isInitializing 
+                  ? <span>Connecting to encrypted network...</span> 
+                  : <span>Activate your cryptographic identity.</span>}
+            </p>
+          </div>
 
           {/* Shown after 4s if still loading — prevents permanent freeze */}
           {isInitTimeout && isInitializing && (
@@ -4032,7 +4045,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     <audio ref={ringAudioRef} loop playsInline x-webkit-airplay="allow" src="/sounds/call_ringtone.mp3" style={{ display: 'none' }} />
 
     {/* Solid white container — two-panel layout: sidebar (left) + chat (right) */}
-      <div className={`relative flex flex-row flex-1 min-h-0 w-full overflow-hidden shadow-sm ${(showScanner || showMyQR || showProfile) ? 'overflow-visible' : ''}`} style={{ 
+      <div key="ledger-main-ui" className={`relative flex flex-row flex-1 min-h-0 w-full overflow-hidden shadow-sm ${(showScanner || showMyQR || showProfile) ? 'overflow-visible' : ''}`} style={{ 
       borderRadius: isMobile ? 0 : '0',
       ...bgStyle,
       fontFamily,
