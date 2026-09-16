@@ -251,7 +251,6 @@ export function GroupCallRoom({
           </motion.div>
         )}
 </AnimatePresence>
-      </div>
 
       {/* Room Info Modal */}
       <AnimatePresence>
@@ -292,7 +291,6 @@ export function GroupCallRoom({
           </motion.div>
         )}
 </AnimatePresence>
-      </div>
 
       {/* Video Grid */}
       <div className="flex-1 p-4 flex items-center justify-center pt-24 pb-32" onClick={() => setActiveMenu(null)}>
@@ -435,7 +433,6 @@ export function GroupCallRoom({
         )}
 </AnimatePresence>
       </div>
-      </div>
       {/* Chat Sidebar */}
       {showChat && (
         <div className="absolute right-0 top-0 bottom-0 w-[380px] max-w-full bg-white border-l border-black/10 flex flex-col z-[2000] shadow-2xl animate-in slide-in-from-right">
@@ -465,4 +462,5 @@ export function GroupCallRoom({
     </div>
   );
 }
+
 
