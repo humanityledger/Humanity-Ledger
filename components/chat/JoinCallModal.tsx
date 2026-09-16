@@ -64,10 +64,10 @@ export function JoinCallModal({ initialRoomId, initialPassword, onClose, onSucce
       try {
         // Tier 1: Full video+audio
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: !isCameraOff ? { facingMode: 'user' } : false,
+          video: { facingMode: 'user' },
           audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 48000 },
         });
-        stream.getAudioTracks().forEach(t => { t.enabled = !isMuted; });
+        if (isCameraOff) { stream.getVideoTracks().forEach(t => { t.enabled = false; }); } stream.getAudioTracks().forEach(t => { t.enabled = !isMuted; });
         setLocalStream(stream);
         if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (videoErr: any) {
@@ -276,3 +276,4 @@ export function JoinCallModal({ initialRoomId, initialPassword, onClose, onSucce
     </div>
   );
 }
+

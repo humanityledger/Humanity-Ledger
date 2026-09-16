@@ -62,7 +62,7 @@ const VideoStream = ({ stream, isLocal, muted, isSpeaking }: { stream: MediaStre
         autoPlay
         playsInline
         muted={isLocal || muted}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isLocal ? 'scale-x-[-1]' : ''} ${hasVideo ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${isLocal ? 'scale-x-[-1]' : ''} ${hasVideo ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       />
       
       {/* Audio-only avatar fallback */}
@@ -462,5 +462,7 @@ export function GroupCallRoom({
     </div>
   );
 }
+
+
 
 

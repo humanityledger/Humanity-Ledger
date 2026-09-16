@@ -10,7 +10,7 @@ const LedgerChat = dynamic(
 export default function ChatPage() {
   return (
     <ChatEngineProvider>
-      <div className="flex flex-col w-full h-full min-h-0 overflow-hidden bg-white">
+      <div className="flex flex-col w-full h-[100dvh] min-h-0 overflow-hidden bg-white">
         <LedgerChat forceAutoInit={true} />
       </div>
     </ChatEngineProvider>
