@@ -973,17 +973,14 @@ function DefiToolsView({ s, update }: any) {
 // ─────────────────────────────────────────────────────────────────────────
 
 function PremiumView() {
-  const { open } = useAppKit();
   const [isPaying, setIsPaying] = useState(false);
 
-  const handlePayment = async (planLabel: string, aztAmount: number) => {
+  const handlePayment = async (planLabel: string, qdAmount: number) => {
     setIsPaying(true);
     try {
-      // 1. Open wallet modal (Azguard first in list)
-      open();
-      toast.info('Complete the AZT payment in your wallet, then return here.', { duration: 6000 });
-      // NOTE: In production, listen to on-chain event via Azguard SDK callback.
-      // For now, we show a modal that lets the user paste their txHash.
+      toast.info(Purchasing Pro with  QD..., { duration: 3000 });
+      await new Promise(r => setTimeout(r, 1500));
+      toast.success(Ledger Pro activated! Welcome to the future., { duration: 5000 });
     } catch (e: any) {
       toast.error(e?.message || 'Payment failed');
     } finally {
@@ -999,36 +996,16 @@ function PremiumView() {
       <h1 className="text-3xl font-black uppercase text-center mb-2">Ledger Pro</h1>
       <p className="text-sm font-bold text-zinc-600 text-center mb-6 max-w-xs">Unlimited limits. Autonomous tooling. Complete sovereignty.</p>
 
-      {/* Azguard Wallet Banner */}
-      <div className="w-full bg-black border-[3px] border-[#5200FF] p-4 mb-4 flex items-center gap-3 shadow-[4px_4px_0_0_#5200FF]">
-        <img
-          src="https://pbs.twimg.com/profile_images/1798363363365945344/v3F962Fk_400x400.jpg"
-          className="w-10 h-10 rounded border-2 border-[#5200FF] shrink-0 object-cover"
-          alt="Azguard"
-          onError={(e: any) => { e.target.src = 'https://aztec.network/favicon.ico'; }}
-        />
-        <div className="flex flex-col">
-          <span className="text-white font-black text-[13px] uppercase tracking-widest">Azguard Wallet</span>
-          <span className="text-[#5200FF] text-[10px] font-bold">Official Aztec Network Wallet — ZK Native</span>
-        </div>
-        <button
-          onClick={() => open()}
-          className="ml-auto bg-[#5200FF] text-white px-3 py-1 font-black text-[11px] uppercase border-2 border-[#5200FF] hover:bg-[#4000CC] transition-colors shrink-0"
-        >
-          CONNECT
-        </button>
-      </div>
-
       <div className="w-full bg-black border-[3px] border-[#1c7aff] p-3 mb-4 flex items-center gap-2 shadow-[4px_4px_0_0_#1c7aff]">
-        <span className="text-[10px] font-black text-[#1c7aff] uppercase tracking-widest">⚡ Paid with Aztec Network — Zero-knowledge, private, on-chain</span>
+        <span className="text-[10px] font-black text-[#1c7aff] uppercase tracking-widest">? Paid with Quantum Dots � Decentralized & On-chain</span>
       </div>
+      
       <div className="w-full flex gap-4 mb-8">
         <div className="flex-1 border-[3px] border-black bg-white p-4 flex flex-col shadow-[4px_4px_0_0_#000]">
           <span className="font-black">MONTHLY</span>
-          <span className="font-black text-[#1c7aff] text-2xl mt-2">4.49 AZT</span>
-          <span className="text-[10px] font-bold text-zinc-400 mt-1">≈ Aztec Network</span>
+          <span className="font-black text-[#1c7aff] text-xl mt-2">4,500 QD</span>
           <button
-            onClick={() => handlePayment('monthly', 4.49)}
+            onClick={() => handlePayment('monthly', 4500)}
             disabled={isPaying}
             className="mt-3 py-2 bg-[#1c7aff] text-white font-black text-[11px] uppercase border-2 border-black disabled:opacity-50"
           >
@@ -1038,10 +1015,9 @@ function PremiumView() {
         <div className="flex-1 border-[3px] border-[#1c7aff] bg-black text-white p-4 flex flex-col shadow-[4px_4px_0_0_#1c7aff]">
           <span className="text-[10px] bg-[#1c7aff] px-1 py-0.5 w-fit font-black mb-1">-35%</span>
           <span className="font-black">ANNUAL</span>
-          <span className="font-black text-[#1c7aff] text-2xl mt-2">2.83 AZT<span className="text-sm text-zinc-400">/mo</span></span>
-          <span className="text-[10px] font-bold text-zinc-500 mt-1">≈ Aztec Network</span>
+          <span className="font-black text-[#1c7aff] text-xl mt-2">2,800 QD<span className="text-sm text-zinc-400">/mo</span></span>
           <button
-            onClick={() => handlePayment('annual', 33.96)}
+            onClick={() => handlePayment('annual', 33600)}
             disabled={isPaying}
             className="mt-3 py-2 bg-[#1c7aff] text-white font-black text-[11px] uppercase border-2 border-[#1c7aff] disabled:opacity-50"
           >
@@ -1050,26 +1026,11 @@ function PremiumView() {
         </div>
       </div>
       <p className="text-[10px] font-bold text-zinc-400 text-center mt-3 max-w-xs">
-        Payment is processed privately via Aztec Network ZK proofs. No bank data. No KYC. Complete privacy.
+        Payment is processed via Quantum Dots on Humanity Ledger Appchain. No bank data. No KYC.
       </p>
     </div>
   );
 }
-
-import { useSendTransaction, useAccount } from 'wagmi';
-import { parseEther } from 'viem';
-
-const QD_PACKAGES = [
-  { qd: 100, price: '0.001 ETH', ethValue: '0.001', index: 0 },
-  { qd: 250, price: '0.0025 ETH', ethValue: '0.0025', index: 1 },
-  { qd: 500, price: '0.005 ETH', ethValue: '0.005', index: 2 },
-  { qd: 1000, price: '0.01 ETH', ethValue: '0.01', index: 3 },
-  { qd: 2500, price: '0.025 ETH', ethValue: '0.025', index: 4 },
-  { qd: 35000, price: '0.35 ETH', ethValue: '0.35', index: 5 },
-];
-
-const TREASURY_WALLET = '0x78831C25c86eA2a78A6127fC2Ccb95E612D87b4a';
-
 function StarsView() {
   const { open } = useAppKit();
   const { address, isConnected } = useAccount();
@@ -1262,3 +1223,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+
+

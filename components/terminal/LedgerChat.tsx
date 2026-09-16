@@ -2936,7 +2936,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 // Strategy 1: look up by content key in optimisticContentMap
                 const knownOptId = optimisticContentMap.current.get(content);
                 if (knownOptId) {
-                  optimisticContentMap.current.delete(finalContent); // consume the entry
+                  optimisticContentMap.current.delete(content); // consume the entry
                   const idx = prev.findIndex(m => m.id === knownOptId);
                   if (idx !== -1) {
                     const next = [...prev];
@@ -3619,7 +3619,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       reader.onloadend = () => {
         const base64data = reader.result as string;
         const msg = `[ATTACHMENT:${file.type || 'application/octet-stream'}]${base64data}|${file.name}`;
-        executeSend(msg);
+        executeSendRef.current?.(msg);
         setIsUploading(false);
         if (fileRef.current) fileRef.current.value = '';
       };
@@ -3701,7 +3701,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (!file || !client || !activePeer || !address) return;
     const payload = await uploadAttachment(file, file.name);
     if (payload) {
-      await executeSend(payload);
+      await executeSendRef.current?.(payload);
     }
   };
 
@@ -5722,7 +5722,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    if (!pollQuestion.trim() || validOpts.length < 2) return;
                    const pollId = `poll_${Date.now()}`;
                    const payload = `__POLL__${pollId}__::${pollQuestion.trim()}__::${validOpts.join('|')}`;
-                   executeSend(payload);
+                   executeSendRef.current?.(payload);
                    setShowPollCreator(false);
                    setPollQuestion('');
                    setPollOptions(['', '']);
@@ -5879,6 +5879,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
+
 
 
 
