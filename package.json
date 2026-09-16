@@ -13,7 +13,8 @@
     "build:ipfs": "cross-env IPFS_BUILD=true next build",
     "build:railway": "npx tailwindcss -i ./app/globals.css -o ./app/globals-compiled.css && echo 'LEGENDARY_BUILD_777' && prisma generate && prisma db push --accept-data-loss && cross-env NODE_OPTIONS=\"--max-old-space-size=4096\" next build",
     "build:contracts": "npx hardhat compile",
-    "deploy:phase5": "npx hardhat run scripts/deployPhase5.ts --network baseSepolia",`n    "deploy:deadman": "npx hardhat run scripts/deploy-deadman-switch.js --network polygonAmoy",
+    "deploy:phase5": "npx hardhat run scripts/deployPhase5.ts --network baseSepolia",
+    "deploy:deadman": "npx hardhat run scripts/deploy-deadman-switch.js --network polygonAmoy",
     "deploy:deadman:mainnet": "npx hardhat run scripts/deploy-deadman-switch.js --network polygon",
     "build:extension": "node scripts/extension-build.js",
     "cap:sync": "npx cap sync",
@@ -349,3 +350,4 @@
     "vitest": "^2.1.0"
   }
 }
+
