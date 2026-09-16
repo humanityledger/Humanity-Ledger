@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useAccount, useBalance, useEnsName, useDisconnect } from 'wagmi';
+import { useHumanityAppchain } from '@/hooks/useHumanityAppchain';
 import { useRouter } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -235,6 +236,7 @@ function IdentityPanel() {
   const { address, connector, chainId } = useAccount();
   const { data: balance } = useBalance({ address });
   const { data: ens } = useEnsName({ address, chainId: 1 });
+  const { isReady, systemConfig } = useHumanityAppchain();
   const { disconnect } = useDisconnect();
   const router = useRouter();
   const [time, setTime] = useState('');
@@ -266,7 +268,7 @@ function IdentityPanel() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 sm:gap-4">
         {/* Clock */}
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-black/40 mb-1">Session Active</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-black/40 mb-1">Appchain: {isReady ? "CONNECTED" : "SYNCING"}</p>
           <p className="font-mono text-[24px] sm:text-[28px] font-bold text-black tracking-tight tabular-nums leading-none">{time}</p>
           <p className="font-mono text-[11px] text-black/40 mt-1.5">{date}</p>
         </div>
@@ -330,3 +332,4 @@ export function AppLauncherHub() {
     </div>
   );
 }
+
