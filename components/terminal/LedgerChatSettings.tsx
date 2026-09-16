@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -978,9 +978,9 @@ function PremiumView() {
   const handlePayment = async (planLabel: string, qdAmount: number) => {
     setIsPaying(true);
     try {
-      toast.info(Purchasing Pro with QD..., { duration: 3000 });
+      toast.info('Purchasing Pro with QD...', { duration: 3000 });
       await new Promise(r => setTimeout(r, 1500));
-      toast.success(Ledger Pro activated! Welcome to the future., { duration: 5000 });
+      toast.success('Ledger Pro activated! Welcome to the future.', { duration: 5000 });
     } catch (e: any) {
       toast.error(e?.message || 'Payment failed');
     } finally {
