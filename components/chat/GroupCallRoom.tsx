@@ -435,6 +435,7 @@ export function GroupCallRoom({
         )}
 </AnimatePresence>
       </div>
+      </div>
       {/* Chat Sidebar */}
       {showChat && (
         <div className="absolute right-0 top-0 bottom-0 w-[380px] max-w-full bg-white border-l border-black/10 flex flex-col z-[2000] shadow-2xl animate-in slide-in-from-right">
