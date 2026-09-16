@@ -77,7 +77,7 @@ export function useHumanityAppchain() {
   });
 
   return {
-    isReady: !!systemConfig,
+    isReady: !!systemConfig || !CORE_CONTRACT_ADDRESS,
     systemConfig,
     registerIdentity,
     sendOnChainMessage,
