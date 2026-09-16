@@ -7,7 +7,8 @@ import { parseAbi } from 'viem';
  * bypassing the old PostgreSQL Prisma database completely.
  */
 const CORE_ABI = parseAbi([
-  'function getSystemConfiguration() view returns (address, address, address, address, address)',
+  // Phase 1 + 3 + 4 Omni-Signature
+  'function getSystemConfiguration() view returns (address, address, address, address, address, address, address, address, address, address)',
   'function identityRegistry() view returns (address)',
   'function paymaster() view returns (address)',
 ]);
@@ -21,6 +22,14 @@ const CHAT_ABI = parseAbi([
   'function createRoom(bytes32 _roomId, string _name, string _encryptedKey) external',
   'function joinRoom(bytes32 _roomId) external',
   'function sendMessage(bytes32 _roomId, string _encryptedContent) external',
+]);
+
+const ACADEMY_ABI = parseAbi([
+  'function submitLesson(bytes32 _courseId, bytes32 _lessonId, string _ipfsProof) external',
+]);
+
+const VAULT_ABI = parseAbi([
+  'function pingHeartbeat() external',
 ]);
 
 // This address will be set once the core is deployed to the Humanity Appchain (L2)
@@ -39,18 +48,32 @@ export function useHumanityAppchain() {
     functionName: 'getSystemConfiguration',
   });
 
-  // 2. Identity Registration (Replaces /api/auth/register)
+  // 2. Identity Registration
   const { writeAsync: registerIdentity } = useContractWrite({
     address: systemConfig?.[0], // Identity Registry Address
     abi: IDENTITY_ABI,
     functionName: 'registerIdentity',
   });
 
-  // 3. Decentralized Chat (Replaces WebSockets)
+  // 3. Decentralized Chat
   const { writeAsync: sendOnChainMessage } = useContractWrite({
     address: systemConfig?.[2], // Ledger Chat Address
     abi: CHAT_ABI,
     functionName: 'sendMessage',
+  });
+
+  // 4. Academy Submissions
+  const { writeAsync: submitLesson } = useContractWrite({
+    address: systemConfig?.[6], // Academy Core Address
+    abi: ACADEMY_ABI,
+    functionName: 'submitLesson',
+  });
+
+  // 5. Vault Heartbeat
+  const { writeAsync: pingVaultHeartbeat } = useContractWrite({
+    address: systemConfig?.[7], // TimeLockVault Address
+    abi: VAULT_ABI,
+    functionName: 'pingHeartbeat',
   });
 
   return {
@@ -58,6 +81,7 @@ export function useHumanityAppchain() {
     systemConfig,
     registerIdentity,
     sendOnChainMessage,
-    // Add logic here to wrap transactions in ERC-4337 UserOps using the Paymaster
+    submitLesson,
+    pingVaultHeartbeat
   };
 }
