@@ -122,7 +122,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
   );
 
   return (
-    <div className="fixed inset-0 z-[999999] bg-[#050505] overflow-y-auto font-sans">
+    <div className="fixed inset-0 z-[999999] bg-[#F6F7F9] overflow-y-auto font-sans">
       <div className="min-h-full flex flex-col items-center justify-center py-8 px-4 sm:px-6">
       <motion.div 
         initial={{ opacity: 0, y: 30 }}
@@ -358,7 +358,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
               <button 
                 onClick={handleFinish}
                 disabled={isSubmitting}
-                className="w-full py-4 bg-[#050505] hover:bg-black/80 rounded-2xl text-white font-black text-[16px] flex items-center justify-center transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
+                className="w-full py-4 bg-[#F6F7F9] hover:bg-black/80 rounded-2xl text-white font-black text-[16px] flex items-center justify-center transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
               >
                 {isSubmitting ? 'Finalizing...' : 'Enter LedgerChat'}
               </button>
