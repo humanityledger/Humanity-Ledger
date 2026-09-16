@@ -997,7 +997,7 @@ function PremiumView() {
       <p className="text-sm font-bold text-zinc-600 text-center mb-6 max-w-xs">Unlimited limits. Autonomous tooling. Complete sovereignty.</p>
 
       <div className="w-full bg-black border-[3px] border-[#1c7aff] p-3 mb-4 flex items-center gap-2 shadow-[4px_4px_0_0_#1c7aff]">
-        <span className="text-[10px] font-black text-[#1c7aff] uppercase tracking-widest">? Paid with Quantum Dots — Decentralized & On-chain</span>
+        <span className="text-[10px] font-black text-[#1c7aff] uppercase tracking-widest">? Paid with Quantum Dots ï¿½ Decentralized & On-chain</span>
       </div>
       
       <div className="w-full flex gap-4 mb-8">
