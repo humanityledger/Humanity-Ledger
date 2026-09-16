@@ -124,8 +124,8 @@ export function GroupCallRoom({
     const current = participants.map(p => p.address);
     const joined = current.filter(a => !prevParticipantsRef.current.includes(a));
     const left = prevParticipantsRef.current.filter(a => !current.includes(a));
-    joined.forEach(a => setChatMessages(prev => [...prev, { sender: 'System', text: ${a.slice(0,6)}... just joined, time: Date.now(), isSystem: true }]));
-    left.forEach(a => setChatMessages(prev => [...prev, { sender: 'System', text: ${a.slice(0,6)}... left, time: Date.now(), isSystem: true }]));
+    joined.forEach(a => setChatMessages(prev => [...prev, { sender: 'System', text: `${a.slice(0,6)}... just joined`, time: Date.now(), isSystem: true }]));
+    left.forEach(a => setChatMessages(prev => [...prev, { sender: 'System', text: `${a.slice(0,6)}... left`, time: Date.now(), isSystem: true }]));
     prevParticipantsRef.current = current;
   }, [participants]);
 
