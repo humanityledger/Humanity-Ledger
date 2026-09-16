@@ -56,9 +56,10 @@ export default function ChatError({
         <h1 className="text-[18px] font-black text-black tracking-tight mb-2">
           Chat Unavailable
         </h1>
-        <p className="text-[12px] text-black/40 leading-relaxed mb-6">
-          Ledger Chat encountered a module error. Your messages are safe. This
-          is a client-side rendering issue.
+        <p className="text-[12px] text-red-500 leading-relaxed mb-6 font-mono text-left break-words overflow-hidden whitespace-pre-wrap">
+          {error.message}
+          <br/>
+          {error.stack}
         </p>
         {error.digest && (
           <div className="w-full bg-black/[0.03] rounded-xl border border-black/5 p-3 mb-6 text-left">
