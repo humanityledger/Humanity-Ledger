@@ -604,8 +604,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // Offline Queue State
   const [isOffline, setIsOffline] = useState(false);
   const [hasAcceptedEula, setHasAcceptedEula] = useState(false);
-  const [isOnboarded, setIsOnboarded] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('ledger_onboarded_' + (effectiveAddress || '0x0')) === 'true' : false);
+  const [isOnboarded, setIsOnboarded] = useState(false);
   const [hasMediaPermission, setHasMediaPermission] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsOnboarded(localStorage.getItem('ledger_onboarded_' + (effectiveAddress || '0x0')) === 'true');
+    }
+  }, [effectiveAddress]);
   const [pendingCallType, setPendingCallType] = useState<'audio' | 'video' | 'answer' | null>(null);
 
 
