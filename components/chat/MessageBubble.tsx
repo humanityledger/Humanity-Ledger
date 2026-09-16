@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
@@ -24,13 +24,13 @@ export interface MessageProps {
   onJoinGroupCall?: (roomId: string, password: string) => void;
 }
 
-// iOS-safe spring — no conflicting scale, pure translate
+// iOS-safe spring â€” no conflicting scale, pure translate
 const SPRING = { type: 'spring', stiffness: 420, damping: 36, mass: 0.9 } as const;
 // Sticker list
-export const STICKERS = ['🔥','💎','🐋','⚡','🌊','🦋','🌙','✨','🎯','🚀','💫','🎭','🏆','💡','🌍','😂','😭','🥺','😍','🙏','💯','👀','🫡','🤝','🎉'];
-const TAPBACKS = ['❤️', '👍', '👎', '😂', '‼️', '?'];
+export const STICKERS = ['ðŸ”¥','ðŸ’Ž','ðŸ‹','âš¡','ðŸŒŠ','ðŸ¦‹','ðŸŒ™','âœ¨','ðŸŽ¯','ðŸš€','ðŸ’«','ðŸŽ­','ðŸ†','ðŸ’¡','ðŸŒ','ðŸ˜‚','ðŸ˜­','ðŸ¥º','ðŸ˜','ðŸ™','ðŸ’¯','ðŸ‘€','ðŸ«¡','ðŸ¤','ðŸŽ‰'];
+const TAPBACKS = ['â¤ï¸', 'ðŸ‘', 'ðŸ‘Ž', 'ðŸ˜‚', 'â€¼ï¸', '?'];
 
-// ─── Poll Bubble ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Poll Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PollBubble = React.memo(({ content, msg, isMe, onVotePoll, clientInboxId }: {
   content: string; msg: any; isMe: boolean;
   onVotePoll?: (pollId: string, idx: number) => void;
@@ -40,7 +40,7 @@ const PollBubble = React.memo(({ content, msg, isMe, onVotePoll, clientInboxId }
   const withoutPrefix = content.replace('__POLL__', '');
   const parts = withoutPrefix.split('__::');
   // [CRITICAL FIX] Poll ID is the deterministic ID in parts[0], NOT msg.id.
-  // msg.id changes from optimistic→real when XMTP confirms. parts[0] is stable.
+  // msg.id changes from optimisticâ†’real when XMTP confirms. parts[0] is stable.
   const pollId = parts[0] || msg.id;
   const question = parts[1] || 'Poll';
   const options = (parts[2] || '').split('|').filter(Boolean);
@@ -101,7 +101,7 @@ const PollBubble = React.memo(({ content, msg, isMe, onVotePoll, clientInboxId }
 });
 PollBubble.displayName = 'PollBubble';
 
-// ─── Payment Bubble ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Payment Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
   const raw = content.replace('__PAYMENT__::', '');
   let amount = '?', recipient = '';
@@ -120,14 +120,14 @@ const PaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: bo
           <span className={`text-[11px] font-bold uppercase tracking-widest ${isMe ? 'text-white/80' : 'text-[#30d158]'}`}>QD Transfer</span>
         </div>
         <p className={`text-[22px] font-black tracking-tight ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>{amount} <span className="text-[14px] font-semibold opacity-70">QDs</span></p>
-        {recipient && <p className={`text-[11px] font-mono ${isMe ? 'text-white/60' : 'text-black/40'}`}>→ {recipient}</p>}
+        {recipient && <p className={`text-[11px] font-mono ${isMe ? 'text-white/60' : 'text-black/40'}`}>â†’ {recipient}</p>}
       </div>
     </div>
   );
 });
 PaymentBubble.displayName = 'PaymentBubble';
 
-// ─── Call Offer Bubble ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Call Offer Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CallOfferBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
   const isVideo = content.includes(':video');
   return (
@@ -156,15 +156,15 @@ const GroupCallBubble = React.memo(({ content, isMe, onJoinGroupCall }: { conten
         </div>
         <div className="flex flex-col">
           <span className={`text-[13px] font-semibold ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>
-            {isPrivate ? '🔒 Private Group Call' : 'Group Call Started'}
+            {isPrivate ? 'ðŸ”’ Private Group Call' : 'Group Call Started'}
           </span>
           <span className={`text-[11px] font-mono tracking-widest ${isMe ? 'text-white/80' : 'text-black/50'}`}>{roomId}</span>
         </div>
       </div>
-      {/* Password display — shown to both creator and recipient so they can join */}
+      {/* Password display â€” shown to both creator and recipient so they can join */}
       {isPrivate && (
         <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${isMe ? 'bg-white/15' : 'bg-black/5'}`}>
-          <span className="text-[10px]">🔑</span>
+          <span className="text-[10px]">ðŸ”‘</span>
           <div className="flex flex-col">
             <span className={`text-[9px] uppercase tracking-widest font-bold ${isMe ? 'text-white/50' : 'text-black/30'}`}>Password</span>
             <span className={`text-[13px] font-mono font-bold tracking-wider ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>{pwd}</span>
@@ -173,7 +173,7 @@ const GroupCallBubble = React.memo(({ content, isMe, onJoinGroupCall }: { conten
       )}
       <button
         onClick={() => onJoinGroupCall ? onJoinGroupCall(roomId, pwd) : (window.location.href = `/chat?joinRoom=${roomId}&pwd=${encodeURIComponent(pwd)}`)}
-        className="mt-1 w-full flex items-center justify-center py-2 rounded-xl bg-[#34C759] text-white font-bold text-xs hover:bg-[#30b551] active:scale-95 transition-all"
+        className={`mt-1 w-full flex items-center justify-center py-2 rounded-xl font-bold text-xs hover:bg-[#30b551] active:scale-95 transition-all ${isMe ? "bg-white text-[#34C759]" : "bg-[#34C759] text-white"}`}
       >
         {isMe ? 'Manage Call' : 'Join Call'}
       </button>
@@ -198,7 +198,7 @@ const MissedCallBubble = React.memo(({ content, isMe }: { content: string; isMe:
 
 CallOfferBubble.displayName = 'CallOfferBubble';
 
-// ─── Sticker Bubble ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Sticker Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // [FIX] No nested Framer Motion scale inside the parent motion.div.
 // iOS Safari has a GPU compositing bug where nested scale transforms
 // produce blur/jank. We use a plain div with CSS animation here.
@@ -215,7 +215,7 @@ const StickerBubble = React.memo(({ content }: { content: string }) => {
 });
 StickerBubble.displayName = 'StickerBubble';
 
-// ─── Context Menu ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Context Menu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const IMessageContextMenu = React.memo(({
   isMe, content, onClose, onReply, onEdit, onCopy, onRevoke, msgId
 }: {
@@ -256,7 +256,7 @@ const IMessageContextMenu = React.memo(({
 });
 IMessageContextMenu.displayName = 'IMessageContextMenu';
 
-// ─── Tapback Picker ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Tapback Picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TapbackPicker = React.memo(({ isMe, onReact, onClose }: {
   isMe: boolean; onReact: (e: string) => void; onClose: () => void;
 }) => (
@@ -283,7 +283,7 @@ const TapbackPicker = React.memo(({ isMe, onReact, onClose }: {
 ));
 TapbackPicker.displayName = 'TapbackPicker';
 
-// ─── Sticker Picker (exported for use in LedgerChat) ──────────────────────────────
+// â”€â”€â”€ Sticker Picker (exported for use in LedgerChat) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const StickerPicker = React.memo(({ onSend, onClose }: {
   onSend: (s: string) => void; onClose: () => void;
 }) => (
@@ -316,7 +316,7 @@ export const StickerPicker = React.memo(({ onSend, onClose }: {
 ));
 StickerPicker.displayName = 'StickerPicker';
 
-// ─── Main MessageBubble ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Main MessageBubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const MessageBubble = React.memo(({
   msg, isMe, showDate, dateStr, isSecretChat, fontFamily, fontSizePx,
   clientInboxId, onReply, onReact, onContextMenu, onOpenLightbox,
@@ -331,7 +331,7 @@ export const MessageBubble = React.memo(({
   const isBurning = !!msg.burnAtNs;
   const secondsLeft = isBurning ? Math.max(0, Math.ceil((msg.burnAtNs - Date.now()) / 1000)) : null;
 
-  // ── Content parsing ──────────────────────────────────────────────────────────
+  // â”€â”€ Content parsing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   let content = typeof msg.content === 'string' ? msg.content : (msg.fallback || 'Encrypted Data');
 
   let forwardFrom: string | null = null;
@@ -368,7 +368,7 @@ export const MessageBubble = React.memo(({
 
   if (isSystemMsg) return null;
 
-  // ── Gesture handlers ─────────────────────────────────────────────────────────
+  // â”€â”€ Gesture handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleDragEnd = (_: any, info: PanInfo) => {
     if (info.offset.x < -50) {
       onReply(msg);
@@ -389,7 +389,7 @@ export const MessageBubble = React.memo(({
   };
 
   const handleDoubleTap = () => {
-    onReact(msg.id, '❤️');
+    onReact(msg.id, 'â¤ï¸');
     if (navigator.vibrate) navigator.vibrate([10, 10, 10]);
   };
 
@@ -490,7 +490,7 @@ export const MessageBubble = React.memo(({
               )}
             </AnimatePresence>
 
-            {/* ─── Content Renderer ──────────────────────────────────────────────── */}
+            {/* â”€â”€â”€ Content Renderer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             {isSticker ? (
               <StickerBubble content={content} />
             ) : isPoll ? (
@@ -567,7 +567,7 @@ export const MessageBubble = React.memo(({
                 )}
               </div>
             ) : (
-              // ── Standard Text Bubble ────────────────────────────────────────────
+              // â”€â”€ Standard Text Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
               <div className="relative">
                 {replyMsg && (
                   <button
@@ -627,7 +627,7 @@ export const MessageBubble = React.memo(({
             )}
           </div>
 
-          {/* ─── Timestamp + Status ───────────────────────────────────────────────── */}
+          {/* â”€â”€â”€ Timestamp + Status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <div className={`flex items-center gap-1 mt-0.5 px-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
             {isBurning && <span className="text-[9px] font-mono font-bold text-[#ff3b30]">{secondsLeft}s</span>}
             <span className="text-[11px] text-black/30">
@@ -649,3 +649,4 @@ export const MessageBubble = React.memo(({
   );
 });
 MessageBubble.displayName = 'MessageBubble';
+
