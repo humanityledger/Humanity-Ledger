@@ -213,7 +213,7 @@ export function GroupCallRoom({
   // --- Fullscreen View ---
   return (
     <div className="fixed inset-0 z-[1000] bg-white flex flex-row overflow-hidden font-sans">
-      <div className={lex flex-col relative transition-all duration-300  }>
+      <div className={`flex-1 flex flex-col relative transition-all duration-300 ${showChat ? 'mr-[380px]' : ''}`}>
       {/* Header */}
       <AnimatePresence>
         {showControls && (
@@ -250,7 +250,8 @@ export function GroupCallRoom({
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+</AnimatePresence>
+      </div>
 
       {/* Room Info Modal */}
       <AnimatePresence>
@@ -290,7 +291,8 @@ export function GroupCallRoom({
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+</AnimatePresence>
+      </div>
 
       {/* Video Grid */}
       <div className="flex-1 p-4 flex items-center justify-center pt-24 pb-32" onClick={() => setActiveMenu(null)}>
@@ -431,7 +433,8 @@ export function GroupCallRoom({
             )}
           </motion.div>
         )}
-      </AnimatePresence>
+</AnimatePresence>
+      </div>
       {/* Chat Sidebar */}
       {showChat && (
         <div className="absolute right-0 top-0 bottom-0 w-[380px] max-w-full bg-white border-l border-black/10 flex flex-col z-[2000] shadow-2xl animate-in slide-in-from-right">
