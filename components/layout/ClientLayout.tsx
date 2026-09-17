@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect } from 'react';
 // Axioma 452  SW registered here (non-blocking)
@@ -40,7 +40,7 @@ const LinkedGate = dynamic(
 // 
 // 
 // Routes that don't need the LinkedGate wrapper (public / self-auth)
-// /chat and /hub handle their own auth — wrapping them with LinkedGate causes
+// /chat and /hub handle their own auth â€” wrapping them with LinkedGate causes
 // redirect loops and blank screen bugs.
 // 
 const PUBLIC_PREFIXES = ['/privacy', '/terms', '/connect', '/sign-up', '/login', '/news', '/chat', '/hub'];
@@ -68,7 +68,7 @@ const BOUNDED_PREFIXES = [
   '/predictions', '/ledger', '/voss-supremacy',
   '/gold-registry', '/vip', '/developer', '/developers', '/faq',
   '/ticket', '/settings', '/privacy', '/terms', '/legal',
-  // FIXED: /connect, /sign-up, /login are now bounded — fixed inset-0 overflow-hidden
+  // FIXED: /connect, /sign-up, /login are now bounded â€” fixed inset-0 overflow-hidden
   // prevents the black void below content. ConnectPage uses flex fill (not fixed inset-0).
   '/connect', '/sign-up', '/login',
   '/admin', '/clearance',
@@ -76,7 +76,7 @@ const BOUNDED_PREFIXES = [
   '/forum', '/chat', '/hub', '/whitepaper', '/manifesto',
   '/docs', // Added to prevent infinite scroll bugs
   '/blog', // Blog posts are bounded pages
-  '/', // Landing page — prevents white zone below footer
+  '/', // Landing page â€” prevents white zone below footer
 ];
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -156,7 +156,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   //  Layout mode 
   // DASHBOARD   fixed inset-0 overflow-hidden   (LedgerProShell owns scroll)
   // BOUNDED     fixed inset-0 overflow-hidden   (header + inner scroll box)
-  // LANDING     also bounded — prevents white zone below footer
+  // LANDING     also bounded â€” prevents white zone below footer
   const isDashboard = pathname.startsWith('/terminal');
   const isLanding = pathname === '/';
   const isBounded = !isDashboard && BOUNDED_PREFIXES.some(p => pathname === p || (p !== '/' && pathname.startsWith(p)));
@@ -180,7 +180,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     const originalBodyPosition = document.body.style.position;
     const originalHtmlOverflow = document.documentElement.style.overflow;
 
-    if (isDashboard || isBounded) {
+    if (isDashboard || isBounded || isChat) {
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
       // To strictly prevent drag-scroll bleeds on MacOS trackpad:
@@ -305,7 +305,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const mainClass = isDashboard || isChat
     ? 'relative z-10 w-full flex-1 flex flex-col min-h-0 overflow-hidden md:pb-0'
     : isBounded
-      // Scroll is fully contained here — no empty page-level void zones.
+      // Scroll is fully contained here â€” no empty page-level void zones.
       // Landing page also uses this path so scroll stops exactly at footer.
       ? `relative z-10 w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-none flex flex-col md:pb-0 bg-white`
       : `relative z-10 w-full flex-1 flex flex-col overscroll-none md:pb-0`;
@@ -336,7 +336,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         <UniversalEliteWallpaper />
 
           <div className={rootClass}>
-            {/* Top header for select standalone routes — single instance, responsive internally */}
+            {/* Top header for select standalone routes â€” single instance, responsive internally */}
             {showInstitutionalHeader && !isChat && (
               <div className="flex-none w-full z-50 fixed top-0 left-0 right-0">
                 <InstitutionalHeader />
@@ -375,3 +375,4 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     </>
   );
 }
+
