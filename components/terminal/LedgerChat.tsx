@@ -3062,6 +3062,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             await new Promise(resolve => setTimeout(resolve, 5000));
             continue;
           }
+        }
         
         // Critical safety: if stream closes cleanly but cancelled is false, 
         // wait before restarting to prevent 100% CPU lock in a tight while loop.
