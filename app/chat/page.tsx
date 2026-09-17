@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import dynamic from 'next/dynamic';
 import { ChatEngineProvider } from '@/context/ChatEngineProvider';
 
@@ -16,4 +16,3 @@ export default function ChatPage() {
     </ChatEngineProvider>
   );
 }
-
