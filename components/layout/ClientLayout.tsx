@@ -348,7 +348,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             )}
 
             <div className={innerClass}>
-              <div className="relative z-40">
+              <div className={isChat ? 'absolute z-40 top-0 left-0 right-0 pointer-events-none' : 'relative z-40'}>
                 <UtilityPanels />
                 <BillionLedgerNotification />
               </div>
@@ -356,9 +356,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
               <ZoomWrapper>
                 <main
                   className={mainClass}
-                  style={isBounded ? {
+                  style={(isBounded || isChat) ? {
                     height: '100%',
                     minHeight: '100%',
+                    maxHeight: '100%',
                     scrollbarWidth: 'thin',
                     overscrollBehavior: 'none',
                     touchAction: 'pan-y',
