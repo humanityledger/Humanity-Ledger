@@ -389,9 +389,10 @@ export function TuringShieldGate({
   }, [verifying, locked, onVerified, triggerShake]);
 
   // ─── Set new PIN flow ─────────────────────────────────────────────────────
-  const handleSetPin = useCallback(async () => {
-    const code = newPin;
-    const conf = confirmPin;
+  const handleSetPin = useCallback(async (val?: string | React.MouseEvent) => {
+      const stringVal = typeof val === 'string' ? val : undefined;
+      const code = pinSetStep === 'new' ? (stringVal ?? newPin) : newPin;
+      const conf = pinSetStep === 'confirm' ? (stringVal ?? confirmPin) : confirmPin;
 
     if (code.length !== 6) { setPinSetError('Enter a 6-digit PIN.'); return; }
 
@@ -502,10 +503,14 @@ export function TuringShieldGate({
                 )}
                 <PinInput
                   value={pinSetStep === 'new' ? newPin : confirmPin}
-                  onChange={pinSetStep === 'new' ? setNewPin : setConfirmPin}
-                  onComplete={v => {
-                    if (v.length === 6) handleSetPin();
-                  }}
+                  onChange={v => {
+                      if (pinSetStep === 'new') setNewPin(v);
+                      else setConfirmPin(v);
+                      setPinSetError(null);
+                    }}
+                    onComplete={v => {
+                      if (v.length === 6) handleSetPin(v);
+                    }}
                   error={!!pinSetError}
                 />
                 <button
@@ -614,7 +619,10 @@ export function TuringShieldGate({
                   >
                     <PinInput
                       value={pin}
-                      onChange={setPin}
+                      onChange={v => {
+                        setPin(v);
+                        setPinError(null);
+                      }}
                       onComplete={handleSubmit}
                       disabled={verifying}
                       error={!!pinError}
@@ -733,7 +741,10 @@ export function TuringShieldGate({
                   {/* OTP Input */}
                   <PinInput
                     value={resetOtp}
-                    onChange={setResetOtp}
+                    onChange={v => {
+                      setResetOtp(v);
+                      setResetOtpError(null);
+                    }}
                     onComplete={handleVerifyOtp}
                     disabled={resetFlowState === 'verifying_otp'}
                     error={!!resetOtpError}
