@@ -2588,321 +2588,321 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           if (activeAbortController) activeAbortController.abort();
           activeAbortController = new AbortController();
           const gen = streamMessages(client, activeAbortController.signal);
-        for await (const msg of gen as any) {
-          if (cancelled) { activeAbortController.abort(); break; }
-          
-          // [AUDIT FIX] Dynamically fetch selfInboxId to avoid stale closure if client rotates
-          const selfInboxId = (client as any).inboxId ?? '';
-          const fromPeer = msg.senderInboxId !== selfInboxId;
-          const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-          const sentAtNs = nsToDate(msg.sentAtNs ?? msg.sentAt).getTime();
-          const currentActivePeer = activePeerRef.current?.toLowerCase();
-          
-          let resolvedPeerAddr = msg.conversation?.peerAddress?.toLowerCase() || '';
-          if (!resolvedPeerAddr) {
-            try {
-              if (fromPeer) {
-                const senderAddr = await resolveSenderAddress(msg.senderInboxId, client);
-                resolvedPeerAddr = senderAddr?.toLowerCase() || '';
-              } else if (msg.conversation) {
-                const dmPeer = await extractPeerAddress(msg.conversation, selfInboxId);
-                resolvedPeerAddr = dmPeer?.toLowerCase() || '';
-              }
-            } catch (e) {
-              console.warn('[Ledger Chat] Transient error resolving peer address:', e);
-            }
-          }
-
-          // Ultimate fallback (works for both sender and recipient in v5.3.0)
-          const convoId = msg.convoId || msg.conversationId || msg.groupId || msg.conversation?.id || '';
-          if (!resolvedPeerAddr && convoId) {
-            try {
-              let dms = await client.conversations.listDms();
-              let dm = dms.find((d: any) => d.id === convoId);
-              
-              // [AUDIT FIX] If the DM is missing from local cache (new chat),
-              // perform a quick sync. This is much better than corrupting the UI
-              // with a raw convoId hash that breaks routing and deduplication.
-              if (!dm) {
-                await client.conversations.sync();
-                dms = await client.conversations.listDms();
-                dm = dms.find((d: any) => d.id === convoId);
-              }
-              
-              if (dm) {
-                const dmPeer = await extractPeerAddress(dm, selfInboxId);
-                resolvedPeerAddr = dmPeer?.toLowerCase() || '';
-              }
-            } catch (e) {
-              console.warn('Failed to resolve convoId to peer address', e);
-            }
-          }
-          
-          // [AUDIT FIX] If all resolutions fail, fall back to convoId or senderInboxId 
-          // to prevent the message from being silently dropped.
-          const msgConvPeer = resolvedPeerAddr || convoId || msg.senderInboxId || 'unknown';
-          const realId = msg.id ?? `real-${sentAtNs}-${Math.random()}`;
-
-          // ── ABSOLUTE DEDUPLICATION GATE ──────────────────────────────────────
-          if (confirmedMsgIds.current.has(realId)) continue;
-          confirmedMsgIds.current.add(realId);
-          pruneConfirmedIds(); // keep Set bounded to last 500 IDs
-          pruneOptimisticMap(); // prune stale optimistic entries
-          // ─────────────────────────────────────────────────────────────────────
-
-          // Phase 2: Intercept Reactions
-          if (typeof content === 'string' && content.startsWith('__REACT__')) {
-            const parts = content.split('__::');
-            if (parts.length >= 2) {
-              const targetId = parts[0].replace('__REACT__', '');
-              const emoji = parts.slice(1).join('__::');
-              const sender = msg.senderInboxId || 'unknown';
-              
-              setMessages(prev => prev.map(m => {
-                if (m.id === targetId) {
-                  const reactions = m.reactions || {};
-                  const users = reactions[emoji] || [];
-                  if (!users.includes(sender)) {
-                    return { ...m, reactions: { ...reactions, [emoji]: [...users, sender] } };
-                  }
+          for await (const msg of gen as any) {
+            if (cancelled) { activeAbortController.abort(); break; }
+            
+            // [AUDIT FIX] Dynamically fetch selfInboxId to avoid stale closure if client rotates
+            const selfInboxId = (client as any).inboxId ?? '';
+            const fromPeer = msg.senderInboxId !== selfInboxId;
+            const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+            const sentAtNs = nsToDate(msg.sentAtNs ?? msg.sentAt).getTime();
+            const currentActivePeer = activePeerRef.current?.toLowerCase();
+            
+            let resolvedPeerAddr = msg.conversation?.peerAddress?.toLowerCase() || '';
+            if (!resolvedPeerAddr) {
+              try {
+                if (fromPeer) {
+                  const senderAddr = await resolveSenderAddress(msg.senderInboxId, client);
+                  resolvedPeerAddr = senderAddr?.toLowerCase() || '';
+                } else if (msg.conversation) {
+                  const dmPeer = await extractPeerAddress(msg.conversation, selfInboxId);
+                  resolvedPeerAddr = dmPeer?.toLowerCase() || '';
                 }
-                return m;
-              }));
+              } catch (e) {
+                console.warn('[Ledger Chat] Transient error resolving peer address:', e);
+              }
             }
-            continue; // Skip rendering this as a chat bubble
-          }
-          
-          // Phase 2: Intercept Read Receipts
-          if (typeof content === 'string' && content.startsWith('__READ__')) {
-            const readId = content.replace('__READ__', '');
-            setMessages(prev => prev.map(m => m.id === readId ? { ...m, status: 'read' } : m));
-            continue;
-          }
 
-          // Phase 3: Intercept Pins & Revokes
-          if (typeof content === 'string' && content.startsWith('__PIN__')) {
-            setPinnedMessageId(content.replace('__PIN__', ''));
-            continue;
-          }
-          if (typeof content === 'string' && content.startsWith('__REVOKE__')) {
-            const revokeId = content.replace('__REVOKE__', '');
-            setMessages(prev => prev.filter(m => m.id !== revokeId));
-            continue;
-          }
-
-          // Phase 5: Intercept VOTE signals
-          if (typeof content === 'string' && content.startsWith('__VOTE__')) {
-            const parts = content.replace('__VOTE__', '').split('__::');
-            if (parts.length >= 2) {
-              const targetPollId = parts[0];
-              const optionIndex = parseInt(parts[1], 10);
-              const sender = msg.senderInboxId || 'peer';
-              setMessages(prev => prev.map(m => {
-                if (typeof m.content === 'string' && m.content.startsWith('__POLL__')) {
-                  // [CRITICAL FIX] Match by pollId extracted from the POLL payload,
-                  // not by m.id — because m.id changes when optimistic→real swap happens.
-                  // Poll payload format: __POLL__<pollId>__::<question>__::<opts>
-                  const pollPayloadId = m.content.replace('__POLL__', '').split('__::')[0];
-                  if (pollPayloadId === targetPollId || m.id === targetPollId) {
-                    const pollData = m.pollVotes || {};
-                    return { ...m, pollVotes: { ...pollData, [sender]: optionIndex } };
-                  }
+            // Ultimate fallback (works for both sender and recipient in v5.3.0)
+            const convoId = msg.convoId || msg.conversationId || msg.groupId || msg.conversation?.id || '';
+            if (!resolvedPeerAddr && convoId) {
+              try {
+                let dms = await client.conversations.listDms();
+                let dm = dms.find((d: any) => d.id === convoId);
+                
+                // [AUDIT FIX] If the DM is missing from local cache (new chat),
+                // perform a quick sync. This is much better than corrupting the UI
+                // with a raw convoId hash that breaks routing and deduplication.
+                if (!dm) {
+                  await client.conversations.sync();
+                  dms = await client.conversations.listDms();
+                  dm = dms.find((d: any) => d.id === convoId);
                 }
-                return m;
-              }));
+                
+                if (dm) {
+                  const dmPeer = await extractPeerAddress(dm, selfInboxId);
+                  resolvedPeerAddr = dmPeer?.toLowerCase() || '';
+                }
+              } catch (e) {
+                console.warn('Failed to resolve convoId to peer address', e);
+              }
             }
-            continue;
-          }
+            
+            // [AUDIT FIX] If all resolutions fail, fall back to convoId or senderInboxId 
+            // to prevent the message from being silently dropped.
+            const msgConvPeer = resolvedPeerAddr || convoId || msg.senderInboxId || 'unknown';
+            const realId = msg.id ?? `real-${sentAtNs}-${Math.random()}`;
 
-          // Phase 4: Intercept __EDIT__ — remote peer edited a message
-          if (typeof content === 'string' && content.startsWith('__EDIT__')) {
-            const editParts = content.replace('__EDIT__', '').split('__::');
-            if (editParts.length >= 2) {
-              const editTargetId = editParts[0];
-              const editNewContent = editParts.slice(1).join('__::');
-              setMessages(prev => prev.map(m =>
-                m.id === editTargetId ? { ...m, content: editNewContent, edited: true } : m
-              ));
+            // ── ABSOLUTE DEDUPLICATION GATE ──────────────────────────────────────
+            if (confirmedMsgIds.current.has(realId)) continue;
+            confirmedMsgIds.current.add(realId);
+            pruneConfirmedIds(); // keep Set bounded to last 2000 IDs
+            pruneOptimisticMap(); // prune stale optimistic entries
+            // ─────────────────────────────────────────────────────────────────────
+
+            // Phase 2: Intercept Reactions
+            if (typeof content === 'string' && content.startsWith('__REACT__')) {
+              const parts = content.split('__::');
+              if (parts.length >= 2) {
+                const targetId = parts[0].replace('__REACT__', '');
+                const emoji = parts.slice(1).join('__::');
+                const sender = msg.senderInboxId || 'unknown';
+                
+                setMessages(prev => prev.map(m => {
+                  if (m.id === targetId) {
+                    const reactions = m.reactions || {};
+                    const users = reactions[emoji] || [];
+                    if (!users.includes(sender)) {
+                      return { ...m, reactions: { ...reactions, [emoji]: [...users, sender] } };
+                    }
+                  }
+                  return m;
+                }));
+              }
+              continue; // Skip rendering this as a chat bubble
             }
-            continue;
-          }
-
-          let mappedContent = content || msg.fallback || 'Encrypted Data';
-          let burnAtNs: number | undefined = undefined;
-
-          // Phase 3: Intercept Self-Destruct
-          if (typeof mappedContent === 'string' && mappedContent.startsWith('__BURN_')) {
-            const parts = mappedContent.split('__::');
-            if (parts.length >= 2) {
-              const seconds = parseInt(parts[0].replace('__BURN_', ''), 10);
-              mappedContent = parts.slice(1).join('__::');
-              burnAtNs = sentAtNs + (seconds * 1000);
+            
+            // Phase 2: Intercept Read Receipts
+            if (typeof content === 'string' && content.startsWith('__READ__')) {
+              const readId = content.replace('__READ__', '');
+              setMessages(prev => prev.map(m => m.id === readId ? { ...m, status: 'read' } : m));
+              continue;
             }
-          }
 
-          // Phase 5: Intercept Payment Signals for Auto-Sync
-          if (typeof mappedContent === 'string' && mappedContent.startsWith('__PAYMENT__')) {
-            // Reconcile balance from server because the sender just transferred QDs to our address
-            refreshBalanceRef.current().catch(() => {});
-          }
+            // Phase 3: Intercept Pins & Revokes
+            if (typeof content === 'string' && content.startsWith('__PIN__')) {
+              setPinnedMessageId(content.replace('__PIN__', ''));
+              continue;
+            }
+            if (typeof content === 'string' && content.startsWith('__REVOKE__')) {
+              const revokeId = content.replace('__REVOKE__', '');
+              setMessages(prev => prev.filter(m => m.id !== revokeId));
+              continue;
+            }
 
-          const mappedMsg = {
-            id: realId,
-            senderInboxId: msg.senderInboxId ?? '',
-            content: mappedContent,
-            burnAtNs,
-            sentAtNs,
-            conversationId: msgConvPeer ? `dm-${msgConvPeer}` : `dm-${currentActivePeer}`
-          };
+            // Phase 5: Intercept VOTE signals
+            if (typeof content === 'string' && content.startsWith('__VOTE__')) {
+              const parts = content.replace('__VOTE__', '').split('__::');
+              if (parts.length >= 2) {
+                const targetPollId = parts[0];
+                const optionIndex = parseInt(parts[1], 10);
+                const sender = msg.senderInboxId || 'peer';
+                setMessages(prev => prev.map(m => {
+                  if (typeof m.content === 'string' && m.content.startsWith('__POLL__')) {
+                    // [CRITICAL FIX] Match by pollId extracted from the POLL payload,
+                    // not by m.id — because m.id changes when optimistic→real swap happens.
+                    // Poll payload format: __POLL__<pollId>__::<question>__::<opts>
+                    const pollPayloadId = m.content.replace('__POLL__', '').split('__::')[0];
+                    if (pollPayloadId === targetPollId || m.id === targetPollId) {
+                      const pollData = m.pollVotes || {};
+                      return { ...m, pollVotes: { ...pollData, [sender]: optionIndex } };
+                    }
+                  }
+                  return m;
+                }));
+              }
+              continue;
+            }
 
-          // [CRITICAL FIX] Always normalize both sides to lowercase before comparing.
-          // msgConvPeer comes from .toLowerCase() but currentActivePeer (activePeerRef.current)
-          // might be stored in its original checksum-cased form. This was silently dropping
-          // all received messages because the equality check was always failing.
-          const normalizedMsgPeer = msgConvPeer?.toLowerCase() ?? '';
-          const normalizedActivePeer = currentActivePeer?.toLowerCase() ?? '';
-          const ETH_ADDR = /^0x[a-fA-F0-9]{40}$/;
-          // [ROOT FIX] belongsToActive now has TWO paths:
-          // 1. ETH address resolved successfully → direct address match (fast path)
-          // 2. Address resolution failed → compare native XMTP convoId against activeXmtpDmIdRef
-          //    (the saved dm.id from when we opened the chat). This prevents silent drops
-          //    when the inboxIdToAddressCache was broken (recursive cacheInboxId bug).
-          const belongsToActiveByAddr =
-            ETH_ADDR.test(normalizedMsgPeer) &&
-            !!normalizedActivePeer &&
-            normalizedMsgPeer === normalizedActivePeer;
-          const belongsToActiveByConvoId =
-            !!convoId &&
-            !!activeXmtpDmIdRef.current &&
-            convoId === activeXmtpDmIdRef.current;
-          const belongsToActive = belongsToActiveByAddr || belongsToActiveByConvoId;
+            // Phase 4: Intercept __EDIT__ — remote peer edited a message
+            if (typeof content === 'string' && content.startsWith('__EDIT__')) {
+              const editParts = content.replace('__EDIT__', '').split('__::');
+              if (editParts.length >= 2) {
+                const editTargetId = editParts[0];
+                const editNewContent = editParts.slice(1).join('__::');
+                setMessages(prev => prev.map(m =>
+                  m.id === editTargetId ? { ...m, content: editNewContent, edited: true } : m
+                ));
+              }
+              continue;
+            }
 
-          // [CRITICAL BUG FIX] If the message belongs to the active chat via the convoId fallback, 
-          // msgConvPeer is a hash, meaning mappedMsg.conversationId was set to dm-<hash>.
-          // The render loop filters out anything that isn't dm-<activePeer>. 
-          // We MUST forcefully align the conversationId here, otherwise it gets inserted into state,
-          // hidden by the UI, and permanently blackholed by the deduplication Set.
-          if (belongsToActive) {
-            mappedMsg.conversationId = `dm-${currentActivePeer}`;
-          }
+            let mappedContent = content || msg.fallback || 'Encrypted Data';
+            let burnAtNs: number | undefined = undefined;
 
-          if (belongsToActive) {
+            // Phase 3: Intercept Self-Destruct
+            if (typeof mappedContent === 'string' && mappedContent.startsWith('__BURN_')) {
+              const parts = mappedContent.split('__::');
+              if (parts.length >= 2) {
+                const seconds = parseInt(parts[0].replace('__BURN_', ''), 10);
+                mappedContent = parts.slice(1).join('__::');
+                burnAtNs = sentAtNs + (seconds * 1000);
+              }
+            }
 
-            setMessages(prev => {
-              // Guard: if real ID already in list (can happen on reconnect), skip
-              if (prev.some(m => m.id === realId)) return prev;
+            // Phase 5: Intercept Payment Signals for Auto-Sync
+            if (typeof mappedContent === 'string' && mappedContent.startsWith('__PAYMENT__')) {
+              // Reconcile balance from server because the sender just transferred QDs to our address
+              refreshBalanceRef.current().catch(() => {});
+            }
 
-              if (!fromPeer) {
-                // ── OWN MESSAGE ECHO: atomic optimistic swap ──────────────────
-                // Strategy 1: look up by content key in optimisticContentMap
-                const knownOptId = optimisticContentMap.current.get(content);
-                if (knownOptId) {
-                  optimisticContentMap.current.delete(content); // consume the entry — key is the raw echoed content
-                  const idx = prev.findIndex(m => m.id === knownOptId);
-                  if (idx !== -1) {
+            const mappedMsg = {
+              id: realId,
+              senderInboxId: msg.senderInboxId ?? '',
+              content: mappedContent,
+              burnAtNs,
+              sentAtNs,
+              conversationId: msgConvPeer ? `dm-${msgConvPeer}` : `dm-${currentActivePeer}`
+            };
+
+            // [CRITICAL FIX] Always normalize both sides to lowercase before comparing.
+            // msgConvPeer comes from .toLowerCase() but currentActivePeer (activePeerRef.current)
+            // might be stored in its original checksum-cased form. This was silently dropping
+            // all received messages because the equality check was always failing.
+            const normalizedMsgPeer = msgConvPeer?.toLowerCase() ?? '';
+            const normalizedActivePeer = currentActivePeer?.toLowerCase() ?? '';
+            const ETH_ADDR = /^0x[a-fA-F0-9]{40}$/;
+            // [ROOT FIX] belongsToActive now has TWO paths:
+            // 1. ETH address resolved successfully → direct address match (fast path)
+            // 2. Address resolution failed → compare native XMTP convoId against activeXmtpDmIdRef
+            //    (the saved dm.id from when we opened the chat). This prevents silent drops
+            //    when the inboxIdToAddressCache was broken (recursive cacheInboxId bug).
+            const belongsToActiveByAddr =
+              ETH_ADDR.test(normalizedMsgPeer) &&
+              !!normalizedActivePeer &&
+              normalizedMsgPeer === normalizedActivePeer;
+            const belongsToActiveByConvoId =
+              !!convoId &&
+              !!activeXmtpDmIdRef.current &&
+              convoId === activeXmtpDmIdRef.current;
+            const belongsToActive = belongsToActiveByAddr || belongsToActiveByConvoId;
+
+            // [CRITICAL BUG FIX] If the message belongs to the active chat via the convoId fallback, 
+            // msgConvPeer is a hash, meaning mappedMsg.conversationId was set to dm-<hash>.
+            // The render loop filters out anything that isn't dm-<activePeer>. 
+            // We MUST forcefully align the conversationId here, otherwise it gets inserted into state,
+            // hidden by the UI, and permanently blackholed by the deduplication Set.
+            if (belongsToActive) {
+              mappedMsg.conversationId = `dm-${currentActivePeer}`;
+            }
+
+            if (belongsToActive) {
+
+              setMessages(prev => {
+                // Guard: if real ID already in list (can happen on reconnect), skip
+                if (prev.some(m => m.id === realId)) return prev;
+
+                if (!fromPeer) {
+                  // ── OWN MESSAGE ECHO: atomic optimistic swap ──────────────────
+                  // Strategy 1: look up by content key in optimisticContentMap
+                  const knownOptId = optimisticContentMap.current.get(content);
+                  if (knownOptId) {
+                    optimisticContentMap.current.delete(content); // consume the entry — key is the raw echoed content
+                    const idx = prev.findIndex(m => m.id === knownOptId);
+                    if (idx !== -1) {
+                      const next = [...prev];
+                      next[idx] = mappedMsg; // replace placeholder with confirmed msg
+                      return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
+                    }
+                  }
+                  // Strategy 2: fallback — find any optimistic with identical content
+                  // within a 30-second window (handles slow networks and retry delays)
+                  const optIdx = prev.findIndex(
+                    m => m.id.startsWith('optimistic-') &&
+                         m.content === content &&
+                         Math.abs(m.sentAtNs - sentAtNs) < 30_000
+                  );
+                  if (optIdx !== -1) {
                     const next = [...prev];
-                    next[idx] = mappedMsg; // replace placeholder with confirmed msg
+                    next[optIdx] = mappedMsg;
                     return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
                   }
+                  // Strategy 3: no optimistic found (e.g. second tab) — insert if not duplicate
+                  return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
                 }
-                // Strategy 2: fallback — find any optimistic with identical content
-                // within a 30-second window (handles slow networks and retry delays)
-                const optIdx = prev.findIndex(
-                  m => m.id.startsWith('optimistic-') &&
-                       m.content === content &&
-                       Math.abs(m.sentAtNs - sentAtNs) < 30_000
-                );
-                if (optIdx !== -1) {
-                  const next = [...prev];
-                  next[optIdx] = mappedMsg;
-                  return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
-                }
-                // Strategy 3: no optimistic found (e.g. second tab) — insert if not duplicate
-                return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
-              }
 
-              // ── PEER MESSAGE: straightforward insert ──────────────────────────
-              if (fromPeer && !content.startsWith('__')) {
-                // We are focused on this chat, so send a read receipt!
-                if (!document.hidden) {
-                  if (ledgerSettings?.notification_sound !== false) { playReceiveSound(); };
-                  triggerHaptic(ledgerSettings?.haptics_intensity ?? 0);
-                  if (ledgerSettings?.show_read_receipts !== false && /^0x[a-fA-F0-9]{40}$/.test(msgConvPeer)) {
-                    sendMessage(client, msgConvPeer, `__READ__${realId}`, address).catch(e => console.warn('Failed to send read receipt', e));
+                // ── PEER MESSAGE: straightforward insert ──────────────────────────
+                if (fromPeer && !content.startsWith('__')) {
+                  // We are focused on this chat, so send a read receipt!
+                  if (!document.hidden) {
+                    if (ledgerSettings?.notification_sound !== false) { playReceiveSound(); };
+                    triggerHaptic(ledgerSettings?.haptics_intensity ?? 0);
+                    if (ledgerSettings?.show_read_receipts !== false && /^0x[a-fA-F0-9]{40}$/.test(msgConvPeer)) {
+                      sendMessage(client, msgConvPeer, `__READ__${realId}`, address).catch(e => console.warn('Failed to send read receipt', e));
+                    }
+                  } else {
+                    // Phase 5: Advanced Push Notifications when app is hidden
+                    notificationEngine.notifyLocal(
+                      `Ledger Chat: ${shortAddr(msgConvPeer)}`,
+                      formatMessagePreview(content),
+                      msgConvPeer,
+                      !!(ledgerSettings as any)?.hide_notification_content
+                    );
                   }
-                } else {
-                  // Phase 5: Advanced Push Notifications when app is hidden
-                  notificationEngine.notifyLocal(
-                    `Ledger Chat: ${shortAddr(msgConvPeer)}`,
-                    formatMessagePreview(content),
-                    msgConvPeer,
-                    !!(ledgerSettings as any)?.hide_notification_content
-                  );
-                }
 
-                if (ledgerSettings?.ghost_auto_reply && ledgerSettings?.ghost_auto_reply_text) {
-                  const replyText = ledgerSettings.ghost_auto_reply_text;
-                  setTimeout(() => {
-                     sendMessage(client, msgConvPeer, replyText, address).catch(e => console.warn('Ghost auto-reply failed', e));
-                  }, 1500);
+                  if (ledgerSettings?.ghost_auto_reply && ledgerSettings?.ghost_auto_reply_text) {
+                    const replyText = ledgerSettings.ghost_auto_reply_text;
+                    setTimeout(() => {
+                       sendMessage(client, msgConvPeer, replyText, address).catch(e => console.warn('Ghost auto-reply failed', e));
+                    }, 1500);
+                  }
                 }
-              }
-              return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
-            });
+                return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
+              });
 
-            // Update conversation preview
-            setConversations(prev => {
-              const updated = prev.map(c =>
-                c.peerAddress.toLowerCase() === currentActivePeer
-                  ? { ...c, lastMessage: content.slice(0, 30), lastAt: new Date() }
-                  : c
-              );
-              persistToLocal(updated);
-              return updated;
-            });
-          } else {
-            // Belongs to a different (background) conversation
-            if (fromPeer && !content.startsWith('__')) {
-              // Phase 5: Push Notifications & Dynamic Island when receiving a message in background chat
-              if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                new Notification(`Ledger Chat: ${shortAddr(msgConvPeer || 'Unknown')}`, {
-                  body: formatMessagePreview(content),
-                  icon: '/favicon.ico'
-                });
-              }
-              // Trigger Dynamic Island
-              useDynamicIsland.getState().setState('notification', {
-                title: shortAddr(msgConvPeer || 'Unknown'),
-                subtitle: formatMessagePreview(content),
-              }, 4000);
-            }
-            let needsSync = false;
-            setConversations(prev => {
-              if (!msgConvPeer) return prev;
-              const exists = prev.some(c => c.peerAddress.toLowerCase() === msgConvPeer);
-              let updated;
-              if (exists) {
-                updated = prev.map(c =>
-                  c.peerAddress.toLowerCase() === msgConvPeer
+              // Update conversation preview
+              setConversations(prev => {
+                const updated = prev.map(c =>
+                  c.peerAddress.toLowerCase() === currentActivePeer
                     ? { ...c, lastMessage: content.slice(0, 30), lastAt: new Date() }
                     : c
                 );
-              } else {
-                needsSync = true;
-                updated = [{
-                  peerAddress: msgConvPeer,
-                  lastMessage: content.slice(0, 30),
-                  lastAt: new Date()
-                }, ...prev];
+                persistToLocal(updated);
+                return updated;
+              });
+            } else {
+              // Belongs to a different (background) conversation
+              if (fromPeer && !content.startsWith('__')) {
+                // Phase 5: Push Notifications & Dynamic Island when receiving a message in background chat
+                if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                  new Notification(`Ledger Chat: ${shortAddr(msgConvPeer || 'Unknown')}`, {
+                    body: formatMessagePreview(content),
+                    icon: '/favicon.ico'
+                  });
+                }
+                // Trigger Dynamic Island
+                useDynamicIsland.getState().setState('notification', {
+                  title: shortAddr(msgConvPeer || 'Unknown'),
+                  subtitle: formatMessagePreview(content),
+                }, 4000);
               }
-              persistToLocal(updated);
-              return updated;
-            });
-            if (needsSync && msgConvPeer) {
-              syncToAddressBook(msgConvPeer);
+              let needsSync = false;
+              setConversations(prev => {
+                if (!msgConvPeer) return prev;
+                const exists = prev.some(c => c.peerAddress.toLowerCase() === msgConvPeer);
+                let updated;
+                if (exists) {
+                  updated = prev.map(c =>
+                    c.peerAddress.toLowerCase() === msgConvPeer
+                      ? { ...c, lastMessage: content.slice(0, 30), lastAt: new Date() }
+                      : c
+                  );
+                } else {
+                  needsSync = true;
+                  updated = [{
+                    peerAddress: msgConvPeer,
+                    lastMessage: content.slice(0, 30),
+                    lastAt: new Date()
+                  }, ...prev];
+                }
+                persistToLocal(updated);
+                return updated;
+              });
+              if (needsSync && msgConvPeer) {
+                syncToAddressBook(msgConvPeer);
+              }
             }
           }
-        }
       } catch (e: any) {
           const errMsg = (e?.message || String(e) || '').toLowerCase();
           // GroupInactive = stale MLS epoch. Silently re-sync and restart stream.
