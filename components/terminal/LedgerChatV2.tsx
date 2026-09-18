@@ -2755,7 +2755,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 // Strategy 1: look up by content key in optimisticContentMap
                 const knownOptId = optimisticContentMap.current.get(content);
                 if (knownOptId) {
-                  optimisticContentMap.current.delete(finalContent); // consume the entry
+                  optimisticContentMap.current.delete(content); // consume the entry — key is the raw echoed content
                   const idx = prev.findIndex(m => m.id === knownOptId);
                   if (idx !== -1) {
                     const next = [...prev];
@@ -2785,7 +2785,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 if (!document.hidden) {
                   if (ledgerSettings?.notification_sound !== false) { playReceiveSound(); };
                   triggerHaptic(ledgerSettings?.haptics_intensity ?? 0);
-                  if (ledgerSettings?.show_read_receipts !== false) {
+                  if (ledgerSettings?.show_read_receipts !== false && /^0x[a-fA-F0-9]{40}$/.test(msgConvPeer)) {
                     sendMessage(client, msgConvPeer, `__READ__${realId}`, address).catch(e => console.warn('Failed to send read receipt', e));
                   }
                 } else {
