@@ -2834,6 +2834,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 subtitle: formatMessagePreview(content),
               }, 4000);
             }
+            let needsSync = false;
             setConversations(prev => {
               if (!msgConvPeer) return prev;
               const exists = prev.some(c => c.peerAddress.toLowerCase() === msgConvPeer);
@@ -2845,6 +2846,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     : c
                 );
               } else {
+                needsSync = true;
                 updated = [{
                   peerAddress: msgConvPeer,
                   lastMessage: content.slice(0, 30),
@@ -2854,6 +2856,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               persistToLocal(updated);
               return updated;
             });
+            if (needsSync && msgConvPeer) {
+              syncToAddressBook(msgConvPeer);
+            }
           }
         }
       } catch (e: any) {
@@ -3361,9 +3366,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       return;
 
     } catch (err: any) {
-      throw err;
-      // On failure, keep the message but mark it as failed so the user knows what happened
-      optimisticContentMap.current.delete(finalContent);
+      // [FIX] Removed 'throw err' which was short-circuiting the UI error feedback.
+      // Now, failed messages will correctly display a red error state in the chat bubble.
+      // Use 'content' (raw input) instead of 'finalContent' to match what we inserted into the map.
+      optimisticContentMap.current.delete(content);
       const errString = err?.message || String(err);
       setMessages(prev => prev.map(m => 
         m.id === optimisticId 
