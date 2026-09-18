@@ -3133,7 +3133,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, [client, activePeer, address]);
 
   const handleStartConversationWithPeer = async (peerAddr: string) => {
-      if (!client || !peerAddr || sending) return;
+      // [FIX] Removed `|| sending` — that global flag blocked chat initialization
+      // while a background message was in-flight, causing silent failures.
+      if (!client || !peerAddr) return;
       setSending(true);
       try {
         let peer = peerAddr.trim();
@@ -3181,17 +3183,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
         const newConv = { peerAddress: peer, lastMessage: '', lastAt: new Date() };
 
+        // [FIX] Extract syncToAddressBook OUTSIDE the setConversations updater.
+        // Side-effects inside state updaters are an anti-pattern — React can call
+        // the updater multiple times in StrictMode, causing duplicate API calls.
+        let needsSync = false;
         setConversations(prev => {
             const exists = prev.find(c => c.peerAddress.toLowerCase() === peer.toLowerCase());
             if (exists) return prev;
-            
-            // Auto-sync manual new chat to Address Book
-            syncToAddressBook(peer);
-            
+            needsSync = true;
             const updated = [newConv, ...prev];
             persistToLocal(updated);
             return updated;
         });
+        if (needsSync) {
+            syncToAddressBook(peer);
+        }
 
         const dmId = `dm-${peer.toLowerCase()}`;
         peerToConvId.current.set(peer.toLowerCase(), dmId);
@@ -5682,7 +5688,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             setShowContactRequests(false);
             setPendingRequestCount(0); // optimistically clear badge on close
           }}
-          onAccepted={(peer) => {
+          onAccepted={(peer, nickname) => {
+            // [FIX 1] Close the modal immediately — no zombie overlay
+            setShowContactRequests(false);
+            setPendingRequestCount(0);
+            // [FIX 2] Persist to local contacts with the nickname the requester has
+            saveLocalContact(address, {
+              peerAddress: peer,
+              name: nickname || `Chat ${peer.slice(0, 6)}`,
+            });
+            // Refresh the contacts tab so the new entry appears instantly
+            loadContacts();
+            // [FIX 3] Open the conversation
             handleStartConversationWithPeer(peer);
           }}
         />,

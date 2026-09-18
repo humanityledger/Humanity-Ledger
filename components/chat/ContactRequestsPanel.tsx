@@ -23,13 +23,15 @@ interface ContactRequest {
 interface ContactRequestsPanelProps {
   myAddress: string;
   onClose: () => void;
-  onAccepted?: (peerAddress: string) => void;
+  onAccepted?: (peerAddress: string, nickname: string) => void;
 }
 
 export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: ContactRequestsPanelProps) {
   const [requests, setRequests] = useState<ContactRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState<string | null>(null);
+  // [FIX] Use a Set so multiple requests can be independently in-flight
+  // without race conditions unlocking each other's buttons.
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
   const loadRequests = useCallback(async () => {
     try {
@@ -51,7 +53,8 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
   }, [loadRequests]);
 
   const handleAction = async (request: ContactRequest, action: 'accept' | 'reject') => {
-    setProcessing(request.id);
+    // [FIX] Add to Set rather than overwriting so concurrent actions don't interfere
+    setProcessingIds(prev => new Set(prev).add(request.id));
     try {
       const res = await fetch(`/api/chat/contacts/request/${action}`, {
         method: 'POST',
@@ -70,14 +73,20 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
 
       if (action === 'accept') {
         toast.success(`You're now connected with ${request.user.nickname}!`);
-        onAccepted?.(request.fromAddress);
+        // [FIX] Pass nickname so the parent can persist it to local contacts
+        onAccepted?.(request.fromAddress, request.user.nickname);
       } else {
         toast.success('Request declined.');
       }
     } catch {
       toast.error('Network error. Please try again.');
     } finally {
-      setProcessing(null);
+      // [FIX] Remove from Set rather than nulling the whole state
+      setProcessingIds(prev => {
+        const next = new Set(prev);
+        next.delete(request.id);
+        return next;
+      });
     }
   };
 
@@ -138,7 +147,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
               requests.map(req => {
                 const hue = hueFor(req.user.address);
                 const initials = req.user.nickname.replace('@', '').slice(0, 2).toUpperCase();
-                const isProcessing = processing === req.id;
+                const isProcessing = processingIds.has(req.id);
 
                 return (
                   <motion.div
