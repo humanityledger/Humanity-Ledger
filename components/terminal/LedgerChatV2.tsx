@@ -2730,7 +2730,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             conversationId: msgConvPeer ? `dm-${msgConvPeer}` : `dm-${currentActivePeer}`
           };
 
-          const belongsToActive = !!msgConvPeer && (msgConvPeer === currentActivePeer);
+          // [CRITICAL FIX] Always normalize both sides to lowercase before comparing.
+          // msgConvPeer comes from .toLowerCase() but currentActivePeer (activePeerRef.current)
+          // might be stored in its original checksum-cased form. This was silently dropping
+          // all received messages because the equality check was always failing.
+          const normalizedMsgPeer = msgConvPeer?.toLowerCase() ?? '';
+          const normalizedActivePeer = currentActivePeer?.toLowerCase() ?? '';
+          const ETH_ADDR = /^0x[a-fA-F0-9]{40}$/;
+          // Only consider it a match if the resolved peer is an actual ETH address
+          // (not a raw convoId / XMTP group hash from the fallback).
+          const belongsToActive = 
+            ETH_ADDR.test(normalizedMsgPeer) &&
+            !!normalizedActivePeer &&
+            normalizedMsgPeer === normalizedActivePeer;
 
           if (belongsToActive) {
 
@@ -4714,16 +4726,50 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               <p className="text-[16px] md:text-[18px] text-[#1C1C1E]/50 font-medium leading-relaxed max-w-sm mb-10">
                 Choose from your existing contacts, or start a new conversation by entering a wallet address.
               </p>
-              <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
+              <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
                 {[
-                  { icon: '🔐', label: 'End-to-End Encrypted' },
-                  { icon: '🌐', label: 'Decentralized Network' },
-                  { icon: '🔥', label: 'Burn on Read' },
-                  { icon: '💎', label: 'Send QD Tokens' }
+                  { 
+                    label: 'End-to-End Encrypted',
+                    icon: (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                    ),
+                    color: 'text-blue-500 bg-blue-50'
+                  },
+                  { 
+                    label: 'Decentralized Network',
+                    icon: (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                      </svg>
+                    ),
+                    color: 'text-purple-500 bg-purple-50'
+                  },
+                  { 
+                    label: 'Burn on Read',
+                    icon: (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+                      </svg>
+                    ),
+                    color: 'text-orange-500 bg-orange-50'
+                  },
+                  { 
+                    label: 'Send QD Tokens',
+                    icon: (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/>
+                      </svg>
+                    ),
+                    color: 'text-emerald-500 bg-emerald-50'
+                  }
                 ].map((f) => (
-                  <div key={f.label} className="bg-white rounded-2xl p-4 border border-black/5 shadow-sm flex flex-col items-center gap-2 text-center">
-                    <span className="text-2xl">{f.icon}</span>
-                    <span className="text-[12px] font-bold text-[#1C1C1E]/70">{f.label}</span>
+                  <div key={f.label} className="bg-white rounded-2xl p-4 border border-black/[0.06] shadow-sm flex flex-col items-center gap-2 text-center hover:shadow-md transition-shadow">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${f.color}`}>
+                      {f.icon}
+                    </div>
+                    <span className="text-[11px] font-semibold text-[#1C1C1E]/60 leading-tight">{f.label}</span>
                   </div>
                 ))}
               </div>
@@ -4733,88 +4779,192 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       {/* NOTE: remoteAudioRef lives ONLY inside the active call portal below to avoid ref conflicts */}
 
-      {/* ── Incoming Call Banner (state: ringing) ───────────────────────────── */}
+      {/* ── Incoming Call Screen (state: ringing) ──────────────────────────────── */}
       {callState === 'ringing' && isMounted && typeof document !== 'undefined'
         ? (createPortal(
-        <div className="fixed inset-0 w-full h-full flex flex-col items-center justify-between bg-white" style={{ zIndex: 200000, touchAction: 'none' }}>
-          {/* Top section */}
-          <div className="flex flex-col items-center w-full pt-[max(60px,env(safe-area-inset-top,60px))] px-6">
-            <p className="text-black/40 text-[11px] font-semibold uppercase tracking-[0.3em] mb-2">
-              {callTypeRef.current === 'video' ? '📹 Incoming Video Call' : '🎙️ Incoming Voice Call'}
-            </p>
-            <p className="text-black/25 text-[13px] font-mono mb-10">Ledger Chat · End-to-end encrypted</p>
+        <div
+          className="fixed inset-0 w-full h-full flex flex-col items-center justify-between"
+          style={{
+            zIndex: 200000,
+            touchAction: 'none',
+            background: 'linear-gradient(160deg, #0f0f14 0%, #1a1a2e 40%, #16213e 100%)',
+          }}
+        >
+          {/* Top label */}
+          <div className="flex flex-col items-center w-full pt-[max(56px,env(safe-area-inset-top,56px))] px-6">
+            <div className="flex items-center gap-2 mb-2">
+              {callTypeRef.current === 'video' ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="white" opacity={0.5}><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.89L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="white" opacity={0.5}><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.22 2 2 0 012 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+              )}
+              <span className="text-white/40 text-[11px] font-semibold uppercase tracking-[0.25em]">
+                {callTypeRef.current === 'video' ? 'Incoming Video Call' : 'Incoming Voice Call'}
+              </span>
+            </div>
+            <p className="text-white/20 text-[12px] tracking-wide">Ledger Chat · End-to-end encrypted</p>
+          </div>
 
-            {/* Animated avatar */}
-            <div className="relative flex items-center justify-center mb-8">
-              <div className="absolute w-56 h-56 rounded-full border border-black/10 animate-ping" style={{ animationDuration: '3s' }} />
-              <div className="absolute w-44 h-44 rounded-full border border-black/10 animate-ping" style={{ animationDuration: '2.2s', animationDelay: '0.4s' }} />
-              <div className="absolute w-36 h-36 rounded-full border border-black/10 animate-ping" style={{ animationDuration: '1.8s', animationDelay: '0.8s' }} />
-              <div className="w-28 h-28 rounded-full flex items-center justify-center relative z-10 shadow-xl bg-[#f5f5f7] border border-black/10">
-                <span className="text-black text-4xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '🐳'}</span>
+          {/* Center — Avatar with animated rings */}
+          <div className="flex flex-col items-center gap-6">
+            {/* Rings */}
+            <div className="relative flex items-center justify-center">
+              {[220, 176, 140].map((size, i) => (
+                <div
+                  key={size}
+                  className="absolute rounded-full border"
+                  style={{
+                    width: size,
+                    height: size,
+                    borderColor: 'rgba(255,255,255,0.07)',
+                    animation: `ping ${2.4 - i * 0.4}s cubic-bezier(0,0,0.2,1) infinite`,
+                    animationDelay: `${i * 0.3}s`,
+                  }}
+                />
+              ))}
+              {/* Avatar */}
+              <div
+                className="w-28 h-28 rounded-full relative z-10 flex items-center justify-center border-2 border-white/10 shadow-2xl text-white text-4xl font-black"
+                style={{ background: 'linear-gradient(135deg, #2a2a40, #3a3a58)' }}
+              >
+                {activePeer ? activePeer.slice(2, 4).toUpperCase() : '??'}
               </div>
             </div>
 
-            <p className="text-black text-[28px] font-black tracking-tight mb-1">{activePeer ? getDisplayName(activePeer) : 'Unknown Peer'}</p>
-            <p className="text-black/50 text-[13px] font-mono animate-pulse">Ringing...</p>
+            {/* Name and status */}
+            <div className="flex flex-col items-center gap-1">
+              <p className="text-white text-[30px] font-bold tracking-tight">
+                {activePeer ? getDisplayName(activePeer) : 'Unknown Caller'}
+              </p>
+              <p className="text-white/40 text-[13px] font-mono">
+                {activePeer ? `${activePeer.slice(0, 6)}...${activePeer.slice(-4)}` : ''}
+              </p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-white/40 text-[12px]">Ringing...</span>
+              </div>
+            </div>
           </div>
 
-          {/* Bottom controls */}
-          <div className="w-full flex items-end justify-between px-12 pb-[max(48px,env(safe-area-inset-bottom,48px))]">
-            {/* Decline */}
-            <div className="flex flex-col items-center gap-3">
-              <button
-                onClick={declineCall}
-                className="w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm bg-[#f5f5f7] border border-black/10"
-              >
-                <PhoneOff size={30} className="text-[#050505]" />
-              </button>
-              <span className="text-black/50 text-[11px] font-medium tracking-widest uppercase">Decline</span>
-            </div>
+          {/* Bottom — Decline & Answer */}
+          <div className="w-full pb-[max(52px,env(safe-area-inset-bottom,52px))] px-16">
+            <div className="flex items-center justify-between">
+              {/* Decline */}
+              <div className="flex flex-col items-center gap-3">
+                <button
+                  onClick={declineCall}
+                  className="w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg"
+                  style={{ background: 'rgba(255,59,48,0.85)', backdropFilter: 'blur(10px)' }}
+                >
+                  <PhoneOff size={28} className="text-white" />
+                </button>
+                <span className="text-white/40 text-[11px] font-medium tracking-wider uppercase">Decline</span>
+              </div>
 
-            {/* Answer */}
-            <div className="flex flex-col items-center gap-3">
-              <button
-                onClick={answerCall}
-                className="w-[84px] h-[84px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-xl bg-[#050505]"
-              >
-                <Phone size={36} className="text-white" />
-              </button>
-              <span className="text-black/50 text-[11px] font-medium tracking-widest uppercase">Answer</span>
+              {/* Message quick-reply */}
+              <div className="flex flex-col items-center gap-3 opacity-50">
+                <button
+                  className="w-[52px] h-[52px] rounded-full flex items-center justify-center border border-white/10"
+                  style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(10px)' }}
+                  onClick={() => { declineCall(); }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </button>
+                <span className="text-white/30 text-[10px] font-medium tracking-wider uppercase">Message</span>
+              </div>
+
+              {/* Answer */}
+              <div className="flex flex-col items-center gap-3">
+                <button
+                  onClick={answerCall}
+                  className="w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg"
+                  style={{ background: 'rgba(52,199,89,0.90)', backdropFilter: 'blur(10px)' }}
+                >
+                  <Phone size={28} className="text-white" />
+                </button>
+                <span className="text-white/40 text-[11px] font-medium tracking-wider uppercase">Answer</span>
+              </div>
             </div>
           </div>
         </div>,
         document.body
       ) as React.ReactNode) : null}
-      {/* ── Outgoing Call (state: calling — waiting for answer) ─────────────── */}
+      {/* ── Outgoing Call Screen (state: calling — waiting for answer) ─────── */}
       {(callState === 'calling' && isMounted && typeof document !== 'undefined')
         ? (createPortal(
-        <div className="fixed inset-0 w-full h-full flex flex-col items-center justify-between bg-white" style={{ zIndex: 200000, touchAction: 'none' }}>
-          <div className="flex flex-col items-center w-full pt-[max(60px,env(safe-area-inset-top,60px))] px-6">
-            <p className="text-black/40 text-[11px] font-semibold uppercase tracking-[0.3em] mb-2">
-              {callTypeRef.current === 'video' ? '📹 Video Call' : '🎙️ Voice Call'}
-            </p>
-            <p className="text-black/25 text-[13px] font-mono mb-10">Ledger Chat · End-to-end encrypted</p>
+        <div
+          className="fixed inset-0 w-full h-full flex flex-col items-center justify-between"
+          style={{
+            zIndex: 200000,
+            touchAction: 'none',
+            background: 'linear-gradient(160deg, #0f0f14 0%, #1a1a2e 40%, #16213e 100%)',
+          }}
+        >
+          {/* Top label */}
+          <div className="flex flex-col items-center w-full pt-[max(56px,env(safe-area-inset-top,56px))] px-6">
+            <div className="flex items-center gap-2 mb-2">
+              {callTypeRef.current === 'video' ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="white" opacity={0.5}><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.89L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="white" opacity={0.5}><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.22 2 2 0 012 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+              )}
+              <span className="text-white/40 text-[11px] font-semibold uppercase tracking-[0.25em]">
+                {callTypeRef.current === 'video' ? 'Video Call' : 'Voice Call'}
+              </span>
+            </div>
+            <p className="text-white/20 text-[12px] tracking-wide">Ledger Chat · End-to-end encrypted</p>
+          </div>
 
-            <div className="relative flex items-center justify-center mb-8">
-              <div className="absolute w-52 h-52 rounded-full border border-black/10 animate-ping" style={{ animationDuration: '3s' }} />
-              <div className="absolute w-40 h-40 rounded-full border border-black/10 animate-ping" style={{ animationDuration: '2.2s', animationDelay: '0.4s' }} />
-              <div className="w-28 h-28 rounded-full flex items-center justify-center relative z-10 shadow-xl bg-[#f5f5f7] border border-black/10">
-                <span className="text-black text-4xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '🐳'}</span>
+          {/* Center — Avatar with slow animated rings */}
+          <div className="flex flex-col items-center gap-6">
+            <div className="relative flex items-center justify-center">
+              {[200, 160].map((size, i) => (
+                <div
+                  key={size}
+                  className="absolute rounded-full border"
+                  style={{
+                    width: size,
+                    height: size,
+                    borderColor: 'rgba(255,255,255,0.06)',
+                    animation: `ping ${3 + i * 0.5}s cubic-bezier(0,0,0.2,1) infinite`,
+                    animationDelay: `${i * 0.5}s`,
+                  }}
+                />
+              ))}
+              <div
+                className="w-28 h-28 rounded-full relative z-10 flex items-center justify-center border-2 border-white/10 shadow-2xl text-white text-4xl font-black"
+                style={{ background: 'linear-gradient(135deg, #2a2a40, #3a3a58)' }}
+              >
+                {activePeer ? activePeer.slice(2, 4).toUpperCase() : '??'}
               </div>
             </div>
 
-            <p className="text-black text-[28px] font-black tracking-tight mb-1">{activePeer ? getDisplayName(activePeer) : 'Unknown Peer'}</p>
-            <p className="text-black/40 text-[13px] font-mono animate-pulse">Calling...</p>
+            <div className="flex flex-col items-center gap-1">
+              <p className="text-white text-[30px] font-bold tracking-tight">
+                {activePeer ? getDisplayName(activePeer) : 'Unknown Peer'}
+              </p>
+              <p className="text-white/40 text-[13px] font-mono">
+                {activePeer ? `${activePeer.slice(0, 6)}...${activePeer.slice(-4)}` : ''}
+              </p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                <span className="text-white/40 text-[12px] animate-pulse">Calling...</span>
+              </div>
+            </div>
           </div>
 
-          <div className="w-full flex flex-col items-center pb-[max(32px,env(safe-area-inset-bottom,32px))]">
-             <button
-                onClick={performEndCallRef.current}
-                className="w-16 h-16 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm bg-[#f5f5f7] border border-black/10"
-              >
-                <PhoneOff size={28} className="text-[#050505]" />
-              </button>
-              <span className="text-black/40 text-[11px] font-mono mt-3 uppercase tracking-widest">Cancel</span>
+          {/* Bottom — Cancel */}
+          <div className="w-full flex flex-col items-center pb-[max(52px,env(safe-area-inset-bottom,52px))]">
+            <button
+              onClick={performEndCallRef.current}
+              className="w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg"
+              style={{ background: 'rgba(255,59,48,0.85)', backdropFilter: 'blur(10px)' }}
+            >
+              <PhoneOff size={28} className="text-white" />
+            </button>
+            <span className="text-white/40 text-[11px] font-medium mt-3 uppercase tracking-wider">Cancel</span>
           </div>
         </div>,
         document.body
