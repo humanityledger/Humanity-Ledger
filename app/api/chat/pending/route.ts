@@ -105,17 +105,28 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const address = searchParams.get('address')?.toLowerCase() ?? null;
 
+    const peer = searchParams.get('peer')?.toLowerCase() ?? null;
+
     const userId = await resolveUserId(req, address);
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!address || address !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const aztecAddr = deriveAztecAddress(address).toLowerCase();
+    
+    // [SECURITY & DATA INTEGRITY FIX] Only delete messages from the specific peer we just loaded.
+    // If peer is missing, return error to prevent accidental wipe of all pending messages.
+    if (!peer) {
+      return NextResponse.json({ error: 'Missing peer parameter' }, { status: 400 });
+    }
 
     await prisma.pendingChatMessage.deleteMany({
-      where: { OR: [
-        { recipient: address }, 
-        { recipient: aztecAddr }
-      ] }
+      where: { 
+        OR: [
+          { recipient: address }, 
+          { recipient: aztecAddr }
+        ],
+        sender: peer
+      }
     });
 
     return NextResponse.json({ success: true });

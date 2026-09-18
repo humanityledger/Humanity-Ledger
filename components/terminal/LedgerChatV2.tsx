@@ -815,8 +815,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // Prune optimisticContentMap — entries lingering >60s were never echoed back (failed send)
   // and should be cleared to prevent unbounded growth.
   const pruneOptimisticMap = useCallback(() => {
+    // [BUG FIX] Don't clear() the entire map — that would destroy in-flight optimistic
+    // entries for messages that haven't been echoed back yet, causing duplicates.
+    // Instead, evict only the OLDEST half when the map exceeds the threshold.
     if (optimisticContentMap.current.size > 100) {
-      optimisticContentMap.current.clear();
+      const entries = Array.from(optimisticContentMap.current.entries());
+      // Keep the newest 50 entries (most likely still in-flight)
+      const toKeep = entries.slice(entries.length - 50);
+      optimisticContentMap.current = new Map(toKeep);
     }
   }, []);
   // Always-fresh ref to executeSend — avoids stale closure in event listeners
@@ -845,12 +851,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [activePeer]);
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages — ONLY if user is already near the bottom.
+  // If the user has scrolled up to read history, do NOT hijack them back to the bottom.
   useEffect(() => {
     if (messagesEndRef.current) {
       const container = messagesEndRef.current.parentElement;
       if (container) {
-        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        // Only auto-scroll if within 150px of the bottom (user hasn't scrolled up)
+        if (distanceFromBottom < 150) {
+          container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        }
       }
     }
   }, [messages]);
@@ -2979,7 +2990,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                const hasIncoming = pData.pending.some((p: any) => p.sender?.toLowerCase() !== address?.toLowerCase());
                
                if (hasIncoming) {
-                 fetch(`/api/chat/pending?address=${address}`, {
+                 fetch(`/api/chat/pending?address=${address}&peer=${activePeer}`, {
                    method: 'DELETE',
                    headers: { 'x-web3-address': address || '' }
                  }).catch(err => console.warn('[PendingConsume] Failed to clear delivered messages:', err));
@@ -4331,7 +4342,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   lastDate = dateStr;
 
                   const isMe = msg.senderInboxId
-                    ? msg.senderInboxId?.toLowerCase() === (client?.inboxId as string)?.toLowerCase()
+                    ? (msg.senderInboxId.toLowerCase() === (client?.inboxId as string)?.toLowerCase() ||
+                       msg.senderInboxId.toLowerCase() === address?.toLowerCase())
                     : false;
                   
                   return (
