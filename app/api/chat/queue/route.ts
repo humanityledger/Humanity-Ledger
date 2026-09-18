@@ -26,8 +26,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Content length guard — prevent storage exhaustion
-    if (content.length > 4 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Content too long (max 4 MB)' }, { status: 400 });
+    // [FIX] Reduced from 4MB to 4096 chars to match /api/chat/pending limit and
+    // prevent database storage exhaustion via high-volume offline queue sends.
+    if (content.length > 4096) {
+      return NextResponse.json({ error: 'Content too long (max 4096 chars)' }, { status: 400 });
     }
 
     // [SECURITY HARDENING] Prevent spoofing of the sender address

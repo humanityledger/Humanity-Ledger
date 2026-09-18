@@ -460,13 +460,12 @@ export async function sendMessage(
     });
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}));
-      console.warn('[XMTP Offline Queue] Could not queue message (non-fatal):', errBody.error || res.statusText);
+      throw new Error(errBody.error || `Offline queue failed with status ${res.status}`);
     }
-    // Do NOT throw — offline queue failure is non-fatal
-    // The message was optimistically shown to the sender already
   } catch (queueErr) {
-    console.warn('[XMTP Offline Queue] Network error queuing (non-fatal):', queueErr);
-    // Still do NOT throw
+    console.warn('[XMTP Offline Queue] Error queuing:', queueErr);
+    // Re-throw so the UI marks it as failed and allows retry
+    throw queueErr;
   }
 }
 

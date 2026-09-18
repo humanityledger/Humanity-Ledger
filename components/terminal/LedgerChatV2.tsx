@@ -805,11 +805,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const confirmedMsgIds = useRef<Set<string>>(new Set());
   const optimisticContentMap = useRef<Map<string, string>>(new Map()); // content -> optimisticId
   // Prune confirmedMsgIds to prevent unbounded growth in long sessions.
-  // We keep the last 500 IDs to guarantee deduplication for any reasonable message history.
+  // [FIX] Raised from 500/250 to 2000/1000 — fetchHistorical bulk-inserts all history IDs.
+  // In conversations with 300-500 messages, the old threshold would prune IDs that are still
+  // in view, causing the next poll to re-insert them as "new" (phantom duplicate messages).
   const pruneConfirmedIds = useCallback(() => {
-    if (confirmedMsgIds.current.size > 500) {
+    if (confirmedMsgIds.current.size > 2000) {
       const arr = Array.from(confirmedMsgIds.current);
-      confirmedMsgIds.current = new Set(arr.slice(arr.length - 250));
+      confirmedMsgIds.current = new Set(arr.slice(arr.length - 1000));
     }
   }, []);
   // Prune optimisticContentMap — entries lingering >60s were never echoed back (failed send)
@@ -2975,21 +2977,23 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           if (pRes.ok) {
             const pData = await pRes.json();
             if (pData.pending && Array.isArray(pData.pending)) {
-               pendingServer = pData.pending.filter((p: any) => p.sender.toLowerCase() === activePeer.toLowerCase() || p.recipient.toLowerCase() === activePeer.toLowerCase()).map((p: any) => ({
-                  id: p.id,
-                  // XMTP uses client.inboxId but our fallback uses raw addresses to match UI logic
-                  senderInboxId: p.sender.toLowerCase() === activePeer.toLowerCase() ? activePeer : (client?.inboxId || address),
-                  content: p.content,
-                  sentAtNs: new Date(p.timestamp).getTime(),
-                  conversationId: `dm-${activePeer.toLowerCase()}`
-               }));
+               // [FIX] API now returns ONLY messages where we are the recipient.
+               // Every message here is from the peer (incoming), so we filter to
+               // the active peer and mark the sender correctly.
+               pendingServer = pData.pending
+                 .filter((p: any) => p.sender.toLowerCase() === activePeer.toLowerCase())
+                 .map((p: any) => ({
+                   id: p.id,
+                   // Since every pending message here is FROM the peer TO us,
+                   // senderInboxId = activePeer (will be compared as ETH addr in isMe check)
+                   senderInboxId: activePeer.toLowerCase(),
+                   content: p.content,
+                   sentAtNs: new Date(p.timestamp).getTime(),
+                   conversationId: `dm-${activePeer.toLowerCase()}`
+                }));
                
-               // CONSUME pending messages where we are the RECIPIENT:
-               // This clears them from the server queue so they are marked as delivered.
-               // Only delete messages addressed TO us — we must not delete messages we sent.
-               const hasIncoming = pData.pending.some((p: any) => p.sender?.toLowerCase() !== address?.toLowerCase());
-               
-               if (hasIncoming) {
+               // CONSUME all pending messages (they are all incoming — API contract guarantees this)
+               if (pendingServer.length > 0) {
                  fetch(`/api/chat/pending?address=${address}&peer=${activePeer}`, {
                    method: 'DELETE',
                    headers: { 'x-web3-address': address || '' }
@@ -3421,8 +3425,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     } catch (err: any) {
       // [FIX] Removed 'throw err' which was short-circuiting the UI error feedback.
       // Now, failed messages will correctly display a red error state in the chat bubble.
-      // Use 'content' (raw input) instead of 'finalContent' to match what we inserted into the map.
-      optimisticContentMap.current.delete(content);
+      // Use 'finalContent' (processed input) to match what we inserted into the map.
+      optimisticContentMap.current.delete(finalContent);
       const errString = err?.message || String(err);
       setMessages(prev => prev.map(m => 
         m.id === optimisticId 

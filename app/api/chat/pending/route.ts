@@ -36,10 +36,13 @@ export async function GET(req: NextRequest) {
 
     const pending = await prisma.pendingChatMessage.findMany({
       where: {
+        // [CRITICAL FIX] Only return messages addressed TO this user (incoming messages).
+        // Previously this also returned messages they SENT, which the UI would then
+        // treat as incoming and delete via DELETE /api/chat/pending (which only
+        // deletes where recipient=address). This caused sent-but-undelivered messages
+        // to be permanently lost from the server queue.
         OR: [
-          { sender: address },
           { recipient: address },
-          { sender: aztecAddr },
           { recipient: aztecAddr }
         ]
       },
