@@ -2606,9 +2606,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             try {
               let dms = await client.conversations.listDms();
               let dm = dms.find((d: any) => d.id === convoId);
-              // [AUDIT FIX] Removed blocking client.conversations.sync() here.
-              // If the DM is not found in the local list yet, we'll fall back to convoId 
-              // rather than blocking the hot stream loop with a network sync.
+              
+              // [AUDIT FIX] If the DM is missing from local cache (new chat),
+              // perform a quick sync. This is much better than corrupting the UI
+              // with a raw convoId hash that breaks routing and deduplication.
+              if (!dm) {
+                await client.conversations.sync();
+                dms = await client.conversations.listDms();
+                dm = dms.find((d: any) => d.id === convoId);
+              }
+              
               if (dm) {
                 const dmPeer = await extractPeerAddress(dm, selfInboxId);
                 resolvedPeerAddr = dmPeer?.toLowerCase() || '';
@@ -2756,6 +2763,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             !!activeXmtpDmIdRef.current &&
             convoId === activeXmtpDmIdRef.current;
           const belongsToActive = belongsToActiveByAddr || belongsToActiveByConvoId;
+
+          // [CRITICAL BUG FIX] If the message belongs to the active chat via the convoId fallback, 
+          // msgConvPeer is a hash, meaning mappedMsg.conversationId was set to dm-<hash>.
+          // The render loop filters out anything that isn't dm-<activePeer>. 
+          // We MUST forcefully align the conversationId here, otherwise it gets inserted into state,
+          // hidden by the UI, and permanently blackholed by the deduplication Set.
+          if (belongsToActive) {
+            mappedMsg.conversationId = `dm-${currentActivePeer}`;
+          }
 
           if (belongsToActive) {
 
