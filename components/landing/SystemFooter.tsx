@@ -47,7 +47,7 @@ export function SystemFooter() {
             <Link href="/docs/privacy" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Privacy Policy</Link>
             <Link href="/docs/terms" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Terms of Service</Link>
             <Link href="/docs/cookies" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Cookie Policy</Link>
-            <Link href="/docs/aml-kyc" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">AML &amp; KYC</Link>
+            <Link href="/docs/aml-kyc" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">AML & KYC</Link>
           </div>
 
           {/* Developers */}
@@ -64,7 +64,7 @@ export function SystemFooter() {
         {/* Bottom bar */}
         <div className="border-t border-black/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-[13px] text-black/40 font-medium text-center md:text-left">
-            &copy; 2027 Humanity Ledger. Not a financial institution. Not affiliated with Humanity Protocol.
+            © 2026 Humanity Ledger. Not a financial institution. Not affiliated with Humanity Protocol.
           </p>
         </div>
 

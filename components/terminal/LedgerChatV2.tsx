@@ -1168,6 +1168,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
              callTypeRef.current = inCallType;
              setCallState('ringing');
              startRingtone();
+
+             if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
+             callTimeoutRef.current = setTimeout(() => {
+               if (callStateRef.current === 'ringing') {
+                 toast.error('Missed call.');
+                 performEndCallRef.current();
+               }
+             }, 45000);
           }
         } else if (
           (callStateRef.current === 'calling' || callStateRef.current === 'connecting')
@@ -1211,11 +1219,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           console.warn('[Ledger Chat:PeerJS] Network error — scheduling re-init');
           schedulePeerReinit(2000);
         } else if (err.type === 'peer-unavailable') {
-          // Remote peer is not connected — this is expected, not a fatal error.
-          // Only show an error if we are actively trying to call.
-          if (callStateRef.current === 'calling' || callStateRef.current === 'connecting') {
-            toast.error('Peer is not available. They may be offline.');
-            performEndCallRef.current();
+          // Remote peer is not connected on their base PeerID.
+          // DO NOT terminate the call here! The receiver may be on a -rX suffixed ID
+          // and will reverse-dial us back via the XMTP __CALL_OFFER__ signal.
+          // The 60-second caller timeout will clean up if they truly don't connect.
+          if (callStateRef.current === 'calling') {
+            console.warn('[Ledger Chat:PeerJS] Peer unavailable on base ID — waiting for XMTP reverse-dial fallback...');
           }
         }
         // Other errors (e.g. 'disconnected') are handled by peer.on('disconnected')
@@ -1307,11 +1316,42 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         remotePeerIdRef.current = callerPeerId;
       }
 
-      if (callStateRef.current === 'idle') {
+      if (callStateRef.current === 'idle' || callStateRef.current === 'ringing') {
+        // [CRITICAL RECIPROCITY FIX] Switch activePeer to the caller so the UI 
+        // and subsequent signaling (e.g. decline/hangup) go to the right person.
+        // This must run even if state is 'ringing' in case the WebRTC connection
+        // beat the XMTP signal to the device.
+        if ((lastMsg as any).conversationId && (lastMsg as any).conversationId.startsWith('dm-')) {
+          const callerEthAddress = (lastMsg as any).conversationId.replace('dm-', '');
+          if (callerEthAddress && callerEthAddress.toLowerCase() !== activePeer?.toLowerCase()) {
+            setActivePeer(callerEthAddress);
+            setConversations(prev => {
+              if (!prev.find(c => c.peerAddress.toLowerCase() === callerEthAddress.toLowerCase())) {
+                const newConv = { peerAddress: callerEthAddress, lastMessage: '📞 Incoming call...', lastAt: new Date() };
+                const next = [newConv, ...prev];
+                persistToLocal(next);
+                return next;
+              }
+              return prev;
+            });
+          }
+        }
+
         setCallType(offerCallType);
         isCallerRef.current = false;
-        setCallState('ringing');
-        startRingtone();
+        
+        if (callStateRef.current !== 'ringing') {
+          setCallState('ringing');
+          startRingtone();
+          
+          if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
+          callTimeoutRef.current = setTimeout(() => {
+            if (callStateRef.current === 'ringing') {
+              toast.error('Missed call.');
+              performEndCallRef.current();
+            }
+          }, 45000);
+        }
       }
       console.log('[Ledger Chat:Signal] CALL_OFFER received, callerPeerId:', callerPeerId, 'type:', offerCallType);
     }
@@ -1326,21 +1366,23 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       console.log('[Ledger Chat:Signal] CALL_ANSWER (ack) received — WebRTC already initiated directly.');
     }
 
-    // ── CALL_DECLINE: Callee declined ──────────────────────────────────────────
+    // ── CALL_DECLINE: Callee declined ─────────────────────────────────────────
     if (content === '__CALL_DECLINE__') {
       processedSignalIds.current.add(lastMsg.id);
-      if (callState !== 'idle') {
+      console.log('[Ledger Chat:Signal] Decline received');
+      if (callStateRef.current !== 'idle') {
         performEndCallRef.current();
-        toast('📵 Call declined.');
+        toast('Call was declined.');
       }
     }
 
     // ── CALL_HANGUP: Remote party hung up ─────────────────────────────────────
     if (content === '__CALL_HANGUP__') {
       processedSignalIds.current.add(lastMsg.id);
-      if (callState !== 'idle') {
+      console.log('[Ledger Chat:Signal] Hangup received');
+      if (callStateRef.current !== 'idle') {
         performEndCallRef.current();
-        toast('📵 Call ended by peer.');
+        toast('Call ended by peer.');
       }
     }
     // AUDIT FIX: Prune signal IDs to prevent memory leak
@@ -1568,13 +1610,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       // With deterministic PeerIDs, the Caller dials the receiver DIRECTLY using
       // derivePeerId(activePeer). We also send CALL_OFFER via XMTP so the receiver's
       // UI shows the ringing screen. The CALL_OFFER carries the caller's stable PeerID.
-      const myStablePeerId = derivePeerId(address!);
+      // [CRITICAL RECIPROCITY FIX] Use the actual registered PeerID (which may have a -rX suffix
+      // if the WebRTC session had to re-initialize). Using the base ID here would break the
+      // receiver's reverse-dial fallback if the caller is on a suffixed ID.
+      const myStablePeerId = myPeerIdRef.current || derivePeerId(address!);
       executeSend(`__CALL_OFFER__:${myStablePeerId}:${type}`).catch(() => {});
 
       // Directly dial the receiver via PeerJS — no XMTP round-trip needed
       const livePeerForStart = peerInstanceRef.current;
-      if (livePeerForStart && !livePeerForStart.destroyed) {
-        const outConn = livePeerForStart.call(receiverPeerId, stream, {
+      if (!livePeerForStart || livePeerForStart.destroyed) {
+        toast.error('WebRTC lost connection — please retry.');
+        performEndCallRef.current();
+        return;
+      }
+      
+      const outConn = livePeerForStart.call(receiverPeerId, stream, {
           metadata: { callType: type }
         });
         if (outConn) {
@@ -1594,7 +1644,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           outConn.on('close', () => performEndCallRef.current());
           outConn.on('error', () => performEndCallRef.current());
         }
-      }
       toast.success('Ringing...');
 
       // Caller timeout: if no stream arrives in 60s, clean up
@@ -1704,7 +1753,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       } else {
         // FALLBACK: Outbound call to Caller's deterministic PeerID
         console.log('[Call:answerCall] No pending connection — falling back to outbound dial');
-        const targetPeerId = remotePeerIdRef.current || derivePeerId(activePeer!);
+        const targetPeerId = remotePeerIdRef.current || (activePeer ? derivePeerId(activePeer) : null);
+        if (!targetPeerId) {
+          toast.error('Cannot answer: caller identity unknown. Please wait and retry.');
+          performEndCallRef.current();
+          return;
+        }
+        
         const livePeer = peerInstanceRef.current;
         if (!livePeer || livePeer.destroyed) {
           toast.error('WebRTC: Peer connection not ready. Please refresh.');
@@ -1747,7 +1802,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           toast.error('Call timed out — no media stream received.');
           performEndCallRef.current();
         }
-      }, 20000);
+      }, 30000);
 
     } catch (e: any) {
       if (stream) { try { stream.getTracks().forEach(t => t.stop()); } catch {} }
@@ -1848,6 +1903,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const toggleVoiceIsolation = useCallback(async () => {
     if (!localStreamRef.current || !activeConnectionRef.current) return;
     const nextIsolation = !voiceIsolation;
+    let newAudioTrack: MediaStreamTrack | null = null;
     try {
       const newStream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -1856,7 +1912,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           autoGainControl: true
         }
       });
-      const newAudioTrack = newStream.getAudioTracks()[0];
+      newAudioTrack = newStream.getAudioTracks()[0];
       const oldAudioTrack = localStreamRef.current.getAudioTracks()[0];
       const peerConn = activeConnectionRef.current.peerConnection;
       if (peerConn) {
@@ -1871,6 +1927,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }
       }
     } catch (e) {
+      try { newAudioTrack?.stop(); } catch {} // prevent track leak
       toast.error('Failed to change voice isolation settings.');
     }
   }, [voiceIsolation, isMicMuted]);
@@ -1879,13 +1936,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const toggleDataSaver = useCallback(async () => {
     if (!localStreamRef.current || !activeConnectionRef.current || callTypeRef.current !== 'video') return;
     const nextSaver = !dataSaver;
+    let newVideoTrack: MediaStreamTrack | null = null;
     try {
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: nextSaver 
           ? { width: { ideal: 480 }, frameRate: { ideal: 15 }, facingMode: activeCamera }
           : { width: { ideal: 1280 }, frameRate: { ideal: 30 }, facingMode: activeCamera }
       });
-      const newVideoTrack = newStream.getVideoTracks()[0];
+      newVideoTrack = newStream.getVideoTracks()[0];
       const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
       const peerConn = activeConnectionRef.current.peerConnection;
       if (peerConn) {
@@ -1900,6 +1958,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }
       }
     } catch (e) {
+      try { newVideoTrack?.stop(); } catch {} // prevent track leak
       toast.error('Failed to apply data saver mode.');
     }
   }, [dataSaver, activeCamera, isCamOff]);
@@ -1908,12 +1967,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const switchCamera = async () => {
     if (!localStreamRef.current || !activeConnectionRef.current) return;
     const newFacingMode = activeCamera === 'user' ? 'environment' : 'user';
+    let newVideoTrack: MediaStreamTrack | null = null;
     try {
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { exact: newFacingMode } },
         audio: false
       });
-      const newVideoTrack = newStream.getVideoTracks()[0];
+      newVideoTrack = newStream.getVideoTracks()[0];
       const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
       
       const peerConn = activeConnectionRef.current.peerConnection;
@@ -1929,13 +1989,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         setIsScreenSharing(false);
       }
     } catch (e) {
+      try { newVideoTrack?.stop(); } catch {}
       toast.error('Rear camera not found or access denied.');
       // Fallback if exact fails
       try {
          const newStream = await navigator.mediaDevices.getUserMedia({
            video: { facingMode: newFacingMode }, audio: false
          });
-         const newVideoTrack = newStream.getVideoTracks()[0];
+         newVideoTrack = newStream.getVideoTracks()[0];
          const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
          const peerConn = activeConnectionRef.current.peerConnection;
          const sender = peerConn.getSenders().find((s: any) => s.track?.kind === 'video');
@@ -1947,7 +2008,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
            setActiveCamera(newFacingMode);
            setIsScreenSharing(false);
          }
-      } catch (err) {}
+      } catch (err) {
+         try { newVideoTrack?.stop(); } catch {}
+      }
     }
   };
 
@@ -2499,15 +2562,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // 4. If no optimistic placeholder exists (e.g. opened in a second tab) →
     //    insert normally, but only after confirming the ID is not already present.
     // Self-healing stream loop: if GroupInactive kills the stream, restart it with backoff.
+    let activeAbortController: AbortController | null = null;
     (async () => {
       let streamRestarts = 0;
       while (!cancelled) {
         try {
-        const abortController = new AbortController();
-          const gen = streamMessages(client, abortController.signal);
+          if (activeAbortController) activeAbortController.abort();
+          activeAbortController = new AbortController();
+          const gen = streamMessages(client, activeAbortController.signal);
         for await (const msg of gen as any) {
-          if (cancelled) { abortController.abort(); break; }
+          if (cancelled) { activeAbortController.abort(); break; }
           
+          // [AUDIT FIX] Dynamically fetch selfInboxId to avoid stale closure if client rotates
+          const selfInboxId = (client as any).inboxId ?? '';
           const fromPeer = msg.senderInboxId !== selfInboxId;
           const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
           const sentAtNs = nsToDate(msg.sentAtNs ?? msg.sentAt).getTime();
@@ -2515,38 +2582,40 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           
           let resolvedPeerAddr = msg.conversation?.peerAddress?.toLowerCase() || '';
           if (!resolvedPeerAddr) {
-            if (fromPeer) {
-              const senderAddr = await resolveSenderAddress(msg.senderInboxId, client);
-              resolvedPeerAddr = senderAddr?.toLowerCase() || '';
-            } else if (msg.conversation) {
-              const dmPeer = await extractPeerAddress(msg.conversation, selfInboxId);
-              resolvedPeerAddr = dmPeer?.toLowerCase() || '';
+            try {
+              if (fromPeer) {
+                const senderAddr = await resolveSenderAddress(msg.senderInboxId, client);
+                resolvedPeerAddr = senderAddr?.toLowerCase() || '';
+              } else if (msg.conversation) {
+                const dmPeer = await extractPeerAddress(msg.conversation, selfInboxId);
+                resolvedPeerAddr = dmPeer?.toLowerCase() || '';
+              }
+            } catch (e) {
+              console.warn('[Ledger Chat] Transient error resolving peer address:', e);
             }
           }
 
           // Ultimate fallback (works for both sender and recipient in v5.3.0)
-          if (!resolvedPeerAddr) {
-            const convoId = msg.convoId || msg.conversationId || msg.groupId || msg.conversation?.id;
-            if (convoId) {
-              try {
-                let dms = await client.conversations.listDms();
-                let dm = dms.find((d: any) => d.id === convoId);
-                if (!dm) {
-                  // Message from a NEW conversation not yet synced locally!
-                  await client.conversations.sync().catch(()=>{});
-                  dms = await client.conversations.listDms();
-                  dm = dms.find((d: any) => d.id === convoId);
-                }
-                if (dm) {
-                  const dmPeer = await extractPeerAddress(dm, selfInboxId);
-                  resolvedPeerAddr = dmPeer?.toLowerCase() || '';
-                }
-              } catch (e) {
-                console.warn('Failed to resolve convoId to peer address', e);
+          const convoId = msg.convoId || msg.conversationId || msg.groupId || msg.conversation?.id || '';
+          if (!resolvedPeerAddr && convoId) {
+            try {
+              let dms = await client.conversations.listDms();
+              let dm = dms.find((d: any) => d.id === convoId);
+              // [AUDIT FIX] Removed blocking client.conversations.sync() here.
+              // If the DM is not found in the local list yet, we'll fall back to convoId 
+              // rather than blocking the hot stream loop with a network sync.
+              if (dm) {
+                const dmPeer = await extractPeerAddress(dm, selfInboxId);
+                resolvedPeerAddr = dmPeer?.toLowerCase() || '';
               }
+            } catch (e) {
+              console.warn('Failed to resolve convoId to peer address', e);
             }
           }
-          const msgConvPeer = resolvedPeerAddr;
+          
+          // [AUDIT FIX] If all resolutions fail, fall back to convoId or senderInboxId 
+          // to prevent the message from being silently dropped.
+          const msgConvPeer = resolvedPeerAddr || convoId || msg.senderInboxId || 'unknown';
           const realId = msg.id ?? `real-${sentAtNs}-${Math.random()}`;
 
           // ── ABSOLUTE DEDUPLICATION GATE ──────────────────────────────────────
@@ -2799,7 +2868,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       } // end while
     })();
 
-    return () => { cancelled = true; clearInterval(globalPoll); };
+    return () => { 
+      cancelled = true; 
+      clearInterval(globalPoll); 
+      if (activeAbortController) activeAbortController.abort();
+    };
   }, [client, address]);
 
   //  Load messages when active peer changes 

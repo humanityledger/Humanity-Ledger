@@ -515,7 +515,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
 
             <div className="flex flex-col gap-4">
               <FeatureCheck text="Wallet identity. No phone number required." />
-              <FeatureCheck text="In-chat Quantum Dot payments with built-in micro-transactions" />
+              <FeatureCheck text="In-chat Quantum Dot payments with built-in microtransactions" />
               <FeatureCheck text="Cryptographic message signing for mathematically guaranteed authenticity" />
               <FeatureCheck text="Burn on Read: messages auto-destroy after viewing" />
               <FeatureCheck text="Voice notes with a real-time waveform visualizer" />
@@ -569,8 +569,8 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               className="flex flex-wrap justify-center gap-12 md:gap-24 mb-16"
             >
               <AnimatedCounter end={100} suffix="%" label="Private" />
-              <AnimatedCounter end={0} suffix="ms" label="Latency" />
-              <AnimatedCounter end={3} suffix="" label="Web3 Native" />
+              <AnimatedCounter end={256} suffix="-bit" label="Encryption" />
+              <AnimatedCounter end={0} suffix=" Trackers" label="Ads & Trackers" />
             </motion.div>
 
             {/* Feature grid */}
@@ -620,7 +620,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
           </motion.div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { step: "01", icon: <Wallet size={24} />, title: "Connect your wallet or use FaceID", desc: "Use your existing wallet or authenticate with FaceID using our Passkey system — no seed phrases exposed.", color: "bg-blue-500/10 text-blue-600" },
+              { step: "01", icon: <Wallet size={24} />, title: "Connect your wallet or use Face ID", desc: "Use your existing wallet or authenticate with Face ID using our Passkey system — no seed phrases exposed.", color: "bg-blue-500/10 text-blue-600" },
               { step: "02", icon: <Fingerprint size={24} />, title: "Create your identity on-chain", desc: "Your ENS name and on-chain reputation become your permanent, portable identity — not controlled by any corporation.", color: "bg-purple-500/10 text-purple-600" },
               { step: "03", icon: <MessageCircle size={24} />, title: "Chat, call, and transact privately", desc: "Chat end-to-end encrypted, make P2P video calls, send crypto in-chat, and join token-gated communities.", color: "bg-green-500/10 text-green-600" },
             ].map((item, i) => (
@@ -689,8 +689,8 @@ function LiveUsersBadge() {
   React.useEffect(() => {
     fetch('/api/metrics/online')
       .then(res => res.json())
-      .then(data => setCount(typeof data.count === 'number' ? data.count : 847))
-      .catch(() => setCount(847));
+      .then(data => setCount(typeof data.count === 'number' ? data.count : null))
+      .catch(() => setCount(null));
       
     const t = setTimeout(() => setVisible(true), 1500);
     return () => clearTimeout(t);

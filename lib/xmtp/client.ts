@@ -41,7 +41,19 @@ const XMTP_ENV: XmtpEnv =
 const clientRegistry = new Map<string, Client>();
 
 // InboxId → Ethereum address cache (populated during message stream/fetch)
+// [AUDIT FIX] Bounded to 1000 entries to prevent unbounded memory growth in long sessions.
 const inboxIdToAddressCache = new Map<string, string>();
+function cacheInboxId(inboxId: string, address: string) {
+  if (inboxIdToAddressCache.size >= 1000) {
+    // Evict the oldest 100 entries (Map preserves insertion order)
+    let evicted = 0;
+    for (const key of inboxIdToAddressCache.keys()) {
+      inboxIdToAddressCache.delete(key);
+      if (++evicted >= 100) break;
+    }
+  }
+  cacheInboxId(inboxId, address);
+}
 
 //  Hex string → Uint8Array 
 function hexToBytes(hex: string): Uint8Array {
@@ -87,7 +99,7 @@ export async function resolveInboxIdToAddress(inboxId: string, client?: Client):
       for (const id of identifiers) {
         if (id?.identifierKind === 'Ethereum' && id?.identifier) {
           const addr = id.identifier.toLowerCase();
-          inboxIdToAddressCache.set(inboxId.toLowerCase(), addr);
+          cacheInboxId(inboxId.toLowerCase(), addr);
           return addr;
         }
       }
@@ -95,7 +107,7 @@ export async function resolveInboxIdToAddress(inboxId: string, client?: Client):
       const addrs: string[] = state.accountAddresses ?? state.addresses ?? [];
       if (addrs.length > 0) {
         const addr = addrs[0].toLowerCase();
-        inboxIdToAddressCache.set(inboxId.toLowerCase(), addr);
+        cacheInboxId(inboxId.toLowerCase(), addr);
         return addr;
       }
     }
@@ -127,7 +139,7 @@ export async function warmInboxIdCache(client: Client): Promise<void> {
             if (ids.length > 0) addr = ids[0].identifier;
           }
           if (inboxId && addr) {
-            inboxIdToAddressCache.set(inboxId.toLowerCase(), addr.toLowerCase());
+            cacheInboxId(inboxId.toLowerCase(), addr.toLowerCase());
           }
         }
       } catch {}
@@ -275,6 +287,9 @@ export async function revokeXMTPInstallations(
 /** Remove a client from the registry (call on wallet disconnect) */
 export function destroyXMTPClient(address: string): void {
   clientRegistry.delete(address.toLowerCase());
+  // [AUDIT FIX] Clear the inbox-id→address cache on client destroy so stale entries
+  // from the previous wallet don't pollute a new session (e.g. after wallet switch).
+  inboxIdToAddressCache.clear();
 }
 
 /**
@@ -488,7 +503,7 @@ export async function extractPeerAddress(dm: any, selfInboxId: string): Promise<
       const inboxId: string = m.inboxId ?? '';
       const addrs = extractAddrs(m);
       if (inboxId && addrs.length > 0) {
-        inboxIdToAddressCache.set(inboxId.toLowerCase(), addrs[0].toLowerCase());
+        cacheInboxId(inboxId.toLowerCase(), addrs[0].toLowerCase());
       }
     }
 
@@ -609,6 +624,10 @@ export async function* streamMessages(client: Client, signal?: AbortSignal) {
 
   let onAbort: (() => void) | undefined;
   if (signal) {
+    // [AUDIT FIX] Don't register a listener if signal is already aborted.
+    if (signal.aborted) {
+      return; // immediately clean up without yielding anything
+    }
     onAbort = () => {
       try {
         if (typeof (stream as any).return === 'function') {
@@ -646,3 +665,4 @@ export async function resolveSenderAddress(senderInboxId: string, client?: Clien
   if (cached) return cached;
   return resolveInboxIdToAddress(senderInboxId, client);
 }
+

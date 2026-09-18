@@ -419,9 +419,8 @@ export default async function RootLayout({
     <html lang="en" className={`light bg-white ${plexSans.variable} ${aztecFont.variable} ${plexMono.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
 
       <head>
-
+        <meta charSet="utf-8" />
         {/* Proper viewport already handled by Next.js `viewport` export above */}
-
         <meta name="apple-mobile-web-app-capable" content="yes" />
 
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
