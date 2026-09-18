@@ -52,7 +52,7 @@ function cacheInboxId(inboxId: string, address: string) {
       if (++evicted >= 100) break;
     }
   }
-  cacheInboxId(inboxId, address);
+  inboxIdToAddressCache.set(inboxId, address);
 }
 
 //  Hex string → Uint8Array 

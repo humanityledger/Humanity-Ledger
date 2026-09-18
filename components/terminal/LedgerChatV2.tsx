@@ -786,6 +786,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const activePeerDmIdRef = useRef<string | null>(null);
   const peerToConvId = useRef<Map<string, string>>(new Map());
   const convIdToPeer = useRef<Map<string, string>>(new Map());
+  // Stores the native XMTP DM convo ID (UUID) for the currently active peer.
+  // Used as fallback when inboxId→address resolution fails in the stream loop.
+  const activeXmtpDmIdRef = useRef<string | null>(null);
   // Cache canReceiveMessages result per address to skip redundant network lookups
   const canReceiveCache = useRef<Map<string, boolean>>(new Map());
   // Track if initClient is already in-flight to prevent double-calls on mobile
@@ -2507,6 +2510,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     activePeerDmIdRef.current = `dm-${activePeer.toLowerCase()}`;
     peerToConvId.current.set(activePeer.toLowerCase(), activePeerDmIdRef.current);
     convIdToPeer.current.set(activePeerDmIdRef.current, activePeer);
+    // Reset native XMTP dm id — will be resolved by fetchHistorical
+    activeXmtpDmIdRef.current = null;
   }, [client, activePeer]);
 
   //  Global XMTP Stream 
@@ -2737,12 +2742,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           const normalizedMsgPeer = msgConvPeer?.toLowerCase() ?? '';
           const normalizedActivePeer = currentActivePeer?.toLowerCase() ?? '';
           const ETH_ADDR = /^0x[a-fA-F0-9]{40}$/;
-          // Only consider it a match if the resolved peer is an actual ETH address
-          // (not a raw convoId / XMTP group hash from the fallback).
-          const belongsToActive = 
+          // [ROOT FIX] belongsToActive now has TWO paths:
+          // 1. ETH address resolved successfully → direct address match (fast path)
+          // 2. Address resolution failed → compare native XMTP convoId against activeXmtpDmIdRef
+          //    (the saved dm.id from when we opened the chat). This prevents silent drops
+          //    when the inboxIdToAddressCache was broken (recursive cacheInboxId bug).
+          const belongsToActiveByAddr =
             ETH_ADDR.test(normalizedMsgPeer) &&
             !!normalizedActivePeer &&
             normalizedMsgPeer === normalizedActivePeer;
+          const belongsToActiveByConvoId =
+            !!convoId &&
+            !!activeXmtpDmIdRef.current &&
+            convoId === activeXmtpDmIdRef.current;
+          const belongsToActive = belongsToActiveByAddr || belongsToActiveByConvoId;
 
           if (belongsToActive) {
 
@@ -2870,17 +2883,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             errMsg.includes('group_inactive') ||
             errMsg.includes('inactive group')
           );
-          if (isGroupInactive && streamRestarts < 5 && !cancelled) {
+          if (!cancelled) {
             streamRestarts++;
             const backoffMs = Math.min(1000 * Math.pow(1.5, streamRestarts), 15000);
-            console.info(`[Chat] MLS GroupInactive — re-sync + stream restart #${streamRestarts} in ${backoffMs}ms`);
+            if (!isGroupInactive) {
+               console.warn('[Chat] global stream failed (will retry):', e);
+            }
             try { await client.conversations.sync(); } catch {}
             await new Promise(resolve => setTimeout(resolve, backoffMs));
             continue; // restart the while loop → restart stream
-          } else if (!cancelled) {
-            console.warn('[Chat] global stream failed:', e);
           }
-          break; // exit while loop for non-recoverable errors
+          break; // only exit if cancelled
         }
       } // end while
     })();
@@ -2905,6 +2918,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       try {
         let raw = await getMessages(client, activePeer);
         if (cancelled) return;
+
+        // Capture the native XMTP conversation ID so the stream loop can
+        // route messages correctly even when inboxId→address resolution fails.
+        try {
+          const { checksumAddress: cs } = await import('viem');
+          const normalizedPeer = cs(activePeer);
+          const xmtpDm = await client.conversations.newDmWithIdentifier({
+            identifier: normalizedPeer, identifierKind: 'Ethereum'
+          });
+          if (xmtpDm?.id) {
+            activeXmtpDmIdRef.current = xmtpDm.id;
+          }
+        } catch {}
         
         const clearTsMs = parseInt(localStorage.getItem(`ledger_cleared_${address}_${activePeer.toLowerCase()}`) || '0', 10);
         if (clearTsMs > 0) {
