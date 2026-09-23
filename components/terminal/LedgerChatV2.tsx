@@ -546,7 +546,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // Offline Queue State
   const [isOffline, setIsOffline] = useState(false);
   const [hasAcceptedEula, setHasAcceptedEula] = useState(false);
-  const [isOnboarded, setIsOnboarded] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('ledger_onboarded_' + (effectiveAddress || '0x0')) === 'true' : false);
+  const [isOnboarded, setIsOnboarded] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && effectiveAddress && effectiveAddress !== '0x0') {
+      setIsOnboarded(localStorage.getItem('ledger_onboarded_' + effectiveAddress) === 'true');
+    }
+  }, [effectiveAddress]);
   const [hasMediaPermission, setHasMediaPermission] = useState(false);
   const [pendingCallType, setPendingCallType] = useState<'audio' | 'video' | 'answer' | null>(null);
 
@@ -1314,63 +1319,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const isMine = lastMsg.senderInboxId?.toLowerCase() === (client?.inboxId as string)?.toLowerCase();
     if (isMine) return; // ignore our own signals
     const content: string = typeof lastMsg.content === 'string' ? lastMsg.content : '';
-
-    // ── CALL_OFFER: Peer is calling us (XMTP notification only — ring the device) ─
-    // [ARCH-FIX] XMTP CALL_OFFER is now only a ring notification.
-    // The actual WebRTC connection is initiated by the caller directly via PeerJS WebSocket.
-    // The receiver's peer.on('call') will fire immediately from PeerJS, independent of XMTP latency.
-    if (content.startsWith('__CALL_OFFER__:')) {
-      processedSignalIds.current.add(lastMsg.id);
-      const parts = content.split(':');
-      const callerPeerId = parts[1];
-      const offerCallType: 'audio'|'video' = (parts[2] as any) || 'audio';
-      
-      // ─── REVERSE-DIAL ARCHITECTURE ─────────────────────────────────────────
-      // We must save the Caller's dynamic PeerID so that when the user clicks
-      // "Answer", we know who to initiate the WebRTC connection back to.
-      if (callerPeerId) {
-        remotePeerIdRef.current = callerPeerId;
-      }
-
-      if (callStateRef.current === 'idle' || callStateRef.current === 'ringing') {
-        // [CRITICAL RECIPROCITY FIX] Switch activePeer to the caller so the UI 
-        // and subsequent signaling (e.g. decline/hangup) go to the right person.
-        // This must run even if state is 'ringing' in case the WebRTC connection
-        // beat the XMTP signal to the device.
-        if ((lastMsg as any).conversationId && (lastMsg as any).conversationId.startsWith('dm-')) {
-          const callerEthAddress = (lastMsg as any).conversationId.replace('dm-', '');
-          if (callerEthAddress && callerEthAddress.toLowerCase() !== activePeer?.toLowerCase()) {
-            setActivePeer(callerEthAddress);
-            setConversations(prev => {
-              if (!prev.find(c => c.peerAddress.toLowerCase() === callerEthAddress.toLowerCase())) {
-                const newConv = { peerAddress: callerEthAddress, lastMessage: '📞 Incoming call...', lastAt: new Date() };
-                const next = [newConv, ...prev];
-                persistToLocal(next);
-                return next;
-              }
-              return prev;
-            });
-          }
-        }
-
-        setCallType(offerCallType);
-        isCallerRef.current = false;
-        
-        if (callStateRef.current !== 'ringing') {
-          setCallState('ringing');
-          startRingtone();
-          
-          if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
-          callTimeoutRef.current = setTimeout(() => {
-            if (callStateRef.current === 'ringing') {
-              toast.error('Missed call.');
-              performEndCallRef.current();
-            }
-          }, 45000);
-        }
-      }
-      console.log('[Ledger Chat:Signal] CALL_OFFER received, callerPeerId:', callerPeerId, 'type:', offerCallType);
-    }
 
     // ── CALL_ANSWER signal from receiver (kept for compatibility / fallback logging) ─
     // [ARCH-FIX] The caller NO LONGER waits for CALL_ANSWER to dial.
@@ -2726,6 +2674,43 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               }
               continue;
             }
+            
+            // Phase 4.5: Intercept CALL_OFFER synchronously to guarantee ringing
+            if (typeof content === 'string' && content.startsWith('__CALL_OFFER__:')) {
+              const parts = content.split(':');
+              const callerPeerId = parts[1];
+              const offerCallType: 'audio'|'video' = (parts[2] as any) || 'audio';
+              if (callerPeerId) remotePeerIdRef.current = callerPeerId;
+              
+              if (callStateRef.current === 'idle' || callStateRef.current === 'ringing') {
+                if (msgConvPeer && msgConvPeer.toLowerCase() !== activePeerRef.current?.toLowerCase()) {
+                  setActivePeer(msgConvPeer);
+                  setConversations(prev => {
+                    if (!prev.find(c => c.peerAddress.toLowerCase() === msgConvPeer.toLowerCase())) {
+                      const newConv = { peerAddress: msgConvPeer, lastMessage: '📞 Incoming call...', lastAt: new Date() };
+                      const next = [newConv, ...prev];
+                      persistToLocal(next);
+                      return next;
+                    }
+                    return prev;
+                  });
+                }
+                setCallType(offerCallType);
+                callTypeRef.current = offerCallType;
+                isCallerRef.current = false;
+                setCallState('ringing');
+                startRingtone();
+                
+                if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
+                callTimeoutRef.current = setTimeout(() => {
+                  if (callStateRef.current === 'ringing') {
+                    toast.error('Missed call.');
+                    performEndCallRef.current();
+                  }
+                }, 45000);
+              }
+              continue; // Do not render signal in chat
+            }
 
             let mappedContent = content || msg.fallback || 'Encrypted Data';
             let burnAtNs: number | undefined = undefined;
@@ -3768,7 +3753,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // Wait for PXE settings to load before deciding to show onboarding,
   // otherwise it briefly flickers for returning users while settings fetch.
   if (!isOnboarded) {
-    if (!pxeLoaded) {
+    if (!pxeLoaded || effectiveAddress === '0x0') {
       return <div className="min-h-screen bg-[#F6F7F9] flex items-center justify-center font-mono text-xs text-black/30">LOADING PROTOCOL...</div>;
     }
     return (
