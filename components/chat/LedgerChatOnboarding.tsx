@@ -72,6 +72,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
 
     await updateBatch({
       displayName: displayName.trim() || finalUsername,
+      username: finalUsername,
       avatar_url: avatar,
       bio: bio.trim() || `From ${country}`,
       privacy_last_seen: privacyLastSeen,
@@ -80,12 +81,34 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
     
     if (pin.length === 6) {
       try {
-        await fetch('/api/auth/enclave-pin', {
+        const pinRes = await fetch('/api/auth/enclave-pin', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ newPin: pin }),
           credentials: 'include',
         });
+        // Write the returned clearance token to sessionStorage so TuringShieldGate
+        // recognises this session as already authenticated — prevents the PIN gate
+        // appearing immediately after onboarding is completed.
+        if (pinRes.ok) {
+          const pinData = await pinRes.json().catch(() => ({}));
+          if (pinData.clearanceToken && pinData.clearanceTs && typeof window !== 'undefined') {
+            // Key names and fingerprint algorithm must match TuringShieldGate exactly.
+            const token = pinData.clearanceToken as string;
+            const ts = pinData.clearanceTs as number;
+            // Replicate deriveFingerprint from TuringShieldGate:
+            const combined = `${token}:${ts}:ledger_enclave`;
+            let hash = 0;
+            for (let i = 0; i < combined.length; i++) {
+              hash = ((hash << 5) - hash + combined.charCodeAt(i)) | 0;
+            }
+            const fp = Math.abs(hash).toString(36);
+            sessionStorage.setItem('__enclave_clearance_v2__', 'granted');
+            sessionStorage.setItem('ledger_enclave_clearance', token);
+            sessionStorage.setItem('ledger_enclave_ts', String(ts));
+            sessionStorage.setItem('__enclave_fp__', fp);
+          }
+        }
       } catch {}
     }
 

@@ -43,12 +43,12 @@ function recordJoinFailure(ip: string): void {
 // ── POST /api/call/room/[roomId]/join — Validate password & issue token ──
 export async function POST(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   const address = getSessionAddress(req);
   if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const roomId = params.roomId.toUpperCase();
+  const roomId = (await params).roomId.toUpperCase();
   const ip = getIp(req);
 
   // Rate limit
@@ -118,12 +118,12 @@ export async function POST(
 // ── DELETE /api/call/room/[roomId]/join — Leave the room ──
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   const address = getSessionAddress(req);
   if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const roomId = params.roomId.toUpperCase();
+  const roomId = (await params).roomId.toUpperCase();
   const room = await prisma.callRoom.findFirst({ where: { roomId, isActive: true } });
   if (!room) return NextResponse.json({ success: true }); // idempotent
 

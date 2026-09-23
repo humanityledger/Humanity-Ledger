@@ -33,7 +33,7 @@ function getSessionAddress(req: NextRequest): string | null {
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   const address = getSessionAddress(req);
   if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -42,7 +42,7 @@ export async function POST(
     return NextResponse.json({ error: 'Too many moderation actions. Slow down.' }, { status: 429 });
   }
 
-  const roomId = params.roomId.toUpperCase().slice(0, 12);
+  const roomId = (await params).roomId.toUpperCase().slice(0, 12);
   if (!/^[A-Z0-9]{6,12}$/.test(roomId)) {
     return NextResponse.json({ error: 'Invalid room ID' }, { status: 400 });
   }

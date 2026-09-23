@@ -8,9 +8,9 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
-  const roomId = (params.roomId || '').toUpperCase().slice(0, 8);
+  const roomId = ((await params).roomId || '').toUpperCase().slice(0, 8);
   
   // Sanitize: only alphanumeric chars allowed in room IDs
   if (!/^[A-Z0-9]{6,8}$/.test(roomId)) {

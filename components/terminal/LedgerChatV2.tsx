@@ -251,7 +251,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, [isConnected, connector, isSystemHandshake, reconnect]);
 
   const [client, setClient] = useState<Client | null>(null);
-  const [isInitializing, setIsInitializing] = useState(false);`n  const [isWaitingForSignature, setIsWaitingForSignature] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [isWaitingForSignature, setIsWaitingForSignature] = useState(false);
   const [initError, setInitError] = useState('');
   
   const [isMounted, setIsMounted] = useState(false);
@@ -2773,6 +2774,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
             if (belongsToActive) {
 
+              // ── CATCH-ALL SIGNAL GUARD ───────────────────────────────────────
+              // Signals that were not caught by earlier phases (e.g. __CALL_DECLINE__,
+              // __CALL_HANGUP__, __READ__, __VOTE__) must NOT be inserted as chat bubbles.
+              // The render filter is a secondary defence; this is the primary one.
+              if (typeof mappedContent === 'string' && (
+                mappedContent.startsWith('__CALL_') ||
+                mappedContent.startsWith('__READ__') ||
+                mappedContent.startsWith('__VOTE__') ||
+                mappedContent.startsWith('__PAYMENT__')
+              )) {
+                // Signal consumed — do not insert into message list
+                continue;
+              }
+
               setMessages(prev => {
                 // Guard: if real ID already in list (can happen on reconnect), skip
                 if (prev.some(m => m.id === realId)) return prev;
@@ -2967,6 +2982,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                // the active peer and mark the sender correctly.
                pendingServer = pData.pending
                  .filter((p: any) => p.sender.toLowerCase() === activePeer.toLowerCase())
+                 .filter((p: any) => typeof p.content !== 'string' || !p.content.startsWith('__CALL_'))
                  .map((p: any) => ({
                    id: p.id,
                    // Since every pending message here is FROM the peer TO us,
@@ -3078,9 +3094,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
              }
              mappedMsgs.push(m);
-          } else {
-             mappedMsgs.push(m);
           }
+          // __CALL_ signals are control-only; intentionally not pushed to mappedMsgs.
         }
 
         if (latestPinnedId) setPinnedMessageId(latestPinnedId);
@@ -4304,14 +4319,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   if (m.conversationId !== convId && m.conversationId !== `dm-${activePeer!.toLowerCase()}`) return false;
                   if (m.burnAtNs && m.burnAtNs <= Date.now()) return false;
                   const c = typeof m.content === 'string' ? m.content : '';
-                  if (c.startsWith('__CALL_ANSWER__')) return false;
-                  if (c === '__CALL_DECLINE__') return false;
-                  if (c === '__CALL_HANGUP__') return false;
+                  if (c.startsWith('__CALL_')) return false;
                   if (c.startsWith('__REACT__')) return false;
                   if (c.startsWith('__PIN__')) return false;
                   if (c.startsWith('__UNPIN__')) return false;
                   if (c.startsWith('__REVOKE__')) return false;
                   if (c.startsWith('__EDIT__')) return false;
+                  if (c.startsWith('__READ__')) return false;
+                  if (c.startsWith('__VOTE__')) return false;
+                  if (c.startsWith('__PAYMENT__')) return false;
                   return true;
                 });
                 if (filteredMsgs.length === 0) return (

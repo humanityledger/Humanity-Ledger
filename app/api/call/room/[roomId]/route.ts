@@ -1,8 +1,8 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function GET(req: NextRequest, { params }: { params: { roomId: string } }) {
-  const roomId = params.roomId.toUpperCase();
+export async function GET(req: NextRequest, { params }: { params: Promise<{ roomId: string }> }) {
+  const roomId = (await params).roomId.toUpperCase();
   const room = await prisma.callRoom.findFirst({
     where: { roomId, isActive: true, expiresAt: { gt: new Date() } },
     select: { roomId: true, isVideo: true, moderatorAddress: true, participants: true, maxParticipants: true, expiresAt: true, passwordHash: true }
