@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { HLLogo } from "@/components/shared/HLLogo";
 import { SystemFooter } from "./SystemFooter";
 import { RemoteLottie } from "@/components/ui/RemoteLottie";
@@ -27,73 +27,6 @@ const fadeUp = {
     transition: { duration: 0.7, ease: EASE, delay: d },
   }),
 };
-
-// ─── Typewriter Effect ────────────────────────────────────────────────────────
-function Typewriter() {
-  const phrases = ['Communicate. Privately.', 'Transact. Trustlessly.', 'Connect. Globally.'];
-  const [text, setText] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [loopNum, setLoopNum] = useState(0);
-  const [typingSpeed, setTypingSpeed] = useState(100);
-
-  useEffect(() => {
-    const handleTyping = () => {
-      const i = loopNum % phrases.length;
-      const fullText = phrases[i];
-
-      setText(isDeleting 
-        ? fullText.substring(0, text.length - 1) 
-        : fullText.substring(0, text.length + 1)
-      );
-
-      setTypingSpeed(isDeleting ? 50 : 100);
-
-      if (!isDeleting && text === fullText) {
-        setTimeout(() => setIsDeleting(true), 2000);
-      } else if (isDeleting && text === '') {
-        setIsDeleting(false);
-        setLoopNum(loopNum + 1);
-      }
-    };
-
-    const timer = setTimeout(handleTyping, typingSpeed);
-    return () => clearTimeout(timer);
-  }, [text, isDeleting, loopNum, typingSpeed]);
-
-  return (
-    <span className="inline-block min-w-[20px] text-transparent bg-clip-text bg-gradient-to-r from-[#2C6BED] to-[#6E95F5]">
-      {text}<span className="animate-pulse text-[#2C6BED]">|</span>
-    </span>
-  );
-}
-
-// ─── Animated Counter ─────────────────────────────────────────────────────────
-function AnimatedCounter({ end, suffix, label }: { end: number; suffix: string; label: string }) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const duration = 2000;
-    const increment = end / (duration / 16);
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= end) {
-        setCount(end);
-        clearInterval(timer);
-      } else {
-        setCount(start);
-      }
-    }, 16);
-    return () => clearInterval(timer);
-  }, [end]);
-  return (
-    <div className="flex flex-col items-center">
-      <span className="text-[40px] md:text-[48px] font-black text-[#1C1C1E] leading-none mb-1">
-        {Math.floor(count)}{suffix}
-      </span>
-      <span className="text-[15px] font-bold text-[#1C1C1E]/50 uppercase tracking-widest">{label}</span>
-    </div>
-  );
-}
 
 // ─── Nav ─────────────────────────────────────────────────────────────────────
 function LandingNav() {
@@ -152,9 +85,9 @@ function LandingNav() {
       <div className="max-w-7xl mx-auto px-5 md:px-10 flex items-center justify-between">
         <Link href="/" className="flex items-center" aria-label="Humanity Ledger home">
           <img
-            src="/logo-corporate.png"
-              alt="Humanity Ledger"
-              style={{ height: 56, width: 'auto', objectFit: 'contain', display: 'block' }}
+            src="/logo-text.png"
+            alt="Humanity Ledger"
+            style={{ height: 28, width: 'auto', objectFit: 'contain', display: 'block' }}
           />
         </Link>
 
@@ -244,26 +177,9 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
       <LandingNav />
 
       {/* ═══ SECTION 1 — HERO ═══════════════════════════════════════════════════ */}
-      <section className="relative flex items-center bg-white pt-20 overflow-hidden min-h-[90vh]">
-        {/* Dynamic animated mesh gradient */}
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-40">
-          <div className="absolute -inset-[100%] animate-mesh-gradient" 
-               style={{ 
-                 background: 'radial-gradient(circle at 50% 50%, rgba(44,107,237,0.15) 0%, transparent 40%), radial-gradient(circle at 80% 20%, rgba(110,149,245,0.15) 0%, transparent 40%), radial-gradient(circle at 20% 80%, rgba(48,209,88,0.08) 0%, transparent 40%)', 
-                 filter: 'blur(60px)' 
-               }} 
-          />
-        </div>
-        <style dangerouslySetInnerHTML={{__html: `
-          @keyframes mesh {
-            0% { transform: rotate(0deg) scale(1); }
-            50% { transform: rotate(180deg) scale(1.1); }
-            100% { transform: rotate(360deg) scale(1); }
-          }
-          .animate-mesh-gradient {
-            animation: mesh 25s linear infinite;
-          }
-        `}} />
+      <section className="relative flex items-center bg-white pt-20 overflow-hidden">
+        {/* Ambient gradient */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_100%_100%_at_50%_-20%,rgba(44,107,237,0.12),rgba(255,255,255,0))] pointer-events-none" />
         <div className="absolute top-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#2C6BED]/20 to-transparent" />
 
         <div className="max-w-7xl mx-auto px-5 md:px-10 w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center py-20 lg:py-28">
@@ -275,46 +191,54 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             variants={fadeUp}
             className="flex flex-col items-center text-center lg:items-start lg:text-left lg:col-span-7 relative z-10"
           >
-            <div className="bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[40px] p-8 md:p-12 shadow-[0_20px_80px_rgba(44,107,237,0.08)]">
-              <h1 className="text-[52px] md:text-[72px] lg:text-[84px] font-black leading-[1.05] tracking-[-0.03em] text-[#050505] mb-6">
-                Ledger Chat<br />
-                <div className="mt-2 text-[36px] md:text-[48px] lg:text-[56px] h-[64px] md:h-[80px]">
-                  <Typewriter />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="flex items-center gap-2.5 mb-8 bg-white border border-black/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-full px-5 py-2.5"
+            >
+              <div className="w-2.5 h-2.5 rounded-full bg-[#30D158] animate-pulse shadow-[0_0_12px_rgba(48,209,88,0.6)]" />
+              <span className="text-[13px] font-bold text-[#1C1C1E] uppercase tracking-[0.1em]">
+                Global Release Jan 2027
+              </span>
+            </motion.div>
+
+            <h1 className="text-[56px] md:text-[80px] lg:text-[96px] font-black leading-[0.95] tracking-[-0.04em] text-[#050505] mb-6">
+              Privacy<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2C6BED] to-[#6E95F5]">redefined.</span>
+            </h1>
+            
+            <p className="text-[19px] md:text-[22px] font-medium leading-[1.6] text-[#1C1C1E]/60 mb-10 max-w-[540px]">
+              Ledger Chat is free, instantly fast, and built for people who want to own their conversations completely. End-to-end encrypted and powered by your wallet.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-10">
+              <Link
+                href="/chat"
+                className="bg-[#050505] hover:bg-[#1A1A1A] text-white font-bold text-[16px] px-8 py-4 rounded-2xl transition-all shadow-[0_8px_24px_rgba(0,0,0,0.12)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
+              >
+                <MessageCircle size={20} />
+                Open Ledger Chat
+              </Link>
+              <Link
+                href="/docs/ledger-chat"
+                className="bg-white hover:bg-[#F6F7F9] text-[#050505] border border-black/10 font-bold text-[16px] px-8 py-4 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
+              >
+                Learn How It Works
+              </Link>
+            </div>
+
+            <div className="flex flex-wrap justify-center lg:justify-start items-center gap-x-8 gap-y-4">
+              {[
+                { icon: <Lock size={16} />, label: "End-to-End Encrypted" },
+                { icon: <EyeOff size={16} />, label: "No Trackers" },
+                { icon: <Wallet size={16} />, label: "Wallet Auth" },
+              ].map((f) => (
+                <div key={f.label} className="flex items-center gap-2 text-[14px] font-bold text-[#1C1C1E]/50">
+                  <span className="text-[#1C1C1E]">{f.icon}</span>
+                  <span>{f.label}</span>
                 </div>
-              </h1>
-              
-              <p className="text-[19px] md:text-[22px] font-medium leading-[1.6] text-[#1C1C1E]/60 mb-10 max-w-[540px]">
-                Ledger Chat is free, instantly fast, and built for people who want to own their conversations completely. End-to-end encrypted and powered by your wallet.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-10">
-                <Link
-                  href="/chat"
-                  className="bg-[#050505] hover:bg-[#1A1A1A] text-white font-bold text-[16px] px-8 py-4 rounded-2xl transition-all shadow-[0_8px_24px_rgba(0,0,0,0.12)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
-                >
-                  <MessageCircle size={20} />
-                  Open Ledger Chat
-                </Link>
-                <Link
-                  href="/docs/ledger-chat"
-                  className="bg-white/80 hover:bg-white text-[#050505] border border-black/10 font-bold text-[16px] px-8 py-4 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
-                >
-                  Learn How It Works
-                </Link>
-              </div>
-
-              <div className="flex flex-wrap justify-center lg:justify-start items-center gap-x-8 gap-y-4">
-                {[
-                  { icon: <Lock size={16} />, label: "End-to-End Encrypted" },
-                  { icon: <EyeOff size={16} />, label: "No Trackers" },
-                  { icon: <Wallet size={16} />, label: "Wallet Auth" },
-                ].map((f) => (
-                  <div key={f.label} className="flex items-center gap-2 text-[14px] font-bold text-[#1C1C1E]/50">
-                    <span className="text-[#1C1C1E]">{f.icon}</span>
-                    <span>{f.label}</span>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           </motion.div>
 
@@ -399,7 +323,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 viewport={{ once: true }}
                 custom={i * 0.1}
                 variants={fadeUp}
-                className="bg-white rounded-3xl p-8 border border-black/[0.05] shadow-sm hover:shadow-md transition-shadow group"
+                className="bg-white rounded-3xl p-8 border border-black/[0.05] shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className={`w-14 h-14 ${card.bg} ${card.color} rounded-2xl flex items-center justify-center mb-6`}>
                   {card.icon}
@@ -412,7 +336,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
         </div>
       </section>
 
-      {/* ═══ SECTION 3 — HOW IT WORKS (OLD, KEPT BUT REFACTORED) ════════════ */}
+      {/* ═══ SECTION 3 — HOW IT WORKS ════════════════════════════════════════ */}
       <section className="bg-white py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-5 md:px-10 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
 
@@ -459,9 +383,9 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
 
             <Link
               href="/connect"
-              className="inline-flex items-center justify-center gap-2 bg-[#1C1C1E] hover:bg-black text-white font-bold text-[15px] px-7 py-3.5 rounded-xl transition-all self-start"
+              className="inline-flex items-center gap-2 bg-[#1C1C1E] hover:bg-black text-white font-bold text-[15px] px-7 py-3.5 rounded-xl transition-all self-start"
             >
-              Start now. Free forever.
+              Start now — it is free
             </Link>
           </motion.div>
 
@@ -514,16 +438,16 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             </div>
 
             <div className="flex flex-col gap-4">
-              <FeatureCheck text="Wallet identity. No phone number required." />
-              <FeatureCheck text="In-chat Quantum Dot payments with built-in microtransactions" />
-              <FeatureCheck text="Cryptographic message signing for mathematically guaranteed authenticity" />
-              <FeatureCheck text="Burn on Read: messages auto-destroy after viewing" />
+              <FeatureCheck text="Wallet identity — no phone number required" />
+              <FeatureCheck text="In-chat Quantum Dot payments — built-in micro-transactions" />
+              <FeatureCheck text="Cryptographic message signing — mathematically guaranteed authenticity" />
+              <FeatureCheck text="Burn on Read — messages auto-destroy after viewing" />
               <FeatureCheck text="Voice notes with a real-time waveform visualizer" />
               <FeatureCheck text="Group chats with verified membership" />
-              <FeatureCheck text="AI Ghost Mode: smart auto-replies protect your time" />
+              <FeatureCheck text="AI Ghost Mode — smart auto-replies protect your time" />
               <FeatureCheck text="Polls, stickers, animated GIFs, and a personal file vault" />
-              <FeatureCheck text="HD video and voice calls with no central server" />
-              <FeatureCheck text="Desktop QR session linking: start on mobile, continue on PC" />
+              <FeatureCheck text="HD video and voice calls — no central server" />
+              <FeatureCheck text="Desktop QR session linking — start on mobile, continue on PC" />
             </div>
           </motion.div>
         </div>
@@ -549,28 +473,15 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               whileInView="visible"
               viewport={{ once: true }}
               variants={fadeUp}
-              className="max-w-3xl text-center mb-16"
+              className="max-w-3xl text-center"
             >
               <h2 className="text-[38px] md:text-[56px] font-bold tracking-tight text-[#1C1C1E] mb-6 leading-tight">
                 Everything you know.<br />And then some.
               </h2>
-              <p className="text-[18px] md:text-[20px] font-medium text-[#1C1C1E]/55 leading-relaxed">
+              <p className="text-[18px] md:text-[20px] font-medium text-[#1C1C1E]/55 leading-relaxed mb-12">
                 Ledger Chat has every feature the most popular messaging apps in the world offer —
                 and then adds capabilities that no other app provides today.
               </p>
-            </motion.div>
-
-            {/* Stats row */}
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeUp}
-              className="flex flex-wrap justify-center gap-12 md:gap-24 mb-16"
-            >
-              <AnimatedCounter end={100} suffix="%" label="Private" />
-              <AnimatedCounter end={256} suffix="-bit" label="Encryption" />
-              <AnimatedCounter end={0} suffix=" Trackers" label="Ads & Trackers" />
             </motion.div>
 
             {/* Feature grid */}
@@ -598,9 +509,9 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                   viewport={{ once: true }}
                   custom={i * 0.05}
                   variants={fadeUp}
-                  className="group relative bg-[#F6F7F9] rounded-2xl p-5 flex flex-col items-center gap-3 text-center border border-black/[0.04] hover:border-black/10 transition-all hover:bg-white hover:shadow-[0_0_30px_rgba(44,107,237,0.15)] hover:-translate-y-1"
+                  className="bg-[#F6F7F9] rounded-2xl p-5 flex flex-col items-center gap-3 text-center border border-black/[0.04] hover:border-black/10 transition-colors"
                 >
-                  <div className={`w-11 h-11 rounded-xl ${item.color} flex items-center justify-center transition-transform group-hover:animate-pulse group-hover:scale-110`}>
+                  <div className={`w-11 h-11 rounded-xl ${item.color} flex items-center justify-center`}>
                     {item.icon}
                   </div>
                   <span className="text-[13px] font-bold text-[#1C1C1E]/80 leading-tight">{item.label}</span>
@@ -611,63 +522,35 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
         </div>
       </section>
 
-      {/* ═══ HOW IT WORKS SECTION ══════════════════════════════════════════ */}
-      <section className="bg-[#F6F7F9] py-24 md:py-32 border-t border-black/[0.04]">
-        <div className="max-w-7xl mx-auto px-5 md:px-10">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-16">
-            <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[#2C6BED] mb-4">How It Works</p>
-            <h2 className="text-[38px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] leading-tight">Three steps to<br />sovereign communication</h2>
-          </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { step: "01", icon: <Wallet size={24} />, title: "Connect your wallet or use Face ID", desc: "Use your existing wallet or authenticate with Face ID using our Passkey system — no seed phrases exposed.", color: "bg-blue-500/10 text-blue-600" },
-              { step: "02", icon: <Fingerprint size={24} />, title: "Create your identity on-chain", desc: "Your ENS name and on-chain reputation become your permanent, portable identity — not controlled by any corporation.", color: "bg-purple-500/10 text-purple-600" },
-              { step: "03", icon: <MessageCircle size={24} />, title: "Chat, call, and transact privately", desc: "Chat end-to-end encrypted, make P2P video calls, send crypto in-chat, and join token-gated communities.", color: "bg-green-500/10 text-green-600" },
-            ].map((item, i) => (
-              <motion.div key={item.step} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i * 0.1} variants={fadeUp}
-                className="relative bg-white rounded-3xl p-8 border border-black/[0.04] hover:border-black/10 transition-all hover:shadow-lg hover:-translate-y-1 group">
-                <div className="absolute -top-3 -left-1 text-[72px] font-black text-black/[0.04] select-none group-hover:text-black/[0.07] transition-colors">{item.step}</div>
-                <div className={`w-12 h-12 rounded-2xl ${item.color} flex items-center justify-center mb-5 relative group-hover:scale-110 transition-transform`}>{item.icon}</div>
-                <h3 className="font-bold text-[18px] text-[#1C1C1E] mb-3">{item.title}</h3>
-                <p className="text-[14px] text-[#1C1C1E]/50 leading-relaxed">{item.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ═══ SECTION 6 — BOTTOM CTA ══════════════════════════════════════════ */}
-      <section className="relative bg-[#0A0A0A] py-24 md:py-36 overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#2C6BED]/20 rounded-full blur-[120px]" />
-        </div>
-        <div className="max-w-7xl mx-auto px-5 md:px-10 flex flex-col items-center text-center relative z-10">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="w-full max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/10 rounded-full px-4 py-1.5 mb-10">
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-white/70 text-[11px] font-mono uppercase tracking-widest">Network Online</span>
+      <section className="bg-[#F0F4FF] py-24 md:py-32">
+        <div className="max-w-7xl mx-auto px-5 md:px-10 flex flex-col items-center text-center">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+          >
+            <div className="w-20 h-20 mx-auto mb-8 bg-[#2C6BED]/10 rounded-3xl flex items-center justify-center">
+              <MessageCircle size={36} className="text-[#2C6BED]" strokeWidth={1.5} />
             </div>
-            <h2 className="text-[44px] md:text-[68px] font-black tracking-tight text-white mb-6 leading-[0.95]">
-              Own your<br /><span className="text-[#2C6BED]">conversations.</span>
+            <h2 className="text-[42px] md:text-[60px] font-bold tracking-tight text-[#1C1C1E] mb-6 leading-tight">
+              Ready to own your<br />conversations?
             </h2>
-            <p className="text-[17px] font-medium text-white/40 mb-12 max-w-xl mx-auto leading-relaxed">
-              No surveillance. No ads. No middleman. Just you and the people you trust — connected forever on-chain.
+            <p className="text-[18px] font-medium text-[#1C1C1E]/55 mb-10 max-w-xl mx-auto leading-relaxed">
+              Join the sovereign messaging network. Free forever. No ads. No surveillance. Just you and the people you trust.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/connect"
-                className="relative group inline-flex items-center gap-3 bg-gradient-to-r from-[#2C6BED] to-[#6E95F5] hover:from-[#1A5AE3] hover:to-[#5c85eb] text-white font-black text-[16px] px-12 py-5 rounded-full transition-all shadow-[0_0_40px_rgba(44,107,237,0.4)] hover:shadow-[0_0_60px_rgba(44,107,237,0.6)] hover:scale-105 overflow-hidden">
-                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-full" />
-                <span className="relative z-10 flex items-center gap-2">
-                  <MessageCircle size={20} /> Launch Ledger Chat
-                </span>
-              </Link>
-              <Link href="/docs/whitepaper"
-                className="inline-flex items-center gap-2 border border-white/15 hover:border-white/30 text-white/60 hover:text-white font-bold text-[14px] px-8 py-5 rounded-full transition-all hover:bg-white/5">
-                Read the Whitepaper
-              </Link>
-            </div>
-            <p className="text-[12px] font-medium text-white/20 mt-8">
-              Open source · Non-custodial · XMTP V3 · ERC-4337
+
+            <Link
+              href="/connect"
+              className="inline-flex items-center gap-2 bg-[#2C6BED] hover:bg-[#1A5AE3] text-white font-bold text-[18px] px-10 py-5 rounded-2xl transition-all shadow-lg shadow-[#2C6BED]/25 mb-6"
+            >
+              <MessageCircle size={20} />
+              Get Ledger Chat
+            </Link>
+
+            <p className="text-[14px] font-medium text-[#1C1C1E]/40">
+              Available on iOS, Android, and Web. Free forever.
             </p>
           </motion.div>
         </div>
@@ -675,43 +558,6 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
 
       {/* Footer */}
       <SystemFooter />
-
-      {/* Floating Live Users Badge */}
-      <LiveUsersBadge />
     </div>
-  );
-}
-
-function LiveUsersBadge() {
-  const [count, setCount] = React.useState<number | null>(null);
-  const [visible, setVisible] = React.useState(false);
-
-  React.useEffect(() => {
-    fetch('/api/metrics/online')
-      .then(res => res.json())
-      .then(data => setCount(typeof data.count === 'number' ? data.count : null))
-      .catch(() => setCount(null));
-      
-    const t = setTimeout(() => setVisible(true), 1500);
-    return () => clearTimeout(t);
-  }, []);
-
-  if (!visible || typeof count !== 'number') return null;
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.9 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: "spring", damping: 20 }}
-      className="fixed bottom-6 right-6 z-50 bg-white/95 backdrop-blur-md border border-black/5 rounded-2xl px-5 py-3 shadow-2xl flex items-center gap-3 hover:scale-105 transition-transform"
-    >
-      <div className="relative flex items-center justify-center">
-        <span className="absolute w-3 h-3 rounded-full bg-green-400 animate-ping opacity-60" />
-        <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
-      </div>
-      <div>
-        <p className="text-[13px] font-black text-[#1C1C1E]">{count.toLocaleString()} online</p>
-        <p className="text-[10px] font-mono text-[#1C1C1E]/40 uppercase tracking-widest">users active now</p>
-      </div>
-    </motion.div>
   );
 }

@@ -8,12 +8,12 @@ import { deriveAztecAddress, isOwner } from '@/lib/aztec/zk-identity';
 
 export const dynamic = 'force-dynamic';
 
-const AZTEC_EXPLORER = 'https://aztecscan.xyz';
+const AZTEC_EXPLORER = 'https://testnet.aztecscan.xyz';
 
 /**
  * POST /api/aztec/transfer
  *
- * Transfers QDs on the Aztec Mainnet v5 (rc.2).
+ * Transfers QDs on the Aztec Testnet v5 (rc.2).
  *
  * Architecture (SDK v5.0.0 — verified from source):
  *
@@ -57,14 +57,7 @@ export async function POST(req: NextRequest) {
 
 
     const fromAddr      = from.toLowerCase().trim();
-    let toAddr          = to.toLowerCase().trim();
-    
-    // [UX FIX] If the user pasted an EVM address (42 chars), auto-derive the Aztec address
-    if (toAddr.length === 42 && toAddr.startsWith('0x')) {
-      toAddr = deriveAztecAddress(toAddr);
-      console.log(`[Aztec Transfer] Auto-derived recipient Aztec address: ${toAddr}`);
-    }
-
+    const toAddr        = to.toLowerCase().trim();
     const roundedAmount = Math.round(rawAmount * 1_000_000) / 1_000_000;
 
     // ── Session Authorization (CSRF / Replay Protection) ────────────────────
@@ -146,16 +139,12 @@ export async function POST(req: NextRequest) {
     // derivation paths produce different addresses.
     const sessionVerified = await isVerifiedIdentity(verifiedSessionAddr).catch(() => false);
     const fromVerified = await isVerifiedIdentity(fromAddr).catch(() => false);
-    // [BETA/TESTING OVERRIDE] We bypass the identity verification for QDs transfers 
-    // so that users can test the Ledger Chat QDs functionality without needing to claim the genesis airdrop.
-    /*
     if (!sessionVerified && !fromVerified) {
       return NextResponse.json(
-        { error: 'Access denied: Claim your genesis airdrop (Sovereign Identity tab) to use QDs.', code: 'NOT_VERIFIED_IDENTITY' },
+        { error: 'Access denied: Claim your genesis airdrop (Aztec Identity tab) to use QDs.', code: 'NOT_VERIFIED_IDENTITY' },
         { status: 403 }
       );
     }
-    */
 
     // ── Ownership check: session must own the fromAddr ────────────────────────
     // Accept if:
@@ -185,8 +174,8 @@ export async function POST(req: NextRequest) {
     let nodeInfo    : any     = null;
 
     const tokenAddressStr = process.env.AZTEC_TOKEN_CONTRACT_ADDRESS;
-    const pxeUrl          = process.env.AZTEC_PXE_URL   || 'https://node.aztec.network';
-    const nodeUrl         = process.env.AZTEC_NODE_URL  || 'https://node.aztec.network';
+    const pxeUrl          = process.env.AZTEC_PXE_URL   || 'https://v5.testnet.rpc.aztec-labs.com';
+    const nodeUrl         = process.env.AZTEC_NODE_URL  || 'https://v5.testnet.rpc.aztec-labs.com';
 
     if (!tokenAddressStr || tokenAddressStr === 'PENDING_DEPLOY') {
       // ── MODE B: Token contract not yet deployed — DB-only ledger anchored to real Aztec block ──
@@ -339,21 +328,13 @@ export async function POST(req: NextRequest) {
         }
 
         // 1. [PERFORMANCE PATCH] $O(1)$ Balance check using synchronized User creditsBalance
-        // AUTO-UPSERT: If the sender doesn't have a User row yet (e.g. new SIWE users whose
-        // row wasn't created at auth time), create it now with the default 2500 QD balance.
-        // This prevents "Sender account not found in ledger" for legitimate users.
-        const sender = await tx.user.upsert({
+        const sender = await tx.user.findUnique({
           where: { walletAddress: fromAddr },
-          update: {}, // no-op update — just return the existing row
-          create: {
-            walletAddress: fromAddr,
-            creditsBalance: 2500, // Default genesis balance per schema
-            tier: 'FREE',
-            humanityScore: 0,
-          },
           select: { creditsBalance: true, id: true }
         });
-
+        if (!sender) {
+          throw new Error('Sender account not found in ledger.');
+        }
 
         const balance = sender.creditsBalance;
 
@@ -381,7 +362,7 @@ export async function POST(req: NextRequest) {
             chainId    : 89021716,
             blockNumber: BigInt(blockNumber ?? Math.floor(Date.now() / 12_000)),
             metadata   : {
-              network         : 'aztec-mainnet',
+              network         : 'aztec-testnet',
               aztecTxHash,
               explorerUrl,
               onChain: true,
@@ -459,7 +440,7 @@ export async function POST(req: NextRequest) {
           update: { creditsBalance: { increment: roundedAmount } },
           create: {
             walletAddress: toAddr,
-            creditsBalance: 2500 + roundedAmount, // Include genesis balance for new users
+            creditsBalance: roundedAmount,
             tier: 'FREE',
             humanityScore: 0
           }
@@ -484,11 +465,11 @@ export async function POST(req: NextRequest) {
       amount          : roundedAmount,
       onChain,
       explorerUrl,
-      network         : 'aztec-mainnet',
+      network         : 'aztec-testnet',
       nodeInfo,
       tokenContractSet: !!tokenAddressStr,
       message: explorerUrl
-        ? `${roundedAmount} QDs transferred on Aztec Mainnet ✅ — View on AztecScan`
+        ? `${roundedAmount} QDs transferred on Aztec Testnet ✅ — View on AztecScan`
         : `${roundedAmount} QDs transferred. Network verified at block #${blockNumber} via Ledger.`,
     });
 
@@ -500,4 +481,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

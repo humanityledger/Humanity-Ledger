@@ -71,9 +71,9 @@ export async function POST(req: NextRequest) {
     const isUserTable = !!userRow;
     
     // Determine lockout state
-    if (dbRow?.enclaveOtpExpiresAt && new Date() < new Date((dbRow as any).enclaveOtpExpiresAt as Date)) {
-      if (((dbRow as any).enclaveOtpAttempts || 0) >= MAX_ATTEMPTS) {
-        const retryAfterMin = Math.ceil((new Date((dbRow as any).enclaveOtpExpiresAt as Date).getTime() - Date.now()) / 60000);
+    if (dbRow?.enclaveOtpExpiresAt && new Date() < new Date(dbRow.enclaveOtpExpiresAt)) {
+      if ((dbRow.enclaveOtpAttempts || 0) >= MAX_ATTEMPTS) {
+        const retryAfterMin = Math.ceil((new Date(dbRow.enclaveOtpExpiresAt).getTime() - Date.now()) / 60000);
         return NextResponse.json(
           { error: `Too many attempts. Try again in ${retryAfterMin} minutes.`, blocked: true },
           { status: 429 }
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'PIN must be exactly 6 digits.' }, { status: 400 });
     }
 
-    const storedPinHash = (dbRow as any)?.enclavePinHash || null;
+    const storedPinHash = dbRow?.enclavePinHash || null;
     const expectedHash = storedPinHash ?? getDefaultPinHash(userId);
     const submittedHash = hashPin(userId, pin);
 
@@ -101,9 +101,9 @@ export async function POST(req: NextRequest) {
     if (!isValid) {
       const now = new Date();
       // Reset window if it expired
-      const isWindowExpired = !dbRow?.enclaveOtpExpiresAt || now > new Date((dbRow as any).enclaveOtpExpiresAt as Date);
-      const newAttempts = isWindowExpired ? 1 : ((dbRow as any)?.enclaveOtpAttempts || 0) + 1;
-      const newExpiresAt = isWindowExpired ? new Date(now.getTime() + ATTEMPT_WINDOW_MS) : (dbRow as any)?.enclaveOtpExpiresAt;
+      const isWindowExpired = !dbRow?.enclaveOtpExpiresAt || now > new Date(dbRow.enclaveOtpExpiresAt);
+      const newAttempts = isWindowExpired ? 1 : (dbRow?.enclaveOtpAttempts || 0) + 1;
+      const newExpiresAt = isWindowExpired ? new Date(now.getTime() + ATTEMPT_WINDOW_MS) : dbRow?.enclaveOtpExpiresAt;
       
       if (isUserTable) {
         await prisma.user.update({
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
         });
       } else if (authUserRow) {
         await prisma.authUser.update({
-          where: { id: (authUserRow as any).id as string },
+          where: { id: authUserRow.id },
           data: { enclaveOtpAttempts: newAttempts, enclaveOtpExpiresAt: newExpiresAt } as any
         });
       }
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ✅ Success — clear DB brute-force counter
-    if (((dbRow as any)?.enclaveOtpAttempts || 0) > 0) {
+    if ((dbRow?.enclaveOtpAttempts || 0) > 0) {
       if (isUserTable) {
         await prisma.user.update({
           where: { walletAddress: userId.toLowerCase() },
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
         });
       } else if (authUserRow) {
         await prisma.authUser.update({
-          where: { id: (authUserRow as any).id as string },
+          where: { id: authUserRow.id },
           data: { enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null } as any
         });
       }

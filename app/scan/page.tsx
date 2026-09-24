@@ -240,13 +240,6 @@ export default function ScanPage() {
     else { initScanner(); }
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handshakeCleanupRef = useRef<(() => void) | null>(null);
-
-  // Cleanup seed polling if user navigates away mid-handshake
-  useEffect(() => {
-    return () => { handshakeCleanupRef.current?.(); };
-  }, []);
-
   const handlePinConfirm = useCallback(async () => {
     if (pinInput.length !== 4 || !pinScanData) return;
     setStatus('verifying_pin');
@@ -272,7 +265,6 @@ export default function ScanPage() {
       }
       setSuccessLabel('Session Linked');
       setStatus('success');
-      if (result.ok && result.cleanup) handshakeCleanupRef.current = result.cleanup;
       setTimeout(() => router.push('/chat'), 1400);
     } catch {
       setErrMsg('PIN verification failed. Please check the code shown on the desktop screen and try again.');
@@ -284,16 +276,6 @@ export default function ScanPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // [SECURITY] Reject oversized images to prevent OOM attacks
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-    if (file.size > MAX_FILE_SIZE) {
-      setErrMsg('Image too large. Please use a file smaller than 10 MB.');
-      setStatus('error');
-      e.target.value = '';
-      return;
-    }
-
     setFileLoading(true);
     try {
       const decoded = await scanFileForQR(file);
@@ -348,7 +330,7 @@ export default function ScanPage() {
 
         <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center leading-none py-3">
           <span className="font-mono text-[11px] font-black uppercase tracking-[0.22em] text-[#050505]">Scan QR</span>
-          <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-black/30 mt-0.5">Sovereign Identity Portal</span>
+          <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-black/30 mt-0.5">Aztec Identity Portal</span>
         </div>
 
         {/* Logo mark */}
@@ -595,10 +577,9 @@ export default function ScanPage() {
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
       >
         <p className="text-[9px] font-mono text-black/25 uppercase tracking-[0.25em]">
-          humanidfi.com • Sovereign Identity
+          humanidfi.com • Aztec Integration Planned
         </p>
       </div>
     </div>
   );
 }
-
