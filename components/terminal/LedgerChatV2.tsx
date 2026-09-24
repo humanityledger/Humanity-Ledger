@@ -42,8 +42,10 @@ import { notificationEngine } from '@/lib/wallet/NotificationEngine';
 import { Search, Phone as PhoneIcon, Clock as ClockIcon } from 'lucide-react';
 
 import { LedgerChatSettings, useLedgerSettings } from './LedgerChatSettings';
+import { VirtualizedMessageList } from '@/components/chat/VirtualizedMessageList';
 import { LottieSendButton } from '@/components/chat/LottieSendButton';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
+import { chatDB } from '@/lib/chat/indexeddb';
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
@@ -2861,6 +2863,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 continue;
               }
 
+              // Background IndexedDB Save (do not block render)
+              chatDB.saveMessages([mappedMsg]).catch(() => {});
+              chatDB.saveConversation({
+                peerAddress: resolvedPeerAddr,
+                lastAt: mappedMsg.sentAtNs
+              }).catch(() => {});
+
               setMessages(prev => {
                 // Guard: if real ID already in list (can happen on reconnect), skip
                 if (prev.some(m => m.id === realId)) return prev;
@@ -3018,6 +3027,22 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (isFetching || cancelled) return;
       isFetching = true;
       try {
+        // [1] Load instantly from IndexedDB cache
+        const dmId = `dm-${activePeer.toLowerCase()}`;
+        try {
+          const localMsgs = await chatDB.getMessagesForConversation(dmId, 100);
+          if (localMsgs && localMsgs.length > 0 && !cancelled) {
+            setMessages(prev => {
+              const existingIds = new Set(prev.map(m => m.id));
+              const newMsgs = localMsgs.filter(m => !existingIds.has(m.id));
+              return [...prev, ...newMsgs].sort((a, b) => a.sentAtNs - b.sentAtNs);
+            });
+          }
+        } catch (dbErr) {
+          console.warn('[ChatDB] Failed to load local cache', dbErr);
+        }
+
+        // [2] Fetch fresh from XMTP network
         let raw = await getMessages(client, activePeer);
         if (cancelled) return;
 
@@ -3246,7 +3271,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           
           // Drop only the replaced optimistic twins, keep everything else
           const base = prev.filter(m => !optimisticToRemove.has(m.id));
-          return [...base, ...newConfirmed].sort((a, b) => a.sentAtNs - b.sentAtNs);
+          const finalMessages = [...base, ...newConfirmed].sort((a, b) => a.sentAtNs - b.sentAtNs);
+          
+          // Save all new confirmed messages to IndexedDB
+          if (newConfirmed.length > 0) {
+            chatDB.saveMessages(newConfirmed).catch(e => console.warn('[ChatDB] Failed to save msgs:', e));
+            chatDB.saveConversation({
+              peerAddress: activePeer.toLowerCase(),
+              lastAt: newConfirmed[newConfirmed.length - 1].sentAtNs
+            }).catch(() => {});
+          }
+
+          return finalMessages;
         });
 
       } catch (e) {
@@ -4419,45 +4455,46 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     </div>
                   </div>
                 );
-                let lastDate = '';
-                return filteredMsgs.map(msg => {
-                  const sentTime = typeof msg.sentAtNs === 'number' ? new Date(msg.sentAtNs) : (msg.sent || msg.sentAt || new Date());
-                  const dateStr = new Date(sentTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-                  const showDate = dateStr !== lastDate;
-                  lastDate = dateStr;
-
-                  const isMe = msg.senderInboxId
-                    ? (msg.senderInboxId.toLowerCase() === (client?.inboxId as string)?.toLowerCase() ||
-                       msg.senderInboxId.toLowerCase() === address?.toLowerCase())
-                    : false;
-                  
-                  return (
-                    <MessageBubble
-                      key={msg.id}
-                      msg={msg}
-                      isMe={isMe}
-                      showDate={showDate}
-                      dateStr={dateStr}
-                      isSecretChat={isSecretChat}
-                      fontFamily={fontFamily}
-                      fontSizePx={fontSizePx}
-                      clientInboxId={client?.inboxId}
-                      onReply={(msgToReply) => setReplyingTo(msgToReply)}
-                      onReact={(msgId, emoji) => executeSend(`__REACT__${msgId}__::${emoji}`)}
-                      onContextMenu={(e, id, content) => {
-                        if (e?.type === 'revoke') {
-                          executeSend(`__REVOKE__${id}`);
-                        } else {
-                          setContextMenu({ id, content, x: e?.clientX ?? 0, y: e?.clientY ?? 0 });
-                        }
-                      }}
-                      onOpenLightbox={(url) => setLightboxImg(url)}
-                      formatMessagePreview={formatMessagePreview}
-                      onVotePoll={(pollId, idx) => executeSend(`__VOTE__${pollId}__::${idx}`)}
-                      onEditMsg={(id, current) => setEditingMsg({ id, content: current })}
-                    />
-                  );
-                });
+                return (
+                  <VirtualizedMessageList
+                    messages={filteredMsgs}
+                    activePeer={activePeer}
+                    myAddress={address || ''}
+                    isLoadingMore={false}
+                    onLoadMore={() => {}}
+                    renderMessage={(msg, isMe) => {
+                      const sentTime = typeof msg.sentAtNs === 'number' ? new Date(msg.sentAtNs) : (msg.sent || msg.sentAt || new Date());
+                      const dateStr = new Date(sentTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                      
+                      return (
+                        <MessageBubble
+                          key={msg.id}
+                          msg={msg}
+                          isMe={isMe}
+                          showDate={false} // Virtualized list needs grouped items or custom header for dates
+                          dateStr={dateStr}
+                          isSecretChat={isSecretChat}
+                          fontFamily={fontFamily}
+                          fontSizePx={fontSizePx}
+                          clientInboxId={client?.inboxId}
+                          onReply={(msgToReply) => setReplyingTo(msgToReply)}
+                          onReact={(msgId, emoji) => executeSend(`__REACT__${msgId}__::${emoji}`)}
+                          onContextMenu={(e, id, content) => {
+                            if (e?.type === 'revoke') {
+                              executeSend(`__REVOKE__${id}`);
+                            } else {
+                              setContextMenu({ id, content, x: e?.clientX ?? 0, y: e?.clientY ?? 0 });
+                            }
+                          }}
+                          onOpenLightbox={(url) => setLightboxImg(url)}
+                          formatMessagePreview={formatMessagePreview}
+                          onVotePoll={(pollId, idx) => executeSend(`__VOTE__${pollId}__::${idx}`)}
+                          onEditMsg={(id, current) => setEditingMsg({ id, content: current })}
+                        />
+                      );
+                    }}
+                  />
+                );
               })()}
               {(peerStatus.isTyping || (activePeer && typingPeers.has(activePeer.toLowerCase()))) && (
                   <div className="flex self-start items-start mt-2 ml-4">
