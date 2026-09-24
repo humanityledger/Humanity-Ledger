@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 import { ChatEngineProvider } from '@/context/ChatEngineProvider';
 
 const LedgerChat = dynamic(
-  () => import('@/components/terminal/LedgerChat').then(m => ({ default: m.LedgerChat })),
+  () => import('@/components/terminal/LedgerChatV2').then(m => ({ default: m.LedgerChat })),
   { ssr: false }
 );
 

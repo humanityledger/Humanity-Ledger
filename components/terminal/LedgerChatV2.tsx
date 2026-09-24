@@ -1008,10 +1008,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             if (queue.length > 0) {
               localStorage.removeItem(outboxKey);
               toast.info(`📤 Back online — sending ${queue.length} queued message${queue.length > 1 ? 's' : ''}...`);
-              for (const msgContent of queue) {
-                if (executeSendRef.current) {
-                  await executeSendRef.current(msgContent);
-                  await new Promise(r => setTimeout(r, 300)); // throttle to avoid XMTP rate limit
+              for (const item of queue) {
+                const peer = typeof item === 'string' ? null : item.peer;
+                const text = typeof item === 'string' ? item : item.content;
+                if (peer && text && sendMessage) {
+                  try {
+                    await sendMessage(client, peer, text, address);
+                    await new Promise(r => setTimeout(r, 300));
+                  } catch (e) {
+                    console.error('Offline flush fail:', e);
+                  }
+                } else if (text && executeSendRef.current) {
+                  await executeSendRef.current(text);
+                  await new Promise(r => setTimeout(r, 300));
                 }
               }
               toast.success('✅ All queued messages delivered.');
@@ -3511,7 +3520,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (isOffline) {
         const outboxKey = `ledger_outbox_${address.toLowerCase()}`;
         const existing = JSON.parse(localStorage.getItem(outboxKey) || '[]');
-        existing.push(finalContent);
+        existing.push({ peer: activePeer, content: finalContent });
         localStorage.setItem(outboxKey, JSON.stringify(existing));
         toast.info("You are offline. Message queued to outbox.");
       } else {
@@ -5001,7 +5010,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 {callTypeRef.current === 'video' ? 'Incoming Video Call' : 'Incoming Voice Call'}
               </span>
             </div>
-            <p className="text-white/20 text-[12px] tracking-wide">Ledger Chat · End-to-end encrypted</p>
+            <p className="text-white/20 text-[12px] tracking-wide">Ledger Chat • End-to-end encrypted</p>
           </div>
 
           {/* Center — Avatar with animated rings */}
@@ -5113,7 +5122,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 {callTypeRef.current === 'video' ? 'Video Call' : 'Voice Call'}
               </span>
             </div>
-            <p className="text-white/20 text-[12px] tracking-wide">Ledger Chat · End-to-end encrypted</p>
+            <p className="text-white/20 text-[12px] tracking-wide">Ledger Chat • End-to-end encrypted</p>
           </div>
 
           {/* Center — Avatar with slow animated rings */}

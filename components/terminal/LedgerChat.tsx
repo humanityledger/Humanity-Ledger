@@ -1007,10 +1007,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             if (queue.length > 0) {
               localStorage.removeItem(outboxKey);
               toast.info(`ðŸ“¤ Back online â€” sending ${queue.length} queued message${queue.length > 1 ? 's' : ''}...`);
-              for (const msgContent of queue) {
-                if (executeSendRef.current) {
-                  await executeSendRef.current(msgContent);
-                  await new Promise(r => setTimeout(r, 300)); // throttle to avoid XMTP rate limit
+              for (const item of queue) {
+                const peer = typeof item === 'string' ? null : item.peer;
+                const text = typeof item === 'string' ? item : item.content;
+                if (peer && text && engineSendMessage) {
+                  try {
+                    await engineSendMessage(peer, text);
+                    await new Promise(r => setTimeout(r, 300));
+                  } catch (e) {
+                    console.error('Offline flush fail:', e);
+                  }
+                } else if (text && executeSendRef.current) {
+                  await executeSendRef.current(text);
+                  await new Promise(r => setTimeout(r, 300));
                 }
               }
               toast.success('âœ… All queued messages delivered.');
@@ -3521,7 +3530,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (isOffline) {
         const outboxKey = `ledger_outbox_${address.toLowerCase()}`;
         const existing = JSON.parse(localStorage.getItem(outboxKey) || '[]');
-        existing.push(finalContent);
+        existing.push({ peer: activePeer, content: finalContent });
         localStorage.setItem(outboxKey, JSON.stringify(existing));
         toast.info("You are offline. Message queued to outbox.");
       } else {
@@ -5054,17 +5063,53 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               <p className="text-[16px] md:text-[18px] text-[#1C1C1E]/50 font-medium leading-relaxed max-w-sm mb-10">
                 Choose from your existing contacts, or start a new conversation by entering a wallet address.
               </p>
-              <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
+              <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
                 {[
-                  { icon: 'ðŸ”', label: 'End-to-End Encrypted' },
-                  { icon: 'ðŸŒ', label: 'Decentralized Network' },
-                  { icon: 'ðŸ”¥', label: 'Burn on Read' },
-                  { icon: 'ðŸ’Ž', label: 'Send QD Tokens' }
+                  { 
+                    label: 'End-to-End Encrypted',
+                    icon: (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                    ),
+                    color: 'text-blue-500 bg-blue-50'
+                  },
+                  { 
+                    label: 'Decentralized Network',
+                    icon: (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                      </svg>
+                    ),
+                    color: 'text-purple-500 bg-purple-50'
+                  },
+                  { 
+                    label: 'Burn on Read',
+                    icon: (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+                      </svg>
+                    ),
+                    color: 'text-orange-500 bg-orange-50'
+                  },
+                  { 
+                    label: 'Send QD Tokens',
+                    icon: (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/>
+                      </svg>
+                    ),
+                    color: 'text-emerald-500 bg-emerald-50'
+                  }
                 ].map((f) => (
-                  <div key={f.label} className="bg-white rounded-2xl p-4 border border-black/5 shadow-sm flex flex-col items-center gap-2 text-center">
-                    <span className="text-2xl">{f.icon}</span>
-                    <span className="text-[12px] font-bold text-[#1C1C1E]/70">{f.label}</span>
+                  <div key={f.label} className="bg-white rounded-2xl p-4 border border-black/[0.06] shadow-sm flex flex-col items-center gap-2 text-center hover:shadow-md transition-shadow">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${f.color}`}>
+                      {f.icon}
+                    </div>
+                    <span className="text-[11px] font-semibold text-[#1C1C1E]/60 leading-tight">{f.label}</span>
                   </div>
+                ))}
+              </div>
                 ))}
               </div>
             </div>
@@ -5082,7 +5127,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             <p className="text-black/40 text-[11px] font-semibold uppercase tracking-[0.3em] mb-2">
               {callTypeRef.current === 'video' ? 'ðŸ“¹ Incoming Video Call' : 'ðŸŽ™ï¸ Incoming Voice Call'}
             </p>
-            <p className="text-black/25 text-[13px] font-mono mb-10">Ledger Chat Â· End-to-end encrypted</p>
+            <p className="text-black/25 text-[13px] font-mono mb-10">Ledger Chat • End-to-end encrypted</p>
 
             {/* Animated avatar */}
             <div className="relative flex items-center justify-center mb-8">
@@ -5133,7 +5178,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             <p className="text-black/40 text-[11px] font-semibold uppercase tracking-[0.3em] mb-2">
               {callTypeRef.current === 'video' ? 'ðŸ“¹ Video Call' : 'ðŸŽ™ï¸ Voice Call'}
             </p>
-            <p className="text-black/25 text-[13px] font-mono mb-10">Ledger Chat Â· End-to-end encrypted</p>
+            <p className="text-black/25 text-[13px] font-mono mb-10">Ledger Chat • End-to-end encrypted</p>
 
             <div className="relative flex items-center justify-center mb-8">
               <div className="absolute w-52 h-52 rounded-full border border-black/10 animate-ping" style={{ animationDuration: '3s' }} />

@@ -31,7 +31,7 @@ export const FEE_JUICE_ADDRESS   = '0x762c132040fda6183066fa3b14d985ee55aa3c18';
 // Source: https://docs.aztec.network/developers/getting_started_on_mainnet
 export const PRIMARY_FPC_ADDRESS =
   process.env.SPONSORED_FPC_ADDRESS ||
-  '0x1441491b59934ec64f8c98f17c91f23c01ca2a45dbb35caf123146ec76f9970c';
+  '0x1969946536f0c09269e2c75e414eef4e21a76e763c5514125208db33d7d944d7';
 
 // Canonical alias for backward compatibility and test imports
 export const SPONSORED_FPC_ADDRESS = PRIMARY_FPC_ADDRESS;

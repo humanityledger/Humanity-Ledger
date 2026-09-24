@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Camera, MessageCircle, QrCode } from 'lucide-react';
 import { QrScanner } from '@/components/terminal/QrScanner';
-import { LedgerChat } from '@/components/terminal/LedgerChat';
+import { LedgerChat } from '@/components/terminal/LedgerChatV2';
 
 export function ScannerZone() {
     const [mode, setMode] = useState<'chat' | 'project'>('chat');

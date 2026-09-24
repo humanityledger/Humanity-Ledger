@@ -1,15 +1,21 @@
-import pathlib
-content = pathlib.Path('d:/Projects/Wallet Human Polymarket ID/contracts/LedgerValidator.sol').read_text(encoding='utf-8')
-content = content.replace('address public immutable ledgerAuthority;', 'address public ledgerAuthority;')
+import re
 
-transfer_fn = '''
-    function transferAuthority(address _newAuthority) external onlyAuthority {
-        require(_newAuthority != address(0), "Invalid address");
-        emit AuthorityTransferred(ledgerAuthority, _newAuthority);
-        ledgerAuthority = _newAuthority;
-    }
-'''
+with open('components/terminal/LedgerChat.tsx', 'r', encoding='utf-8') as f:
+    content = f.read()
 
-content = content.replace('function pingReserve(', transfer_fn + '\n    function pingReserve(')
-pathlib.Path('d:/Projects/Wallet Human Polymarket ID/contracts/LedgerValidator.sol').write_text(content, encoding='utf-8')
-print('Fixed LedgerValidator.sol')
+# Replace mojibake with proper emojis. The block we are looking for is inside:
+# <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
+pattern = r'\{\s*\[.*?label:\s*.End-to-End Encrypted.*?\].map\(\(f\)\s*=>'
+replacement = '''{[
+                  { icon: '🔒', label: 'End-to-End Encrypted' },
+                  { icon: '🌐', label: 'Decentralized Network' },
+                  { icon: '🔥', label: 'Burn on Read' },
+                  { icon: '💎', label: 'Send QD Tokens' }
+                ].map((f) =>'''
+
+new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+
+with open('components/terminal/LedgerChat.tsx', 'w', encoding='utf-8') as f:
+    f.write(new_content)
+
+print("Changed:", content != new_content)
