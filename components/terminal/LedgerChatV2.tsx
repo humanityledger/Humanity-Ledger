@@ -43,6 +43,12 @@ import { Search, Phone as PhoneIcon, Clock as ClockIcon } from 'lucide-react';
 
 import { LedgerChatSettings, useLedgerSettings } from './LedgerChatSettings';
 import { VirtualizedMessageList } from '@/components/chat/VirtualizedMessageList';
+import { CrystalNavBar, NavTab } from '@/components/chat/CrystalNavBar';
+import { ContactInfoPanel } from '@/components/chat/ContactInfoPanel';
+import { LedgerUpdatesTab } from '@/components/chat/LedgerUpdatesTab';
+import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
+import { LedgerCommunitiesTab } from '@/components/chat/LedgerCommunitiesTab';
+import { LedgerSettingsFull } from '@/components/chat/LedgerSettingsFull';
 import { LottieSendButton } from '@/components/chat/LottieSendButton';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
 import { chatDB } from '@/lib/chat/indexeddb';
@@ -307,9 +313,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   // ── v2: Telegram-Parity state ──────────────────────────────────────────
   const [callHistoryList, setCallHistoryList] = useState<CallRecord[]>([]);
-  const [sidebarTab, setSidebarTab] = useState<'chats' | 'calls' | 'contacts'>('chats');
+  const [sidebarTab, setSidebarTab] = useState<'chats' | 'calls' | 'contacts' | 'updates' | 'communities'>('chats');
   const [showSaveContactModal, setShowSaveContactModal] = useState(false);
   const [saveContactName, setSaveContactName] = useState('');
+  const [showContactInfo, setShowContactInfo] = useState(false);
+  const [showFullSettings, setShowFullSettings] = useState(false);
 
   const loadContacts = useCallback(() => {
     if (address) {
@@ -3917,6 +3925,35 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         )}
       </AnimatePresence>
 
+      {/* ── CONTACT INFO PANEL ── */}
+      <AnimatePresence>
+        {showContactInfo && activePeer && (
+          <ContactInfoPanel
+            peerAddress={activePeer}
+            peerName={getDisplayName(activePeer)}
+            onClose={() => setShowContactInfo(false)}
+            onVoiceCall={() => { setShowContactInfo(false); handleStartCall('voice', activePeer); }}
+            onVideoCall={() => { setShowContactInfo(false); handleStartCall('video', activePeer); }}
+            onSearch={() => { setShowContactInfo(false); setShowSearch(true); }}
+            onBlock={() => {
+              setShowContactInfo(false);
+              toast.error(`${getDisplayName(activePeer)} has been blocked.`);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── FULL SETTINGS (WhatsApp parity) ── */}
+      <AnimatePresence>
+        {showFullSettings && (
+          <LedgerSettingsFull
+            myAddress={effectiveAddress || ''}
+            myName={getDisplayName(effectiveAddress || '')}
+            onClose={() => setShowFullSettings(false)}
+          />
+        )}
+      </AnimatePresence>
+
     {/* ─── WebRTC Ringtone Audio Element ────────────────────────────────────── */}
     <audio ref={ringAudioRef} loop playsInline x-webkit-airplay="allow" src="/sounds/call_ringtone.mp3" style={{ display: 'none' }} />
 
@@ -4011,7 +4048,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             <button onClick={() => window.location.href = '/portfolio'} className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#F2F2F7] text-[#000000] hover:bg-[#E5E5EA] transition-all text-[12px] font-semibold active:scale-95">
               <PieChart size={13} />
             </button>
-            <button onClick={() => setShowSettings(true)} className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#F2F2F7] text-[#000000] hover:bg-[#E5E5EA] transition-all text-[12px] font-semibold active:scale-95">
+            <button onClick={() => setShowFullSettings(true)} className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#F2F2F7] text-[#000000] hover:bg-[#E5E5EA] transition-all text-[12px] font-semibold active:scale-95">
               <Settings size={13} />
             </button>
           </div>
@@ -4025,33 +4062,39 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           </div>
         </div>
 
-        {/* ── Tab Bar ── */}
-        <div className="flex border-b border-black/[0.06] bg-white shrink-0">
-          {(['chats', 'calls', 'contacts'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setSidebarTab(tab)}
-              className={`flex-1 py-3 flex flex-col items-center gap-0.5 transition-all ${
-                sidebarTab === tab
-                  ? 'text-[#007AFF]'
-                  : 'text-[#8E8E93] hover:text-[#000000]'
-              }`}
-            >
-              {tab === 'chats' ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={sidebarTab === 'chats' ? '#007AFF' : 'none'} stroke={sidebarTab === 'chats' ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              ) : tab === 'calls' ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={sidebarTab === 'calls' ? '#007AFF' : 'none'} stroke={sidebarTab === 'calls' ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.6 4.35 2 2 0 0 1 3.57 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.1 6.1l.9-.9a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={sidebarTab === 'contacts' ? '#007AFF' : 'none'} stroke={sidebarTab === 'contacts' ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              )}
-              <span className={`text-[10px] font-semibold tracking-wide ${sidebarTab === tab ? 'text-[#007AFF]' : 'text-[#8E8E93]'}`}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </span>
-            </button>
-          ))}
-        </div>
+        {/* ── Crystal Glass NavBar ── */}
+        <CrystalNavBar
+          activeTab={(['chats','calls','contacts'].includes(sidebarTab) ? sidebarTab === 'chats' || sidebarTab === 'contacts' ? 'chats' : 'calls' : sidebarTab) as NavTab}
+          onTabChange={(tab: NavTab) => {
+            if (tab === 'calls') setSidebarTab('calls');
+            else if (tab === 'updates') setSidebarTab('updates');
+            else if (tab === 'communities') setSidebarTab('communities');
+            else setSidebarTab('chats');
+          }}
+          unreadCounts={{
+            chats: conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
+          }}
+        />
 
-        <div className="flex-1 overflow-y-auto flex flex-col bg-white">
+        <div className="flex-1 overflow-y-auto flex flex-col bg-[#F2F2F7]">
+
+          {/* ── UPDATES TAB ── */}
+          {sidebarTab === 'updates' && (
+            <LedgerUpdatesTab
+              myAddress={address || ''}
+              myName={resolveContactName(address || '', address || '', localContacts)}
+              contacts={localContacts.map(c => ({ peerAddress: c.peerAddress, name: c.name }))}
+              onOpenChat={(addr) => { setActivePeer(addr); setSidebarTab('chats'); setShowList(false); }}
+            />
+          )}
+
+          {/* ── COMMUNITIES TAB ── */}
+          {sidebarTab === 'communities' && (
+            <LedgerCommunitiesTab
+              myAddress={address || ''}
+              onOpenCommunity={(id) => { /* Route to community */ }}
+            />
+          )}
 
           {/* ── CHATS TAB ── */}
           {sidebarTab === 'chats' && (
@@ -4152,63 +4195,31 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             </>
           )}
 
-          {/* ── CALLS TAB ── */}
+          {/* ── CALLS TAB (New LedgerCallsTab) ── */}
           {sidebarTab === 'calls' && (
-            <div className="flex-1 overflow-y-auto">
-              {callHistoryList.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full p-8 text-center gap-4">
-                  <div className="w-20 h-20 rounded-full bg-[#F2F2F7] flex items-center justify-center">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#C7C7CC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.6 4.35 2 2 0 0 1 3.57 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.1 6.1l.9-.9a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                  </div>
-                  <div>
-                    <p className="text-[16px] font-bold text-[#000000] mb-1">No Calls Yet</p>
-                    <p className="text-[13px] text-[#8E8E93]">Open a chat and tap the phone<br/>icon to start a call.</p>
-                  </div>
-                </div>
-              ) : callHistoryList.map((call) => {
-                const isToday = new Date(call.timestamp).toDateString() === new Date().toDateString();
-                const isYesterday = new Date(call.timestamp).toDateString() === new Date(Date.now() - 86400000).toDateString();
-                const timeLabel = isToday
-                  ? new Date(call.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                  : isYesterday ? 'Yesterday'
-                  : new Date(call.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
-                const mins = Math.floor(call.durationSeconds / 60).toString().padStart(2, '0');
-                const secs = (call.durationSeconds % 60).toString().padStart(2, '0');
-                const isMissed = call.status === 'missed' || call.status === 'declined';
-                return (
-                  <button
-                    key={call.id}
-                    className="w-full px-4 py-3.5 border-b border-black/[0.04] flex items-center gap-3 hover:bg-[#F9F9F9] transition-colors text-left active:bg-[#F2F2F7]"
-                    onClick={() => { setActivePeer(call.peerAddress); setSidebarTab('chats'); setShowList(false); }}
-                  >
-                    <div className="relative shrink-0">
-                      <Avatar address={call.peerAddress} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[15px] font-semibold text-[#000000] truncate mb-0.5">{getDisplayName(call.peerAddress)}</p>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[13px] font-medium ${isMissed ? 'text-[#FF3B30]' : 'text-[#8E8E93]'}`}>
-                          {call.direction === 'incoming' ? '↙' : '↗'} {call.type === 'video' ? 'Video' : 'Voice'} • {isMissed ? 'Missed' : call.durationSeconds > 0 ? `${mins}:${secs}` : 'No answer'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className="text-[12px] text-[#8E8E93]">{timeLabel}</span>
-                      <button
-                        onClick={e => { e.stopPropagation(); setSidebarTab('chats'); setShowList(false); handleStartCall(call.type, call.peerAddress); }}
-                        className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center text-[#007AFF] hover:bg-[#E5E5EA] transition-all active:scale-90"
-                        title={`Call back (${call.type})`}
-                      >
-                        {call.type === 'video' ? <Video size={14} /> : <Phone size={14} />}
-                      </button>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            <LedgerCallsTab
+              callHistory={callHistoryList.map(c => ({
+                id: c.id,
+                peerAddress: c.peerAddress,
+                peerName: getDisplayName(c.peerAddress),
+                type: c.type,
+                direction: c.direction,
+                missed: c.durationSeconds === 0 && c.direction === 'incoming',
+                duration: c.durationSeconds,
+                timestamp: c.timestamp
+              }))}
+              myAddress={address || ''}
+              onStartCall={(addr, type) => { setSidebarTab('chats'); setShowList(false); handleStartCall(type, addr); }}
+              onOpenChat={(addr) => { setActivePeer(addr); setSidebarTab('chats'); setShowList(false); }}
+              onNew={() => { setSidebarTab('contacts'); }}
+              onSchedule={() => toast.info('Call scheduling coming soon!')}
+              onKeypad={() => {}}
+              onFavorites={() => {}}
+            />
           )}
 
           {/* ── CONTACTS TAB ── */}
+
           {sidebarTab === 'contacts' && (
             <div className="flex-1 overflow-y-auto">
               {localContacts.length === 0 ? (
@@ -4250,7 +4261,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <button onClick={() => setShowList(true)} className="md:hidden p-1.5 rounded-lg hover:bg-black/5 text-black/40 text-[10px] font-black tracking-wider mr-1">
                   ←
                 </button>
-                <button onClick={() => setShowProfile(true)} className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity">
+                <button onClick={() => setShowContactInfo(true)} className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity">
                   <div className="relative">
                     <div
                       className="w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-black text-white shadow-lg"
