@@ -31,7 +31,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
   const [bio, setBio] = useState('');
   const [pin, setPin] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [privacyLastSeen, setPrivacyLastSeen] = useState('everybody');
+  const [privacyLastSeen, setPrivacyLastSeen] = useState<'everybody' | 'contacts' | 'nobody'>('everybody');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -323,7 +323,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                  <label className="block text-[13px] font-bold text-[#050505] mb-2">Who can see my online status?</label>
                  <select 
                    value={privacyLastSeen}
-                   onChange={(e) => setPrivacyLastSeen(e.target.value)}
+                   onChange={(e) => setPrivacyLastSeen(e.target.value as any)}
                    className="w-full bg-[#f5f5f7] border-2 border-transparent focus:border-[#1c7aff] focus:bg-white rounded-2xl py-4 px-4 text-[15px] font-semibold text-black outline-none transition-all appearance-none cursor-pointer"
                  >
                    <option value="everybody">Everybody</option>
@@ -393,3 +393,4 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
     </div>
   );
 }
+

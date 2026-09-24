@@ -158,16 +158,6 @@ export const metadata = {
 
   },
 
-  appleWebApp: {
-
-    capable: true,
-
-    title: 'Humanity Ledger',
-
-    statusBarStyle: 'default',
-
-  },
-
   openGraph: {
 
     title: 'Humanity Ledger | Privacy Infrastructure on Aztec',

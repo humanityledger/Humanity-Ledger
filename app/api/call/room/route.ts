@@ -12,9 +12,9 @@ const MAX_ROOMS_PER_HOUR = 10;
 // Rate-limit: in-memory map (resets on server restart, sufficient for call abuse prevention)
 const createRateMap = new Map<string, { count: number; resetAt: number }>();
 
-function getSessionAddress(req: NextRequest): string | null {
+async function getSessionAddress(req: NextRequest): Promise<string | null> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const session = cookieStore.get('system_handshake')?.value;
     if (session) return session.toLowerCase();
     const header = req.headers.get('x-wallet-address');
@@ -36,7 +36,7 @@ function checkCreateRateLimit(address: string): boolean {
 
 // ── POST /api/call/room — Create a new call room ──
 export async function POST(req: NextRequest) {
-  const address = getSessionAddress(req);
+  const address = await getSessionAddress(req);
   if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   // Input validation

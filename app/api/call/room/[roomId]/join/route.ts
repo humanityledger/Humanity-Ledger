@@ -6,9 +6,9 @@ import { verifyRoomPassword, generateJoinToken } from '@/lib/utils/roomCrypto';
 const ROOM_SECRET = process.env.CALL_ROOM_SECRET || process.env.NEXTAUTH_SECRET || 'ledger-call-secret-change-in-prod';
 const TOKEN_TTL_MS = 4 * 60 * 60 * 1000;
 
-function getSessionAddress(req: NextRequest): string | null {
+async function getSessionAddress(req: NextRequest): Promise<string | null> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const session = cookieStore.get('system_handshake')?.value;
     if (session) return session.toLowerCase();
     const header = req.headers.get('x-wallet-address');
@@ -45,7 +45,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
 ) {
-  const address = getSessionAddress(req);
+  const address = await getSessionAddress(req);
   if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const roomId = (await params).roomId.toUpperCase();
@@ -120,7 +120,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
 ) {
-  const address = getSessionAddress(req);
+  const address = await getSessionAddress(req);
   if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const roomId = (await params).roomId.toUpperCase();

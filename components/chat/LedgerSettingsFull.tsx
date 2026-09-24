@@ -2,12 +2,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, ChevronRight, Star, Broadcast, Laptop, Plus,
+  ArrowLeft, ChevronRight, Star, Radio, LaptopMinimal, Plus,
   Bell, Lock, Eye, EyeOff, Mail, Key, User, Phone, Trash2,
   Globe, Shield, Users, MessageCircle, Clock, Camera, Image,
   Database, Wifi, BarChart, Download, Settings, HelpCircle,
   Send, FileText, Package, Heart, Crown, Zap, Monitor, Palette,
-  Volume2, Vibrate, Hash, Check, Toggle, X, AlertTriangle, Mic
+  Volume2, Vibrate, Hash, Check, ToggleLeft, X, AlertTriangle, Mic
 } from 'lucide-react';
 
 interface LedgerSettingsFullProps {

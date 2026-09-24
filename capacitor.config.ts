@@ -4,7 +4,6 @@ const config: CapacitorConfig = {
   appId: 'com.humanidfi.ledger',
   appName: 'Humanity Ledger',
   webDir: 'out',
-  bundledWebRuntime: false,
   server: {
     androidScheme: 'https',
     iosScheme: 'https',

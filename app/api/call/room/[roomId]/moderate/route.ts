@@ -16,9 +16,9 @@ function checkModerateRateLimit(address: string): boolean {
   return true;
 }
 
-function getSessionAddress(req: NextRequest): string | null {
+async function getSessionAddress(req: NextRequest): Promise<string | null> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const session = cookieStore.get('system_handshake')?.value;
     if (session) return session.toLowerCase();
     const header = req.headers.get('x-wallet-address');
@@ -35,7 +35,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
 ) {
-  const address = getSessionAddress(req);
+  const address = await getSessionAddress(req);
   if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   if (!checkModerateRateLimit(address)) {

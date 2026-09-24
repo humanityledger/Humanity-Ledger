@@ -5110,8 +5110,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   </div>
                 ))}
               </div>
-                ))}
-              </div>
+
+
             </div>
           </div>
         )}
