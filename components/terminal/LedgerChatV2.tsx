@@ -14,6 +14,7 @@ import { useAppKit } from '@reown/appkit/react';
 import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations } from '@/lib/xmtp/client';
 import { QrScanner } from '@/components/terminal/QrScanner';
 import { TuringShieldGate } from '@/components/auth/TuringShieldGate';
+import { CreateGroupModal } from '../chat/CreateGroupModal';
 import type { Client } from '@xmtp/browser-sdk';
 import { useSettingsStore } from '@/lib/store/useSettingsStore';
 import { useWalletStore } from '@/lib/store/wallet-store';
@@ -402,6 +403,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showVault, setShowVault] = useState(false);
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [showContactRequests, setShowContactRequests] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const [blockedPeers, setBlockedPeers] = useState<Set<string>>(new Set());
@@ -3877,6 +3879,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
+              <button
+                onClick={() => setShowCreateGroup(true)}
+                className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white hover:bg-indigo-600 transition-all active:scale-95 shadow-sm"
+                title="New Group Chat"
+              >
+                <UserPlus size={18} strokeWidth={2.5} />
+              </button>
             </div>
           </div>
 
@@ -5791,6 +5800,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             loadContacts();
             // [FIX 3] Open the conversation
             handleStartConversationWithPeer(peer);
+          }}
+        />,
+        document.body
+      )}
+
+      {showCreateGroup && createPortal(
+        <CreateGroupModal
+          client={client}
+          myAddress={address}
+          onClose={() => setShowCreateGroup(false)}
+          onGroupCreated={(groupId, groupName) => {
+            handleStartConversationWithPeer(groupId);
           }}
         />,
         document.body
