@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
@@ -357,13 +357,20 @@ export const MessageBubble = React.memo(({
   const isPayment    = content.startsWith('__PAYMENT__');
   const isSticker    = content.startsWith('__STICKER__');
   const isAudio      = content.startsWith('__AUDIO__');
+  const isMedia      = content.startsWith('__MEDIA__:');
   const isGif        = content.startsWith('[GIF]');
   const isLocation   = content.startsWith('[LOCATION]');
   const isSystemMsg  = content.startsWith('__PIN__') || content.startsWith('__REVOKE__') || content.startsWith('__READ__') || content.startsWith('__VOTE__') || content.startsWith('__EDIT__') || content.startsWith('__UNPIN__');
   const audioSrc     = isAudio ? content.slice('__AUDIO__'.length) : null;
   const gifUrl       = isGif ? content.slice('[GIF]'.length) : null;
   const locationCoords = isLocation ? content.slice('[LOCATION]'.length) : null;
-  const attachmentMatch = (!isAudio && !isGif) ? content.match(/^\[ATTACHMENT:([^\]]*)\](.*?)\|(.*)$/is) : null;
+  
+  let mediaObj = null;
+  if (isMedia) {
+    try { mediaObj = JSON.parse(content.slice('__MEDIA__:'.length)); } catch {}
+  }
+  
+  const attachmentMatch = (!isAudio && !isGif && !isMedia) ? content.match(/^\[ATTACHMENT:([^\]]*)\](.*?)\|(.*)$/is) : null;
   const attachment   = attachmentMatch ? { mime: attachmentMatch[1] || 'application/octet-stream', url: attachmentMatch[2], name: attachmentMatch[3] } : null;
 
   if (isSystemMsg) return null;
@@ -409,12 +416,24 @@ export const MessageBubble = React.memo(({
     }
   };
 
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+
   useEffect(() => {
     if (!showTapback && !showCtxMenu) return;
     const handler = () => { setShowTapback(false); setShowCtxMenu(false); };
     document.addEventListener('click', handler);
     return () => document.removeEventListener('click', handler);
   }, [showTapback, showCtxMenu]);
+
+  useEffect(() => {
+    if (mediaObj && !mediaUrl) {
+      import('@/lib/chat/media').then(m => {
+        m.EncryptedMediaEngine.fetchAndDecrypt(mediaObj.cid, mediaObj.k, mediaObj.iv, mediaObj.mime)
+          .then(url => setMediaUrl(url))
+          .catch(err => console.error('[MessageBubble] Decrypt error:', err));
+      });
+    }
+  }, [mediaObj, mediaUrl]);
 
   return (
     <React.Fragment>

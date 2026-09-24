@@ -46,6 +46,7 @@ import { VirtualizedMessageList } from '@/components/chat/VirtualizedMessageList
 import { LottieSendButton } from '@/components/chat/LottieSendButton';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
 import { chatDB } from '@/lib/chat/indexeddb';
+import { EncryptedMediaEngine } from '@/lib/chat/media';
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
@@ -2133,19 +2134,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             return;
         }
 
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const dataUrl = reader.result as string;
+        try {
+          const file = new File([blob], `voice-${Date.now()}.webm`, { type: mimeType });
+          const audioMsg = await EncryptedMediaEngine.processAndUpload(file);
           
-          // XMTP Limit Check: Typical message limit is 1MB. 
-          // Base64 overhead is ~33%. A 750KB blob is roughly the safe limit.
-          if (dataUrl.length > 1024 * 1024) {
-              setInitError('Voice message is too long for the secure P2P network. Please record a shorter message (under 30s).');
-              setRecordingSeconds(0);
-              return;
-          }
-
-          const audioMsg = `__AUDIO__${dataUrl}`;
           if (client && activePeer) {
             const optimisticId = `optimistic-${Date.now()}`;
             setMessages(prev => [...prev, {
@@ -2164,11 +2156,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 setInitError('Failed to transmit secure voice message. Check your connection.');
             }
           } else {
-            // [UX FIX] If no peer selected when stopping recording, show a helpful message
             toast.error('Select a contact first to send the voice message.');
           }
-        };
-        reader.readAsDataURL(blob);
+        } catch (error) {
+          console.error('[Voice] Encryption failed:', error);
+          toast.error('Failed to encrypt voice message.');
+        }
 
         setRecordingSeconds(0);
       };

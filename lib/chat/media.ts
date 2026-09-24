@@ -74,14 +74,23 @@ export class EncryptedMediaEngine {
     const { encryptedBlob, ivBase64, keyBase64 } = await this.encryptFile(file);
     
     // In production, this posts to a decentralized storage pinning service (e.g., Pinata/Web3Storage)
-    const formData = new FormData();
-    formData.append('file', encryptedBlob);
+    const ipfsCid = `QmMockCid${Date.now()}`; 
     
-    // Mock upload for scaffolding
-    console.log('[MediaEngine] Uploading encrypted blob to IPFS...');
-    const ipfsCid = `QmMockCid${Date.now()}...`; 
+    // Simulate IPFS by saving the encrypted blob to IndexedDB
+    try {
+      const { vault } = await import('@/lib/core/SecureVault');
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(encryptedBlob);
+      });
+      await vault.setItem(`ipfs_mock_${ipfsCid}`, base64);
+      console.log(`[MediaEngine] Uploaded encrypted blob to mock IPFS (CID: ${ipfsCid})`);
+    } catch (e) {
+      console.error('[MediaEngine] IPFS Mock Upload Failed:', e);
+    }
     
-    // The payload that will be sent via XMTP (in plaintext relative to the XMTP channel, but E2E encrypted by XMTP itself)
+    // The payload that will be sent via XMTP
     const metadata = {
       type: 'attachment',
       mime: file.type,
@@ -93,5 +102,25 @@ export class EncryptedMediaEngine {
     };
 
     return `__MEDIA__:${JSON.stringify(metadata)}`;
+  }
+
+  /**
+   * Mock IPFS fetcher + Decryptor
+   */
+  static async fetchAndDecrypt(cid: string, keyBase64: string, ivBase64: string, mimeType: string): Promise<string> {
+    try {
+      const { vault } = await import('@/lib/core/SecureVault');
+      const base64 = await vault.getItem(`ipfs_mock_${cid}`);
+      if (!base64) throw new Error('CID not found in mock IPFS network');
+      
+      const res = await fetch(base64);
+      const encryptedBlob = await res.blob();
+      
+      const decryptedBlob = await this.decryptFile(encryptedBlob, keyBase64, ivBase64, mimeType);
+      return URL.createObjectURL(decryptedBlob);
+    } catch (e) {
+      console.error('[MediaEngine] Fetch/Decrypt Failed:', e);
+      throw e;
+    }
   }
 }
