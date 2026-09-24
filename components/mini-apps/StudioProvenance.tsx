@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 
 export const StudioProvenance: React.FC = () => {
@@ -66,3 +68,4 @@ export const StudioProvenance: React.FC = () => {
     </div>
   );
 };
+

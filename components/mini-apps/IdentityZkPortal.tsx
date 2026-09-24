@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 
 export const IdentityZkPortal: React.FC = () => {
@@ -47,3 +49,4 @@ export const IdentityZkPortal: React.FC = () => {
     </div>
   );
 };
+

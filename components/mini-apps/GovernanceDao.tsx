@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { GaslessPaymaster } from '@/lib/chat/paymaster';
 
@@ -60,3 +62,4 @@ export const GovernanceDao: React.FC = () => {
     </div>
   );
 };
+

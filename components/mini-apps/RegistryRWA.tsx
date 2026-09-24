@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 
 export const RegistryRWA: React.FC = () => {
@@ -59,3 +61,4 @@ export const RegistryRWA: React.FC = () => {
     </div>
   );
 };
+
