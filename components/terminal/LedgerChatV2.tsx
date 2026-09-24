@@ -4284,6 +4284,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   <div className="flex flex-col">
                     <span className="text-[13px] font-black text-[#050505] font-mono flex items-center gap-1.5">
                       {getDisplayName(activePeer!)}
+                      {ledgerSettings?.disappearing_messages !== 'off' && (
+                        <Clock size={12} className="text-[#8E8E93] ml-1" />
+                      )}
                     </span>
                     <span className={`text-[10px] font-semibold flex items-center gap-1 ${peerStatus.status === 'online' ? 'text-black' : 'text-black/50'}`}>
                       {peerStatus.isTyping ? (
@@ -4739,9 +4742,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     >
                       {[
                         { id: 'attach', icon: <Paperclip size={18} />, label: 'Files', color: 'text-white', bg: 'bg-[#007AFF]', onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
+                        { id: 'location', icon: <MapPin size={18} />, label: 'Live Location', color: 'text-white', bg: 'bg-[#34C759]', onClick: () => { sendLiveLocation(); setShowAppDrawer(false); } },
                         { id: 'gif', icon: <span className="font-black text-[10px] tracking-widest">GIF</span>, label: 'GIFs (Beta)', color: 'text-white', bg: 'bg-[#FF2D55]', onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
                         { id: 'sticker', icon: <Smile size={18} />, label: 'Stickers', color: 'text-white', bg: 'bg-[#5856D6]', onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
-                        { id: 'poll', icon: <BarChart2 size={18} />, label: 'Polls', color: 'text-white', bg: 'bg-[#34C759]', onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
+                        { id: 'poll', icon: <BarChart2 size={18} />, label: 'Polls', color: 'text-white', bg: 'bg-[#FF9500]', onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
                         { id: 'qd', icon: <Wallet size={18} />, label: 'Pay', color: 'text-white', bg: 'bg-[#FF9500]', onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
                         { id: 'burn', icon: <Flame size={18} />, label: 'Burn Timer', color: 'text-white', bg: 'bg-[#FF3B30]', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
                         { id: 'location', icon: <MapPin size={18} />, label: 'Location', color: 'text-white', bg: 'bg-[#32ADE6]', onClick: () => { 
@@ -5946,5 +5950,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
 
 
