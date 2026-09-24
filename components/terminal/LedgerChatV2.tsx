@@ -2867,7 +2867,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               // Background IndexedDB Save (do not block render)
               chatDB.saveMessages([mappedMsg]).catch(() => {});
               chatDB.saveConversation({
-                peerAddress: resolvedPeerAddr,
+                peerAddress: msgConvPeer,
                 lastAt: mappedMsg.sentAtNs
               }).catch(() => {});
 

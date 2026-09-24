@@ -59,11 +59,12 @@ export class ChatDatabase {
       const transaction = this.db!.transaction(['messages'], 'readonly');
       const store = transaction.objectStore('messages');
       const index = store.index('conversationId');
+      // Always store and query lowercase for consistency
       const request = index.getAll(IDBKeyRange.only(conversationId.toLowerCase()));
 
       request.onsuccess = () => {
-        // Sort by sentAt descending, then paginate
-        const msgs = request.result.sort((a, b) => b.sentAt - a.sentAt);
+        // Sort by sentAtNs descending, then paginate
+        const msgs = request.result.sort((a, b) => (b.sentAtNs || 0) - (a.sentAtNs || 0));
         resolve(msgs.slice(offset, offset + limit).reverse()); // Return chronological for UI
       };
       

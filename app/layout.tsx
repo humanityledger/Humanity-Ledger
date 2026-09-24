@@ -113,6 +113,12 @@ export const metadata = {
     shortcut: '/favicon.png',
     apple: '/favicon.png',
   },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    title: 'Ledger',
+    statusBarStyle: 'black-translucent',
+  },
 
   creator: 'Humanity Ledger',
 

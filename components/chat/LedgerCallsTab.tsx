@@ -22,6 +22,10 @@ interface LedgerCallsTabProps {
   myAddress: string;
   onStartCall: (address: string, type: 'voice' | 'video') => void;
   onOpenChat: (address: string) => void;
+  onNew: () => void;
+  onSchedule: () => void;
+  onKeypad: () => void;
+  onFavorites: () => void;
 }
 
 const AVATAR_COLORS = ['#007AFF','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
