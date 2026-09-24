@@ -1,33 +1,33 @@
-import { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.humanidfi.app',
+  appId: 'com.humanidfi.ledger',
   appName: 'Humanity Ledger',
-  webDir: 'public', // Using public as dummy dir, we use remote server
-
+  webDir: 'out',
+  bundledWebRuntime: false,
   server: {
-    url: 'https://humanidfi.com',
-    cleartext: false, // Force HTTPS
+    androidScheme: 'https',
+    iosScheme: 'https',
+    hostname: 'humanidfi.com',
   },
   plugins: {
     PushNotifications: {
-      presentationOptions: ["badge", "sound", "alert"],
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+    SplashScreen: {
+      launchShowDuration: 2000,
+      launchAutoHide: true,
+      backgroundColor: '#000000',
+      androidSplashResourceName: 'splash',
+      androidScaleType: 'CENTER_CROP',
+      showSpinner: true,
+      androidSpinnerStyle: 'large',
+      iosSpinnerStyle: 'small',
+      spinnerColor: '#999999',
+      splashFullScreen: true,
+      splashImmersive: true,
     },
   },
-  // Extra configuration to ensure WebRTC works well in Capacitor
-  ios: {
-    contentInset: 'always',
-    allowsLinkPreview: false,
-    // [iOS FIX] Allow audio and video to play inline (not fullscreen) in WKWebView.
-    // Without this, audio elements in CustomAudioPlayer trigger the system media player
-    // and can't be played within the app UI. Required for voice notes & WebRTC.
-    // @ts-ignore
-    allowsInlineMediaPlayback: true,
-    // [iOS FIX] Allow audio-only content to autoplay without a user gesture lock.
-    // This is needed so that incoming call audio (remoteAudioRef) plays immediately
-    // when the WebRTC stream is attached after the user taps "Answer".
-    mediaTypesRequiringUserActionForPlayback: 'none' as any,
-  }
 };
 
 export default config;
