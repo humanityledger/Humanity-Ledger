@@ -347,6 +347,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [pinnedMessageId, setPinnedMessageId] = useState<string | null>(null); // Phase 3: Pinned
   const [burnTimer, setBurnTimer] = useState<number | null>(null); // Phase 3: Self-Destruct TTL
   const [messages, setMessages] = useState<any[]>([]);
+  // [CRITICAL FIX #3 SUPPORT] Ref kept in sync with messages state so that the
+  // stream's for-await loop can read the latest snapshot without a stale closure.
+  const messagesRef = useRef<any[]>([]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   // Phase 3: Self-Destruct Timer
   useEffect(() => {
@@ -2593,8 +2597,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const realId = msg.id ?? `real-${sentAtNs}-${Math.random()}`;
 
             // ── ABSOLUTE DEDUPLICATION GATE ──────────────────────────────────────
-            if (confirmedMsgIds.current.has(realId)) continue;
-            confirmedMsgIds.current.add(realId);
+            // [CRITICAL FIX #3] On stream restart after a network drop, the stream
+            // replays recent messages. Their IDs may be in confirmedMsgIds, but the
+            // React state may have been wiped (e.g. peer switch + remount).
+            // Only skip if the ID is already IN React state — not just in the Set.
+            if (confirmedMsgIds.current.has(realId)) {
+              const alreadyInState = messagesRef.current?.some((m: any) => m.id === realId);
+              if (alreadyInState) continue;
+              // ID was in dedup Set but NOT in state — re-insert (fall through).
+            } else {
+              confirmedMsgIds.current.add(realId);
+            }
             pruneConfirmedIds(); // keep Set bounded to last 2000 IDs
             pruneOptimisticMap(); // prune stale optimistic entries
             // ─────────────────────────────────────────────────────────────────────
@@ -2761,7 +2774,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               !!convoId &&
               !!activeXmtpDmIdRef.current &&
               convoId === activeXmtpDmIdRef.current;
-            const belongsToActive = belongsToActiveByAddr || belongsToActiveByConvoId;
+            // [CRITICAL FIX #2] Third path: when ETH address resolution AND convoId both fail
+            // (common on cold cache / slow networks), fall back to matching the senderInboxId
+            // against the active peer's known inboxId. This is the last resort that prevents
+            // messages from being silently routed to background-conversation notifications
+            // when they should appear in the open chat.
+            const activePeerInboxId = (activeXmtpDmIdRef as any).peerInboxId ?? '';
+            const belongsToActiveBySenderInboxId =
+              fromPeer &&
+              !!msg.senderInboxId &&
+              !!activePeerInboxId &&
+              msg.senderInboxId.toLowerCase() === activePeerInboxId.toLowerCase();
+            const belongsToActive = belongsToActiveByAddr || belongsToActiveByConvoId || belongsToActiveBySenderInboxId;
+
 
             // [CRITICAL BUG FIX] If the message belongs to the active chat via the convoId fallback, 
             // msgConvPeer is a hash, meaning mappedMsg.conversationId was set to dm-<hash>.

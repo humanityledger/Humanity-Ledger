@@ -391,6 +391,15 @@ export async function sendMessage(
 
   if (!isAztecAddress) {
     const normalizedTo = await checksumAddress(toAddress);
+
+    // [CRITICAL FIX #1] Validate the normalized address is a real EIP-55 checksummed
+    // Ethereum address (42 chars, starts with 0x). If checksumAddress silently returned
+    // a malformed/lowercase string, throw immediately. Sending to a broken address
+    // appears to succeed locally but the recipient NEVER receives the message.
+    if (!normalizedTo || !/^0x[a-fA-F0-9]{40}$/.test(normalizedTo)) {
+      throw new Error(`[XMTP] sendMessage: Invalid or non-checksum address after normalization: "${normalizedTo}". Message not sent.`);
+    }
+
     const identifier: XmtpIdentifier = {
       identifier: normalizedTo,
       identifierKind: 'Ethereum',
