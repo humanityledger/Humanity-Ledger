@@ -5580,6 +5580,79 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         document.body
       ) : null}
 
+       
+      {/* ─── MISSING MODALS FOR APP DRAWER ─── */}
+      {showGifPicker && (
+        <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm flex justify-center items-end" onClick={() => setShowGifPicker(false)}>
+          <div className="bg-white w-full max-w-md h-[50vh] rounded-t-3xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold mb-4">Send GIF (Tenor/Giphy Integration)</h3>
+            <div className="grid grid-cols-2 gap-2 overflow-y-auto">
+              {['https://media.giphy.com/media/ICOgUNjpvO0PC/giphy.gif', 'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif', 'https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif'].map((gif, i) => (
+                <img key={i} src={gif} alt="gif" className="rounded-xl w-full h-32 object-cover cursor-pointer hover:opacity-80" onClick={() => {
+                  executeSend(`![GIF](${gif})`);
+                  setShowGifPicker(false);
+                }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showStickerPicker && (
+        <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm flex justify-center items-end" onClick={() => setShowStickerPicker(false)}>
+          <div className="bg-white w-full max-w-md h-[40vh] rounded-t-3xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold mb-4">Send Sticker</h3>
+            <div className="grid grid-cols-4 gap-4 text-center text-4xl">
+              {['🔥', '👍', '❤️', '😂', '🎉', '🚀', '👀', '💯'].map(emoji => (
+                <span key={emoji} className="cursor-pointer hover:scale-125 transition-transform" onClick={() => {
+                  executeSend(`__STICKER__${emoji}`);
+                  setShowStickerPicker(false);
+                }}>{emoji}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPollCreator && (
+        <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm flex justify-center items-end sm:items-center" onClick={() => setShowPollCreator(false)}>
+          <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 flex flex-col" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold mb-4 text-lg">Create Poll</h3>
+            <input id="poll-q" type="text" placeholder="Ask a question..." className="w-full bg-gray-100 p-3 rounded-xl mb-4 outline-none font-medium" />
+            <input id="poll-o1" type="text" placeholder="Option 1" className="w-full bg-gray-50 p-3 rounded-xl mb-2 outline-none" />
+            <input id="poll-o2" type="text" placeholder="Option 2" className="w-full bg-gray-50 p-3 rounded-xl mb-4 outline-none" />
+            <button className="w-full bg-[#007AFF] text-white py-3 rounded-xl font-bold" onClick={() => {
+              const q = document.getElementById('poll-q').value;
+              const o1 = document.getElementById('poll-o1').value;
+              const o2 = document.getElementById('poll-o2').value;
+              if (q && o1 && o2) {
+                executeSend(`__POLL__${Date.now()}__::${q}__::${o1}__::${o2}`);
+                setShowPollCreator(false);
+              }
+            }}>Send Poll</button>
+          </div>
+        </div>
+      )}
+
+      {showWalletTransfer && (
+        <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm flex justify-center items-end sm:items-center" onClick={() => setShowWalletTransfer(false)}>
+          <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 flex flex-col" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold mb-2 text-lg text-center">Transfer QD</h3>
+            <p className="text-gray-500 text-sm text-center mb-6">Send funds directly via L2 Aztec Network</p>
+            <div className="flex items-center justify-center gap-2 mb-6 text-4xl font-black text-gray-800">
+              $ <input id="qd-amount" type="number" placeholder="0.00" className="w-32 bg-transparent outline-none" />
+            </div>
+            <button className="w-full bg-[#FF9500] text-white py-3 rounded-xl font-bold" onClick={() => {
+              const amt = document.getElementById('qd-amount').value;
+              if (amt && Number(amt) > 0) {
+                executeSend(`__PAYMENT__${amt}`);
+                setShowWalletTransfer(false);
+              }
+            }}>Sign & Send</button>
+          </div>
+        </div>
+      )}
+
        {/* Context Menu Overlay */}
        {(contextMenu && typeof document !== 'undefined')
          ? createPortal(
