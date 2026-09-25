@@ -270,8 +270,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               </Section>
               <Section title="Transfer">
                 <SettingRow icon={<Monitor size={16} />} iconBg="#007AFF" label="Move Chats to Android" onTap={() => toast.info("Scan the QR code on your new device.")} />
-                <SettingRow icon={<Monitor size={16} />} iconBg="#8E8E93" label="Transfer Chat History" onTap={() => {}} />
-                <SettingRow icon={<Monitor size={16} />} iconBg="#007AFF" label="Transfer Chats to iPhone" onTap={() => {}} />
+                <SettingRow icon={<Monitor size={16} />} iconBg="#8E8E93" label="Transfer Chat History" onTap={() => toast.info('This feature requires an active network upgrade. Coming soon.')} />
+                <SettingRow icon={<Monitor size={16} />} iconBg="#007AFF" label="Transfer Chats to iPhone" onTap={() => toast.info('This feature requires an active network upgrade. Coming soon.')} />
               </Section>
             </>
           )}
@@ -362,9 +362,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
         {/* Favorites, Lists, Starred */}
         <Section>
           <SettingRow icon={<Heart size={16} />} iconBg="#FF2D55" label="Favourites" onTap={() => toast.info("0 Favourites")} />
-          <SettingRow icon={<List size={16} />} iconBg="#007AFF" label="Lists" onTap={() => {}} />
+          <SettingRow icon={<List size={16} />} iconBg="#007AFF" label="Lists" onTap={() => toast.info('This feature requires an active network upgrade. Coming soon.')} />
           <SettingRow icon={<Star size={16} />} iconBg="#FF9500" label="Starred Messages" onTap={() => toast.info("0 Starred Messages")} />
-          <SettingRow icon={<Broadcast size={16} />} iconBg="#34C759" label="Broadcast Messages" onTap={() => {}} />
+          <SettingRow icon={<Broadcast size={16} />} iconBg="#34C759" label="Broadcast Messages" onTap={() => toast.info('This feature requires an active network upgrade. Coming soon.')} />
         </Section>
 
         {/* Account & Linked */}
@@ -412,5 +412,6 @@ function List(props: any) { return <svg {...props} viewBox="0 0 24 24" fill="non
 function Broadcast(props: any) { return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>; }
 function Laptop(props: any) { return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>; }
 function Flag(props: any) { return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>; }
+
 
 

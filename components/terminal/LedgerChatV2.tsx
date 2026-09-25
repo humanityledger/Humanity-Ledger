@@ -3950,11 +3950,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             messages={messages.filter((m: any) => m.conversationId === `dm-${activePeer?.toLowerCase()}`)}
             onClearChat={() => {
               setShowContactInfo(false);
-              setShowClearChatConfirm(true);
+              if (window.confirm('Are you sure you want to clear this chat? This will remove all messages from your device.')) {
+                localStorage.setItem(\ledger_cleared_\_\\, Date.now().toString());
+                setMessages(prev => prev.filter(m => m.conversationId !== \dm-\\));
+                toast.success('Chat cleared');
+              }
             }}
             onAddToGroup={() => {
               setShowContactInfo(false);
-              setShowCreateGroup(true);
+              toast.info('Group creation coming soon');
             }}
             groups={[]}
             peerAddress={activePeer}
@@ -6003,6 +6007,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
+
+
 
 
 
