@@ -1,10 +1,5 @@
-import { ContentTypeId } from '@xmtp/xmtp-js';
-export const ContentTypeQD = new ContentTypeId({
-  authorityId: 'humanityledger.com',
-  typeId: 'qd-transfer',
-  versionMajor: 1,
-  versionMinor: 0,
-});
+import { ContentTypeId } from '@xmtp/browser-sdk';
+export const ContentTypeQD = new ContentTypeId('humanityledger.com', 'qd-transfer', 1, 0);
 
 export class QDCodec {
   get contentType() { return ContentTypeQD; }
@@ -19,5 +14,7 @@ export class QDCodec {
     return JSON.parse(new TextDecoder().decode(encodedContent.content));
   }
   fallback(content: any) { return 'Sent you QDs'; }
+  shouldPush(content: any) { return true; }
 }
+
 

@@ -1,3 +1,4 @@
+import { QDCodec } from './qd-codec';
 /**
  * XMTP E2E Encrypted Chat Client
  *
@@ -674,6 +675,7 @@ export async function resolveSenderAddress(senderInboxId: string, client?: Clien
   if (cached) return cached;
   return resolveInboxIdToAddress(senderInboxId, client);
 }
+
 
 
 
