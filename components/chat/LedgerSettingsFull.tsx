@@ -83,7 +83,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   const setGroupsPublic = (val: boolean) => updateSetting('groupsPublic' as any, val);
   const setStatusPublic = (val: boolean) => updateSetting('statusPublic' as any, val);
   const setAllowCameraEffects = (val: boolean) => updateSetting('allowCameraEffects' as any, val);
-  const setReadReceipts = (val: boolean) => updateSetting('readReceipts' as any, val);
+  const setReadReceipts = (val: boolean) => updateSetting('show_read_receipts' as any, val);
   const setAppLock = (val: boolean) => updateSetting('appLock' as any, val);
   const setSilenceUnknown = (val: boolean) => updateSetting('silenceUnknown' as any, val);
   const setProtectIP = (val: boolean) => updateSetting('protectIP' as any, val);
@@ -108,7 +108,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   const groupsPublic = settings.groupsPublic as boolean ?? true;
   const statusPublic = settings.statusPublic as boolean ?? true;
   const allowCameraEffects = settings.allowCameraEffects as boolean ?? true;
-  const readReceipts = settings.readReceipts as boolean ?? true;
+  const readReceipts = settings.show_read_receipts as boolean ?? true;
   const appLock = settings.appLock as boolean ?? true;
   const silenceUnknown = settings.silenceUnknown as boolean ?? true;
   const protectIP = settings.protectIP as boolean ?? true;
@@ -398,4 +398,5 @@ function List(props: any) { return <svg {...props} viewBox="0 0 24 24" fill="non
 function Broadcast(props: any) { return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>; }
 function Laptop(props: any) { return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>; }
 function Flag(props: any) { return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>; }
+
 
