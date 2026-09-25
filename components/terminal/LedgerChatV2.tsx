@@ -3951,9 +3951,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             onClearChat={() => {
               setShowContactInfo(false);
               if (window.confirm('Are you sure you want to clear this chat? This will remove all messages from your device.')) {
-                localStorage.setItem(\ledger_cleared_\_\\, Date.now().toString());
-                setMessages(prev => prev.filter(m => m.conversationId !== \dm-\\));
-                toast.success('Chat cleared');
+              if (window.confirm('Are you sure you want to clear this chat? This will remove all messages from your device.')) {
+                localStorage.setItem(`ledger_cleared_${address}_${activePeer.toLowerCase()}`, Date.now().toString());
+                setMessages(prev => prev.filter(m => m.conversationId !== `dm-${activePeer.toLowerCase()}`));
               }
             }}
             onAddToGroup={() => {
