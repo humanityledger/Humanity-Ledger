@@ -3067,6 +3067,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           });
           if (xmtpDm?.id) {
             activeXmtpDmIdRef.current = xmtpDm.id;
+            // [CRITICAL FIX] Populate peerInboxId so stream routing fallback works
+            try {
+              const memberIds = (xmtpDm as any).memberInboxIds ?? [];
+              const selfId = (client as any).inboxId ?? "";
+              const peerId = memberIds.find((id: string) => id !== selfId) ?? "";
+              if (peerId) (activeXmtpDmIdRef as any).peerInboxId = peerId;
+            } catch {}
           }
         } catch {}
         
@@ -3939,6 +3946,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       <AnimatePresence>
         {showContactInfo && activePeer && (
           <ContactInfoPanel
+            myAddress={effectiveAddress || ''}
+            messages={messages.filter((m: any) => m.conversationId === `dm-${activePeer?.toLowerCase()}`)}
+            onClearChat={() => {
+              setShowContactInfo(false);
+              setShowClearChatConfirm(true);
+            }}
+            onAddToGroup={() => {
+              setShowContactInfo(false);
+              setShowCreateGroup(true);
+            }}
+            groups={[]}
             peerAddress={activePeer}
             peerName={getDisplayName(activePeer)}
             onClose={() => setShowContactInfo(false)}
@@ -5971,6 +5989,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
 
 
 
