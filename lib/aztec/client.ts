@@ -1,3 +1,4 @@
+export const AZTEC_EXPLORER = 'https://aztecscan.xyz';
 // @ts-nocheck
 
 
