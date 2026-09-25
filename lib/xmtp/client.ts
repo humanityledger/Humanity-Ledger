@@ -235,6 +235,7 @@ export async function getXMTPClient(
     client = await Promise.race([
       Client.create(signer, {
         env: XMTP_ENV,
+        codecs: [new QDCodec()],
         dbEncryptionKey,
         appVersion: 'LedgerNetwork-Privacy-Node/1.0.0-obfuscated',
       }),
@@ -673,4 +674,6 @@ export async function resolveSenderAddress(senderInboxId: string, client?: Clien
   if (cached) return cached;
   return resolveInboxIdToAddress(senderInboxId, client);
 }
+
+
 
