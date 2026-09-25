@@ -82,6 +82,10 @@ export default function GlobalError({
             <p className="text-sm font-bold text-black/50 leading-relaxed mb-8 max-w-sm">
               The System Terminal encountered a critical root fault in the React mounting tree. The system halted to prevent state corruption.
             </p>
+            <pre className="w-full text-left text-[10px] text-red-500 font-mono bg-red-50 rounded-xl px-4 py-3 mb-8 overflow-x-auto whitespace-pre-wrap break-all border border-red-100">
+              {error.message}
+              {error.stack ? `\n\n${error.stack}` : ''}
+            </pre>
 
             {error.digest && (
               <div className="w-full bg-black/5 rounded-2xl p-4 mb-8 border border-black/10 flex items-center justify-between">

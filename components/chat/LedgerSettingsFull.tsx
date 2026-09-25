@@ -158,11 +158,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           {activeSection === 'Privacy' && (
             <>
               <Section title="Who Can See">
-                <SettingRow icon={<Eye size={16} />} iconBg="#8E8E93" label="Last Seen & Online" value={lastSeenPublic ? 'Everyone' : 'Nobody'} onTap={() => setLastSeenPublic(v => !v)} />
-                <SettingRow icon={<User size={16} />} iconBg="#007AFF" label="Profile Picture" value={profilePublic ? 'Everyone' : 'Contacts'} onTap={() => setProfilePublic(v => !v)} />
-                <SettingRow icon={<Hash size={16} />} iconBg="#AF52DE" label="About" value={aboutPublic ? 'Everyone' : 'Contacts'} onTap={() => setAboutPublic(v => !v)} />
-                <SettingRow icon={<Users size={16} />} iconBg="#34C759" label="Groups" value={groupsPublic ? 'Everyone' : 'Contacts'} onTap={() => setGroupsPublic(v => !v)} />
-                <SettingRow icon={<BarChart size={16} />} iconBg="#FF9500" label="Status" value={statusPublic ? 'Contacts' : 'Nobody'} onTap={() => setStatusPublic(v => !v)} />
+                <SettingRow icon={<Eye size={16} />} iconBg="#8E8E93" label="Last Seen & Online" value={lastSeenPublic ? 'Everyone' : 'Nobody'} onTap={() => setLastSeenPublic(!lastSeenPublic)} />
+                <SettingRow icon={<User size={16} />} iconBg="#007AFF" label="Profile Picture" value={profilePublic ? 'Everyone' : 'Contacts'} onTap={() => setProfilePublic(!profilePublic)} />
+                <SettingRow icon={<Hash size={16} />} iconBg="#AF52DE" label="About" value={aboutPublic ? 'Everyone' : 'Contacts'} onTap={() => setAboutPublic(!aboutPublic)} />
+                <SettingRow icon={<Users size={16} />} iconBg="#34C759" label="Groups" value={groupsPublic ? 'Everyone' : 'Contacts'} onTap={() => setGroupsPublic(!groupsPublic)} />
+                <SettingRow icon={<BarChart size={16} />} iconBg="#FF9500" label="Status" value={statusPublic ? 'Contacts' : 'Nobody'} onTap={() => setStatusPublic(!statusPublic)} />
               </Section>
               <Section title="Messages">
                 <SettingRow icon={<Clock size={16} />} iconBg="#FF9500" label="Default Message Timer" value={(settings as any).default_timer || "Off"} onTap={() => cycle("default_timer", ["Off", "24 Hours", "7 Days", "90 Days"])} />

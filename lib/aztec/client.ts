@@ -68,9 +68,14 @@ export function truncateAztecAddress(addr: string, chars = 8): string {
   return `${addr.slice(0, chars)}...${addr.slice(-chars)}`;
 }
 
+const AZTEC_MAINNET_RPC = 'https://api.aztec.network/aztec-mainnet/api/v1';
+
 /**
  * Probe the Aztec Mainnet node to get current network info.
  * Returns null if unreachable.
+ *
+ * Uses direct HTTP JSON-RPC fetch instead of SDK client to avoid
+ * loading the full Aztec.js Node bundle in browser context.
  */
 export async function probeMainnetNode(): Promise<{
   blockNumber: number;
@@ -82,17 +87,35 @@ export async function probeMainnetNode(): Promise<{
 } | null> {
   const start = Date.now();
   try {
-    const node = await getAztecNodeClient();
-    const [blockNumber, nodeInfo] = await Promise.all([
-      node.getBlockNumber(),
-      node.getNodeInfo(),
+    const [blockRes, nodeRes] = await Promise.all([
+      fetch(AZTEC_MAINNET_RPC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'node_getBlockNumber', params: [], id: 1 }),
+        signal: AbortSignal.timeout(8000),
+      }),
+      fetch(AZTEC_MAINNET_RPC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'node_getNodeInfo', params: [], id: 2 }),
+        signal: AbortSignal.timeout(8000),
+      }),
     ]);
+
+    if (!blockRes.ok || !nodeRes.ok) throw new Error('[Aztec] Node RPC returned non-200');
+
+    const blockData = await blockRes.json();
+    const nodeData = await nodeRes.json();
+
+    const blockNumber = Number(blockData.result ?? 0);
+    const info = nodeData.result ?? {};
+
     return {
       blockNumber,
-      nodeVersion: nodeInfo.nodeVersion,
-      l1ChainId: nodeInfo.l1ChainId,
-      rollupVersion: nodeInfo.rollupVersion,
-      rollupAddress: nodeInfo.l1ContractAddresses.rollupAddress.toString(),
+      nodeVersion: info.nodeVersion ?? 'unknown',
+      l1ChainId: Number(info.l1ChainId ?? 1),
+      rollupVersion: Number(info.rollupVersion ?? 0),
+      rollupAddress: info.l1ContractAddresses?.rollupAddress ?? '',
       latencyMs: Date.now() - start,
     };
   } catch (e: any) {
@@ -104,5 +127,15 @@ export async function probeMainnetNode(): Promise<{
 
 export function deriveSecretKeyFromEvm(evmAddress: string): string {
   throw new Error('CUSTODIAL_DERIVE_RETIRED');
+}
+
+/**
+ * Aztec Sponsored Fee Payment Contract (FPC) address on mainnet.
+ * Used by airdrop routes to pay gas fees on behalf of new users.
+ */
+export const SPONSORED_FPC_ADDRESS = '0x25048e204c3cb7e43d2c2640448df2d3d4b81fe5f9e7bbdc98ea7ee4ec0c04e6';
+
+export function getFpcAddress(): string {
+  return process.env.AZTEC_FPC_ADDRESS ?? SPONSORED_FPC_ADDRESS;
 }
 
