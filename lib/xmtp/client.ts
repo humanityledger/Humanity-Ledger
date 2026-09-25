@@ -1,3 +1,4 @@
+'use client';
 import { QDCodec } from './qd-codec';
 /**
  * XMTP E2E Encrypted Chat Client
@@ -18,7 +19,6 @@ import { QDCodec } from './qd-codec';
  *
  */
 
-'use client';
 
 import { Buffer } from 'buffer';
 
