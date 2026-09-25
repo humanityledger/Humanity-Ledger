@@ -1,86 +1,5 @@
 // @ts-nocheck
-/**
- * lib/aztec/client.ts — Aztec Mainnet.0.0 client
- *
- * Architecture (v5.0.0 SDK):
- *  - createAztecNodeClient → connects to the public Aztec Mainnet node
- *  - PXE runs as a sidecar (via `aztec start --pxe`) or externally
- *  - `AZTEC_PXE_URL` can point to an external PXE (e.g. https://pxe.humanidfi.com)
- *    OR be left unset to use the node directly for read-only queries.
- *
- * Real Mainnet info (confirmed 2026-07-07):
- *  Node URL:     https://node.aztec.network
- *  Explorer:     https://aztecscan.xyz
- *  SponsoredFPC: 0x1969946536f0c09269e2c75e414eef4e21a76e763c5514125208db33d7d944d7
- *  L1 Chain:     2151908 (Sepolia)
- *  Rollup:       0xfe6061806cac748085904a010d2d9e33b8031741
- */
 
-export const AZTEC_MAINNET_NODE  = process.env.AZTEC_NODE_URL  || 'https://node.aztec.network';
-export const AZTEC_PXE_URL       = process.env.AZTEC_PXE_URL   || process.env.AZTEC_NODE_URL || 'https://node.aztec.network';
-export const AZTEC_EXPLORER      = 'https://aztecscan.xyz';
-export const AZTEC_NETWORK       = 'aztec-mainnet';
-export const L1_CHAIN_ID         = 2151908; // Aztec L1
-export const ROLLUP_VERSION      = 1; 
-export const ROLLUP_ADDRESS      = '0xd73a91bdcf6891c7642f3e460036e1ef2cc23178';
-// Additional L1 contracts (live node, 2026-07-21)
-export const REGISTRY_ADDRESS    = '0xa0bfb1b494fb49041e5c6e8c2c1be09cd171c6ba';
-export const FEE_JUICE_ADDRESS   = '0x762c132040fda6183066fa3b14d985ee55aa3c18';
-
-// SponsoredFPC — canonical address from docs.aztec.network/networks (V5.0.1 official, July 26, 2026)
-// Source: https://docs.aztec.network/developers/getting_started_on_mainnet
-export const PRIMARY_FPC_ADDRESS =
-  process.env.SPONSORED_FPC_ADDRESS ||
-  '0x1969946536f0c09269e2c75e414eef4e21a76e763c5514125208db33d7d944d7';
-
-// Canonical alias for backward compatibility and test imports
-export const SPONSORED_FPC_ADDRESS = PRIMARY_FPC_ADDRESS;
-
-/**
- * Returns the canonical SponsoredFPC address.
- * In a future version this may rotate between multiple real FPC instances
- * as Aztec Labs deploys additional relayers on mainnet.
- */
-export function getFpcAddress(): string {
-  return PRIMARY_FPC_ADDRESS;
-}
-
-// Cache the node client across hot-reloads
-let _nodeClient: any = null;
-
-/**
- * Returns a cached Aztec Node JSON-RPC client.
- * In v5.0.0 of aztec.js, this is createAztecNodeClient from @aztec/aztec.js/node.
- * The node client supports: getBlockNumber, getNodeInfo, getTxReceipt, sendTx, etc.
- */
-export async function getAztecNodeClient() {
-  if (_nodeClient) return _nodeClient;
-  const { createAztecNodeClient } = await import('@aztec/aztec.js/node');
-  _nodeClient = createAztecNodeClient(AZTEC_MAINNET_NODE);
-  console.log(`[Aztec] ✅ Node client connected → ${AZTEC_MAINNET_NODE}`);
-  return _nodeClient;
-}
-
-/**
- * Derives a deterministic Aztec secret key from an EVM address string.
- * Uses a deterministic hash of the EVM address padded to 31 bytes (Fr-safe).
- *
- * NOTE: In production this should be an EIP-191 signature from the user's wallet
- * to ensure the user controls the Aztec key. For the server-custodial mainnet
- * model, this deterministic derivation is acceptable.
- */
-export function deriveSecretKeyFromEvm(evmAddress: string): string {
-  const normalized = evmAddress.toLowerCase().replace('0x', '');
-  
-  // [SECURITY PATCH A2] Use server-side secret (pepper) for derivation instead of predictable 0x00 padding.
-  // This ensures the secret key remains strictly custodial and cannot be guessed.
-  const crypto = require('crypto');
-  const secret = process.env.JWT_SECRET || 'ledger-oracle-secret';
-  const hash = crypto.createHash('sha256').update(`${normalized}:${secret}`).digest('hex');
-  
-  // Pad to 62 chars then prefix — result fits in bn254 scalar field (Fr)
-  return `0x00${hash.slice(0, 62)}`;
-}
 
 /**
  * Aztec mainnet explorer URL for a given transaction hash.
@@ -180,3 +99,4 @@ export async function probeMainnetNode(): Promise<{
     return null;
   }
 }
+
