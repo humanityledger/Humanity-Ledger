@@ -13,6 +13,7 @@ import { sendViaOnion, registerAsRelay } from '@/lib/onion/OnionRouter';
 import { useAppKit } from '@reown/appkit/react';
 import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations } from '@/lib/xmtp/client';
 import { QrScanner } from '@/components/terminal/QrScanner';
+import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { TuringShieldGate } from '@/components/auth/TuringShieldGate';
 import { CreateGroupModal } from '../chat/CreateGroupModal';
 import type { Client } from '@xmtp/browser-sdk';
@@ -5500,10 +5501,30 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                </div>
                <div className="mb-8">
                  <p className="text-[10px] text-black/40 text-center font-mono leading-relaxed px-4">
-                   Establish a cryptographically secured P2P channel by scanning a peer&apos;s System QR identity.
+                   Scan a peer&apos;s QR identity to chat securely, or scan a Desktop Connect QR to link your session.
                  </p>
                </div>
-               <QrScanner mode="scan" onScanSuccess={(addr) => handleStartConversationWithPeer(addr)} />
+               <QrScanner mode="scan" onScanSuccess={async (text) => {
+                  if (text.includes('?s=') || text.includes('?uuid=') || text.includes('humanidfi.com/connect') || text.includes('session=')) {
+                    toast.loading('Linking device...', { id: 'link-device' });
+                    const result = await completeSessionHandshake(
+                      text,
+                      () => address as string,
+                      signMessageAsync as any,
+                      undefined
+                    );
+                    toast.dismiss('link-device');
+                    if (result.ok) {
+                      toast.success('Session Linked Successfully! Desktop is now connected.');
+                      setShowScanner(false);
+                      if (result.cleanup) result.cleanup();
+                    } else {
+                      toast.error(result.message || 'Failed to link session.');
+                    }
+                  } else {
+                    handleStartConversationWithPeer(text);
+                  }
+                }} />
            </div>
         </div>,
         document.body
@@ -5950,6 +5971,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
+
 
 
 
