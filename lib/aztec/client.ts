@@ -100,3 +100,8 @@ export async function probeMainnetNode(): Promise<{
   }
 }
 
+
+export function deriveSecretKeyFromEvm(evmAddress: string): string {
+  throw new Error('CUSTODIAL_DERIVE_RETIRED');
+}
+
