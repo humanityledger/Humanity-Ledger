@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import { useLedgerSettings } from '@/components/terminal/LedgerChatSettings';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, ChevronRight, Star, Radio, LaptopMinimal, Plus,
@@ -72,31 +73,57 @@ const shortAddr = (a: string) => a ? `${a.slice(0,6)}...${a.slice(-4)}` : '';
 
 export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddress, myName, onClose }) => {
   // Toggles
-  const [securityNotifs, setSecurityNotifs] = useState(true);
-  const [twoStep, setTwoStep] = useState(false);
-  const [passkeys, setPasskeys] = useState(false);
-  const [lastSeenPublic, setLastSeenPublic] = useState(true);
-  const [profilePublic, setProfilePublic] = useState(true);
-  const [aboutPublic, setAboutPublic] = useState(true);
-  const [groupsPublic, setGroupsPublic] = useState(true);
-  const [statusPublic, setStatusPublic] = useState(true);
-  const [allowCameraEffects, setAllowCameraEffects] = useState(true);
-  const [readReceipts, setReadReceipts] = useState(true);
-  const [appLock, setAppLock] = useState(false);
-  const [silenceUnknown, setSilenceUnknown] = useState(false);
-  const [protectIP, setProtectIP] = useState(true);
-  const [disableLinkPreviews, setDisableLinkPreviews] = useState(false);
-  const [saveToPhotos, setSaveToPhotos] = useState(false);
-  const [stickerSuggestions, setStickerSuggestions] = useState(true);
-  const [voiceTranscripts, setVoiceTranscripts] = useState(false);
-  const [archiveKeep, setArchiveKeep] = useState(false);
-  const [animations, setAnimations] = useState(true);
-  const [inAppNotifs, setInAppNotifs] = useState(true);
-  const [showPreview, setShowPreview] = useState(true);
-  const [msgNotifs, setMsgNotifs] = useState(true);
-  const [groupNotifs, setGroupNotifs] = useState(true);
-  const [useLessData, setUseLessData] = useState(false);
-  const [e2eBackup, setE2eBackup] = useState(false);
+  const { settings, updateSetting } = useLedgerSettings(myAddress);
+  const setSecurityNotifs = (val: boolean) => updateSetting('securityNotifs' as any, val);
+  const setTwoStep = (val: boolean) => updateSetting('twoStep' as any, val);
+  const setPasskeys = (val: boolean) => updateSetting('passkeys' as any, val);
+  const setLastSeenPublic = (val: boolean) => updateSetting('lastSeenPublic' as any, val);
+  const setProfilePublic = (val: boolean) => updateSetting('profilePublic' as any, val);
+  const setAboutPublic = (val: boolean) => updateSetting('aboutPublic' as any, val);
+  const setGroupsPublic = (val: boolean) => updateSetting('groupsPublic' as any, val);
+  const setStatusPublic = (val: boolean) => updateSetting('statusPublic' as any, val);
+  const setAllowCameraEffects = (val: boolean) => updateSetting('allowCameraEffects' as any, val);
+  const setReadReceipts = (val: boolean) => updateSetting('readReceipts' as any, val);
+  const setAppLock = (val: boolean) => updateSetting('appLock' as any, val);
+  const setSilenceUnknown = (val: boolean) => updateSetting('silenceUnknown' as any, val);
+  const setProtectIP = (val: boolean) => updateSetting('protectIP' as any, val);
+  const setDisableLinkPreviews = (val: boolean) => updateSetting('disableLinkPreviews' as any, val);
+  const setSaveToPhotos = (val: boolean) => updateSetting('saveToPhotos' as any, val);
+  const setStickerSuggestions = (val: boolean) => updateSetting('stickerSuggestions' as any, val);
+  const setVoiceTranscripts = (val: boolean) => updateSetting('voiceTranscripts' as any, val);
+  const setArchiveKeep = (val: boolean) => updateSetting('archiveKeep' as any, val);
+  const setAnimations = (val: boolean) => updateSetting('animations' as any, val);
+  const setInAppNotifs = (val: boolean) => updateSetting('inAppNotifs' as any, val);
+  const setShowPreview = (val: boolean) => updateSetting('showPreview' as any, val);
+  const setMsgNotifs = (val: boolean) => updateSetting('msgNotifs' as any, val);
+  const setGroupNotifs = (val: boolean) => updateSetting('groupNotifs' as any, val);
+  const setUseLessData = (val: boolean) => updateSetting('useLessData' as any, val);
+  const setE2eBackup = (val: boolean) => updateSetting('e2eBackup' as any, val);
+  const securityNotifs = settings.securityNotifs as boolean ?? true;
+  const twoStep = settings.twoStep as boolean ?? true;
+  const passkeys = settings.passkeys as boolean ?? true;
+  const lastSeenPublic = settings.lastSeenPublic as boolean ?? true;
+  const profilePublic = settings.profilePublic as boolean ?? true;
+  const aboutPublic = settings.aboutPublic as boolean ?? true;
+  const groupsPublic = settings.groupsPublic as boolean ?? true;
+  const statusPublic = settings.statusPublic as boolean ?? true;
+  const allowCameraEffects = settings.allowCameraEffects as boolean ?? true;
+  const readReceipts = settings.readReceipts as boolean ?? true;
+  const appLock = settings.appLock as boolean ?? true;
+  const silenceUnknown = settings.silenceUnknown as boolean ?? true;
+  const protectIP = settings.protectIP as boolean ?? true;
+  const disableLinkPreviews = settings.disableLinkPreviews as boolean ?? true;
+  const saveToPhotos = settings.saveToPhotos as boolean ?? true;
+  const stickerSuggestions = settings.stickerSuggestions as boolean ?? true;
+  const voiceTranscripts = settings.voiceTranscripts as boolean ?? true;
+  const archiveKeep = settings.archiveKeep as boolean ?? true;
+  const animations = settings.animations as boolean ?? true;
+  const inAppNotifs = settings.inAppNotifs as boolean ?? true;
+  const showPreview = settings.showPreview as boolean ?? true;
+  const msgNotifs = settings.msgNotifs as boolean ?? true;
+  const groupNotifs = settings.groupNotifs as boolean ?? true;
+  const useLessData = settings.useLessData as boolean ?? true;
+  const e2eBackup = settings.e2eBackup as boolean ?? true;
 
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const displayName = myName || shortAddr(myAddress);
@@ -371,3 +398,4 @@ function List(props: any) { return <svg {...props} viewBox="0 0 24 24" fill="non
 function Broadcast(props: any) { return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>; }
 function Laptop(props: any) { return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>; }
 function Flag(props: any) { return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>; }
+

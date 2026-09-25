@@ -453,3 +453,22 @@ export const useSettingsStore = create<SettingsState>()(
         }
     )
 );
+
+
+// [BACKEND SYNC] Subscribe to Zustand changes and sync to backend
+if (typeof window !== 'undefined') {
+  useSettingsStore.subscribe((state) => {
+    // Debounce the sync to avoid API spam
+    if ((window as any)._settingsSyncTimeout) clearTimeout((window as any)._settingsSyncTimeout);
+    (window as any)._settingsSyncTimeout = setTimeout(() => {
+      const address = localStorage.getItem('wagmi.store') ? JSON.parse(localStorage.getItem('wagmi.store')!).state.connections.value?.[0]?.[1]?.accounts?.[0] : null;
+      if (!address) return;
+      fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-verified-session-address': address },
+        body: JSON.stringify(state)
+      }).catch(e => console.error('[Zustand Sync] Failed:', e));
+    }, 1000);
+  });
+}
+

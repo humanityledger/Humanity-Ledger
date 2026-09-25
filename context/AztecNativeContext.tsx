@@ -174,25 +174,248 @@ export function AztecNativeProvider({ children }: { children: React.ReactNode })
   const notifiedRef = useRef<Set<string>>(new Set<string>());
   if (!notifiedRef.current || notifiedRef.current.size === 0) {
     try {
-      let pxeToken = '';
-      if (typedSigner) {
-        const signature = await typedSigner({
-          domain: { name: 'Humanity Ledger', version: '1', chainId: 2151908 },
-          types: { DeriveAccount: [ { name: 'action', type: 'string' }, { name: 'warning', type: 'string' }, { name: 'nonce', type: 'uint256' } ] },
-          primaryType: 'DeriveAccount',
-          message: { action: 'Connect to Humanity Ledger', warning: 'Do not sign on unknown sites!', nonce: 1n }
-        });
-        const res = await fetch('/api/aztec/session', { method: 'POST', body: JSON.stringify({ signature, evmAddress: rawSeed }) });
-        const data = await res.json();
-        if (data.pxeToken) pxeToken = data.pxeToken;
+      const stored = localStorage.getItem(NOTIFIED_KEY);
+      notifiedRef.current = stored ? new Set(JSON.parse(stored)) : new Set<string>();
+    } catch {
+      notifiedRef.current = new Set<string>();
+    }
+  }
+
+  // Helper: add an ID and persist the set.
+  const markNotified = useCallback((id: string) => {
+    if (!notifiedRef.current) return;
+    notifiedRef.current.add(id);
+    try {
+      // Keep at most 200 IDs to avoid unbounded storage growth.
+      const arr = Array.from(notifiedRef.current).slice(-200);
+      localStorage.setItem(NOTIFIED_KEY, JSON.stringify(arr));
+    } catch { /* private mode / storage full */ }
+  }, [NOTIFIED_KEY]);
+  const initialSyncRef = useRef<boolean>(true);
+  // Polling interval ref for cleanup.
+  const pollRef     = useRef<NodeJS.Timeout | null>(null);
+
+  // ─── Core Poll Function ────────────────────────────────────────────────────
+  const fetchLedgerState = useCallback(async (addr: string) => {
+    try {
+      const [balRes, txRes] = await Promise.all([
+        fetch(`/api/aztec/balance?aztecAddress=${encodeURIComponent(addr.toLowerCase())}&t=${Date.now()}`, { cache: "no-store" }),
+        fetch(`/api/aztec/transactions?address=${encodeURIComponent(addr.toLowerCase())}`),
+      ]);
+
+      if (balRes.ok) {
+        const { balance: rawBal } = await balRes.json();
+        setBalance(parseFloat(rawBal));
       }
-      // Mock address for now since we don't return the raw aztec address from session anymore
-      const aztecAddr = '0x' + rawSeed.replace('0x','').padStart(64, '0');
-      setAztecAddress(aztecAddr);
-      setSeed(rawSeed);
-      vault.setItem('aztec_session', JSON.stringify({ address: aztecAddr, evmAddress: rawSeed, pxeToken }));
-      startPolling();
-    } catch (err) {
+
+      if (txRes.ok) {
+        const { transactions } = await txRes.json();
+        if (Array.isArray(transactions)) {
+          const fresh = transactions.map((tx: any) => mapTx(tx, addr));
+          setHistory(fresh);
+
+          // Skip toasting on the first load to prevent notification spam on mobile
+          const isFirstFetch = !initialSyncRef.current; // Assuming isMountedRef exists, let's use a local ref for initial fetch or check if history was empty
+          
+          for (const tx of transactions) {
+            if (notifiedRef.current.has(tx.id)) continue;
+            markNotified(tx.id); // persist immediately — survives iOS remount
+            
+            // Only toast if it's not the initial sync
+            if (
+              !initialSyncRef.current &&
+              tx.toAddress?.toLowerCase() === addr.toLowerCase() &&
+              tx.type !== "AIRDROP"
+            ) {
+              const amt = typeof tx.amount === "number" ? tx.amount : parseFloat(tx.amount);
+              toast.success(`+${amt} QDs received`, {
+                description: `From ${tx.fromAddress?.slice(0, 10)}...${tx.fromAddress?.slice(-6)}`,
+              });
+            }
+          }
+          
+          initialSyncRef.current = false;
+        }
+      }
+    } catch {
+      // Transient network errors — next poll cycle self-heals.
+    }
+  }, []);
+
+  // ─── Start / Stop Polling ─────────────────────────────────────────────────
+  const startPolling = useCallback((addr: string) => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(() => fetchLedgerState(addr), POLL_INTERVAL);
+  }, [fetchLedgerState]);
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  // Cleanup on unmount.
+  useEffect(() => () => stopPolling(), [stopPolling]);
+
+  // ─── Auto-Restore Session & Cross-Tab Sync ─────────────────────────────────
+  useEffect(() => {
+    const restoreFromStorage = async () => {
+      try {
+        const stored = await vault.getItem('aztec_session');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.address && parsed.seed) {
+            setAztecAddress(prev => {
+              if (prev !== parsed.address) {
+                setSeed(parsed.seed);
+                setIsLoading(true);
+                fetchLedgerState(parsed.address).finally(() => setIsLoading(false));
+                startPolling(parsed.address);
+              }
+              return parsed.address;
+            });
+            return true; // Indicates session was found
+          }
+        } else {
+          // If storage was cleared in another tab, disconnect here
+          setAztecAddress(prev => {
+            if (prev) {
+               setSeed(null);
+               setBalance(0);
+               setHistory([]);
+               stopPolling();
+            }
+            return null;
+          });
+        }
+      } catch (e) {
+        console.warn("Could not restore Aztec session", e);
+      }
+      return false;
+    };
+
+    // Initial restore on mount
+    restoreFromStorage();
+
+    // Listen for changes from other tabs (web only, will gracefully ignore in Native)
+    const handleStorage = async (e: StorageEvent) => {
+      // Cross-tab sync uses raw localStorage events as signals, then we read from vault
+      if (e.key === 'hl_secure_aztec_session' || e.key === 'aztec_session') {
+        await restoreFromStorage();
+      } else if (e.key === 'aztec_sync_trigger') {
+        try {
+          const stored = await vault.getItem('aztec_session');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.address) fetchLedgerState(parsed.address);
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    // ── Email / QR-session auto-derive ────────────────────────────────────────
+    // For users who logged in via email OTP (no wagmi connector),
+    // we derive an Aztec address from their email identifier so the QDs
+    // balance can be fetched and displayed.
+    //
+    // SECURITY NOTE:
+    //   - We do NOT auto-trigger the airdrop from the client (that would be a
+    //     Sybil attack vector). Users must click "Claim Identity" to receive QDs.
+    //   - The derived address is cached in localStorage keyed by the handshake
+    //     value. It is deterministic and can always be re-derived from the same input.
+    try {
+      // Safely parse and decode the system_handshake cookie
+      const rawCookie = typeof document !== 'undefined'
+        ? (document.cookie.match(/(?:^|;\s*)system_handshake=([^;]+)/)?.[1] || null)
+        : null;
+      // Decode in case the cookie value was URL-encoded (e.g. email_user%40gmail.com)
+      const handshake = rawCookie ? decodeURIComponent(rawCookie) : null;
+
+      if (handshake && handshake.startsWith('email_')) {
+        const emailIdentifier = handshake.slice('email_'.length);
+        const identifierKey = `aztec_email_addr_${emailIdentifier}`;
+        
+        vault.getItem(identifierKey).then(cachedAddr => {
+          if (cachedAddr) {
+            setAztecAddress(cachedAddr);
+            setIsLoading(true);
+            fetchLedgerState(cachedAddr).finally(() => setIsLoading(false));
+            startPolling(cachedAddr);
+          } else {
+            fetch('/api/aztec/derive-address', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ seed: emailIdentifier }),
+            }).then(r => r.json()).then(data => {
+              if (data?.aztecAddress) {
+                vault.setItem(identifierKey, data.aztecAddress);
+                setAztecAddress(data.aztecAddress);
+                setIsLoading(true);
+                fetchLedgerState(data.aztecAddress).finally(() => setIsLoading(false));
+                startPolling(data.aztecAddress);
+              }
+            }).catch((err) => {
+              console.warn('[AztecNativeContext] Failed to auto-derive Aztec address for email user:', err);
+            });
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("Could not auto-derive Aztec session for email user", e);
+    }
+    
+    return () => window.removeEventListener('storage', handleStorage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Auto-Restore Session from DB (Wallet Reconnection) ────────────────────
+  // When a user connects their wallet (evmAddress populates), we check if they
+  // already have an identity in the DB. If yes, we auto-restore it seamlessly.
+  // This prevents returning users from being asked to "Authenticate to Enter"
+  // and mistakenly believing they have to claim QDs again.
+  useEffect(() => {
+    if (!evmAddress || aztecAddress || isBusy) return;
+    
+    let cancelled = false;
+    const checkExistingIdentity = async () => {
+      try {
+        const restoreRes = await fetch('/api/aztec/restore-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ evmAddress }),
+        });
+        if (cancelled) return;
+        
+        if (restoreRes.ok) {
+          const restoreData = await restoreRes.json();
+          if (restoreData.found && restoreData.aztecAddress) {
+            const canonicalAddr = restoreData.aztecAddress;
+            setAztecAddress(canonicalAddr);
+            setSeed(evmAddress);
+            try {
+              await vault.setItem('aztec_session', JSON.stringify({
+                address: canonicalAddr,
+                seed: evmAddress,
+              }));
+            } catch {}
+            notifiedRef.current = new Set();
+            setIsLoading(true);
+            await fetchLedgerState(canonicalAddr);
+            setIsLoading(false);
+            startPolling(canonicalAddr);
+            
+            // Only toast if we aren't currently authenticating manually
+            if (!isBusy) {
+              toast.success(
+                `✅ Identity seamlessly restored — ${restoreData.balance.toFixed(2)} QDs`,
+                { id: "az-auto-connect", duration: 4000 }
+              );
+            }
+          }
+        }
+      } catch (err) {
         // silent fail for auto-restore
       }
     };
@@ -239,7 +462,6 @@ export function AztecNativeProvider({ children }: { children: React.ReactNode })
     setError(null);
 
     const activeSigner = externalSignMessageAsync ?? wagmiSignMessageAsync;
-    const typedSigner = signTypedDataAsync;
 
     try {
       // ── STEP 0: RETURNING USER CHECK ─────────────────────────────────────────
@@ -607,8 +829,4 @@ export function AztecNativeProvider({ children }: { children: React.ReactNode })
     </AztecNativeContext.Provider>
   );
 }
-
-
-
-
 

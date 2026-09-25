@@ -1626,3 +1626,18 @@ model ModerationReport {
   timestamp       DateTime @default(now())
   status          String   @default("PENDING")
 }
+
+
+// 
+// LEDGER CHAT SETTINGS ENGINE - Abysmally complex backend integration
+// 
+model UserSettings {
+  id            String   @id @default(uuid())
+  walletAddress String   @unique
+  settings      Json
+  lastSyncedAt  DateTime @default(now())
+
+  @@index([walletAddress])
+}
+
+

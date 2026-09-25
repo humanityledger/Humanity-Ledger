@@ -25,6 +25,30 @@ import { vault } from '@/lib/core/SecureVault';
 // ───────────────────────────────────────────────────────────────────────────
 
 export interface LedgerProtocolSettings {
+  securityNotifs: boolean;
+  twoStep: boolean;
+  passkeys: boolean;
+  lastSeenPublic: boolean;
+  profilePublic: boolean;
+  aboutPublic: boolean;
+  groupsPublic: boolean;
+  statusPublic: boolean;
+  allowCameraEffects: boolean;
+  appLock: boolean;
+  silenceUnknown: boolean;
+  protectIP: boolean;
+  disableLinkPreviews: boolean;
+  saveToPhotos: boolean;
+  stickerSuggestions: boolean;
+  voiceTranscripts: boolean;
+  archiveKeep: boolean;
+  animations: boolean;
+  inAppNotifs: boolean;
+  showPreview: boolean;
+  msgNotifs: boolean;
+  groupNotifs: boolean;
+  useLessData: boolean;
+  e2eBackup: boolean;
   // ─────────────────────────────────────────────────────
   //  ALERTS & SOUNDS
   // ─────────────────────────────────────────────────────
@@ -185,6 +209,30 @@ export interface LedgerProtocolSettings {
 // ───────────────────────────────────────────────────────────────────────────
 
 export const DEFAULT_PXE_SETTINGS: LedgerProtocolSettings = {
+  securityNotifs: true,
+  twoStep: false,
+  passkeys: false,
+  lastSeenPublic: true,
+  profilePublic: true,
+  aboutPublic: true,
+  groupsPublic: true,
+  statusPublic: true,
+  allowCameraEffects: true,
+  appLock: false,
+  silenceUnknown: false,
+  protectIP: true,
+  disableLinkPreviews: false,
+  saveToPhotos: false,
+  stickerSuggestions: true,
+  voiceTranscripts: false,
+  archiveKeep: false,
+  animations: true,
+  inAppNotifs: true,
+  showPreview: true,
+  msgNotifs: true,
+  groupNotifs: true,
+  useLessData: false,
+  e2eBackup: false,
   // Alerts & Sounds
   notifications_private: true,
   notifications_groups: true,
@@ -537,3 +585,6 @@ class SettingsEnginePXE {
  *   const unsub = pxeEngine.subscribe(address, callback);
  */
 export const pxeEngine = new SettingsEnginePXE();
+
+
+
