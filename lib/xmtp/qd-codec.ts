@@ -1,11 +1,9 @@
-import { ContentTypeId } from '@xmtp/browser-sdk';
-export const ContentTypeQD = new ContentTypeId('humanityledger.com', 'qd-transfer', 1, 0);
 
 export class QDCodec {
-  get contentType() { return ContentTypeQD; }
+  get contentType() { return { authorityId: 'humanityledger.com', typeId: 'qd-transfer', versionMajor: 1, versionMinor: 0 }; }
   encode(content: any) {
     return {
-      type: ContentTypeQD,
+      type: this.contentType,
       parameters: {},
       content: new TextEncoder().encode(JSON.stringify(content)),
     };
