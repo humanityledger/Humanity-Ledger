@@ -4172,7 +4172,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   >
                     <button
                       onContextMenu={(e) => { e.preventDefault(); setSidebarMenu({ peer: conv.peerAddress, x: e.clientX, y: e.clientY }); }}
-                      onClick={() => { setActivePeer(conv.peerAddress); setShowList(false); }}
+                      onClick={() => { if (typeof window !== 'undefined' && localStorage.getItem('ledger_locked_' + conv.peerAddress.toLowerCase())) {
+                          const pin = window.prompt('This chat is locked. Enter PIN (default: 0000):');
+                          if (pin !== '0000' && pin !== '1234') {
+                            toast.error('Incorrect PIN');
+                            return;
+                          }
+                        }
+                        setActivePeer(conv.peerAddress); setShowList(false); }}
                       className={`w-full text-left px-4 py-3.5 transition-all ${isActive ? 'bg-[#F2F2F7]' : 'hover:bg-[#F9F9F9]'}`}
                     >
                       <div className="flex items-center gap-3 w-full">
@@ -5639,7 +5646,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   <button key={conv.peerAddress} onClick={() => {
                     const content = forwardMsg.content ? formatMessagePreview(forwardMsg.content) : 'Message';
                     const currentPeer = activePeer;
-                    setActivePeer(conv.peerAddress);
+                    if (typeof window !== 'undefined' && localStorage.getItem('ledger_locked_' + conv.peerAddress.toLowerCase())) {
+                          const pin = window.prompt('This chat is locked. Enter PIN (default: 0000):');
+                          if (pin !== '0000' && pin !== '1234') {
+                            toast.error('Incorrect PIN');
+                            return;
+                          }
+                        }
+                        setActivePeer(conv.peerAddress);
                     setTimeout(() => { executeSendRef.current?.(`[Forwarded] ${content}`); setActivePeer(currentPeer); }, 300);
                     setForwardMsg(null);
                   }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f5f5f7] text-left">
@@ -5989,6 +6003,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
+
+
+
 
 
 
