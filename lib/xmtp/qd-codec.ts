@@ -1,6 +1,6 @@
 
 export class QDCodec {
-  get contentType() { return { authorityId: 'humanityledger.com', typeId: 'qd-transfer', versionMajor: 1, versionMinor: 0 }; }
+  get contentType() { return { authorityId: 'humanityledger.com', typeId: 'qd-transfer', versionMajor: 1, versionMinor: 0, sameAs(id: any) { return this.authorityId === id.authorityId && this.typeId === id.typeId; } }; }
   encode(content: any) {
     return {
       type: this.contentType,
