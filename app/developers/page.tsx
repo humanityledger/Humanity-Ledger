@@ -114,7 +114,7 @@ export async function initiateQuantumRelayStream(signer: ethers.Signer) {
   // Bind to the Decentralized Relay
   const stream = await xmtp.conversations.streamAllMessages();
   
-  console.log(\`[Relay]: Node synchronized. Awaiting state transitions.\`);
+  console.log(`[Relay]: Node synchronized. Awaiting state transitions.`);
   
   for await (const message of stream) {
     if (message.senderAddress === xmtp.address) continue; // Ignore self
@@ -249,11 +249,11 @@ export default function DevelopersPage() {
               <button
                 key={mod.id}
                 onClick={() => setActiveModule(mod)}
-                className={\`flex items-center gap-3 px-6 py-4 text-left transition-all \${
+                className={`flex items-center gap-3 px-6 py-4 text-left transition-all ${
                   activeModule.id === mod.id 
                     ? "bg-white/10 border-l-2 border-white text-white" 
                     : "border-l-2 border-transparent text-white/40 hover:bg-white/5 hover:text-white/80"
-                }\`}
+                }`}
               >
                 <div className="shrink-0">{mod.icon}</div>
                 <span className="font-mono text-[12px] font-bold uppercase tracking-widest">{mod.title}</span>
