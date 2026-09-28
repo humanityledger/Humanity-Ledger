@@ -1155,7 +1155,7 @@ function StarsView() {
         {QD_PACKAGES.map((pkg) => (
           <div
             key={pkg.index}
-            onClick={() => !buying && handlePurchase(pkg)}
+            onClick={() => !buying && handlePurchase(pkg as any)}
             className={`w-full bg-white border-[3px] border-black p-4 flex items-center justify-between shadow-[4px_4px_0_0_#000] cursor-pointer transition-transform ${buying === pkg.index ? 'translate-y-1 opacity-60' : 'active:translate-y-1'}`}
           >
             <div className="flex items-center gap-3">
