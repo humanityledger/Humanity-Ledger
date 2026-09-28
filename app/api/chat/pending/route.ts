@@ -33,19 +33,26 @@ export async function GET(req: NextRequest) {
     if (!address || address !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const aztecAddr = deriveAztecAddress(address).toLowerCase();
+    const peer = searchParams.get('peer')?.toLowerCase() ?? null;
+
+    const whereClause = peer 
+      ? {
+          OR: [
+            { recipient: address, sender: peer },
+            { recipient: aztecAddr, sender: peer },
+            { sender: address, recipient: peer },
+            { sender: aztecAddr, recipient: peer }
+          ]
+        }
+      : {
+          OR: [
+            { recipient: address },
+            { recipient: aztecAddr }
+          ]
+        };
 
     const pending = await prisma.pendingChatMessage.findMany({
-      where: {
-        // [CRITICAL FIX] Only return messages addressed TO this user (incoming messages).
-        // Previously this also returned messages they SENT, which the UI would then
-        // treat as incoming and delete via DELETE /api/chat/pending (which only
-        // deletes where recipient=address). This caused sent-but-undelivered messages
-        // to be permanently lost from the server queue.
-        OR: [
-          { recipient: address },
-          { recipient: aztecAddr }
-        ]
-      },
+      where: whereClause,
       orderBy: { timestamp: 'asc' }
     });
 

@@ -3097,7 +3097,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                // Every message here is from the peer (incoming), so we filter to
                // the active peer and mark the sender correctly.
                pendingServer = pData.pending
-                 .filter((p: any) => p.sender.toLowerCase() === activePeer.toLowerCase())
+                 /* Removed filter because API already filters by peer now */
                  .filter((p: any) => typeof p.content !== 'string' || !p.content.startsWith('__CALL_'))
                  .map((p: any) => ({
                    id: p.id,
@@ -3315,9 +3315,23 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // Fallback polling for the active conversation history
     const pollId = setInterval(fetchHistorical, 5000);
 
+    const fetchFriendRequests = async () => {
+      if (!address) return;
+      try {
+        const res = await fetch('/api/chat/contacts/request?direction=incoming', { headers: { 'x-web3-address': address } });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.requests) setPendingRequestCount(data.requests.length);
+        }
+      } catch (e) {}
+    };
+    fetchFriendRequests();
+    const reqPollId = setInterval(fetchFriendRequests, 10000);
+
     return () => {
       cancelled = true;
       clearInterval(pollId);
+      if (typeof reqPollId !== 'undefined') clearInterval(reqPollId);
     };
   }, [client, activePeer, address]);
 
