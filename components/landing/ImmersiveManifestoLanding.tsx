@@ -269,7 +269,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
       </section>
 
       {/* ═══ SECTION 2 — WHY LEDGER CHAT ══════════════════════════════════════ */}
-      <section className="bg-[#F6F7F9] py-24 md:py-32">
+      <section id="architecture" className="bg-[#F6F7F9] py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-5 md:px-10">
 
           <motion.div
@@ -285,10 +285,10 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               </div>
             </div>
             <h2 className="text-[38px] md:text-[54px] font-bold tracking-tight text-[#1C1C1E] mb-5">
-              Why Ledger Chat?
+              Protocol Architecture
             </h2>
             <p className="text-[18px] md:text-[20px] font-medium text-[#1C1C1E]/55 max-w-2xl mx-auto leading-relaxed">
-              Because your messages belong to you, not to a corporation with investors to please.
+              Because cryptographic privacy is a deterministic requirement, not a corporate feature.
             </p>
           </motion.div>
 
@@ -298,22 +298,22 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 icon: <EyeOff size={26} strokeWidth={2} />,
                 color: "text-[#2C6BED]",
                 bg: "bg-[#2C6BED]/8",
-                title: "No Ads. No Trackers. No Compromise.",
-                desc: "We earn zero revenue from your conversations. We do not sell your data. Ledger Chat is sustained by users who believe privacy is a right, not a product.",
+                title: "Mathematical Sovereignty.",
+                desc: "Your metadata never hits a centralized plaintext database. Ledger Chat routes encrypted packets directly through distributed node infrastructure.",
               },
               {
                 icon: <Shield size={26} strokeWidth={2} />,
                 color: "text-purple-600",
                 bg: "bg-purple-500/8",
-                title: "Privacy Is the Foundation.",
-                desc: "Every single message is encrypted end-to-end before it leaves your device. Not even Humanity Ledger can read your conversations.",
+                title: "Zero-Knowledge State Shielding.",
+                desc: "We leverage Aztec's programmable privacy frameworks. Every message payload is encrypted end-to-end, protecting your entire social graph.",
               },
               {
                 icon: <Fingerprint size={26} strokeWidth={2} />,
                 color: "text-[#30D158]",
                 bg: "bg-[#30D158]/10",
-                title: "Your Identity Is Your Wallet.",
-                desc: "No phone number. No email. No government ID required. Your crypto wallet is your passport. Sovereignty guaranteed by mathematics, not promises.",
+                title: "Hardware-Bound Identity.",
+                desc: "No telecom providers. No phone numbers. Your digital identity is rooted in cryptographic key pairs securely stored in your device enclave.",
               },
             ].map((card, i) => (
               <motion.div
@@ -350,34 +350,34 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
           >
             <div>
               <h2 className="text-[38px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] mb-5 leading-tight">
-                Connecting the world,<br />privately.
+                Architected for absolute<br />confidentiality.
               </h2>
               <p className="text-[17px] font-medium text-[#1C1C1E]/55 leading-relaxed">
-                Getting started takes under 60 seconds. No forms to fill. No verification emails.
-                Just your wallet and a world of private conversations waiting for you.
+                The protocol establishes secure sessions without exposing identifying metadata.
+                No traditional telecom infrastructure is required.
               </p>
             </div>
 
             <div className="flex flex-col gap-8">
               <Step
                 n="1"
-                title="Connect your wallet."
-                desc="Your crypto wallet becomes your identity. MetaMask, Rainbow, Coinbase Wallet — all supported."
+                title="Hardware Authentication."
+                desc="Authenticate locally via SIWE and WebAuthn. Cryptographic key pairs never leave your device enclave."
               />
               <Step
                 n="2"
-                title="Set up your profile."
-                desc="Create a display name and avatar. No phone number. No email address. Ever."
+                title="ZK Identity Shielding."
+                desc="Your public identifier is abstracted using Aztec zero-knowledge circuits. Your social graph remains cryptographically hidden."
               />
               <Step
                 n="3"
-                title="Start talking."
-                desc="Find anyone by wallet address. Every message is encrypted end-to-end before it leaves your device."
+                title="Decentralized Relay."
+                desc="Messages are routed via the XMTP network. Unbroken encrypted packets are transferred without metadata exposure."
               />
               <Step
                 n="4"
-                title="Total control."
-                desc="Burn messages on read, set self-destruct timers, revoke sent messages, and send crypto payments in-chat."
+                title="Sovereign Controls."
+                desc="Enforce deterministic burn-on-read execution, revoke decryption keys instantly, and maintain total ownership of your state."
               />
             </div>
 
@@ -385,7 +385,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               href="/connect"
               className="inline-flex items-center gap-2 bg-[#1C1C1E] hover:bg-black text-white font-bold text-[15px] px-7 py-3.5 rounded-xl transition-all self-start"
             >
-              Start now — it is free
+              Initiate Secure Session
             </Link>
           </motion.div>
 
@@ -429,25 +429,24 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
           >
             <div>
               <h2 className="text-[38px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] mb-5 leading-tight">
-                Beyond Messaging.
+                Institutional-Grade Features.
               </h2>
               <p className="text-[17px] font-medium text-[#1C1C1E]/55 leading-relaxed">
-                Ledger Chat includes everything you expect from the world's top messaging apps,
-                and adds features that no other app offers today.
+                Ledger Chat integrates advanced cryptographic primitives into a seamless communication interface, rendering traditional secure messengers obsolete.
               </p>
             </div>
 
             <div className="flex flex-col gap-4">
-              <FeatureCheck text="Wallet identity — no phone number required" />
-              <FeatureCheck text="In-chat Quantum Dot payments — built-in micro-transactions" />
-              <FeatureCheck text="Cryptographic message signing — mathematically guaranteed authenticity" />
-              <FeatureCheck text="Burn on Read — messages auto-destroy after viewing" />
-              <FeatureCheck text="Voice notes with a real-time waveform visualizer" />
-              <FeatureCheck text="Group chats with verified membership" />
-              <FeatureCheck text="AI Ghost Mode — smart auto-replies protect your time" />
-              <FeatureCheck text="Polls, stickers, animated GIFs, and a personal file vault" />
-              <FeatureCheck text="HD video and voice calls — no central server" />
-              <FeatureCheck text="Desktop QR session linking — start on mobile, continue on PC" />
+              <FeatureCheck text="Hardware-bound authentication (WebAuthn / FIDO2)" />
+              <FeatureCheck text="Zero-knowledge atomic swaps and encrypted payment routing" />
+              <FeatureCheck text="Deterministic ECDSA message signing for absolute authenticity" />
+              <FeatureCheck text="Ephemeral state: deterministic burn-on-read execution" />
+              <FeatureCheck text="Real-time voice modulation and encrypted audio streaming" />
+              <FeatureCheck text="Zero-knowledge group chat membership verification" />
+              <FeatureCheck text="Autonomous agent integration with isolated execution environments" />
+              <FeatureCheck text="End-to-end encrypted decentralized file storage vault" />
+              <FeatureCheck text="SIM-less WebRTC mesh with decentralized signaling (Video/Voice)" />
+              <FeatureCheck text="Cryptographically secure ECDH QR session handshakes" />
             </div>
           </motion.div>
         </div>
