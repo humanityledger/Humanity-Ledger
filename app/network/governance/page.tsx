@@ -1,49 +1,38 @@
-"use client";
-
-import React from "react";
-import Link from "next/link";
-import { SystemFooter } from "@/components/landing/SystemFooter";
+import { AztecDocPage } from '@/components/landing/AztecDocPage';
 
 export default function GovernancePage() {
   return (
-    <main className="min-h-screen bg-[#050505] text-[#E0E0E0] selection:bg-[#0044CC] selection:text-white font-sans">
-      <section className="pt-40 pb-32 px-8 max-w-[1000px] mx-auto">
-        <Link href="/" className="inline-block font-mono text-[10px] uppercase tracking-[0.3em] text-[#0044CC] mb-6 hover:text-white transition-colors">
-          &larr; Return to Protocol
-        </Link>
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#0044CC] mb-6">Network Governance</div>
-        <h1 className="font-serif text-5xl md:text-7xl text-white font-normal leading-[1.0] tracking-tight mb-16">
-          Cryptographic <br /><span className="italic text-white/40">Consensus.</span>
-        </h1>
-        
-        <div className="space-y-12 text-lg text-white/70 leading-[1.8]">
-          <div>
-            <h3 className="text-2xl text-white font-serif mb-4">01. Immutable Code</h3>
-            <p>
-              Humanity Ledger operates under the principle that code is law. The fundamental cryptographic logic that shields user identity and routes messages is designed to be immutable, ensuring that no central authority—including the founding engineering collective—can arbitrarily modify protocol constraints or access user state.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-2xl text-white font-serif mb-4">02. Decentralized Proposals</h3>
-            <p>
-              Upgrades to peripheral smart contracts or decentralized relay configurations will be handled via an on-chain proposal system. The protocol is designed to transition control to a decentralized autonomous entity post-mainnet launch, utilizing ZK-voting to allow token holders to govern without exposing their voting choices publicly.
-            </p>
-          </div>
-
-          <div className="mt-8 bg-[#1A1A1A] border border-white/10 rounded-xl p-8 text-center">
-            <span className="text-white/40 font-mono text-sm block mb-2">Governance Portal</span>
-            <h4 className="text-xl text-white font-bold mb-4">Snapshot & On-Chain Voting</h4>
-            <p className="text-sm text-white/60 mb-6 max-w-md mx-auto">
-              The on-chain governance module will be activated following the complete deployment of the network's zero-knowledge state shielding infrastructure.
-            </p>
-            <button disabled className="px-6 py-2 rounded-full bg-white/5 border border-white/10 text-white/30 cursor-not-allowed text-sm font-bold">
-              Launching Q2 2027
-            </button>
-          </div>
-        </div>
-      </section>
-      <SystemFooter />
-    </main>
+    <AztecDocPage
+      eyebrow="Network · Governance"
+      title="Decentralized Protocol Governance"
+      subtitle="Humanity Ledger is governed by its community of verified, biologically unique participants. We employ a privacy-preserving quadratic voting system built on Zero-Knowledge proofs to ensure that protocol evolution is directed by the collective will of humanity, rather than capital concentration."
+      sections={[
+        {
+          id: 'one-human-one-vote',
+          title: 'Sybil-Resistant Democratic Participation',
+          paragraphs: [
+            'Traditional blockchain governance is plutocratic: 1 token equals 1 vote. This inevitably leads to protocol capture by whales, venture capital firms, and early adopters. Humanity Ledger introduces a radical paradigm shift: 1 verified human equals 1 foundational vote.',
+            'Because every participant in the Humanity Ledger network must undergo the ZK Identity hardware-rooted authentication process, we possess absolute cryptographic certainty that each wallet represents a unique biological entity. We leverage this Sybil resistance to implement a fair, democratic governance model.',
+          ],
+        },
+        {
+          id: 'quadratic-voting',
+          title: 'Zero-Knowledge Quadratic Voting',
+          paragraphs: [
+            'While the foundational vote ensures equality, we also recognize the need to gauge the intensity of preference on complex protocol upgrades. Humanity Ledger implements a Zero-Knowledge Quadratic Voting (zk-QV) system.',
+            'Users can allocate Quantum Dots (QDs) to express stronger preferences, but the cost of additional votes scales quadratically (e.g., 1 vote costs 1 QD, 2 votes cost 4 QDs, 3 votes cost 9 QDs). Crucially, because all voting is conducted within the Aztec L2 shielded pool, the votes are tallied homomorphically.',
+            'The network can compute the final tally of a proposal without ever revealing which individual voted for what, or how many QDs they spent. This prevents voter intimidation, bribery, and the bandwagon effect, ensuring pristine democratic signaling.',
+          ],
+        },
+        {
+          id: 'upgradeability',
+          title: 'Protocol Upgradeability',
+          paragraphs: [
+            'The governance system has direct cryptographic authority over the protocol parameters and smart contract upgrades. When a proposal reaches the required quorum and threshold, a time-lock is initiated.',
+            'Upon expiration of the time-lock, the decentralized execution contract autonomously implements the changes (e.g., updating the verification keys for a new Noir circuit, modifying the QD issuance rate, or altering relay fee structures). Human intervention is cryptographically impossible once the vote is finalized.',
+          ],
+        },
+      ]}
+    />
   );
 }

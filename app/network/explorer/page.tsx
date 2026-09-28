@@ -1,57 +1,41 @@
-"use client";
+import { AztecDocPage } from '@/components/landing/AztecDocPage';
 
-import React from "react";
-import Link from "next/link";
-import { SystemFooter } from "@/components/landing/SystemFooter";
-
-export default function ZKExplorerPage() {
+export default function ExplorerPage() {
   return (
-    <main className="min-h-screen bg-[#050505] text-[#E0E0E0] selection:bg-[#0044CC] selection:text-white font-sans">
-      <section className="pt-40 pb-32 px-8 max-w-[1000px] mx-auto">
-        <Link href="/" className="inline-block font-mono text-[10px] uppercase tracking-[0.3em] text-[#0044CC] mb-6 hover:text-white transition-colors">
-          &larr; Return to Protocol
-        </Link>
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#0044CC] mb-6">Network Diagnostics</div>
-        <h1 className="font-serif text-5xl md:text-7xl text-white font-normal leading-[1.0] tracking-tight mb-8">
-          Zero-Knowledge <br /><span className="italic text-white/40">Block Explorer.</span>
-        </h1>
-        
-        <div className="bg-[#111] border border-red-500/20 rounded-xl p-8 mb-12">
-          <h2 className="text-xl font-bold text-red-400 mb-2">ACCESS DENIED BY MATHEMATICS</h2>
-          <p className="text-white/60 font-mono text-sm">
-            Unlike traditional blockchains (e.g., Ethereum, Bitcoin) where all state transitions, balances, and message payloads are public, the Humanity Ledger operates on a strict Zero-Knowledge architecture (Aztec Noir).
-          </p>
-        </div>
-
-        <div className="space-y-12 text-lg text-white/70 leading-[1.8]">
-          <div>
-            <h3 className="text-2xl text-white font-serif mb-4">What You Cannot See</h3>
-            <p>
-              By design, our network explorer cannot display wallet addresses, message contents, transaction amounts, or communication graphs. All state is shielded using client-side SNARK proofs before being submitted to the decentralized relay.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-2xl text-white font-serif mb-4">What You Can Verify</h3>
-            <p>
-              The explorer only allows you to verify the cryptographic validity of a specific transaction hash. You can confirm that a state transition occurred and was mathematically valid, without knowing what the transition was or who executed it.
-            </p>
-          </div>
-
-          <div className="mt-8">
-            <input 
-              type="text" 
-              placeholder="Enter TxHash or Nullifier..." 
-              className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-6 py-4 text-white font-mono text-sm focus:outline-none focus:border-[#0044CC] transition-colors"
-              disabled
-            />
-            <p className="text-[12px] text-white/40 font-mono mt-3">
-              Explorer module is currently restricted to local testnet validation. Mainnet indexing will deploy in Q1 2027.
-            </p>
-          </div>
-        </div>
-      </section>
-      <SystemFooter />
-    </main>
+    <AztecDocPage
+      eyebrow="Network · Block Explorer"
+      title="The Omniscient Shield Explorer"
+      subtitle="Unlike traditional block explorers that expose the entire financial history and social graph of a network, the Humanity Ledger Block Explorer is a cryptographic verification tool. It provides deterministic proof of inclusion and system integrity without violating the zero-knowledge guarantees of the protocol."
+      sections={[
+        {
+          id: 'paradigm-shift',
+          title: 'The Privacy Paradox in Block Exploration',
+          paragraphs: [
+            'Traditional networks (Ethereum, Solana, Bitcoin) utilize transparent ledgers where every transaction, balance, and interaction is publicly broadcast. This allows block explorers like Etherscan to provide rich, human-readable data. However, this architecture is fundamentally incompatible with the right to financial privacy.',
+            'Humanity Ledger is built on the Aztec Network, a privacy-first zk-Rollup. Our ledger state is composed of encrypted UTXOs (Unspent Transaction Outputs) and nullifier hashes. Consequently, the Block Explorer cannot display sender addresses, receiver addresses, asset types, or transfer amounts.',
+          ],
+        },
+        {
+          id: 'what-is-visible',
+          title: 'What the Explorer Reveals',
+          paragraphs: [
+            'The Explorer serves as a vital tool for network health monitoring, sequencer auditing, and cryptographic verification. The following data points are publicly verifiable by any observer:',
+            '1. L2 Block Headers: Cryptographic commitments to the state of the rollup, including the global state tree root, the nullifier tree root, and the contract tree root.',
+            '2. Encrypted Commitments: Raw ciphertext blobs representing new UTXOs added to the state tree. These are mathematically impossible to decrypt without the corresponding viewing key.',
+            '3. Nullifiers: Deterministic hashes representing consumed UTXOs. They prove that an asset was spent without revealing which asset it was or who spent it.',
+            '4. Zero-Knowledge Proofs: The succinct cryptographic proofs submitted by users to validate their state transitions. The explorer verifies the mathematical soundness of these proofs against the protocol\'s verification keys.',
+            '5. Sequencer Metrics: Data regarding block finality times, throughput (TPS), and L1 settlement costs.',
+          ],
+        },
+        {
+          id: 'viewing-keys',
+          title: 'Authenticated Decryption (Viewing Keys)',
+          paragraphs: [
+            'Users can interact with the Explorer using their cryptographic viewing keys. By providing a viewing key to the local client interface, the user\'s browser can scan the encrypted commitments and decrypt only the UTXOs that belong to them.',
+            'This decryption happens entirely client-side. The viewing key is never transmitted to the Explorer\'s backend servers. This allows users to view their own transaction history, export compliance reports, and audit their state while maintaining absolute privacy from the network and the protocol operators.',
+          ],
+        },
+      ]}
+    />
   );
 }

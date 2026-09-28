@@ -1,45 +1,50 @@
-"use client";
+import { AztecDocPage } from '@/components/landing/AztecDocPage';
 
-import React from "react";
-import Link from "next/link";
-import { SystemFooter } from "@/components/landing/SystemFooter";
-
-export default function LedgerChatProtocolPage() {
+export default function LedgerChatPage() {
   return (
-    <main className="min-h-screen bg-[#050505] text-[#E0E0E0] selection:bg-[#0044CC] selection:text-white font-sans">
-      <section className="pt-40 pb-32 px-8 max-w-[1000px] mx-auto">
-        <Link href="/" className="inline-block font-mono text-[10px] uppercase tracking-[0.3em] text-[#0044CC] mb-6 hover:text-white transition-colors">
-          &larr; Return to Root
-        </Link>
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#0044CC] mb-6">Application Layer</div>
-        <h1 className="font-serif text-5xl md:text-7xl text-white font-normal leading-[1.0] tracking-tight mb-16">
-          Ledger Chat <br /><span className="italic text-white/40">Architecture.</span>
-        </h1>
-        
-        <div className="space-y-12 text-lg text-white/70 leading-[1.8]">
-          <div>
-            <h3 className="text-2xl text-white font-serif mb-4">01. SIM-less Connectivity</h3>
-            <p>
-              Ledger Chat entirely bypasses the traditional telecom stack. By anchoring identity to cryptographic wallet signatures rather than SIM cards or cellular networks, the protocol eliminates SS7 vulnerabilities, SIM-swapping vectors, and centralized telco surveillance.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-2xl text-white font-serif mb-4">02. Decentralized WebRTC Mesh</h3>
-            <p>
-              Voice and HD video calls are established using a decentralized WebRTC mesh. Signaling is negotiated securely over the XMTP network using ephemeral ECDH keys. Once the peer-to-peer connection is established, audio and video streams flow directly between endpoints with deterministic end-to-end encryption. No central server proxies your media.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-2xl text-white font-serif mb-4">03. Deterministic Burn-on-Read</h3>
-            <p>
-              Ephemeral state is strictly enforced. When a message is designated as "Burn-on-Read", the decryption keys for that specific payload are cryptographically shredded from memory immediately after execution. It is mathematically impossible to retrieve the ciphertext's original content post-destruction.
-            </p>
-          </div>
-        </div>
-      </section>
-      <SystemFooter />
-    </main>
+    <AztecDocPage
+      eyebrow="Protocol · Ledger Chat"
+      title="Sovereign Decentralized Messaging"
+      subtitle="Ledger Chat is the application layer of the Humanity Ledger protocol, built as a terminal interface for sovereign, uninterceptable communications and zero-knowledge asset transfers."
+      sections={[
+        {
+          id: 'architecture',
+          title: 'The Dual-Network Architecture',
+          paragraphs: [
+            'Ledger Chat operates fundamentally differently from traditional messaging applications like Signal or Telegram. It leverages a dual-network architecture: XMTP (Extensible Message Transport Protocol) for ephemeral, high-throughput message routing, and the Aztec L2 rollup for zero-knowledge state settlement and financial operations.',
+            'This segregation of concerns allows Ledger Chat to provide instant, decentralized peer-to-peer communication without congesting the blockchain, while ensuring that all identity assertions and Quantum Dot transfers benefit from the absolute security and finality of Ethereum L1 via the Aztec prover network.',
+          ],
+        },
+        {
+          id: 'encryption',
+          title: 'Cryptographic Forward Secrecy',
+          paragraphs: [
+            'Every conversation established in Ledger Chat utilizes the Double Ratchet Algorithm implemented over X25519 elliptic curves, providing perfect forward secrecy and post-compromise security. The key derivation function (KDF) rotates the symmetric keys for every single message sent.',
+            'Because the application is entirely client-side, the private keys necessary to decrypt the conversation exist only in the volatile memory of the local device. The decentralised relay network (XMTP) acts purely as a blind packet router, incapable of inspecting metadata, payloads, or the social graph of interacting peers.',
+          ],
+          bullets: [
+            'X25519 Ephemeral Handshakes: Secure peer discovery without trusting a central authority.',
+            'Double Ratchet Ratcheting: Continuous key rotation guarantees forward secrecy.',
+            'Metadata Obfuscation: Sender/receiver pairings are shielded at the network layer.',
+          ],
+        },
+        {
+          id: 'zk-transfers',
+          title: 'In-Band Quantum Dot Transfers',
+          paragraphs: [
+            'Ledger Chat integrates seamlessly with the Humanity Ledger Registry smart contracts on Aztec. Users can transfer Quantum Dots (QDs) directly within the chat interface. These transactions are compiled into zero-knowledge proofs locally using the Noir domain-specific language.',
+            'When a transfer occurs, the recipient receives a cryptographic commitment representing the new UTXO (Unspent Transaction Output) balance. The sender generates a nullifier to destroy their spent UTXO. Because these operations occur inside the chat terminal, the user experience is identical to sending a text message, yet the underlying settlement provides cryptographic privacy guarantees that not even the protocol operators can breach.',
+          ],
+        },
+        {
+          id: 'webrtc',
+          title: 'Decentralized Voice & Video (WebRTC)',
+          paragraphs: [
+            'Ledger Chat supports sovereign peer-to-peer voice and video calls. The connection establishment completely circumvents centralized signaling servers by utilizing the XMTP relay to exchange WebRTC Session Description Protocol (SDP) offers, answers, and ICE candidates.',
+            'Once the ICE negotiation concludes, the media stream is routed directly between the communicating devices over an encrypted DTLS/SRTP channel. This guarantees that real-time communications are physically uninterceptable by any intermediary infrastructure.',
+          ],
+        },
+      ]}
+    />
   );
 }

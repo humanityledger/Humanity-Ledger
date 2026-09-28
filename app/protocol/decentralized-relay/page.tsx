@@ -1,45 +1,50 @@
-"use client";
-
-import React from "react";
-import Link from "next/link";
-import { SystemFooter } from "@/components/landing/SystemFooter";
+import { AztecDocPage } from '@/components/landing/AztecDocPage';
 
 export default function DecentralizedRelayPage() {
   return (
-    <main className="min-h-screen bg-[#050505] text-[#E0E0E0] selection:bg-[#0044CC] selection:text-white font-sans">
-      <section className="pt-40 pb-32 px-8 max-w-[1000px] mx-auto">
-        <Link href="/" className="inline-block font-mono text-[10px] uppercase tracking-[0.3em] text-[#0044CC] mb-6 hover:text-white transition-colors">
-          &larr; Return to Root
-        </Link>
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#0044CC] mb-6">Transport Layer</div>
-        <h1 className="font-serif text-5xl md:text-7xl text-white font-normal leading-[1.0] tracking-tight mb-16">
-          Decentralized <br /><span className="italic text-white/40">Relay.</span>
-        </h1>
-        
-        <div className="space-y-12 text-lg text-white/70 leading-[1.8]">
-          <div>
-            <h3 className="text-2xl text-white font-serif mb-4">01. Unbreakable Routing</h3>
-            <p>
-              Traditional messaging architectures rely on centralized servers to route and store messages, creating single points of failure and surveillance bottlenecks. Humanity Ledger replaces this with a Decentralized Relay protocol. Encrypted packets are routed across a distributed network of independent nodes.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-2xl text-white font-serif mb-4">02. XMTP Integration</h3>
-            <p>
-              By utilizing the Extensible Message Transport Protocol (XMTP), Humanity Ledger ensures that all communications are end-to-end encrypted by default. Nodes in the relay network are cryptographically incapable of inspecting the payload or the metadata of the messages they transport. They simply validate the transaction constraints and pass the encrypted bytes forward.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-2xl text-white font-serif mb-4">03. Ephemeral Storage Nodes</h3>
-            <p>
-              Messages destined for offline peers are temporarily held in decentralized, highly-available storage nodes. These packets remain in their fully encrypted state. Once the target peer comes online and retrieves the payload, it is mathematically obliterated from the transport layer. There is no central database to subpoena.
-            </p>
-          </div>
-        </div>
-      </section>
-      <SystemFooter />
-    </main>
+    <AztecDocPage
+      eyebrow="Protocol · Decentralized Relay"
+      title="The Ephemeral Coordination Layer"
+      subtitle="A distributed, censorship-resistant message bus that facilitates off-chain coordination, peer discovery, and payload delivery for the Humanity Ledger protocol without requiring trust in centralized servers."
+      sections={[
+        {
+          id: 'why-relay',
+          title: 'The Necessity of Off-Chain Coordination',
+          paragraphs: [
+            'Zero-Knowledge rollups like Aztec excel at settling private financial state and enforcing consensus. However, they are fundamentally unsuited for high-throughput, low-latency, ephemeral communications. WebRTC signaling, chat messages, and peer discovery require a system capable of routing millions of messages per second with sub-50ms latency.',
+            'To solve this, Humanity Ledger integrates a Decentralized Relay built on the XMTP (Extensible Message Transport Protocol) architecture. This relay operates as an independent decentralized network specifically designed for secure message transport.',
+          ],
+        },
+        {
+          id: 'architecture',
+          title: 'Relay Architecture and Topology',
+          paragraphs: [
+            'The Decentralized Relay is composed of a globally distributed set of validator nodes. These nodes do not achieve consensus over state; rather, they achieve consensus over message propagation. They operate a publish/subscribe (pub/sub) topic routing protocol.',
+            'When a user initializes Ledger Chat, their client connects to the nearest relay node and subscribes to a specific cryptographic topic derived from their wallet address. Any peer wishing to communicate derives the same topic and publishes encrypted payloads to the network. The relay nodes propagate the payload across the network until it reaches the subscriber.',
+          ],
+          bullets: [
+            'Waku v2 Protocol: The underlying gossip protocol ensuring message delivery.',
+            'Store Nodes: Ephemeral persistence layers that cache messages for offline clients (up to 30 days).',
+            'Filter Nodes: Bandwidth-efficient light node protocols for mobile clients.',
+          ],
+        },
+        {
+          id: 'encryption',
+          title: 'Blind Payload Routing',
+          paragraphs: [
+            'The relay network is entirely "blind". It routes ciphertext envelopes without any ability to decrypt the contents or identify the communicating parties. The transport layer relies on Double Ratchet encryption (X3DH) negotiated entirely out-of-band or via the relay itself using ephemeral prekeys.',
+            'Because the relay nodes have no insight into the payloads, they cannot censor specific communications, monitor social graphs, or monetize user data. The network is agnostic to the protocol running on top of it, treating a WebRTC SDP offer and a text message as identical opaque binary blobs.',
+          ],
+        },
+        {
+          id: 'incentives',
+          title: 'Network Incentivization',
+          paragraphs: [
+            'Operating a high-throughput relay node requires significant bandwidth and compute resources. The Humanity Ledger economic model incorporates relay incentivization through Quantum Dots (QDs).',
+            'In the upcoming protocol iterations, users will attach micro-proofs of QD micropayments to their relay payloads. Relay nodes will batch these proofs and submit them to the Aztec sequencer to claim their routing fees, creating a self-sustaining, decentralized infrastructure resistant to corporate capture.',
+          ],
+        },
+      ]}
+    />
   );
 }

@@ -1,45 +1,50 @@
-"use client";
-
-import React from "react";
-import Link from "next/link";
-import { SystemFooter } from "@/components/landing/SystemFooter";
+import { AztecDocPage } from '@/components/landing/AztecDocPage';
 
 export default function ZKIdentityPage() {
   return (
-    <main className="min-h-screen bg-[#050505] text-[#E0E0E0] selection:bg-[#0044CC] selection:text-white font-sans">
-      <section className="pt-40 pb-32 px-8 max-w-[1000px] mx-auto">
-        <Link href="/" className="inline-block font-mono text-[10px] uppercase tracking-[0.3em] text-[#0044CC] mb-6 hover:text-white transition-colors">
-          &larr; Return to Root
-        </Link>
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#0044CC] mb-6">Identity Layer</div>
-        <h1 className="font-serif text-5xl md:text-7xl text-white font-normal leading-[1.0] tracking-tight mb-16">
-          Zero-Knowledge <br /><span className="italic text-white/40">Identity.</span>
-        </h1>
-        
-        <div className="space-y-12 text-lg text-white/70 leading-[1.8]">
-          <div>
-            <h3 className="text-2xl text-white font-serif mb-4">01. Hardware-Rooted Keys</h3>
-            <p>
-              Your digital identity is no longer an email address in a centralized database; it is a cryptographic keypair stored inside your device's secure hardware enclave (Secure Enclave / Titan M). By utilizing WebAuthn and FIDO2 standards, authentication is deterministic and immune to remote phishing or brute-force extraction.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-2xl text-white font-serif mb-4">02. Programmable Privacy (Aztec)</h3>
-            <p>
-              While standard blockchains expose all transactions and social graphs to the public, Humanity Ledger utilizes the Aztec network's programmable privacy frameworks. You can mathematically prove your identity, wallet balances, or group memberships using Zero-Knowledge proofs (ZK-SNARKs) without ever revealing your public address to the recipient or the network.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-2xl text-white font-serif mb-4">03. Social Graph Obfuscation</h3>
-            <p>
-              Interactions on the network generate cryptographic nullifiers rather than plaintext sender/receiver pairs. A third-party observer analyzing the decentralized relay can only see that mathematically valid data is moving; they cannot determine who is communicating with whom.
-            </p>
-          </div>
-        </div>
-      </section>
-      <SystemFooter />
-    </main>
+    <AztecDocPage
+      eyebrow="Protocol · ZK Identity"
+      title="Hardware-Rooted Zero-Knowledge Identity"
+      subtitle="The foundational Sybil resistance mechanism of Humanity Ledger. ZK Identity binds cryptographic primitives directly to the biometric secure enclaves of user hardware, producing mathematical proof of unique personhood without compromising privacy."
+      sections={[
+        {
+          id: 'hardware-binding',
+          title: 'Secure Enclave Cryptography',
+          paragraphs: [
+            'Traditional decentralized identity systems rely on centralized KYC providers or vulnerable social graph attestations. Humanity Ledger shifts the root of trust to the physical hardware. Utilizing the WebAuthn API, the protocol instructs the device\'s Secure Enclave (e.g., Apple Secure Enclave, Android StrongBox) to generate an ECDSA P-256 keypair.',
+            'Crucially, the private key is physically fused into the silicon and can never be extracted by the operating system, the browser, or the Humanity Ledger protocol itself. Operations using this key require biometric authorization (FaceID, TouchID), effectively binding the cryptographic identity to a unique biological entity.',
+          ],
+        },
+        {
+          id: 'zk-proofs',
+          title: 'Anonymous Attestations via zk-SNARKs',
+          paragraphs: [
+            'While the Secure Enclave provides Sybil resistance, broadcasting the public key would severely compromise user privacy by creating a globally traceable identifier. Humanity Ledger solves this through zero-knowledge proofs.',
+            'Instead of signing a transaction directly with the enclave key, the user compiles a zk-SNARK (using the Barretenberg prover). The proof mathematically asserts: "I possess a private key within my enclave that corresponds to a public key currently registered in the Humanity Ledger Merkle tree, and I have authorized this specific state transition." The proof reveals neither the public key nor the identity of the user.',
+          ],
+          bullets: [
+            'Zero-Knowledge Succinct Non-Interactive Arguments of Knowledge (zk-SNARKs).',
+            'Noir DSL for circuit constraints.',
+            'Barretenberg backend for sub-second client-side proving.',
+          ],
+        },
+        {
+          id: 'nullifiers',
+          title: 'Deterministic Nullifiers',
+          paragraphs: [
+            'To prevent double-spending and replay attacks in an anonymous system, the protocol relies on deterministic nullifiers. A nullifier is a one-way cryptographic hash derived from the user\'s private enclave key and a specific context (such as a unique asset ID or a protocol epoch).',
+            'When a state transition occurs, the nullifier is published to the Aztec L2 public state. The verifier smart contract ensures the nullifier has not been seen before. Because the nullifier is deterministic, any attempt to use the same private key for the same context will produce an identical nullifier and be rejected, enforcing strict limits without revealing the actor.',
+          ],
+        },
+        {
+          id: 'recovery',
+          title: 'Social & Multi-Sig Recovery',
+          paragraphs: [
+            'Recognizing that hardware can be lost or destroyed, ZK Identity implements a mathematically sound recovery mechanism. Users can shard a master recovery seed using Shamir\'s Secret Sharing scheme across a network of trusted peers (Guardians).',
+            'If a device is lost, the user initiates a recovery protocol via their Guardians. The Guardians submit zero-knowledge proofs authorizing the rotation of the public key registered in the Merkle tree, seamlessly transferring the identity to the new hardware enclave without exposing the underlying recovery seed.',
+          ],
+        },
+      ]}
+    />
   );
 }
