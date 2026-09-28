@@ -114,7 +114,7 @@ export async function initiateQuantumRelayStream(signer: ethers.Signer) {
   // Bind to the Decentralized Relay
   const stream = await xmtp.conversations.streamAllMessages();
   
-  console.log(`[Relay]: Node synchronized. Awaiting state transitions.`);
+  console.log(\`[Relay]: Node synchronized. Awaiting state transitions.\`);
   
   for await (const message of stream) {
     if (message.senderAddress === xmtp.address) continue; // Ignore self
