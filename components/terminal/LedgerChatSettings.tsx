@@ -127,19 +127,20 @@ export function LedgerChatSettings({ onClose, address }: LedgerChatSettingsProps
 
   return (
     <div className="fixed inset-0 z-[50] flex items-center justify-center pointer-events-none">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto" onClick={onClose} />
-      <div className="relative w-full h-[100dvh] md:h-[85vh] md:w-[480px] bg-zinc-50 md:border-[3px] md:border-black pointer-events-auto flex flex-col font-mono overflow-hidden shadow-[12px_12px_0_0_rgba(0,0,0,1)] z-10 md:rounded-xl">
-        <div className="flex items-center justify-between px-4 py-4 bg-white shrink-0 border-b-[3px] border-black z-10">
-          <button onClick={goBack} className="text-black font-bold uppercase tracking-widest text-[13px] hover:bg-black hover:text-white px-2 py-1 transition-colors border-2 border-transparent hover:border-black">
-            {view === 'root' ? '[ CLOSE ]' : '< BACK'}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-md pointer-events-auto" onClick={onClose} />
+      <div className="relative w-full h-[100dvh] md:h-[90vh] md:w-[460px] bg-[#F8F8F8] pointer-events-auto flex flex-col font-sans overflow-hidden z-10 md:shadow-2xl border-0 md:border md:border-black/10">
+        <div className="flex items-center justify-between px-6 py-5 bg-[#F8F8F8]/95 backdrop-blur-sm shrink-0 border-b border-black/8 z-10">
+          <button onClick={goBack} className="text-black/50 hover:text-black transition-colors p-1 -ml-1 flex items-center gap-1.5">
+            <ChevronLeft size={18} />
+            <span className="text-[12px] font-bold uppercase tracking-wider">{view === 'root' ? 'Close' : 'Back'}</span>
           </button>
-          <span className="font-black text-[15px] text-black tracking-tight uppercase truncate flex-1 text-center px-2">
+          <span className="text-[11px] font-mono tracking-[0.2em] uppercase font-bold text-black absolute left-1/2 -translate-x-1/2">
             {viewTitle}
           </span>
           <div className="w-16" />
         </div>
 
-        <div className="relative flex-1 w-full overflow-hidden bg-zinc-50">
+        <div className="relative flex-1 w-full overflow-hidden bg-[#F8F8F8]">
           <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={view}
@@ -149,7 +150,7 @@ export function LedgerChatSettings({ onClose, address }: LedgerChatSettingsProps
               animate="center"
               exit="exit"
               transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-              className="absolute inset-0 w-full h-full flex flex-col bg-zinc-50 overflow-y-auto"
+              className="absolute inset-0 w-full h-full flex flex-col bg-[#F8F8F8] overflow-y-auto"
             >
               {view === 'root' && <RootView onNavigate={navigate} address={address} s={settings} />}
               {view === 'profile' && <ProfileView address={address} s={settings} />}
@@ -181,61 +182,64 @@ export function LedgerChatSettings({ onClose, address }: LedgerChatSettingsProps
 
 function RootView({ onNavigate, address, s }: any) {
   return (
-    <div className="w-full pb-20">
-      <button onClick={() => onNavigate('profile')} className="w-full p-4 border-b-[3px] border-black bg-white hover:bg-zinc-50 transition-colors">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-black flex items-center justify-center shrink-0 border-2 border-black overflow-hidden">
-            {s.avatar_url
-              ? <img src={s.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-              : <span className="text-white font-black text-2xl">{(s.displayName || '?').charAt(0).toUpperCase()}</span>
-            }
-          </div>
-          <div className="flex flex-col flex-1 overflow-hidden text-left">
-            <span className="text-[18px] font-black text-black uppercase truncate">{s.displayName}</span>
-            <span className="text-[13px] font-bold text-black/50 truncate">@{s.username}</span>
-            <span className="text-[10px] font-mono mt-1 text-black/40 truncate">{address}</span>
-          </div>
-          <ArrowRight size={20} className="text-black shrink-0" />
+    <div className="w-full pb-20 px-6">
+      <button onClick={() => onNavigate('profile')} className="w-full py-6 border-b border-black/8 flex items-center gap-5 text-left group">
+        <div className="w-14 h-14 bg-black flex items-center justify-center shrink-0 overflow-hidden shadow-md">
+          {s.avatar_url
+            ? <img src={s.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+            : <span className="text-white font-serif italic text-2xl">{(s.displayName || '?').charAt(0).toUpperCase()}</span>
+          }
         </div>
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <span className="text-[18px] font-bold text-black tracking-tight truncate">{s.displayName}</span>
+          <span className="text-[12px] font-mono text-black/40 truncate">{address}</span>
+        </div>
+        <ChevronRight size={16} className="text-black/20 group-hover:text-black transition-colors shrink-0" />
       </button>
 
-      <div className="p-4 space-y-4">
+      <div className="mt-8 flex flex-col">
         <BBlock>
-          <BItem icon={<Bookmark size={18}/>} label="Personal Vault" onClick={() => onNavigate('personal_vault')} />
-          <BItem icon={<Phone size={18}/>} label="Connection Log" onClick={() => onNavigate('connection_log')} />
-          <BItem icon={<MonitorSmartphone size={18}/>} label="Active Devices" onClick={() => onNavigate('devices')} />
-          <BItem icon={<Folder size={18}/>} label="Workspaces" onClick={() => onNavigate('workspaces')} noBorder />
+          <BItem icon={<Bookmark size={16}/>} label="Personal Vault" onClick={() => onNavigate('personal_vault')} />
+          <BItem icon={<Phone size={16}/>} label="Connection Log" onClick={() => onNavigate('connection_log')} />
+          <BItem icon={<MonitorSmartphone size={16}/>} label="Active Devices" onClick={() => onNavigate('devices')} />
+          <BItem icon={<Folder size={16}/>} label="Workspaces" onClick={() => onNavigate('workspaces')} noBorder />
         </BBlock>
 
-        <BBlock>
-          <BItem icon={<Bell size={18}/>} label="Alerts & Sounds" onClick={() => onNavigate('notifications')} />
-          <BItem icon={<Shield size={18}/>} label="Privacy Engine" onClick={() => onNavigate('privacy')} />
-          <BItem icon={<Database size={18}/>} label="Data & Storage" onClick={() => onNavigate('data')} />
-          <BItem icon={<Paintbrush size={18}/>} label="Aesthetics" onClick={() => onNavigate('appearance')} />
-          <BItem icon={<Globe size={18}/>} label="Language" onClick={() => onNavigate('language')} noBorder />
-        </BBlock>
-
-        <BBlock>
-          <BItem icon={<Bot size={18}/>} label="AI Ghost Mode" onClick={() => onNavigate('ghost_mode')} />
-          <BItem icon={<Activity size={18}/>} label="Ledger Intelligence Tools" onClick={() => onNavigate('defi_tools')} noBorder />
-        </BBlock>
-
-        <div onClick={() => onNavigate('premium')} className="w-full border-[3px] border-black bg-black text-white p-4 flex items-center gap-4 cursor-pointer hover:bg-zinc-900 transition-colors shadow-[6px_6px_0_0_#1c7aff]">
-          <Crown size={28} className="text-[#1c7aff] shrink-0" />
-          <div className="flex flex-col">
-            <span className="text-[16px] font-black uppercase">Ledger Network Pro</span>
-            <span className="text-[11px] text-zinc-400">Unlock maximum capacity</span>
-          </div>
-          <ArrowRight size={18} className="ml-auto text-zinc-500" />
+        <div className="mt-10">
+          <BBlock>
+            <BItem icon={<Bell size={16}/>} label="Alerts & Sounds" onClick={() => onNavigate('notifications')} />
+            <BItem icon={<Shield size={16}/>} label="Privacy Engine" onClick={() => onNavigate('privacy')} />
+            <BItem icon={<Database size={16}/>} label="Data & Storage" onClick={() => onNavigate('data')} />
+            <BItem icon={<Paintbrush size={16}/>} label="Aesthetics" onClick={() => onNavigate('appearance')} />
+            <BItem icon={<Globe size={16}/>} label="Language" onClick={() => onNavigate('language')} noBorder />
+          </BBlock>
         </div>
 
-        <div onClick={() => onNavigate('stars')} className="w-full border-[3px] border-black bg-yellow-400 text-black p-4 flex items-center gap-4 cursor-pointer hover:bg-yellow-300 transition-colors shadow-[6px_6px_0_0_#000]">
-          <Star size={28} className="fill-black shrink-0" />
-          <div className="flex flex-col">
-            <span className="text-[16px] font-black uppercase">Quantum Dots</span>
-            <span className="text-[11px] font-bold">1,250 QD Balance</span>
-          </div>
-          <ArrowRight size={18} className="ml-auto" />
+        <div className="mt-10">
+          <BBlock>
+            <BItem icon={<Bot size={16}/>} label="AI Ghost Mode" onClick={() => onNavigate('ghost_mode')} />
+            <BItem icon={<Activity size={16}/>} label="Ledger Intelligence Tools" onClick={() => onNavigate('defi_tools')} noBorder />
+          </BBlock>
+        </div>
+
+        <div className="mt-10 flex flex-col gap-3">
+          <button onClick={() => onNavigate('premium')} className="w-full border border-black/10 bg-black text-white p-5 flex items-center gap-4 hover:bg-black/90 transition-colors text-left">
+            <Crown size={20} className="text-white shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-[14px] font-bold uppercase tracking-wide">Ledger Network Pro</span>
+              <span className="text-[11px] text-white/50 font-mono">Unlock maximum protocol capacity</span>
+            </div>
+            <ChevronRight size={14} className="ml-auto text-white/30" />
+          </button>
+
+          <button onClick={() => onNavigate('stars')} className="w-full border border-black/10 bg-[#F8F8F8] p-5 flex items-center gap-4 hover:bg-black/5 transition-colors text-left">
+            <Star size={20} className="text-black shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-[14px] font-bold uppercase tracking-wide text-black">Quantum Dots</span>
+              <span className="text-[11px] text-black/40 font-mono">1,250 QD Balance</span>
+            </div>
+            <ChevronRight size={14} className="ml-auto text-black/20" />
+          </button>
         </div>
       </div>
     </div>
@@ -1180,25 +1184,30 @@ function StarsView() {
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 function BBlock({ children }: { children: React.ReactNode }) {
-  return <div className="w-full bg-white border-[3px] border-black shadow-[6px_6px_0_0_#000] flex flex-col">{children}</div>;
+  return <div className="w-full flex flex-col">{children}</div>;
 }
 
 function BItem({ icon, label, onClick, noBorder = false }: any) {
   return (
-    <div onClick={onClick} className={`w-full flex items-center gap-3 p-4 cursor-pointer hover:bg-zinc-100 transition-colors ${noBorder ? '' : 'border-b-[3px] border-black'}`}>
-      <div className="text-black shrink-0">{icon}</div>
-      <span className="font-black uppercase text-[14px] flex-1">{label}</span>
-      <ChevronRight size={18} className="text-zinc-400 shrink-0" />
+    <div onClick={onClick} className={`w-full flex items-center justify-between py-4 cursor-pointer group transition-colors ${noBorder ? '' : 'border-b border-black/8'}`}>
+      <div className="flex items-center gap-4">
+        <div className="text-black/40 group-hover:text-black transition-colors shrink-0">{icon}</div>
+        <span className="text-[13px] font-bold uppercase tracking-wider text-black">{label}</span>
+      </div>
+      <ChevronRight size={14} className="text-black/20 group-hover:text-black transition-colors shrink-0" />
     </div>
   );
 }
 
 function TRow({ label, checked, onChange, noBorder = false }: any) {
   return (
-    <div onClick={() => onChange(!checked)} className={`w-full flex items-center justify-between p-4 cursor-pointer hover:bg-black/5 transition-colors ${noBorder ? '' : 'border-b-[3px] border-black'}`}>
-      <span className="font-black uppercase text-[13px]">{label}</span>
-      <button className={`w-12 h-7 border-[3px] border-black transition-colors relative ${checked ? 'bg-[#34c759]' : 'bg-white'}`}>
-        <div className={`absolute top-0 bottom-0 w-5 h-full border-r-2 border-black transition-all bg-black ${checked ? 'left-[calc(100%-20px)]' : 'left-0'}`} />
+    <div onClick={() => onChange(!checked)} className={`w-full flex items-center justify-between py-4 cursor-pointer ${noBorder ? '' : 'border-b border-black/8'}`}>
+      <span className="text-[13px] font-bold uppercase tracking-wider text-black">{label}</span>
+      <button
+        className={`w-10 h-5 border border-black rounded-none flex items-center p-0.5 transition-colors shrink-0 ${checked ? 'bg-black' : 'bg-transparent'}`}
+        onClick={(e) => { e.stopPropagation(); onChange(!checked); }}
+      >
+        <div className={`w-3.5 h-3.5 transition-transform ${checked ? 'translate-x-5 bg-white' : 'translate-x-0 bg-black'}`} />
       </button>
     </div>
   );
@@ -1208,37 +1217,38 @@ function CycleRow({ label, value, options, onChange, noBorder = false }: any) {
   const idx = options.indexOf(value);
   const next = () => onChange(options[(idx + 1) % options.length]);
   return (
-    <div onClick={next} className={`w-full flex items-center justify-between p-4 cursor-pointer hover:bg-zinc-100 ${noBorder ? '' : 'border-b-[3px] border-black'}`}>
-      <span className="font-black uppercase text-[13px]">{label}</span>
-      <span className="font-bold text-zinc-600 uppercase text-[11px]">{value}</span>
+    <div onClick={next} className={`w-full flex items-center justify-between py-4 cursor-pointer ${noBorder ? '' : 'border-b border-black/8'}`}>
+      <span className="text-[13px] font-bold uppercase tracking-wider text-black">{label}</span>
+      <span className="font-mono text-[11px] text-black/50 uppercase">{value}</span>
     </div>
   );
 }
 
 function BInput({ label, value, onChange, prefix }: any) {
   return (
-    <div className="flex flex-col gap-1 w-full">
-      <label className="text-[11px] font-black uppercase tracking-widest text-zinc-500">{label}</label>
-      <div className="flex w-full">
-        {prefix && <div className="bg-black text-white border-[3px] border-black border-r-0 px-4 py-3 font-black flex items-center">{prefix}</div>}
-        <input type="text" value={value} onChange={e => onChange(e.target.value)} className="flex-1 bg-white border-[3px] border-black p-3 text-[14px] font-bold outline-none focus:bg-yellow-50" />
+    <div className="flex flex-col gap-2 w-full">
+      <label className="text-[10px] font-mono uppercase tracking-[0.2em] text-black/40">{label}</label>
+      <div className="flex w-full border-b border-black/20 focus-within:border-black transition-colors">
+        {prefix && <div className="text-black/40 font-mono text-sm pr-2 flex items-center">{prefix}</div>}
+        <input type="text" value={value} onChange={e => onChange(e.target.value)} className="flex-1 bg-transparent py-3 text-[14px] font-bold outline-none text-black placeholder-black/20" />
       </div>
     </div>
   );
 }
 
 function SH({ title }: { title: string }) {
-  return <span className="text-[11px] font-black uppercase tracking-widest text-zinc-500 ml-2 block">{title}</span>;
+  return <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-black/40 block mb-3 mt-6 first:mt-0">{title}</span>;
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-[11px] font-black uppercase tracking-widest text-zinc-500">{label}</span>
-      <span className="text-[11px] font-black uppercase">{value}</span>
+    <div className="flex items-center justify-between py-2 border-b border-black/5 last:border-0">
+      <span className="text-[11px] font-mono uppercase tracking-wider text-black/40">{label}</span>
+      <span className="text-[11px] font-bold uppercase text-black">{value}</span>
     </div>
   );
 }
+
 
 
 
