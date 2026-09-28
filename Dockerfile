@@ -88,7 +88,8 @@ ENV SKIP_ENV_VALIDATION=true
 
 # Generate Prisma client and build application
 RUN npx prisma generate && \
-    npx next build
+    npx next build && \
+    rm -rf .next/cache
 
 #  STAGE 5: PRODUCTION RUNNER 
 FROM runtime AS runner
