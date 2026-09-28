@@ -7,10 +7,10 @@ export function SystemFooter() {
       <div className="max-w-7xl mx-auto">
         
         {/* Top row */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-10 mb-14">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-10 mb-14">
           
           {/* Brand column */}
-          <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
+          <div className="col-span-2 md:col-span-2 flex flex-col gap-4">
             <Link href="/" aria-label="Humanity Ledger home">
               <img
                 src="/logo-text.png"
@@ -18,8 +18,8 @@ export function SystemFooter() {
                 style={{ height: 32, width: 'auto', objectFit: 'contain', display: 'block' }}
               />
             </Link>
-            <p className="text-[14px] text-black/50 font-medium leading-relaxed max-w-[200px]">
-              The sovereign, decentralized messaging network. Built for 2027.
+            <p className="text-[14px] text-black/50 font-medium leading-relaxed max-w-[240px]">
+              The sovereign, decentralized messaging network. Zero-knowledge by default. Built for 2027.
             </p>
           </div>
 
@@ -29,7 +29,7 @@ export function SystemFooter() {
             <Link href="/protocol/ledger-chat" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Ledger Chat</Link>
             <Link href="/protocol/zk-identity" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">ZK Identity</Link>
             <Link href="/protocol/decentralized-relay" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Decentralized Relay</Link>
-            <Link href="/protocol/xmtp" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">XMTP Integration</Link>
+            <Link href="/developers" className="text-[14px] font-medium text-[#2C6BED] hover:text-[#1A5AE3] transition-colors">Developer Hub &rarr;</Link>
           </div>
 
           {/* Network */}
@@ -46,16 +46,15 @@ export function SystemFooter() {
             <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Cryptography</h4>
             <Link href="/docs/whitepaper" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Whitepaper</Link>
             <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Aztec ZK Rollup</a>
-            <Link href="/docs/noir-circuits" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Noir Circuits</Link>
             <Link href="/docs/audits" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Security Audits</Link>
+            <a href="https://github.com/humanityledger" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">GitHub</a>
           </div>
 
-          {/* Developers */}
+          {/* Sovereign Agreements */}
           <div className="flex flex-col gap-3">
-            <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Developers</h4>
-            <Link href="/docs/architecture" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Architecture</Link>
-            <Link href="/docs/api" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">API Reference</Link>
-            <a href="https://github.com/humanityledger" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">GitHub</a>
+            <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Compliance</h4>
+            <Link href="/privacy" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Privacy Posture</Link>
+            <Link href="/terms" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Terms of Operation</Link>
           </div>
 
         </div>

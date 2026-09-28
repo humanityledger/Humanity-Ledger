@@ -1,56 +1,45 @@
 "use client";
 
-import React from 'react';
-import { DocsShell, DocH1, DocH2, DocP, DocCallout, DocOrderedList } from '@/components/docs/DocsShell';
+import React from "react";
+import Link from "next/link";
+import { SystemFooter } from "@/components/landing/SystemFooter";
 
 export default function TermsPage() {
-    return (
-        <DocsShell currentSlug="terms">
-            <DocH1>Terms of Service</DocH1>
-            
-            <DocP>
-                The definitive legal agreement establishing the parameters of interaction between users and the Humanity Ledger infrastructure, with planned Aztec Network integration.
-            </DocP>
+  return (
+    <main className="min-h-screen bg-[#050505] text-[#E0E0E0] selection:bg-[#0044CC] selection:text-white font-sans">
+      <section className="pt-40 pb-32 px-8 max-w-[1000px] mx-auto">
+        <Link href="/" className="inline-block font-mono text-[10px] uppercase tracking-[0.3em] text-[#0044CC] mb-6 hover:text-white transition-colors">
+          &larr; Return to Protocol
+        </Link>
+        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#0044CC] mb-6">Protocol Interaction Agreement</div>
+        <h1 className="font-serif text-5xl md:text-7xl text-white font-normal leading-[1.0] tracking-tight mb-16">
+          Sovereign <br /><span className="italic text-white/40">Terms of Operation.</span>
+        </h1>
+        
+        <div className="space-y-12 text-lg text-white/70 leading-[1.8]">
+          <div>
+            <h3 className="text-2xl text-white font-serif mb-4">01. Cryptographic Liability</h3>
+            <p>
+              By interacting with the Humanity Ledger, you acknowledge that all state transitions are finalized via smart contracts deployed on a decentralized network. You alone are responsible for the physical and digital security of your hardware-rooted authentication modules and private keys. We cannot reverse, modify, or halt any cryptographic execution.
+            </p>
+          </div>
 
-            <DocCallout type="note" title="EFFECTIVE DATE">
-                July 26, 2026
-            </DocCallout>
+          <div>
+            <h3 className="text-2xl text-white font-serif mb-4">02. Decentralized Relay Usage</h3>
+            <p>
+              The application layer serves strictly as an unprivileged conduit to the underlying protocol. Our decentralized relay networks route encrypted packets without inspection or persistent storage. Users agree to utilize the relay layer in accordance with the hardcoded consensus mechanisms and rate-limiting telemetry.
+            </p>
+          </div>
 
-            <DocH2>01. Protocol Interaction</DocH2>
-            <DocP>
-                This document constitutes the legal agreement governing your use of the Humanity Ledger interface. By generating zero knowledge proofs, deploying Noir contracts, or engaging with our decentralised sequencing architecture, you agree to these terms.
-            </DocP>
-            <DocP>
-                The platform is a non custodial, decentralised privacy infrastructure. Access to the protocol is facilitated through open source cryptography. We do not custody, wrap, escrow, or otherwise manage your cryptographic assets or private viewing keys.
-            </DocP>
-            <DocP>
-                Consequently, we are mathematically incapable of reversing, pausing, or altering transactions once they have been signed by your wallet and finalized by the decentralised sequencer network on Ethereum Layer 1.
-            </DocP>
-
-            <DocH2>02. Limitation of Liability</DocH2>
-            <DocP>
-                The protocol provides privacy preserving infrastructure using experimental zero knowledge cryptography. While the code is heavily audited, the use of decentralised finance protocols inherently carries significant risk.
-            </DocP>
-            <DocCallout type="warning" title="CRYPTOGRAPHIC RISK">
-                Interaction with zero knowledge smart contracts implies an acknowledgment of cryptographic risk. We expressly disclaim all liability for capital loss resulting from protocol exploits, network congestion, incorrect proof generation, or loss of private decryption keys.
-            </DocCallout>
-
-            <DocH2>03. Usage Restrictions</DocH2>
-            <DocP>
-                The protocol is designed to provide financial privacy for legitimate users. We strictly prohibit the use of our infrastructure for money laundering, terrorism financing, or any activity that violates applicable international sanctions.
-            </DocP>
-            <DocP>
-                While we cannot access your private state, we reserve the right to block IP addresses or client side identifiers that engage in denial of service attacks against our RPC infrastructure or attempt to exploit the platform's front-end interfaces.
-            </DocP>
-
-            <DocH2>04. Token Classification & No Investment Advice</DocH2>
-            <DocP>
-                Quantum Data points (QDs) are strictly testnet tokens designed exclusively to facilitate interaction with our privacy infrastructure. QDs do not constitute electronic money, securities, derivatives, or any form of regulated financial instrument.
-            </DocP>
-            <DocP>
-                We are not a regulated financial institution. Nothing on this platform constitutes financial, investment, or legal advice. You are solely responsible for your own financial decisions and interactions.
-            </DocP>
-
-        </DocsShell>
-    );
+          <div>
+            <h3 className="text-2xl text-white font-serif mb-4">03. Code as Law</h3>
+            <p>
+              The open-source Zero-Knowledge circuits (Noir) and EVM-compatible contracts dictating system behavior supersede any written text in this document. Any discrepancy between human-readable intent and compiled bytecode is resolved strictly in favor of the bytecode.
+            </p>
+          </div>
+        </div>
+      </section>
+      <SystemFooter />
+    </main>
+  );
 }
