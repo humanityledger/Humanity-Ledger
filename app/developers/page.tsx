@@ -1,356 +1,258 @@
-"use client";
-
-import React, { useState } from "react";
-import Link from "next/link";
-import { Terminal, Cpu, Database, Network, Shield, Code2 } from "lucide-react";
-import { SystemFooter } from "@/components/landing/SystemFooter";
-
-// ─── CODE BLOCKS (defined as plain strings to avoid nested template literal issues) ───
-
-const CODE_PROTOCOL_CONFIG = [
-  "// Protocol Configuration & Global Constants",
-  "export const AZTEC_NETWORK_CONFIG = {",
-  "  chainId: 31337,",
-  "  rollupAddress: '0x...',",
-  "  registryAddress: '0x...',",
-  "  l1RpcUrl: process.env.NEXT_PUBLIC_ETH_RPC,",
-  "  aztecRpcUrl: 'https://aztec-node.humanidfi.com',",
-  "  proofSystem: 'barretenberg-plonk',",
-  "  curve: 'BN254'",
-  "};",
-].join("\n");
-
-const CODE_NOIR_IDENTITY = [
-  "// Humanity Ledger - Cryptographic Identity Circuit (Noir)",
-  "use dep::std;",
-  "use dep::aztec::context::PrivateContext;",
-  "",
-  "fn verify_hardware_enclave(",
-  "    pub_key_x: pub Field,",
-  "    pub_key_y: pub Field,",
-  "    signature: [u8; 64],",
-  "    message_hash: [u8; 32],",
-  "    identity_nullifier: pub Field",
-  ") {",
-  "    // 1. Verify hardware-rooted ECDSA signature mathematically",
-  "    let valid_signature = std::ecdsa_secp256k1::verify_signature(",
-  "        pub_key_x, pub_key_y, signature, message_hash",
-  "    );",
-  "    assert(valid_signature);",
-  "",
-  "    // 2. Enforce cryptographic state shielding constraint",
-  "    let computed_nullifier = std::hash::poseidon::bn254::hash_2([",
-  "        pub_key_x,",
-  "        pub_key_y",
-  "    ]);",
-  "    assert(identity_nullifier == computed_nullifier);",
-  "}",
-].join("\n");
-
-const CODE_NOIR_CUSTOM = [
-  "// Integrating Humanity Ledger Identity into a Custom Protocol",
-  "fn execute_confidential_trade(",
-  "    trade_payload: pub Field,",
-  "    ledger_identity_proof: [Field; 16],",
-  "    verification_key: [Field; 114]",
-  ") {",
-  "    // Recursively verify the Humanity Ledger identity proof",
-  "    let is_verified_human = std::verify_proof(",
-  "        verification_key,",
-  "        ledger_identity_proof,",
-  "        [trade_payload], // Public inputs",
-  "        0 // Proof identifier",
-  "    );",
-  "    assert(is_verified_human);",
-  "    // Execute trade logic...",
-  "}",
-].join("\n");
-
-const CODE_XMTP_RELAY = [
-  "// Humanity Ledger - XMTP Relay Stream Initialization",
-  "import { Client } from '@xmtp/xmtp-js';",
-  "import { ethers } from 'ethers';",
-  "",
-  "export async function initiateQuantumRelayStream(signer: ethers.Signer) {",
-  "  // Instantiate Hardware-Rooted session in production enclave",
-  "  const xmtp = await Client.create(signer, { env: 'production' });",
-  "",
-  "  // Bind to the Decentralized Relay",
-  "  const stream = await xmtp.conversations.streamAllMessages();",
-  "",
-  "  console.log('[Relay]: Node synchronized. Awaiting state transitions.');",
-  "",
-  "  for await (const message of stream) {",
-  "    if (message.senderAddress === xmtp.address) continue;",
-  "",
-  "    const payload = message.content;",
-  "    const sender = message.senderAddress;",
-  "    await processZeroKnowledgePayload(payload, sender);",
-  "  }",
-  "}",
-].join("\n");
-
-const CODE_SOLIDITY_VERIFIER = [
-  "// SPDX-License-Identifier: MIT",
-  "pragma solidity ^0.8.24;",
-  "",
-  "import {UltraVerifier} from './plonk_vk.sol';",
-  "",
-  "contract LedgerStateShield {",
-  "    UltraVerifier public verifier;",
-  "    mapping(bytes32 => bool) public consumedNullifiers;",
-  "",
-  "    error CryptographicAnomalyDetected();",
-  "    error StateTransitionInvalid();",
-  "",
-  "    constructor(address _verifier) {",
-  "        verifier = UltraVerifier(_verifier);",
-  "    }",
-  "",
-  "    function transitionState(",
-  "        bytes calldata proof,",
-  "        bytes32[] calldata publicInputs",
-  "    ) external {",
-  "        bytes32 nullifier = publicInputs[0];",
-  "        if (consumedNullifiers[nullifier]) revert CryptographicAnomalyDetected();",
-  "        bool valid = verifier.verify(proof, publicInputs);",
-  "        if (!valid) revert StateTransitionInvalid();",
-  "        consumedNullifiers[nullifier] = true;",
-  "    }",
-  "}",
-].join("\n");
-
-const CODE_WEBAUTHN = [
-  "// Hardware-Rooted Key Generation Request (WebAuthn)",
-  "const credential = await navigator.credentials.create({",
-  "  publicKey: {",
-  "    challenge: new Uint8Array(32), // Cryptographic nonce",
-  "    rp: { name: 'Humanity Ledger Protocol', id: 'humanidfi.com' },",
-  "    user: {",
-  "      id: new Uint8Array(16),",
-  "      name: 'node.operator',",
-  "      displayName: 'Protocol Node'",
-  "    },",
-  "    pubKeyCredParams: [{ alg: -7, type: 'public-key' }],",
-  "    authenticatorSelection: {",
-  "      authenticatorAttachment: 'platform', // Force hardware enclave",
-  "      userVerification: 'required'         // Force biometric check",
-  "    },",
-  "    timeout: 60000,",
-  "    attestation: 'direct' // Request cryptographic hardware attestation",
-  "  }",
-  "});",
-].join("\n");
-
-// ─── MODULE DEFINITIONS ───────────────────────────────────────────────────────
-
-const DEVELOPER_MODULES = [
-  {
-    id: "architecture",
-    title: "Protocol Architecture",
-    icon: <Network size={16} />,
-    sections: [
-      {
-        subtitle: "Zero-Knowledge State Shielding",
-        text: "Humanity Ledger does not operate as a standard smart contract protocol. It is a cryptographic enclave deployed on the Aztec L2 rollup. Every state transition — whether a message sent via Ledger Chat, an identity verification, or a Quantum Dot transfer — is executed client-side. The client generates a zk-SNARK locally, proving the validity of the transition without revealing the inputs.",
-        code: null,
-      },
-      {
-        subtitle: "The Dual-State Homomorphic Paradigm",
-        text: "Traditional blockchains force a dichotomy: transparent on-chain execution or opaque off-chain servers. We utilize Aztec's dual-state architecture. Public states (global Merkle roots, protocol constants) interact flawlessly with private encrypted UTXOs. The protocol uses the BN254 elliptic curve for the Barretenberg proving backend, achieving sub-second proof generation on consumer hardware via highly optimized WebAssembly circuits.",
-        code: CODE_PROTOCOL_CONFIG,
-      },
-    ],
-  },
-  {
-    id: "noir",
-    title: "Noir Cryptographic Circuits",
-    icon: <Code2 size={16} />,
-    sections: [
-      {
-        subtitle: "Client-Side Proving Pipeline",
-        text: "We expose foundational circuits written in Noir, a Rust-like domain-specific language for writing zero-knowledge proofs. When a user interacts with Humanity Ledger, the Noir program compiles into a mathematical constraint system. The Barretenberg prover then generates an ultra-succinct proof that the constraints were satisfied. This proof is transmitted to the Decentralized Relay.",
-        code: CODE_NOIR_IDENTITY,
-      },
-      {
-        subtitle: "Custom Circuit Integration",
-        text: "Developers can write custom Noir circuits that interface with the Humanity Ledger Registry. By asserting the validity of a Humanity Ledger private token within your own circuit, you can build regulatory-compliant dark pools, anonymous voting systems, and confidential decentralized exchanges without ever interacting with cleartext data.",
-        code: CODE_NOIR_CUSTOM,
-      },
-    ],
-  },
-  {
-    id: "xmtp",
-    title: "XMTP Decentralized Relay",
-    icon: <Database size={16} />,
-    sections: [
-      {
-        subtitle: "Peer-to-Peer State Synchronization",
-        text: "While Aztec manages the financial and consensus state, ephemeral off-chain coordination — Ledger Chat messaging, WebRTC signaling, peer discovery — requires a high-throughput decentralized relay. We utilize the Extensible Message Transport Protocol (XMTP) as a localized, censorship-resistant message bus.",
-        code: CODE_XMTP_RELAY,
-      },
-      {
-        subtitle: "Cryptographic Payload Delivery",
-        text: "Messages delivered through the relay are double-encrypted. First, the payload is symmetrically encrypted using a derivation of the ECDH shared secret between the two peers. Second, the entire packet is wrapped in the XMTP protocol's standard transport encryption. This ensures absolute forward secrecy and cryptographic deniability.",
-        code: null,
-      },
-    ],
-  },
-  {
-    id: "smart-contracts",
-    title: "Solidity Verifier Contracts",
-    icon: <Cpu size={16} />,
-    sections: [
-      {
-        subtitle: "L1 Settlement and Verification",
-        text: "Proofs generated on the client device must ultimately be verified on Ethereum L1. Humanity Ledger deploys UltraPlonk verifier contracts written in Solidity. These contracts contain hardcoded verification keys corresponding to our Noir circuits. When a state transition is submitted, the verifier executes the elliptic curve pairings to guarantee mathematical soundness.",
-        code: CODE_SOLIDITY_VERIFIER,
-      },
-    ],
-  },
-  {
-    id: "zk-identity",
-    title: "Zero-Knowledge Identity",
-    icon: <Shield size={16} />,
-    sections: [
-      {
-        subtitle: "Biometric Hardware Binding",
-        text: "The core of Humanity Ledger's Sybil resistance is the ZKI protocol. Using WebAuthn and Secure Enclaves (Apple Secure Enclave, Android StrongBox), we bind an ECDSA keypair to the user's biometric hardware. The private key never leaves the enclave and cannot be extracted, even by the OS.",
-        code: CODE_WEBAUTHN,
-      },
-      {
-        subtitle: "Anonymous Credentials",
-        text: "Once the hardware key is established, the user can sign arbitrary payloads. To maintain privacy, we do not broadcast the public key or the signature. Instead, the user generates a zk-SNARK proving they possess a valid hardware signature over a specific message. The network verifies the proof without ever learning which specific public key generated the signature — achieving absolute anonymity while mathematically guaranteeing uniqueness.",
-        code: null,
-      },
-    ],
-  },
-];
-
-// ─── PAGE COMPONENT ───────────────────────────────────────────────────────────
+import { AztecDocPage } from '@/components/landing/AztecDocPage';
 
 export default function DevelopersPage() {
-  const [activeModule, setActiveModule] = useState(DEVELOPER_MODULES[0]);
-
   return (
-    <main className="min-h-screen bg-black text-white font-sans selection:bg-white selection:text-black">
-      {/* HEADER */}
-      <section className="pt-32 pb-16 px-8 max-w-[1400px] mx-auto border-b border-white/10">
-        <div className="flex flex-col gap-6">
-          <Link
-            href="/"
-            className="inline-flex font-mono text-[11px] uppercase tracking-[0.3em] text-white/50 hover:text-white transition-colors w-fit"
-          >
-            &larr; Return to Protocol
-          </Link>
-          <h1 className="font-serif text-5xl md:text-7xl font-normal leading-tight tracking-tight max-w-4xl">
-            Protocol Engineering{" "}
-            <span className="italic text-white/40">Architectural Reference.</span>
-          </h1>
-          <p className="text-lg md:text-xl text-white/60 max-w-3xl leading-relaxed font-light mt-4">
-            The definitive, exhaustive guide for integrating with the Humanity Ledger
-            protocol. Construct privacy-preserving decentralized applications utilizing
-            Zero-Knowledge State Shielding, decentralized relays, and fully homomorphic
-            data structures. Designed for senior protocol engineers.
-          </p>
-        </div>
-      </section>
-
-      {/* WORKSPACE */}
-      <section className="max-w-[1400px] mx-auto flex flex-col lg:flex-row min-h-[800px] border-x border-b border-white/10">
-        {/* SIDEBAR */}
-        <div className="w-full lg:w-80 shrink-0 border-r border-white/10 flex flex-col bg-black/50">
-          <div className="p-6 border-b border-white/10">
-            <span className="font-mono text-[10px] font-black uppercase tracking-[0.3em] text-white/40">
-              Modules
-            </span>
-          </div>
-          <div className="flex flex-col py-4">
-            {DEVELOPER_MODULES.map((mod) => (
-              <button
-                key={mod.id}
-                onClick={() => setActiveModule(mod)}
-                className={[
-                  "flex items-center gap-3 px-6 py-4 text-left transition-all border-l-2",
-                  activeModule.id === mod.id
-                    ? "bg-white/10 border-white text-white"
-                    : "border-transparent text-white/40 hover:bg-white/5 hover:text-white/80",
-                ].join(" ")}
-              >
-                <div className="shrink-0">{mod.icon}</div>
-                <span className="font-mono text-[12px] font-bold uppercase tracking-widest">
-                  {mod.title}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-auto p-6 border-t border-white/10 bg-white/5">
-            <div className="flex items-center gap-3 text-white/60 mb-2">
-              <Terminal size={14} />
-              <span className="font-mono text-[10px] font-black uppercase tracking-[0.2em]">
-                System Status
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-mono text-[11px] text-emerald-500">
-                Aztec PXE Engine Online
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* CONTENT */}
-        <div className="flex-1 flex flex-col bg-[#050505]">
-          <div className="p-10 lg:p-16 flex flex-col gap-16">
-            <div className="flex flex-col gap-4 border-b border-white/10 pb-10">
-              <div className="flex items-center gap-3 text-white/40 mb-2">
-                {activeModule.icon}
-                <span className="font-mono text-[11px] font-black uppercase tracking-[0.3em]">
-                  {activeModule.title}
-                </span>
-              </div>
-              <h2 className="font-serif text-4xl md:text-5xl text-white tracking-tight">
-                {activeModule.title}
-              </h2>
-            </div>
-
-            {activeModule.sections.map((section, idx) => (
-              <div key={idx} className="flex flex-col gap-6">
-                <h3 className="text-2xl font-bold tracking-tight text-white">
-                  {section.subtitle}
-                </h3>
-                <p className="text-[16px] leading-[1.8] text-white/70 font-light max-w-4xl">
-                  {section.text}
-                </p>
-
-                {section.code && (
-                  <div className="mt-4 bg-[#0A0A0A] border border-white/10 overflow-hidden shadow-2xl flex flex-col max-w-5xl">
-                    <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-[#050505]">
-                      <div className="w-2.5 h-2.5 rounded-full bg-white/20" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-white/20" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-white/20" />
-                      <span className="ml-4 font-mono text-[10px] text-white/30 uppercase tracking-widest">
-                        Cryptographic Implementation
-                      </span>
-                    </div>
-                    <div className="p-6 overflow-x-auto">
-                      <pre className="text-[13px] font-mono text-[#A8D8A8] leading-[1.7] whitespace-pre">
-                        <code>{section.code}</code>
-                      </pre>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="border-t border-white/10 mt-20">
-        <SystemFooter />
-      </div>
-    </main>
+    <AztecDocPage
+      eyebrow="Developers · Protocol Engineering"
+      title="Developer Documentation"
+      subtitle="The complete technical reference for building on the Humanity Ledger protocol. From Zero-Knowledge circuit design in Noir to XMTP relay integration and smart contract deployment on Aztec, everything you need to build sovereign cryptographic applications."
+      sections={[
+        {
+          id: 'architecture-overview',
+          title: 'Protocol Architecture Overview',
+          paragraphs: [
+            'Humanity Ledger is a multi-layer cryptographic protocol composed of three distinct execution environments that work in concert. Understanding the boundary between each layer is essential before integrating.',
+            'The first layer is the Aztec L2 ZK-Rollup, responsible for all private financial state transitions. It compiles Noir circuits into UltraPlonk zero-knowledge proofs, which are then recursively verified and settled on Ethereum L1 via the Aztec sequencer network.',
+            'The second layer is the XMTP Decentralised Relay, an independent gossip network built on the Waku v2 protocol. It handles all ephemeral message routing and peer discovery for Ledger Chat and the WebRTC call signalling system. The relay is entirely blind to the content it routes.',
+            'The third layer is the Client-Side Private Execution Environment (PXE). This is a WASM binary that runs inside the user browser and is responsible for all local proof generation, key derivation, and transaction construction. No private data ever leaves the PXE.',
+          ],
+          callout: {
+            title: 'Core Principle',
+            body: 'The protocol is designed such that the Humanity Ledger operator infrastructure has zero cryptographic capability to read user state, decrypt messages, or identify participants. This is enforced mathematically, not by policy.',
+          },
+        },
+        {
+          id: 'network-config',
+          title: 'Network Configuration',
+          paragraphs: [
+            'All SDK integrations must begin by importing and validating the protocol configuration constants. These values are pinned to the currently deployed contract addresses on the Aztec Sepolia testnet and will be updated when Mainnet is live.',
+          ],
+          bullets: [
+            'chainId: 31337 (Aztec Sandbox) / 11155111 (Sepolia Testnet)',
+            'proofSystem: barretenberg-ultraplonk',
+            'curve: BN254 (Grumpkin for EC operations inside circuits)',
+            'XMTP Environment: production (mainnet) or dev (testnet)',
+          ],
+        },
+        {
+          id: 'noir-identity-circuit',
+          title: 'ZK Identity Circuit (Noir)',
+          paragraphs: [
+            'The foundational circuit of the Humanity Ledger protocol is the hardware enclave verification circuit. It is written in the Noir domain-specific language and compiled by the Barretenberg backend into a UltraPlonk proof.',
+            'The circuit enforces two mathematical constraints simultaneously. First, it verifies that an ECDSA P-256 signature was produced by a private key resident in a hardware Secure Enclave (the prover knows the signature without ever transmitting the private key). Second, it computes a deterministic Poseidon hash of the enclave public key coordinates and asserts it equals the submitted identity nullifier, preventing replay attacks.',
+            'Example circuit (Noir):',
+          ],
+          callout: {
+            title: 'Noir Circuit: verify_hardware_enclave',
+            body: [
+              'use dep::std;',
+              'use dep::aztec::context::PrivateContext;',
+              '',
+              'fn verify_hardware_enclave(',
+              '    pub_key_x: pub Field,',
+              '    pub_key_y: pub Field,',
+              '    signature: [u8; 64],',
+              '    message_hash: [u8; 32],',
+              '    identity_nullifier: pub Field',
+              ') {',
+              '    let valid = std::ecdsa_secp256k1::verify_signature(',
+              '        pub_key_x, pub_key_y, signature, message_hash',
+              '    );',
+              '    assert(valid);',
+              '',
+              '    let computed_nullifier = std::hash::poseidon::bn254::hash_2([',
+              '        pub_key_x, pub_key_y',
+              '    ]);',
+              '    assert(identity_nullifier == computed_nullifier);',
+              '}',
+            ].join('\n'),
+          },
+        },
+        {
+          id: 'xmtp-integration',
+          title: 'XMTP Relay Integration',
+          paragraphs: [
+            'Ledger Chat uses the XMTP browser SDK v5.3.0. The client is initialized once per wallet session and stored in a singleton registry. All messages are end-to-end encrypted using the Double Ratchet Algorithm over X25519 elliptic curves before being submitted to the relay.',
+            'The critical implementation detail is that XMTP v5.3.0 requires EIP-55 checksummed Ethereum addresses as identifiers. Lowercase or unchecksummed addresses will silently create separate conversation threads, meaning the recipient will never receive the message. Always use viem getAddress() to normalise before any XMTP call.',
+            'Streaming all incoming messages in real time:',
+          ],
+          callout: {
+            title: 'TypeScript: XMTP Stream Setup',
+            body: [
+              "import { Client } from '@xmtp/browser-sdk';",
+              "import { getAddress } from 'viem';",
+              '',
+              'async function* streamMessages(client: Client, signal?: AbortSignal) {',
+              '  await client.conversations.sync();',
+              '  const stream = await client.conversations.streamAllMessages();',
+              '',
+              '  try {',
+              '    for await (const message of stream) {',
+              '      if (signal?.aborted) break;',
+              '      yield message;',
+              '    }',
+              '  } finally {',
+              '    if (typeof (stream as any).return === "function") {',
+              '      (stream as any).return();',
+              '    }',
+              '  }',
+              '}',
+            ].join('\n'),
+          },
+        },
+        {
+          id: 'send-message',
+          title: 'Sending Encrypted Messages',
+          paragraphs: [
+            'Sending a message requires constructing a DM conversation object via newDmWithIdentifier. This call is idempotent: if the conversation already exists on the XMTP network, it returns the existing object. If not, it creates a new encrypted channel.',
+            'The address passed to newDmWithIdentifier must be EIP-55 checksummed. The function below includes a three-attempt retry with exponential backoff (1s, 2s) and automatic fallback to the offline queue if the recipient is not yet registered on the XMTP network.',
+          ],
+          callout: {
+            title: 'TypeScript: sendMessage with Offline Queue Fallback',
+            body: [
+              "import { getAddress } from 'viem';",
+              '',
+              'async function sendMessage(',
+              '  client: Client,',
+              '  toAddress: string,',
+              '  content: string,',
+              '  senderEthAddress: string',
+              '): Promise<void> {',
+              '  const normalizedTo = getAddress(toAddress);',
+              '  const identifier = { identifier: normalizedTo, identifierKind: "Ethereum" };',
+              '',
+              '  for (let i = 0; i < 3; i++) {',
+              '    try {',
+              '      const dm = await client.conversations.newDmWithIdentifier(identifier);',
+              '      await dm.send(content);',
+              '      await dm.sync().catch(() => {});',
+              '      return;',
+              '    } catch (err: any) {',
+              '      const msg = err?.message?.toLowerCase() ?? "";',
+              '      if (msg.includes("not on xmtp") || msg.includes("no inbox")) break;',
+              '      if (i < 2) await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));',
+              '    }',
+              '  }',
+              '',
+              '  // Offline queue fallback',
+              "  await fetch('/api/chat/queue', {",
+              '    method: "POST",',
+              '    headers: { "Content-Type": "application/json", "x-web3-address": senderEthAddress },',
+              '    body: JSON.stringify({ sender: senderEthAddress, recipient: toAddress, content }),',
+              '  });',
+              '}',
+            ].join('\n'),
+          },
+        },
+        {
+          id: 'zk-transfer',
+          title: 'Zero-Knowledge Asset Transfers',
+          paragraphs: [
+            'Quantum Dot (QD) transfers are compiled into zero-knowledge proofs locally inside the PXE WASM module. The transaction never exposes the sender identity, the recipient identity, or the transfer amount to any observer.',
+            'The transfer constructs a new encrypted UTXO commitment for the recipient and a nullifier hash for the spent UTXO of the sender. Both are submitted to the Aztec sequencer, which batches them into a rollup block and settles the recursive proof on Ethereum L1.',
+          ],
+          callout: {
+            title: 'TypeScript: QD Transfer via PXE',
+            body: [
+              "import { createPXEClient, Fr, AztecAddress, AccountWallet } from '@aztec/aztec.js';",
+              "import { QDSTokenContract } from '@/contracts/QDSToken';",
+              '',
+              'async function transferQDs(',
+              '  wallet: AccountWallet,',
+              '  recipientAztecAddress: string,',
+              '  amount: bigint',
+              '): Promise<void> {',
+              '  const pxe = createPXEClient(process.env.NEXT_PUBLIC_AZTEC_PXE_URL!);',
+              '  const token = await QDSTokenContract.at(',
+              '    AztecAddress.fromString(process.env.NEXT_PUBLIC_QDS_CONTRACT_ADDRESS!),',
+              '    wallet',
+              '  );',
+              '',
+              '  const recipient = AztecAddress.fromString(recipientAztecAddress);',
+              '',
+              '  await token.methods',
+              '    .transfer(recipient, new Fr(amount))',
+              '    .send()',
+              '    .wait();',
+              '}',
+            ].join('\n'),
+          },
+        },
+        {
+          id: 'webauthn-identity',
+          title: 'Hardware-Rooted Identity (WebAuthn)',
+          paragraphs: [
+            'The Humanity Ledger identity system anchors trust in hardware Secure Enclaves via the WebAuthn API (FIDO2). The enclave generates an ECDSA P-256 keypair that is physically fused into the device silicon and can never be extracted by software, operating systems, or the Humanity Ledger protocol itself.',
+            'Registration creates a new credential in the Secure Enclave and returns the public key and a credential ID. Authentication produces an ECDSA signature over a server-issued challenge, which is then fed into the Noir verification circuit described above to generate a zero-knowledge proof of hardware-rooted identity.',
+          ],
+          bullets: [
+            'Supported authenticators: Apple Secure Enclave (FaceID/TouchID), Android StrongBox/TEE, FIDO2 Hardware Keys (YubiKey).',
+            'Algorithm: ES256 (ECDSA with SHA-256 over P-256 curve).',
+            'Attestation: Self-attestation for privacy. No attestation certificate is transmitted to the server.',
+            'The server stores only the public key and credential ID, never any private keying material.',
+          ],
+        },
+        {
+          id: 'api-reference',
+          title: 'REST API Reference',
+          paragraphs: [
+            'The Humanity Ledger backend exposes a set of authenticated REST endpoints for contact management, offline message queuing, and notification delivery. All endpoints that modify state require either a server-side session cookie or the x-web3-address header for wallet-connected users.',
+          ],
+          bullets: [
+            'POST /api/chat/queue — Queue an encrypted message for an offline recipient. Body: { sender, recipient, content }. Content max 4096 characters.',
+            'GET /api/chat/pending?address={addr} — Retrieve pending messages for a wallet address. Requires x-web3-address header matching the address parameter.',
+            'DELETE /api/chat/pending?address={addr}&peer={peer} — Consume and delete delivered pending messages from a specific peer.',
+            'POST /api/chat/contacts/request — Send a contact request. Body: { toAddress }. Deduplication enforced: only one pending request allowed per pair.',
+            'GET /api/chat/contacts/request?direction=incoming|outgoing — List pending contact requests with enriched user profile data.',
+            'POST /api/chat/contacts/request/{action} — Accept or reject a contact request by ID. Actions: accept, reject.',
+            'POST /api/chat/report — Submit a user report. Body: { reporter, reported, reason }.',
+          ],
+          callout: {
+            title: 'Authentication',
+            body: 'All API endpoints support three authentication mechanisms in priority order: (1) x-verified-session-address header injected by middleware after cryptographic JWT verification (cannot be forged), (2) server-side NextAuth session cookie, (3) x-web3-address header for WalletConnect-only sessions (trusted for non-sensitive reads).',
+          },
+        },
+        {
+          id: 'smart-contracts',
+          title: 'Smart Contract Architecture',
+          paragraphs: [
+            'The Humanity Ledger protocol is governed by three core smart contracts deployed on the Aztec L2 network. All contracts are written in Noir and compiled to verifiable bytecode by the Barretenberg prover.',
+            'QDSToken.nr is the native Quantum Dot asset contract. It implements a UTXO-based private balance model using Aztec note architecture. All transfer operations are shielded: senders, recipients, and amounts are provably hidden from all observers including the Aztec sequencer.',
+            'ZKIdentityRegistry.nr is the Sybil resistance contract. It stores the Merkle tree of registered hardware enclave public key commitments. Identity registration, nullifier publication, and social recovery guardian updates are all performed via zero-knowledge proofs.',
+            'StudioProvenance.nr manages cryptographic provenance records for the AI Studio component, enabling tamper-evident attribution of generated content to specific verified human identities without revealing the identity itself.',
+          ],
+          callout: {
+            title: 'Audit Status',
+            body: 'All three contracts are currently undergoing formal cryptographic audit. Results will be published at /docs/audits upon completion. The codebase is open-source and available for public review on GitHub.',
+            href: '/docs/audits',
+            hrefLabel: 'View Audit Reports',
+          },
+        },
+        {
+          id: 'sdk-quickstart',
+          title: 'SDK Quick Start',
+          paragraphs: [
+            'The Humanity Ledger SDK is designed to be integrated into any Next.js, React, or Node.js application in under ten minutes. The package bundles the XMTP browser client, the Aztec PXE WASM, and all Humanity Ledger-specific cryptographic utilities.',
+          ],
+          bullets: [
+            'Step 1 — Install: npm install @humanity-ledger/sdk @xmtp/browser-sdk @aztec/aztec.js',
+            'Step 2 — Initialise the XMTP client: use getXMTPClient(wagmiSigner) from @humanity-ledger/sdk.',
+            'Step 3 — Connect the Aztec PXE: use createPXEClient(pxeUrl) from @aztec/aztec.js.',
+            'Step 4 — Register identity: submit the WebAuthn credential to the ZKIdentityRegistry contract via the PXE.',
+            'Step 5 — Start streaming messages: use streamMessages(client, abortSignal) and iterate with for await.',
+          ],
+          callout: {
+            title: 'Environment Variables Required',
+            body: [
+              'NEXT_PUBLIC_XMTP_ENV=production',
+              'NEXT_PUBLIC_AZTEC_PXE_URL=https://aztec-pxe.humanidfi.com',
+              'NEXT_PUBLIC_QDS_CONTRACT_ADDRESS=0x...',
+              'NEXT_PUBLIC_ZK_REGISTRY_ADDRESS=0x...',
+              'DATABASE_URL=postgresql://...',
+            ].join('\n'),
+          },
+        },
+      ]}
+    />
   );
 }

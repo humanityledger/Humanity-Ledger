@@ -69,18 +69,30 @@ export function AztecDocPage({ eyebrow, title, subtitle, sections, children }: A
                 </ul>
               )}
               {section.callout && (
-                <div className="mt-8 p-6 md:p-8 rounded-2xl border border-[#2a1b4d]/15 bg-[#2a1b4d]/[0.03]">
-                  <p className="font-mono text-[9px] font-black uppercase tracking-[0.25em] text-[#2a1b4d]/70 mb-2">
-                    {section.callout.title}
-                  </p>
-                  <p className="text-[14px] text-[#050505]/65 leading-relaxed mb-4">{section.callout.body}</p>
+                <div className="mt-8 rounded-2xl border border-[#2a1b4d]/15 overflow-hidden">
+                  <div className="px-5 py-3 bg-[#2a1b4d]/[0.05] border-b border-[#2a1b4d]/10">
+                    <p className="font-mono text-[9px] font-black uppercase tracking-[0.25em] text-[#2a1b4d]/70">
+                      {section.callout.title}
+                    </p>
+                  </div>
+                  {section.callout.body.includes('\n') ? (
+                    <pre className="p-5 md:p-6 bg-[#0f0f14] overflow-x-auto text-[13px] leading-relaxed text-[#e2e8f0] font-mono whitespace-pre">
+                      <code>{section.callout.body}</code>
+                    </pre>
+                  ) : (
+                    <div className="p-5 md:p-6 bg-[#2a1b4d]/[0.02]">
+                      <p className="text-[14px] text-[#050505]/65 leading-relaxed">{section.callout.body}</p>
+                    </div>
+                  )}
                   {section.callout.href && section.callout.hrefLabel && (
-                    <Link
-                      href={section.callout.href}
-                      className="inline-flex font-mono text-[10px] font-black uppercase tracking-widest text-[#2a1b4d] hover:text-black transition-colors"
-                    >
-                      {section.callout.hrefLabel} →
-                    </Link>
+                    <div className="px-5 py-3 border-t border-[#2a1b4d]/10 bg-[#2a1b4d]/[0.03]">
+                      <Link
+                        href={section.callout.href}
+                        className="inline-flex font-mono text-[10px] font-black uppercase tracking-widest text-[#2a1b4d] hover:text-black transition-colors"
+                      >
+                        {section.callout.hrefLabel} →
+                      </Link>
+                    </div>
                   )}
                 </div>
               )}
