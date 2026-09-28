@@ -93,11 +93,11 @@ function LandingNav() {
 
         <div className="hidden md:flex items-center gap-7">
           {[
-            { label: "Features", href: "/docs/ledger-chat" },
-            { label: "How It Works", href: "/docs/architecture" },
-            { label: "Privacy", href: "/docs/privacy" },
+            { label: "Protocol", href: "/protocol" },
+            { label: "Zero-Knowledge", href: "/zero-knowledge" },
+            { label: "Ecosystem", href: "/ecosystem" },
+            { label: "Developers", href: "/docs" },
             { label: "Blog", href: "/blog" },
-            { label: "Docs", href: "/docs/terms" },
           ].map((item) => (
             <Link
               key={item.label}
@@ -119,7 +119,7 @@ function LandingNav() {
                 href="/chat"
                 className="bg-[#2C6BED] hover:bg-[#1A5AE3] text-white font-bold text-[14px] px-5 py-2.5 rounded-full transition-all shadow-sm"
               >
-                Open Chat
+                Open Ledger Chat
               </Link>
               <button
                 onClick={handleDisconnect}
@@ -134,7 +134,7 @@ function LandingNav() {
               href="/connect"
               className="bg-[#2C6BED] hover:bg-[#1A5AE3] text-white font-bold text-[14px] px-5 py-2.5 rounded-full transition-all shadow-sm"
             >
-              Get Ledger Chat
+              Initiate Ledger Chat
             </Link>
           )}
         </div>
@@ -199,17 +199,17 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             >
               <div className="w-2.5 h-2.5 rounded-full bg-[#30D158] animate-pulse shadow-[0_0_12px_rgba(48,209,88,0.6)]" />
               <span className="text-[13px] font-bold text-[#1C1C1E] uppercase tracking-[0.1em]">
-                Global Release Jan 2027
+                Alpha Release Jan 2027
               </span>
             </motion.div>
 
             <h1 className="text-[56px] md:text-[80px] lg:text-[96px] font-black leading-[0.95] tracking-[-0.04em] text-[#050505] mb-6">
-              Privacy<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2C6BED] to-[#6E95F5]">redefined.</span>
+              Sovereign<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2C6BED] to-[#6E95F5]">communication.</span>
             </h1>
             
             <p className="text-[19px] md:text-[22px] font-medium leading-[1.6] text-[#1C1C1E]/60 mb-10 max-w-[540px]">
-              Ledger Chat is free, instantly fast, and built for people who want to own their conversations completely. End-to-end encrypted and powered by your wallet.
+              Zero-Knowledge identity meets unbroken encrypted messaging. Ledger Chat delivers SIM-less voice, video, and text over distributed networks. Built natively on Aztec.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-10">
@@ -221,18 +221,18 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 Open Ledger Chat
               </Link>
               <Link
-                href="/docs/ledger-chat"
+                href="#architecture"
                 className="bg-white hover:bg-[#F6F7F9] text-[#050505] border border-black/10 font-bold text-[16px] px-8 py-4 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
               >
-                Learn How It Works
+                Explore Architecture
               </Link>
             </div>
 
             <div className="flex flex-wrap justify-center lg:justify-start items-center gap-x-8 gap-y-4">
               {[
-                { icon: <Lock size={16} />, label: "End-to-End Encrypted" },
-                { icon: <EyeOff size={16} />, label: "No Trackers" },
-                { icon: <Wallet size={16} />, label: "Wallet Auth" },
+                { icon: <Lock size={16} />, label: "End-to-End Encrypted (XMTP)" },
+                { icon: <EyeOff size={16} />, label: "Zero-Knowledge State Shielding" },
+                { icon: <Wallet size={16} />, label: "SIM-less Hardware Auth" },
               ].map((f) => (
                 <div key={f.label} className="flex items-center gap-2 text-[14px] font-bold text-[#1C1C1E]/50">
                   <span className="text-[#1C1C1E]">{f.icon}</span>

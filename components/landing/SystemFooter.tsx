@@ -23,40 +23,39 @@ export function SystemFooter() {
             </p>
           </div>
 
-          {/* Features */}
+          {/* Protocol */}
           <div className="flex flex-col gap-3">
-            <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Features</h4>
-            <Link href="/docs/ledger-chat" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Ledger Chat</Link>
-            <Link href="/docs/privacy" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Privacy & Security</Link>
-            <Link href="/docs/cryptography" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Encryption</Link>
-            <Link href="/docs/identity" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Wallet Identity</Link>
+            <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Protocol</h4>
+            <Link href="/protocol/ledger-chat" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Ledger Chat</Link>
+            <Link href="/protocol/zk-identity" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">ZK Identity</Link>
+            <Link href="/protocol/decentralized-relay" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Decentralized Relay</Link>
+            <Link href="/protocol/xmtp" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">XMTP Integration</Link>
           </div>
 
-          {/* Company */}
+          {/* Network */}
           <div className="flex flex-col gap-3">
-            <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Company</h4>
-            <Link href="/company/about" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">About</Link>
-            <Link href="/company/changelog" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Changelog</Link>
+            <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Network</h4>
+            <Link href="/network/explorer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Block Explorer</Link>
+            <Link href="/network/status" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Network Status</Link>
+            <Link href="/network/governance" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Governance</Link>
             <Link href="/blog" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Blog</Link>
-            <a href="https://github.com/humanityledger/Humanity-Ledger" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">GitHub</a>
           </div>
 
-          {/* Legal */}
+          {/* Security & Cryptography */}
           <div className="flex flex-col gap-3">
-            <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Legal</h4>
-            <Link href="/docs/privacy" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Privacy Policy</Link>
-            <Link href="/docs/terms" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Terms of Service</Link>
-            <Link href="/docs/cookies" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Cookie Policy</Link>
-            <Link href="/docs/aml-kyc" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">AML & KYC</Link>
+            <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Cryptography</h4>
+            <Link href="/docs/whitepaper" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Whitepaper</Link>
+            <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Aztec ZK Rollup</a>
+            <Link href="/docs/noir-circuits" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Noir Circuits</Link>
+            <Link href="/docs/audits" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Security Audits</Link>
           </div>
 
           {/* Developers */}
           <div className="flex flex-col gap-3">
             <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Developers</h4>
             <Link href="/docs/architecture" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Architecture</Link>
-            <Link href="/developers/api-docs" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">API Reference</Link>
-            <Link href="/docs/audits" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Security Audits</Link>
-            
+            <Link href="/docs/api" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">API Reference</Link>
+            <a href="https://github.com/humanityledger" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">GitHub</a>
           </div>
 
         </div>

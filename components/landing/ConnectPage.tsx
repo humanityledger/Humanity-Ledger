@@ -332,7 +332,7 @@ export default function ConnectPage() {
         <div className="absolute inset-x-0 bottom-0 h-20 z-10" style={{ background: 'linear-gradient(to bottom, transparent, #ffffff)' }} />
         {/* Logo top-left with safe-area inset */}
         <div className="absolute top-4 left-4 z-20" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-          <img src="/logo-corporate.png" alt="Humanity Ledger" className="h-6 w-auto brightness-200 drop-shadow-lg" />
+          <img src="/logo-corporate.png" alt="Humanity Ledger" className="h-6 w-auto invert drop-shadow-lg" />
         </div>
       </div>
 
@@ -353,18 +353,18 @@ export default function ConnectPage() {
           <div className="absolute inset-0 z-[1]" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.55) 100%)' }} />
           
           <div className="relative z-20">
-            <img src="/logo-corporate.png" alt="Humanity Ledger" className="h-7 w-auto object-contain brightness-200" />
+            <img src="/logo-corporate.png" alt="Humanity Ledger" className="h-7 w-auto object-contain invert" />
           </div>
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }} className="relative z-20 flex flex-col gap-6">
             <div>
               <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/30 mb-4">Humanity Ledger Beta</p>
-              <h1 className="text-4xl xl:text-5xl font-black tracking-tight leading-[1.1] text-white">Your sovereign<br />digital workspace.</h1>
+              <h1 className="text-4xl xl:text-5xl font-black tracking-tight leading-[1.1] text-white">Your sovereign<br />cryptographic network.</h1>
             </div>
-            <p className="text-[15px] text-white/45 leading-relaxed max-w-[360px]">Authenticate once with your Ethereum wallet. Access encrypted messaging, portfolio sync, and on-chain identity.</p>
+            <p className="text-[15px] text-white/45 leading-relaxed max-w-[360px]">Authenticate once with a hardware-bound Ethereum wallet. Access Zero-Knowledge identity shielding, portfolio sync, and unbroken encrypted messaging.</p>
             <div className="flex flex-col gap-3 mt-2">
               {[
-                { icon: <Lock size={12} />,   label: "End-to-end encrypted via XMTP" },
-                { icon: <Shield size={12} />, label: "Wallet authentication via SIWE. No passwords." },
+                { icon: <Lock size={12} />,   label: "Client-Side ZK Proving & Sovereign Messaging (XMTP)" },
+                { icon: <Shield size={12} />, label: "Hardware-Rooted Authentication (No passwords)" },
                 { icon: <Wallet size={12} />, label: "Multi-chain portfolio sync" },
               ].map((f, i) => (
                 <div key={i} className="flex items-center gap-3">
