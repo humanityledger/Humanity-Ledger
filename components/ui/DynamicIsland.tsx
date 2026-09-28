@@ -51,7 +51,7 @@ export function DynamicIsland() {
   };
 
   // Dimensions based on state
-  let width = 120;
+  let width = 200;
   let height = 36;
   let borderRadius = 20;
 
@@ -64,42 +64,34 @@ export function DynamicIsland() {
 
   return (
     <div className="fixed top-2 md:top-4 left-0 right-0 z-[9999] flex justify-center pointer-events-none">
-      <motion.div
-        layout
-        onClick={handleTap}
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ 
-          y: 0, 
-          opacity: 1, 
-          width, 
-          height,
-          borderRadius
-        }}
-        transition={{ 
-          type: "spring", 
-          stiffness: 400, 
-          damping: 30,
-          mass: 0.8
-        }}
-        className={`relative bg-black text-white overflow-hidden shadow-2xl flex items-center ${activeState !== 'idle' ? 'pointer-events-auto cursor-pointer' : ''}`}
-        style={{
-          boxShadow: '0 10px 40px -10px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1) inset'
-        }}
-      >
-        <AnimatePresence mode="wait">
-          {activeState === 'idle' && (
-            <motion.div 
-              key="idle"
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0, transition: { duration: 0.1 } }}
-              className="w-full flex justify-center items-center gap-2 px-4"
-            >
-              <div className="w-2 h-2 rounded-full bg-white/20" />
-            </motion.div>
-          )}
-
-          {activeState === 'calling' && (
+      <AnimatePresence>
+        {activeState !== 'idle' && (
+          <motion.div
+            layout
+            onClick={handleTap}
+            initial={{ y: -50, opacity: 0, scale: 0.9 }}
+            animate={{ 
+              y: 0, 
+              opacity: 1, 
+              scale: 1,
+              width, 
+              height,
+              borderRadius
+            }}
+            exit={{ y: -50, opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 400, 
+              damping: 30,
+              mass: 0.8
+            }}
+            className="relative bg-black text-white overflow-hidden shadow-2xl flex items-center pointer-events-auto cursor-pointer"
+            style={{
+              boxShadow: '0 10px 40px -10px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1) inset'
+            }}
+          >
+            <AnimatePresence mode="wait">
+              {activeState === 'calling' && (
             <motion.div 
               key="calling"
               initial={{ opacity: 0, scale: 0.9 }} 
@@ -293,7 +285,9 @@ export function DynamicIsland() {
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
