@@ -76,18 +76,20 @@ export async function POST(req: NextRequest) {
 
     if (!fallbackToModeB) {
       try {
-        const { EmbeddedWallet }            = await import('@aztec/wallets/embedded');
+        const { createPXEClient }           = await import('@aztec/aztec.js');
+        const { getSchnorrAccount }         = await import('@aztec/accounts/schnorr');
         const { Fr }                        = await import('@aztec/foundation/curves/bn254');
         const { AztecAddress }              = await import('@aztec/stdlib/aztec-address');
         const { TokenContract }             = await import('@aztec/noir-contracts.js/Token');
         const { SponsoredFeePaymentMethod } = await import('@aztec/aztec.js/fee');
         const { getFpcAddress }             = await import('@/lib/aztec/client');
 
-        const wallet = await EmbeddedWallet.create(pxeUrl, { ephemeral: true });
+        const pxe = createPXEClient(pxeUrl);
         
         const secretKey = Fr.fromHexString(relayerSecret.replace(/^0x/i, ''));
-        const accountManager = await wallet.createSchnorrAccount(secretKey, new Fr(0n));
-        const relayerAddr = accountManager.address;
+        const accountManager = getSchnorrAccount(pxe, secretKey, new Fr(0n), Fr.ZERO);
+        const wallet = await accountManager.getWallet();
+        const relayerAddr = wallet.getAddress();
 
         const tokenAddress  = AztecAddress.fromString(tokenAddressStr!);
         const toAddress     = AztecAddress.fromString(aztecAddress);
@@ -105,7 +107,7 @@ export async function POST(req: NextRequest) {
         explorerUrl = `${AZTEC_EXPLORER}/tx-effect/${aztecTxHash.replace('0x', '')}`;
         console.log(`[Calendar Airdrop] ✅ Native On-chain! Hash: ${aztecTxHash}`);
         
-        try { await wallet.stop(); } catch (e) {}
+        
       } catch (err: any) {
         console.warn(`[Calendar Airdrop] On-chain error (${err.message}). Falling back to Mode B.`);
         fallbackToModeB = true;

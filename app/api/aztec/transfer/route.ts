@@ -210,7 +210,8 @@ export async function POST(req: NextRequest) {
     // ── MODE A (NATIVE ON-CHAIN TRANSFER) ────────────────────────────────
     console.log('[Aztec Transfer] Mode A: Aztec Native On-chain Transfer');
 
-    const { EmbeddedWallet }            = await import('@aztec/wallets/embedded');
+    const { createPXEClient }           = await import('@aztec/aztec.js');
+    const { getSchnorrAccount }         = await import('@aztec/accounts/schnorr');
     const { Fr }                        = await import('@aztec/foundation/curves/bn254');
     const { AztecAddress }              = await import('@aztec/stdlib/aztec-address');
     const { TokenContract }             = await import('@aztec/noir-contracts.js/Token');
@@ -222,14 +223,18 @@ export async function POST(req: NextRequest) {
     let onChainSuccess = false;
 
     try {
-      const wallet = await EmbeddedWallet.create(pxeUrl, { ephemeral: true });
+      // FIX: Never boot EmbeddedWallet (native C++ LMDB instance) in a Serverless/API Route.
+      // Doing so causes port locks (18080) and massive memory leaks.
+      // Instead, we connect to a Remote PXE via createPXEClient.
+      const pxe = createPXEClient(pxeUrl);
 
       const secretKeyHex = deriveSecretKeyFromEvm(verifiedSessionAddr);
       const secretKey    = Fr.fromHexString(secretKeyHex.replace(/^0x/i, ''));
       const salt         = new Fr(0n);
       
-      const accountManager = await wallet.createSchnorrAccount(secretKey, salt);
-      const senderAddr     = accountManager.address;
+      const accountManager = getSchnorrAccount(pxe, secretKey, salt, Fr.ZERO);
+      const wallet         = await accountManager.getWallet();
+      const senderAddr     = wallet.getAddress();
 
       const tokenAddressInstance = AztecAddress.fromString(tokenAddressStr);
       const toAddressInstance    = AztecAddress.fromString(toAddr);
@@ -262,7 +267,7 @@ export async function POST(req: NextRequest) {
         fallbackToModeB = true;
       }
       
-      try { await wallet.stop(); } catch (e) {}
+      
     } catch (setupErr: any) {
       console.log(`[Aztec Transfer] ℹ️ EmbeddedWallet or Node error (${setupErr.message}). Falling back to Mode B.`);
       fallbackToModeB = true;
