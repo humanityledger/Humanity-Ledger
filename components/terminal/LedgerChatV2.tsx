@@ -413,7 +413,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showVault, setShowVault] = useState(false);
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showScheduleCall, setShowScheduleCall] = useState(false);
 
   const [showUserSearch, setShowUserSearch] = useState(false);
@@ -3943,20 +3942,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         )}
         
         
-      {showCreateGroup && (
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl relative">
-            <h2 className="text-[18px] font-bold text-black mb-2">Create Group</h2>
-            <p className="text-[13px] text-black/50 mb-6">Groups support up to 256 members with end-to-end encryption via the Double Ratchet protocol.</p>
-            <input type="text" placeholder="Group Name" className="w-full bg-[#f5f5f7] border-none rounded-xl p-4 text-[14px] font-medium text-black focus:ring-2 focus:ring-[#1c7aff] mb-4" />
-            <div className="flex gap-3">
-              <button onClick={() => setShowCreateGroup(false)} className="flex-1 py-3 bg-[#f5f5f7] hover:bg-[#e5e5ea] text-black font-bold text-[14px] rounded-xl">Cancel</button>
-              <button onClick={() => { setShowCreateGroup(false); toast.success('Group initialized. Awaiting network confirmation.'); }} className="flex-1 py-3 bg-[#1c7aff] hover:bg-[#0056d6] text-white font-bold text-[14px] rounded-xl">Create</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {showScheduleCall && (
         <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl relative">
