@@ -3484,9 +3484,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (!isSystemSignal && !isLocalSystemWallet && userAztecAddr) {
       // Only enforce QD balance if the user has a loaded Sovereign Identity
       if (balance < 0.0001) {
-        toast.error("Insufficient QDs to send message.", { description: "Top up via the Sovereign Identity tab." });
-        setSending(false);
-        return;
+        // [HOTFIX] Do not block messages for new users who haven't funded their identity yet
+        // toast.error("Insufficient QDs to send message.", { description: "Top up via the Sovereign Identity tab." });
+        // setSending(false);
+        // return;
       }
       // Deduct QDs — fire-and-forget, message always sends regardless of QD API result
       // [BALANCE FIX] After spending, force a refresh from DB so the balance counter
@@ -5006,7 +5007,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
             <div className="w-full max-w-xl flex flex-col items-center text-center relative z-10">
               <div className="w-28 h-28 rounded-[36px] overflow-hidden mb-8 shadow-2xl ring-[6px] ring-black/[0.03]">
-                <img src="/ledgerchaticon.jpg" alt="Ledger Chat Logo" className="w-full h-full object-cover" />
+                <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
               </div>
               <h1 className="text-[32px] md:text-[42px] font-bold tracking-tight text-[#1C1C1E] mb-4">Select a conversation</h1>
               <p className="text-[16px] md:text-[18px] text-[#1C1C1E]/50 font-medium leading-relaxed max-w-sm mb-4">
@@ -5018,44 +5019,28 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
-                {[
-                  { 
-                    label: 'End-to-End Encrypted',
-                    icon: (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                      </svg>
-                    ),
-                    color: 'text-blue-500 bg-blue-50'
-                  },
-                  { 
-                    label: 'Decentralized Network',
-                    icon: (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                      </svg>
-                    ),
-                    color: 'text-purple-500 bg-purple-50'
-                  },
-                  { 
-                    label: 'Burn on Read',
-                    icon: (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
-                      </svg>
-                    ),
-                    color: 'text-orange-500 bg-orange-50'
-                  },
-                  { 
-                    label: 'Send QD Tokens',
-                    icon: (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/>
-                      </svg>
-                    ),
-                    color: 'text-emerald-500 bg-emerald-50'
-                  }
-                ].map((f) => (
+                              {[
+                    { 
+                      icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>), 
+                      label: 'End-to-End Encrypted',
+                      color: 'text-blue-500 bg-blue-50'
+                    },
+                    { 
+                      icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>), 
+                      label: 'Decentralized Network',
+                      color: 'text-purple-500 bg-purple-50'
+                    },
+                    { 
+                      icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>), 
+                      label: 'Burn on Read',
+                      color: 'text-orange-500 bg-orange-50'
+                    },
+                    { 
+                      icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg>), 
+                      label: 'Send QD Tokens',
+                      color: 'text-emerald-500 bg-emerald-50'
+                    }
+                  ].map((f) => (
                   <div key={f.label} className="bg-white rounded-2xl p-4 border border-black/[0.06] shadow-sm flex flex-col items-center gap-2 text-center hover:shadow-md transition-shadow">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${f.color}`}>
                       {f.icon}
@@ -5652,7 +5637,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           <div className="bg-white w-full max-w-md h-[40vh] rounded-t-3xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
             <h3 className="font-bold mb-4">Send Sticker</h3>
             <div className="grid grid-cols-4 gap-4 text-center text-4xl">
-              {['🔥', '👍', '❤️', '😂', '🎉', '🚀', '👀', '💯'].map(emoji => (
+              {['👍', '🔥', '🚀', '😂', '💯', '🙏', '👀', '✨'].map(emoji => (
                 <span key={emoji} className="cursor-pointer hover:scale-125 transition-transform" onClick={() => {
                   executeSend(`__STICKER__${emoji}`);
                   setShowStickerPicker(false);
