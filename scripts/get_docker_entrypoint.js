@@ -1,7 +1,7 @@
 const fs = require('fs');
 
 async function getManifest() {
-  const tokenRes = await fetch('https://auth.docker.io/token?service=registry.docker.io&scope=repository:aztecprotocol/aztec:pull');
+  const tokenRes = await fetch('https://auth.docker.io/token?service=registry.docker.io&scope=repository:azteclabs/aztec:pull');
   const { token } = await tokenRes.json();
   
   const manifestRes = await fetch('https://registry-1.docker.io/v2/aztecprotocol/aztec/manifests/latest', {

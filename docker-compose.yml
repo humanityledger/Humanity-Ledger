@@ -9,7 +9,7 @@ services:
       - "8545:8545"
 
   aztec-sandbox:
-    image: aztecprotocol/aztec-sandbox:latest
+    image: aztecprotocol/aztec-sandbox:6.0.0-rc.1
     ports:
       - "18080:8080" # PXE  (host 18080 → container 8080)
       - "18081:8081" # Node (host 18081 → container 8081)

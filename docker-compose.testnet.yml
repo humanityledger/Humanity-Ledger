@@ -5,7 +5,7 @@ services:
   # Start:  docker compose -f docker-compose.testnet.yml up aztec-pxe -d
   # Verify: curl http://localhost:18080/status
   aztec-pxe:
-    image: aztecprotocol/aztec:4.3.1
+    image: azteclabs/aztec:4.3.1
     command: ["start", "--pxe", "--node-url", "https://node.aztec.network", "--port", "8080"]
     ports:
       - "18080:8080"
@@ -26,7 +26,7 @@ services:
   # ONE-TIME: Deploys QDs TokenContract to Aztec V5 Testnet
   # Run with: docker compose -f docker-compose.testnet.yml run --rm deploy-qds
   deploy-qds:
-    image: aztecprotocol/aztec:4.3.1
+    image: azteclabs/aztec:4.3.1
     depends_on:
       aztec-pxe:
         condition: service_healthy
