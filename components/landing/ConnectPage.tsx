@@ -6,6 +6,7 @@ import { PasskeyOnboarding } from '@/components/auth/PasskeyOnboarding';
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { HLLogo } from "@/components/shared/HLLogo";
 import { useAccount, useConnect, useDisconnect, useSignMessage } from "wagmi";
 import { useAppKit } from "@reown/appkit/react";
 import { useUIStore } from "@/lib/store/ui-store";
@@ -313,92 +314,85 @@ export default function ConnectPage() {
   return (
     <div className="w-full min-h-screen bg-[#F7F7F6] text-black overflow-x-hidden selection:bg-black selection:text-white">
       {/* MOBILE HERO — clean white, world map bg, Ledger Chat icon */}
-      <div className="lg:hidden w-full relative flex flex-col items-center justify-center bg-white pt-14 pb-8 px-6 overflow-hidden border-b border-black/5">
+      <div className="lg:hidden w-full relative flex flex-col items-center justify-center bg-[#FAFAFA] pt-14 pb-8 px-6 overflow-hidden border-b border-black/5">
         {/* Faint world map */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-          <img src="/worldmap.png" alt="" aria-hidden="true" className="w-[160%] max-w-none h-auto object-contain opacity-[0.04]" />
+          <img src="/worldmap.png" alt="" aria-hidden="true" className="w-[140%] max-w-none h-auto object-contain opacity-[0.03]" />
         </div>
-        {/* Ambient glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] h-[340px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(255,42,133,0.08) 0%, rgba(88,86,214,0.06) 60%, transparent 100%)' }} />
-
-        {/* Ledger Chat icon */}
-        <div className="relative z-10 w-24 h-24 rounded-[30px] overflow-hidden mb-5" style={{ boxShadow: '0 24px 48px -12px rgba(255,42,133,0.35), 0 0 0 6px rgba(0,0,0,0.03)' }}>
+        
+        <div className="relative z-10 w-28 h-28 rounded-[36px] overflow-hidden mb-6" style={{ boxShadow: '0 24px 48px -12px rgba(255,42,133,0.25), inset 0 1px 1px rgba(255,255,255,0.5), 0 0 0 1px rgba(0,0,0,0.02)' }}>
           <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" />
         </div>
-        <h2 className="relative z-10 text-[28px] font-black tracking-tight text-black mb-1">Ledger Chat</h2>
-        <p className="relative z-10 text-[13px] text-black/40 font-medium mb-5 text-center max-w-[260px]">The world's most advanced cryptographic messenger.</p>
-        {/* Launch badge */}
-        <div className="relative z-10 w-full max-w-[300px] rounded-2xl overflow-hidden border border-[#ff2a85]/20" style={{ background: 'linear-gradient(135deg, rgba(28,122,255,0.07) 0%, rgba(255,42,133,0.09) 100%)' }}>
-          <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, #1c7aff, #ff2a85)' }} />
-          <div className="px-5 py-4 text-center">
-            <p className="text-[9px] font-mono uppercase tracking-[0.25em] font-bold mb-1" style={{ color: '#ff2a85' }}>Global Launch</p>
-            <p className="text-[20px] font-black text-black">January 1, 2027</p>
-            <p className="text-[11px] text-black/45 font-medium mt-1">Google Play &amp; App Store</p>
+        <h2 className="relative z-10 text-[32px] font-black tracking-[-0.03em] text-black mb-2">Ledger Chat</h2>
+        <p className="relative z-10 text-[14px] text-neutral-500 font-medium mb-6 text-center max-w-[280px] leading-relaxed">The world's most advanced cryptographic messenger.</p>
+        
+        {/* Launch badge - sleek pill */}
+        <div className="relative z-10 inline-flex items-center gap-3 pl-2 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/[0.04]">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-inner" style={{ background: 'linear-gradient(135deg, #1c7aff, #ff2a85)' }}>
+            <span className="text-white font-bold text-xs tracking-widest">27</span>
+          </div>
+          <div className="flex flex-col text-left">
+            <span className="text-[8.5px] font-mono uppercase tracking-[0.2em] font-bold" style={{ color: '#ff2a85' }}>Global Launch</span>
+            <span className="text-[13px] font-bold tracking-tight text-black leading-tight">January 1, 2027</span>
           </div>
         </div>
       </div>
 
       <div className="w-full flex flex-col lg:grid lg:grid-cols-[1fr_460px] xl:grid-cols-[1fr_500px] min-h-screen lg:h-screen lg:min-h-[600px] lg:max-h-screen">
 
-        {/* LEFT: Branding — desktop only, clean white */}
-        <div className="hidden lg:flex flex-col justify-between bg-white text-black p-12 relative overflow-hidden h-full">
+        {/* LEFT: Branding — desktop only, masterpiece clean white */}
+        <div className="hidden lg:flex flex-col justify-between bg-[#FAFAFA] text-black p-14 relative overflow-hidden h-full">
 
-          {/* Faint world map background */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-            <img src="/worldmap.png" alt="" aria-hidden="true" className="w-[130%] max-w-none h-auto object-contain opacity-[0.045]" style={{ transform: 'translateY(8%)' }} />
+          {/* Faint world map background - elegant sizing and mask */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+            <img src="/worldmap.png" alt="" aria-hidden="true" className="w-[85%] max-w-[1000px] h-auto object-contain opacity-[0.025]" style={{ maskImage: 'radial-gradient(circle at center, black 30%, transparent 80%)', WebkitMaskImage: 'radial-gradient(circle at center, black 30%, transparent 80%)' }} />
           </div>
-
-          {/* Soft ambient glow behind icon */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[60%] w-[500px] h-[500px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(255,42,133,0.07) 0%, rgba(88,86,214,0.05) 55%, transparent 100%)' }} />
 
           {/* Top logo */}
           <div className="relative z-20">
-            <div className="flex items-center gap-2.5">
-              <img src="/logo-corporate.png" alt="Humanity Ledger" className="h-7 w-auto object-contain" style={{ filter: 'brightness(0)' }} />
-            </div>
+            <HLLogo size={24} theme="dark" />
           </div>
 
           {/* Centre content */}
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-20 flex flex-col items-center text-center gap-0"
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-20 flex flex-col items-center text-center gap-0 w-full max-w-[480px] mx-auto"
           >
             {/* Ledger Chat icon — hero */}
             <div
-              className="w-[130px] h-[130px] rounded-[38px] overflow-hidden mb-8 hover:scale-105 transition-transform duration-500 cursor-default"
-              style={{ boxShadow: '0 32px 64px -16px rgba(255,42,133,0.32), 0 0 0 8px rgba(0,0,0,0.025)' }}
+              className="w-[140px] h-[140px] rounded-[42px] overflow-hidden mb-10 transition-transform duration-700 hover:scale-[1.03] cursor-default bg-white"
+              style={{ boxShadow: '0 30px 60px -15px rgba(255,42,133,0.3), inset 0 1px 2px rgba(255,255,255,0.8), 0 0 0 1px rgba(0,0,0,0.03)' }}
             >
               <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" />
             </div>
 
-            <h1 className="text-5xl xl:text-6xl font-black tracking-tight leading-none text-black mb-4">
+            <h1 className="text-[56px] xl:text-[64px] font-black tracking-[-0.04em] leading-none text-black mb-5">
               Ledger Chat
             </h1>
 
-            <p className="text-[16px] text-black/45 leading-relaxed max-w-[380px] font-medium mb-10">
+            <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-10 max-w-[400px]">
               The world's most advanced cryptographic messaging protocol. End-to-end encrypted, zero-knowledge, and fully sovereign.
             </p>
 
-            {/* Launch advertisement */}
-            <div
-              className="w-full max-w-[380px] rounded-3xl overflow-hidden border border-[#ff2a85]/18 relative"
-              style={{ background: 'linear-gradient(135deg, rgba(28,122,255,0.06) 0%, rgba(255,42,133,0.08) 50%, rgba(88,86,214,0.06) 100%)' }}
-            >
-              <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, #1c7aff 0%, #ff2a85 100%)' }} />
-              <div className="px-8 py-6 flex flex-col items-center gap-1">
-                <p className="text-[11px] font-mono uppercase tracking-[0.28em] font-bold" style={{ color: '#ff2a85' }}>Global Launch</p>
-                <p className="text-[32px] font-black text-black leading-none mt-1">January 1, 2027</p>
-                <p className="text-[13px] text-black/50 font-medium mt-2">Available worldwide on Google Play &amp; App Store</p>
+            {/* Launch advertisement - ultra premium pill */}
+            <div className="relative inline-flex items-center gap-4 pl-3 pr-6 py-3 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.05)] border border-black/[0.04] transition-all hover:shadow-[0_12px_40px_rgba(255,42,133,0.1)] cursor-default">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#1c7aff]/[0.015] to-[#ff2a85]/[0.015] rounded-full pointer-events-none" />
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-inner" style={{ background: 'linear-gradient(135deg, #1c7aff, #ff2a85)' }}>
+                <span className="text-white font-bold text-sm tracking-widest">27</span>
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="text-[9.5px] font-mono uppercase tracking-[0.2em] font-bold" style={{ color: '#ff2a85' }}>Global Launch</span>
+                <span className="text-[14.5px] font-bold tracking-tight text-black leading-tight">January 1, 2027</span>
               </div>
             </div>
           </motion.div>
 
           {/* Bottom bar */}
-          <div className="relative z-20 flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-black/25">Zero-Knowledge Protocol</span>
-            <span className="text-[10px] font-mono uppercase tracking-widest text-black/25">Timisoara R&amp;D Hub</span>
+          <div className="relative z-20 flex items-center justify-between opacity-40">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-black font-semibold">Zero-Knowledge Protocol</span>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-black font-semibold">Timisoara R&amp;D Hub</span>
           </div>
         </div>
 

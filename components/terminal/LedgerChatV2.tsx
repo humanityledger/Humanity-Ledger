@@ -3191,7 +3191,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           } else if (typeof content === 'string' && content.startsWith('__VOTE__')) {
             // Already processed above — skip rendering as bubble
           } else if (typeof content === 'string' && !content.startsWith('__CALL_')) {
-             if (m.senderInboxId?.toLowerCase() === activePeer.toLowerCase()) {
+             // [CRITICAL FIX] senderInboxId is an XMTP hash, not an eth address!
+             // To know if it's from the peer, check if it is NOT from us.
+             const selfId = (client as any).inboxId;
+             const isFromPeer = m.senderInboxId !== selfId;
+             
+             if (isFromPeer) {
                lastPeerMsgId = m.id;
              }
              if (content.startsWith('__BURN_')) {

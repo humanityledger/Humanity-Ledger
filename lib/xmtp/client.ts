@@ -412,6 +412,11 @@ export async function sendMessage(
         // Always try direct XMTP send first (newDmWithIdentifier handles
         // both "already exists" and "create new" cases atomically)
         const dm = await client.conversations.newDmWithIdentifier(identifier);
+        
+        // [CRITICAL FIX] Must sync the DM before sending, or messages get lost 
+        // in local MLS state desync on XMTP v3+
+        try { await dm.sync(); } catch {}
+        
         await dm.send(content);
         // Sync after send to confirm delivery — ignore sync errors, message is already sent
         try { await dm.sync(); } catch {}
