@@ -312,68 +312,94 @@ export default function ConnectPage() {
 
   return (
     <div className="w-full min-h-screen bg-[#F7F7F6] text-black overflow-x-hidden selection:bg-black selection:text-white">
-      {/* ────────────────────────────────────────────────────────────
-          MOBILE HERO: Full-width globe video, natural 16:9 ratio
-          Hidden on desktop — desktop uses the left/right grid below
-      ──────────────────────────────────────────────────────────── */}
-      <div className="lg:hidden w-full relative overflow-hidden bg-black aspect-video max-h-[40vh]">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          disablePictureInPicture
-          className="absolute inset-0 w-full h-full object-cover"
-          src="/system-shots/72298-541981714.mp4"
-          style={{ objectPosition: 'center center' }}
-        />
-        {/* Bottom fade for seamless transition to the white auth form */}
-        <div className="absolute inset-x-0 bottom-0 h-20 z-10" style={{ background: 'linear-gradient(to bottom, transparent, #ffffff)' }} />
-        {/* Logo top-left with safe-area inset */}
-        <div className="absolute top-4 left-4 z-20" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-          <img src="/logo-corporate.png" alt="Humanity Ledger" className="h-6 w-auto invert drop-shadow-lg" />
+      {/* MOBILE HERO — clean white, world map bg, Ledger Chat icon */}
+      <div className="lg:hidden w-full relative flex flex-col items-center justify-center bg-white pt-14 pb-8 px-6 overflow-hidden border-b border-black/5">
+        {/* Faint world map */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+          <img src="/worldmap.png" alt="" aria-hidden="true" className="w-[160%] max-w-none h-auto object-contain opacity-[0.04]" />
+        </div>
+        {/* Ambient glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] h-[340px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(255,42,133,0.08) 0%, rgba(88,86,214,0.06) 60%, transparent 100%)' }} />
+
+        {/* Ledger Chat icon */}
+        <div className="relative z-10 w-24 h-24 rounded-[30px] overflow-hidden mb-5" style={{ boxShadow: '0 24px 48px -12px rgba(255,42,133,0.35), 0 0 0 6px rgba(0,0,0,0.03)' }}>
+          <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" />
+        </div>
+        <h2 className="relative z-10 text-[28px] font-black tracking-tight text-black mb-1">Ledger Chat</h2>
+        <p className="relative z-10 text-[13px] text-black/40 font-medium mb-5 text-center max-w-[260px]">The world's most advanced cryptographic messenger.</p>
+        {/* Launch badge */}
+        <div className="relative z-10 w-full max-w-[300px] rounded-2xl overflow-hidden border border-[#ff2a85]/20" style={{ background: 'linear-gradient(135deg, rgba(28,122,255,0.07) 0%, rgba(255,42,133,0.09) 100%)' }}>
+          <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, #1c7aff, #ff2a85)' }} />
+          <div className="px-5 py-4 text-center">
+            <p className="text-[9px] font-mono uppercase tracking-[0.25em] font-bold mb-1" style={{ color: '#ff2a85' }}>Global Launch</p>
+            <p className="text-[20px] font-black text-black">January 1, 2027</p>
+            <p className="text-[11px] text-black/45 font-medium mt-1">Google Play &amp; App Store</p>
+          </div>
         </div>
       </div>
 
       <div className="w-full flex flex-col lg:grid lg:grid-cols-[1fr_460px] xl:grid-cols-[1fr_500px] min-h-screen lg:h-screen lg:min-h-[600px] lg:max-h-screen">
 
-        {/* LEFT: Branding — desktop only */}
-        <div className="hidden lg:flex flex-col justify-between bg-black text-white p-12 relative overflow-hidden h-full">
-          {/* HIGH-QUALITY VIDEO BACKGROUND */}
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            className="absolute inset-0 w-full h-full object-cover z-0 opacity-90"
-            src="/system-shots/72298-541981714.mp4"
-          />
-          <div className="absolute inset-0 z-[1]" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.55) 100%)' }} />
-          
-          <div className="relative z-20">
-            <img src="/logo-corporate.png" alt="Humanity Ledger" className="h-7 w-auto object-contain invert" />
+        {/* LEFT: Branding — desktop only, clean white */}
+        <div className="hidden lg:flex flex-col justify-between bg-white text-black p-12 relative overflow-hidden h-full">
+
+          {/* Faint world map background */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
+            <img src="/worldmap.png" alt="" aria-hidden="true" className="w-[130%] max-w-none h-auto object-contain opacity-[0.045]" style={{ transform: 'translateY(8%)' }} />
           </div>
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }} className="relative z-20 flex flex-col gap-6">
-            <div>
-              <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/30 mb-4">Humanity Ledger Beta</p>
-              <h1 className="text-4xl xl:text-5xl font-black tracking-tight leading-[1.1] text-white">Your sovereign<br />cryptographic network.</h1>
+
+          {/* Soft ambient glow behind icon */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[60%] w-[500px] h-[500px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(255,42,133,0.07) 0%, rgba(88,86,214,0.05) 55%, transparent 100%)' }} />
+
+          {/* Top logo */}
+          <div className="relative z-20">
+            <div className="flex items-center gap-2.5">
+              <img src="/logo-corporate.png" alt="Humanity Ledger" className="h-7 w-auto object-contain" style={{ filter: 'brightness(0)' }} />
             </div>
-            <p className="text-[15px] text-white/45 leading-relaxed max-w-[360px]">Authenticate once with a hardware-bound Ethereum wallet. Access Zero-Knowledge identity shielding, portfolio sync, and unbroken encrypted messaging.</p>
-            <div className="flex flex-col gap-3 mt-2">
-              {[
-                { icon: <Lock size={12} />,   label: "Client-Side ZK Proving & Sovereign Messaging (XMTP)" },
-                { icon: <Shield size={12} />, label: "Hardware-Rooted Authentication (No passwords)" },
-                { icon: <Wallet size={12} />, label: "Multi-chain portfolio sync" },
-              ].map((f, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className="w-6 h-6 rounded-md border border-white/10 bg-white/5 flex items-center justify-center text-white/40">{f.icon}</div>
-                  <span className="text-[12px] text-white/40 font-medium">{f.label}</span>
-                </div>
-              ))}
+          </div>
+
+          {/* Centre content */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-20 flex flex-col items-center text-center gap-0"
+          >
+            {/* Ledger Chat icon — hero */}
+            <div
+              className="w-[130px] h-[130px] rounded-[38px] overflow-hidden mb-8 hover:scale-105 transition-transform duration-500 cursor-default"
+              style={{ boxShadow: '0 32px 64px -16px rgba(255,42,133,0.32), 0 0 0 8px rgba(0,0,0,0.025)' }}
+            >
+              <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" />
+            </div>
+
+            <h1 className="text-5xl xl:text-6xl font-black tracking-tight leading-none text-black mb-4">
+              Ledger Chat
+            </h1>
+
+            <p className="text-[16px] text-black/45 leading-relaxed max-w-[380px] font-medium mb-10">
+              The world's most advanced cryptographic messaging protocol. End-to-end encrypted, zero-knowledge, and fully sovereign.
+            </p>
+
+            {/* Launch advertisement */}
+            <div
+              className="w-full max-w-[380px] rounded-3xl overflow-hidden border border-[#ff2a85]/18 relative"
+              style={{ background: 'linear-gradient(135deg, rgba(28,122,255,0.06) 0%, rgba(255,42,133,0.08) 50%, rgba(88,86,214,0.06) 100%)' }}
+            >
+              <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, #1c7aff 0%, #ff2a85 100%)' }} />
+              <div className="px-8 py-6 flex flex-col items-center gap-1">
+                <p className="text-[11px] font-mono uppercase tracking-[0.28em] font-bold" style={{ color: '#ff2a85' }}>Global Launch</p>
+                <p className="text-[32px] font-black text-black leading-none mt-1">January 1, 2027</p>
+                <p className="text-[13px] text-black/50 font-medium mt-2">Available worldwide on Google Play &amp; App Store</p>
+              </div>
             </div>
           </motion.div>
+
+          {/* Bottom bar */}
+          <div className="relative z-20 flex items-center justify-between">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-black/25">Zero-Knowledge Protocol</span>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-black/25">Timisoara R&amp;D Hub</span>
+          </div>
         </div>
 
         {/* RIGHT: Auth panel — full height on desktop, white bottom sheet on mobile */}
