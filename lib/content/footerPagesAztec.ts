@@ -53,6 +53,31 @@ export const WHITEPAPER_SECTIONS: AztecDocSection[] = [
       'The Aztec L2 Layer operates as a zkRollup on Ethereum. It receives proofs from users, verifies their validity in batches, and updates the global state roots. The sequencer processes encrypted data and publishes verified state commitments without accessing the underlying private content. The L2 layer is responsible for transaction ordering, proof verification, and state root publication.',
       'The Ethereum L1 Layer provides ultimate settlement and data availability. State roots published by the Aztec sequencer are anchored to Ethereum, providing economic finality, censorship resistance, and a permanent audit trail of verified state transitions. L1 and L2 communicate via messaging portals that utilize Inbox and Outbox smart contracts to enable trustless asset bridging.',
     ],
+    diagram: {
+      caption: "Figure 2: Full-Stack Protocol Topology",
+      chart: `graph TD
+    subgraph "L0: Client Device"
+      K[Wallet Keys] --> PXE(PXE - Barretenberg WASM)
+      PXE -->|Locally encrypted| DB[(IndexedDB)]
+      PXE -->|Proof Artifact| XMTP[XMTP E2EE Layer]
+    end
+
+    subgraph "L1.5: Aztec L2 Rollup"
+      XMTP -->|Submit Proof| SEQ[Sequencer Node]
+      SEQ --> PRV[Prover Network]
+      PRV -->|Update Roots| ST[(Note + Nullifier Trees)]
+    end
+
+    subgraph "L1: Ethereum Mainnet"
+      PRV -.->|Publish State Root| RC[Rollup Contract]
+      RC -->|Inbox / Outbox| BR[Bridge Portals]
+    end
+
+    style PXE fill:#ffffff,stroke:#2a1b4d,stroke-width:2px
+    style ST fill:#f5f5f5,stroke:#444444,stroke-width:1.5px
+    style RC fill:#f0f0f0,stroke:#666666,stroke-dasharray: 5 5
+    style XMTP fill:#ffffff,stroke:#000000,stroke-width:1.5px,stroke-dasharray: 3 3`,
+    },
   },
   {
     id: 'ledger-network-integration',

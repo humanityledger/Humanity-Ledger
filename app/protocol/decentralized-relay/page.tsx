@@ -27,6 +27,21 @@ export default function DecentralizedRelayPage() {
             'Store Nodes: Ephemeral persistence layers that cache messages for offline clients (up to 30 days).',
             'Filter Nodes: Bandwidth-efficient light node protocols for mobile clients.',
           ],
+          diagram: {
+            caption: "Figure 1: Waku v2 Gossip Topology",
+            chart: `graph TD
+    A[Alice (Light Client)] -->|Publish Ciphertext| N1(Relay Node 1)
+    N1 <-->|Gossip Protocol| N2(Relay Node 2)
+    N1 <-->|Gossip Protocol| N3(Store Node)
+    N2 <-->|Gossip Protocol| N4(Relay Node 3)
+    N3 -->|Cache Sync| B[Bob (Offline Client)]
+    N4 -->|Direct Push| C[Charlie (Light Client)]
+    
+    style A fill:#ffffff,stroke:#000000,stroke-width:2px
+    style B fill:#ffffff,stroke:#000000,stroke-width:2px
+    style C fill:#ffffff,stroke:#000000,stroke-width:2px
+    style N3 fill:#f5f5f5,stroke:#2a1b4d,stroke-width:2px,stroke-dasharray: 5 5`
+          },
         },
         {
           id: 'encryption',

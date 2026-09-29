@@ -29,30 +29,55 @@ const initials = (name: string, addr: string) => name ? name.slice(0,2).toUpperC
 
 export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, myName, contacts, onOpenChat }) => {
   const [myStatus, setMyStatus] = useState<StatusUpdate[]>([]);
+  const [contactStatuses, setContactStatuses] = useState<StatusUpdate[]>([]);
   const [showComposer, setShowComposer] = useState(false);
   const [draftText, setDraftText] = useState('');
   const [draftPrivacy, setDraftPrivacy] = useState<'everyone' | 'contacts' | 'except'>('contacts');
   const [showPrivacyMenu, setShowPrivacyMenu] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Simulated contact statuses (in prod these come from XMTP __STATUS__ signals)
-  const contactStatuses: Array<{ address: string; name: string; status: string; ts: number }> = [];
+  React.useEffect(() => {
+    fetchUpdates();
+  }, [myAddress]);
 
-  const postStatus = () => {
-    if (!draftText.trim()) return;
-    const now = Date.now();
-    const newStatus: StatusUpdate = {
-      id: `status-${now}`,
-      text: draftText.trim(),
-      createdAt: now,
-      expiresAt: now + 24 * 60 * 60 * 1000,
-      privacy: draftPrivacy
-    };
-    setMyStatus(prev => [newStatus, ...prev]);
-    setDraftText('');
-    setShowComposer(false);
+  const fetchUpdates = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/chat/updates', { headers: { 'x-web3-address': myAddress }});
+      if (res.ok) {
+        const { updates } = await res.json();
+        const mine = updates.filter((u: any) => u.ownerAddress.toLowerCase() === myAddress.toLowerCase());
+        const others = updates.filter((u: any) => u.ownerAddress.toLowerCase() !== myAddress.toLowerCase());
+        setMyStatus(mine);
+        setContactStatuses(others);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setIsLoading(false);
   };
 
-  const formatTime = (ts: number) => {
+  const postStatus = async () => {
+    if (!draftText.trim()) return;
+    try {
+      const res = await fetch('/api/chat/updates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+        body: JSON.stringify({ text: draftText.trim(), privacy: draftPrivacy })
+      });
+      if (res.ok) {
+        const { update } = await res.json();
+        setMyStatus(prev => [update, ...prev]);
+        setDraftText('');
+        setShowComposer(false);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const formatTime = (tsStr: string | number) => {
+    const ts = new Date(tsStr).getTime();
     const diff = Date.now() - ts;
     if (diff < 60000) return 'Just now';
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
@@ -136,20 +161,20 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
             <p className="text-[15px] font-semibold text-[#1C1C1E] text-center">No Recent Updates</p>
             <p className="text-[13px] text-[#8E8E93] text-center">Status updates from your contacts will appear here. They disappear after 24 hours.</p>
           </div>
-        ) : contactStatuses.map((cs, i) => (
+        ) : contactStatuses.map((cs: any) => (
           <button
-            key={i}
-            onClick={() => onOpenChat(cs.address)}
+            key={cs.id}
+            onClick={() => onOpenChat(cs.ownerAddress)}
             className="w-full flex items-center gap-3 px-4 py-3 border-b border-black/[0.06] hover:bg-[#F2F2F7] text-left"
           >
-            <div className="w-[54px] h-[54px] rounded-full ring-2 ring-[#007AFF] ring-offset-2 flex items-center justify-center text-white font-bold" style={{ background: avatarColor(cs.address) }}>
-              {initials(cs.name, cs.address)}
+            <div className="w-[54px] h-[54px] rounded-full ring-2 ring-[#007AFF] ring-offset-2 flex items-center justify-center text-white font-bold" style={{ background: avatarColor(cs.ownerAddress) }}>
+              {initials('', cs.ownerAddress)}
             </div>
             <div className="flex-1">
-              <p className="text-[16px] font-semibold text-[#1C1C1E]">{cs.name || shortAddr(cs.address)}</p>
-              <p className="text-[13px] text-[#8E8E93] truncate">{cs.status}</p>
+              <p className="text-[16px] font-semibold text-[#1C1C1E]">{shortAddr(cs.ownerAddress)}</p>
+              <p className="text-[13px] text-[#8E8E93] truncate">{cs.text}</p>
             </div>
-            <span className="text-[12px] text-[#8E8E93]">{formatTime(cs.ts)}</span>
+            <span className="text-[12px] text-[#8E8E93]">{formatTime(cs.createdAt)}</span>
           </button>
         ))}
       </div>

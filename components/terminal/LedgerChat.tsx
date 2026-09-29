@@ -136,7 +136,8 @@ export const parseMessageText = (text: string, isMe: boolean) => {
 };
 
 import { playSendSound, playReceiveSound } from '../../lib/utils/sounds';
-import { MessageBubble, StickerPicker } from '../chat/MessageBubble';
+import { MessageBubble } from '../chat/MessageBubble';
+import { StickerPicker } from '../chat/StickerPicker';
 
 
 function isMessageExpired(msgTimestamp: number, timerSetting: string | undefined) {
@@ -4868,34 +4869,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       className="absolute bottom-full left-3 mb-2 w-[240px] max-h-[400px] bg-white/90 backdrop-blur-xl border border-black/[0.08] shadow-[0_16px_40px_rgba(0,0,0,0.12)] rounded-[24px] overflow-y-auto flex flex-col z-50"
                     >
                       {[
-                        { id: 'attach', icon: <Paperclip size={18} />, label: 'Files', color: 'text-white', bg: 'bg-[#007AFF]', onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
-                        { id: 'gif', icon: <span className="font-black text-[10px] tracking-widest">GIF</span>, label: 'GIFs (Beta)', color: 'text-white', bg: 'bg-[#FF2D55]', onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
+                        { id: 'attach', icon: <Paperclip size={18} />, label: 'Document', color: 'text-white', bg: 'bg-[#007AFF]', onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
+                        { id: 'media', icon: <span className="font-black text-[10px] tracking-widest">MEDIA</span>, label: 'Media', color: 'text-white', bg: 'bg-[#FF2D55]', onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
                         { id: 'sticker', icon: <Smile size={18} />, label: 'Stickers', color: 'text-white', bg: 'bg-[#5856D6]', onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
-                        { id: 'poll', icon: <BarChart2 size={18} />, label: 'Polls', color: 'text-white', bg: 'bg-[#34C759]', onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
-                        { id: 'qd', icon: <Wallet size={18} />, label: 'Pay', color: 'text-white', bg: 'bg-[#FF9500]', onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
-                        { id: 'burn', icon: <Flame size={18} />, label: 'Burn Timer', color: 'text-white', bg: 'bg-[#FF3B30]', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
-                        { id: 'location', icon: <MapPin size={18} />, label: 'Location', color: 'text-white', bg: 'bg-[#32ADE6]', onClick: () => { 
-                          if (navigator.geolocation) {
-                            navigator.geolocation.getCurrentPosition(
-                              (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
-                              () => toast.error('Location denied')
-                            );
-                          }
-                          setShowAppDrawer(false); 
-                        } },
-                        { id: 'secret', icon: <Lock size={18} />, label: isSecretChat ? 'Exit Secret Mode' : 'Secret Mode', color: 'text-white', bg: isSecretChat ? 'bg-[#FF3B30]' : 'bg-[#30D158]', onClick: () => { setIsSecretChat((s: boolean) => !s); setShowAppDrawer(false); } },
-                          { id: 'ai', icon: <BrainCircuit size={18} />, label: 'Aegis AI Core', color: 'text-white', bg: 'bg-[#FF2D55]', onClick: () => { executeSendRef.current?.('[AEGIS_AI] Analyze sentiment and facts'); setShowAppDrawer(false); toast.success('Aegis AI Agent invoked'); } },
-                          { id: 'superfluid', icon: <Droplet size={18} />, label: 'Superfluid Stream', color: 'text-white', bg: 'bg-[#32ADE6]', onClick: () => { executeSendRef.current?.('[SUPERFLUID] Stream 100 USDC/month'); setShowAppDrawer(false); toast.success('Superfluid Stream Initialized'); } },
-                          { id: 'escrow', icon: <ShieldCheck size={18} />, label: 'HTLC Escrow', color: 'text-white', bg: 'bg-[#FF9500]', onClick: () => { executeSendRef.current?.('[HTLC_ESCROW] Lock funds in smart contract'); setShowAppDrawer(false); toast.success('HTLC Escrow contract deployed'); } },
-                          { id: 'crosschain', icon: <ArrowRightLeft size={18} />, label: 'Cross-Chain', color: 'text-white', bg: 'bg-[#AF52DE]', onClick: () => { executeSendRef.current?.('[CROSS_CHAIN] Bridge asset via CCIP'); setShowAppDrawer(false); toast.success('Cross-Chain Intent signed'); } },
-                          { id: 'livepeer', icon: <Radio size={18} />, label: 'Live Broadcast', color: 'text-white', bg: 'bg-[#FF3B30]', onClick: () => { executeSendRef.current?.('[LIVEPEER] Start decentralized broadcast'); setShowAppDrawer(false); toast.success('Livepeer RTMP Node starting'); } },
-                          { id: 'miniapp', icon: <LayoutGrid size={18} />, label: 'Mini App', color: 'text-white', bg: 'bg-[#5856D6]', onClick: () => { executeSendRef.current?.('[MINI_APP] Launch syndicate game'); setShowAppDrawer(false); toast.success('Mini-App execution loaded'); } },
-                        { id: 'schedule', icon: <Clock size={18} />, label: 'Schedule Send', color: 'text-white', bg: 'bg-[#AF52DE]', onClick: () => {
+                        { id: 'poll', icon: <BarChart2 size={18} />, label: 'Poll', color: 'text-white', bg: 'bg-[#34C759]', onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
+                        { id: 'qd', icon: <Wallet size={18} />, label: 'Payment', color: 'text-white', bg: 'bg-[#FF9500]', onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
+                        { id: 'burn', icon: <Flame size={18} />, label: 'Burn', color: 'text-white', bg: 'bg-[#FF3B30]', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
+                        { id: 'schedule', icon: <Clock size={18} />, label: 'Schedule', color: 'text-white', bg: 'bg-[#AF52DE]', onClick: () => {
                             setShowAppDrawer(false);
-                            // Open a native datetime-local picker via a temporary hidden input
                             const inp = document.createElement('input');
                             inp.type = 'datetime-local';
-                            // Set min to now + 1 minute
                             const minDate = new Date(Date.now() + 60000);
                             inp.min = minDate.toISOString().slice(0, 16);
                             inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
@@ -4910,7 +4893,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             };
                             inp.click();
                           } },
-                        { id: 'ai', icon: <span className="font-bold text-[10px]">AI</span>, label: 'AI Reply', color: 'text-white', bg: 'bg-[#000000]', onClick: () => { setInputText('Sure, sounds good to me.'); setShowAppDrawer(false); } },
+                        { id: 'location', icon: <MapPin size={18} />, label: 'Location', color: 'text-white', bg: 'bg-[#32ADE6]', onClick: () => { 
+                          if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(
+                              (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
+                              () => toast.error('Location denied')
+                            );
+                          }
+                          setShowAppDrawer(false); 
+                        } },
+                        { id: 'livelocation', icon: <Radio size={18} />, label: 'Live Location', color: 'text-white', bg: 'bg-[#FF3B30]', onClick: () => { executeSendRef.current?.(`[LIVE_LOCATION]${Date.now()}`); setShowAppDrawer(false); toast.success('Live Location broadcast started'); } }
                       ].map((app, idx) => (
                         <button 
                           key={app.id} 

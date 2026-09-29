@@ -1641,3 +1641,60 @@ model UserSettings {
 }
 
 
+
+
+// ─── COMMUNITIES & STATUS UPDATES ──────────────────────────────────────────
+
+model StatusUpdate {
+  id          String   @id @default(cuid())
+  ownerAddress String
+  text        String
+  emoji       String?
+  privacy     String   @default("contacts") // "everyone", "contacts", "except"
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([ownerAddress])
+  @@index([expiresAt])
+}
+
+model Community {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  isPrivate   Boolean  @default(false)
+  ownerAddress String
+  joinCode    String   @unique
+  createdAt   DateTime @default(now())
+  
+  members     CommunityMember[]
+  messages    CommunityMessage[]
+
+  @@index([joinCode])
+  @@index([ownerAddress])
+}
+
+model CommunityMember {
+  id           String    @id @default(cuid())
+  communityId  String
+  walletAddress String
+  role         String    @default("MEMBER") // ADMIN, MEMBER
+  joinedAt     DateTime  @default(now())
+
+  community    Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, walletAddress])
+  @@index([walletAddress])
+}
+
+model CommunityMessage {
+  id           String    @id @default(cuid())
+  communityId  String
+  senderAddress String
+  content      String
+  sentAt       DateTime  @default(now())
+  
+  community    Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@index([communityId, sentAt])
+}

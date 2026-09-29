@@ -27,8 +27,8 @@ export interface MessageProps {
 // iOS-safe spring â€” no conflicting scale, pure translate
 const SPRING = { type: 'spring', stiffness: 420, damping: 36, mass: 0.9 } as const;
 // Sticker list
-export const STICKERS = ['ðŸ”¥','ðŸ’Ž','ðŸ‹','âš¡','ðŸŒŠ','ðŸ¦‹','ðŸŒ™','âœ¨','ðŸŽ¯','ðŸš€','ðŸ’«','ðŸŽ­','ðŸ†','ðŸ’¡','ðŸŒ','ðŸ˜‚','ðŸ˜­','ðŸ¥º','ðŸ˜','ðŸ™','ðŸ’¯','ðŸ‘€','ðŸ«¡','ðŸ¤','ðŸŽ‰'];
-const TAPBACKS = ['â¤ï¸', 'ðŸ‘', 'ðŸ‘Ž', 'ðŸ˜‚', 'â€¼ï¸', '?'];
+// Re-export StickerPicker and stickers from dedicated file
+export { StickerPicker, PREMIUM_STICKERS as STICKERS, RenderPremiumSticker } from './StickerPicker';
 
 // â”€â”€â”€ Poll Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PollBubble = React.memo(({ content, msg, isMe, onVotePoll, clientInboxId }: {
@@ -283,59 +283,6 @@ const TapbackPicker = React.memo(({ isMe, onReact, onClose }: {
 ));
 TapbackPicker.displayName = 'TapbackPicker';
 
-// â”€â”€â”€ Sticker Picker (exported for use in LedgerChat) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-export const StickerPicker = React.memo(({ onSend, onClose }: {
-  onSend: (s: string) => void; onClose: () => void;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 15, scale: 0.96 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    exit={{ opacity: 0, y: 15, scale: 0.96 }}
-    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-    className="absolute bottom-full mb-3 left-0 right-0 bg-[#F0F2F5]/95 backdrop-blur-3xl border border-black/5 rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden z-50 flex flex-col"
-    onClick={e => e.stopPropagation()}
-  >
-    {/* Premium Banner */}
-    <div className="bg-gradient-to-r from-[#25D366] to-[#128C7E] px-4 py-3 flex items-center justify-between text-white shadow-sm relative overflow-hidden">
-      <div className="absolute right-[-20px] top-[-20px] w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none" />
-      <div className="flex flex-col z-10">
-        <span className="text-[14px] font-bold tracking-tight flex items-center gap-1.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          Premium Stickers
-        </span>
-        <span className="text-[11px] text-white/90 font-medium">Unlock immersive FX for €2.99/mo</span>
-      </div>
-      <button className="z-10 px-3 py-1.5 bg-white text-[#128C7E] text-[12px] font-bold rounded-full shadow-sm hover:scale-105 active:scale-95 transition-transform">
-        Get Plan
-      </button>
-    </div>
-
-    <div className="flex items-center justify-between px-4 py-2 border-b border-black/5 bg-white">
-      <div className="flex gap-4">
-        <button className="text-[13px] font-bold text-[#25D366] border-b-2 border-[#25D366] pb-1">Recents</button>
-        <button className="text-[13px] font-bold text-[#54656F] hover:text-[#111B21] pb-1">Trending</button>
-        <button className="text-[13px] font-bold text-[#54656F] hover:text-[#111B21] pb-1">3D FX</button>
-      </div>
-      <button onClick={onClose} className="p-1 rounded-full hover:bg-[#F0F2F5] text-[#54656F] transition-colors">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-
-    <div className="grid grid-cols-4 gap-3 p-4 max-h-[220px] overflow-y-auto scrollbar-none bg-[#EBE5DC]">
-      {STICKERS.map(s => (
-        <button
-          key={s}
-          onClick={() => { onSend(s); onClose(); }}
-          className="w-full aspect-square flex items-center justify-center text-[42px] rounded-2xl hover:bg-white/60 hover:shadow-sm hover:scale-110 active:scale-90 transition-all duration-200"
-        >
-          <span style={{ filter: 'drop-shadow(0px 4px 6px rgba(0,0,0,0.15))' }}>{s}</span>
-        </button>
-      ))}
-    </div>
-  </motion.div>
-));
-StickerPicker.displayName = 'StickerPicker';
-
 // â”€â”€â”€ Main MessageBubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const MessageBubble = React.memo(({
   msg, isMe, showDate, dateStr, isSecretChat, fontFamily, fontSizePx,
@@ -375,6 +322,7 @@ export const MessageBubble = React.memo(({
   const isMissedCall = content.startsWith('__CALL_MISSED__:') || content === '__CALL_DECLINE__';
   const isPoll       = content.startsWith('__POLL__');
   const isPayment    = content.startsWith('__PAYMENT__');
+  const isPremium    = content.startsWith('[PREMIUM:');
   const isSticker    = content.startsWith('__STICKER__');
   const isAudio      = content.startsWith('__AUDIO__');
   const isMedia      = content.startsWith('__MEDIA__:');
@@ -549,6 +497,8 @@ export const MessageBubble = React.memo(({
               >
                 <img src={gifUrl} alt="GIF" className="max-w-[220px] max-h-[200px] object-cover" loading="lazy" />
               </button>
+            ) : isPremium ? (
+              <RenderPremiumSticker code={content} size="96px" />
             ) : isAudio && audioSrc ? (
               <div className={`px-3 py-2 rounded-[18px] shadow border ${isMe ? 'bg-[#1c7aff] border-transparent rounded-br-[4px]' : 'bg-white border-black/8 rounded-bl-[4px]'}`}>
                 <CustomAudioPlayer src={audioSrc} isMe={isMe} />

@@ -68,11 +68,13 @@ export async function POST(req: NextRequest) {
     // ── 5. Generate Native Aztec On-Chain Mint (or Fallback) ──
     const tokenAddressStr = process.env.AZTEC_TOKEN_CONTRACT_ADDRESS;
     const pxeUrl          = process.env.AZTEC_PXE_URL || 'https://node.aztec.network';
-    const relayerSecret   = process.env.AZTEC_RELAYER_SECRET || '0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6';
+    const relayerSecret   = process.env.AZTEC_RELAYER_SECRET_KEY;
 
+    // [SECURITY] Never fall back to a hardcoded key. If the relayer key is not configured,
+    // route to Mode B (DB-only ledger) immediately.
     let aztecTxHash = '';
     let explorerUrl = '';
-    let fallbackToModeB = !tokenAddressStr || tokenAddressStr === 'PENDING_DEPLOY';
+    let fallbackToModeB = !tokenAddressStr || tokenAddressStr === 'PENDING_DEPLOY' || !relayerSecret;
 
     if (!fallbackToModeB) {
       try {

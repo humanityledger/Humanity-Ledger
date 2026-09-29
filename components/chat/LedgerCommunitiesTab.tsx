@@ -21,7 +21,7 @@ interface LedgerCommunitiesTabProps {
 const generateRoomId = () => Math.random().toString(36).substring(2, 10).toUpperCase();
 
 export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAddress, onOpenCommunity }) => {
-  const [communities, setCommunities] = useState<Community[]>([]);
+  const [communities, setCommunities] = useState<any[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [newName, setNewName] = useState('');
@@ -29,43 +29,71 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
   const [isPrivate, setIsPrivate] = useState(false);
   const [joinLink, setJoinLink] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const createCommunity = () => {
-    if (!newName.trim()) return;
-    const id = generateRoomId();
-    const comm: Community = {
-      id,
-      name: newName.trim(),
-      description: newDesc.trim(),
-      members: 1,
-      isPrivate,
-      createdAt: Date.now(),
-      joinLink: `${typeof window !== 'undefined' ? window.location.origin : 'https://humanidfi.com'}/join/${id}`
-    };
-    setCommunities(prev => [comm, ...prev]);
-    setNewName('');
-    setNewDesc('');
-    setIsPrivate(false);
-    setShowCreate(false);
+  React.useEffect(() => {
+    fetchCommunities();
+  }, [myAddress]);
+
+  const fetchCommunities = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/chat/communities', { headers: { 'x-web3-address': myAddress } });
+      if (res.ok) {
+        const data = await res.json();
+        setCommunities(data.communities);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setIsLoading(false);
   };
 
-  const joinCommunity = () => {
+  const createCommunity = async () => {
+    if (!newName.trim()) return;
+    try {
+      const res = await fetch('/api/chat/communities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+        body: JSON.stringify({ name: newName.trim(), description: newDesc.trim(), isPrivate })
+      });
+      if (res.ok) {
+        await fetchCommunities();
+        setNewName('');
+        setNewDesc('');
+        setIsPrivate(false);
+        setShowCreate(false);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const joinCommunity = async () => {
+    // allow pasting the full link or just the code
+    let code = joinLink.trim();
     const idMatch = joinLink.match(/\/join\/([A-Z0-9]+)/i);
-    if (!idMatch) return;
-    const id = idMatch[1].toUpperCase();
-    if (communities.find(c => c.id === id)) { setShowJoin(false); return; }
-    const comm: Community = {
-      id,
-      name: `Community ${id}`,
-      description: 'Joined via link',
-      members: 1,
-      isPrivate: false,
-      createdAt: Date.now(),
-      joinLink
-    };
-    setCommunities(prev => [comm, ...prev]);
-    setJoinLink('');
-    setShowJoin(false);
+    if (idMatch) code = idMatch[1].toUpperCase();
+
+    if (!code) return;
+
+    try {
+      const res = await fetch('/api/chat/communities/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+        body: JSON.stringify({ joinCode: code })
+      });
+      if (res.ok) {
+        await fetchCommunities();
+        setJoinLink('');
+        setShowJoin(false);
+      } else {
+        const error = await res.json();
+        alert(error.error || 'Failed to join community');
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const copyLink = async (link: string, id: string) => {
