@@ -4508,7 +4508,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             )}
 
             {/* Dynamic Chat Background */}
-            <div className={`flex-1 overflow-y-auto p-4 flex flex-col gap-3 min-h-0 relative ${isSecretChat ? 'bg-[#fffafa]' : ''}`} style={isSecretChat ? { fontFamily, fontSize: `${fontSizePx}px` } : { ...bgStyle, fontFamily, fontSize: `${fontSizePx}px` }}>
+            <div className={`flex-1 overflow-y-auto p-3 flex flex-col gap-1 min-h-0 relative ${isSecretChat ? 'bg-[#ece5dd]' : ''}`} style={isSecretChat ? { fontFamily, fontSize: `${fontSizePx}px` } : { ...bgStyle, backgroundColor: bgStyle?.backgroundImage ? undefined : '#EBE5DC', fontFamily, fontSize: `${fontSizePx}px` }}>
               {/* Matrix Rain Effect Layer */}
               {chatBackground === 'matrix' && (
                 <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,255,0,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -4545,6 +4545,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     messages={filteredMsgs}
                     activePeer={activePeer}
                     myAddress={address || ''}
+                    clientInboxId={client?.inboxId}
                     isLoadingMore={false}
                     onLoadMore={() => {}}
                     renderMessage={(msg, isMe) => {
@@ -4799,88 +4800,87 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               )}
                 <input type="file" ref={fileRef} className="hidden" onChange={handleFileUpload} />
                 <form onSubmit={handleSend} className="flex flex-col w-full relative">
-                  {/* ── App Drawer (iOS 17 iMessage Style) ── */}
+                  {/* ── App Drawer (WhatsApp-style icon grid) ── */}
                   <AnimatePresence>
                   {showAppDrawer && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.96 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                      className="absolute bottom-full left-3 mb-2 w-[240px] max-h-[400px] bg-white/90 backdrop-blur-xl border border-black/[0.08] shadow-[0_16px_40px_rgba(0,0,0,0.12)] rounded-[24px] overflow-y-auto flex flex-col z-50"
-                    >
-                      {[
-                        { id: 'attach', icon: <Paperclip size={18} />, label: 'Files', color: 'text-white', bg: 'bg-[#007AFF]', onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
-                        { id: 'location', icon: <MapPin size={18} />, label: 'Live Location', color: 'text-white', bg: 'bg-[#34C759]', onClick: () => { sendLiveLocation(); setShowAppDrawer(false); } },
-                        { id: 'gif', icon: <span className="font-black text-[10px] tracking-widest">GIF</span>, label: 'GIFs (Beta)', color: 'text-white', bg: 'bg-[#FF2D55]', onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
-                        { id: 'sticker', icon: <Smile size={18} />, label: 'Stickers', color: 'text-white', bg: 'bg-[#5856D6]', onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
-                        { id: 'poll', icon: <BarChart2 size={18} />, label: 'Polls', color: 'text-white', bg: 'bg-[#FF9500]', onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
-                        { id: 'qd', icon: <Wallet size={18} />, label: 'Pay', color: 'text-white', bg: 'bg-[#FF9500]', onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
-                        { id: 'burn', icon: <Flame size={18} />, label: 'Burn Timer', color: 'text-white', bg: 'bg-[#FF3B30]', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
-                        { id: 'location', icon: <MapPin size={18} />, label: 'Location', color: 'text-white', bg: 'bg-[#32ADE6]', onClick: () => { 
-                          if (navigator.geolocation) {
-                            navigator.geolocation.getCurrentPosition(
-                              (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
-                              () => toast.error('Location denied')
-                            );
-                          }
-                          setShowAppDrawer(false); 
-                        } },
-                        { id: 'secret', icon: <Lock size={18} />, label: isSecretChat ? 'Exit Secret Mode' : 'Secret Mode', color: 'text-white', bg: isSecretChat ? 'bg-[#FF3B30]' : 'bg-[#30D158]', onClick: () => { setIsSecretChat((s: boolean) => !s); setShowAppDrawer(false); } },
-                        { id: 'schedule', icon: <Clock size={18} />, label: 'Schedule Send', color: 'text-white', bg: 'bg-[#AF52DE]', onClick: () => {
-                            setShowAppDrawer(false);
-                            // Open a native datetime-local picker via a temporary hidden input
-                            const inp = document.createElement('input');
-                            inp.type = 'datetime-local';
-                            // Set min to now + 1 minute
-                            const minDate = new Date(Date.now() + 60000);
-                            inp.min = minDate.toISOString().slice(0, 16);
-                            inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
-                            document.body.appendChild(inp);
-                            inp.onchange = () => {
-                              const picked = new Date(inp.value);
-                              if (!isNaN(picked.getTime()) && picked > new Date()) {
-                                setScheduledAt(picked);
-                                toast.success(`Message scheduled for ${picked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowAppDrawer(false)} />
+                      <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                        className="absolute bottom-full left-0 right-0 bg-white/98 backdrop-blur-2xl border-t border-black/[0.06] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] rounded-t-[28px] z-50 pt-3 pb-6 px-4"
+                      >
+                        <div className="w-10 h-1.5 bg-black/10 rounded-full mx-auto mb-5" />
+                        <div className="grid grid-cols-4 gap-y-5 gap-x-2">
+                          {[
+                            { id: 'attach', emoji: '📎', label: 'Files', bg: '#007AFF', onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'gif', emoji: '🎬', label: 'GIF', bg: '#FF2D55', onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
+                            { id: 'sticker', emoji: '😄', label: 'Stickers', bg: '#5856D6', onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
+                            { id: 'poll', emoji: '📊', label: 'Poll', bg: '#FF9500', onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
+                            { id: 'qd', emoji: '💸', label: 'Pay', bg: '#30D158', onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
+                            { id: 'burn', emoji: '🔥', label: 'Burn', bg: '#FF3B30', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
+                            { id: 'secret', emoji: isSecretChat ? '🔓' : '🔒', label: isSecretChat ? 'Normal' : 'Secret', bg: isSecretChat ? '#FF3B30' : '#1C7AFF', onClick: () => { setIsSecretChat((s: boolean) => !s); setShowAppDrawer(false); } },
+                            { id: 'schedule', emoji: '🕐', label: 'Schedule', bg: '#AF52DE', onClick: () => {
+                                setShowAppDrawer(false);
+                                const inp = document.createElement('input');
+                                inp.type = 'datetime-local';
+                                const minDate = new Date(Date.now() + 60000);
+                                inp.min = minDate.toISOString().slice(0, 16);
+                                inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+                                document.body.appendChild(inp);
+                                inp.onchange = () => {
+                                  const picked = new Date(inp.value);
+                                  if (!isNaN(picked.getTime()) && picked > new Date()) {
+                                    setScheduledAt(picked);
+                                    toast.success(`Scheduled for ${picked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+                                  }
+                                  document.body.removeChild(inp);
+                                };
+                                inp.click();
+                              } },
+                            { id: 'location', emoji: '📍', label: 'Location', bg: '#34C759', onClick: () => { 
+                              if (navigator.geolocation) {
+                                navigator.geolocation.getCurrentPosition(
+                                  (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
+                                  () => toast.error('Location denied')
+                                );
                               }
-                              document.body.removeChild(inp);
-                            };
-                            inp.click();
-                          } },
-                        { id: 'ai', icon: <span className="font-bold text-[10px]">AI</span>, label: 'AI Reply', color: 'text-white', bg: 'bg-[#000000]', onClick: () => { setInputText('Sure, sounds good to me.'); setShowAppDrawer(false); } },
-                      ].map((app, idx) => (
-                        <button 
-                          key={app.id} 
-                          type="button" 
-                          onClick={app.onClick} 
-                          className={`flex items-center gap-3.5 px-4 py-3 hover:bg-black/5 active:bg-black/10 transition-colors w-full text-left ${idx !== 0 ? 'border-t border-black/[0.04]' : ''}`}
-                        >
-                          <div className={`w-8 h-8 rounded-full ${app.bg} ${app.color} flex items-center justify-center shrink-0 shadow-sm`}>
-                            {app.icon}
-                          </div>
-                          <span className="text-[15px] font-semibold text-[#000000] tracking-tight">{app.label}</span>
-                        </button>
-                      ))}
-                    </motion.div>
+                              setShowAppDrawer(false); 
+                            } },
+                            { id: 'live-loc', emoji: '🗺️', label: 'Live Loc', bg: '#32ADE6', onClick: () => { sendLiveLocation(); setShowAppDrawer(false); } },
+                            { id: 'ai', emoji: '🤖', label: 'AI Reply', bg: '#000000', onClick: () => { setInputText('Sure, sounds good to me.'); setShowAppDrawer(false); } },
+                          ].map((app) => (
+                            <button 
+                              key={app.id} 
+                              type="button" 
+                              onClick={app.onClick} 
+                              className="flex flex-col items-center gap-2 active:scale-90 transition-transform select-none"
+                            >
+                              <div 
+                                className="w-[60px] h-[60px] rounded-[18px] flex items-center justify-center text-[26px] shadow-md"
+                                style={{ backgroundColor: app.bg }}
+                              >
+                                {app.emoji}
+                              </div>
+                              <span className="text-[11px] font-medium text-[#555] text-center leading-tight">{app.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    </>
                   )}
                   </AnimatePresence>
 
-                  {/* ── Main Input Row ── */}
-                  <div className="flex items-end gap-2 px-3 pb-3 pt-2 w-full relative z-40 bg-white">
+                  {/* ── Main Input Row (WhatsApp/Signal style) ── */}
+                  <div className="flex items-end gap-2 px-2 pb-3 pt-2 w-full relative z-40 bg-[#F0F2F5]">
                     <button
                       type="button"
                       onClick={() => { setShowAppDrawer(d => !d); setShowEmojiPicker(false); }}
-                      className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all duration-300 mt-auto mb-0.5 ${showAppDrawer ? 'bg-[#000000] text-white rotate-45 scale-90 shadow-md' : 'bg-[#E5E5EA] text-[#8E8E93] hover:bg-[#D1D1D6] hover:text-[#000000]'}`}
+                      className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all duration-200 mb-0.5 ${showAppDrawer ? 'bg-[#25D366] text-white rotate-45 shadow-lg' : 'bg-white text-[#54656F] hover:bg-[#F0F2F5] shadow-sm border border-black/5'}`}
                     >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => { setShowEmojiPicker(d => !d); setShowAppDrawer(false); }}
-                      className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all duration-300 mt-auto mb-0.5 ${showEmojiPicker ? 'bg-[#1c7aff] text-white shadow-md scale-105' : 'bg-transparent text-[#8e8e93] hover:bg-[#E5E5EA] hover:text-[#000000]'}`}
-                    >
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </button>
 
                     <AnimatePresence>
@@ -4906,9 +4906,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       )}
                     </AnimatePresence>
 
-                    <div className="flex-1 bg-white border border-[#c8c8cc] rounded-3xl flex items-end relative shadow-sm overflow-hidden min-h-[38px] transition-all focus-within:border-blue-400">
+                    {/* WhatsApp-style gray pill container */}
+                    <div className="flex-1 bg-white rounded-[24px] flex items-end relative shadow-sm border border-black/[0.08] overflow-hidden min-h-[44px] transition-all">
+                      {/* Emoji button inside pill on the left */}
+                      <button
+                        type="button"
+                        onClick={() => { setShowEmojiPicker(d => !d); setShowAppDrawer(false); }}
+                        className={`w-10 h-10 shrink-0 self-end mb-[2px] ml-1 flex items-center justify-center transition-all ${showEmojiPicker ? 'text-[#25D366]' : 'text-[#8696A0]'} hover:text-[#25D366]`}
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                      </button>
+
                       {isRecording ? (
-                        <div className="flex-1 flex items-center justify-between px-4 py-2 bg-[#f5f5f7] h-[38px]">
+                        <div className="flex-1 flex items-center justify-between px-3 py-2 h-[44px]">
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-[#ff3b30] animate-pulse" />
                             <span className="text-[14px] font-mono font-medium text-[#ff3b30]">
@@ -4919,76 +4929,71 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             <button
                               type="button"
                               onClick={cancelRecording}
-                              className="text-black/40 hover:text-black/80 font-bold text-[12px] uppercase tracking-widest px-2 py-1"
+                              className="text-black/40 hover:text-black/80 font-semibold text-[13px] px-2 py-1"
                             >
                               Cancel
                             </button>
                             <button
                               type="button"
                               onClick={stopRecording}
-                              className="w-7 h-7 rounded-full bg-[#30d158] flex items-center justify-center text-white shadow-sm active:scale-95"
+                              className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center text-white shadow-sm active:scale-95"
                             >
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="ml-0.5"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
                             </button>
                           </div>
                         </div>
                       ) : (
-                        <>
-                          <textarea
-                            ref={inputRef as any}
-                            value={inputText}
-                            onChange={e => {
-                              setInputText(e.target.value);
-                              e.target.style.height = '38px';
-                              e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-                              const now = Date.now();
-                              if (now - lastTypingTimeRef.current > 3000 && e.target.value.trim().length > 0) {
-                                lastTypingTimeRef.current = now;
-                                if (client && activePeer) {
-                                  sendMessage(client, activePeer, '__TYPING__').catch(() => {});
-                                }
+                        <textarea
+                          ref={inputRef as any}
+                          value={inputText}
+                          onChange={e => {
+                            setInputText(e.target.value);
+                            e.target.style.height = '44px';
+                            e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                            const now = Date.now();
+                            if (now - lastTypingTimeRef.current > 3000 && e.target.value.trim().length > 0) {
+                              lastTypingTimeRef.current = now;
+                              if (client && activePeer) {
+                                sendMessage(client, activePeer, '__TYPING__').catch(() => {});
                               }
-                            }}
-                            onKeyDown={e => {
-                              if (ledgerSettings?.mechanical_keyboard) playKeyClick();
-                              const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
-                              if (e.key === 'Enter' && !e.shiftKey && !isTouch) {
-                                e.preventDefault();
-                                if (inputText.trim() && !isUploading) {
-                                  handleSend(e as any);
-                                  (e.target as HTMLTextAreaElement).style.height = '38px';
-                                }
+                            }
+                          }}
+                          onKeyDown={e => {
+                            if (ledgerSettings?.mechanical_keyboard) playKeyClick();
+                            const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+                            if (e.key === 'Enter' && !e.shiftKey && !isTouch) {
+                              e.preventDefault();
+                              if (inputText.trim() && !isUploading) {
+                                handleSend(e as any);
+                                (e.target as HTMLTextAreaElement).style.height = '44px';
                               }
-                            }}
-                            disabled={isUploading}
-                            placeholder={isUploading ? "Uploading..." : "Message"}
-                            rows={1}
-                            // [CRITICAL FIX] font-size: 16px is required on iOS Safari to prevent the UI from zooming in when focused!
-                            className="flex-1 bg-transparent px-4 py-2 text-[#050505] focus:outline-none placeholder:text-black/30 disabled:opacity-50 text-[16px] resize-none max-h-[120px] scrollbar-none leading-relaxed min-h-[38px]"
-                            style={{ paddingRight: inputText.trim() ? '45px' : '36px' }}
-                          />
-                          
-                          {/* Inside input right-side actions */}
-                          <div className="absolute right-1 bottom-[3px] flex items-center">
-                            {inputText.trim() ? (
-                              <LottieSendButton
-                                disabled={sending || isUploading}
-                                data-key={sendAnimKey}
-                                onTrigger={() => {}}
-                              />
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={startRecording}
-                                className="w-8 h-8 rounded-full flex items-center justify-center transition-all text-[#8e8e93] hover:text-black active:scale-95"
-                              >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                              </button>
-                            )}
-                          </div>
-                        </>
+                            }
+                          }}
+                          disabled={isUploading}
+                          placeholder={isUploading ? "Uploading..." : "Message"}
+                          rows={1}
+                          // [CRITICAL FIX] font-size: 16px prevents iOS Safari zoom on focus
+                          className="flex-1 bg-transparent px-3 py-[10px] text-[#111B21] focus:outline-none placeholder:text-[#8696A0] disabled:opacity-50 text-[16px] resize-none max-h-[120px] scrollbar-none leading-relaxed min-h-[44px]"
+                        />
                       )}
                     </div>
+
+                    {/* Send / Mic button outside the pill */}
+                    {inputText.trim() ? (
+                      <LottieSendButton
+                        disabled={sending || isUploading}
+                        data-key={sendAnimKey}
+                        onTrigger={() => {}}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={startRecording}
+                        className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all bg-[#25D366] text-white shadow-md active:scale-90 mb-0.5"
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                      </button>
+                    )}
                   </div>
                 </form>
 

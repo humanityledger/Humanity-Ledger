@@ -6,6 +6,8 @@ interface VirtualizedMessageListProps {
   messages: any[];
   activePeer: string;
   myAddress: string;
+  /** The XMTP inboxId of the current user (a hash string, NOT an ETH address) */
+  clientInboxId?: string;
   renderMessage: (msg: any, isMe: boolean) => React.ReactNode;
   onLoadMore: () => void;
   isLoadingMore: boolean;
@@ -14,35 +16,52 @@ interface VirtualizedMessageListProps {
 // Memoized individual row component to prevent reconciliation lag on 50k messages
 const MemoizedMessageRow = React.memo(({ 
   msg, 
-  myAddressLower, 
+  myAddressLower,
+  clientInboxIdLower,
   renderMessage 
 }: { 
   msg: any; 
-  myAddressLower: string; 
+  myAddressLower: string;
+  clientInboxIdLower: string;
   renderMessage: (msg: any, isMe: boolean) => React.ReactNode;
 }) => {
-  const isMe = msg.senderInboxId?.toLowerCase() === myAddressLower || 
-               msg.senderAddress?.toLowerCase() === myAddressLower;
+  // [CRITICAL FIX] senderInboxId is an XMTP hash, NOT an ETH address.
+  // We MUST compare senderInboxId against the XMTP clientInboxId (also a hash).
+  // The ETH address comparison is a fallback for optimistic messages only,
+  // which have senderInboxId set to the ETH address.
+  const senderLower = (msg.senderInboxId ?? '').toLowerCase();
+  const isMe =
+    // Primary: XMTP inboxId match (real messages from network)
+    (clientInboxIdLower && senderLower === clientInboxIdLower) ||
+    // Fallback: ETH address match (optimistic messages we created locally)
+    senderLower === myAddressLower ||
+    msg.senderAddress?.toLowerCase() === myAddressLower;
   
   return (
-    <div className="w-full pb-3">
+    <div className="w-full pb-1">
       {renderMessage(msg, isMe)}
     </div>
   );
-}, (prev, next) => prev.msg.id === next.msg.id && prev.msg.status === next.msg.status);
+}, (prev, next) => 
+  prev.msg.id === next.msg.id && 
+  prev.msg.status === next.msg.status &&
+  prev.msg.reactions === next.msg.reactions
+);
 
 export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
   messages,
   activePeer,
   myAddress,
+  clientInboxId,
   renderMessage,
   onLoadMore,
   isLoadingMore
 }) => {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   
-  // Cache the lowercase string to avoid doing it 50,000 times inside the render loop
+  // Cache the lowercase strings to avoid recomputing on every render
   const myAddressLower = useMemo(() => myAddress.toLowerCase(), [myAddress]);
+  const clientInboxIdLower = useMemo(() => (clientInboxId ?? '').toLowerCase(), [clientInboxId]);
 
   // Handle infinite scroll up
   const startReached = useCallback(() => {
@@ -52,7 +71,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
   }, [isLoadingMore, onLoadMore]);
 
   return (
-    <div className="flex-1 w-full h-full bg-[#FDFDFD]">
+    <div className="flex-1 w-full h-full">
       <Virtuoso
         ref={virtuosoRef}
         data={messages}
@@ -64,7 +83,8 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
           <MemoizedMessageRow 
             key={msg.id}
             msg={msg} 
-            myAddressLower={myAddressLower} 
+            myAddressLower={myAddressLower}
+            clientInboxIdLower={clientInboxIdLower}
             renderMessage={renderMessage} 
           />
         )}
