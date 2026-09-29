@@ -21,13 +21,23 @@ export default function EcosystemPage() {
               '// 1. Sign a challenge message with the ETH private key of an active attester',
               '$ cast wallet sign "<challenge_message>" --private-key 0x...',
               '',
-              '// 2. Alternatively, sign directly via browser wallet',
-              '// -> https://etherscan.io/verifiedsignatures',
-              '',
-              '// 3. Submit the signature hash to the Aztec Foundation Honk registry',
+              '// 2. Submit the signature hash to the Aztec Foundation Honk registry',
               '// Upon verification, the @Testnet Sequencer role is granted.'
             ].join('\n'),
           },
+        },
+        {
+          id: 'v6-upgrade',
+          title: 'Aztec v6 Network Upgrade Readiness',
+          paragraphs: [
+            'As core infrastructure providers, Humanity Ledger operations are strictly aligned with the Aztec Network upgrade cycles. The protocol has successfully migrated to the new v6 node architecture hosted under the aztec-labs-eng/aztec-node repository.',
+            'Our testnet sequencers are currently running azteclabs/aztec:6.0.0-rc.1 in the v6 Testnet (deployed Sept 28, 2026), successfully batching transactions on the new rollup instance. This serves as a live dry-run for our infrastructure.',
+          ],
+          bullets: [
+            'Governance Signalling (Oct 7): Our sequencers are configured with the GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS to participate in the v6 upgrade consensus.',
+            'Mainnet Deployment (Oct 20): We are prepared for the zero-day deployment of the stable v6.0.0 Mainnet binaries shipping just prior to the hard fork.',
+            'Docker Registry: Our orchestrators now pull exclusively from the new azteclabs organization instead of the legacy aztecprotocol registry.',
+          ],
         },
         {
           id: 'infrastructure-stack',
