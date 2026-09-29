@@ -4034,7 +4034,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         <div className="pb-0 px-4 border-b border-black/[0.06] bg-white" style={{ paddingTop: 'max(16px, env(safe-area-inset-top, 16px))' }}>
           {/* Top row: title + action buttons */}
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-[22px] font-black text-[#000000] tracking-tight">Messages</h1>
+            <div className="flex items-center gap-3">
+<img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-8 h-8 rounded-lg shadow-sm" />
+<h1 className="text-[22px] font-black text-[#000000] tracking-tight">Messages</h1>
+</div>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setShowUserSearch(true)}
@@ -4992,8 +4995,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#1c7aff]/5 rounded-full blur-[120px] pointer-events-none" />
 
             <div className="w-full max-w-xl flex flex-col items-center text-center relative z-10">
-              <div className="w-20 h-20 rounded-[28px] bg-gradient-to-br from-[#1c7aff] to-[#5856D6] flex items-center justify-center mb-8 shadow-2xl">
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <div className="w-28 h-28 rounded-[36px] overflow-hidden mb-8 shadow-2xl ring-[6px] ring-black/[0.03]">
+                <img src="/ledgerchaticon.jpg" alt="Ledger Chat Logo" className="w-full h-full object-cover" />
               </div>
               <h1 className="text-[32px] md:text-[42px] font-bold tracking-tight text-[#1C1C1E] mb-4">Select a conversation</h1>
               <p className="text-[16px] md:text-[18px] text-[#1C1C1E]/50 font-medium leading-relaxed max-w-sm mb-4">
