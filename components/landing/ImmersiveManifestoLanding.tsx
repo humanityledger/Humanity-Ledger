@@ -200,8 +200,8 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             </motion.div>
 
             <h1 className="text-[56px] md:text-[80px] lg:text-[96px] font-black leading-[0.95] tracking-[-0.04em] text-[#050505] mb-6">
-              Sovereign<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2C6BED] to-[#6E95F5]">communication.</span>
+              Chat securely and<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2C6BED] to-[#6E95F5]">with encryption using Ledger Chat.</span>
             </h1>
             
             <p className="text-[19px] md:text-[22px] font-medium leading-[1.6] text-[#1C1C1E]/60 mb-10 max-w-[540px]">
