@@ -12,32 +12,42 @@ interface HLLogoProps {
   size?: number;
 }
 
-export function HLLogo({ variant = 'full', theme = 'dark', className = '', size = 32 }: HLLogoProps) {
+export function HLLogo({ variant = 'full', theme = 'dark', className = '', size = 38 }: HLLogoProps) {
   const color = theme === 'light' ? '#ffffff' : '#050505';
 
   const GlobeBubbleIcon = (
-    <img 
-      src="/favicon.png" 
-      alt="Humanity Ledger Logo" 
-      style={{ width: size, height: size, objectFit: 'contain' }}
-      className={`shrink-0 ${theme === 'light' ? 'invert' : ''}`}
-    />
+    <div 
+      className={`shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-white border border-black/5 shadow-sm ${theme === 'light' ? 'invert border-white/20' : ''}`}
+      style={{ width: size, height: size }}
+    >
+      <img 
+        src="/favicon.png" 
+        alt="Humanity Ledger Logo" 
+        style={{ width: '120%', height: '120%', objectFit: 'cover' }}
+        className="pointer-events-none"
+      />
+    </div>
   );
 
   if (variant === 'mark') {
     return (
-      <div className={`flex items-center justify-center ${className}`} style={{ height: size, width: size }}>
+      <div className={`flex items-center justify-center ${className}`}>
         {GlobeBubbleIcon}
       </div>
     );
   }
 
   return (
-    <div className={`flex items-center gap-2.5 ${className}`} role="img" aria-label="Humanity Ledger">
+    <div className={`flex items-center gap-3 ${className}`} role="img" aria-label="Humanity Ledger">
       {GlobeBubbleIcon}
-      <span style={{ fontSize: size * 0.65, fontWeight: 900, letterSpacing: '-0.04em', color, lineHeight: 1, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-        Humanity Ledger
-      </span>
+      <div className="flex flex-col">
+        <span style={{ fontSize: size * 0.45, fontWeight: 900, letterSpacing: '-0.02em', color, lineHeight: 1.1, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+          Humanity
+        </span>
+        <span style={{ fontSize: size * 0.45, fontWeight: 900, letterSpacing: '-0.02em', color, lineHeight: 1.1, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+          Ledger
+        </span>
+      </div>
     </div>
   );
 }

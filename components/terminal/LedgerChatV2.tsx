@@ -3,7 +3,7 @@
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Smile, Paperclip, BarChart2, Wallet, Flame } from 'lucide-react';
+import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Smile, Paperclip, BarChart2, Wallet, Flame, Image as ImageIcon, Map as MapIcon, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import type Peer from 'peerjs';
@@ -4529,6 +4529,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   if (c.startsWith('__READ__')) return false;
                   if (c.startsWith('__VOTE__')) return false;
                   if (c.startsWith('__PAYMENT__')) return false;
+                  if (c.startsWith('__TYPING__')) return false;
                   return true;
                 });
                 if (filteredMsgs.length === 0) return (
@@ -4815,14 +4816,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         <div className="w-10 h-1.5 bg-black/10 rounded-full mx-auto mb-5" />
                         <div className="grid grid-cols-4 gap-y-5 gap-x-2">
                           {[
-                            { id: 'attach', emoji: '📎', label: 'Files', bg: '#007AFF', onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
-                            { id: 'gif', emoji: '🎬', label: 'GIF', bg: '#FF2D55', onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
-                            { id: 'sticker', emoji: '😄', label: 'Stickers', bg: '#5856D6', onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
-                            { id: 'poll', emoji: '📊', label: 'Poll', bg: '#FF9500', onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
-                            { id: 'qd', emoji: '💸', label: 'Pay', bg: '#30D158', onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
-                            { id: 'burn', emoji: '🔥', label: 'Burn', bg: '#FF3B30', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
-                            { id: 'secret', emoji: isSecretChat ? '🔓' : '🔒', label: isSecretChat ? 'Normal' : 'Secret', bg: isSecretChat ? '#FF3B30' : '#1C7AFF', onClick: () => { setIsSecretChat((s: boolean) => !s); setShowAppDrawer(false); } },
-                            { id: 'schedule', emoji: '🕐', label: 'Schedule', bg: '#AF52DE', onClick: () => {
+                            { id: 'attach', icon: <Paperclip size={24} strokeWidth={1.5} />, label: 'Document', onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'gif', icon: <ImageIcon size={24} strokeWidth={1.5} />, label: 'Media', onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
+                            { id: 'sticker', icon: <Smile size={24} strokeWidth={1.5} />, label: 'Stickers', onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
+                            { id: 'poll', icon: <BarChart2 size={24} strokeWidth={1.5} />, label: 'Poll', onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
+                            { id: 'qd', icon: <Wallet size={24} strokeWidth={1.5} />, label: 'Payment', onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
+                            { id: 'burn', icon: <Flame size={24} strokeWidth={1.5} />, label: 'Burn', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
+                            { id: 'secret', icon: <Lock size={24} strokeWidth={1.5} />, label: isSecretChat ? 'Normal' : 'Secret', onClick: () => { setIsSecretChat((s: boolean) => !s); setShowAppDrawer(false); } },
+                            { id: 'schedule', icon: <Clock size={24} strokeWidth={1.5} />, label: 'Schedule', onClick: () => {
                                 setShowAppDrawer(false);
                                 const inp = document.createElement('input');
                                 inp.type = 'datetime-local';
@@ -4840,7 +4841,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                                 };
                                 inp.click();
                               } },
-                            { id: 'location', emoji: '📍', label: 'Location', bg: '#34C759', onClick: () => { 
+                            { id: 'location', icon: <MapPin size={24} strokeWidth={1.5} />, label: 'Location', onClick: () => { 
                               if (navigator.geolocation) {
                                 navigator.geolocation.getCurrentPosition(
                                   (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
@@ -4849,22 +4850,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                               }
                               setShowAppDrawer(false); 
                             } },
-                            { id: 'live-loc', emoji: '🗺️', label: 'Live Loc', bg: '#32ADE6', onClick: () => { sendLiveLocation(); setShowAppDrawer(false); } },
-                            { id: 'ai', emoji: '🤖', label: 'AI Reply', bg: '#000000', onClick: () => { setInputText('Sure, sounds good to me.'); setShowAppDrawer(false); } },
+                            { id: 'live-loc', icon: <MapIcon size={24} strokeWidth={1.5} />, label: 'Live Loc', onClick: () => { sendLiveLocation(); setShowAppDrawer(false); } },
+                            { id: 'ai', icon: <Bot size={24} strokeWidth={1.5} />, label: 'AI Reply', onClick: () => { setInputText('Sure, sounds good to me.'); setShowAppDrawer(false); } },
                           ].map((app) => (
                             <button 
                               key={app.id} 
                               type="button" 
                               onClick={app.onClick} 
-                              className="flex flex-col items-center gap-2 active:scale-90 transition-transform select-none"
+                              className="flex flex-col items-center gap-2 active:scale-95 transition-transform select-none"
                             >
                               <div 
-                                className="w-[60px] h-[60px] rounded-[18px] flex items-center justify-center text-[26px] shadow-md"
-                                style={{ backgroundColor: app.bg }}
+                                className="w-[60px] h-[60px] rounded-[16px] flex items-center justify-center text-[#54656F] bg-white border border-black/[0.08] shadow-sm hover:shadow-md transition-shadow"
                               >
-                                {app.emoji}
+                                {app.icon}
                               </div>
-                              <span className="text-[11px] font-medium text-[#555] text-center leading-tight">{app.label}</span>
+                              <span className="text-[11px] font-medium text-[#54656F] text-center leading-tight">{app.label}</span>
                             </button>
                           ))}
                         </div>
@@ -5322,29 +5322,29 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 )
               ) : (
                 /* ── AUDIO CALL ── */
-                <div className="w-full h-full flex flex-col items-center justify-center bg-[#f5f5f7]">
-                  <div className="relative z-10 flex flex-col items-center gap-8">
+                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#1c1c1e] to-[#000000]">
+                  <div className="relative z-10 flex flex-col items-center gap-10">
                     {/* Audio Visualizer Rings */}
                     <div className="relative flex items-center justify-center">
                       {remoteStream && (
                         <>
-                          <div className="absolute rounded-full border border-black/10 transition-all duration-75" style={{ width: 140 + audioLevel * 1.5, height: 140 + audioLevel * 1.5, opacity: Math.min(1, audioLevel / 50 + 0.1) }} />
-                          <div className="absolute rounded-full bg-black/5 transition-all duration-75" style={{ width: 120 + audioLevel, height: 120 + audioLevel, opacity: Math.min(1, audioLevel / 100 + 0.2) }} />
+                          <div className="absolute rounded-full border border-white/10 transition-all duration-75" style={{ width: 140 + audioLevel * 1.5, height: 140 + audioLevel * 1.5, opacity: Math.min(1, audioLevel / 50 + 0.1) }} />
+                          <div className="absolute rounded-full bg-white/5 transition-all duration-75" style={{ width: 120 + audioLevel, height: 120 + audioLevel, opacity: Math.min(1, audioLevel / 100 + 0.2) }} />
                         </>
                       )}
-                      <div className="w-32 h-32 rounded-full flex items-center justify-center shadow-lg relative z-10 bg-white border border-black/5">
-                        <span className="text-black text-5xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '🐳'}</span>
+                      <div className="w-36 h-36 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(255,255,255,0.05)] relative z-10 bg-gradient-to-b from-[#2c2c2e] to-[#1c1c1e] border border-white/10 overflow-hidden">
+                        <span className="text-white text-5xl font-black opacity-90">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '🐳'}</span>
                       </div>
                     </div>
                     <div className="text-center">
-                      <p className="text-black text-[30px] font-black tracking-tight mb-2">{activePeer ? getDisplayName(activePeer) : 'Unknown Peer'}</p>
+                      <p className="text-white text-[32px] font-bold tracking-tight mb-2 drop-shadow-md">{activePeer ? getDisplayName(activePeer) : 'Unknown Peer'}</p>
                       {remoteStream ? (
-                        <span className={`text-[13px] font-mono uppercase tracking-[0.25em] flex items-center gap-2 justify-center ${networkQuality === 'poor' ? 'text-black/50' : 'text-black/80'}`}>
-                          <span className={`w-2 h-2 rounded-full animate-pulse ${networkQuality === 'poor' ? 'bg-black/50' : 'bg-black/80'}`} />
-                          {networkQuality === 'poor' ? 'Poor Connection' : formatDuration(callDurationSeconds)}
+                        <span className={`text-[14px] font-medium flex items-center gap-2 justify-center ${networkQuality === 'poor' ? 'text-yellow-400' : 'text-white/60'}`}>
+                          <span className={`w-2 h-2 rounded-full animate-pulse ${networkQuality === 'poor' ? 'bg-yellow-400' : 'bg-[#25D366]'}`} />
+                          {networkQuality === 'poor' ? 'Weak Connection' : formatDuration(callDurationSeconds)}
                         </span>
                       ) : (
-                        <span className="text-black/40 text-[13px] font-mono uppercase tracking-widest animate-pulse">Establishing audio...</span>
+                        <span className="text-white/50 text-[14px] font-medium tracking-wide animate-pulse">Calling...</span>
                       )}
                     </div>
                   </div>
