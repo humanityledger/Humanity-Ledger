@@ -1,48 +1,36 @@
 services:
-  # ─── Aztec PXE Sidecar ────────────────────────────────────────────────────────
-  # Connects to V5 Testnet. Exposes PXE on localhost:18080
-  #
-  # Start:  docker compose -f docker-compose.testnet.yml up aztec-pxe -d
-  # Verify: curl http://localhost:18080/status
+  # Aztec v6 Testnet Node (Sequencer Mode)
+  aztec-sequencer:
+    image: azteclabs/aztec:6.0.0-rc.1
+    command: ["start", "--node", "--sequencer", "--archiver"]
+    ports:
+      - "18081:8081"
+      - "40400:40400"
+    environment:
+      # L1 parameters for v6 Testnet (Sep 28)
+      ETHEREUM_HOST: https://sepolia.infura.io/v3/${INFURA_API_KEY:-dummy}
+      L1_CHAIN_ID: 11155111
+      AZTEC_PORT: 8081
+      HOST: 0.0.0.0
+      LOG_LEVEL: info
+      # Sequencer Identity
+      SEQ_PUBLISHER_PRIVATE_KEY: ${SEQ_PUBLISHER_PRIVATE_KEY:-dummy}
+      SEQ_SENDER_PRIVATE_KEY: ${SEQ_SENDER_PRIVATE_KEY:-dummy}
+      P2P_ENABLED: "true"
+      P2P_PORT: 40400
+      BOOTSTRAP_NODES: ${BOOTSTRAP_NODES:-dummy}
+    restart: unless-stopped
+
+  # Aztec PXE (Private Execution Environment) connecting to local sequencer
   aztec-pxe:
-    image: azteclabs/aztec:4.3.1
-    command: ["start", "--pxe", "--node-url", "https://node.aztec.network", "--port", "8080"]
+    image: azteclabs/aztec:6.0.0-rc.1
+    command: ["start", "--pxe", "--node-url", "http://aztec-sequencer:8081"]
     ports:
       - "18080:8080"
+    depends_on:
+      - aztec-sequencer
     environment:
-      # The PXE reads node URL from this env var
-      AZTEC_NODE_URL: https://node.aztec.network
       PORT: "8080"
       HOST: "0.0.0.0"
       LOG_LEVEL: info
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/status && echo OK"]
-      interval: 15s
-      timeout: 10s
-      retries: 24
-      start_period: 90s
-
-  # ─── QDs Token Deployer ───────────────────────────────────────────────────────
-  # ONE-TIME: Deploys QDs TokenContract to Aztec V5 Testnet
-  # Run with: docker compose -f docker-compose.testnet.yml run --rm deploy-qds
-  deploy-qds:
-    image: azteclabs/aztec:4.3.1
-    depends_on:
-      aztec-pxe:
-        condition: service_healthy
-    environment:
-      - AZTEC_PXE_URL=http://aztec-pxe:8080
-      - AZTEC_NODE_URL=https://node.aztec.network
-      - AZTEC_RELAYER_SECRET_KEY=${AZTEC_RELAYER_SECRET_KEY}
-      - SPONSORED_FPC_ADDRESS=0x261366b3c0a9b4c30864629556cf282be409e6822b1f3a065fcb7e34f36d7880
-    volumes:
-      - ./scripts:/scripts:ro
-    command: >
-      sh -c "
-        echo 'Waiting for PXE...';
-        sleep 5;
-        node --experimental-vm-modules /scripts/deploy-qds-token.ts 2>&1 ||
-        npx tsx /scripts/deploy-qds-token.ts 2>&1
-      "
-    profiles:
-      - deploy
+    restart: unless-stopped
