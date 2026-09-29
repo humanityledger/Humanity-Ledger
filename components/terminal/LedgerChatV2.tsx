@@ -5322,29 +5322,29 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 )
               ) : (
                 /* ── AUDIO CALL ── */
-                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#1c1c1e] to-[#000000]">
+                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#f8f9fa] to-[#e9ecef]">
                   <div className="relative z-10 flex flex-col items-center gap-10">
                     {/* Audio Visualizer Rings */}
                     <div className="relative flex items-center justify-center">
                       {remoteStream && (
                         <>
-                          <div className="absolute rounded-full border border-white/10 transition-all duration-75" style={{ width: 140 + audioLevel * 1.5, height: 140 + audioLevel * 1.5, opacity: Math.min(1, audioLevel / 50 + 0.1) }} />
-                          <div className="absolute rounded-full bg-white/5 transition-all duration-75" style={{ width: 120 + audioLevel, height: 120 + audioLevel, opacity: Math.min(1, audioLevel / 100 + 0.2) }} />
+                          <div className="absolute rounded-full border border-black/10 transition-all duration-75" style={{ width: 140 + audioLevel * 1.5, height: 140 + audioLevel * 1.5, opacity: Math.min(1, audioLevel / 50 + 0.1) }} />
+                          <div className="absolute rounded-full bg-black/5 transition-all duration-75" style={{ width: 120 + audioLevel, height: 120 + audioLevel, opacity: Math.min(1, audioLevel / 100 + 0.2) }} />
                         </>
                       )}
-                      <div className="w-36 h-36 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(255,255,255,0.05)] relative z-10 bg-gradient-to-b from-[#2c2c2e] to-[#1c1c1e] border border-white/10 overflow-hidden">
-                        <span className="text-white text-5xl font-black opacity-90">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '🐳'}</span>
+                      <div className="w-36 h-36 rounded-full flex items-center justify-center shadow-xl relative z-10 bg-white border border-black/5 overflow-hidden">
+                        <span className="text-black/80 text-5xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '🐳'}</span>
                       </div>
                     </div>
                     <div className="text-center">
-                      <p className="text-white text-[32px] font-bold tracking-tight mb-2 drop-shadow-md">{activePeer ? getDisplayName(activePeer) : 'Unknown Peer'}</p>
+                      <p className="text-black text-[32px] font-bold tracking-tight mb-2">{activePeer ? getDisplayName(activePeer) : 'Unknown Peer'}</p>
                       {remoteStream ? (
-                        <span className={`text-[14px] font-medium flex items-center gap-2 justify-center ${networkQuality === 'poor' ? 'text-yellow-400' : 'text-white/60'}`}>
-                          <span className={`w-2 h-2 rounded-full animate-pulse ${networkQuality === 'poor' ? 'bg-yellow-400' : 'bg-[#25D366]'}`} />
+                        <span className={`text-[14px] font-medium flex items-center gap-2 justify-center ${networkQuality === 'poor' ? 'text-yellow-600' : 'text-black/60'}`}>
+                          <span className={`w-2 h-2 rounded-full animate-pulse ${networkQuality === 'poor' ? 'bg-yellow-500' : 'bg-[#25D366]'}`} />
                           {networkQuality === 'poor' ? 'Weak Connection' : formatDuration(callDurationSeconds)}
                         </span>
                       ) : (
-                        <span className="text-white/50 text-[14px] font-medium tracking-wide animate-pulse">Calling...</span>
+                        <span className="text-black/50 text-[14px] font-medium tracking-wide animate-pulse">Calling...</span>
                       )}
                     </div>
                   </div>
