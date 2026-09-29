@@ -27,6 +27,18 @@ export default function LedgerChatPage() {
             'Double Ratchet Ratcheting: Continuous key rotation guarantees forward secrecy.',
             'Metadata Obfuscation: Sender/receiver pairings are shielded at the network layer.',
           ],
+          diagram: {
+            caption: "Figure 1: E2EE Messaging Architecture",
+            chart: `graph TD
+    A[Alice's Device] -->|1. Generate ECDH Key| B(Local IndexedDB)
+    A -->|2. Encrypt Payload| C[XMTP Decentralized Network]
+    C -->|3. Route Ciphertext| D[Bob's Device]
+    D -->|4. Decrypt via Double Ratchet| E(Local IndexedDB)
+    
+    style A fill:#ffffff,stroke:#000000,stroke-width:2px
+    style D fill:#ffffff,stroke:#000000,stroke-width:2px
+    style C fill:#f0f0f0,stroke:#666666,stroke-dasharray: 5 5`
+          },
         },
         {
           id: 'zk-transfers',
@@ -43,6 +55,20 @@ export default function LedgerChatPage() {
             'Ledger Chat supports sovereign peer-to-peer voice and video calls. The connection establishment completely circumvents centralized signaling servers by utilizing the XMTP relay to exchange WebRTC Session Description Protocol (SDP) offers, answers, and ICE candidates.',
             'Once the ICE negotiation concludes, the media stream is routed directly between the communicating devices over an encrypted DTLS/SRTP channel. This guarantees that real-time communications are physically uninterceptable by any intermediary infrastructure.',
           ],
+          diagram: {
+            caption: "Figure 2: Decentralized WebRTC Signaling",
+            chart: `sequenceDiagram
+    participant A as Peer A (Caller)
+    participant X as XMTP Network (E2EE)
+    participant B as Peer B (Receiver)
+
+    A->>X: Send __CALL_OFFER__ (SDP)
+    X->>B: Deliver Encrypted Offer
+    B->>X: Send __CALL_ANSWER__ (SDP)
+    X->>A: Deliver Encrypted Answer
+    A<-->>B: Direct P2P Media Stream (DTLS/SRTP)
+    Note over A,B: XMTP is bypassed once media connects`
+          }
         },
       ]}
     />

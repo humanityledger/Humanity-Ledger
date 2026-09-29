@@ -27,6 +27,23 @@ export default function ZKIdentityPage() {
             'Noir DSL for circuit constraints.',
             'Barretenberg backend for sub-second client-side proving.',
           ],
+          diagram: {
+            caption: "Figure 1: Hardware-Rooted ZK Authentication Flow",
+            chart: `sequenceDiagram
+    participant U as User Hardware
+    participant SE as Secure Enclave
+    participant B as Barretenberg Prover
+    participant L2 as Aztec Rollup (L2)
+
+    U->>SE: Biometric Auth (FaceID)
+    SE-->>U: Unlocks Private Key Access
+    U->>B: Generate zk-SNARK Proof
+    Note over B: Inputs: Private Key, Merkle Path
+    B-->>U: Zero-Knowledge Proof (Artifact)
+    U->>L2: Submit Proof + Public Nullifier
+    L2->>L2: Verify Proof & Check Nullifier
+    L2-->>U: State Transition Accepted`
+          },
         },
         {
           id: 'nullifiers',
