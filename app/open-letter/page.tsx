@@ -41,7 +41,7 @@ export default function OpenLetterPage() {
           </p>
 
           <p>
-            We threw away months of perfectly good code. We severed ties with Worldcoin because biometric centralization violates the core ethos of cryptographic privacy. And we completely re-architected the <strong>Humanity Ledger</strong> around Aztec and Noir.
+            We threw away months of perfectly good code. We severed ties with legacy centralised protocols because biometric centralization violates the core ethos of cryptographic privacy. And we completely re-architected the <strong>Humanity Ledger</strong> around Aztec and Noir.
           </p>
 
           <h3 className="text-2xl mt-12 mb-6">What We Are Building Now</h3>

@@ -11,7 +11,7 @@ export default function ProtocolPage() {
           id: 'overview',
           title: 'What is Humanity Ledger?',
           paragraphs: [
-            'Humanity Ledger is a next-generation decentralised communication and identity protocol built for a world where privacy, sovereignty, and mathematical truth supersede institutional trust. Unlike Worldcoin, which relies on centralised biometric orbs and a corporation retaining iris scan hashes, Humanity Ledger anchors identity proofs entirely in the user\'s hardware Secure Enclave — a cryptographic module physically fused into the device silicon.',
+            'Humanity Ledger is a next-generation decentralised communication and identity protocol built for a world where privacy, sovereignty, and mathematical truth supersede institutional trust. Unlike legacy centralised protocols, which relies on centralised biometric orbs and a corporation retaining iris scan hashes, Humanity Ledger anchors identity proofs entirely in the user\'s hardware Secure Enclave — a cryptographic module physically fused into the device silicon.',
             'The protocol is composed of three interconnected execution environments: the Aztec ZK-Rollup for private financial state settlement, the XMTP decentralised relay for ephemeral encrypted message routing, and the client-side Private Execution Environment (PXE) for local zero-knowledge proof generation. No private data ever leaves the device unencrypted.',
             'The protocol serves as the foundational infrastructure for Ledger Chat, the sovereign peer-to-peer messaging terminal, and for the Quantum Dots (QD) economic system — a deflationary, privacy-preserving utility token used for protocol participation.',
           ],
@@ -34,16 +34,16 @@ export default function ProtocolPage() {
           ],
         },
         {
-          id: 'vs-worldcoin',
-          title: 'Why Humanity Ledger Supersedes Worldcoin',
+          id: 'sovereign-identity',
+          title: 'The Sovereign Identity Primitive',
           paragraphs: [
-            'Worldcoin\'s architecture has three fundamental flaws that Humanity Ledger resolves at the protocol level. First, Worldcoin requires a physical orb scan — a centralised biometric collection event that creates an indelible record of a user\'s iris pattern, managed by a US corporation. Humanity Ledger requires only a WebAuthn authentication event using the device\'s existing Secure Enclave. No new hardware is needed. No biometric data leaves the device.',
-            'Second, Worldcoin\'s proof of personhood system uses a semi-transparent merkle structure where the protocol operator has visibility into which commitments belong to active identities. Humanity Ledger uses nullifier-based anonymous credentials: the protocol can verify that a credential belongs to a registered human without knowing which human or which device generated it.',
-            'Third, Worldcoin\'s WLD token is traded on centralised exchanges and subject to regulatory seizure. Humanity Ledger\'s Quantum Dots exist exclusively within the Aztec shielded pool. They cannot be frozen, seized, or attributed to a real-world identity by any authority.',
+            'The foundational primitive of the Humanity Ledger is its approach to proof-of-personhood. Rather than relying on centralised biometric databases or third-party hardware collection events, the protocol leverages the cryptographic capabilities already present in modern consumer devices.',
+            'By utilising the WebAuthn standard and hardware Secure Enclaves, Humanity Ledger anchors identity directly into the device silicon. The enclave generates an ECDSA keypair where the private key is physically non-extractable. A zero-knowledge proof is then generated locally, proving that a valid hardware-rooted signature exists for a given challenge, without ever exposing the underlying biometric trigger or the private key itself.',
+            'This architecture ensures that identity is entirely self-sovereign. The protocol operators, sequencers, and relayers have zero visibility into the identities of the participants. The nullifier-based credential system guarantees that a user can prove their uniqueness across different contexts without those contexts being linkable to one another.',
           ],
           callout: {
-            title: 'Privacy Comparison',
-            body: 'Worldcoin: Iris scan → Corporate DB → ZK proof of scan hash\nHumanity Ledger: Device Secure Enclave → Local ZK proof → Anonymous commitment\n\nWorldcoin knows your iris was scanned.\nHumanity Ledger knows only that a valid device generated a valid proof.',
+            title: 'Privacy by Default',
+            body: 'Humanity Ledger knows only that a valid cryptographic enclave generated a valid proof. There is no corporate database, no biometric storage, and no centralized honeypot of user data.',
           },
         },
         {

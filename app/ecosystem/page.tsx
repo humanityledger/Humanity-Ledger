@@ -42,12 +42,12 @@ export default function EcosystemPage() {
           ],
         },
         {
-          id: 'worldcoin-alternative',
+          id: 'sovereign-alternative',
           title: 'The Sovereign Alternative',
           paragraphs: [
-            'The digital identity ecosystem is currently fracturing into two models: the corporate-biometric model (exemplified by Worldcoin) and the sovereign-cryptographic model (exemplified by Humanity Ledger).',
-            'Worldcoin’s ecosystem relies on the deployment of physical "Orbs" globally, requiring users to submit to an iris scan. This creates a massive honeypot of biometric data hashes controlled by a single entity. The Humanity Ledger ecosystem fundamentally rejects this approach.',
-            'Our ecosystem relies on the cryptographic hardware already present in billions of consumer devices. By leveraging the WebAuthn standard and hardware Secure Enclaves, we create a sybil-resistant identity network that is mathematically impossible to centrally exploit, because the private keys physically cannot leave the users\' devices.',
+            'The digital identity ecosystem requires a paradigm shift away from centralized data collection and toward deterministic, mathematically proven sovereignty. Humanity Ledger represents this structural shift.',
+            'Our ecosystem relies on the cryptographic hardware already present in billions of consumer devices. By leveraging the WebAuthn standard and hardware Secure Enclaves, we create a sybil-resistant identity network that is mathematically impossible to centrally exploit.',
+            'Because private keys physically cannot leave the users\' devices, and all attestations are verified via zero-knowledge proofs on the Aztec rollup, the Humanity Ledger ecosystem provides absolute privacy guarantees without requiring users to trust the operator infrastructure.',
           ],
         },
         {

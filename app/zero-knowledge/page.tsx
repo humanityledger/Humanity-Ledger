@@ -20,7 +20,7 @@ export default function ZeroKnowledgePage() {
           title: 'UltraPlonk Proof System',
           paragraphs: [
             'The Humanity Ledger protocol uses the UltraPlonk arithmetisation scheme, developed by Aztec Network. UltraPlonk is a universal and updatable zk-SNARK that eliminates the need for a per-circuit trusted setup ceremony. Instead, it relies on a universal structured reference string (SRS) that can be reused across all circuits in the protocol.',
-            'UltraPlonk achieves superior performance characteristics compared to Groth16 (the proof system used by Worldcoin). The proof size is constant regardless of the circuit size. Verification on-chain is O(1) in gas cost. The system supports custom gates (lookup tables, range checks, elliptic curve operations) via the PLOOKUP protocol, enabling dramatic efficiency improvements for cryptographic primitives that would otherwise be prohibitively expensive in a vanilla R1CS arithmetisation.',
+            'UltraPlonk achieves superior performance characteristics compared to Groth16 (the proof system used by legacy centralised protocols). The proof size is constant regardless of the circuit size. Verification on-chain is O(1) in gas cost. The system supports custom gates (lookup tables, range checks, elliptic curve operations) via the PLOOKUP protocol, enabling dramatic efficiency improvements for cryptographic primitives that would otherwise be prohibitively expensive in a vanilla R1CS arithmetisation.',
           ],
           bullets: [
             'Proof Size: ~2KB (constant, independent of circuit size).',

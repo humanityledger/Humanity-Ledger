@@ -12,7 +12,7 @@ export default function ChangelogPage() {
       changes: [
         { type: 'major', text: 'Integrated Barretenberg backend for client-side proving.' },
         { type: 'major', text: 'Replaced ECDSA signatures with Noir zk-SNARK circuits.' },
-        { type: 'removed', text: 'Removed all centralised biometric dependencies (Worldcoin).' },
+        { type: 'removed', text: 'Removed all centralised biometric dependencies (legacy centralised protocols).' },
         { type: 'security', text: 'Implemented encrypted UTXO state for QDs.' }
       ]
     },

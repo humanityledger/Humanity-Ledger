@@ -21,7 +21,7 @@ export default function StoryPage() {
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Q1 2026</h3>
             <h2 className="text-2xl font-bold text-slate-900 mb-4">The Aztec Integration</h2>
             <p className="text-slate-600 leading-relaxed text-lg">
-              Recognizing the fundamental flaw in public ledgers, the project completely pivots its architecture. The Humanity Ledger integrates the Aztec Network, rewriting its core logic in Noir to enable Zero Knowledge execution. Worldcoin and all centralised biometric vectors are purged from the system.
+              Recognizing the fundamental flaw in public ledgers, the project completely pivots its architecture. The Humanity Ledger integrates the Aztec Network, rewriting its core logic in Noir to enable Zero Knowledge execution. legacy centralised protocols and all centralised biometric vectors are purged from the system.
             </p>
           </div>
 
