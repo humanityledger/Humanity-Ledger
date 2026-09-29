@@ -5001,7 +5001,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </p>
               <div className="bg-[#1c7aff]/10 border border-[#1c7aff]/20 text-[#1c7aff] rounded-xl p-4 max-w-md w-full mb-10">
                 <p className="text-[13px] font-bold text-center">
-                  A partir del 1 de enero de 2027 estará disponible en Google Play y AppStore para todo el mundo.
+                  Available globally on Google Play and the App Store starting January 1, 2027.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3 w-full max-w-sm">

@@ -1496,8 +1496,17 @@ html.dark [class*="text-black/"] {
 }
 
 /* Ensure all min-h-screen wrappers are transparent, not white */
-html.dark .min-h-screen:not([class*="bg-[#"]):not([class*="bg-black"]):not([class*="bg-white/"]):not([class*="bg-slate"]):not([class*="bg-transparent"]) {
+html.dark .min-h-screen:not([class*="bg-[#"]):not([class*="bg-black"]):not([class*="bg-white/"]):not([class*="bg-slate"]):not([class*="bg-transparent"]):not([data-doc-page]) {
   background-color: transparent !important;
+}
+
+/* Documentation pages must ALWAYS be white — never dark */
+[data-doc-page], [data-doc-page] * {
+  --tw-bg-opacity: 1 !important;
+}
+[data-doc-page] {
+  background-color: #ffffff !important;
+  color: #050505 !important;
 }
 
 /* Section blend overlays: in dark mode they should fade to transparent/black */

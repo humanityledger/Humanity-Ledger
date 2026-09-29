@@ -19,7 +19,7 @@ export type AztecDocPageProps = {
 
 export function AztecDocPage({ eyebrow, title, subtitle, sections, children }: AztecDocPageProps) {
   return (
-    <div className="w-full min-h-screen bg-white text-[#050505] font-sans">
+    <div data-doc-page className="w-full min-h-screen bg-white text-[#050505] font-sans" style={{ backgroundColor: '#ffffff', color: '#050505' }}>
       <div className="w-full max-w-[920px] mx-auto px-6 py-16 md:py-20">
         <header className="mb-14 border-b border-black/8 pb-10">
           <p className="font-mono text-[10px] font-black uppercase tracking-[0.35em] text-[#2a1b4d]/60 mb-4">

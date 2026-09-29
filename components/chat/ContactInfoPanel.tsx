@@ -214,7 +214,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
     if (!lists[listInput]) lists[listInput] = [];
     if (!lists[listInput].includes(peerAddress)) lists[listInput].push(peerAddress);
     localStorage.setItem('ledger_lists', JSON.stringify(lists));
-    showToast(`Appended to matrix: ${listInput}`);
+    showToast(`Added to list: ${listInput}`);
     setModal(null);
   };
 
@@ -230,7 +230,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
         <button onClick={onClose} className="p-2 -ml-2 text-black/50 hover:text-black transition-colors">
           <ArrowLeft size={20} />
         </button>
-        <span className="text-[11px] font-mono tracking-[0.2em] uppercase font-bold text-black">Identity Matrix</span>
+        <span className="text-[11px] font-mono tracking-[0.2em] uppercase font-bold text-black">Contact Profile</span>
         <div className="w-8" />
       </div>
 
@@ -281,7 +281,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
         <Section title="Actions">
           <Row icon={<Share2 size={16} />} label="Export Protocol Link" onTap={handleShare} />
           <Row icon={<Heart size={16} className={isFav ? 'fill-black' : ''} />} label={isFav ? "Remove Vector" : "Save Identity Vector"} onTap={toggleFav} />
-          <Row icon={<List size={16} />} label="Append to Matrix" onTap={() => setModal('list')} />
+          <Row icon={<List size={16} />} label="Add to List" onTap={() => setModal('list')} />
           <Row icon={<Download size={16} />} label="Extract State Log" onTap={handleExport} />
           <Row icon={<Trash2 size={16} />} label="Obliterate State" onTap={() => onClearChat?.()} />
         </Section>
@@ -393,11 +393,11 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
       )}
 
       {modal === 'list' && (
-        <Modal title="Append to Matrix" onClose={() => setModal(null)}>
+        <Modal title="Add to List" onClose={() => setModal(null)}>
           <div className="flex flex-col gap-4">
             <input 
               type="text" 
-              placeholder="Matrix Identifier (e.g. CORE_TEAM)" 
+              placeholder="List name (e.g. Team, Family)" 
               value={listInput} 
               onChange={e => setListInput(e.target.value)}
               className="w-full border border-black px-4 py-3 outline-none focus:bg-black/5 font-mono text-sm uppercase"
