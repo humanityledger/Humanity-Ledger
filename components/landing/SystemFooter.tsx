@@ -1,5 +1,6 @@
 import Link from "next/link";
 import React from "react";
+import { HLLogo } from "@/components/shared/HLLogo";
 
 export function SystemFooter() {
   return (
@@ -12,11 +13,7 @@ export function SystemFooter() {
           {/* Brand column */}
           <div className="col-span-2 md:col-span-2 flex flex-col gap-4">
             <Link href="/" aria-label="Humanity Ledger home">
-              <img
-                src="/logo-text.png"
-                alt="Humanity Ledger"
-                style={{ height: 32, width: 'auto', objectFit: 'contain', display: 'block' }}
-              />
+              <HLLogo size={32} theme="dark" />
             </Link>
             <p className="text-[14px] text-black/50 font-medium leading-relaxed max-w-[240px]">
               The sovereign, decentralized messaging network. Zero-knowledge by default. Built for 2027.

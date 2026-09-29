@@ -84,11 +84,7 @@ function LandingNav() {
     >
       <div className="max-w-7xl mx-auto px-5 md:px-10 flex items-center justify-between">
         <Link href="/" className="flex items-center" aria-label="Humanity Ledger home">
-          <img
-            src="/logo-text.png"
-            alt="Humanity Ledger"
-            style={{ height: 28, width: 'auto', objectFit: 'contain', display: 'block' }}
-          />
+          <HLLogo size={28} theme="dark" />
         </Link>
 
         <div className="hidden md:flex items-center gap-7">
@@ -96,7 +92,7 @@ function LandingNav() {
             { label: "Protocol", href: "/protocol" },
             { label: "Zero-Knowledge", href: "/zero-knowledge" },
             { label: "Ecosystem", href: "/ecosystem" },
-            { label: "Developers", href: "/docs" },
+            { label: "Developers", href: "/developers" },
             { label: "Blog", href: "/blog" },
           ].map((item) => (
             <Link
