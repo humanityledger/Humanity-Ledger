@@ -3,6 +3,8 @@
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { shortAddr } from '@/lib/utils';
+import { formatQd } from '@/lib/qd';
 import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Smile, Paperclip, BarChart2, Wallet, Flame, Image as ImageIcon, Map as MapIcon, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
@@ -3791,7 +3793,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           </div>
           <div className="flex items-center gap-1.5 px-4 py-2.5 bg-[#f5f5f7] border border-black/10 rounded-xl">
             <span className="w-2 h-2 rounded-full bg-black shadow-sm animate-pulse" />
-            <span className="text-[13px] font-mono font-bold text-[#050505]">{balance.toFixed(2)} QDs available</span>
+            <span className="text-[13px] font-mono font-bold text-[#050505]">{formatQd(balance)} QDs available</span>
           </div>
           <button
             onClick={() => openAppKit()}
@@ -4129,7 +4131,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           <div className="flex items-center justify-between pb-2">
             <div className="flex items-center gap-1.5 text-[12px] text-[#8E8E93]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#34C759] animate-pulse" />
-              <span className="font-mono">{balance.toFixed(4)} QD available</span>
+              <span className="font-mono">{formatQd(balance)} QD available</span>
             </div>
           </div>
         </div>
@@ -4391,7 +4393,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               <div className="flex items-center gap-1.5">
                 <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 bg-[#f5f5f7] border border-black/10 rounded-xl" title="Available QDs">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#050505] shadow-sm animate-pulse" />
-                  <span className="text-[10px] font-mono font-bold text-black">{balance.toFixed(2)} QD</span>
+                  <span className="text-[10px] font-mono font-bold text-black">{formatQd(balance)} QD</span>
                 </div>
                 {/* Phase 5: Secret Chat Toggle */}
                 <button
@@ -5929,7 +5931,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                <div className="flex items-center justify-between">
                  <div>
                    <h3 className="text-[16px] font-black tracking-tight text-gray-900">Send QD Tokens</h3>
-                   <p className="text-[11px] text-black/40 font-mono mt-0.5">Balance: {balance.toFixed(4)} QD</p>
+                   <p className="text-[11px] text-black/40 font-mono mt-0.5">Balance: {formatQd(balance)} QD</p>
                  </div>
                  <button onClick={() => { setShowWalletTransfer(false); setTransferAmount(''); }} className="p-2 rounded-full hover:bg-[#e5e5ea] text-black/40">✕</button>
                </div>

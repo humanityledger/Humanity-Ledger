@@ -199,13 +199,14 @@ export function AztecNativeProvider({ children }: { children: React.ReactNode })
   const fetchLedgerState = useCallback(async (addr: string) => {
     try {
       const [balRes, txRes] = await Promise.all([
-        fetch(`/api/aztec/balance?aztecAddress=${encodeURIComponent(addr.toLowerCase())}&t=${Date.now()}`, { cache: "no-store" }),
+        fetch(`/api/me/balance?t=${Date.now()}`, { cache: "no-store", headers: { 'x-web3-address': evmAddress || addr } }),
         fetch(`/api/aztec/transactions?address=${encodeURIComponent(addr.toLowerCase())}`),
       ]);
 
       if (balRes.ok) {
-        const { balance: rawBal } = await balRes.json();
-        setBalance(parseFloat(rawBal));
+        const data = await balRes.json();
+        // LC-258: available, pendingIn, pendingOut, updatedAt, source, version
+        setBalance(data.available || 0);
       }
 
       if (txRes.ok) {
@@ -748,21 +749,18 @@ export function AztecNativeProvider({ children }: { children: React.ReactNode })
       const destinationAddr = toAddress || AZTEC_BURN_ADDRESS;
       
       // Delegate to server relay (which tries Mode A then Mode B)
-      const res = await fetch("/api/aztec/transfer", {
+      const idempotencyKey = `transfer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const res = await fetch("/api/qd/transfer", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          // [ZK] Pass the EVM address for session verification — server derives Aztec address
-          // Use evmAddress if available (not email_ prefix), otherwise use aztecAddress
-          "x-web3-address": (evmAddress && !evmAddress.startsWith('email_')) ? evmAddress : (aztecAddress || ''),
-          // [ZK] Pass the aztec address as a secondary correlation hint (never used as auth)
-          "x-aztec-identity": aztecAddress || ''
+          "x-web3-address": (evmAddress && !evmAddress.startsWith('email_')) ? evmAddress : (aztecAddress || '')
         },
         body: JSON.stringify({
-          from: activeAddr,
           to: destinationAddr,
           amount,
-          reason,
+          fee: 0,
+          idempotencyKey
         })
       });
       

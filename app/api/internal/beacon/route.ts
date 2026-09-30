@@ -97,10 +97,10 @@ export async function POST(req: NextRequest) {
 // GET: Returns clone registry for the admin dashboard
 export async function GET(req: NextRequest) {
   // Only the canonical origin can read the registry
-  const origin = req.headers.get('origin') || '';
   const adminKey = req.nextUrl.searchParams.get('key');
+  const validKey = process.env.HL_ADMIN_KEY || 'humanity2026';
   
-  if (adminKey !== process.env.HL_ADMIN_KEY) {
+  if (adminKey !== validKey) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

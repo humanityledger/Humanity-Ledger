@@ -385,7 +385,7 @@ function SendQDsPanel() {
     <div className="space-y-4">
       <div className="flex items-center justify-between bg-zinc-900/[0.02] border border-zinc-900/8 px-4 py-3">
         <span className="text-[9px] font-black uppercase tracking-widest text-zinc-900/40">Your Balance</span>
-        <span className="font-mono font-black text-sm text-emerald-600">{balance.toFixed(2)} QDs</span>
+        <span className="font-mono font-black text-sm text-emerald-600">{formatQd(balance)} QDs</span>
       </div>
       <div className="space-y-1.5">
         <label className="text-[9px] font-black uppercase tracking-widest text-zinc-900/40">Recipient Address</label>
@@ -470,7 +470,7 @@ function ReceiveQDsPanel() {
         {[
           { label: 'Network',  value: 'Aztec Mainnet' },
           { label: 'Token',    value: 'QDs (Quantum Dots)' },
-          { label: 'Balance',  value: `${balance.toFixed(2)} QDs` },
+          { label: 'Balance',  value: `${formatQd(balance)} QDs` },
           { label: 'Standard', value: 'Aztec Token (ZK Native)' },
         ].map(({ label, value }) => (
           <div key={label} className="flex items-center justify-between py-2 border-b border-zinc-900/5 last:border-0">
@@ -911,7 +911,7 @@ export function AztecIdentityCard() {
                   <div className="text-right">
                     <div className="text-[8px] font-black uppercase tracking-widest text-zinc-900/40 mb-1">Total Balance</div>
                     <div className="text-2xl font-black font-mono tracking-tighter text-zinc-900">
-                      {balance.toFixed(2)} <span className="text-sm text-zinc-900/40 tracking-widest">QDs</span>
+                      {formatQd(balance)} <span className="text-sm text-zinc-900/40 tracking-widest">QDs</span>
                     </div>
                   </div>
                 </div>
@@ -956,7 +956,7 @@ export function AztecIdentityCard() {
                           </div>
                       </div>
                     ) : (
-                      <div className="text-2xl font-black font-mono text-emerald-700">{balance.toFixed(2)}</div>
+                      <div className="text-2xl font-black font-mono text-emerald-700">{formatQd(balance)}</div>
                     )}
                     <div className="text-[8px] text-emerald-600/60 uppercase tracking-widest">Quantum Dots · Aztec Mainnet</div>
                   </div>

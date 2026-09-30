@@ -1699,3 +1699,20 @@ model CommunityMessage {
   @@index([communityId, sentAt])
 }
 
+
+model QDCreditLedger {
+  id             String   @id @default(uuid())
+  address        String
+  delta          Float
+  direction      String
+  reason         String
+  counterparty   String?
+  txRef          String   @unique
+  idempotencyKey String   @unique
+  rail           String   @default("internal")
+  createdAt      DateTime @default(now())
+
+  @@index([address])
+  @@index([txRef])
+}
+
