@@ -28,6 +28,7 @@ import { AztecPXEVisualizer } from './AztecPXEVisualizer';
 import { ZKProofGrid } from '../premium/ZKProofGrid';
 import { AztecShieldingTerminal } from './AztecShieldingTerminal';
 import { AztecAirdropCalendar } from './AztecAirdropCalendar';
+import { formatQd } from '@/lib/qd';
 
 // ─── On-Chain Verified Network Constants ─────────────────────────────────────
 // Addresses verified via node_getNodeInfo / node_getBlock RPC.

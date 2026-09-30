@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
 import { FastForward, MapPin, Clock, PhoneOff, PhoneMissed, Video, Check, CheckCheck, Pencil, Lock } from 'lucide-react';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
+import { StickerPicker, PREMIUM_STICKERS, RenderPremiumSticker } from './StickerPicker';
 
 export interface MessageProps {
   msg: any;
