@@ -322,8 +322,8 @@ export const MessageBubble = React.memo(({
   const isMissedCall = content.startsWith('__CALL_MISSED__:') || content === '__CALL_DECLINE__';
   const isPoll       = content.startsWith('__POLL__');
   const isPayment    = content.startsWith('__PAYMENT__');
-  const isPremium    = content.startsWith('[PREMIUM:');
-  const isSticker    = content.startsWith('__STICKER__');
+  const isPremium    = content.startsWith('[PREMIUM:') || content.startsWith('__STICKER__[PREMIUM:');
+  const isSticker    = content.startsWith('__STICKER__') && !isPremium;
   const isAudio      = content.startsWith('__AUDIO__');
   const isMedia      = content.startsWith('__MEDIA__:');
   const isGif        = content.startsWith('[GIF]');
@@ -498,7 +498,7 @@ export const MessageBubble = React.memo(({
                 <img src={gifUrl} alt="GIF" className="max-w-[220px] max-h-[200px] object-cover" loading="lazy" />
               </button>
             ) : isPremium ? (
-              <RenderPremiumSticker code={content} size="96px" />
+              <RenderPremiumSticker code={content.replace('__STICKER__', '')} size="96px" />
             ) : isAudio && audioSrc ? (
               <div className={`px-3 py-2 rounded-[18px] shadow border ${isMe ? 'bg-[#1c7aff] border-transparent rounded-br-[4px]' : 'bg-white border-black/8 rounded-bl-[4px]'}`}>
                 <CustomAudioPlayer src={audioSrc} isMe={isMe} />

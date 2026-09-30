@@ -5630,22 +5630,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         </div>
       )}
 
-      {showStickerPicker && (
-        <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm flex justify-center items-end" onClick={() => setShowStickerPicker(false)}>
-          <div className="bg-white w-full max-w-md h-[40vh] rounded-t-3xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold mb-4">Send Sticker</h3>
-            <div className="grid grid-cols-4 gap-4 text-center text-4xl">
-              {['👍', '🔥', '🚀', '😂', '💯', '🙏', '👀', '✨'].map(emoji => (
-                <span key={emoji} className="cursor-pointer hover:scale-125 transition-transform" onClick={() => {
-                  executeSend(`__STICKER__${emoji}`);
-                  setShowStickerPicker(false);
-                }}>{emoji}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       {showPollCreator && (
         <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm flex justify-center items-end sm:items-center" onClick={() => setShowPollCreator(false)}>
           <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 flex flex-col" onClick={e => e.stopPropagation()}>
@@ -6112,6 +6096,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
 
 
 
