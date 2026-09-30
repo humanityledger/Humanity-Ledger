@@ -25,6 +25,37 @@ const DynamicUniversalScanModal = dynamic(
   { ssr: false }
 );
 
+function AppStoreBadge() {
+  return (
+    <a href="#notify" className="flex items-center gap-2.5 bg-black hover:bg-[#1A1A1C] text-white px-5 py-3 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-white/5">
+      <svg viewBox="0 0 814 1000" width="22" height="22" fill="white">
+        <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.3 135.3-316.9 269-316.9 70.1 0 128.4 46.4 172.5 46.4 42.8 0 109.8-49.2 190.5-49.2zm-225.3-191.8c33.5-39.6 58.9-94.8 58.9-150 0-7.7-.6-15.4-1.9-21.8C531.3 12.1 468.3 49 422.8 104.3c-30.8 35.8-59.6 90.4-59.6 146.4 0 8.3 1.3 16.6 1.9 19.2 3.2.6 8.3 1.3 13.5 1.3 49.9 0 107.5-33.5 144.2-71.1z"/>
+      </svg>
+      <div className="flex flex-col text-left">
+        <span className="text-[9px] font-medium opacity-70 leading-none mb-0.5 tracking-wider">Download on the</span>
+        <span className="text-[16px] font-bold leading-none tracking-tight">App Store</span>
+      </div>
+    </a>
+  );
+}
+
+function GooglePlayBadge() {
+  return (
+    <a href="#notify" className="flex items-center gap-2.5 bg-black hover:bg-[#1A1A1C] text-white px-5 py-3 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-white/5">
+      <svg viewBox="0 0 24 24" width="22" height="22">
+        <path fill="#4CAF50" d="M1.22 0L11 10 1.22 20C.4 20 0 19.26 0 18.55V1.45C0 .74.4 0 1.22 0z"/>
+        <path fill="#FFC107" d="M22 12l-4.37 2.53-4.63-4.53L17.63 5.5z"/>
+        <path fill="#F44336" d="M1.22 20l9.78-10L22 12 6.78 21.3c-.5.29-1.06.44-1.56.44-.36 0-.72-.09-1-.24z"/>
+        <path fill="#2196F3" d="M1.22 0l9.78 10L6.78 2.7A3.5 3.5 0 001.22 0z"/>
+      </svg>
+      <div className="flex flex-col text-left">
+        <span className="text-[9px] font-medium opacity-70 leading-none mb-0.5 tracking-wider">GET IT ON</span>
+        <span className="text-[16px] font-bold leading-none tracking-tight">Google Play</span>
+      </div>
+    </a>
+  );
+}
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {

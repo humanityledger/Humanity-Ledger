@@ -271,7 +271,7 @@ export function CopyAttestingArena() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505]/70 backdrop-blur-md p-4"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-md p-4"
                         onClick={(e) => { if (e.target === e.currentTarget) { setSelectedVerifier(null); setCopyResult(null); } }}
                     >
                         <motion.div

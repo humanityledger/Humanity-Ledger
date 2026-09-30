@@ -97,7 +97,7 @@ export class InstitutionalErrorBoundary extends Component<Props, State> {
           
           <button
             onClick={this.handleReset}
-            className="flex items-center gap-2.5 px-6 py-3 bg-[#050505] text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10"
+            className="flex items-center gap-2.5 px-6 py-3 bg-white text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10"
           >
             <RefreshCw size={14} /> Try Again
           </button>

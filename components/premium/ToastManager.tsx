@@ -45,7 +45,7 @@ export function PremiumToasts() {
             className={`pointer-events-auto flex items-center gap-4 px-6 py-4 rounded-sm border shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-xl ${
               toast.type === 'alert'
                 ? 'bg-rose-500/10 border-rose-500/50 text-rose-500'
-                : 'bg-[#050505]/95 border-[#e0ff00]/20 text-[#e0ff00] ring-1 ring-[#e0ff00]/10'
+                : 'bg-white/95 border-[#e0ff00]/20 text-[#e0ff00] ring-1 ring-[#e0ff00]/10'
             }`}
             onClick={() => removeToast(toast.id)}
           >

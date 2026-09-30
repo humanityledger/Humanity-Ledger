@@ -62,7 +62,7 @@ export function ReputationDashboard() {
   if (!isConnected) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[600px] gap-5 bg-white rounded-3xl border border-black/5 m-4 shadow-sm">
-        <div className="w-16 h-16 rounded-2xl bg-[#050505]/5 border border-black/10 flex items-center justify-center">
+        <div className="w-16 h-16 rounded-2xl bg-white/5 border border-black/10 flex items-center justify-center">
           <Building size={28} strokeWidth={1.4} className="text-[#050505]" />
         </div>
         <div className="flex flex-col items-center gap-2 text-center">
@@ -124,7 +124,7 @@ export function ReputationDashboard() {
         {/* Action Panel */}
         <div className="bg-white border border-black/5 shadow-sm rounded-2xl p-6 flex flex-col justify-between">
           <div>
-            <div className="w-12 h-12 rounded-xl bg-[#050505]/5 border border-black/10 flex items-center justify-center mb-5">
+            <div className="w-12 h-12 rounded-xl bg-white/5 border border-black/10 flex items-center justify-center mb-5">
               <Award size={20} className="text-[#050505]" />
             </div>
             <h3 className="text-[13px] font-bold text-[#050505] uppercase tracking-widest mb-2">Access Credentials</h3>
@@ -139,7 +139,7 @@ export function ReputationDashboard() {
             className={`w-full py-3.5 mt-6 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all flex justify-center items-center gap-2 ${
               hasCredential 
                 ? 'bg-black/5 text-black/30 cursor-not-allowed border border-black/5'
-                : 'bg-[#050505] text-white hover:bg-black/80'
+                : 'bg-white text-white hover:bg-black/80'
             }`}
           >
             {isMinting ? <RefreshCw size={14} className="animate-spin" /> : <Award size={14} />}

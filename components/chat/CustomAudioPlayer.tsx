@@ -85,13 +85,13 @@ export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean })
 
   return (
       <div className="flex flex-col gap-2 w-full">
-        <div className={`flex items-center gap-2 min-w-[200px] max-w-[280px] p-2 rounded-2xl transition-all ${isMe ? 'bg-[#050505]' : 'bg-gray-100/50'}`}>
+        <div className={`flex items-center gap-2 min-w-[200px] max-w-[280px] p-2 rounded-2xl transition-all ${isMe ? 'bg-white' : 'bg-gray-100/50'}`}>
           <audio ref={audioRef} src={src} preload="auto" playsInline x-webkit-airplay="allow" />
           
           <button 
             onClick={togglePlay}
             className={`w-9 h-9 flex items-center justify-center shrink-0 rounded-full transition-colors ${
-              isMe ? 'bg-white text-black hover:bg-white/90' : 'bg-[#050505] text-white hover:bg-black/90'
+              isMe ? 'bg-white text-black hover:bg-white/90' : 'bg-white text-white hover:bg-black/90'
             }`}
           >
             {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-1" />}
@@ -110,7 +110,7 @@ export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean })
               />
               <div className={`w-full h-1.5 rounded-full relative overflow-hidden ${isMe ? 'bg-white/20' : 'bg-black/10'}`}>
                 <div 
-                  className={`absolute top-0 left-0 h-full rounded-full transition-all duration-75 ${isMe ? 'bg-white' : 'bg-[#050505]'}`}
+                  className={`absolute top-0 left-0 h-full rounded-full transition-all duration-75 ${isMe ? 'bg-white' : 'bg-white'}`}
                   style={{ width: `${duration ? (progress / duration) * 100 : 0}%` }}
                 />
               </div>

@@ -231,7 +231,7 @@ export function LedgerTrackerDashboard() {
     }, [unifiedLedgerFeed, searchQuery, activeTab]);
 
     return (
-        <div className="relative bg-[#050505] min-h-screen text-white/90 font-sans selection:bg-white/20 selection:text-white overflow-x-hidden">
+        <div className="relative bg-white min-h-screen text-white/90 font-sans selection:bg-white/20 selection:text-white overflow-x-hidden">
             <div className="relative z-10 w-full max-w-[2560px] mx-auto flex flex-col">
                 <AnimatePresence>
                     {showNews && (

@@ -181,7 +181,7 @@ function ProTokenRow({ symbol, index }: { symbol: string; index: number }) {
                 </div>
             </td>
             <td className="py-5 px-6 text-right">
-                <button className="opacity-0 group-hover:opacity-100 px-5 py-2 rounded-lg bg-[#050505] text-[#FFFFFF] text-[9px] font-black uppercase tracking-[0.2em] transition-all">
+                <button className="opacity-0 group-hover:opacity-100 px-5 py-2 rounded-lg bg-white text-[#FFFFFF] text-[9px] font-black uppercase tracking-[0.2em] transition-all">
                     Execute
                 </button>
             </td>
@@ -301,13 +301,13 @@ export function PremiumGridStack() {
                     <div className="flex gap-2">
                         <button 
                             onClick={() => setSelectedCategory('MAJOR')}
-                            className={`px-5 py-2 text-[9px] font-black uppercase tracking-[0.2em] transition-all rounded-lg ${selectedCategory === 'MAJOR' ? 'bg-[#050505] text-[#FFFFFF] shadow-md' : 'text-[#888888] hover:text-[#050505] hover:bg-black/5'}`}
+                            className={`px-5 py-2 text-[9px] font-black uppercase tracking-[0.2em] transition-all rounded-lg ${selectedCategory === 'MAJOR' ? 'bg-white text-[#FFFFFF] shadow-md' : 'text-[#888888] hover:text-[#050505] hover:bg-black/5'}`}
                         >
                             Majors
                         </button>
                         <button 
                             onClick={() => setSelectedCategory('ALT')}
-                            className={`px-5 py-2 text-[9px] font-black uppercase tracking-[0.2em] transition-all rounded-lg ${selectedCategory === 'ALT' ? 'bg-[#050505] text-[#FFFFFF] shadow-md' : 'text-[#888888] hover:text-[#050505] hover:bg-black/5'}`}
+                            className={`px-5 py-2 text-[9px] font-black uppercase tracking-[0.2em] transition-all rounded-lg ${selectedCategory === 'ALT' ? 'bg-white text-[#FFFFFF] shadow-md' : 'text-[#888888] hover:text-[#050505] hover:bg-black/5'}`}
                         >
                             Altcoins
                         </button>
@@ -322,7 +322,7 @@ export function PremiumGridStack() {
                         }}
                         className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] rounded-lg border transition-all flex items-center gap-1.5 ${
                             isRearranging
-                                ? 'bg-[#050505] border-[#050505] text-white'
+                                ? 'bg-white border-[#050505] text-white'
                                 : 'border-[#E5E5E5] text-[#888888] hover:border-[#050505] hover:text-[#050505]'
                         }`}
                     >

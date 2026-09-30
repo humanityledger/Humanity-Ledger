@@ -496,7 +496,7 @@ export function LegendaryTransactionModal({
                                   setQuote(null);
                                   setErrorMsg(null);
                               }}
-                              className={`flex-1 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${mode === t ? 'bg-[#050505] text-[#FFFFFF] shadow-md' : 'text-black/40 hover:text-black/80'}`}
+                              className={`flex-1 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${mode === t ? 'bg-white text-[#FFFFFF] shadow-md' : 'text-black/40 hover:text-black/80'}`}
                           >
                               {t}
                           </button>
@@ -540,7 +540,7 @@ export function LegendaryTransactionModal({
                                        <button 
                                            key={c}
                                            onClick={() => setSubMode(c)}
-                                           className={`px-3 py-1.5 rounded text-[10px] font-black transition-all ${subMode === c ? 'bg-[#050505] text-[#FFFFFF]' : 'text-black/40 hover:text-[#050505]'}`}
+                                           className={`px-3 py-1.5 rounded text-[10px] font-black transition-all ${subMode === c ? 'bg-white text-[#FFFFFF]' : 'text-black/40 hover:text-[#050505]'}`}
                                        >
                                            {c}
                                        </button>

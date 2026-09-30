@@ -95,7 +95,7 @@ export default function ExecutionDock() {
   };
 
   return (
-    <div className="flex flex-col gap-6 absolute inset-0 p-4 overflow-y-auto custom-scrollbar bg-[#050505]">
+    <div className="flex flex-col gap-6 absolute inset-0 p-4 overflow-y-auto custom-scrollbar bg-white">
       
       {/*  PRICE TICKER  */}
       <div className="flex flex-col gap-1 items-end z-10">
@@ -133,7 +133,7 @@ export default function ExecutionDock() {
          </div>
 
          {isQuoting || isSendingTx || isConfirming ? (
-             <div className="absolute inset-0 bg-[#050505]/90 backdrop-blur-md z-20 flex flex-col items-center justify-center">
+             <div className="absolute inset-0 bg-white/90 backdrop-blur-md z-20 flex flex-col items-center justify-center">
                  <div className="flex items-center gap-3 text-[var(--aztec-orchid)] font-black uppercase tracking-[0.2em] text-xs">
                      <Activity size={16} className="animate-spin" /> 
                      {isQuoting ? 'ROUTING DEX LIQUIDITY...' : isSendingTx ? 'AWAITING WALLET SIGNATURE...' : 'BROADCASTING TO MEMPOOL...'}

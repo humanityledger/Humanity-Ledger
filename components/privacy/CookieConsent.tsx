@@ -36,7 +36,7 @@ export function CookieConsent() {
                         className="relative rounded-2xl overflow-hidden border border-[#050505]/10 shadow-[0_20px_60px_rgba(0,0,0,0.08)] bg-white/95 backdrop-blur-xl"
                     >
                         {/* Top Accent Line */}
-                        <div className="h-[2px] w-full bg-[#050505]" />
+                        <div className="h-[2px] w-full bg-white" />
 
                         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-5 p-6 sm:px-8">
                             
@@ -51,7 +51,7 @@ export function CookieConsent() {
                             </div>
 
                             {/* Divider (Desktop) */}
-                            <div className="hidden sm:block w-[1px] h-12 bg-[#050505]/10 shrink-0 mx-2" />
+                            <div className="hidden sm:block w-[1px] h-12 bg-white/10 shrink-0 mx-2" />
 
                             {/* Text Content */}
                             <div className="flex-1 min-w-0 pr-2">
@@ -68,7 +68,7 @@ export function CookieConsent() {
                             <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto mt-2 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-[#050505]/5">
                                 <button
                                     onClick={acceptAll}
-                                    className="flex-1 sm:flex-none px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-200 active:scale-[0.97] bg-[#050505] text-white hover:bg-[#222] shadow-md"
+                                    className="flex-1 sm:flex-none px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-200 active:scale-[0.97] bg-white text-white hover:bg-[#222] shadow-md"
                                 >
                                     Acknowledge
                                 </button>

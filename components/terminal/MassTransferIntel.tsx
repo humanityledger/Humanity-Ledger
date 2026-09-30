@@ -339,7 +339,7 @@ export function MassTransferIntel() {
                 onClick={() => setFloorPreset(p.value)}
                 className={`px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border transition-colors rounded-sm ${
                   floorPreset === p.value
-                    ? "bg-[#050505]  text-white  border-[#050505] "
+                    ? "bg-white  text-white  border-[#050505] "
                     : "bg-white  text-[#888888]  border-[#E5E5E5]  hover:border-[#050505]  hover:text-[#050505] "
                 }`}
               >
@@ -354,7 +354,7 @@ export function MassTransferIntel() {
             onClick={() => setIsSonarActive(p => !p)}
             className={`px-4 py-2 border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors ${
               isSonarActive
-                ? "border-[#050505]  bg-[#050505]  text-white "
+                ? "border-[#050505]  bg-white  text-white "
                 : "border-[#E5E5E5]  bg-white  hover:bg-[#F0F0F0]  text-[#050505] "
             }`}
           >

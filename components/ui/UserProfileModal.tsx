@@ -369,7 +369,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
                             <button
                                 onClick={handleSave}
                                 disabled={!isConnected || isSaving}
-                                className="bg-[#050505] text-white px-8 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-black/80 hover:shadow-lg hover:shadow-black/10 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center gap-2"
+                                className="bg-white text-white px-8 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-black/80 hover:shadow-lg hover:shadow-black/10 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center gap-2"
                             >
                                 {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                 {isSaving ? 'SYNCING STATE...' : 'SAVE CONFIGURATION'}

@@ -1058,7 +1058,7 @@ function AztecTab() {
       {/* Header */}
       <div className="rounded-2xl border border-black/10 bg-white p-6">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-6 h-6 rounded-md bg-[#050505] flex items-center justify-center">
+          <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center">
             
           </div>
           <p className="text-[10px] font-black uppercase tracking-widest text-black/50">
@@ -1340,7 +1340,7 @@ function BandwidthTab() {
           className="w-12 h-6 bg-black/8 rounded-full relative border border-black/10 transition-all hover:border-black/30"
         >
           <div
-            className={`w-6 h-6 absolute top-[-1px] left-[-1px] bg-[#050505] rounded-full transition-transform duration-200 ${
+            className={`w-6 h-6 absolute top-[-1px] left-[-1px] bg-white rounded-full transition-transform duration-200 ${
               isAnnual ? 'translate-x-6' : 'translate-x-0'
             }`}
           />
@@ -1381,7 +1381,7 @@ function BandwidthTab() {
                 </div>
               )}
               {plan.elite && (
-                <div className="absolute -top-3 left-6 bg-[#050505] text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">
+                <div className="absolute -top-3 left-6 bg-white text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">
                   Maximum power
                 </div>
               )}
@@ -1440,7 +1440,7 @@ function BandwidthTab() {
                     disabled={cargando}
                     className={`w-full sm:w-auto px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
                       plan.elite
-                        ? 'bg-[#050505] text-white hover:bg-[#1a1a1a] shadow-md'
+                        ? 'bg-white text-white hover:bg-[#1a1a1a] shadow-md'
                         : 'bg-black/5 text-[#050505] border border-black/10 hover:bg-black/10'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
@@ -1657,7 +1657,7 @@ export function ProvenanceStudioContent({
               onClick={() => startTransition(() => setActiveTab(tab.id))}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 activeTab === tab.id
-                  ? 'bg-[#050505] text-white shadow-sm'
+                  ? 'bg-white text-white shadow-sm'
                   : 'text-black/40 hover:text-black/70'
               }`}
             >

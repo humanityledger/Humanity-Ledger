@@ -81,7 +81,7 @@ export default function ContextMenu({ onAction, children }: ContextMenuProps) {
           exit={{ opacity: 0, scale: 0.9, y: 5 }}
           transition={{ duration: 0.15, ease: "easeOut" }}
           style={{ top: position.y, left: position.x }}
-          className="fixed z-[9999] min-w-[240px] rounded-sm bg-[#050505]/95 backdrop-blur-2xl border border-white/10 p-2 shadow-[0_0_40px_rgba(0,0,0,0.9)] focus:outline-none ring-1 ring-white/10"
+          className="fixed z-[9999] min-w-[240px] rounded-sm bg-white/95 backdrop-blur-2xl border border-white/10 p-2 shadow-[0_0_40px_rgba(0,0,0,0.9)] focus:outline-none ring-1 ring-white/10"
         >
           {/* Header */}
           <div className="px-3 py-2 mb-1 border-b border-white/10 flex items-center justify-between">

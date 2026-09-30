@@ -126,9 +126,9 @@ export function SirDeggenBrowser({ initialUrl = 'aztek://hub' }: SirDeggenBrowse
       </div>
 
       {/*  VIEWPORT  */}
-      <div className="flex-1 relative bg-[#050505]">
+      <div className="flex-1 relative bg-white">
         {url === 'aztek://hub' ? (
-          <div className="p-12 h-screen overflow-y-auto bg-[#050505]">
+          <div className="p-12 h-screen overflow-y-auto bg-white">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto space-y-12">
                <h2 className="text-4xl font-aztec-serif font-black text-white uppercase tracking-tighter">SirDeggen <span className="text-[var(--aztec-orchid)]">Hub</span></h2>
                <div className="grid grid-cols-2 gap-8">

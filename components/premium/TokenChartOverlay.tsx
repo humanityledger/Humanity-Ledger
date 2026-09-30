@@ -106,7 +106,7 @@ export const TokenChartOverlay = ({ symbol, onClose }: OverlayProps) => {
                     </div>
 
                     {/* Right Sidebar */}
-                    <div className="flex flex-col overflow-hidden bg-[#050505]">
+                    <div className="flex flex-col overflow-hidden bg-white">
 
                         {/* Stats strip */}
                         <div className="px-5 py-4 border-b border-white/5 grid grid-cols-2 gap-4">

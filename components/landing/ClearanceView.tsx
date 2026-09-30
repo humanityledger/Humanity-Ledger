@@ -252,7 +252,7 @@ export function ClearanceView({ onBack }: ClearanceViewProps) {
                     onClick={() => connect({ connector: injected() })}
                     whileHover={{ scale: 1.02, backgroundColor: "#111" }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full bg-[#050505] text-white font-mono text-xs font-black uppercase py-7 tracking-[0.4em] flex justify-center items-center gap-4 transition-all duration-300 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)]"
+                    className="w-full bg-white text-white font-mono text-xs font-black uppercase py-7 tracking-[0.4em] flex justify-center items-center gap-4 transition-all duration-300 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)]"
                   >
                     CONECTAR WALLET // L2
                   </motion.button>
@@ -262,7 +262,7 @@ export function ClearanceView({ onBack }: ClearanceViewProps) {
                     disabled={isExecuting || !rates}
                     whileHover={{ scale: 1.02, backgroundColor: "#111" }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full bg-[#050505] text-white font-mono text-xs font-black uppercase py-7 tracking-[0.4em] disabled:opacity-30 disabled:cursor-not-allowed flex justify-center items-center gap-4 transition-all duration-300 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)]"
+                    className="w-full bg-white text-white font-mono text-xs font-black uppercase py-7 tracking-[0.4em] disabled:opacity-30 disabled:cursor-not-allowed flex justify-center items-center gap-4 transition-all duration-300 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)]"
                   >
                     {isWaiting ? (
                       <>

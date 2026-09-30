@@ -353,7 +353,7 @@ export function HyperliquidExecutionPanel() {
             <button
               onClick={placeOrder}
               disabled={isSubmitting || !isConnected || !size}
-              className="w-full py-3.5 mt-2 rounded-xl bg-[#050505] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-black/80 transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="w-full py-3.5 mt-2 rounded-xl bg-white text-white text-[11px] font-bold uppercase tracking-widest hover:bg-black/80 transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <><RefreshCw size={14} className="animate-spin" /> Processing...</>

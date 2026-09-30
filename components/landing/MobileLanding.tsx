@@ -226,7 +226,7 @@ function SigningOverlay({
           <div className="w-full flex flex-col gap-3">
             <button
               onClick={onOpenWallet}
-              className="w-full py-4 rounded-2xl bg-[#050505] text-white font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all hover:bg-black/90"
+              className="w-full py-4 rounded-2xl bg-white text-white font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all hover:bg-black/90"
             >
               <Fingerprint size={16} />
               Open Wallet & Retry
@@ -246,7 +246,7 @@ function SigningOverlay({
               <a
                 href={wcDeepLink}
                 rel="noopener noreferrer"
-                className="w-full py-4 rounded-2xl bg-[#050505] text-white font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-transform select-none hover:bg-black/90"
+                className="w-full py-4 rounded-2xl bg-white text-white font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-transform select-none hover:bg-black/90"
               >
                 Open Wallet App
               </a>
@@ -254,7 +254,7 @@ function SigningOverlay({
               /* No deep-link → open the Reown AppKit modal so user picks their wallet */
               <button
                 onClick={onOpenWallet}
-                className="w-full py-4 rounded-2xl bg-[#050505] text-white font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all hover:bg-black/90"
+                className="w-full py-4 rounded-2xl bg-white text-white font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all hover:bg-black/90"
               >
                 <Fingerprint size={16} />
                 Tap to Sign &amp; Complete Login

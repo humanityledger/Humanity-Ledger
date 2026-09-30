@@ -126,7 +126,7 @@ export function NewPairsTable() {
                             className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border transition-all ${rugFilter === f
                                 ? f === 'verified' ? 'bg-[#00C076] text-white border-[#00C076]'
                                 : f === 'risky'    ? 'bg-[#FF3B30] text-white border-[#FF3B30]'
-                                : 'bg-[#050505] text-white border-[#050505]'
+                                : 'bg-white text-white border-[#050505]'
                                 : 'text-[#888888] border-[#E5E5E5] hover:border-[#050505]'}`}
                         >
                             {f}

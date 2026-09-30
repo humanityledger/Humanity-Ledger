@@ -122,7 +122,7 @@ export class DashboardErrorBoundary extends Component<Props, State> {
 
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#050505] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#333] transition-all"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-white text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#333] transition-all"
           >
             <RotateCcw size={14} />
             Reboot Interface

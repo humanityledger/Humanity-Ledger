@@ -121,14 +121,14 @@ export default function UnifiedDocsPage() {
                               key={i}
                               className="flex gap-3 text-[14px] md:text-[15px] text-[#050505]/65 leading-relaxed"
                             >
-                              <span className="mt-2 w-1.5 h-1.5 rounded-full bg-[#050505] shrink-0" />
+                              <span className="mt-2 w-1.5 h-1.5 rounded-full bg-white shrink-0" />
                               <span>{b}</span>
                             </li>
                           ))}
                         </ul>
                       )}
                       {section.callout && (
-                        <div className="mt-8 p-6 md:p-8 rounded-2xl border border-[#050505]/15 bg-[#050505]/[0.03]">
+                        <div className="mt-8 p-6 md:p-8 rounded-2xl border border-[#050505]/15 bg-white/[0.03]">
                           <p className="font-mono text-[9px] font-black uppercase tracking-[0.25em] text-[#050505]/70 mb-2">
                             {section.callout.title}
                           </p>

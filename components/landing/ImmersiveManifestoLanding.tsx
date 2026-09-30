@@ -221,7 +221,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-8">
               <Link
                 href="/chat"
-                className="bg-[#050505] hover:bg-[#1A1A1A] text-white font-bold text-[16px] px-8 py-4 rounded-2xl transition-all shadow-[0_8px_24px_rgba(0,0,0,0.12)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
+                className="bg-white hover:bg-[#1A1A1A] text-white font-bold text-[16px] px-8 py-4 rounded-2xl transition-all shadow-[0_8px_24px_rgba(0,0,0,0.12)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
               >
                 <MessageCircle size={20} />
                 Open Ledger Chat

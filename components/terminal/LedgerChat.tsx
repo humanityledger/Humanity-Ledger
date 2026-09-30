@@ -4475,7 +4475,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 {/* Phase 5: Secret Chat Toggle */}
                 <button
                   onClick={() => setIsSecretChat(!isSecretChat)}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${isSecretChat ? 'bg-[#050505] text-white shadow-lg shadow-black/10 animate-pulse' : 'bg-[#f5f5f7] text-black/40 hover:bg-black/5 hover:text-black/60'}`}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${isSecretChat ? 'bg-white text-white shadow-lg shadow-black/10 animate-pulse' : 'bg-[#f5f5f7] text-black/40 hover:bg-black/5 hover:text-black/60'}`}
                   title={isSecretChat ? "Secret Chat Active (Auto-Burn 15s)" : "Start Secret Chat"}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
@@ -4753,7 +4753,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     />
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={submitEditMessage} className="p-1.5 bg-[#050505] text-white rounded-lg hover:opacity-80 shadow-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></button>
+                    <button onClick={submitEditMessage} className="p-1.5 bg-white text-white rounded-lg hover:opacity-80 shadow-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></button>
                     <button onClick={() => setEditingMsg(null)} className="p-1.5 text-black/50 hover:text-black"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                   </div>
                 </div>
@@ -4833,7 +4833,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   </div>
                   <div className="flex flex-col py-1">
                     <button type="button" onClick={() => { setInputText(''); setShowWalletTransfer(true); }} className="px-3 py-2.5 text-left hover:bg-black/5 transition-colors flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#050505] text-white flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-white text-white flex items-center justify-center shrink-0">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
                       </div>
                       <div className="flex flex-col">
@@ -5365,7 +5365,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
             {/* â”€â”€ Network Alert â”€â”€ */}
             {networkQuality === 'poor' && (
-              <div className="absolute top-[100px] left-1/2 -translate-x-1/2 bg-[#050505]/90 backdrop-blur text-white text-[11px] font-mono font-bold px-4 py-1.5 rounded-full z-20 flex items-center gap-2">
+              <div className="absolute top-[100px] left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur text-white text-[11px] font-mono font-bold px-4 py-1.5 rounded-full z-20 flex items-center gap-2">
                  âš ï¸ Weak Connection
               </div>
             )}
@@ -5409,7 +5409,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
                 <button
                   onClick={endCall}
-                  className="w-[72px] h-[72px] bg-[#050505] rounded-[28px] flex items-center justify-center text-white hover:opacity-80 active:scale-90 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
+                  className="w-[72px] h-[72px] bg-white rounded-[28px] flex items-center justify-center text-white hover:opacity-80 active:scale-90 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
                 >
                   <PhoneOff size={32} />
                 </button>
@@ -5458,7 +5458,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    </div>
                    <button 
                      onClick={toggleVoiceIsolation}
-                     className={`w-12 h-6 rounded-full transition-colors relative ${voiceIsolation ? 'bg-[#050505]' : 'bg-black/20'}`}
+                     className={`w-12 h-6 rounded-full transition-colors relative ${voiceIsolation ? 'bg-white' : 'bg-black/20'}`}
                    >
                      <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${voiceIsolation ? 'left-6' : 'left-0.5'}`} />
                    </button>
@@ -5472,7 +5472,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    </div>
                    <button 
                      onClick={toggleDataSaver}
-                     className={`w-12 h-6 rounded-full transition-colors relative ${dataSaver ? 'bg-[#050505]' : 'bg-black/20'}`}
+                     className={`w-12 h-6 rounded-full transition-colors relative ${dataSaver ? 'bg-white' : 'bg-black/20'}`}
                    >
                      <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${dataSaver ? 'left-6' : 'left-0.5'}`} />
                    </button>
@@ -5715,7 +5715,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                <button onClick={() => setShowClearConfirm(false)} className="flex-1 py-3.5 rounded-xl bg-[#f5f5f7] hover:bg-[#e5e5ea] text-[13px] font-bold text-gray-700 transition-colors">
                  Cancel
                </button>
-               <button onClick={executeClearChat} className="flex-1 py-3.5 rounded-xl bg-[#050505] hover:bg-[#050505] text-white text-[13px] font-bold transition-colors shadow-lg shadow-black/10">
+               <button onClick={executeClearChat} className="flex-1 py-3.5 rounded-xl bg-white hover:bg-white text-white text-[13px] font-bold transition-colors shadow-lg shadow-black/10">
                  Clear Chat
                </button>
              </div>
@@ -5793,7 +5793,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    setPollQuestion('');
                    setPollOptions(['', '']);
                  }}
-                 className="w-full py-3.5 rounded-xl bg-[#050505] hover:opacity-80 text-white text-[13px] font-bold shadow-sm transition-colors"
+                 className="w-full py-3.5 rounded-xl bg-white hover:opacity-80 text-white text-[13px] font-bold shadow-sm transition-colors"
                >
                  Send Poll
                </button>
@@ -5851,7 +5851,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                      setTransferSending(false);
                    }
                  }}
-                 className="w-full py-3.5 rounded-xl bg-[#050505] hover:opacity-80 text-white text-[13px] font-bold shadow-lg shadow-black/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                 className="w-full py-3.5 rounded-xl bg-white hover:opacity-80 text-white text-[13px] font-bold shadow-lg shadow-black/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                >
                  {transferSending ? 'Processing...' : `Send ${transferAmount || '0'} QD`}
                </button>
@@ -5916,7 +5916,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     setShowSaveContactModal(false);
                   }
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-[#050505] text-[12px] font-bold text-white hover:opacity-80 transition-opacity disabled:opacity-30"
+                className="flex-1 py-2.5 rounded-xl bg-white text-[12px] font-bold text-white hover:opacity-80 transition-opacity disabled:opacity-30"
                 disabled={!saveContactName.trim()}
               >Save</button>
             </div>

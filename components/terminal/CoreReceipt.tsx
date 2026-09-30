@@ -36,7 +36,7 @@ export default function CoreReceipt({
             className="w-full max-w-sm mx-auto bg-white rounded-[24px] overflow-hidden shadow-2xl border border-neutral-100"
         >
             {/* Header */}
-            <div className="bg-[#050505] p-8 text-center relative overflow-hidden">
+            <div className="bg-white p-8 text-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full" />
                 <div className="relative z-10">
                     <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full mx-auto flex items-center justify-center mb-4">

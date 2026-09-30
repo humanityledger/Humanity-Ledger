@@ -277,7 +277,7 @@ export default function MessageEngine({
   const { address } = useWalletStore();
   const { settings: ledgerSettings } = useLedgerSettings(address || '');
 
-  // Read quantum settings directly from PXE store (source of truth)
+  // Read settings directly from PXE store (source of truth)
   const chatBackground   = ledgerSettings?.chat_background || 'default';
   const chatBgCustomUrl  = ledgerSettings?.chat_background_custom_url || '';
   const bubbleStyle      = ledgerSettings?.bubble_style || 'default';

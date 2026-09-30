@@ -327,7 +327,7 @@ export function SystemVault() {
                                 <button
                                     onClick={handlePing}
                                     disabled={isPinging}
-                                    className="w-full bg-[#050505] border border-[#050505] hover:bg-white hover:text-[#050505] text-white py-2.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                                    className="w-full bg-white border border-[#050505] hover:bg-white hover:text-[#050505] text-white py-2.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
                                 >
                                     {isPinging ? 'TRANSMITTING...' : 'EMIT HEARTBEAT PING'}
                                 </button>
@@ -336,7 +336,7 @@ export function SystemVault() {
                             <button
                                 onClick={handleDeployDeadman}
                                 disabled={!isConnected}
-                                className="w-full bg-[#FFFFFF] border border-[#E5E5E5] text-[#050505] hover:bg-[#050505] hover:text-white py-2.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all relative z-10 disabled:opacity-40"
+                                className="w-full bg-[#FFFFFF] border border-[#E5E5E5] text-[#050505] hover:bg-white hover:text-white py-2.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all relative z-10 disabled:opacity-40"
                             >
                                 {isConnected ? 'DEPLOY DEADMAN FAILSAFE' : 'CONNECT WALLET'}
                             </button>
@@ -356,7 +356,7 @@ export function SystemVault() {
                         <button
                             onClick={handleLock}
                             disabled={isLocking || !isConnected}
-                            className="w-full bg-[#FFFFFF] border border-[#E5E5E5] text-[#050505] hover:bg-[#050505] hover:text-white py-2.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-40 relative z-10"
+                            className="w-full bg-[#FFFFFF] border border-[#E5E5E5] text-[#050505] hover:bg-white hover:text-white py-2.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-40 relative z-10"
                         >
                             {isLocking ? 'SIGNING...' : isConnected ? 'DEPLOY TIMELOCK (0.001 ETH)' : 'CONNECT WALLET'}
                         </button>
@@ -389,7 +389,7 @@ export function SystemVault() {
                         <button
                             onClick={handleAddGuardian}
                             disabled={addingGuardian}
-                            className="bg-[#050505] text-white px-6 py-2.5 rounded-lg font-black text-xs uppercase tracking-widest hover:bg-[#FFFFFF] hover:text-[#050505] border border-transparent hover:border-[#E5E5E5] transition-colors disabled:opacity-50 flex items-center gap-2"
+                            className="bg-white text-white px-6 py-2.5 rounded-lg font-black text-xs uppercase tracking-widest hover:bg-[#FFFFFF] hover:text-[#050505] border border-transparent hover:border-[#E5E5E5] transition-colors disabled:opacity-50 flex items-center gap-2"
                         >
                             <UserPlus size={14} />
                             {addingGuardian ? 'ADDING...' : 'ADD'}

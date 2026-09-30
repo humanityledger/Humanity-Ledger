@@ -178,7 +178,7 @@ export function ApiTerminal() {
                                         {group.endpoints.map(ep => (
                                             <button key={ep.id}
                                                 onClick={() => { setSelected(ep); setResponse(null); setResponseHeaders({}); }}
-                                                className={`w-full text-left px-2 py-2 rounded-lg flex items-center gap-2 transition-colors ${selected.id === ep.id ? 'bg-[#050505] text-white' : 'text-[#888888] hover:text-[#050505] hover:bg-[#E5E5E5]/50'}`}>
+                                                className={`w-full text-left px-2 py-2 rounded-lg flex items-center gap-2 transition-colors ${selected.id === ep.id ? 'bg-white text-white' : 'text-[#888888] hover:text-[#050505] hover:bg-[#E5E5E5]/50'}`}>
                                                 <span className={`text-[7px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider shrink-0 ${selected.id === ep.id ? 'bg-white/20 text-white border-white/20' : METHOD_COLORS[ep.method]}`}>
                                                     {ep.method}
                                                 </span>
@@ -194,7 +194,7 @@ export function ApiTerminal() {
             </div>
 
             {/*  Console  */}
-            <div className="flex-1 flex flex-col min-w-0 bg-[#050505] text-white">
+            <div className="flex-1 flex flex-col min-w-0 bg-white text-white">
 
                 {/* Header */}
                 <div className="px-6 py-3 border-b border-white/10 bg-black/30 flex items-center justify-between">

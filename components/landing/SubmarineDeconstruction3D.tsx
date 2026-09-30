@@ -363,12 +363,12 @@ export default function SubmarineDeconstruction3D() {
   }, []);
 
   if (!mounted) {
-    return <section className="relative w-full h-screen bg-[#050505]" />;
+    return <section className="relative w-full h-screen bg-white" />;
   }
 
   return (
     // Transform into a monstrous 800vh storytelling scroll terrain
-    <section ref={sectionRef} className="relative w-full h-[800vh] bg-[#050505] selection:bg-[var(--aztec-orchid)]/30">
+    <section ref={sectionRef} className="relative w-full h-[800vh] bg-white selection:bg-[var(--aztec-orchid)]/30">
       
       <div className="sticky top-0 w-full h-screen overflow-hidden flex items-center justify-center bg-noise">
         {/* Deep Environment Vignette */}

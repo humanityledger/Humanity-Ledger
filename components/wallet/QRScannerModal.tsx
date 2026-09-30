@@ -428,7 +428,7 @@ export default function QRScannerModal({ isOpen, onClose, onScan, address: exter
                 onClick={() => setTab('camera')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all border ${
                   tab === 'camera'
-                    ? 'bg-[#050505] text-white border-[#050505]'
+                    ? 'bg-white text-white border-[#050505]'
                     : 'bg-white text-black/40 border-black/10 hover:border-black/20'
                 }`}
               >
@@ -438,7 +438,7 @@ export default function QRScannerModal({ isOpen, onClose, onScan, address: exter
                 onClick={() => setTab('file')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all border ${
                   tab === 'file'
-                    ? 'bg-[#050505] text-white border-[#050505]'
+                    ? 'bg-white text-white border-[#050505]'
                     : 'bg-white text-black/40 border-black/10 hover:border-black/20'
                 }`}
               >
@@ -544,7 +544,7 @@ export default function QRScannerModal({ isOpen, onClose, onScan, address: exter
                   </div>
 
                   <label className="relative cursor-pointer">
-                    <span className="flex items-center gap-2 px-6 py-3 bg-[#050505] text-white text-[10px] font-black uppercase tracking-widest hover:bg-black/80 transition-colors">
+                    <span className="flex items-center gap-2 px-6 py-3 bg-white text-white text-[10px] font-black uppercase tracking-widest hover:bg-black/80 transition-colors">
                       {fileLoading ? (
                         <><span className="inline-block animate-spin">◌</span> Processing...</>
                       ) : (

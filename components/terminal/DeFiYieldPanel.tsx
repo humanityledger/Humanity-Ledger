@@ -219,7 +219,7 @@ export default function DeFiYieldPanel() {
                                 <motion.div
                                     key={p.pool}
                                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15, delay: i * 0.008 }}
-                                    className={`grid grid-cols-6 gap-8 p-4 border-b border-[#E5E5E5] cursor-pointer transition-colors ${isActive ? 'bg-[#050505]/[0.02]' : 'hover:bg-[#FFFFFF]'}`}
+                                    className={`grid grid-cols-6 gap-8 p-4 border-b border-[#E5E5E5] cursor-pointer transition-colors ${isActive ? 'bg-white/[0.02]' : 'hover:bg-[#FFFFFF]'}`}
                                     onClick={() => setSelected(isActive ? null : p)}
                                 >
                                     <div className="col-span-2 overflow-hidden flex flex-col gap-1">
@@ -311,7 +311,7 @@ export default function DeFiYieldPanel() {
                                 <button 
                                     onClick={handleOneClickDeposit}
                                     disabled={isDepositing || !depositAmount}
-                                    className="w-full py-4 rounded bg-[#050505] text-white font-bold uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-2 hover:bg-[#888888] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full py-4 rounded bg-white text-white font-bold uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-2 hover:bg-[#888888] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isDepositing ? (
                                         <Loader2 size={16} className="animate-spin" />
