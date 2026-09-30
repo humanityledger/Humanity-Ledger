@@ -2,7 +2,7 @@
 
 import { headers } from 'next/headers'
 
-import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
+import { Inter, IBM_Plex_Mono } from 'next/font/google'
 
 import './globals-compiled.css'
 
@@ -32,8 +32,6 @@ import { GlobalErrorBoundary } from "@/components/ui/GlobalErrorBoundary";
 
 import { ScrollProgressBar } from "@/components/ui/ScrollProgressBar";
 
-
-
 import { AntiTamperCore } from "@/components/security/AntiTamperCore";
 
 import { AztecProvider } from "@/context/AztecContext";
@@ -42,44 +40,23 @@ import { AztecNativeProvider } from "@/context/AztecNativeContext";
 
 import { WalletConnectProvider } from '@/components/walletconnect/WalletConnectProvider';
 
-
-
-const plexSans = IBM_Plex_Sans({ 
-
+const inter = Inter({ 
   subsets: ['latin'], 
-
-  weight: ['400', '500', '600', '700'],
-
-  variable: '--font-inter' // Reusing the inter variable to override all sans usages safely
-
+  variable: '--font-inter',
+  display: 'swap'
 })
 
-
-
-const aztecFont = IBM_Plex_Sans({
-
+const aztecFont = Inter({
   subsets: ['latin'],
-
-  weight: ['400', '600', '700'],
-
   variable: '--font-aztec-serif',
-
   display: 'swap',
-
 })
-
-
 
 const plexMono = IBM_Plex_Mono({
-
   subsets: ['latin'],
-
   weight: ['400', '500', '700'],
-
   variable: '--font-aztec-mono',
-
   display: 'swap',
-
 })
 
 
@@ -373,7 +350,7 @@ export default async function RootLayout({
 
   return (
 
-    <html lang="en" className={`light bg-white ${plexSans.variable} ${aztecFont.variable} ${plexMono.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang="en" className={`light bg-white ${inter.variable} ${aztecFont.variable} ${plexMono.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
 
       <head>
         <meta charSet="utf-8" />
