@@ -1,16 +1,25 @@
 {
+  "id": "humanity-ledger-pwa",
   "name": "Humanity Ledger",
-  "short_name": "Ledger",
-  "description": "Secure Sovereign P2P Messaging and ZK Identity",
-  "start_url": "/dashboard",
+  "short_name": "Ledger Chat",
+  "description": "The world's most private and secure messaging platform. No phone number required. Designed for everyone.",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#FFFFFF",
+  "theme_color": "#FFFFFF",
+  "lang": "en",
+  "dir": "ltr",
+  "orientation": "portrait-primary",
+  "categories": ["communication", "social", "security"],
+  "screenshots": [],
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "/favicon.png",
+      "sizes": "32x32",
+      "type": "image/png"
     },
     {
       "src": "/icon-192.png",
@@ -25,6 +34,13 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["finance", "social", "security"],
-  "orientation": "portrait"
+  "shortcuts": [
+    {
+      "name": "Open Ledger Chat",
+      "short_name": "Chat",
+      "description": "Go directly to encrypted messaging",
+      "url": "/chat",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    }
+  ]
 }
