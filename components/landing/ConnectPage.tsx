@@ -324,7 +324,7 @@ export default function ConnectPage() {
           <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" />
         </div>
         <h2 className="relative z-10 text-[32px] font-black tracking-[-0.03em] text-black mb-2">Ledger Chat</h2>
-        <p className="relative z-10 text-[14px] text-neutral-500 font-medium mb-6 text-center max-w-[280px] leading-relaxed">The world's most advanced cryptographic messenger.</p>
+        <p className="relative z-10 text-[14px] text-neutral-500 font-medium mb-6 text-center max-w-[280px] leading-relaxed">The world's most secure private messenger.</p>
         
         {/* Launch badge - sleek pill */}
         <div className="relative z-10 inline-flex items-center gap-3 pl-2 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/[0.04]">
@@ -373,7 +373,7 @@ export default function ConnectPage() {
             </h1>
 
             <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-10 max-w-[400px]">
-              The world's most advanced cryptographic messaging protocol. End-to-end encrypted, zero-knowledge, and fully sovereign.
+              The world's most secure private messaging protocol. End-to-end encrypted and fully sovereign.
             </p>
 
             {/* Launch advertisement - ultra premium pill */}
@@ -391,7 +391,7 @@ export default function ConnectPage() {
 
           {/* Bottom bar */}
           <div className="relative z-20 flex items-center justify-between opacity-40">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-black font-semibold">Zero-Knowledge Protocol</span>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-black font-semibold">Sovereign Protocol</span>
             <span className="text-[10px] font-mono uppercase tracking-widest text-black font-semibold">Timisoara R&amp;D Hub</span>
           </div>
         </div>

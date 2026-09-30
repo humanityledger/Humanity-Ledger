@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
@@ -462,7 +462,7 @@ function ConnectedScreen({
             { label: 'Ledger Chat', href: '/chat', icon: <MessageSquare size={22} strokeWidth={1.5} />, color: 'bg-[#1c7aff] text-white', border: 'border-transparent' },
             { label: 'Portfolio', href: '/portfolio', icon: <PieChart size={22} strokeWidth={1.5} />, color: 'bg-[#f5f5f7] text-black', border: 'border-transparent' },
             { label: 'Studio', href: '/studio/provenance', icon: <Package size={22} strokeWidth={1.5} />, color: 'bg-gradient-to-tr from-purple-500 to-indigo-600 text-white', border: 'border-transparent' },
-            { label: 'ZK Sandbox', href: '/sandbox', icon: <Fingerprint size={22} strokeWidth={1.5} />, color: 'bg-black text-white', border: 'border-transparent' },
+            { label: 'Developer Sandbox', href: '/sandbox', icon: <Fingerprint size={22} strokeWidth={1.5} />, color: 'bg-black text-white', border: 'border-transparent' },
           ].map((app, i) => {
             const InnerContent = (
               <div className={`flex flex-col justify-between p-4 h-[120px] rounded-[24px] border ${app.border} ${app.color} shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer`}>
@@ -1386,7 +1386,7 @@ export function MobileLanding() {
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           className="font-serif text-[clamp(2.8rem,12vw,5rem)] font-normal tracking-tight text-[#0A0A0A] leading-[1.1] select-none"
         >
-          YOUR KEYS.<br />YOUR IDENTITY.
+          Your Keys.<br />Your Identity.
         </motion.h1>
         <motion.p
           initial={{ opacity: 0 }}
@@ -1394,7 +1394,7 @@ export function MobileLanding() {
           transition={{ delay: 0.3, duration: 0.6 }}
           className="mt-4 text-[10px] font-mono uppercase tracking-[0.25em] text-black/55"
         >
-          Humanity Ledger / ZK-Native / Sovereign
+          Sovereign Messaging Network
         </motion.p>
 
         {/* ── ANDROID/iOS RECOVERY BANNER ───────────────────────────────── */}
@@ -1509,7 +1509,7 @@ export function MobileLanding() {
         </div>
 
         <p className="text-center text-[9px] font-mono text-black/55 uppercase tracking-[0.2em] mt-3 mb-0.5">
-          Secured by Humanity Ledger. ZK-Native. End-to-End Encrypted.
+          Secured by Humanity Ledger. End-to-End Encrypted.
         </p>
       </motion.div>
 
