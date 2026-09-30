@@ -214,7 +214,7 @@ export const viewport = {
 
   maximumScale: 1,
 
-  userScalable: false,
+  userScalable: false, viewportFit: 'cover',
 
   viewportFit: 'cover',
 
@@ -650,5 +650,6 @@ export default async function RootLayout({
   )
 
 }
+
 
 

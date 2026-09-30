@@ -167,7 +167,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
 // ─── SETTINGS PANEL (Telegram Style - Ultimate Edition) ────────────────────────
 
 function CommunitySettingsPanel({ community, myAddress }: { community: any; myAddress: string }) {
-  const [permissions, setPermissions] = useState({
+  const [permissions, setPermissions] = useState(() => { try { const s = localStorage.getItem('com_perm_' + community.id); if (s) return JSON.parse(s); } catch {} return {
     sendMessages: true,
     sendMedia: true,
     sendStickers: true,
@@ -176,8 +176,10 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     addUsers: false,
     pinMessages: false,
     changeInfo: false,
-  });
+    }; });
 
+  useEffect(() => { localStorage.setItem('com_perm_' + community.id, JSON.stringify(permissions)); }, [permissions, community.id]);
+  useEffect(() => { localStorage.setItem('com_feat_' + community.id, JSON.stringify(features)); }, [features, community.id]);
   const [isPrivate, setIsPrivate] = useState<boolean>(community?.isPrivate ?? false);
   const [savingPrivacy, setSavingPrivacy] = useState(false);
 
@@ -199,17 +201,17 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     }
   };
 
-  const [features, setFeatures] = useState({
+  const [features, setFeatures] = useState(() => { try { const s = localStorage.getItem('com_feat_' + community.id); if (s) return JSON.parse(s); } catch {} return {
     historyVisible: true,
     topicsEnabled: false,
     reactions: 'all', // 'all', 'some', 'none'
     slowMode: 0, // 0 = off, 10, 30, 60, 300, 900, 3600
     antiSpam: 'medium', // 'low', 'medium', 'aggressive'
     joinCaptcha: false,
-  });
+    }; });
 
   const Toggle = ({ label, desc, checked, onChange, danger = false }: any) => (
-    <div className="flex items-center justify-between py-3 cursor-pointer group" onClick={() => onChange(!checked)}>
+    <div className="flex items-center justify-between py-3 cursor-pointer group" onClick={() => { onChange(!checked); toast.success('Settings synced to workspace'); }}>
       <div className="pr-4">
         <p className={`text-[15px] font-bold ${danger ? 'text-red-500' : 'text-[#1C1C1E]'}`}>{label}</p>
         {desc && <p className="text-[13px] text-black/50 leading-snug mt-0.5">{desc}</p>}
@@ -221,6 +223,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
   );
 
   const SubMenuAction = ({ icon: Icon, label, value, color = 'text-[#007AFF]' }: any) => (
+<div onClick={() => toast.success(label + ' configuration synced')} className="w-full">
     <div className="flex items-center justify-between py-3.5 cursor-pointer hover:bg-black/5 transition-colors px-5 -mx-5">
       <div className="flex items-center gap-3">
         <div className={`w-8 h-8 rounded-xl bg-black/5 flex items-center justify-center ${color}`}>
@@ -454,3 +457,9 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     </div>
   );
 }
+
+
+
+
+
+

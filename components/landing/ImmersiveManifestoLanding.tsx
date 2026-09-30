@@ -134,36 +134,40 @@ function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
   );
 }
 
-// App Store badge (SVG inline for reliability)
+// App Store badge (High Quality)
 function AppStoreBadge() {
   return (
     <a
       href="#notify"
-      className="flex items-center gap-3 bg-[#1C1C1E] hover:bg-black text-white px-5 py-3 rounded-xl transition-all active:scale-95 shadow-lg"
+      className="flex items-center gap-2.5 bg-black hover:bg-[#1A1A1C] text-white px-5 py-2.5 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-white/5"
     >
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
-        <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+        <path d="M15.42 5.09c-.83 1.25-2.07 2.06-3.41 2.06-1.5 0-2.8-.82-3.66-2.06C9.17 3.84 10.4 3 11.75 3c1.5 0 2.8.84 3.67 2.09zm-3.64 2.81c-2.3 0-4.04 1.49-4.8 3.73-.77 2.23.11 4.71 1.76 6.94 1.25 1.68 2.5 3.37 4.14 3.39 1.54.02 2.03-1.07 3.96-1.07 1.93 0 2.45 1.05 3.98 1.05 1.53 0 2.65-1.57 3.96-3.49a11.1 11.1 0 001.69-3.46c-.03-.02-3.18-1.22-3.21-4.89-.03-3.08 2.52-4.57 2.64-4.64-1.44-2.11-3.67-2.4-4.48-2.46-1.92-.2-3.76 1.13-4.7 1.13-1-.02-2.52-1.12-3.96-1.12-1.39 0-3.04.59-4 1.64h.01a5.6 5.6 0 001.01-6.75z"/>
       </svg>
-      <div className="text-left">
-        <p className="text-[10px] font-medium opacity-70 leading-none">Launching on</p>
-        <p className="text-[15px] font-bold leading-tight">App Store</p>
+      <div className="flex flex-col text-left">
+        <span className="text-[9px] font-medium opacity-80 leading-none mb-0.5 tracking-wide">Download on the</span>
+        <span className="text-[17px] font-bold leading-none tracking-tight">App Store</span>
       </div>
     </a>
   );
 }
 
+// Google Play badge (High Quality)
 function GooglePlayBadge() {
   return (
     <a
       href="#notify"
-      className="flex items-center gap-3 bg-[#1C1C1E] hover:bg-black text-white px-5 py-3 rounded-xl transition-all active:scale-95 shadow-lg"
+      className="flex items-center gap-2.5 bg-black hover:bg-[#1A1A1C] text-white px-5 py-2.5 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-white/5"
     >
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
-        <path d="M3 20.5v-17c0-.83 1-.99 1.5-.5l14 8.5-14 8.5c-.5.49-1.5.33-1.5-.5zm2-13.5v11l9.5-5.5L5 7z"/>
+      <svg viewBox="0 0 24 24" width="26" height="26">
+        <path fill="#4CAF50" d="M3.7,2.2l12.7,12.7L21.3,9L3.7,2.2z"/>
+        <path fill="#FFC107" d="M16.4,14.9L3.7,21.8l0,0C4,22,4.4,22,4.8,21.8l16.1-9.3L16.4,14.9z"/>
+        <path fill="#F44336" d="M3.7,2.2L3.7,2.2C3.3,2.4,3,2.9,3,3.4v17.2c0,0.5,0.3,1,0.7,1.2l12.7-12.7L3.7,2.2z"/>
+        <path fill="#2196F3" d="M21.3,9L16.4,14.9l4.5-4.5C21.6,9.8,21.6,9.4,21.3,9z"/>
       </svg>
-      <div className="text-left">
-        <p className="text-[10px] font-medium opacity-70 leading-none">Launching on</p>
-        <p className="text-[15px] font-bold leading-tight">Google Play</p>
+      <div className="flex flex-col text-left">
+        <span className="text-[9px] font-medium opacity-80 leading-none mb-0.5 tracking-wide">GET IT ON</span>
+        <span className="text-[17px] font-bold leading-none tracking-tight">Google Play</span>
       </div>
     </a>
   );
@@ -437,7 +441,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             </div>
             {[
               ["No phone number required", true, false, false],
-              ["Messages encrypted end to end", true, true, false],
+              ["Messages encrypted End to end", true, true, false],
               ["No ads, ever", true, true, false],
               ["No company can read your messages", true, false, false],
               ["No data collected about you", true, false, false],
@@ -684,14 +688,14 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               },
               {
                 tag: "Improved",
-                title: "Settings that actually do things",
+                title: "Total Control in Your Hands",
                 desc: "Every option in the Settings screen now has a visible effect on your account. Change your theme, adjust your privacy level, toggle notifications or message previews, and see the result immediately.",
                 color: "bg-orange-500 text-white",
               },
               {
                 tag: "Security",
                 title: "End to end encrypted by default, no setup required",
-                desc: "All conversations in Ledger Chat are encrypted from the moment they start. You do not need to enable anything. There is no plain-text fallback mode. Every message is private, always.",
+                desc: "All conversations in Ledger Chat are encrypted from the moment they start. You do not need to enable anything. There is no plain text fallback mode. Every message is private, always.",
                 color: "bg-[#1C1C1E] text-white",
               },
             ].map((item, i) => (
@@ -801,7 +805,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               Ready to start?
             </h2>
             <p className="text-[18px] font-medium text-[#1C1C1E]/55 mb-10 max-w-xl mx-auto leading-relaxed">
-              Ledger Chat is free, requires no sign-up form, no email, and no phone number.
+              Ledger Chat is free, requires no sign up form, no email, and no phone number.
               Open it in your browser right now or wait for the mobile app in January 2027.
             </p>
 
@@ -839,3 +843,4 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
     </div>
   );
 }
+
