@@ -79,7 +79,7 @@ const APPS: {
   {
     id: 'studio',
     label: 'Studio',
-    desc: 'Provenance registry. Not open while the module is under repair.',
+    desc: 'Creative workspace. Currently under maintenance.',
     href: '#',
     icon: Package,
     bg: '#7C3AED',
@@ -101,7 +101,7 @@ const APPS: {
   {
     id: 'identity',
     label: 'Identity',
-    desc: 'ZK sovereign credential',
+    desc: 'Your global digital passport',
     href: '#',
     icon: Fingerprint,
     bg: '#0A0A0A',
@@ -318,6 +318,27 @@ export function AppLauncherHub() {
   return (
     <div>
       <IdentityPanel />
+      <div className="mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="bg-white rounded-[24px] border border-black/[0.06] p-8 shadow-sm relative overflow-hidden"
+        >
+          <div className="absolute right-0 top-0 w-1/3 h-full bg-gradient-to-l from-blue-50 to-transparent pointer-events-none" />
+          <div className="relative z-10 max-w-2xl">
+            <h2 className="text-[28px] font-black tracking-tight text-black mb-3">
+              Welcome to the Next Step in Humanity
+            </h2>
+            <p className="text-[15px] font-medium text-black/60 leading-relaxed mb-4">
+              Ledger Chat is not just another messaging app; it is the ultimate foundation for private, global communication. Built to be entirely sovereign, your data belongs exclusively to you.
+            </p>
+            <p className="text-[15px] font-medium text-black/60 leading-relaxed">
+              We have eliminated the complexity of modern technology. There are no passwords, no hidden settings, and no frustrating menus. It is designed to be <strong>so intuitive and comfortable that older adults can use it effortlessly</strong>, while providing security that surpasses anything else on the market.
+            </p>
+          </div>
+        </motion.div>
+      </div>
 
       {/* Section label */}
       <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-black/25 mb-4 px-1">

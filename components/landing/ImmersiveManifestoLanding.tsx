@@ -463,6 +463,68 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
         </div>
       </section>
 
+      {/* ═══ SECTION 4.5 — ACCESSIBILITY & THE NEXT STEP ═══════════════════════ */}
+      <section className="bg-white py-24 md:py-32">
+        <div className="max-w-7xl mx-auto px-5 md:px-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              className="flex flex-col gap-8"
+            >
+              <div>
+                <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#2C6BED] mb-4">The Next Step in Humanity</p>
+                <h2 className="text-[38px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] mb-6 leading-tight">
+                  Designed for everyone.<br />Perfect for older adults.
+                </h2>
+                <p className="text-[18px] font-medium text-[#1C1C1E]/60 leading-relaxed mb-6">
+                  Technology should adapt to people, not the other way around. We believe privacy is a fundamental human right, but it only works if it is effortless to use.
+                </p>
+                <p className="text-[18px] font-medium text-[#1C1C1E]/60 leading-relaxed">
+                  Ledger Chat eliminates the friction of modern applications. There are no passwords to forget, no complex settings to configure, and no menus hidden behind technical jargon. It is as simple as opening the app and talking.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
+                <div className="bg-[#F6F7F9] p-6 rounded-2xl">
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
+                    <CheckCircle2 size={20} className="text-[#30D158]" />
+                  </div>
+                  <h4 className="text-[17px] font-bold text-[#1C1C1E] mb-2">No passwords</h4>
+                  <p className="text-[15px] font-medium text-[#1C1C1E]/60">Your device itself unlocks the app using your face or fingerprint. Nothing to remember, nothing to lose.</p>
+                </div>
+                <div className="bg-[#F6F7F9] p-6 rounded-2xl">
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
+                    <Smile size={20} className="text-[#2C6BED]" />
+                  </div>
+                  <h4 className="text-[17px] font-bold text-[#1C1C1E] mb-2">Comfortable to read</h4>
+                  <p className="text-[15px] font-medium text-[#1C1C1E]/60">Clean typography, high contrast colors, and an interface that scales perfectly if you need larger text.</p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, ease: EASE }}
+              className="w-full bg-[#F6F7F9] rounded-[40px] overflow-hidden flex items-center justify-center p-10 relative"
+              style={{ aspectRatio: '4/3' }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-tr from-[#2C6BED]/5 to-transparent" />
+              <div className="text-center relative z-10 max-w-sm">
+                <h3 className="text-[24px] font-bold text-[#1C1C1E] mb-4">"It just works."</h3>
+                <p className="text-[16px] font-medium text-[#1C1C1E]/55">
+                  We have taken the most advanced security in the world and hidden it entirely behind an interface that feels as familiar and welcoming as writing a letter.
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* ═══ SECTION 5 — FEATURES ════════════════════════════════════════════════ */}
       <section className="bg-white py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-5 md:px-10 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">

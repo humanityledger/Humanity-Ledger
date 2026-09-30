@@ -323,8 +323,10 @@ export default function ConnectPage() {
         <div className="relative z-10 w-28 h-28 rounded-[36px] overflow-hidden mb-6" style={{ boxShadow: '0 24px 48px -12px rgba(255,42,133,0.25), inset 0 1px 1px rgba(255,255,255,0.5), 0 0 0 1px rgba(0,0,0,0.02)' }}>
           <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" />
         </div>
-        <h2 className="relative z-10 text-[32px] font-black tracking-[-0.03em] text-black mb-2">Ledger Chat</h2>
-        <p className="relative z-10 text-[14px] text-neutral-500 font-medium mb-6 text-center max-w-[280px] leading-relaxed">The world's most secure private messenger.</p>
+        <h2 className="relative z-10 text-[32px] font-black tracking-[-0.03em] text-black mb-2">The Next Step</h2>
+        <p className="relative z-10 text-[14px] text-neutral-500 font-medium mb-6 text-center max-w-[280px] leading-relaxed">
+          The ultimate secure messenger. Perfectly comfortable for everyone, including older adults. No passwords needed.
+        </p>
         
         {/* Launch badge - sleek pill */}
         <div className="relative z-10 inline-flex items-center gap-3 pl-2 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/[0.04]">
@@ -369,11 +371,14 @@ export default function ConnectPage() {
             </div>
 
             <h1 className="text-[56px] xl:text-[64px] font-black tracking-[-0.04em] leading-none text-black mb-5">
-              Ledger Chat
+              The Next Step.
             </h1>
 
-            <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-10 max-w-[400px]">
-              The world's most secure private messaging protocol. End-to-end encrypted and fully sovereign.
+            <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-4 max-w-[420px]">
+              Ledger Chat is the world's most secure private messenger. But security means nothing if it is hard to use.
+            </p>
+            <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-10 max-w-[420px]">
+              No passwords to remember, no complex menus. Just open and connect. We designed it to be so intuitive that it is <strong>perfectly comfortable for older adults</strong> and absolutely seamless for everyone else.
             </p>
 
             {/* Launch advertisement - ultra premium pill */}
