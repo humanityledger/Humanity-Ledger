@@ -4814,7 +4814,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                         transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                        className="absolute bottom-full left-0 right-0 bg-white/98 backdrop-blur-2xl border-t border-black/[0.06] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] rounded-t-[28px] z-50 pt-3 pb-6 px-4"
+                        className="absolute bottom-[64px] left-1 w-[230px] bg-white border border-black/[0.08] shadow-[0_8px_30px_rgba(0,0,0,0.14)] rounded-2xl z-50 py-1.5 overflow-hidden"
                       >
                         <div className="w-10 h-1.5 bg-black/10 rounded-full mx-auto mb-5" />
                         <div className="flex flex-col py-2">
