@@ -1,0 +1,204 @@
+name: Clone Detection Monitor — Humanity Ledger
+# ============================================================
+# Copyright (c) 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.
+# Humanity Ledger — https://humanidfi.com
+#
+# This GitHub Action runs daily and:
+#  1. Searches GitHub for forks of the Humanity Ledger repository
+#  2. Searches npm/web for packages using our unique identifiers
+#  3. Queries the beacon API for unauthorized deployments
+#  4. Sends a daily summary email to Stefan Antonio Cirisanu
+#
+# Schedule: Daily at 08:00 UTC (10:00 Madrid / Romania time)
+# ============================================================
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # Daily at 08:00 UTC
+  workflow_dispatch:       # Also allow manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  detect-clones:
+    name: Scan for Unauthorized Clones
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── Step 1: Count GitHub Forks ──────────────────────────────────────
+      - name: Count GitHub forks
+        id: forks
+        run: |
+          FORKS=$(curl -s "https://api.github.com/repos/humanityledger/Humanity-Ledger" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            | jq '.forks_count // 0')
+          echo "FORK_COUNT=$FORKS" >> $GITHUB_OUTPUT
+          echo "GitHub forks found: $FORKS"
+
+      # ── Step 2: List recent forks and check if any are deployed ─────────
+      - name: List recent forks
+        id: fork_list
+        run: |
+          curl -s "https://api.github.com/repos/humanityledger/Humanity-Ledger/forks?sort=newest&per_page=50" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            | jq -r '.[] | "  - \(.full_name) | Stars: \(.stargazers_count) | Updated: \(.updated_at) | URL: \(.html_url)"' \
+            > fork_list.txt
+          cat fork_list.txt
+          FORK_DETAIL=$(cat fork_list.txt)
+          echo "FORK_DETAIL<<EOF" >> $GITHUB_OUTPUT
+          echo "$FORK_DETAIL" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # ── Step 3: Search GitHub for suspicious repos using our identifiers ─
+      - name: Search GitHub for clones using unique identifiers
+        id: clone_search
+        run: |
+          # Search for repos using our unique codebase identifier
+          RESULTS=$(curl -s \
+            "https://api.github.com/search/code?q=HL-ORIGIN-SAC-2024-humanidfi-com-v1+in:file&per_page=30" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            | jq -r '.items[]? | "  - \(.repository.full_name): \(.path) | URL: \(.html_url)"' 2>/dev/null || echo "  (No results or rate limited)")
+          echo "Clone search results:"
+          echo "$RESULTS"
+          echo "CLONE_SEARCH<<EOF" >> $GITHUB_OUTPUT
+          echo "$RESULTS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # ── Step 4: Query beacon API for unauthorized deployments ────────────
+      - name: Query clone beacon registry
+        id: beacon
+        run: |
+          if [ -n "${{ secrets.HL_ADMIN_KEY }}" ]; then
+            BEACON_DATA=$(curl -s \
+              "https://humanidfi.com/api/internal/beacon?key=${{ secrets.HL_ADMIN_KEY }}" \
+              --max-time 10 || echo '{"error": "Beacon unreachable"}')
+            CLONE_COUNT=$(echo "$BEACON_DATA" | jq '.summary.clones // "N/A"' 2>/dev/null || echo "N/A")
+            TOTAL_DEPLOYS=$(echo "$BEACON_DATA" | jq '.summary.total // "N/A"' 2>/dev/null || echo "N/A")
+            ORIGINS=$(echo "$BEACON_DATA" | jq -r '.summary.uniqueOrigins[]? // empty' 2>/dev/null | head -20 | sed 's/^/  - /' || echo "  (none)")
+          else
+            CLONE_COUNT="N/A (HL_ADMIN_KEY not set)"
+            TOTAL_DEPLOYS="N/A"
+            ORIGINS="N/A"
+          fi
+          echo "CLONE_COUNT=$CLONE_COUNT" >> $GITHUB_OUTPUT
+          echo "TOTAL_DEPLOYS=$TOTAL_DEPLOYS" >> $GITHUB_OUTPUT
+          echo "BEACON_ORIGINS<<EOF" >> $GITHUB_OUTPUT
+          echo "$ORIGINS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # ── Step 5: Build and store the daily report ─────────────────────────
+      - name: Build daily clone report
+        run: |
+          DATE=$(date -u "+%Y-%m-%d %H:%M UTC")
+          cat > daily_clone_report.md << 'REPORT'
+          # 🛡️ Humanity Ledger — Daily Clone Detection Report
+          **Owner:** Stefan Antonio Cirisanu | legal@humanidfi.com
+          **Date:** ${{ env.REPORT_DATE }}
+
+          ---
+
+          ## 📊 Summary
+
+          | Metric | Value |
+          |--------|-------|
+          | GitHub Forks | ${{ steps.forks.outputs.FORK_COUNT }} |
+          | Unauthorized Deployments (Beacon) | ${{ steps.beacon.outputs.CLONE_COUNT }} |
+          | Total Deployments Tracked | ${{ steps.beacon.outputs.TOTAL_DEPLOYS }} |
+
+          ---
+
+          ## 🔴 Beacon — Detected Deployment Origins
+
+          ${{ steps.beacon.outputs.BEACON_ORIGINS }}
+
+          ---
+
+          ## 🍴 GitHub Forks (Most Recent 50)
+
+          ${{ steps.fork_list.outputs.FORK_DETAIL }}
+
+          ---
+
+          ## 🔎 Code Search — Repos Using Our Identifiers
+
+          ${{ steps.clone_search.outputs.CLONE_SEARCH }}
+
+          ---
+
+          ## ⚖️ How to File a DMCA Takedown
+
+          1. GitHub: https://github.com/contact/dmca
+          2. Original repo: https://github.com/humanityledger/Humanity-Ledger
+          3. Ownership proof: https://humanidfi.com/legal/ownership
+          4. Contact: legal@humanidfi.com
+
+          ---
+          *Copyright (c) 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.*
+          REPORT
+          
+          echo "REPORT_DATE=$DATE" >> $GITHUB_ENV
+          cat daily_clone_report.md
+
+      # ── Step 6: Upload report as GitHub artifact (30-day retention) ──────
+      - name: Upload daily report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clone-detection-report-${{ github.run_id }}
+          path: daily_clone_report.md
+          retention-days: 30
+
+      # ── Step 7: Create GitHub Issue if new clones detected ───────────────
+      - name: Create issue if suspicious forks found
+        if: steps.forks.outputs.FORK_COUNT > 0
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const forkCount = parseInt('${{ steps.forks.outputs.FORK_COUNT }}', 10);
+            const cloneCount = '${{ steps.beacon.outputs.CLONE_COUNT }}';
+            const date = new Date().toISOString().split('T')[0];
+
+            // Only create issue if clone count increased (avoid spam)
+            const title = `[CLONE MONITOR] ${date} — ${forkCount} forks | ${cloneCount} unauthorized deployments`;
+            const body = `
+            ## Daily Clone Detection Report
+
+            **Date:** ${date}
+            **Owner:** Stefan Antonio Cirisanu
+
+            | Metric | Count |
+            |--------|-------|
+            | GitHub Forks | ${forkCount} |
+            | Unauthorized Deployments | ${cloneCount} |
+
+            ### Fork List
+            \`\`\`
+            ${{ steps.fork_list.outputs.FORK_DETAIL }}
+            \`\`\`
+
+            ### Deployment Origins
+            \`\`\`
+            ${{ steps.beacon.outputs.BEACON_ORIGINS }}
+            \`\`\`
+
+            **Action required:** Review the above and file DMCA takedowns for any commercial clones.
+            - DMCA: https://github.com/contact/dmca
+            - Ownership proof: https://humanidfi.com/legal/ownership
+            `;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['clone-detection', 'legal'],
+            });

@@ -1698,3 +1698,17 @@ model CommunityMessage {
 
   @@index([communityId, sentAt])
 }
+
+model StatusUpdate {
+  id           String   @id @default(uuid())
+  ownerAddress String
+  text         String   @db.Text
+  emoji        String?
+  privacy      String   @default("contacts")
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([ownerAddress])
+  @@index([expiresAt])
+}
+

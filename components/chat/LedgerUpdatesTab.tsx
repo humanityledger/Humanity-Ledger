@@ -208,10 +208,13 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
                 onChange={e => setDraftText(e.target.value)}
                 placeholder="What's on your mind?"
                 maxLength={700}
-                className="w-full min-h-[120px] text-[16px] text-[#1C1C1E] placeholder:text-[#8E8E93] resize-none outline-none border border-black/10 rounded-xl p-3"
+                className="w-full min-h-[120px] text-[16px] text-[#1C1C1E] placeholder:text-[#8E8E93] resize-none outline-none border border-black/10 rounded-xl p-3 focus:ring-2 focus:ring-[#007AFF]/20"
+                onPointerDownCapture={(e) => e.stopPropagation()} 
+                onKeyDown={(e) => e.stopPropagation()} 
               />
 
               <button
+
                 onClick={() => setShowPrivacyMenu(m => !m)}
                 className="flex items-center gap-2 text-[#007AFF]"
               >
