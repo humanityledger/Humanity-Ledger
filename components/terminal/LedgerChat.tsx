@@ -177,17 +177,39 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const refreshBalanceRef = useRef<() => Promise<void>>(async () => {});
   useEffect(() => { refreshBalanceRef.current = refreshBalance; }, [refreshBalance]);
 
-  // Mechanical keyboard click sound
+  // Premium send sound — minimal, confident, warm. Inspired by Apple's design philosophy.
+  // A soft downward frequency sweep, short and decisive. Not a beep. A statement.
   const playKeyClick = () => {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = 'square'; osc.frequency.setValueAtTime(800, ctx.currentTime);
-      gain.gain.setValueAtTime(0.04, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
-      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.03);
+
+      // Primary tone: a warm sine wave that sweeps from 520Hz down to 260Hz
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(520, ctx.currentTime);
+      osc1.frequency.exponentialRampToValueAtTime(260, ctx.currentTime + 0.12);
+      gain1.gain.setValueAtTime(0.0, ctx.currentTime);
+      gain1.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.01);
+      gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14);
+      osc1.connect(gain1); gain1.connect(ctx.destination);
+
+      // Subtle harmonic layer: a very faint triangle at half frequency for warmth
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(260, ctx.currentTime);
+      osc2.frequency.exponentialRampToValueAtTime(130, ctx.currentTime + 0.12);
+      gain2.gain.setValueAtTime(0.0, ctx.currentTime);
+      gain2.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 0.01);
+      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14);
+      osc2.connect(gain2); gain2.connect(ctx.destination);
+
+      osc1.start(ctx.currentTime); osc1.stop(ctx.currentTime + 0.15);
+      osc2.start(ctx.currentTime); osc2.stop(ctx.currentTime + 0.15);
+
+      // Close context after sound finishes to free resources
+      setTimeout(() => { try { ctx.close(); } catch {} }, 300);
     } catch {}
   };
 

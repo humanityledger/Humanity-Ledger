@@ -7,7 +7,7 @@ import { HLLogo } from "@/components/shared/HLLogo";
 import { SystemFooter } from "./SystemFooter";
 import { RemoteLottie } from "@/components/ui/RemoteLottie";
 import {
-  Lock, Shield, Check, MessageCircle,
+  Lock, Shield, Check, CheckCircle2, MessageCircle,
   Fingerprint, Globe, Mic, Video, BarChart2,
   Wallet, Users, Smartphone, ArrowRight,
   MessageSquare, Bell, Image, Smile

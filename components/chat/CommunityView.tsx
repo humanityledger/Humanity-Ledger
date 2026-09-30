@@ -8,6 +8,7 @@ import {
   Globe, Lock, Image as ImageIcon, Search,
   Eye, EyeOff, Pin, Heart, Plus, AlertTriangle
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { RichPostEditorModal } from './RichPostEditor';
 
 interface CommunityViewProps {
@@ -179,7 +180,6 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     }; });
 
   useEffect(() => { localStorage.setItem('com_perm_' + community.id, JSON.stringify(permissions)); }, [permissions, community.id]);
-  useEffect(() => { localStorage.setItem('com_feat_' + community.id, JSON.stringify(features)); }, [features, community.id]);
   const [isPrivate, setIsPrivate] = useState<boolean>(community?.isPrivate ?? false);
   const [savingPrivacy, setSavingPrivacy] = useState(false);
 
@@ -210,6 +210,8 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     joinCaptcha: false,
     }; });
 
+  useEffect(() => { localStorage.setItem('com_feat_' + community.id, JSON.stringify(features)); }, [features, community.id]);
+
   const Toggle = ({ label, desc, checked, onChange, danger = false }: any) => (
     <div className="flex items-center justify-between py-3 cursor-pointer group" onClick={() => { onChange(!checked); toast.success('Settings synced to workspace'); }}>
       <div className="pr-4">
@@ -236,7 +238,8 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
         <ChevronLeft size={18} className="text-black/20 rotate-180" />
       </div>
     </div>
-  );
+  </div>
+);
 
   return (
     <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-6 pb-32">
