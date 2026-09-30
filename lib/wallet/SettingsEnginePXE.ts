@@ -378,14 +378,16 @@ class SettingsEnginePXE {
         const fresh = { ...DEFAULT_PXE_SETTINGS, last_synced_at: Date.now() };
         this.cache[address] = fresh;
         await this.syncToPXE(address, fresh);
-        this.broadcast(address, fresh);`r`n        Object.entries(fresh).forEach(([k, v]) => this.applyDOMSideEffects(k as keyof LedgerProtocolSettings, v));
+        this.broadcast(address, fresh);
+        Object.entries(fresh).forEach(([k, v]) => this.applyDOMSideEffects(k as keyof LedgerProtocolSettings, v));
         return fresh;
       }
 
       // Schema migration: merge any new fields from DEFAULT_PXE_SETTINGS
       const migrated = this.migrateSchema(parsed as LedgerProtocolSettings);
       this.cache[address] = migrated;
-      this.broadcast(address, migrated);`r`n      Object.entries(migrated).forEach(([k, v]) => this.applyDOMSideEffects(k as keyof LedgerProtocolSettings, v));
+      this.broadcast(address, migrated);
+      Object.entries(migrated).forEach(([k, v]) => this.applyDOMSideEffects(k as keyof LedgerProtocolSettings, v));
 
       return migrated;
     } catch (error) {
@@ -485,7 +487,8 @@ class SettingsEnginePXE {
     await vault.setItem(`pxe_settings_${address}`, '');
     const fresh = { ...DEFAULT_PXE_SETTINGS, last_synced_at: Date.now() };
     this.cache[address] = fresh;
-    this.broadcast(address, fresh);`r`n        Object.entries(fresh).forEach(([k, v]) => this.applyDOMSideEffects(k as keyof LedgerProtocolSettings, v));
+    this.broadcast(address, fresh);
+    Object.entries(fresh).forEach(([k, v]) => this.applyDOMSideEffects(k as keyof LedgerProtocolSettings, v));
   }
 
   // ─────────────────────────────────────────────────────────────────────

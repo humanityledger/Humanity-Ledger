@@ -106,21 +106,21 @@ export function LedgerChatSettings({ onClose, address }: LedgerChatSettingsProps
 
   if (!isLoaded) return null;
 
-  const viewTitle = view === 'root' ? 'SYSTEM SETTINGS'
+  const viewTitle = view === 'root' ? 'SETTINGS'
     : view === 'profile' ? 'MY PROFILE'
     : view === 'edit_profile' ? 'EDIT PROFILE'
     : view === 'notifications' ? 'ALERTS & SOUNDS'
-    : view === 'privacy' ? 'PRIVACY ENGINE'
+    : view === 'privacy' ? 'PRIVACY'
     : view === 'data' ? 'DATA & STORAGE'
-    : view === 'appearance' ? 'AESTHETICS'
+    : view === 'appearance' ? 'APPEARANCE'
     : view === 'language' ? 'LANGUAGE'
     : view === 'personal_vault' ? 'PERSONAL VAULT'
     : view === 'connection_log' ? 'CONNECTION LOG'
     : view === 'devices' ? 'ACTIVE DEVICES'
     : view === 'workspaces' ? 'WORKSPACES'
-    : view === 'ghost_mode' ? 'AI GHOST MODE'
-    : view === 'defi_tools' ? 'LEDGER TOOLS'
-    : view === 'network' ? 'NETWORK PROTOCOL'
+    : view === 'ghost_mode' ? 'AI ASSISTANT'
+    : view === 'defi_tools' ? 'TOOLS'
+    : view === 'network' ? 'NETWORK'
     : view === 'premium' ? 'LEDGER NETWORK PRO'
     : view === 'stars' ? 'QD TOKENS'
     : view.toUpperCase().replace(/_/g, ' ');
