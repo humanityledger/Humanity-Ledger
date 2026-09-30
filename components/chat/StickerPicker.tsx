@@ -227,24 +227,17 @@ export const StickerPicker = React.memo(({ onSend, onClose }: {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 30, scale: 0.95 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-        className="absolute bottom-full mb-3 left-0 right-0 bg-[#F8F9FA]/95 backdrop-blur-3xl border border-white/40 rounded-[28px] shadow-[0_32px_80px_rgba(0,0,0,0.15)] overflow-hidden z-[400] flex flex-col"
+        className="absolute bottom-full mb-3 left-0 right-0 bg-white rounded-t-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden z-[400] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        {/* PRO Banner */}
-        <div className="bg-gradient-to-r from-[#111] to-[#333] px-5 py-3.5 flex items-center justify-between text-white shadow-md relative overflow-hidden">
-          <div className="absolute right-[-30px] top-[-30px] w-32 h-32 bg-gradient-to-br from-[rgba(255,215,0,0.3)] to-transparent rounded-full blur-2xl pointer-events-none" />
-          <div className="flex flex-col z-10">
-            <span className="text-[15px] font-black tracking-tight flex items-center gap-2 text-[#FFD700]">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              APEX PREDATOR PACK
-            </span>
-            <span className="text-[11px] text-white/70 font-semibold tracking-wide uppercase mt-0.5">4K Ultra-HD Immersive Stickers</span>
-          </div>
-          <button 
+        {/* Clean iOS-style header */}
+        <div className="px-4 py-3 flex items-center justify-between border-b border-black/8">
+          <span className="text-[15px] font-semibold text-black">Stickers</span>
+          <button
             onClick={onClose}
-            className="z-10 w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors backdrop-blur-md"
+            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-black/5 text-black/40 hover:text-black transition-colors"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>

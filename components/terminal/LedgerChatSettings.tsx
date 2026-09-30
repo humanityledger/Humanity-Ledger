@@ -241,6 +241,20 @@ function RootView({ onNavigate, address, s }: any) {
             <ChevronRight size={14} className="ml-auto text-black/20" />
           </button>
         </div>
+
+        {/* Sticky profile footer */}
+        <div className="mt-10 pt-6 border-t border-black/8 flex items-center gap-3">
+          <div className="w-10 h-10 bg-black flex items-center justify-center shrink-0 overflow-hidden">
+            {s.avatar_url
+              ? <img src={s.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+              : <span className="text-white font-black text-lg">{(s.displayName || '?').charAt(0).toUpperCase()}</span>
+            }
+          </div>
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <span className="text-[13px] font-bold text-black truncate">{s.displayName || 'My Profile'}</span>
+            <span className="text-[10px] font-mono text-black/40 truncate">{address}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
