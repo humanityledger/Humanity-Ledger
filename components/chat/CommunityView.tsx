@@ -226,18 +226,49 @@ function CommunitySettingsPanel({ community }: { community: any }) {
 
       {/* Invite Link */}
       <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] overflow-hidden">
-        <div className="px-6 py-4 border-b border-black/[0.04] bg-[#FAFAFA]/50">
+        <div className="px-6 py-4 border-b border-black/[0.04] bg-[#FAFAFA]/50 flex items-center justify-between">
           <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#007AFF]">Invitation Link</p>
+          <button 
+            onClick={async () => {
+              if (!confirm('Are you sure you want to revoke this link? The old link will stop working instantly.')) return;
+              try {
+                const res = await fetch('/api/chat/communities', {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ communityId: community.id, action: 'REVOKE_LINK' })
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  // Force a reload of the UI by window location or state. (In real implementation, pass update function)
+                  window.location.reload();
+                }
+              } catch (e) { console.error(e); }
+            }}
+            className="text-[11px] font-bold text-red-500 hover:text-red-600 transition-colors uppercase tracking-wider"
+          >
+            Revoke Link
+          </button>
         </div>
         <div className="p-6 flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-[#007AFF]/10 flex items-center justify-center text-[#007AFF] shrink-0">
             <LinkIcon size={20} strokeWidth={2.5} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[15px] font-mono text-[#1C1C1E] truncate">{community?.joinLink || 'https://humanidfi.com/join/...'}</p>
-            <p className="text-[12px] text-black/40 mt-0.5">Anyone with this link can join</p>
+            <p className="text-[15px] font-mono text-[#1C1C1E] truncate">
+              {community?.joinCode ? `https://humanidfi.com/join/${community.joinCode}` : 'Loading...'}
+            </p>
+            <p className="text-[12px] text-black/40 mt-0.5">
+              {community?.isPrivate ? 'Only people with this exact secure link can join' : 'Anyone with this link can join'}
+            </p>
           </div>
-          <button className="px-5 py-2.5 bg-[#1C1C1E] text-white text-[13px] font-bold rounded-xl hover:bg-black/80 transition-transform active:scale-95 shrink-0 shadow-lg shadow-black/10">Copy Link</button>
+          <button 
+            onClick={() => {
+              if (community?.joinCode) navigator.clipboard.writeText(`https://humanidfi.com/join/${community.joinCode}`);
+            }}
+            className="px-5 py-2.5 bg-[#1C1C1E] text-white text-[13px] font-bold rounded-xl hover:bg-black/80 transition-transform active:scale-95 shrink-0 shadow-lg shadow-black/10"
+          >
+            Copy Link
+          </button>
         </div>
       </div>
 
@@ -359,11 +390,28 @@ function CommunitySettingsPanel({ community }: { community: any }) {
         <div className="px-6 py-4 border-b border-red-100 bg-red-100/50">
           <p className="text-[12px] font-black uppercase tracking-[0.15em] text-red-600">Danger Zone</p>
         </div>
-        <div className="p-6">
-          <button className="w-full py-3.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-[14px] font-bold transition-colors shadow-lg shadow-red-500/20 active:scale-[0.98]">
+        <div className="p-6 flex flex-col gap-4">
+          <button 
+            onClick={async () => {
+              const confirm1 = confirm(`Are you sure you want to delete ${community?.name}?`);
+              if (!confirm1) return;
+              const confirm2 = confirm(`FINAL WARNING: This action cannot be undone. All data will be wiped.`);
+              if (!confirm2) return;
+              try {
+                const res = await fetch(`/api/chat/communities?id=${community.id}`, { method: 'DELETE' });
+                if (res.ok) {
+                  window.location.reload();
+                } else {
+                  const err = await res.json();
+                  alert(err.error || 'Failed to delete community');
+                }
+              } catch (e) { console.error(e); }
+            }}
+            className="w-full py-3.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-[14px] font-bold transition-colors shadow-lg shadow-red-500/20 active:scale-[0.98]"
+          >
             Delete Community
           </button>
-          <p className="text-[12px] text-red-500/70 text-center mt-3">This action cannot be undone. All messages and posts will be permanently destroyed from the network.</p>
+          <p className="text-[12px] text-red-500/70 text-center">This action cannot be undone. All messages and posts will be permanently destroyed from the network.</p>
         </div>
       </div>
     </div>

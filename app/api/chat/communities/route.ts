@@ -76,3 +76,68 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+// Update Community Settings & Revoke Links
+export async function PATCH(req: NextRequest) {
+  try {
+    const caller = await resolveCaller(req);
+    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = await req.json();
+    const { communityId, action, isPrivate } = body;
+    if (!communityId) return NextResponse.json({ error: 'Missing communityId' }, { status: 400 });
+
+    // Validate admin
+    const member = await (prisma as any).communityMember.findUnique({
+      where: { communityId_walletAddress: { communityId, walletAddress: caller } }
+    });
+
+    if (!member || member.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Only admins can modify settings' }, { status: 403 });
+    }
+
+    if (action === 'REVOKE_LINK') {
+      const newJoinCode = generateJoinCode() + generateJoinCode(); // Double entropy for private links
+      const updated = await (prisma as any).community.update({
+        where: { id: communityId },
+        data: { joinCode: newJoinCode }
+      });
+      return NextResponse.json({ ok: true, joinCode: updated.joinCode });
+    }
+
+    if (action === 'UPDATE_PRIVACY') {
+      const updated = await (prisma as any).community.update({
+        where: { id: communityId },
+        data: { isPrivate: Boolean(isPrivate) }
+      });
+      return NextResponse.json({ ok: true, isPrivate: updated.isPrivate });
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const caller = await resolveCaller(req);
+    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const id = req.nextUrl.searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'Missing community id' }, { status: 400 });
+
+    const community = await (prisma as any).community.findUnique({
+      where: { id }
+    });
+
+    if (!community) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (community.ownerAddress !== caller) return NextResponse.json({ error: 'Only the creator can delete the community' }, { status: 403 });
+
+    await (prisma as any).community.delete({ where: { id } });
+
+    return NextResponse.json({ ok: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

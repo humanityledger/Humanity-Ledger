@@ -160,7 +160,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
                 </div>
 
                 <button
-                  onClick={e => { e.stopPropagation(); copyLink(c.joinLink, c.id); }}
+                  onClick={e => { e.stopPropagation(); copyLink(`https://humanidfi.com/join/${c.joinCode}`, c.id); }}
                   className="w-8 h-8 rounded-full bg-[#007AFF]/10 flex items-center justify-center shrink-0"
                   title="Copy invite link"
                 >
