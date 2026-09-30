@@ -706,22 +706,37 @@ export function RichPostEditorModal({
   open,
   onClose,
   communityName,
+  communityId, // <--- Added this
   myAddress,
   onPublished,
 }: {
   open: boolean;
   onClose: () => void;
   communityName?: string;
+  communityId?: string; // <--- Added this
   myAddress: string;
   onPublished?: (content: { html: string; text: string; json: any }) => void;
 }) {
   const handlePublish = async (content: { html: string; text: string; json: any }) => {
     try {
-      await fetch('/api/chat/community-posts', {
+      if (!communityId) {
+        console.error('Missing communityId');
+        return;
+      }
+      
+      const res = await fetch('/api/chat/community-posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
-        body: JSON.stringify({ content: content.html, plainText: content.text }),
+        body: JSON.stringify({ 
+          communityId, 
+          content: content.html, 
+          plainText: content.text,
+          contentJson: content.json
+        }),
       });
+      
+      if (!res.ok) throw new Error('Publish failed');
+      
       onPublished?.(content);
       onClose();
     } catch (e) {

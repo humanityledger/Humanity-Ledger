@@ -7,9 +7,10 @@ import { HLLogo } from "@/components/shared/HLLogo";
 import { SystemFooter } from "./SystemFooter";
 import { RemoteLottie } from "@/components/ui/RemoteLottie";
 import {
-  Lock, Shield, EyeOff, Check, MessageCircle,
-  Fingerprint, Flame, Globe, Mic, Video, Bot, BarChart2,
-  Wallet, Users
+  Lock, Shield, Check, MessageCircle,
+  Fingerprint, Globe, Mic, Video, BarChart2,
+  Wallet, Users, Smartphone, ArrowRight,
+  MessageSquare, Bell, Image, Smile
 } from "lucide-react";
 
 export interface ImmersiveManifestoLandingProps {
@@ -52,9 +53,7 @@ function LandingNav() {
 
   const handleDisconnect = async () => {
     setDisconnecting(true);
-    try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    } catch {}
+    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch {}
     try {
       document.cookie = 'system_handshake=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       document.cookie = 'wallet-auth=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
@@ -77,60 +76,31 @@ function LandingNav() {
   return (
     <nav
       className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${
-        scrolled
-          ? "bg-white/95 backdrop-blur-xl border-b border-black/[0.06] py-3"
-          : "bg-transparent py-5"
+        scrolled ? "bg-white/95 backdrop-blur-xl border-b border-black/[0.06] shadow-sm" : "bg-transparent"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-5 md:px-10 flex items-center justify-between">
-        <Link href="/" className="flex items-center" aria-label="Humanity Ledger home">
-          <HLLogo size={28} theme="dark" />
-        </Link>
-
-        <div className="hidden md:flex items-center gap-7">
-          {[
-            { label: "Protocol", href: "/protocol" },
-            { label: "Zero-Knowledge", href: "/zero-knowledge" },
-            { label: "Ecosystem", href: "/ecosystem" },
-            { label: "Developers", href: "/developers" },
-            { label: "Blog", href: "/blog" },
-          ].map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="text-[15px] font-medium text-[#1C1C1E]/70 hover:text-[#1C1C1E] transition-colors"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
+      <div className="max-w-7xl mx-auto px-5 md:px-10 h-16 flex items-center justify-between">
+        <HLLogo size={28} />
+        <div className="flex items-center gap-3">
           {connectedAddress ? (
             <>
-              <span className="hidden sm:block text-[13px] font-mono text-black/40 border border-black/10 rounded-full px-3 py-1">
-                {fmtAddr(connectedAddress)}
-              </span>
-              <Link
-                href="/chat"
-                className="bg-[#2C6BED] hover:bg-[#1A5AE3] text-white font-bold text-[14px] px-5 py-2.5 rounded-full transition-all shadow-sm"
-              >
-                Open Ledger Chat
+              <Link href="/chat" className="text-[14px] font-bold text-[#1C1C1E] px-4 py-2 rounded-xl hover:bg-black/5 transition-colors">
+                Open Chat
               </Link>
               <button
                 onClick={handleDisconnect}
                 disabled={disconnecting}
-                className="border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[13px] px-4 py-2.5 rounded-full transition-all disabled:opacity-50"
+                className="text-[13px] font-bold text-[#1C1C1E]/50 hover:text-red-500 transition-colors px-2"
               >
-                {disconnecting ? "…" : "Disconnect"}
+                {disconnecting ? "…" : fmtAddr(connectedAddress)}
               </button>
             </>
           ) : (
             <Link
               href="/connect"
-              className="bg-[#2C6BED] hover:bg-[#1A5AE3] text-white font-bold text-[14px] px-5 py-2.5 rounded-full transition-all shadow-sm"
+              className="bg-[#1C1C1E] hover:bg-black text-white text-[14px] font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm active:scale-95"
             >
-              Initiate Ledger Chat
+              Get Started
             </Link>
           )}
         </div>
@@ -139,23 +109,21 @@ function LandingNav() {
   );
 }
 
-// ─── Feature pill ─────────────────────────────────────────────────────────────
 function FeatureCheck({ text }: { text: string }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="w-5 h-5 rounded-full bg-[#2C6BED]/10 flex items-center justify-center shrink-0 mt-0.5">
-        <Check size={12} className="text-[#2C6BED]" strokeWidth={3} />
+      <div className="w-5 h-5 rounded-full bg-[#1C1C1E] flex items-center justify-center shrink-0 mt-0.5">
+        <Check size={11} strokeWidth={3} className="text-white" />
       </div>
-      <span className="text-[16px] font-medium text-[#1C1C1E]/80 leading-snug">{text}</span>
+      <span className="text-[16px] font-medium text-[#1C1C1E]/70 leading-snug">{text}</span>
     </div>
   );
 }
 
-// ─── Step item ────────────────────────────────────────────────────────────────
 function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
   return (
     <div className="flex gap-5">
-      <div className="w-9 h-9 rounded-full bg-[#2C6BED] text-white font-black text-[15px] flex items-center justify-center shrink-0">
+      <div className="w-9 h-9 rounded-full bg-[#1C1C1E] text-white text-[13px] font-black flex items-center justify-center shrink-0 mt-0.5 shadow-md">
         {n}
       </div>
       <div className="flex flex-col gap-1">
@@ -163,6 +131,41 @@ function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
         <p className="text-[15px] font-medium text-[#1C1C1E]/60 leading-relaxed">{desc}</p>
       </div>
     </div>
+  );
+}
+
+// App Store badge (SVG inline for reliability)
+function AppStoreBadge() {
+  return (
+    <a
+      href="#notify"
+      className="flex items-center gap-3 bg-[#1C1C1E] hover:bg-black text-white px-5 py-3 rounded-xl transition-all active:scale-95 shadow-lg"
+    >
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
+        <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+      </svg>
+      <div className="text-left">
+        <p className="text-[10px] font-medium opacity-70 leading-none">Launching on</p>
+        <p className="text-[15px] font-bold leading-tight">App Store</p>
+      </div>
+    </a>
+  );
+}
+
+function GooglePlayBadge() {
+  return (
+    <a
+      href="#notify"
+      className="flex items-center gap-3 bg-[#1C1C1E] hover:bg-black text-white px-5 py-3 rounded-xl transition-all active:scale-95 shadow-lg"
+    >
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
+        <path d="M3 20.5v-17c0-.83 1-.99 1.5-.5l14 8.5-14 8.5c-.5.49-1.5.33-1.5-.5zm2-13.5v11l9.5-5.5L5 7z"/>
+      </svg>
+      <div className="text-left">
+        <p className="text-[10px] font-medium opacity-70 leading-none">Launching on</p>
+        <p className="text-[15px] font-bold leading-tight">Google Play</p>
+      </div>
+    </a>
   );
 }
 
@@ -174,12 +177,11 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
 
       {/* ═══ SECTION 1 — HERO ═══════════════════════════════════════════════════ */}
       <section className="relative flex items-center bg-white pt-20 overflow-hidden">
-        {/* Ambient gradient */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_100%_100%_at_50%_-20%,rgba(44,107,237,0.12),rgba(255,255,255,0))] pointer-events-none" />
-        <div className="absolute top-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#2C6BED]/20 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_100%_100%_at_50%_-20%,rgba(44,107,237,0.07),rgba(255,255,255,0))] pointer-events-none" />
+        <div className="absolute top-0 w-full h-[1px] bg-gradient-to-r from-transparent via-black/8 to-transparent" />
 
         <div className="max-w-7xl mx-auto px-5 md:px-10 w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center py-20 lg:py-28">
-          
+
           {/* Left: Copy */}
           <motion.div
             initial="hidden"
@@ -187,7 +189,8 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             variants={fadeUp}
             className="flex flex-col items-center text-center lg:items-start lg:text-left lg:col-span-7 relative z-10"
           >
-            <motion.div 
+            {/* Launch date badge */}
+            <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1, duration: 0.5 }}
@@ -195,20 +198,23 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             >
               <div className="w-2.5 h-2.5 rounded-full bg-[#30D158] animate-pulse shadow-[0_0_12px_rgba(48,209,88,0.6)]" />
               <span className="text-[13px] font-bold text-[#1C1C1E] uppercase tracking-[0.1em]">
-                Alpha Release Jan 2027
+                Launching January 2027 — iOS & Android
               </span>
             </motion.div>
 
-            <h1 className="text-[56px] md:text-[80px] lg:text-[96px] font-black leading-[0.95] tracking-[-0.04em] text-[#050505] mb-6">
-              Chat securely and<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2C6BED] to-[#6E95F5]">with encryption using Ledger Chat.</span>
+            <h1 className="text-[52px] md:text-[72px] lg:text-[88px] font-black leading-[0.95] tracking-[-0.04em] text-[#050505] mb-6">
+              The private<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2C6BED] to-[#6E95F5]">messenger</span><br />
+              you always wanted.
             </h1>
-            
-            <p className="text-[19px] md:text-[22px] font-medium leading-[1.6] text-[#1C1C1E]/60 mb-10 max-w-[540px]">
-              Zero-Knowledge identity meets unbroken encrypted messaging. Ledger Chat delivers SIM-less voice, video, and text over distributed networks. Built natively on Aztec.
+
+            <p className="text-[18px] md:text-[21px] font-medium leading-[1.6] text-[#1C1C1E]/60 mb-10 max-w-[520px]">
+              Ledger Chat is a messaging app where only you and the person you are talking to can read what is written.
+              No phone number required. No ads. No data collection. Ever.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-10">
+            {/* CTA buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-8">
               <Link
                 href="/chat"
                 className="bg-[#050505] hover:bg-[#1A1A1A] text-white font-bold text-[16px] px-8 py-4 rounded-2xl transition-all shadow-[0_8px_24px_rgba(0,0,0,0.12)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
@@ -217,39 +223,44 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 Open Ledger Chat
               </Link>
               <Link
-                href="#architecture"
+                href="#how-it-works"
                 className="bg-white hover:bg-[#F6F7F9] text-[#050505] border border-black/10 font-bold text-[16px] px-8 py-4 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
               >
-                Explore Architecture
+                How it works
               </Link>
             </div>
 
-            <div className="flex flex-wrap justify-center lg:justify-start items-center gap-x-8 gap-y-4">
+            {/* App Store + Google Play badges */}
+            <div className="flex flex-row flex-wrap gap-3 justify-center lg:justify-start mb-10">
+              <AppStoreBadge />
+              <GooglePlayBadge />
+            </div>
+
+            {/* Trust indicators */}
+            <div className="flex flex-wrap justify-center lg:justify-start items-center gap-x-6 gap-y-3">
               {[
-                { icon: <Lock size={16} />, label: "End-to-End Encrypted (XMTP)" },
-                { icon: <EyeOff size={16} />, label: "Zero-Knowledge State Shielding" },
-                { icon: <Wallet size={16} />, label: "SIM-less Hardware Auth" },
+                { icon: <Lock size={14} />, label: "End to end encrypted" },
+                { icon: <Shield size={14} />, label: "No phone number needed" },
+                { icon: <Globe size={14} />, label: "Works on any device" },
               ].map((f) => (
-                <div key={f.label} className="flex items-center gap-2 text-[14px] font-bold text-[#1C1C1E]/50">
-                  <span className="text-[#1C1C1E]">{f.icon}</span>
+                <div key={f.label} className="flex items-center gap-2 text-[13px] font-bold text-[#1C1C1E]/45">
+                  <span className="text-[#1C1C1E]/60">{f.icon}</span>
                   <span>{f.label}</span>
                 </div>
               ))}
             </div>
           </motion.div>
 
-          {/* Right: Lottie animation */}
+          {/* Right: Phone mockup with Lottie */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.2, ease: EASE }}
             className="relative w-full flex items-center justify-center lg:col-span-5"
           >
-            <div className="relative w-full max-w-[420px] mx-auto">
-              {/* Glow */}
-              <div className="absolute inset-0 bg-[#2C6BED] blur-[100px] opacity-10 rounded-full" />
-              {/* Card */}
-              <div className="relative bg-white/40 backdrop-blur-3xl border border-white/60 rounded-[48px] shadow-[0_40px_100px_rgba(44,107,237,0.12),inset_0_2px_10px_rgba(255,255,255,0.8)] p-2">
+            <div className="relative w-full max-w-[400px] mx-auto">
+              <div className="absolute inset-0 bg-[#2C6BED] blur-[100px] opacity-8 rounded-full" />
+              <div className="relative bg-white/40 backdrop-blur-3xl border border-white/60 rounded-[48px] shadow-[0_40px_100px_rgba(44,107,237,0.10),inset_0_2px_10px_rgba(255,255,255,0.8)] p-2">
                 <div className="bg-white rounded-[40px] overflow-hidden" style={{ aspectRatio: '4/5', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(0,0,0,0.04)' }}>
                   <RemoteLottie
                     path="/lottie/texting.json"
@@ -264,10 +275,9 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
         </div>
       </section>
 
-      {/* ═══ SECTION 2 — WHY LEDGER CHAT ══════════════════════════════════════ */}
-      <section id="architecture" className="bg-[#F6F7F9] py-24 md:py-32">
+      {/* ═══ SECTION 2 — WHAT IS LEDGER CHAT ════════════════════════════════════ */}
+      <section className="bg-[#F6F7F9] py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-5 md:px-10">
-
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -275,41 +285,37 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             variants={fadeUp}
             className="text-center mb-16"
           >
-            <div className="flex items-center justify-center mb-6">
-              <div className="w-16 h-16 flex items-center justify-center">
-                <RemoteLottie path="/lottie/messaging-loader.json" loop width={64} height={64} />
-              </div>
-            </div>
-            <h2 className="text-[38px] md:text-[54px] font-bold tracking-tight text-[#1C1C1E] mb-5">
-              Protocol Architecture
+            <h2 className="text-[38px] md:text-[54px] font-bold tracking-tight text-[#1C1C1E] mb-5 leading-tight">
+              What is Ledger Chat?
             </h2>
             <p className="text-[18px] md:text-[20px] font-medium text-[#1C1C1E]/55 max-w-2xl mx-auto leading-relaxed">
-              Because cryptographic privacy is a deterministic requirement, not a corporate feature.
+              Ledger Chat is a private messaging app built from the ground up to keep your conversations
+              between you and the people you choose. Nothing more.
             </p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
-                icon: <EyeOff size={26} strokeWidth={2} />,
+                icon: <MessageCircle size={26} strokeWidth={2} />,
                 color: "text-[#2C6BED]",
                 bg: "bg-[#2C6BED]/8",
-                title: "Mathematical Sovereignty.",
-                desc: "Your metadata never hits a centralized plaintext database. Ledger Chat routes encrypted packets directly through distributed node infrastructure.",
-              },
-              {
-                icon: <Shield size={26} strokeWidth={2} />,
-                color: "text-purple-600",
-                bg: "bg-purple-500/8",
-                title: "Zero-Knowledge State Shielding.",
-                desc: "We leverage Aztec's programmable privacy frameworks. Every message payload is encrypted end-to-end, protecting your entire social graph.",
+                title: "Private by default.",
+                desc: "Every message you send is locked on your device before it travels anywhere. Only the person you are writing to holds the key to read it. No one else — not us, not any government, not any server — can read your messages.",
               },
               {
                 icon: <Fingerprint size={26} strokeWidth={2} />,
                 color: "text-[#30D158]",
                 bg: "bg-[#30D158]/10",
-                title: "Hardware-Bound Identity.",
-                desc: "No telecom providers. No phone numbers. Your digital identity is rooted in cryptographic key pairs securely stored in your device enclave.",
+                title: "No phone number required.",
+                desc: "You connect to Ledger Chat using a digital wallet — a small file on your device that acts as your identity. You do not need a SIM card, a phone number, or an email address. Your account belongs entirely to you.",
+              },
+              {
+                icon: <Globe size={26} strokeWidth={2} />,
+                color: "text-purple-600",
+                bg: "bg-purple-500/8",
+                title: "No servers store your data.",
+                desc: "Messages travel directly between people rather than through a central company server. This means there is no database of your conversations that can be hacked, sold, or handed to anyone.",
               },
             ].map((card, i) => (
               <motion.div
@@ -332,11 +338,10 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
         </div>
       </section>
 
-      {/* ═══ SECTION 3 — HOW IT WORKS ════════════════════════════════════════ */}
-      <section className="bg-white py-24 md:py-32">
+      {/* ═══ SECTION 3 — HOW IT WORKS (Step by Step) ════════════════════════════ */}
+      <section id="how-it-works" className="bg-white py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-5 md:px-10 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
 
-          {/* Text */}
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -345,47 +350,45 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             className="flex flex-col gap-10"
           >
             <div>
+              <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#2C6BED] mb-4">Step by step</p>
               <h2 className="text-[38px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] mb-5 leading-tight">
-                Architected for absolute<br />confidentiality.
+                How to start<br />chatting in minutes.
               </h2>
               <p className="text-[17px] font-medium text-[#1C1C1E]/55 leading-relaxed">
-                The protocol establishes secure sessions without exposing identifying metadata.
-                No traditional telecom infrastructure is required.
+                You do not need any technical knowledge. Anyone who can use a smartphone can set up
+                Ledger Chat in under three minutes.
               </p>
             </div>
 
             <div className="flex flex-col gap-8">
               <Step
                 n="1"
-                title="Hardware-Level Security."
-                desc="Your account is secured by the biometric hardware already built into your device (Face ID, Touch ID). Your private keys are locked securely in your device's secure enclave and never touch the internet."
+                title="Download the app."
+                desc="Install Ledger Chat from the App Store or Google Play. It is free. It will always be free. There are no hidden fees or premium tiers for private messaging."
               />
               <Step
                 n="2"
-                title="Total Identity Protection."
-                desc="Your identity is protected by advanced cryptographic shielding. We cannot see who you talk to, when you talk, or what you say. Your social graph remains completely private and untraceable."
+                title="Create your identity."
+                desc="Tap 'Create Wallet' when the app opens. Your device generates a unique key pair in under a second. This is your account. Write down the recovery phrase shown to you and store it safely — this is the only thing that can restore your account."
               />
               <Step
                 n="3"
-                title="Decentralized Infrastructure."
-                desc="Messages are routed through a decentralized network rather than central servers. This ensures 100% uptime, prevents censorship, and eliminates single points of failure while keeping metadata secure."
+                title="Find someone to talk to."
+                desc="Share your Ledger Chat address with a friend, or search for someone by their address directly in the app. You can also scan a QR code in person to add a contact instantly."
               />
               <Step
                 n="4"
-                title="Complete Ownership."
-                desc="Set your messages to instantly destroy themselves after being read, remotely delete sensitive data, and maintain absolute ownership over your communication history at all times."
+                title="Start the conversation."
+                desc="Tap on a contact and start writing. Your message is encrypted the moment you press Send. It arrives on their device and only their device. You can also make voice and video calls in the same conversation."
               />
             </div>
 
-            <Link
-              href="/connect"
-              className="inline-flex items-center gap-2 bg-[#1C1C1E] hover:bg-black text-white font-bold text-[15px] px-7 py-3.5 rounded-xl transition-all self-start"
-            >
-              Initiate Secure Session
-            </Link>
+            <div className="flex flex-row gap-3 flex-wrap">
+              <AppStoreBadge />
+              <GooglePlayBadge />
+            </div>
           </motion.div>
 
-          {/* Map Lottie */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -399,23 +402,82 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
         </div>
       </section>
 
-      {/* ═══ SECTION 4 — FEATURES ════════════════════════════════════════════ */}
+      {/* ═══ SECTION 4 — HOW IT DIFFERS FROM OTHER APPS ═════════════════════════ */}
       <section className="bg-[#F6F7F9] py-24 md:py-32">
+        <div className="max-w-7xl mx-auto px-5 md:px-10">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="text-center mb-16"
+          >
+            <h2 className="text-[38px] md:text-[54px] font-bold tracking-tight text-[#1C1C1E] mb-5">
+              What makes Ledger Chat different?
+            </h2>
+            <p className="text-[18px] font-medium text-[#1C1C1E]/55 max-w-2xl mx-auto leading-relaxed">
+              Most messaging apps are built around advertising revenue. Ledger Chat is built
+              around you.
+            </p>
+          </motion.div>
+
+          {/* Comparison table */}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="bg-white rounded-3xl border border-black/[0.05] shadow-sm overflow-hidden"
+          >
+            <div className="grid grid-cols-4 bg-[#FAFAFA] border-b border-black/5 px-6 py-4">
+              <div className="text-[13px] font-black uppercase tracking-widest text-black/30">Feature</div>
+              <div className="text-[13px] font-black uppercase tracking-widest text-[#1C1C1E] text-center">Ledger Chat</div>
+              <div className="text-[13px] font-black uppercase tracking-widest text-black/30 text-center">WhatsApp</div>
+              <div className="text-[13px] font-black uppercase tracking-widest text-black/30 text-center">Telegram</div>
+            </div>
+            {[
+              ["No phone number required", true, false, false],
+              ["Messages encrypted end to end", true, true, false],
+              ["No ads, ever", true, true, false],
+              ["No company can read your messages", true, false, false],
+              ["No data collected about you", true, false, false],
+              ["Send money in a conversation", true, false, false],
+              ["Voice and video calls", true, true, true],
+              ["Group communities", true, true, true],
+              ["Account never tied to your real identity", true, false, false],
+            ].map(([label, lc, wa, tg], i) => (
+              <div key={String(label)} className={`grid grid-cols-4 px-6 py-4 items-center ${i % 2 === 0 ? '' : 'bg-[#FAFAFA]'} border-b border-black/[0.03] last:border-0`}>
+                <span className="text-[15px] font-medium text-[#1C1C1E]/80">{String(label)}</span>
+                <div className="flex justify-center">
+                  {lc ? <Check size={18} strokeWidth={3} className="text-[#30D158]" /> : <span className="text-black/20 text-lg">—</span>}
+                </div>
+                <div className="flex justify-center">
+                  {wa ? <Check size={18} strokeWidth={3} className="text-black/25" /> : <span className="text-black/20 text-lg">—</span>}
+                </div>
+                <div className="flex justify-center">
+                  {tg ? <Check size={18} strokeWidth={3} className="text-black/25" /> : <span className="text-black/20 text-lg">—</span>}
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ═══ SECTION 5 — FEATURES ════════════════════════════════════════════════ */}
+      <section className="bg-white py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-5 md:px-10 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
 
-          {/* Lottie */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, ease: EASE }}
-            className="w-full max-w-[480px] mx-auto bg-white rounded-[40px] border border-black/[0.05] shadow-md overflow-hidden flex items-center justify-center p-8"
+            className="w-full max-w-[480px] mx-auto bg-[#F6F7F9] rounded-[40px] border border-black/[0.05] shadow-md overflow-hidden flex items-center justify-center p-8"
             style={{ aspectRatio: '1/1' }}
           >
             <RemoteLottie path="/lottie/message-icon.json" loop width="100%" height="100%" />
           </motion.div>
 
-          {/* Feature list */}
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -425,42 +487,186 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
           >
             <div>
               <h2 className="text-[38px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] mb-5 leading-tight">
-                Institutional-Grade Features.
+                Everything you need.<br />Nothing you do not.
               </h2>
               <p className="text-[17px] font-medium text-[#1C1C1E]/55 leading-relaxed">
-                Ledger Chat integrates advanced cryptographic primitives into a seamless communication interface, rendering traditional secure messengers obsolete.
+                Ledger Chat gives you every tool you expect from a modern messaging app,
+                without the parts designed to keep you tracked or watched.
               </p>
             </div>
 
             <div className="flex flex-col gap-4">
-              <FeatureCheck text="Hardware biometric authentication (Face ID & Touch ID integration)" />
-              <FeatureCheck text="Seamless and completely private peer-to-peer digital payments" />
-              <FeatureCheck text="Cryptographic message signing ensures nobody can impersonate you" />
-              <FeatureCheck text="Self-destructing messages that instantly burn after being read" />
-              <FeatureCheck text="End-to-end encrypted high-definition audio and video calling" />
-              <FeatureCheck text="Private group chats where metadata and membership are hidden" />
-              <FeatureCheck text="AI Ghost Mode to translate tone or automatically reply while away" />
-              <FeatureCheck text="Fully encrypted personal vault for storing your most sensitive files" />
-              <FeatureCheck text="No phone number required. Connect purely via your digital identity" />
-              <FeatureCheck text="Secure in-person contact exchange via encrypted QR codes" />
+              <FeatureCheck text="Send text, photos, videos, voice messages, and files" />
+              <FeatureCheck text="Make clear, private voice and video calls with no quality loss" />
+              <FeatureCheck text="Create group chats and communities for up to thousands of people" />
+              <FeatureCheck text="Set messages to delete automatically after they are read" />
+              <FeatureCheck text="Send money to anyone in your contacts, instantly and for free" />
+              <FeatureCheck text="React to messages with any emoji" />
+              <FeatureCheck text="Share your location safely for a limited time only" />
+              <FeatureCheck text="Create polls to collect opinions from a group" />
+              <FeatureCheck text="Start encrypted audio and video calls from any conversation" />
+              <FeatureCheck text="Use a QR code to add contacts when you meet in person" />
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* ═══ SECTION 5 — FEATURE GRID ════════════════════════════════════════ */}
+      {/* ═══ SECTION 6 — PLATFORM REQUIREMENTS ══════════════════════════════════ */}
+      <section className="bg-[#F6F7F9] py-24 md:py-32">
+        <div className="max-w-7xl mx-auto px-5 md:px-10">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="text-center mb-14"
+          >
+            <h2 className="text-[38px] md:text-[54px] font-bold tracking-tight text-[#1C1C1E] mb-4">
+              Available on all your devices.
+            </h2>
+            <p className="text-[18px] font-medium text-[#1C1C1E]/55 max-w-xl mx-auto">
+              Ledger Chat works on iPhone, Android phones, and any web browser.
+              Your conversations stay in sync across all of them automatically.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {[
+              {
+                icon: <Smartphone size={28} />,
+                title: "iPhone",
+                sub: "Requires iOS 16 or later",
+                badge: "App Store — January 2027",
+                color: "text-[#2C6BED]",
+                bg: "bg-[#2C6BED]/8",
+              },
+              {
+                icon: <Smartphone size={28} />,
+                title: "Android",
+                sub: "Requires Android 10 or later",
+                badge: "Google Play — January 2027",
+                color: "text-[#30D158]",
+                bg: "bg-[#30D158]/8",
+              },
+              {
+                icon: <Globe size={28} />,
+                title: "Web Browser",
+                sub: "Chrome, Safari, Firefox — no download",
+                badge: "Available now at humanidfi.com",
+                color: "text-purple-600",
+                bg: "bg-purple-500/8",
+              },
+            ].map((p) => (
+              <motion.div
+                key={p.title}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeUp}
+                className="bg-white rounded-3xl p-8 border border-black/[0.05] shadow-sm flex flex-col gap-4 text-center items-center"
+              >
+                <div className={`w-14 h-14 ${p.bg} ${p.color} rounded-2xl flex items-center justify-center`}>
+                  {p.icon}
+                </div>
+                <div>
+                  <h3 className="text-[20px] font-bold text-[#1C1C1E]">{p.title}</h3>
+                  <p className="text-[14px] text-black/50 mt-1">{p.sub}</p>
+                </div>
+                <div className="bg-[#F6F7F9] text-[12px] font-bold text-black/50 px-4 py-2 rounded-lg w-full text-center">
+                  {p.badge}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ SECTION 7 — WHAT IS NEW ═════════════════════════════════════════════ */}
       <section className="bg-white py-24 md:py-32">
+        <div className="max-w-4xl mx-auto px-5 md:px-10">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="text-center mb-14"
+          >
+            <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#2C6BED] mb-4">Latest updates</p>
+            <h2 className="text-[38px] md:text-[54px] font-bold tracking-tight text-[#1C1C1E] mb-4">
+              What we have built recently.
+            </h2>
+            <p className="text-[18px] font-medium text-[#1C1C1E]/55">
+              Ledger Chat improves every week. Here is a summary of the most recent additions.
+            </p>
+          </motion.div>
+
+          <div className="flex flex-col gap-4">
+            {[
+              {
+                tag: "New",
+                title: "Communities with rich announcements",
+                desc: "Group administrators can now write and publish formatted announcements with images, bold text, and bullet points — similar to a publication inside the group.",
+                color: "bg-[#2C6BED] text-white",
+              },
+              {
+                tag: "Improved",
+                title: "Group invite links that you control",
+                desc: "Share a single link to invite people to a group. If you change your mind, revoke the link in one tap and it stops working immediately. Private groups block new entries automatically when you close them.",
+                color: "bg-[#30D158] text-white",
+              },
+              {
+                tag: "New",
+                title: "50,000 QD tokens for every new member",
+                desc: "Every person who creates a Ledger Chat account receives 50,000 QD tokens automatically. These tokens let you send payments inside conversations and access certain features in the app.",
+                color: "bg-purple-600 text-white",
+              },
+              {
+                tag: "Improved",
+                title: "Settings that actually do things",
+                desc: "Every option in the Settings screen now has a visible effect on your account. Change your theme, adjust your privacy level, toggle notifications or message previews, and see the result immediately.",
+                color: "bg-orange-500 text-white",
+              },
+              {
+                tag: "Security",
+                title: "End to end encrypted by default, no setup required",
+                desc: "All conversations in Ledger Chat are encrypted from the moment they start. You do not need to enable anything. There is no plain-text fallback mode. Every message is private, always.",
+                color: "bg-[#1C1C1E] text-white",
+              },
+            ].map((item, i) => (
+              <motion.div
+                key={item.title}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                custom={i * 0.07}
+                variants={fadeUp}
+                className="flex gap-5 bg-[#FAFAFA] border border-black/[0.05] rounded-2xl px-6 py-5 items-start hover:border-black/10 transition-colors"
+              >
+                <span className={`shrink-0 text-[11px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md mt-0.5 ${item.color}`}>
+                  {item.tag}
+                </span>
+                <div>
+                  <h4 className="text-[16px] font-bold text-[#1C1C1E] mb-1">{item.title}</h4>
+                  <p className="text-[14px] font-medium text-[#1C1C1E]/55 leading-relaxed">{item.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ SECTION 8 — FEATURE GRID ════════════════════════════════════════════ */}
+      <section id="notify" className="bg-[#F6F7F9] py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-5 md:px-10">
           <div className="flex flex-col items-center">
-
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, ease: EASE }}
-              className="w-40 h-40 mb-10 flex items-center justify-center"
+              className="w-32 h-32 mb-10 flex items-center justify-center"
             >
-              <RemoteLottie path="/lottie/typing.json" loop width={160} height={160} />
+              <RemoteLottie path="/lottie/typing.json" loop width={128} height={128} />
             </motion.div>
 
             <motion.div
@@ -474,12 +680,11 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 Everything you know.<br />And then some.
               </h2>
               <p className="text-[18px] md:text-[20px] font-medium text-[#1C1C1E]/55 leading-relaxed mb-12">
-                Ledger Chat has every feature the most popular messaging apps in the world offer —
-                and then adds capabilities that no other app provides today.
+                Ledger Chat has every feature the most popular messaging apps offer, and adds things
+                that no other app provides today.
               </p>
             </motion.div>
 
-            {/* Feature grid */}
             <motion.div
               initial="hidden"
               whileInView="visible"
@@ -488,14 +693,14 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl"
             >
               {[
-                { icon: <MessageCircle size={22} />, label: "Encrypted Messages", color: "text-[#2C6BED] bg-[#2C6BED]/8" },
-                { icon: <Mic size={22} />, label: "HD Voice Calls", color: "text-[#30D158] bg-[#30D158]/8" },
+                { icon: <MessageSquare size={22} />, label: "Private Messages", color: "text-[#2C6BED] bg-[#2C6BED]/8" },
+                { icon: <Mic size={22} />, label: "Voice Calls", color: "text-[#30D158] bg-[#30D158]/8" },
                 { icon: <Video size={22} />, label: "Video Calls", color: "text-purple-600 bg-purple-500/8" },
-                { icon: <Wallet size={22} />, label: "Crypto Payments", color: "text-orange-500 bg-orange-500/8" },
-                { icon: <Flame size={22} />, label: "Disappearing Messages", color: "text-red-500 bg-red-500/8" },
-                { icon: <Bot size={22} />, label: "AI Ghost Mode", color: "text-cyan-600 bg-cyan-500/8" },
-                { icon: <BarChart2 size={22} />, label: "Polls and Votes", color: "text-emerald-600 bg-emerald-500/8" },
-                { icon: <Users size={22} />, label: "Group Chats", color: "text-indigo-600 bg-indigo-500/8" },
+                { icon: <Wallet size={22} />, label: "Send Payments", color: "text-orange-500 bg-orange-500/8" },
+                { icon: <Bell size={22} />, label: "Message Timers", color: "text-red-500 bg-red-500/8" },
+                { icon: <Image size={22} />, label: "Photo and Video", color: "text-cyan-600 bg-cyan-500/8" },
+                { icon: <BarChart2 size={22} />, label: "Polls", color: "text-emerald-600 bg-emerald-500/8" },
+                { icon: <Users size={22} />, label: "Communities", color: "text-indigo-600 bg-indigo-500/8" },
               ].map((item, i) => (
                 <motion.div
                   key={item.label}
@@ -504,7 +709,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                   viewport={{ once: true }}
                   custom={i * 0.05}
                   variants={fadeUp}
-                  className="bg-[#F6F7F9] rounded-2xl p-5 flex flex-col items-center gap-3 text-center border border-black/[0.04] hover:border-black/10 transition-colors"
+                  className="bg-white rounded-2xl p-5 flex flex-col items-center gap-3 text-center border border-black/[0.04] hover:border-black/10 transition-colors"
                 >
                   <div className={`w-11 h-11 rounded-xl ${item.color} flex items-center justify-center`}>
                     {item.icon}
@@ -517,35 +722,51 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
         </div>
       </section>
 
-      {/* ═══ SECTION 6 — BOTTOM CTA ══════════════════════════════════════════ */}
-      <section className="bg-[#F0F4FF] py-24 md:py-32">
+      {/* ═══ SECTION 9 — BOTTOM CTA ══════════════════════════════════════════════ */}
+      <section className="bg-white py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-5 md:px-10 flex flex-col items-center text-center">
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={fadeUp}
+            className="flex flex-col items-center"
           >
-            <div className="w-20 h-20 mx-auto mb-8 bg-[#2C6BED]/10 rounded-3xl flex items-center justify-center">
-              <MessageCircle size={36} className="text-[#2C6BED]" strokeWidth={1.5} />
+            <div className="w-20 h-20 mx-auto mb-8 bg-[#1C1C1E] rounded-3xl flex items-center justify-center shadow-xl">
+              <MessageCircle size={34} className="text-white" strokeWidth={1.8} />
             </div>
             <h2 className="text-[42px] md:text-[60px] font-bold tracking-tight text-[#1C1C1E] mb-6 leading-tight">
-              Ready to own your<br />conversations?
+              Ready to start?
             </h2>
             <p className="text-[18px] font-medium text-[#1C1C1E]/55 mb-10 max-w-xl mx-auto leading-relaxed">
-              Join the sovereign messaging network. Free forever. No ads. No surveillance. Just you and the people you trust.
+              Ledger Chat is free, requires no sign-up form, no email, and no phone number.
+              Open it in your browser right now or wait for the mobile app in January 2027.
             </p>
 
-            <Link
-              href="/connect"
-              className="inline-flex items-center gap-2 bg-[#2C6BED] hover:bg-[#1A5AE3] text-white font-bold text-[18px] px-10 py-5 rounded-2xl transition-all shadow-lg shadow-[#2C6BED]/25 mb-6"
-            >
-              <MessageCircle size={20} />
-              Get Ledger Chat
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              <Link
+                href="/chat"
+                className="inline-flex items-center gap-2 bg-[#1C1C1E] hover:bg-black text-white font-bold text-[17px] px-10 py-4 rounded-2xl transition-all shadow-lg active:scale-95"
+              >
+                <MessageCircle size={20} />
+                Open in Browser
+              </Link>
+              <a
+                href="#notify"
+                className="inline-flex items-center gap-2 bg-[#F6F7F9] hover:bg-[#EBEBEB] text-[#1C1C1E] font-bold text-[17px] px-10 py-4 rounded-2xl transition-all active:scale-95"
+              >
+                <Bell size={18} />
+                Notify me at Launch
+              </a>
+            </div>
 
-            <p className="text-[14px] font-medium text-[#1C1C1E]/40">
-              Available on iOS, Android, and Web. Free forever.
+            <div className="flex flex-row gap-3 flex-wrap justify-center mb-6">
+              <AppStoreBadge />
+              <GooglePlayBadge />
+            </div>
+
+            <p className="text-[13px] font-medium text-[#1C1C1E]/35">
+              Free forever. No ads. No subscriptions. No data sold.
             </p>
           </motion.div>
         </div>

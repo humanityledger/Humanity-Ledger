@@ -303,6 +303,45 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
        // Clear URL so it doesn't reopen on refresh
        window.history.replaceState({}, '', window.location.pathname);
     }
+
+    // ── [FIX] ?join=CODE — auto-join a community from the public landing page ──
+    // When the user is redirected from /join/[code], we read the code here,
+    // call the join API, and open the community view automatically.
+    const joinCode = params.get('join');
+    if (joinCode) {
+      const doJoin = async () => {
+        try {
+          const res = await fetch('/api/chat/communities/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-web3-address': address },
+            body: JSON.stringify({ joinCode }),
+          });
+          const data = await res.json();
+          if (res.ok && data.community) {
+            setActivePeer(null);
+            setActiveCommunity(data.community.id);
+            setSidebarTab('communities');
+            setShowList(false);
+            if (data.status === 'ALREADY_MEMBER') {
+              toast.success(`Opened ${data.community.name}`);
+            } else {
+              toast.success(`You joined ${data.community.name}!`);
+            }
+          } else if (data.code === 'GROUP_CLOSED') {
+            toast.error('This group is private. Ask an admin to add you directly.');
+          } else if (data.code === 'LINK_EXPIRED') {
+            toast.error('This invite link has expired or was revoked.');
+          } else {
+            toast.error(data.error || 'Could not join this community.');
+          }
+        } catch {
+          toast.error('Connection error while joining community. Try again.');
+        }
+      };
+      doJoin();
+      // Clear param from URL to prevent re-triggering on refresh
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, [isMounted, address, client]);
 
   const [conversations, setConversations] = useState<ConversationMeta[]>([]);

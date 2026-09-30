@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ChevronLeft, Users, Settings, Bell, 
+  ChevronLeft, Users, Settings, Bell, X,
   MessageSquare, Hash, Link as LinkIcon, Edit, Shield,
   Globe, Lock, Image as ImageIcon, Search,
-  Eye, EyeOff, Pin, Heart
+  Eye, EyeOff, Pin, Heart, Plus, AlertTriangle
 } from 'lucide-react';
 import { RichPostEditorModal } from './RichPostEditor';
 
@@ -101,9 +101,19 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                     )}
                     <div className="prose prose-sm max-w-none px-6 py-4 text-[#1C1C1E]/80" dangerouslySetInnerHTML={{ __html: post.content }} />
                     <div className="bg-[#FAFAFA] px-6 py-3 border-t border-black/5 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div 
+                        className="flex items-center gap-2 cursor-pointer hover:bg-black/5 px-2 py-1 -ml-2 rounded-lg transition-colors"
+                        onClick={() => {
+                          // Quick hack to open peer chat in LedgerChatV2
+                          window.history.pushState({}, '', `/chat?to=${post.authorAddress}`);
+                          window.dispatchEvent(new Event('popstate'));
+                          // Or reload to force the ?to param handler we wrote earlier
+                          window.location.href = `/chat?to=${post.authorAddress}`;
+                        }}
+                        title="Click to message this user"
+                      >
                         <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500" />
-                        <span className="text-[12px] font-medium text-black/40">{post.authorAddress.slice(0,6)}...{post.authorAddress.slice(-4)}</span>
+                        <span className="text-[12px] font-medium text-black/60 hover:text-black">{post.authorAddress.slice(0,6)}...{post.authorAddress.slice(-4)}</span>
                         <span className="text-[12px] text-black/20">•</span>
                         <span className="text-[12px] font-medium text-black/40">{new Date(post.createdAt).toLocaleDateString()}</span>
                       </div>
@@ -136,7 +146,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
         )}
 
         {activeTab === 'settings' && (
-          <CommunitySettingsPanel community={community} />
+          <CommunitySettingsPanel community={community} myAddress={myAddress} />
         )}
       </div>
 
@@ -145,6 +155,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
         onClose={() => setShowEditor(false)} 
         myAddress={myAddress}
         communityName={community?.name}
+        communityId={communityId}
         onPublished={() => {
           fetchPosts();
         }}
@@ -155,7 +166,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
 
 // ─── SETTINGS PANEL (Telegram Style - Ultimate Edition) ────────────────────────
 
-function CommunitySettingsPanel({ community }: { community: any }) {
+function CommunitySettingsPanel({ community, myAddress }: { community: any; myAddress: string }) {
   const [permissions, setPermissions] = useState({
     sendMessages: true,
     sendMedia: true,
@@ -166,6 +177,27 @@ function CommunitySettingsPanel({ community }: { community: any }) {
     pinMessages: false,
     changeInfo: false,
   });
+
+  const [isPrivate, setIsPrivate] = useState<boolean>(community?.isPrivate ?? false);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+
+  const togglePrivacy = async (newVal: boolean) => {
+    setSavingPrivacy(true);
+    try {
+      const res = await fetch('/api/chat/communities', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+        body: JSON.stringify({ communityId: community.id, action: 'UPDATE_PRIVACY', isPrivate: newVal }),
+      });
+      if (res.ok) {
+        setIsPrivate(newVal);
+      }
+    } catch (e) {
+      console.error('Failed to update privacy', e);
+    } finally {
+      setSavingPrivacy(false);
+    }
+  };
 
   const [features, setFeatures] = useState({
     historyVisible: true,
@@ -216,10 +248,15 @@ function CommunitySettingsPanel({ community }: { community: any }) {
           <p className="text-[14px] text-black/50 mt-1 line-clamp-2">{community?.description || 'No description provided for this community.'}</p>
           <div className="flex flex-wrap items-center gap-2 mt-3">
             <span className="text-[12px] font-bold text-[#007AFF] bg-[#007AFF]/10 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Users size={14}/> {community?.members} Members</span>
-            <span className="text-[12px] font-bold text-black/60 bg-black/5 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-              {community?.isPrivate ? <Lock size={12}/> : <Globe size={12}/>}
-              {community?.isPrivate ? 'Private Group' : 'Public Group'}
-            </span>
+            <button
+              onClick={() => togglePrivacy(!isPrivate)}
+              disabled={savingPrivacy}
+              className={`text-[12px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all border ${isPrivate ? 'bg-red-50 text-red-500 border-red-100 hover:bg-red-100' : 'bg-green-50 text-green-600 border-green-100 hover:bg-green-100'} disabled:opacity-50`}
+              title={isPrivate ? 'Click to make Public (open to all)' : 'Click to make Private (close group)'}
+            >
+              {savingPrivacy ? <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /> : isPrivate ? <Lock size={12}/> : <Globe size={12}/>}
+              {isPrivate ? 'Private — Click to Open' : 'Public — Click to Close'}
+            </button>
           </div>
         </div>
       </div>

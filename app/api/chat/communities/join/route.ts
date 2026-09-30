@@ -15,7 +15,7 @@ async function resolveCaller(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const caller = await resolveCaller(req);
-    if (!caller) return NextResponse.json({ error: 'Unauthorized. Connect wallet first.' }, { status: 401 });
+    if (!caller) return NextResponse.json({ error: 'Unauthorized. Connect your wallet first.' }, { status: 401 });
 
     const { joinCode } = await req.json();
     if (!joinCode) return NextResponse.json({ error: 'joinCode required' }, { status: 400 });
@@ -23,26 +23,38 @@ export async function POST(req: NextRequest) {
     const code = joinCode.toUpperCase().trim();
 
     const community = await (prisma as any).community.findUnique({
-      where: { joinCode: code }
+      where: { joinCode: code },
+      include: { _count: { select: { members: true } } }
     });
 
-    if (!community) return NextResponse.json({ error: 'Invalid or expired invite link.' }, { status: 404 });
+    // ── GATE 1: Link existence (revocation check) ──────────────────────────────
+    if (!community) {
+      return NextResponse.json({
+        error: 'This invite link has expired or was revoked by the administrator.',
+        code: 'LINK_EXPIRED'
+      }, { status: 404 });
+    }
 
-    // ─── STRICT PRIVATE GROUP CHECK ───
-    // If the community is private, the joinCode must match perfectly. If the admin 
-    // changes the privacy settings or revokes the link, the old link is destroyed.
-    // In a fully complex implementation, we could check for an "Approval Required" flag
-    // or a ban list. Let's check for bans if we had a ban list, but for now we enforce 
-    // that the link exists. If the admin revoked it, it won't be found above.
-
+    // ── GATE 2: Privacy enforcement ────────────────────────────────────────────
+    // A PRIVATE community means the admin has closed entry to the public.
+    // Only existing members (already in the DB) can re-enter. New members are BLOCKED.
     const existing = await (prisma as any).communityMember.findUnique({
       where: { communityId_walletAddress: { communityId: community.id, walletAddress: caller } }
     });
 
+    if (community.isPrivate && !existing) {
+      return NextResponse.json({
+        error: 'This is a private group. New members cannot join via link. Ask an administrator to add you.',
+        code: 'GROUP_CLOSED'
+      }, { status: 403 });
+    }
+
+    // ── GATE 3: Already a member ───────────────────────────────────────────────
     if (existing) {
       return NextResponse.json({ ok: true, status: 'ALREADY_MEMBER', community });
     }
 
+    // ── JOIN ───────────────────────────────────────────────────────────────────
     await (prisma as any).communityMember.create({
       data: {
         communityId: community.id,
@@ -50,6 +62,22 @@ export async function POST(req: NextRequest) {
         role: 'MEMBER'
       }
     });
+
+    // Create a system post announcing the new member
+    try {
+      await (prisma as any).$executeRawUnsafe(
+        `INSERT INTO "CommunityPost"
+         ("communityId", "authorAddress", "title", "content", "plainText")
+         VALUES ($1, $2, $3, $4, $5)`,
+        community.id,
+        caller, // Use the new member's address as author so their avatar shows up
+        null,
+        `<p>👋 <span style="color: #007AFF; font-weight: bold;">Joined the community</span> via invite link.</p>`,
+        `Joined the community via invite link.`
+      );
+    } catch (e) {
+      console.error('Failed to post welcome message:', e);
+    }
 
     return NextResponse.json({ ok: true, status: 'JOINED', community });
   } catch (error: any) {

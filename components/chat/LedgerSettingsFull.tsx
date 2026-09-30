@@ -113,7 +113,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
         <button onClick={onClose} className="p-2 -ml-2 text-black/50 hover:text-black transition-colors">
           <ArrowLeft size={20} />
         </button>
-        <span className="text-[11px] font-mono tracking-[0.2em] uppercase font-bold text-black">Quantum Settings</span>
+        <span className="text-[11px] font-mono tracking-[0.2em] uppercase font-bold text-black">Settings</span>
         <div className="w-8" />
       </div>
 

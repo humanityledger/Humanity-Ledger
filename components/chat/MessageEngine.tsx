@@ -10,6 +10,8 @@ import {
 import { toast } from 'sonner';
 import { useSystemFormatter } from '@/hooks/useSystemFormatter';
 import { useSettingsStore } from '@/lib/store/useSettingsStore';
+import { useWalletStore } from '@/lib/store/wallet-store';
+import { useLedgerSettings } from '@/components/terminal/LedgerChatSettings';
 
 import type { ChatSettings } from '@/components/chat/AdvancedSettingsModal';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -272,21 +274,24 @@ export default function MessageEngine({
   const [menuState, setMenuState] = useState<{ id: string; content: string; x: number; y: number } | null>(null);
   const { formatDate } = useSystemFormatter();
 
-  // Read quantum settings directly from store (source of truth)
-  const chatBackground   = useSettingsStore(s => s.chatBackground);
-  const chatBgCustomUrl  = useSettingsStore(s => s.chatBackgroundCustomUrl);
-  const bubbleStyle      = useSettingsStore(s => s.bubbleStyle);
-  const accentColor      = useSettingsStore(s => s.accentColor);
-  const chatFont         = useSettingsStore(s => s.chatFont);
-  const textSize         = useSettingsStore(s => s.textSize);
-  const watermarkEnabled = useSettingsStore(s => s.watermarkEnabled);
-  const stealthMode      = useSettingsStore(s => s.stealthMode);
-  const showReadReceipts = useSettingsStore(s => s.showReadReceipts);
-  const burnOnRead       = useSettingsStore(s => s.burnOnRead);
-  const burnSeconds      = useSettingsStore(s => s.burnOnReadSeconds);
-  const tickerWidgets    = useSettingsStore(s => s.tickerWidgets);
-  const contractScanner  = useSettingsStore(s => s.contractScanner);
-  const showAttestation  = useSettingsStore(s => s.showAttestationBadge);
+  const { address } = useWalletStore();
+  const { settings: ledgerSettings } = useLedgerSettings(address || '');
+
+  // Read quantum settings directly from PXE store (source of truth)
+  const chatBackground   = ledgerSettings?.chat_background || 'default';
+  const chatBgCustomUrl  = ledgerSettings?.chat_background_custom_url || '';
+  const bubbleStyle      = ledgerSettings?.bubble_style || 'default';
+  const accentColor      = ledgerSettings?.accent_color || '#6366f1';
+  const chatFont         = ledgerSettings?.chat_font || 'inter';
+  const textSize         = ledgerSettings?.text_size || 2;
+  const watermarkEnabled = ledgerSettings?.watermark_enabled || false;
+  const stealthMode      = ledgerSettings?.privacy_last_seen === 'nobody';
+  const showReadReceipts = ledgerSettings?.privacy_read_receipts || true;
+  const burnOnRead       = ledgerSettings?.burn_on_read || false;
+  const burnSeconds      = 10; // Fixed for now unless we want to map it
+  const tickerWidgets    = ledgerSettings?.ticker_widgets || false;
+  const contractScanner  = ledgerSettings?.contract_scanner || false;
+  const showAttestation  = ledgerSettings?.show_attestation_badge || true;
 
   const openMenu = useCallback((e: React.MouseEvent | React.TouchEvent, id: string, content: string) => {
     e.preventDefault();
