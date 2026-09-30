@@ -51,6 +51,7 @@ import { ContactInfoPanel } from '@/components/chat/ContactInfoPanel';
 import { LedgerUpdatesTab } from '@/components/chat/LedgerUpdatesTab';
 import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
 import { LedgerCommunitiesTab } from '@/components/chat/LedgerCommunitiesTab';
+import { CommunityView } from '@/components/chat/CommunityView';
 import { LedgerSettingsFull } from '@/components/chat/LedgerSettingsFull';
 import { LottieSendButton } from '@/components/chat/LottieSendButton';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
@@ -306,6 +307,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   const [conversations, setConversations] = useState<ConversationMeta[]>([]);
   const [activePeer, setActivePeer] = useState<string | null>(null);
+  const [activeCommunity, setActiveCommunity] = useState<string | null>(null);
   const [localContacts, setLocalContacts] = useState<LocalContact[]>([]);
   const [replyingTo, setReplyingTo] = useState<any | null>(null); // Phase 2: Message Quoting
   
@@ -4166,7 +4168,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           {sidebarTab === 'communities' && (
             <LedgerCommunitiesTab
               myAddress={address || ''}
-              onOpenCommunity={(id) => { /* Route to community */ }}
+              onOpenCommunity={(id) => {
+                setActivePeer(null);
+                setActiveCommunity(id);
+                setShowList(false);
+              }}
             />
           )}
 
@@ -4335,7 +4341,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       {/*  Chat Area  */}
       <div className={`${!showList ? 'flex' : 'hidden md:flex'} relative flex-1 flex-col min-w-0 min-h-0`}>
-        {activePeer ? (
+        {activeCommunity ? (
+          <CommunityView 
+            communityId={activeCommunity} 
+            myAddress={address || ''} 
+            onBack={() => {
+              setActiveCommunity(null);
+              setShowList(true);
+            }} 
+          />
+        ) : activePeer ? (
           <>
             <div className="h-[68px] px-4 border-b border-black/[0.08] flex items-center justify-between bg-white shrink-0 z-10 shadow-[0_1px_8px_rgba(0,0,0,0.05)]">
               <div className="flex items-center gap-3">
