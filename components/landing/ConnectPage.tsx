@@ -350,7 +350,7 @@ export default function ConnectPage() {
 
           {/* Top logo */}
           <div className="relative z-20">
-            <HLLogo size={24} theme="dark" />
+            <HLLogo size={36} theme="dark" />
           </div>
 
           {/* Centre content */}

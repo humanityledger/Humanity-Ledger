@@ -4043,7 +4043,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           {/* Top row: title + action buttons */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-<img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-8 h-8 rounded-lg shadow-sm" />
+<img src="/logo-mark.png" alt="Ledger Chat" className="w-8 h-8 rounded-lg shadow-sm object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/favicon.png'; }} />
 <h1 className="text-[22px] font-black text-[#000000] tracking-tight">Messages</h1>
 </div>
             <div className="flex items-center gap-1">

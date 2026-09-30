@@ -16,16 +16,49 @@ export const metadata: Metadata = {
  * Shows all deployments of the Humanity Ledger codebase that have
  * fired the DeploymentBeacon, including unauthorized commercial clones.
  */
+import { prisma } from '@/lib/prisma';
+
 async function getCloneData(adminKey: string) {
+  const validKey = process.env.HL_ADMIN_KEY || 'humanity2026';
+  if (adminKey !== validKey) return { error: 'Unauthorized' };
+
   try {
-    const res = await fetch(
-      `https://humanidfi.com/api/internal/beacon?key=${encodeURIComponent(adminKey)}`,
-      { cache: 'no-store' }
-    );
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
+    // Auto-heal: Ensure table exists before querying
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CloneBeacon" (
+        "fingerprint" TEXT NOT NULL,
+        "origin" TEXT NOT NULL,
+        "host" TEXT NOT NULL,
+        "ip" TEXT NOT NULL,
+        "deployEnv" TEXT NOT NULL,
+        "userAgent" TEXT NOT NULL,
+        "isClone" BOOLEAN NOT NULL DEFAULT false,
+        "hitCount" INTEGER NOT NULL DEFAULT 1,
+        "commercialData" TEXT,
+        "seenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CloneBeacon_pkey" PRIMARY KEY ("fingerprint")
+      );
+    `).catch(() => {});
+
+    const beacons = await prisma.$queryRaw<any[]>`
+      SELECT * FROM "CloneBeacon" ORDER BY "seenAt" DESC LIMIT 500
+    `.catch(() => []);
+
+    const clones    = beacons.filter((b: any) => b.isClone);
+    const canonical = beacons.filter((b: any) => !b.isClone);
+
+    return {
+      summary: {
+        total:         beacons.length,
+        clones:        clones.length,
+        canonical:     canonical.length,
+        uniqueOrigins: [...new Set(beacons.map((b: any) => b.origin))],
+      },
+      clones,
+      canonical,
+    };
+  } catch (e) {
+    return { error: 'DB unavailable' };
   }
 }
 
