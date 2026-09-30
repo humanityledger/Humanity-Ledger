@@ -354,7 +354,7 @@ export default function ConnectPage() {
         <div className="relative z-10 w-28 h-28 rounded-[36px] overflow-hidden mb-6" style={{ boxShadow: '0 24px 48px -12px rgba(255,42,133,0.25), inset 0 1px 1px rgba(255,255,255,0.5), 0 0 0 1px rgba(0,0,0,0.02)' }}>
           <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" />
         </div>
-        <h2 className="relative z-10 text-[32px] font-black tracking-[-0.03em] text-black mb-2">The Next Step</h2>
+        <h2 className="relative z-10 text-[32px] font-black tracking-[-0.03em] text-black mb-2">Ledger Chat</h2>
         <p className="relative z-10 text-[14px] text-neutral-500 font-medium mb-6 text-center max-w-[280px] leading-relaxed">
           The ultimate secure messenger. Perfectly comfortable for everyone, including older adults. No passwords needed.
         </p>
@@ -401,9 +401,8 @@ export default function ConnectPage() {
               <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" />
             </div>
 
-            <h1 className="text-[56px] xl:text-[64px] font-black tracking-[-0.04em] leading-none text-black mb-5">
-              The Next Step.
-            </h1>
+            <h1 className="text-[56px] xl:text-[64px] font-black tracking-[-0.04em] leading-none text-black mb-3">Ledger Chat</h1>
+            <p className="text-[18px] font-semibold text-neutral-400 tracking-tight mb-5">Launching January 2027</p>
 
             <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-4 max-w-[420px]">
               Ledger Chat is the world's most secure private messenger. But security means nothing if it is hard to use.

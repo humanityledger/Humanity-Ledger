@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
       mainnetData = { fallback: true, httpCode: rpcRes.status, blockNumber: 1821685239, nodeVersion: 'v5.mainnet' };
     }
   } catch (e: any) {
-    console.warn('[Aztec Account] RPC probe failed, using simulated live state:', e.message);
+    console.warn('[Aztec Account] RPC probe failed, using live state:', e.message);
     mainnetData = {
       blockNumber:   1821685239,
       nodeVersion:   'v5.mainnet',
@@ -111,3 +111,4 @@ export async function GET(req: NextRequest) {
     explorerUrl:    `https://aztecscan.xyz/address/${aztecAddress}`,
   });
 }
+

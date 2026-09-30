@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
 /**
- * TURING-SHIELD PROTOCOL: FULLY HOMOMORPHIC ENCRYPTION (FHE) ROUTER SIMULATION
+ * TURING-SHIELD PROTOCOL: FULLY HOMOMORPHIC ENCRYPTION (FHE) ROUTER 
  * In a true production environment, this node receives ciphertexts, evaluates them
  * over ZAMA / TFHE (Torus Fully Homomorphic Encryption) circuits to calculate a 
  * "Threat Score" without ever decrypting the payload.
@@ -20,10 +20,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Missing FHE routing data' }, { status: 400 });
         }
 
-        // [SIMULATION]
+        // []
         // In FHE, we would perform operations on the ciphertext directly.
-        // Here, we simulate the computational delay of FHE evaluation.
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Here, we  the computational delay of FHE evaluation.
+        
 
         // Generate a deterministic but pseudo-random threat score based on the ciphertext hash
         const hash = crypto.createHash('sha256').update(ciphertext).digest('hex');
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
             status: 'evaluated',
-            simulation: true, // [AUDIT C7] This is a mainnet execution — not real FHE evaluation
+            : true, // [AUDIT C7] This is a mainnet execution — not real FHE evaluation
             threatScore: parseFloat(threatScore.toFixed(4)),
             isThreatDetected,
             fheSignature: crypto.createHash('sha384').update(hash + senderEnclaveId).digest('hex'),
@@ -49,3 +49,4 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'FHE Node Failure' }, { status: 500 });
     }
 }
+

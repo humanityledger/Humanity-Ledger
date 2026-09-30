@@ -22,6 +22,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
   const [showEditor, setShowEditor] = useState(false);
   const [community, setCommunity] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
+  const [localLikes, setLocalLikes] = useState<Record<string, number>>({});
 
   useEffect(() => {
     // Fetch community details
@@ -118,9 +119,12 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                         <span className="text-[12px] text-black/20">•</span>
                         <span className="text-[12px] font-medium text-black/40">{new Date(post.createdAt).toLocaleDateString()}</span>
                       </div>
-                      <button className="flex items-center gap-1.5 text-black/40 hover:text-red-500 transition-colors">
-                        <Heart size={14} />
-                        <span className="text-[12px] font-bold">{post.likes || 0}</span>
+                      <button 
+                        onClick={() => setLocalLikes(prev => ({ ...prev, [post.id]: (prev[post.id] ?? (post.likes || 0)) + 1 }))}
+                        className={`flex items-center gap-1.5 transition-colors ${localLikes[post.id] !== undefined ? 'text-red-500' : 'text-black/40 hover:text-red-500'}`}
+                      >
+                        <Heart size={14} fill={localLikes[post.id] !== undefined ? 'currentColor' : 'none'} />
+                        <span className="text-[12px] font-bold">{localLikes[post.id] ?? (post.likes || 0)}</span>
                       </button>
                     </div>
                   </div>
