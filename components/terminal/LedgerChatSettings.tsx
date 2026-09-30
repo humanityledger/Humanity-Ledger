@@ -25,11 +25,11 @@ import { useWalletStore } from '@/lib/store/wallet-store';
 import { useAccount, useSendTransaction } from 'wagmi';
 import { parseEther } from 'viem';
 
-// Treasury wallet for Quantum Dots purchases
-// Treasury wallet for Quantum Dots purchases — must match server-side validation in /api/aztec/purchase-qd
+// Treasury wallet for QD Tokens purchases
+// Treasury wallet for QD Tokens purchases — must match server-side validation in /api/aztec/purchase-qd
 const TREASURY_WALLET = '0x78831C25c86eA2a78A6127fC2Ccb95E612D87b4a' as `0x${string}`;
 
-// Quantum Dots purchase packages
+// QD Tokens purchase packages
 const QD_PACKAGES = [
   { index: 0, qd: 100,  price: '$1.99',  ethValue: '0.001' },
   { index: 1, qd: 500,  price: '$7.99',  ethValue: '0.004' },
@@ -122,7 +122,7 @@ export function LedgerChatSettings({ onClose, address }: LedgerChatSettingsProps
     : view === 'defi_tools' ? 'LEDGER TOOLS'
     : view === 'network' ? 'NETWORK PROTOCOL'
     : view === 'premium' ? 'LEDGER NETWORK PRO'
-    : view === 'stars' ? 'QUANTUM DOTS'
+    : view === 'stars' ? 'QD TOKENS'
     : view.toUpperCase().replace(/_/g, ' ');
 
   return (
@@ -235,7 +235,7 @@ function RootView({ onNavigate, address, s }: any) {
           <button onClick={() => onNavigate('stars')} className="w-full border border-black/10 bg-[#F8F8F8] p-5 flex items-center gap-4 hover:bg-black/5 transition-colors text-left">
             <Star size={20} className="text-black shrink-0" />
             <div className="flex flex-col">
-              <span className="text-[14px] font-bold uppercase tracking-wide text-black">Quantum Dots</span>
+              <span className="text-[14px] font-bold uppercase tracking-wide text-black">QD Tokens</span>
               <span className="text-[11px] text-black/40 font-mono">1,250 QD Balance</span>
             </div>
             <ChevronRight size={14} className="ml-auto text-black/20" />
@@ -243,7 +243,7 @@ function RootView({ onNavigate, address, s }: any) {
         </div>
 
         {/* Sticky profile footer */}
-        <div className="mt-10 pt-6 border-t border-black/8 flex items-center gap-3">
+        <div className="sticky bottom-0 mt-10 pt-4 pb-6 bg-white/95 backdrop-blur-md border-t border-black/8 flex items-center gap-3 w-full">
           <div className="w-10 h-10 bg-black flex items-center justify-center shrink-0 overflow-hidden">
             {s.avatar_url
               ? <img src={s.avatar_url} alt="avatar" className="w-full h-full object-cover" />
@@ -1031,7 +1031,7 @@ function PremiumView() {
       <p className="text-sm font-bold text-zinc-600 text-center mb-6 max-w-xs">Unlimited limits. Autonomous tooling. Complete sovereignty.</p>
 
       <div className="w-full bg-black border-[3px] border-[#1c7aff] p-3 mb-4 flex items-center gap-2 shadow-[4px_4px_0_0_#1c7aff]">
-        <span className="text-[10px] font-black text-[#1c7aff] uppercase tracking-widest">? Paid with Quantum Dots Ã¯Â¿Â½ Decentralized & On-chain</span>
+        <span className="text-[10px] font-black text-[#1c7aff] uppercase tracking-widest">? Paid with QD Tokens Ã¯Â¿Â½ Decentralized & On-chain</span>
       </div>
       
       <div className="w-full flex gap-4 mb-8">
@@ -1060,7 +1060,7 @@ function PremiumView() {
         </div>
       </div>
       <p className="text-[10px] font-bold text-zinc-400 text-center mt-3 max-w-xs">
-        Payment is processed via Quantum Dots on Humanity Ledger Appchain. No bank data. No KYC.
+        Payment is processed via QD Tokens on Humanity Ledger Appchain. No bank data. No KYC.
       </p>
     </div>
   );
@@ -1093,7 +1093,7 @@ function StarsView() {
       // Simulate waiting for confirmation (could use useWaitForTransactionReceipt)
       await new Promise(r => setTimeout(r, 4000));
       
-      // 2. Call API to credit the Quantum Dots
+      // 2. Call API to credit the QD Tokens
       const res = await fetch('/api/aztec/purchase-qd', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1111,7 +1111,7 @@ function StarsView() {
         return;
       }
       
-      toast.success(`Ã¢Å“â€¦ ${pkg.qd} Quantum Dots credited securely!`, { id: toastId, duration: 6000 });
+      toast.success(`Ã¢Å“â€¦ ${pkg.qd} QD Tokens credited securely!`, { id: toastId, duration: 6000 });
       
       if (typeof window !== 'undefined') {
          window.dispatchEvent(new CustomEvent('ledger_qd_balance_update', { detail: data.balance }));
@@ -1133,7 +1133,7 @@ function StarsView() {
       <div className="w-32 h-32 border-[4px] border-black bg-yellow-400 flex items-center justify-center shadow-[10px_10px_0_0_#000] mb-8">
         <Star size={64} className="fill-black text-black" />
       </div>
-      <h1 className="text-3xl font-black uppercase text-center mb-2">Quantum Dots</h1>
+      <h1 className="text-3xl font-black uppercase text-center mb-2">QD Tokens</h1>
       <p className="text-sm font-bold text-zinc-600 text-center mb-4 max-w-xs">Fuel your economy. Trade, tip, and power decentralized protocols.</p>
 
       {/* Ethereum Wallet Banner */}
@@ -1161,7 +1161,7 @@ function StarsView() {
         {isConnected && address ? (
           <span className="text-[13px] font-mono font-bold text-zinc-700">{address.slice(0,6)}...{address.slice(-4)}</span>
         ) : (
-          <span className="text-[11px] text-red-500 font-bold mt-1">Connect your wallet to purchase Quantum Dots</span>
+          <span className="text-[11px] text-red-500 font-bold mt-1">Connect your wallet to purchase QD Tokens</span>
         )}
       </div>
 
@@ -1176,7 +1176,7 @@ function StarsView() {
               <Star size={18} className="fill-yellow-400 text-black" />
               <div className="flex flex-col">
                 <span className="font-black text-xl">{pkg.qd.toLocaleString()} QD</span>
-                <span className="text-[10px] font-bold text-zinc-400">Quantum Dots</span>
+                <span className="text-[10px] font-bold text-zinc-400">QD Tokens</span>
               </div>
             </div>
             <div className="flex flex-col items-end gap-1">
@@ -1187,7 +1187,7 @@ function StarsView() {
         ))}
       </div>
       <p className="text-[10px] font-bold text-zinc-400 text-center mt-4 max-w-xs">
-        Payments are processed via Ethereum mainnet and sent directly to the Humanity Ledger treasury. Quantum Dots are credited after on-chain confirmation.
+        Payments are processed via Ethereum mainnet and sent directly to the Humanity Ledger treasury. QD Tokens are credited after on-chain confirmation.
       </p>
     </div>
   );

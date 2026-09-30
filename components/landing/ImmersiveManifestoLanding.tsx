@@ -357,23 +357,23 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             <div className="flex flex-col gap-8">
               <Step
                 n="1"
-                title="Hardware Authentication."
-                desc="Authenticate locally via SIWE and WebAuthn. Cryptographic key pairs never leave your device enclave."
+                title="Hardware-Level Security."
+                desc="Your account is secured by the biometric hardware already built into your device (Face ID, Touch ID). Your private keys are locked securely in your device's secure enclave and never touch the internet."
               />
               <Step
                 n="2"
-                title="ZK Identity Shielding."
-                desc="Your public identifier is abstracted using Aztec zero-knowledge circuits. Your social graph remains cryptographically hidden."
+                title="Total Identity Protection."
+                desc="Your identity is protected by advanced cryptographic shielding. We cannot see who you talk to, when you talk, or what you say. Your social graph remains completely private and untraceable."
               />
               <Step
                 n="3"
-                title="Decentralized Relay."
-                desc="Messages are routed via the XMTP network. Unbroken encrypted packets are transferred without metadata exposure."
+                title="Decentralized Infrastructure."
+                desc="Messages are routed through a decentralized network rather than central servers. This ensures 100% uptime, prevents censorship, and eliminates single points of failure while keeping metadata secure."
               />
               <Step
                 n="4"
-                title="Sovereign Controls."
-                desc="Enforce deterministic burn-on-read execution, revoke decryption keys instantly, and maintain total ownership of your state."
+                title="Complete Ownership."
+                desc="Set your messages to instantly destroy themselves after being read, remotely delete sensitive data, and maintain absolute ownership over your communication history at all times."
               />
             </div>
 
@@ -433,16 +433,16 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             </div>
 
             <div className="flex flex-col gap-4">
-              <FeatureCheck text="Hardware-bound authentication (WebAuthn / FIDO2)" />
-              <FeatureCheck text="Zero-knowledge atomic swaps and encrypted payment routing" />
-              <FeatureCheck text="Deterministic ECDSA message signing for absolute authenticity" />
-              <FeatureCheck text="Ephemeral state: deterministic burn-on-read execution" />
-              <FeatureCheck text="Real-time voice modulation and encrypted audio streaming" />
-              <FeatureCheck text="Zero-knowledge group chat membership verification" />
-              <FeatureCheck text="Autonomous agent integration with isolated execution environments" />
-              <FeatureCheck text="End-to-end encrypted decentralized file storage vault" />
-              <FeatureCheck text="SIM-less WebRTC mesh with decentralized signaling (Video/Voice)" />
-              <FeatureCheck text="Cryptographically secure ECDH QR session handshakes" />
+              <FeatureCheck text="Hardware biometric authentication (Face ID & Touch ID integration)" />
+              <FeatureCheck text="Seamless and completely private peer-to-peer digital payments" />
+              <FeatureCheck text="Cryptographic message signing ensures nobody can impersonate you" />
+              <FeatureCheck text="Self-destructing messages that instantly burn after being read" />
+              <FeatureCheck text="End-to-end encrypted high-definition audio and video calling" />
+              <FeatureCheck text="Private group chats where metadata and membership are hidden" />
+              <FeatureCheck text="AI Ghost Mode to translate tone or automatically reply while away" />
+              <FeatureCheck text="Fully encrypted personal vault for storing your most sensitive files" />
+              <FeatureCheck text="No phone number required. Connect purely via your digital identity" />
+              <FeatureCheck text="Secure in-person contact exchange via encrypted QR codes" />
             </div>
           </motion.div>
         </div>
