@@ -334,7 +334,7 @@ export function AppLauncherHub() {
               Ledger Chat is not just another messaging app; it is the ultimate foundation for private, global communication. Built to be entirely sovereign, your data belongs exclusively to you.
             </p>
             <p className="text-[15px] font-medium text-black/60 leading-relaxed">
-              We have eliminated the complexity of modern technology. There are no passwords, no hidden settings, and no frustrating menus. It is designed to be <strong>so intuitive and comfortable that older adults can use it effortlessly</strong>, while providing security that surpasses anything else on the market.
+              We have eliminated the complexity of modern technology. There are no passwords, no hidden settings, and no frustrating menus. It is designed to be <strong>radically simple</strong>, while providing security that surpasses anything else on the market.
             </p>
           </div>
         </motion.div>
@@ -353,4 +353,5 @@ export function AppLauncherHub() {
     </div>
   );
 }
+
 

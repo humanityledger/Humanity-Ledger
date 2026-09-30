@@ -142,7 +142,7 @@ function AppStoreBadge() {
       className="flex items-center gap-2.5 bg-black hover:bg-[#1A1A1C] text-white px-5 py-2.5 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-white/5"
     >
       <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
-        <path d="M15.42 5.09c-.83 1.25-2.07 2.06-3.41 2.06-1.5 0-2.8-.82-3.66-2.06C9.17 3.84 10.4 3 11.75 3c1.5 0 2.8.84 3.67 2.09zm-3.64 2.81c-2.3 0-4.04 1.49-4.8 3.73-.77 2.23.11 4.71 1.76 6.94 1.25 1.68 2.5 3.37 4.14 3.39 1.54.02 2.03-1.07 3.96-1.07 1.93 0 2.45 1.05 3.98 1.05 1.53 0 2.65-1.57 3.96-3.49a11.1 11.1 0 001.69-3.46c-.03-.02-3.18-1.22-3.21-4.89-.03-3.08 2.52-4.57 2.64-4.64-1.44-2.11-3.67-2.4-4.48-2.46-1.92-.2-3.76 1.13-4.7 1.13-1-.02-2.52-1.12-3.96-1.12-1.39 0-3.04.59-4 1.64h.01a5.6 5.6 0 001.01-6.75z"/>
+        <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-1.996.04-3.875 1.154-4.908 2.946-2.096 3.633-.535 9.022 1.503 11.966 1.002 1.455 2.164 3.107 3.738 3.045 1.492-.061 2.062-.977 3.864-.977 1.782 0 2.316.977 3.882.94 1.625-.04 2.637-1.492 3.626-2.947 1.144-1.674 1.616-3.298 1.637-3.385-.035-.015-3.176-1.22-3.208-4.887-.033-3.076 2.518-4.572 2.636-4.64-1.442-2.115-3.666-2.404-4.48-2.464-1.92-.196-3.754 1.134-4.698 1.134-.999-.022-2.52-1.123-3.96-1.123h.01a5.59 5.59 0 001.007-6.745zm4.847-1.19c.772-1.025 1.258-2.42 1.109-3.79-.115.01-.252.023-.396.023-1.408 0-2.955-.83-3.816-1.916-.764-.95-1.326-2.39-1.15-3.75 1.246.05 2.809.835 3.633 1.83.694.848 1.233 2.174 1.082 3.499.043.01.094.015.138.015.14 0 .285-.018.423-.058a5.526 5.526 0 00-1.023 4.147z"/>
       </svg>
       <div className="flex flex-col text-left">
         <span className="text-[9px] font-medium opacity-80 leading-none mb-0.5 tracking-wide">Download on the</span>
@@ -481,7 +481,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               <div>
                 <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#2C6BED] mb-4">The Next Step in Humanity</p>
                 <h2 className="text-[38px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] mb-6 leading-tight">
-                  Designed for everyone.<br />Perfect for older adults.
+                  Ledger Chat available 1/01/2027<br />on AppStore &amp; Google Play
                 </h2>
                 <p className="text-[18px] font-medium text-[#1C1C1E]/60 leading-relaxed mb-6">
                   Technology should adapt to people, not the other way around. We believe privacy is a fundamental human right, but it only works if it is effortless to use.
@@ -843,4 +843,6 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
     </div>
   );
 }
+
+
 
