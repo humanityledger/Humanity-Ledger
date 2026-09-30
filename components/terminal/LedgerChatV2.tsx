@@ -4815,15 +4815,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         className="absolute bottom-full left-0 right-0 bg-white/98 backdrop-blur-2xl border-t border-black/[0.06] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] rounded-t-[28px] z-50 pt-3 pb-6 px-4"
                       >
                         <div className="w-10 h-1.5 bg-black/10 rounded-full mx-auto mb-5" />
-                        <div className="grid grid-cols-4 gap-y-5 gap-x-2">
+                        <div className="flex flex-col py-2">
                           {[
-                            { id: 'attach',    icon: <Paperclip size={24} strokeWidth={1.5} />,  label: 'Document',      onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
-                            { id: 'gif',       icon: <ImageIcon size={24} strokeWidth={1.5} />,  label: 'Media',         onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
-                            { id: 'sticker',   icon: <Smile size={24} strokeWidth={1.5} />,      label: 'Stickers',      onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
-                            { id: 'poll',      icon: <BarChart2 size={24} strokeWidth={1.5} />,  label: 'Poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
-                            { id: 'qd',        icon: <Wallet size={24} strokeWidth={1.5} />,     label: 'Payment',       onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
-                            { id: 'burn',      icon: <Flame size={24} strokeWidth={1.5} />,      label: 'Burn',          onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
-                            { id: 'schedule',  icon: <Clock size={24} strokeWidth={1.5} />,      label: 'Schedule',      onClick: () => {
+                            { id: 'attach',    icon: <Paperclip size={18} strokeWidth={2} />,  label: 'Document',      onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'gif',       icon: <ImageIcon size={18} strokeWidth={2} />,  label: 'Media',         onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
+                            { id: 'sticker',   icon: <Smile size={18} strokeWidth={2} />,      label: 'Stickers',      onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
+                            { id: 'poll',      icon: <BarChart2 size={18} strokeWidth={2} />,  label: 'Poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
+                            { id: 'qd',        icon: <Wallet size={18} strokeWidth={2} />,     label: 'Payment',       onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
+                            { id: 'burn',      icon: <Flame size={18} strokeWidth={2} />,      label: 'Burn',          onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
+                            { id: 'schedule',  icon: <Clock size={18} strokeWidth={2} />,      label: 'Schedule',      onClick: () => {
                                 setShowAppDrawer(false);
                                 const inp = document.createElement('input');
                                 inp.type = 'datetime-local';
@@ -4841,7 +4841,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                                 };
                                 inp.click();
                               } },
-                            { id: 'location',  icon: <MapPin size={24} strokeWidth={1.5} />,    label: 'Location',      onClick: () => { 
+                            { id: 'location',  icon: <MapPin size={18} strokeWidth={2} />,    label: 'Location',      onClick: () => { 
                               if (navigator.geolocation) {
                                 navigator.geolocation.getCurrentPosition(
                                   (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
@@ -4850,20 +4850,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                               }
                               setShowAppDrawer(false); 
                             } },
-                            { id: 'live-loc',  icon: <MapIcon size={24} strokeWidth={1.5} />,   label: 'Live Location', onClick: () => { sendLiveLocation(); setShowAppDrawer(false); } },
+                            { id: 'live-loc',  icon: <MapIcon size={18} strokeWidth={2} />,   label: 'Live Location', onClick: () => { sendLiveLocation(); setShowAppDrawer(false); } },
                           ].map((app) => (
                             <button 
                               key={app.id} 
                               type="button" 
                               onClick={app.onClick} 
-                              className="flex flex-col items-center gap-2 active:scale-95 transition-transform select-none"
+                              className="flex items-center gap-4 py-3 px-4 w-full hover:bg-black/5 active:bg-black/10 rounded-xl transition-colors select-none text-left"
                             >
-                              <div 
-                                className="w-[60px] h-[60px] rounded-[16px] flex items-center justify-center text-[#54656F] bg-white border border-black/[0.08] shadow-sm hover:shadow-md transition-shadow"
-                              >
+                              <div className="text-black/50 flex-shrink-0">
                                 {app.icon}
                               </div>
-                              <span className="text-[11px] font-medium text-[#54656F] text-center leading-tight">{app.label}</span>
+                              <span className="text-[16px] font-medium text-black leading-tight flex-1">{app.label}</span>
                             </button>
                           ))}
                         </div>

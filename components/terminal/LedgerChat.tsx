@@ -4868,54 +4868,56 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       transition={{ type: "spring", stiffness: 400, damping: 30 }}
                       className="absolute bottom-full left-3 mb-2 w-[240px] max-h-[400px] bg-white/90 backdrop-blur-xl border border-black/[0.08] shadow-[0_16px_40px_rgba(0,0,0,0.12)] rounded-[24px] overflow-y-auto flex flex-col z-50"
                     >
-                      {[
-                        { id: 'attach', icon: <Paperclip size={18} />, label: 'Document', color: 'text-white', bg: 'bg-[#007AFF]', onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
-                        { id: 'media', icon: <span className="font-black text-[10px] tracking-widest">MEDIA</span>, label: 'Media', color: 'text-white', bg: 'bg-[#FF2D55]', onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
-                        { id: 'sticker', icon: <Smile size={18} />, label: 'Stickers', color: 'text-white', bg: 'bg-[#5856D6]', onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
-                        { id: 'poll', icon: <BarChart2 size={18} />, label: 'Poll', color: 'text-white', bg: 'bg-[#34C759]', onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
-                        { id: 'qd', icon: <Wallet size={18} />, label: 'Payment', color: 'text-white', bg: 'bg-[#FF9500]', onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
-                        { id: 'burn', icon: <Flame size={18} />, label: 'Burn', color: 'text-white', bg: 'bg-[#FF3B30]', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
-                        { id: 'schedule', icon: <Clock size={18} />, label: 'Schedule', color: 'text-white', bg: 'bg-[#AF52DE]', onClick: () => {
-                            setShowAppDrawer(false);
-                            const inp = document.createElement('input');
-                            inp.type = 'datetime-local';
-                            const minDate = new Date(Date.now() + 60000);
-                            inp.min = minDate.toISOString().slice(0, 16);
-                            inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
-                            document.body.appendChild(inp);
-                            inp.onchange = () => {
-                              const picked = new Date(inp.value);
-                              if (!isNaN(picked.getTime()) && picked > new Date()) {
-                                setScheduledAt(picked);
-                                toast.success(`Message scheduled for ${picked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
-                              }
-                              document.body.removeChild(inp);
-                            };
-                            inp.click();
+                      <div className="flex flex-col py-2">
+                        {[
+                          { id: 'attach', icon: <Paperclip size={18} strokeWidth={2} />, label: 'Document', onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
+                          { id: 'media', icon: <ImageIcon size={18} strokeWidth={2} />, label: 'Media', onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
+                          { id: 'sticker', icon: <Smile size={18} strokeWidth={2} />, label: 'Stickers', onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
+                          { id: 'poll', icon: <BarChart2 size={18} strokeWidth={2} />, label: 'Poll', onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
+                          { id: 'qd', icon: <Wallet size={18} strokeWidth={2} />, label: 'Payment', onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
+                          { id: 'burn', icon: <Flame size={18} strokeWidth={2} />, label: 'Burn', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
+                          { id: 'schedule', icon: <Clock size={18} strokeWidth={2} />, label: 'Schedule', onClick: () => {
+                              setShowAppDrawer(false);
+                              const inp = document.createElement('input');
+                              inp.type = 'datetime-local';
+                              const minDate = new Date(Date.now() + 60000);
+                              inp.min = minDate.toISOString().slice(0, 16);
+                              inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+                              document.body.appendChild(inp);
+                              inp.onchange = () => {
+                                const picked = new Date(inp.value);
+                                if (!isNaN(picked.getTime()) && picked > new Date()) {
+                                  setScheduledAt(picked);
+                                  toast.success(`Message scheduled for ${picked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+                                }
+                                document.body.removeChild(inp);
+                              };
+                              inp.click();
+                            } },
+                          { id: 'location', icon: <MapPin size={18} strokeWidth={2} />, label: 'Location', onClick: () => { 
+                            if (navigator.geolocation) {
+                              navigator.geolocation.getCurrentPosition(
+                                (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
+                                () => toast.error('Location denied')
+                              );
+                            }
+                            setShowAppDrawer(false); 
                           } },
-                        { id: 'location', icon: <MapPin size={18} />, label: 'Location', color: 'text-white', bg: 'bg-[#32ADE6]', onClick: () => { 
-                          if (navigator.geolocation) {
-                            navigator.geolocation.getCurrentPosition(
-                              (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
-                              () => toast.error('Location denied')
-                            );
-                          }
-                          setShowAppDrawer(false); 
-                        } },
-                        { id: 'livelocation', icon: <Radio size={18} />, label: 'Live Location', color: 'text-white', bg: 'bg-[#FF3B30]', onClick: () => { executeSendRef.current?.(`[LIVE_LOCATION]${Date.now()}`); setShowAppDrawer(false); toast.success('Live Location broadcast started'); } }
-                      ].map((app, idx) => (
-                        <button 
-                          key={app.id} 
-                          type="button" 
-                          onClick={app.onClick} 
-                          className={`flex items-center gap-3.5 px-4 py-3 hover:bg-black/5 active:bg-black/10 transition-colors w-full text-left ${idx !== 0 ? 'border-t border-black/[0.04]' : ''}`}
-                        >
-                          <div className={`w-8 h-8 rounded-full ${app.bg} ${app.color} flex items-center justify-center shrink-0 shadow-sm`}>
-                            {app.icon}
-                          </div>
-                          <span className="text-[15px] font-semibold text-[#000000] tracking-tight">{app.label}</span>
-                        </button>
-                      ))}
+                          { id: 'livelocation', icon: <Radio size={18} strokeWidth={2} />, label: 'Live Location', onClick: () => { executeSendRef.current?.(`[LIVE_LOCATION]${Date.now()}`); setShowAppDrawer(false); toast.success('Live Location broadcast started'); } }
+                        ].map((app) => (
+                          <button 
+                            key={app.id} 
+                            type="button" 
+                            onClick={app.onClick} 
+                            className="flex items-center gap-4 py-3 px-4 w-full hover:bg-black/5 active:bg-black/10 transition-colors select-none text-left"
+                          >
+                            <div className="text-black/50 flex-shrink-0">
+                              {app.icon}
+                            </div>
+                            <span className="text-[16px] font-medium text-black leading-tight flex-1">{app.label}</span>
+                          </button>
+                        ))}
+                      </div>
                     </motion.div>
                   )}
                   </AnimatePresence>

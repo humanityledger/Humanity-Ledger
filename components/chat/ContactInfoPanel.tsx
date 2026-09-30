@@ -224,7 +224,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: '100%', opacity: 0 }}
       transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
-      className="absolute inset-0 z-50 bg-[#FAFAFA] flex flex-col overflow-y-auto font-sans"
+      className="absolute inset-0 z-[200] bg-[#FAFAFA] flex flex-col overflow-y-auto font-sans"
     >
       <div className="sticky top-0 z-10 bg-[#FAFAFA]/90 backdrop-blur-lg border-b border-black/10 px-6 py-4 flex items-center justify-between">
         <button onClick={onClose} className="p-2 -ml-2 text-black/50 hover:text-black transition-colors">
@@ -234,7 +234,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
         <div className="w-8" />
       </div>
 
-      <div className="p-8 flex flex-col items-center">
+      <div className="p-8 pb-12 flex flex-col max-w-2xl mx-auto w-full items-center">
         <div className="w-24 h-24 bg-black flex items-center justify-center mb-6 border border-black/10 shadow-2xl relative">
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
           <span className="text-3xl font-serif italic text-white z-10">{initials(displayName, peerAddress)}</span>
@@ -242,14 +242,14 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
         <h2 className="text-2xl font-bold tracking-tight mb-2 text-black">{displayName}</h2>
         <p className="text-[12px] font-mono text-black/40 break-all text-center">{peerAddress}</p>
 
-        <div className="flex gap-4 mt-8 w-full">
+        <div className="flex gap-4 mt-8 w-full max-w-md">
           <button onClick={onVoiceCall} className="flex-1 flex flex-col items-center gap-3 py-4 border border-black/10 hover:bg-black hover:text-white transition-all group">
             <Phone size={18} className="text-black group-hover:text-white" />
             <span className="text-[10px] font-mono uppercase tracking-widest">Audio</span>
           </button>
           <button onClick={onVideoCall} className="flex-1 flex flex-col items-center gap-3 py-4 border border-black/10 hover:bg-black hover:text-white transition-all group">
             <Video size={18} className="text-black group-hover:text-white" />
-            <span className="text-[10px] font-mono uppercase tracking-widest">Visual</span>
+            <span className="text-[10px] font-mono uppercase tracking-widest">Video</span>
           </button>
           <button onClick={onSearch} className="flex-1 flex flex-col items-center gap-3 py-4 border border-black/10 hover:bg-black hover:text-white transition-all group">
             <Search size={18} className="text-black group-hover:text-white" />

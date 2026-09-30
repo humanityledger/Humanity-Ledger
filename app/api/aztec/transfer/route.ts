@@ -210,19 +210,18 @@ export async function POST(req: NextRequest) {
     // ── MODE A (NATIVE ON-CHAIN TRANSFER) ────────────────────────────────
     console.log('[Aztec Transfer] Mode A: Aztec Native On-chain Transfer');
 
-    const { createPXEClient }           = await import('@aztec/aztec.js');
-    const { getSchnorrAccount }         = await import('@aztec/accounts/schnorr');
-    const { Fr }                        = await import('@aztec/foundation/curves/bn254');
-    const { AztecAddress }              = await import('@aztec/stdlib/aztec-address');
-    const { TokenContract }             = await import('@aztec/noir-contracts.js/Token');
-    const { SponsoredFeePaymentMethod } = await import('@aztec/aztec.js/fee');
-    const { deriveSecretKeyFromEvm }    = await import('@/lib/aztec/client');
-    const { getFpcAddress }             = await import('@/lib/aztec/client');
-
     let fallbackToModeB = false;
     let onChainSuccess = false;
 
     try {
+      const { createPXEClient }           = await import('@aztec/aztec.js');
+      const { getSchnorrAccount }         = await import('@aztec/accounts/schnorr');
+      const { Fr }                        = await import('@aztec/foundation/curves/bn254');
+      const { AztecAddress }              = await import('@aztec/stdlib/aztec-address');
+      const { TokenContract }             = await import('@aztec/noir-contracts.js/Token');
+      const { SponsoredFeePaymentMethod } = await import('@aztec/aztec.js/fee');
+      const { deriveSecretKeyFromEvm, getFpcAddress } = await import('@/lib/aztec/client');
+
       // FIX: Never boot EmbeddedWallet (native C++ LMDB instance) in a Serverless/API Route.
       // Doing so causes port locks (18080) and massive memory leaks.
       // Instead, we connect to a Remote PXE via createPXEClient.
