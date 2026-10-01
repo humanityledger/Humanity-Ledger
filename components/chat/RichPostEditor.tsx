@@ -745,7 +745,10 @@ export function RichPostEditorModal({
   };
 
   return (
-    <AnimatePresence> {open && ( <motion.div key="editor-modal-wrapper"> {/* Backdrop */}
+    <AnimatePresence>
+      {open && (
+        <motion.div key="editor-modal-wrapper">
+          {/* Backdrop */}
           <motion.div
             key="backdrop"
             initial={{ opacity: 0 }}
@@ -762,9 +765,7 @@ export function RichPostEditorModal({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
             transition={{ type: 'spring', stiffness: 380, damping: 40 }}
-            className="fixed bottom-0 left-0 right-0 md:bottom-auto md:top-[50%] md:left-[50%] md:translate-x-[-50%] md:translate-y-[-50%] z-[9991]
-                       w-full md:w-[760px] h-[85vh] md:h-[75vh] rounded-t-[28px] md:rounded-2xl overflow-hidden
-                       shadow-2xl"
+            className="fixed bottom-0 left-0 right-0 z-[9991] w-full h-[90vh] rounded-t-[32px] overflow-hidden shadow-2xl"
           >
             <RichPostEditor
               title={communityName ? `Post in ${communityName}` : 'New Post'}
@@ -773,7 +774,7 @@ export function RichPostEditorModal({
               onClose={onClose}
             />
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );

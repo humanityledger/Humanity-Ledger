@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { RichPostEditorModal } from './RichPostEditor';
+import { CommunityChatView } from './CommunityChatView';
 
 interface CommunityViewProps {
   communityId: string;
@@ -144,11 +145,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
           </div>
         )}
 
-        {activeTab === 'chat' && (
-          <div className="flex-1 flex items-center justify-center h-full text-black/40 font-bold">
-            Live Chat is coming soon.
-          </div>
-        )}
+        {activeTab === 'chat' && ( <CommunityChatView communityId={communityId} myAddress={myAddress} /> )}
 
         {activeTab === 'settings' && (
           <CommunitySettingsPanel community={community} myAddress={myAddress} />
@@ -186,6 +183,28 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
   useEffect(() => { localStorage.setItem('com_perm_' + community.id, JSON.stringify(permissions)); }, [permissions, community.id]);
   const [isPrivate, setIsPrivate] = useState<boolean>(community?.isPrivate ?? false);
   const [savingPrivacy, setSavingPrivacy] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState(community?.name || '');
+  const [editDesc, setEditDesc] = useState(community?.description || '');
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  const saveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      const res = await fetch('/api/chat/communities', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+        body: JSON.stringify({ communityId: community.id, action: 'UPDATE_INFO', name: editName, description: editDesc }),
+      });
+      if (res.ok) {
+        toast.success('Profile updated');
+        setIsEditingProfile(false);
+        community.name = editName;
+        community.description = editDesc;
+      } else toast.error('Failed to update');
+    } catch (e) { toast.error('Error saving'); }
+    setSavingProfile(false);
+  };
 
   const togglePrivacy = async (newVal: boolean) => {
     setSavingPrivacy(true);
@@ -388,6 +407,27 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
         </div>
       </div>
 
+            {/* Members List */}
+      <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] overflow-hidden mt-6">
+        <div className="px-6 py-4 border-b border-black/[0.04] bg-[#FAFAFA]/50">
+          <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#007AFF]">Group Members</p>
+        </div>
+        <div className="p-6 flex flex-col divide-y divide-black/5">
+          {community?.members?.length > 0 ? (
+            community.members.map((m: any) => (
+              <div key={m.id} className="py-3 first:pt-0 last:pb-0 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center font-bold text-xs">{m.walletAddress?.slice(2,4).toUpperCase()}</div>
+                <div className="flex flex-col">
+                  <span className="text-[14px] font-bold font-mono">{m.walletAddress?.slice(0, 6)}...{m.walletAddress?.slice(-4)}</span>
+                  <span className="text-[11px] text-black/40 uppercase font-bold">{m.role}</span>
+                </div>
+              </div>
+            ))
+          ) : (
+             <p className="text-[13px] text-black/50">No members yet.</p>
+          )}
+        </div>
+      </div>
       {/* Security & Anti-Spam */}
       <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] overflow-hidden">
         <div className="px-6 py-4 border-b border-black/[0.04] bg-[#FAFAFA]/50">

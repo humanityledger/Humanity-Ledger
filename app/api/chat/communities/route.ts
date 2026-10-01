@@ -105,6 +105,19 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ ok: true, joinCode: updated.joinCode });
     }
 
+    if (action === 'UPDATE_INFO') {
+      const { name, description, avatarUrl } = body;
+      const updated = await (prisma as any).community.update({
+        where: { id: communityId },
+        data: { 
+          ...(name ? { name } : {}),
+          ...(description !== undefined ? { description } : {}),
+          ...(avatarUrl !== undefined ? { avatarUrl } : {})
+        }
+      });
+      return NextResponse.json({ ok: true, community: updated });
+    }
+
     if (action === 'UPDATE_PRIVACY') {
       const updated = await (prisma as any).community.update({
         where: { id: communityId },
