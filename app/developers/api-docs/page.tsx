@@ -121,7 +121,7 @@ export default function UnifiedDocsPage() {
                               key={i}
                               className="flex gap-3 text-[14px] md:text-[15px] text-[#050505]/65 leading-relaxed"
                             >
-                              <span className="mt-2 w-1.5 h-1.5 rounded-full bg-white shrink-0" />
+                              <span className="mt-2 w-1.5 h-1.5 rounded-full bg-black shrink-0" />
                               <span>{b}</span>
                             </li>
                           ))}
