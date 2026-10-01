@@ -745,10 +745,7 @@ export function RichPostEditorModal({
   };
 
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          {/* Backdrop */}
+    <AnimatePresence> {open && ( <motion.div key="editor-modal-wrapper"> {/* Backdrop */}
           <motion.div
             key="backdrop"
             initial={{ opacity: 0 }}

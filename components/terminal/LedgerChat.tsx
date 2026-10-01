@@ -4883,7 +4883,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   {/* â”€â”€ App Drawer (iOS 17 iMessage Style) â”€â”€ */}
                   <AnimatePresence>
                   {showAppDrawer && (
-                    <motion.div 
+                    <motion.div key="app-drawer"
                       initial={{ opacity: 0, y: 10, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.96 }}
@@ -4912,7 +4912,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                                   setScheduledAt(picked);
                                   toast.success(`Message scheduled for ${picked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
                                 }
-                                document.body.removeChild(inp);
+                                if (document.body.contains(inp)) document.body.removeChild(inp);
                               };
                               inp.click();
                             } },
@@ -4962,10 +4962,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                     </button>
 
-                    <AnimatePresence>
-                      {showEmojiPicker && (
-                        <>
-                          <div 
+                    <AnimatePresence> {showEmojiPicker && ( <motion.div key="emoji-picker" exit={{opacity:0}}> <div 
                             className="fixed inset-0 z-[90]" 
                             onClick={() => setShowEmojiPicker(false)} 
                           />
@@ -4979,11 +4976,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                               onEmojiClick={(emojiData: any) => { 
                                 setInputText(prev => prev + emojiData.emoji);
                               }}
-                            />
-                          </motion.div>
-                        </>
-                      )}
-                    </AnimatePresence>
+                            /> </motion.div> </motion.div> )} </AnimatePresence>
 
                     <div className="flex-1 bg-white border border-[#c8c8cc] rounded-3xl flex items-end relative shadow-sm overflow-hidden min-h-[38px] transition-all focus-within:border-blue-400">
                       {isRecording ? (
@@ -5654,9 +5647,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         )}
 
         {/* Profile Popover Overlay â€” fixed + portal so it escapes overflow:hidden containers */}
-       <AnimatePresence>
-        {showProfile && activePeer && (
-          <LedgerChatProfile
+       <AnimatePresence> {showProfile && activePeer && ( <LedgerChatProfile key="profile-modal"
             peerAddress={activePeer}
             onClose={() => setShowProfile(false)}
             onClearChat={clearChat}
