@@ -723,6 +723,10 @@ export function RichPostEditorModal({
         console.error('Missing communityId');
         return;
       }
+      if (!myAddress || myAddress.trim() === '') {
+        toast.error('Wallet not connected — cannot publish post');
+        return;
+      }
       
       const res = await fetch('/api/chat/community-posts', {
         method: 'POST',
@@ -735,12 +739,18 @@ export function RichPostEditorModal({
         }),
       });
       
-      if (!res.ok) throw new Error('Publish failed');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        toast.error(errData.error || 'Failed to publish post');
+        return;
+      }
       
+      toast.success('Post published!');
       onPublished?.(content);
       onClose();
     } catch (e) {
       console.error('[RichPostEditorModal] Publish failed:', e);
+      toast.error('Network error. Please try again.');
     }
   };
 

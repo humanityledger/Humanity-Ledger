@@ -4199,7 +4199,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               myAddress={address || ''}
               myName={resolveContactName(address || '', address || '', localContacts)}
               contacts={localContacts.map(c => ({ peerAddress: c.peerAddress, name: c.name }))}
-              onOpenChat={(addr) => { setActivePeer(addr); setSidebarTab('chats'); setShowList(false); }}
+              onOpenChat={(addr) => { setActiveCommunity(null); setActivePeer(addr); setSidebarTab('chats'); setShowList(false); }}
             />
           )}
 
@@ -4270,7 +4270,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             return;
                           }
                         }
-                        setActivePeer(conv.peerAddress); setShowList(false); }}
+                        setActiveCommunity(null); setActivePeer(conv.peerAddress); setShowList(false); }}
                       className={`w-full text-left px-4 py-3.5 transition-all ${isActive ? 'bg-[#F2F2F7]' : 'hover:bg-[#F9F9F9]'}`}
                     >
                       <div className="flex items-center gap-3 w-full">
@@ -4336,7 +4336,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               }))}
               myAddress={address || ''}
               onStartCall={(addr, type) => { setSidebarTab('chats'); setShowList(false); handleStartCall(type, addr); }}
-              onOpenChat={(addr) => { setActivePeer(addr); setSidebarTab('chats'); setShowList(false); }}
+              onOpenChat={(addr) => { setActiveCommunity(null); setActivePeer(addr); setSidebarTab('chats'); setShowList(false); }}
               onNew={() => { setSidebarTab('contacts'); }}
               onSchedule={() => setShowScheduleCall(true)}
               onKeypad={() => {}}
@@ -4362,7 +4362,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <button
                   key={contact.id}
                   className="w-full px-4 py-3.5 border-b border-black/[0.04] flex items-center gap-3 hover:bg-[#F9F9F9] transition-colors text-left active:bg-[#F2F2F7]"
-                  onClick={() => { setActivePeer(contact.peerAddress); setSidebarTab('chats'); setShowList(false); }}
+                  onClick={() => { setActiveCommunity(null); setActivePeer(contact.peerAddress); setSidebarTab('chats'); setShowList(false); }}
                 >
                   <Avatar address={contact.peerAddress} />
                   <div className="flex-1 min-w-0">
