@@ -623,13 +623,20 @@ export const MessageBubble = React.memo(({
             <span className="text-[11px] text-black/30">
               {new Date(sentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
-            {isMe && (
+            {isMe && !msg.failed && (
               <span className={msg.status === 'read' ? 'text-[#1c7aff]' : 'text-black/25'}>
                 {msg.status === 'scheduled'
                   ? <Clock size={10} className="text-orange-400 inline" />
                   : msg.status === 'read'
                     ? <CheckCheck size={12} />
+                  : msg.status === 'delivered'
+                    ? <CheckCheck size={12} />
                     : <Check size={12} />}
+              </span>
+            )}
+            {isMe && msg.failed && (
+              <span className="text-[#ff3b30] flex items-center gap-1">
+                 <span className="text-[10px] font-bold">Failed</span>
               </span>
             )}
           </div>

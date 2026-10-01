@@ -3430,7 +3430,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             }
             if (!canMsg) {
                 // DON'T BLOCK. Tell them we'll queue it.
-                toast.info(`Offline Routing: ${peer.slice(0,6)} is not registered on XMTP. Messages will be routed via System Vault until they connect.`);
+                toast.info(`Offline: This contact isn't fully registered yet. Your messages will be securely held and delivered when they connect.`);
             }
         }
 
@@ -4590,11 +4590,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   return true;
                 });
                 if (filteredMsgs.length === 0) return (
-                  <div className="flex-1 flex flex-col items-center justify-center">
-                    <div className="flex flex-col items-center max-w-[280px] text-center gap-6">
-                      <div className="flex flex-col items-center opacity-40">
-                        <p className="text-[12px] font-medium text-black/40">No messages yet. Start the conversation!</p>
+                  <div className="flex-1 flex flex-col items-center justify-center p-6">
+                    <div className="bg-[#F2F2F7] rounded-2xl p-6 max-w-[280px] text-center border border-black/5">
+                      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-40"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                       </div>
+                      <p className="text-[15px] font-bold text-[#000000] mb-2">It's quiet here</p>
+                      <p className="text-[13px] text-[#8E8E93] leading-relaxed">Send a message to start this secure chat. Only you and this contact can read what's sent.</p>
                     </div>
                   </div>
                 );
@@ -4665,10 +4667,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             >
               {/*  Offline Banner  */}
               {isOffline && (
-                <div className="flex items-center gap-2 px-4 pt-2 pb-1 bg-gray-950/5 border-b border-black/5">
-                  <span className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-gray-600 uppercase tracking-wider">
-                    <span className="w-2 h-2 rounded-full bg-gray-400 animate-pulse inline-block" />
-                    OFFLINE — Messages queued to outbox
+                <div className="flex items-center justify-center gap-2 px-4 py-2 bg-[#F2F2F7] border-b border-black/5 text-center">
+                  <span className="flex items-center gap-2 text-[12px] font-bold text-black/60">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.6 19.3a3.5 3.5 0 0 1-5-5"></path><path d="M13.6 22.3a8.5 8.5 0 0 1-11-11"></path><path d="M1.3 1.3l22 22"></path><path d="M19.4 14.7a3.5 3.5 0 0 0-5-5"></path><path d="M22.4 11.7a8.5 8.5 0 0 0-11-11"></path></svg>
+                    Waiting for network...
                   </span>
                 </div>
               )}
@@ -5067,7 +5069,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </p>
               <div className="bg-[#1c7aff]/10 border border-[#1c7aff]/20 text-[#1c7aff] rounded-xl p-4 max-w-md w-full mb-10">
                 <p className="text-[13px] font-bold text-center">
-                  Available globally on Google Play and the App Store starting January 1, 2027.
+                  Ledger Chat is currently in Public Beta. E2E Encryption is active.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
@@ -5808,7 +5810,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     <span className="text-[12px] font-mono text-gray-700 truncate">{conv.peerAddress.slice(0, 8)}...{conv.peerAddress.slice(-4)}</span>
                   </button>
                 ))}
-                {conversations.length === 0 && <p className="text-center text-[12px] text-black/40 py-6">No conversations yet</p>}
+                {conversations.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
+                    <div className="w-12 h-12 bg-black/5 rounded-full flex items-center justify-center mb-3">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-black/40"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    </div>
+                    <p className="text-[14px] font-bold text-black/70 mb-1">Your inbox is empty</p>
+                    <p className="text-[12px] text-black/50 leading-relaxed">Start a secure conversation by entering a contact's address above.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
