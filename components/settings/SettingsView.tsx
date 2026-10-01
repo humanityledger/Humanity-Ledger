@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 "use client";
 
 import { useCallback } from 'react';
@@ -108,8 +108,17 @@ function Row({
   children?: React.ReactNode;
 }) {
   return (
-    <div className={`flex items-start justify-between gap-3 p-3.5 bg-white rounded-2xl border transition-all ${
-      disabled ? 'opacity-40 pointer-events-none' : 'border-black/[0.05] hover:border-black/[0.12]'
+    <div 
+      onClick={(e) => {
+        if (disabled) return;
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'BUTTON' || target.closest('button')) return; // let inner buttons handle themselves
+        if (target.tagName === 'SELECT' || target.closest('select')) return; // let inner selects handle themselves
+        if (onToggle) onToggle();
+        else if (action) action();
+      }}
+      className={`flex items-start justify-between gap-3 p-3.5 bg-white rounded-2xl border transition-all ${
+      disabled ? 'opacity-40 pointer-events-none' : 'border-black/[0.05] hover:border-black/[0.12] cursor-pointer'
     }`}>
       <div className="flex items-start gap-3 flex-1 min-w-0">
         <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${danger ? 'bg-red-50 text-red-500' : 'bg-[#F2F2F7] text-black'}`}>

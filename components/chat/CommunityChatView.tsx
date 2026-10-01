@@ -94,6 +94,14 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
           </div>
         )}
         {messages.map((m: any) => {
+          if (m.content && m.content.startsWith('__SYSTEM__')) {
+            const evText = m.content.replace('__SYSTEM__', '');
+            return (
+              <div key={m.id} className="flex justify-center my-2">
+                <span className="text-[11px] text-black/40 bg-black/5 rounded-full px-3 py-1">{evText}</span>
+              </div>
+            );
+          }
           const isMe = (m.authorAddress || '').toLowerCase() === (myAddress || '').toLowerCase();
           return (
             <div key={m.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>

@@ -355,6 +355,7 @@ class SettingsEnginePXE {
       if (typeof window !== 'undefined') {
         try {
           const res = await fetch('/api/chat/settings', {
+            credentials: 'include',
             headers: { 'x-web3-address': address }
           });
           if (res.ok) {
@@ -516,6 +517,7 @@ class SettingsEnginePXE {
       if (typeof window !== 'undefined') {
         fetch('/api/chat/settings', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json', 'x-web3-address': address },
           body: JSON.stringify({ settings: updated })
         }).catch(err => console.warn('[PXE ENGINE] Remote sync error:', err));

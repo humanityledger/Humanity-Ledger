@@ -12,13 +12,12 @@ interface LedgerSettingsFullProps {
 }
 
 // Custom Minimalist Toggle
-const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
-  <button
-    onClick={() => onChange(!value)}
+const Toggle = ({ value, onChange }: { value: boolean; onChange?: (v: boolean) => void }) => (
+  <div
     className={`w-10 h-5 border border-black rounded-none flex items-center p-0.5 transition-colors ${value ? 'bg-black' : 'bg-transparent'}`}
   >
     <div className={`w-3.5 h-3.5 bg-current transition-transform ${value ? 'translate-x-5 text-white' : 'translate-x-0 text-black'}`} />
-  </button>
+  </div>
 );
 
 const Row = ({ icon, label, value, onTap, danger = false, toggle, onToggle }: {
@@ -26,9 +25,12 @@ const Row = ({ icon, label, value, onTap, danger = false, toggle, onToggle }: {
   onTap?: () => void; danger?: boolean;
   toggle?: boolean; onToggle?: (v: boolean) => void;
 }) => (
-  <button
-    onClick={onTap}
-    className={`w-full flex items-center justify-between py-4 border-b border-black/10 group ${onTap || onToggle !== undefined ? 'hover:border-black transition-colors' : ''} text-left`}
+  <div
+    onClick={() => {
+      if (onTap) onTap();
+      else if (onToggle !== undefined && toggle !== undefined) onToggle(!toggle);
+    }}
+    className={`w-full flex items-center justify-between py-4 border-b border-black/10 group cursor-pointer ${onTap || onToggle !== undefined ? 'hover:border-black transition-colors' : ''} text-left`}
   >
     <div className="flex items-center gap-4">
       <span className={`shrink-0 ${danger ? 'text-red-500' : 'text-black/40 group-hover:text-black transition-colors'}`}>{icon}</span>
@@ -37,12 +39,12 @@ const Row = ({ icon, label, value, onTap, danger = false, toggle, onToggle }: {
     <div className="flex items-center gap-3">
       {value && <span className="text-[12px] font-mono text-black/50">{value}</span>}
       {onToggle !== undefined && toggle !== undefined ? (
-        <Toggle value={toggle} onChange={onToggle} />
+        <Toggle value={toggle} />
       ) : onTap ? (
         <ChevronRight size={14} className="text-black/20 group-hover:text-black transition-colors shrink-0" />
       ) : null}
     </div>
-  </button>
+  </div>
 );
 
 const Section = ({ title, children }: { title?: string; children: React.ReactNode }) => (
