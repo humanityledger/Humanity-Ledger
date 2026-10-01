@@ -166,6 +166,7 @@ export function LedgerChatSettings({ onClose, address }: LedgerChatSettingsProps
               {view === 'workspaces' && <WorkspacesView s={settings} update={updateSetting} />}
               {view === 'ghost_mode' && <GhostModeView s={settings} update={updateSetting} />}
               {view === 'defi_tools' && <DefiToolsView s={settings} update={updateSetting} />}
+              {view === 'network' && <NetworkView s={settings} update={updateSetting} />}
               {view === 'premium' && <PremiumView />}
               {view === 'stars' && <StarsView />}
             </motion.div>
@@ -1005,6 +1006,32 @@ function DefiToolsView({ s, update }: any) {
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 //  PREMIUM & QD VIEWS
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+function NetworkView({ s, update }: any) {
+  return (
+    <div className="p-4 space-y-4 pb-20">
+      <SH title="Protocol Routing" />
+      <BBlock>
+        <TRow label="WebRTC IP Masking" checked={s.webrtc_ip_masking} onChange={(v: boolean) => update('webrtc_ip_masking', v)} />
+        <TRow label="MEV Protection" checked={s.mev_protection} onChange={(v: boolean) => update('mev_protection', v)} />
+        <TRow label="Tor Onion Routing" checked={s.tor_routing} onChange={(v: boolean) => update('tor_routing', v)} noBorder />
+      </BBlock>
+      <SH title="Custom RPC" />
+      <BBlock>
+        <div className="py-3">
+          <input
+            type="text"
+            placeholder="https://mainnet.infura.io/v3/..."
+            value={s.custom_rpc_url || ''}
+            onChange={e => update('custom_rpc_url', e.target.value)}
+            className="w-full bg-transparent text-[13px] font-mono text-black outline-none placeholder:text-black/30"
+          />
+        </div>
+      </BBlock>
+    </div>
+  );
+}
+
 
 function PremiumView() {
   const [isPaying, setIsPaying] = useState(false);

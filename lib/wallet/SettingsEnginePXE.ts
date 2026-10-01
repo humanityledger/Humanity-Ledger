@@ -186,6 +186,8 @@ export interface LedgerProtocolSettings {
   gas_preset: 'ECONOMY' | 'STANDARD' | 'FAST' | 'INSTANT';
   /** MEV protection for transactions */
   mev_protection: boolean;
+  /** Route traffic via Tor network (requires local daemon) */
+  tor_routing: boolean;
   /** Custom RPC URL (empty = default) */
   custom_rpc_url: string;
 
@@ -301,6 +303,7 @@ export const DEFAULT_PXE_SETTINGS: LedgerProtocolSettings = {
   // Network
   gas_preset: 'STANDARD',
   mev_protection: false,
+  tor_routing: false,
   custom_rpc_url: '',
 
   // Workspaces
