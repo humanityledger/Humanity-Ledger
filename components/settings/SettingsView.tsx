@@ -370,7 +370,7 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
         <SectionLabel>Transaction Safety</SectionLabel>
         <Row icon={UserCheck} title="Require Password for Signing" desc="Always confirm vault password before signing transactions." toggle={requirePasswordForSigning} onToggle={toggleRequirePasswordForSigning} />
         <Row icon={AlertTriangle} title="Strict Mode (Whitelist Only)" desc="Only allow transactions to addresses in your contact book." toggle={strictMode} onToggle={toggleStrictMode} />
-        <Row icon={Activity} title="Simulate Transactions" desc="Preview exact token flows before broadcasting." toggle={executionConfig.simulateBeforeSend ?? true} onToggle={() => setExecutionConfig({ ...executionConfig, simulateBeforeSend: !executionConfig.simulateBeforeSend })} badge="Pro" />
+        <Row icon={Activity} title="Pre-flight Verification" desc="Preview exact token flows before broadcasting." toggle={executionConfig.verifyBeforeSend ?? true} onToggle={() => setExecutionConfig({ ...executionConfig, verifyBeforeSend: !executionConfig.verifyBeforeSend })} badge="Pro" />
         <Row icon={Shield} title="Phishing Detection" desc="Warn when interacting with flagged contracts." toggle={uiConfig.phishingDetection ?? true} onToggle={() => setUiConfig({ ...uiConfig, phishingDetection: !uiConfig.phishingDetection })} />
 
         <SectionLabel>Session Control</SectionLabel>
@@ -760,3 +760,4 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+

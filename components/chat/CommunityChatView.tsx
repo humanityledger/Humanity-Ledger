@@ -15,7 +15,7 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (myAddress) headers['x-web3-address'] = myAddress;
-      const res = await fetch(`/api/chat/community-posts?communityId=${communityId}&limit=50`, { headers });
+      const res = await fetch(`/api/chat/communities/posts?communityId=${communityId}&limit=50`, { headers });
       if (!res.ok) return;
       const data = await res.json();
       const chatMsgs = (data.posts || []).filter((p: any) => !p.title && !p.contentJson);
@@ -59,7 +59,7 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
     setMessages(prev => [...prev, optimistic]);
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     try {
-      const res = await fetch('/api/chat/community-posts', {
+      const res = await fetch('/api/chat/communities/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
         body: JSON.stringify({ communityId, content: txt, plainText: txt }),
@@ -148,3 +148,4 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
     </div>
   );
 }
+

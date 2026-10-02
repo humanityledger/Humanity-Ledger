@@ -624,12 +624,10 @@ export const MessageBubble = React.memo(({
               {new Date(sentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
             {isMe && !msg.failed && (
-              <span className={msg.status === 'read' ? 'text-[#1c7aff]' : 'text-black/25'}>
+              <span className={msg.status === 'read' && (window as any).__ledger_read_receipts !== false ? 'text-[#1c7aff]' : 'text-black/25'}>
                 {msg.status === 'scheduled'
                   ? <Clock size={10} className="text-orange-400 inline" />
-                  : msg.status === 'read'
-                    ? <CheckCheck size={12} />
-                  : msg.status === 'delivered'
+                  : (msg.status === 'read' || msg.status === 'delivered') && (window as any).__ledger_read_receipts !== false
                     ? <CheckCheck size={12} />
                     : <Check size={12} />}
               </span>

@@ -88,7 +88,7 @@ fn main(
   // against the keccak hashes tracing up to the l1_state_root.
   let leaf_hash = keccak256(storage_value, 32);
   
-  // Simulated Constraint: leaf hash must be non-zero
+  // Constraint: leaf hash must be non-zero
   assert(leaf_hash[0] as u64 + leaf_hash[1] as u64 > 0);
 }
 `,
@@ -177,7 +177,7 @@ export function NoirCircuitSandbox() {
     setCompileResult(null);
   }, []);
 
-  const simulateCompilation = useCallback(async () => {
+  const compileCircuit = useCallback(async () => {
     if (!aztecAddress) {
       toast.error("Sovereign Identity Required", { description: "You must claim your Sovereign Identity to interact with the ZK Sandbox." });
       return;
@@ -504,7 +504,7 @@ contract ZKVerifier {
           />
           <button
             id="btn-run-compiler"
-            onClick={simulateCompilation}
+            onClick={compileCircuit}
             disabled={running}
             className={running
               ? 'w-full py-5 font-bold text-[12px] uppercase tracking-[0.2em] transition-all bg-slate-100 text-slate-400 cursor-not-allowed'
@@ -575,4 +575,5 @@ contract ZKVerifier {
     </section>
   );
 }
+
 

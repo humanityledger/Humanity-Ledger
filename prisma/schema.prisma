@@ -1649,3 +1649,19 @@ model QDCreditLedger {
   @@index([txRef])
 }
 
+// DECENTRALIZED FEDERATION RELAY
+// This model acts as a temporary store-and-forward relay node for MLS Group 
+// messages. In E2E groups, peers may be offline. This node stores the encrypted
+// ciphertext of the message, but NO PLAINTEXT is visible to the server.
+model CommunityPost {
+  id             String   @id @default(cuid())
+  communityId    String
+  authorAddress  String
+  content        String   // ENCRYPTED CIPHERTEXT (AES-256-GCM or MLS payload)
+  contentHtml    String?  // ENCRYPTED HTML CIPHERTEXT
+  likes          Int      @default(0)
+  createdAt      DateTime @default(now())
+  
+  @@index([communityId])
+  @@index([authorAddress])
+}

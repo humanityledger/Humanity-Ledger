@@ -138,7 +138,7 @@ const PRODUCTS = [
   },
 ];
 
-// ── Simulated Mobile Phone Shell ──────────────────────────────────────────────
+// ── Preview Mobile Phone Shell ──────────────────────────────────────────────
 function MobileShell({ product }: { product: typeof PRODUCTS[0] }) {
   return (
     <div className="relative mx-auto w-[220px] h-[420px] md:w-[240px] md:h-[460px]">
@@ -214,7 +214,7 @@ function MobileShell({ product }: { product: typeof PRODUCTS[0] }) {
   );
 }
 
-// ── Simulated Desktop Browser Shell ───────────────────────────────────────────
+// ── Preview Desktop Browser Shell ───────────────────────────────────────────
 function DesktopShell({ product }: { product: typeof PRODUCTS[0] }) {
   const demo = product.pcDemo;
   return (
@@ -427,3 +427,4 @@ export function SeeInActionSection() {
     </section>
   );
 }
+

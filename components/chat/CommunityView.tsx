@@ -39,7 +39,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
   }, [communityId]);
 
   const fetchPosts = () => {
-    fetch(`/api/chat/community-posts?communityId=${communityId}`)
+    fetch(`/api/chat/communities/posts?communityId=${communityId}`)
       .then(r => r.json())
       .then(d => {
         if (d.posts) setPosts(d.posts);
@@ -504,6 +504,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     </div>
   );
 }
+
 
 
 

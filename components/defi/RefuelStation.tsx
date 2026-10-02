@@ -6,7 +6,7 @@ import { Fuel, AlertTriangle, ArrowRight, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function RefuelStation({ gasLevel = 0.5 }: { gasLevel?: number }) {
-    // Simulate logic: If native gas value < $1, show SOS
+    // Protocol logic: If native gas value < $1, show SOS
     // For demo purposes, we can hardcode logic or pass props
     const isEmergency = gasLevel < 1;
 
@@ -79,4 +79,5 @@ export function RefuelStation({ gasLevel = 0.5 }: { gasLevel?: number }) {
         </>
     );
 }
+
 

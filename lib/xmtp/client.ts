@@ -684,3 +684,6 @@ export async function resolveSenderAddress(senderInboxId: string, client?: Clien
 
 
 
+
+export async function getXmtpGroup(client: Client, groupId: string) { await client.conversations.sync(); const groups = await (client.conversations as any).listGroups(); return groups.find((g: any) => g.id === groupId); }
+export async function createXmtpGroup(client: Client, peerAddresses: string[]) { await client.conversations.sync(); return await (client.conversations as any).newGroup(peerAddresses); }

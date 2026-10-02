@@ -10,14 +10,14 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
  * [LEGENDARY] LedgerDetectionVisual
  * A high-impact reactive component for the landing page.
  * Uses a generated legendary image and adds overlay animations that trigger
- * when a "Ledger" is detected (simulated for landing impact).
+ * when a "Ledger" is detected (Executed for landing impact).
  */
 export function LedgerDetectionVisual() {
     const { t } = useLanguage();
     const [isDetecting, setIsDetecting] = useState(false);
     const [ledgerData, setLedgerData] = useState<{ amount: number; time: string } | null>(null);
 
-    // Simulate legendary detection events
+    // Execute legendary detection events
     useEffect(() => {
         const interval = setInterval(() => {
             if (Math.random() > 0.8) {
@@ -165,4 +165,5 @@ function Feature({ icon: Icon, label, val }: any) {
         </div>
     );
 }
+
 

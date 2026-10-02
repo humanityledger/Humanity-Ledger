@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { z } from 'zod';
 
 export const ContactSchema = z.object({
@@ -43,7 +43,7 @@ export const ExecutionConfigSchema = z.object({
   mevProtection: z.boolean().optional(),
   gasLimitBuffer: z.string().optional(),
   
-  simulateBeforeSend: z.boolean().optional(),
+  verifyBeforeSend: z.boolean().optional(),
   expertMode: z.boolean().optional(),
   customNonce: z.boolean().optional(),
   wasmProving: z.boolean().optional(),
@@ -119,7 +119,7 @@ export function getDefaultUserSettings(): UserSettings {
   return UserSettingsSchema.parse({});
 }
 
-// ─── Validation helpers used by SettingsSyncService ──────────────────────────
+// --- Validation helpers used by SettingsSyncService --------------------------
 
 export type ValidationResult<T> =
   | { success: true; data: T; errors?: undefined }
@@ -157,3 +157,4 @@ export function validatePartialSettings(raw: unknown): ValidationResult<PartialU
     errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
   };
 }
+
