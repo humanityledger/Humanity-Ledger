@@ -1,4 +1,12 @@
-import { NextResponse } from 'next/server';
+import os
+import re
+
+# Patch wallet/create
+with open('app/api/wallet/create/route.ts', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Completely rewrite the route to be non-custodial
+non_custodial_create = """import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { ethers } from 'ethers';
@@ -27,3 +35,18 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
     }
 }
+"""
+with open('app/api/wallet/create/route.ts', 'w', encoding='utf-8') as f:
+    f.write(non_custodial_create)
+
+# Patch timelock
+non_custodial_timelock = """import { NextResponse } from 'next/server';
+
+export async function POST(req: Request) {
+    return NextResponse.json({ error: '410 Gone: Server-side transaction signing is decommissioned. All transactions must be signed locally via WebCrypto/Enclave on the client.' }, { status: 410 });
+}
+"""
+with open('app/api/wallet/timelock/create/route.ts', 'w', encoding='utf-8') as f:
+    f.write(non_custodial_timelock)
+
+print("Wallet endpoints made strictly non-custodial.")

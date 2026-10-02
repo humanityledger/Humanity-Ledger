@@ -247,7 +247,7 @@ model ApiKey {
 
 model AuthUser {
   id                  String    @id @default(uuid())
-  email               String    @unique
+  email String? @unique
   name                String?
   username            String?   @unique
   passwordHash        String?
@@ -261,7 +261,7 @@ model AuthUser {
   backupCodes         String[]  @default([])
   lastLoginAt         DateTime?
   recoveryEmail       String?
-  encryptedPrivateKey String?
+  // encryptedPrivateKey String? (Removed for Non-Custodial Sovereign compliance)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -289,7 +289,7 @@ model AuthUser {
 
 model EmailSubscriber {
   id               String   @id @default(uuid())
-  email            String   @unique
+  email String? @unique
   frequency        String   @default("weekly") // "daily", "weekly", "monthly"
   subscribed       Boolean  @default(true)
   unsubscribeToken String?  @unique
@@ -372,16 +372,7 @@ model ChatContactRequest {
   @@index([fromAddress, status])
 }
 
-model PendingChatMessage {
-  id        String   @id @default(uuid())
-  sender    String
-  recipient String
-  content   String   @db.Text
-  timestamp DateTime @default(now())
-
-  @@index([recipient])
-  @@index([sender])
-}
+// Removed: PendingChatMessage (Centralized Offline Queue)
 
 model ExchangePosition {
   id            String   @id @default(uuid())
@@ -1074,25 +1065,7 @@ model Log {
 // PRIVACY & SESSION AUDITING LOGS
 // 
 
-model UserSessionLog {
-  id         String   @id @default(uuid())
-  userId     String?
-  sessionId  String
-  timestamp  DateTime @default(now())
-  action     String // "PAGE_VIEW", "WALLET_CONNECT", "TAB_CHANGE", "EXPORT"
-  entityType String?
-  entityId   String?
-  ipAddress  String?
-  userAgent  String?
-  deviceType String?
-  location   String?
-  metadata   Json?
-
-  @@index([userId, timestamp(sort: Desc)])
-  @@index([action, timestamp(sort: Desc)])
-  @@index([sessionId])
-  @@index([timestamp(sort: Desc)])
-}
+// Removed: UserSessionLog (Telemetry / Analytics)
 
 model UserPrivacyProfile {
   id                String   @id @default(uuid())
@@ -1408,37 +1381,7 @@ model ProvenanceEvent {
 // Powers the /registry map — our live global activity intelligence layer.
 //
 
-model LoginGeoEvent {
-  id            String   @id @default(uuid())
-  // Anonymized identity — never store raw IP or wallet
-  userId        String? // Hashed user reference (nullable = pre-auth probe)
-  sessionType   String // "WALLET_CONNECT" | "EMAIL_LOGIN" | "QR_SCAN" | "METAMASK" | "RAINBOW" | "HUMANITY_ID"
-  // Geographic intelligence
-  countryCode   String // ISO 3166-1 alpha-2: "ES", "US", "JP"
-  countryName   String
-  region        String? // State/province
-  city          String?
-  latitude      Float?
-  longitude     Float?
-  // Network intelligence
-  ipHash        String? // SHA-256(ip+salt) — anonymous, non-reversible
-  asn           String? // Autonomous System Number for network analysis
-  isTor         Boolean  @default(false)
-  isVpn         Boolean  @default(false)
-  isDatacenter  Boolean  @default(false)
-  // Session metadata
-  authMethod    String   @default("UNKNOWN") // "SIWE", "EMAIL", "QR", "METAMASK"
-  deviceType    String? // "MOBILE" | "DESKTOP" | "TABLET"
-  wasSuccessful Boolean  @default(true)
-  timestamp     DateTime @default(now())
-
-  @@index([countryCode, timestamp(sort: Desc)])
-  @@index([userId, timestamp(sort: Desc)])
-  @@index([timestamp(sort: Desc)])
-  @@index([sessionType, timestamp(sort: Desc)])
-  @@index([wasSuccessful, timestamp(sort: Desc)])
-  @@map("login_geo_events")
-}
+// Removed: login_geo_events
 
 // 
 // QUANTUM PIPELINE & ZERO-KNOWLEDGE STATE
@@ -1668,7 +1611,7 @@ model Community {
   createdAt   DateTime @default(now())
   
   members     CommunityMember[]
-  messages    CommunityMessage[]
+  // messages CommunityMessage[]
 
   @@index([joinCode])
   @@index([ownerAddress])
@@ -1687,17 +1630,7 @@ model CommunityMember {
   @@index([walletAddress])
 }
 
-model CommunityMessage {
-  id           String    @id @default(cuid())
-  communityId  String
-  senderAddress String
-  content      String
-  sentAt       DateTime  @default(now())
-  
-  community    Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
-
-  @@index([communityId, sentAt])
-}
+// Removed: CommunityMessage (Centralized Storage)
 
 
 model QDCreditLedger {
