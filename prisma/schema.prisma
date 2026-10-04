@@ -373,14 +373,17 @@ model ChatContactRequest {
 }
 
 model PendingChatMessage {
-  id        String   @id @default(uuid())
-  sender    String
-  recipient String
-  content   String   @db.Text
-  timestamp DateTime @default(now())
+  id               String    @id @default(uuid())
+  sender           String    // sender wallet address
+  recipient        String    // recipient wallet address
+  content          String    @db.Text // XMTP-encrypted ciphertext — never stored as plaintext
+  encryptionScheme String    @default("xmtp-e2ee") // encryption scheme used
+  deliveredAt      DateTime? // null = pending delivery; set when delivered to recipient
+  timestamp        DateTime  @default(now())
 
   @@index([recipient])
   @@index([sender])
+  @@index([deliveredAt])
 }
 
 model ExchangePosition {

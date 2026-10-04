@@ -5298,7 +5298,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           document.body
         ) : (
           /* ── FULL SCREEN VIEW ── */
-          <div className="fixed inset-0 w-full h-full bg-black flex flex-col" style={{ zIndex: 200000, touchAction: 'none' }}>
+          <div className="fixed inset-0 w-full h-full bg-[#f8f9fa] flex flex-col" style={{ zIndex: 200000, touchAction: 'none' }}>
             
             {/* ── BACKGROUND ── */}
             <div className="absolute inset-0">
@@ -5440,7 +5440,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   onClick={toggleMic}
                   className={`w-[60px] h-[60px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm ${
                     isMicMuted
-                      ? 'bg-black text-white'
+                      ? 'bg-[#FF3B30] text-white'
                       : 'bg-[#f5f5f7] text-black hover:bg-[#e5e5ea]'
                   }`}
                 >
@@ -5449,7 +5449,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
                 <button
                   onClick={endCall}
-                  className="w-[72px] h-[72px] bg-[#050505] rounded-[28px] flex items-center justify-center text-white hover:opacity-80 active:scale-90 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
+                  className="w-[72px] h-[72px] bg-[#FF3B30] rounded-[28px] flex items-center justify-center text-white hover:opacity-80 active:scale-90 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
                 >
                   <PhoneOff size={32} />
                 </button>
