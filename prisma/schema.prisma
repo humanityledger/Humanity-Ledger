@@ -1689,3 +1689,6 @@ model LoginGeoEvent {
   @@index([countryCode])
   @@index([createdAt])
 }
+
+// ─────────────────────────────────────────────────────────────────
+// COMMUNITIES (Feature #3 — Ledger Chat's core differentiator)
