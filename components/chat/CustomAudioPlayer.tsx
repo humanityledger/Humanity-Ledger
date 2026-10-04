@@ -85,13 +85,13 @@ export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean })
 
   return (
       <div className="flex flex-col gap-2 w-full">
-        <div className={`flex items-center gap-2 min-w-[200px] max-w-[280px] p-2 rounded-2xl transition-all ${isMe ? 'bg-[#050505]' : 'bg-gray-100/50'}`}>
+        <div className={`flex items-center gap-2 min-w-[200px] max-w-[280px] p-2 rounded-2xl transition-all ${isMe ? 'bg-white' : 'bg-gray-100/50'}`}>
           <audio ref={audioRef} src={src} preload="auto" playsInline x-webkit-airplay="allow" />
           
           <button 
             onClick={togglePlay}
             className={`w-9 h-9 flex items-center justify-center shrink-0 rounded-full transition-colors ${
-              isMe ? 'bg-white text-black hover:bg-white/90' : 'bg-[#050505] text-white hover:bg-black/90'
+              isMe ? 'bg-white text-black hover:bg-white/90' : 'bg-white text-white hover:bg-black/90'
             }`}
           >
             {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-1" />}
@@ -99,7 +99,7 @@ export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean })
 
           <div className="flex-1 flex flex-col gap-1 mx-1 justify-center">
             {/* Synthetic Waveform aesthetic */}
-            <div className="relative w-full h-8 flex items-center">
+            <div className="relative w-full h-8 flex items-center gap-[2px]">
               <input
                 type="range"
                 min={0}
@@ -108,12 +108,23 @@ export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean })
                 onChange={handleSeek}
                 className="absolute z-20 w-full opacity-0 cursor-pointer h-full"
               />
-              <div className={`w-full h-1.5 rounded-full relative overflow-hidden ${isMe ? 'bg-white/20' : 'bg-black/10'}`}>
-                <div 
-                  className={`absolute top-0 left-0 h-full rounded-full transition-all duration-75 ${isMe ? 'bg-white' : 'bg-[#050505]'}`}
-                  style={{ width: `${duration ? (progress / duration) * 100 : 0}%` }}
-                />
-              </div>
+              {/* Generate 30 bars for the waveform */}
+              {Array.from({ length: 30 }).map((_, i) => {
+                const isActive = duration > 0 && (i / 30) <= (progress / duration);
+                // Deterministic pseudo-random height based on index
+                const height = 20 + ((i * 17) % 60); 
+                return (
+                  <div 
+                    key={i} 
+                    className={`flex-1 rounded-full transition-colors duration-150 ${
+                      isActive 
+                        ? (isMe ? 'bg-white' : 'bg-[#1c7aff]') 
+                        : (isMe ? 'bg-white/30' : 'bg-black/15')
+                    }`}
+                    style={{ height: `${height}%` }}
+                  />
+                );
+              })}
             </div>
             
             <div className={`flex items-center justify-between px-1 ${isMe ? 'text-white/60' : 'text-black/50'}`}>

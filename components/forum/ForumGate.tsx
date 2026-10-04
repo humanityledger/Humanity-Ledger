@@ -34,7 +34,7 @@ export function ForumGate({ children }: { children: React.ReactNode }) {
           <p className="text-[14px] text-black/50 font-medium">Con HumanityLedger por el momento aún no es posible ya que requiere de una firma. Debes ingresar únicamente y precisamente con WalletConnect.</p>
           <button
             onClick={() => open()}
-            className="mt-4 w-full py-4 rounded-[18px] bg-[#050505] text-white font-black tracking-widest text-[12px] uppercase shadow-lg hover:bg-[#111] transition-all"
+            className="mt-4 w-full py-4 rounded-[18px] bg-white text-white font-black tracking-widest text-[12px] uppercase shadow-lg hover:bg-[#111] transition-all"
           >
             Conectar WalletConnect
           </button>
@@ -52,7 +52,7 @@ export function ForumGate({ children }: { children: React.ReactNode }) {
           <p className="text-[14px] text-black/50 font-medium">Por favor, Connect con WalletConnect para acceder al Foro.</p>
           <button
             onClick={() => open()}
-            className="mt-4 px-8 py-3.5 rounded-[18px] bg-[#050505] text-white font-black tracking-widest text-[12px] uppercase shadow-lg hover:bg-[#111] transition-all"
+            className="mt-4 px-8 py-3.5 rounded-[18px] bg-white text-white font-black tracking-widest text-[12px] uppercase shadow-lg hover:bg-[#111] transition-all"
           >
             Conectar WalletConnect
           </button>

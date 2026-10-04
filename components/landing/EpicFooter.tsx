@@ -50,7 +50,7 @@ export function EpicFooter() {
     }, []);
 
     return (
-        <footer ref={footerRef} className="relative w-full h-screen bg-[#050505] flex flex-col items-center justify-center overflow-hidden">
+        <footer ref={footerRef} className="relative w-full h-screen bg-white flex flex-col items-center justify-center overflow-hidden">
             
             {/* Massive Background Typography */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5 select-none">

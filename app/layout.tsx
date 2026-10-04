@@ -2,7 +2,7 @@
 
 import { headers } from 'next/headers'
 
-import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
+import { Inter, IBM_Plex_Mono } from 'next/font/google'
 
 import './globals-compiled.css'
 
@@ -32,8 +32,6 @@ import { GlobalErrorBoundary } from "@/components/ui/GlobalErrorBoundary";
 
 import { ScrollProgressBar } from "@/components/ui/ScrollProgressBar";
 
-
-
 import { AntiTamperCore } from "@/components/security/AntiTamperCore";
 
 import { AztecProvider } from "@/context/AztecContext";
@@ -42,44 +40,23 @@ import { AztecNativeProvider } from "@/context/AztecNativeContext";
 
 import { WalletConnectProvider } from '@/components/walletconnect/WalletConnectProvider';
 
-
-
-const plexSans = IBM_Plex_Sans({ 
-
+const inter = Inter({ 
   subsets: ['latin'], 
-
-  weight: ['400', '500', '600', '700'],
-
-  variable: '--font-inter' // Reusing the inter variable to override all sans usages safely
-
+  variable: '--font-inter',
+  display: 'swap'
 })
 
-
-
-const aztecFont = IBM_Plex_Sans({
-
+const aztecFont = Inter({
   subsets: ['latin'],
-
-  weight: ['400', '600', '700'],
-
   variable: '--font-aztec-serif',
-
   display: 'swap',
-
 })
-
-
 
 const plexMono = IBM_Plex_Mono({
-
   subsets: ['latin'],
-
   weight: ['400', '500', '700'],
-
   variable: '--font-aztec-mono',
-
   display: 'swap',
-
 })
 
 
@@ -88,23 +65,25 @@ export const metadata = {
 
   title: {
 
-    default: 'Humanity Ledger | Privacy Infrastructure on Aztec',
+    default: 'Humanity Ledger | Privacy & Sovereign Identity on Aztec Network',
 
-    template: '%s | Humanity Ledger'
+    template: '%s | Humanity Ledger — by Stefan Antonio Cirisanu'
 
   },
 
-  description: 'Humanity Ledger is a workspace opened by a wallet signature. Ledger Chat is the messenger inside that workspace. Message bodies are encrypted on the device via XMTP.',
+  description: 'Humanity Ledger is the privacy-first sovereign identity and encrypted messaging protocol built on the Aztec Network. Founded and created by Stefan Antonio Cirisanu. Includes LedgerChat (E2E encrypted messenger), QD Token economy, Studio Provenance, and Zero Knowledge proof infrastructure.',
 
   keywords: [
 
-    'humanity ledger', 'Sovereign Identity', 'studio provenance', 'LedgerChat', 'decentralised identity',
-
-    'zero knowledge proofs', 'privacy', 'noir language', 'verifiable credentials'
+    'Humanity Ledger', 'Stefan Antonio Cirisanu', 'Stefan Cirisanu', 'LedgerChat',
+    'Sovereign Identity', 'Aztec Network', 'Zero Knowledge Proofs', 'ZK Messenger',
+    'QD Token', 'Studio Provenance', 'decentralized identity', 'encrypted messaging',
+    'privacy protocol', 'XMTP messenger', 'Noir language ZK', 'privacy infrastructure blockchain',
+    'on-chain identity verification', 'Aztec sequencer testnet', 'humanidfi', 'humanidfi.com'
 
   ],
 
-  authors: [{ name: 'Humanity Ledger' }],
+  authors: [{ name: 'Stefan Antonio Cirisanu', url: 'https://humanidfi.com' }],
   icons: {
     icon: [
       { url: '/favicon.png', type: 'image/png', sizes: '32x32' },
@@ -120,9 +99,23 @@ export const metadata = {
     statusBarStyle: 'black-translucent',
   },
 
-  creator: 'Humanity Ledger',
+  creator: 'Stefan Antonio Cirisanu',
 
-  publisher: 'Humanity Ledger',
+  publisher: 'Humanity Ledger — Stefan Antonio Cirisanu',
+
+  category: 'Technology',
+
+  other: {
+    'copyright': 'Copyright 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.',
+    'author': 'Stefan Antonio Cirisanu',
+    'owner': 'Stefan Antonio Cirisanu',
+    'reply-to': 'legal@humanidfi.com',
+    'dc.creator': 'Stefan Antonio Cirisanu',
+    'dc.publisher': 'Humanity Ledger',
+    'dc.rights': 'Copyright 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.',
+    'dc.language': 'en',
+    'dc.subject': 'Privacy Infrastructure, Sovereign Identity, Zero Knowledge Proofs, Aztec Network',
+  },
 
   metadataBase: new URL('https://humanidfi.com'),
 
@@ -210,6 +203,7 @@ export const metadata = {
 
 
 
+
 export const viewport = {
 
   themeColor: '#FFFFFF',
@@ -220,7 +214,7 @@ export const viewport = {
 
   maximumScale: 1,
 
-  userScalable: false,
+  userScalable: false, viewportFit: 'cover',
 
   viewportFit: 'cover',
 
@@ -249,170 +243,114 @@ export default async function RootLayout({
 
 
   const jsonLd = {
-
     "@context": "https://schema.org",
-
     "@graph": [
-
       {
-
-        "@type": "WebSite",
-
-        "url": "https://humanidfi.com/",
-
-        "name": "Humanity Ledger",
-
-        "description": "Privacy-preserving identity verification solution integrating zero knowledge proofs.",
-
-        "potentialAction": {
-
-          "@type": "SearchAction",
-
-          "target": {
-
-            "@type": "EntryPoint",
-
-            "urlTemplate": "https://humanidfi.com/?q={search_term_string}"
-
-          },
-
-          "query-input": "required name=search_term_string"
-
-        },
-
-        "publisher": {
-
-          "@id": "https://humanidfi.com/#organization"
-
-        }
-
-      },
-
-      {
-
-        "@type": "Organization",
-
-        "@id": "https://humanidfi.com/#organization",
-
-        "name": "Humanity Ledger",
-
-        "alternateName": ["Humanity Ledger Ecosystem", "Humanity Ledger Protocol"],
-
+        "@type": "Person",
+        "@id": "https://humanidfi.com/#founder",
+        "name": "Stefan Antonio Cirisanu",
+        "alternateName": "Stefan Cirisanu",
+        "jobTitle": "Founder & CEO",
+        "description": "Stefan Antonio Cirisanu is the sole founder, creator, and owner of Humanity Ledger — a privacy-first sovereign identity and encrypted communications protocol built on the Aztec Network.",
         "url": "https://humanidfi.com",
-
-        "logo": "https://humanidfi.com/logo-mark.png",
-
+        "email": "legal@humanidfi.com",
         "sameAs": [
-
-          "https://github.com/humanityledger/Humanity-Ledger"
-
-        ]
-
+          "https://github.com/humanityledger",
+          "https://humanidfi.com"
+        ],
+        "worksFor": { "@id": "https://humanidfi.com/#organization" },
+        "founder": { "@id": "https://humanidfi.com/#organization" }
       },
-
       {
-
+        "@type": "Organization",
+        "@id": "https://humanidfi.com/#organization",
+        "name": "Humanity Ledger",
+        "legalName": "Humanity Ledger",
+        "alternateName": ["Humanity Ledger Protocol", "Humanity Ledger Ecosystem", "humanidfi"],
+        "description": "Humanity Ledger is a privacy-preserving sovereign identity and encrypted messaging protocol built on the Aztec Network. Founded and owned by Stefan Antonio Cirisanu.",
+        "url": "https://humanidfi.com",
+        "logo": "https://humanidfi.com/logo-mark.png",
+        "email": "legal@humanidfi.com",
+        "foundingDate": "2024",
+        "founders": [{ "@id": "https://humanidfi.com/#founder" }],
+        "sameAs": [
+          "https://github.com/humanityledger/Humanity-Ledger",
+          "https://humanidfi.com"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://humanidfi.com/#website",
+        "url": "https://humanidfi.com/",
+        "name": "Humanity Ledger",
+        "description": "Privacy-first sovereign identity protocol and encrypted messenger by Stefan Antonio Cirisanu.",
+        "publisher": { "@id": "https://humanidfi.com/#organization" },
+        "author": { "@id": "https://humanidfi.com/#founder" },
+        "copyrightHolder": { "@id": "https://humanidfi.com/#founder" },
+        "copyrightYear": "2024",
+        "inLanguage": "en-US",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://humanidfi.com/?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
         "@type": "WebApplication",
-
         "name": "Humanity Ledger Platform",
-
+        "alternateName": "LedgerChat",
         "applicationCategory": "SecurityApplication",
-
-        "operatingSystem": "Web",
-
-        "offers": {
-
-          "@type": "Offer",
-
-          "price": "0",
-
-          "priceCurrency": "USD"
-
-        },
-
-        "creator": {
-
-          "@id": "https://humanidfi.com/#organization"
-
-        },
-
-        "description": "Privacy-preserving identity verification and portfolio management.",
-
+        "operatingSystem": "Web, iOS, Android",
+        "url": "https://humanidfi.com",
+        "author": { "@id": "https://humanidfi.com/#founder" },
+        "creator": { "@id": "https://humanidfi.com/#founder" },
+        "copyrightHolder": { "@id": "https://humanidfi.com/#founder" },
+        "copyrightYear": "2024",
+        "description": "LedgerChat is an end-to-end encrypted sovereign messenger by Stefan Antonio Cirisanu.",
         "featureList": [
-
-          "Identity Verification",
-
-          "Zero Knowledge Proofs",
-
-          "Attestation Tools",
-
-          "Privacy-Preserving Infrastructure"
-
-        ]
-
+          "End-to-End Encrypted Messaging",
+          "Sovereign Identity (wallet-native)",
+          "Zero Knowledge Proof Verification",
+          "QD Token Payments in Chat",
+          "Studio Provenance for Artists",
+          "Aztec Network Sequencer Integration"
+        ],
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
       },
-
       {
-
+        "@type": "SoftwareSourceCode",
+        "name": "Humanity Ledger Source Code",
+        "codeRepository": "https://github.com/humanityledger/Humanity-Ledger",
+        "programmingLanguage": ["TypeScript", "Rust", "Noir", "Solidity"],
+        "author": { "@id": "https://humanidfi.com/#founder" },
+        "copyrightHolder": { "@id": "https://humanidfi.com/#founder" },
+        "copyrightYear": "2024",
+        "license": "https://humanidfi.com/legal/ownership",
+        "description": "Source code for the Humanity Ledger protocol — written by Stefan Antonio Cirisanu. Unauthorized commercial use is prohibited."
+      },
+      {
         "@type": "ItemList",
-
         "itemListElement": [
-
-          {
-
-            "@type": "SiteNavigationElement",
-
-            "position": 1,
-
-            "name": "Docs",
-
-            "description": "Humanity Ledger SDK enables privacy-preserving identity verification.",
-
-            "url": "https://humanidfi.com/developers/api-docs"
-
-          },
-
-          {
-
-            "@type": "SiteNavigationElement",
-
-            "position": 2,
-
-            "name": "Portfolio App",
-
-            "description": "Track cross-chain capital flows and asset balances locally. Portfolio data is computed locally on your device.",
-
-            "url": "https://humanidfi.com/portfolio"
-
-          },
-
-          {
-
-            "@type": "SiteNavigationElement",
-
-            "position": 3,
-
-            "name": "Humanity Ledger Registry Explorer",
-
-            "description": "Explore countries with supported documents, view coverage and node density.",
-
-            "url": "https://humanidfi.com/registry"
-
-          }
-
+          { "@type": "SiteNavigationElement", "position": 1, "name": "Ledger Chat", "url": "https://humanidfi.com/ledger-chat" },
+          { "@type": "SiteNavigationElement", "position": 2, "name": "Sovereign Identity", "url": "https://humanidfi.com/sovereign-identity" },
+          { "@type": "SiteNavigationElement", "position": 3, "name": "QD Token", "url": "https://humanidfi.com/qd-token" },
+          { "@type": "SiteNavigationElement", "position": 4, "name": "Studio Provenance", "url": "https://humanidfi.com/studio-provenance" },
+          { "@type": "SiteNavigationElement", "position": 5, "name": "Developer API Docs", "url": "https://humanidfi.com/developers/api-docs" },
+          { "@type": "SiteNavigationElement", "position": 6, "name": "Legal & Ownership", "url": "https://humanidfi.com/legal/ownership" }
         ]
-
       }
-
     ]
-
   };
+
 
 
 
   return (
 
-    <html lang="en" className={`light bg-white ${plexSans.variable} ${aztecFont.variable} ${plexMono.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang="en" className={`light bg-white ${inter.variable} ${aztecFont.variable} ${plexMono.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
 
       <head>
         <meta charSet="utf-8" />
@@ -712,5 +650,6 @@ export default async function RootLayout({
   )
 
 }
+
 
 

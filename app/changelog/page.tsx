@@ -91,7 +91,7 @@ export default function ChangelogPage() {
           <p className="text-slate-500 mb-6 max-w-md mx-auto">
             Every commit is cryptographically signed and available on our public repository.
           </p>
-          <a href="https://github.com/humanityledger/Humanity-Ledger" target="_blank" rel="noreferrer" className="inline-flex items-center justify-center px-6 py-3 bg-[#050505] text-white rounded-lg font-medium hover:bg-[#222] transition-colors">
+          <a href="https://github.com/humanityledger/Humanity-Ledger" target="_blank" rel="noreferrer" className="inline-flex items-center justify-center px-6 py-3 bg-white text-white rounded-lg font-medium hover:bg-[#222] transition-colors">
             Open GitHub Repository
           </a>
         </div>

@@ -68,7 +68,7 @@ export function VisionStatsSection() {
                   <span className={`text-base md:text-lg font-bold transition-colors ${isOpen ? 'text-[#050505]' : 'text-[#050505]/80'}`}>
                     {faq.question}
                   </span>
-                  <div className={`shrink-0 ml-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isOpen ? 'bg-[#050505] text-white' : 'bg-[#050505]/5 text-[#050505]'}`}>
+                  <div className={`shrink-0 ml-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isOpen ? 'bg-white text-white' : 'bg-white/5 text-[#050505]'}`}>
                     {isOpen ? <Minus size={16} /> : <Plus size={16} />}
                   </div>
                 </button>
@@ -82,7 +82,7 @@ export function VisionStatsSection() {
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                     >
                       <div className="px-6 pb-8 md:px-8 pt-0">
-                        <div className="h-px w-full bg-[#050505]/5 mb-6" />
+                        <div className="h-px w-full bg-white/5 mb-6" />
                         <p className="text-sm md:text-base text-[#050505]/60 leading-relaxed">
                           {faq.answer}
                         </p>

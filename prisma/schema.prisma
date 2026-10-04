@@ -247,7 +247,7 @@ model ApiKey {
 
 model AuthUser {
   id                  String    @id @default(uuid())
-  email               String    @unique
+  email String? @unique
   name                String?
   username            String?   @unique
   passwordHash        String?
@@ -261,7 +261,7 @@ model AuthUser {
   backupCodes         String[]  @default([])
   lastLoginAt         DateTime?
   recoveryEmail       String?
-  encryptedPrivateKey String?
+  // encryptedPrivateKey String? (Removed for Non-Custodial Sovereign compliance)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -289,7 +289,7 @@ model AuthUser {
 
 model EmailSubscriber {
   id               String   @id @default(uuid())
-  email            String   @unique
+  email String? @unique
   frequency        String   @default("weekly") // "daily", "weekly", "monthly"
   subscribed       Boolean  @default(true)
   unsubscribeToken String?  @unique
@@ -372,19 +372,7 @@ model ChatContactRequest {
   @@index([fromAddress, status])
 }
 
-model PendingChatMessage {
-  id               String    @id @default(uuid())
-  sender           String    // sender wallet address
-  recipient        String    // recipient wallet address
-  content          String    @db.Text // XMTP-encrypted ciphertext — never stored as plaintext
-  encryptionScheme String    @default("xmtp-e2ee") // encryption scheme used
-  deliveredAt      DateTime? // null = pending delivery; set when delivered to recipient
-  timestamp        DateTime  @default(now())
-
-  @@index([recipient])
-  @@index([sender])
-  @@index([deliveredAt])
-}
+// Removed: PendingChatMessage (Centralized Offline Queue)
 
 model ExchangePosition {
   id            String   @id @default(uuid())
@@ -1077,25 +1065,7 @@ model Log {
 // PRIVACY & SESSION AUDITING LOGS
 // 
 
-model UserSessionLog {
-  id         String   @id @default(uuid())
-  userId     String?
-  sessionId  String
-  timestamp  DateTime @default(now())
-  action     String // "PAGE_VIEW", "WALLET_CONNECT", "TAB_CHANGE", "EXPORT"
-  entityType String?
-  entityId   String?
-  ipAddress  String?
-  userAgent  String?
-  deviceType String?
-  location   String?
-  metadata   Json?
-
-  @@index([userId, timestamp(sort: Desc)])
-  @@index([action, timestamp(sort: Desc)])
-  @@index([sessionId])
-  @@index([timestamp(sort: Desc)])
-}
+// Removed: UserSessionLog (Telemetry / Analytics)
 
 model UserPrivacyProfile {
   id                String   @id @default(uuid())
@@ -1411,37 +1381,7 @@ model ProvenanceEvent {
 // Powers the /registry map — our live global activity intelligence layer.
 //
 
-model LoginGeoEvent {
-  id            String   @id @default(uuid())
-  // Anonymized identity — never store raw IP or wallet
-  userId        String? // Hashed user reference (nullable = pre-auth probe)
-  sessionType   String // "WALLET_CONNECT" | "EMAIL_LOGIN" | "QR_SCAN" | "METAMASK" | "RAINBOW" | "HUMANITY_ID"
-  // Geographic intelligence
-  countryCode   String // ISO 3166-1 alpha-2: "ES", "US", "JP"
-  countryName   String
-  region        String? // State/province
-  city          String?
-  latitude      Float?
-  longitude     Float?
-  // Network intelligence
-  ipHash        String? // SHA-256(ip+salt) — anonymous, non-reversible
-  asn           String? // Autonomous System Number for network analysis
-  isTor         Boolean  @default(false)
-  isVpn         Boolean  @default(false)
-  isDatacenter  Boolean  @default(false)
-  // Session metadata
-  authMethod    String   @default("UNKNOWN") // "SIWE", "EMAIL", "QR", "METAMASK"
-  deviceType    String? // "MOBILE" | "DESKTOP" | "TABLET"
-  wasSuccessful Boolean  @default(true)
-  timestamp     DateTime @default(now())
-
-  @@index([countryCode, timestamp(sort: Desc)])
-  @@index([userId, timestamp(sort: Desc)])
-  @@index([timestamp(sort: Desc)])
-  @@index([sessionType, timestamp(sort: Desc)])
-  @@index([wasSuccessful, timestamp(sort: Desc)])
-  @@map("login_geo_events")
-}
+// Removed: login_geo_events
 
 // 
 // QUANTUM PIPELINE & ZERO-KNOWLEDGE STATE
@@ -1644,3 +1584,84 @@ model UserSettings {
 }
 
 
+
+
+// ─── COMMUNITIES & STATUS UPDATES ──────────────────────────────────────────
+
+model StatusUpdate {
+  id          String   @id @default(cuid())
+  ownerAddress String
+  text        String
+  emoji       String?
+  privacy     String   @default("contacts") // "everyone", "contacts", "except"
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([ownerAddress])
+  @@index([expiresAt])
+}
+
+model Community {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  isPrivate   Boolean  @default(false)
+  ownerAddress String
+  joinCode    String   @unique
+  createdAt   DateTime @default(now())
+  
+  members     CommunityMember[]
+  // messages CommunityMessage[]
+
+  @@index([joinCode])
+  @@index([ownerAddress])
+}
+
+model CommunityMember {
+  id           String    @id @default(cuid())
+  communityId  String
+  walletAddress String
+  role         String    @default("MEMBER") // ADMIN, MEMBER
+  joinedAt     DateTime  @default(now())
+
+  community    Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, walletAddress])
+  @@index([walletAddress])
+}
+
+// Removed: CommunityMessage (Centralized Storage)
+
+
+model QDCreditLedger {
+  id             String   @id @default(uuid())
+  address        String
+  delta          Float
+  direction      String
+  reason         String
+  counterparty   String?
+  txRef          String   @unique
+  idempotencyKey String   @unique
+  rail           String   @default("internal")
+  createdAt      DateTime @default(now())
+
+  @@index([address])
+  @@index([txRef])
+}
+
+// DECENTRALIZED FEDERATION RELAY
+// This model acts as a temporary store-and-forward relay node for MLS Group 
+// messages. In E2E groups, peers may be offline. This node stores the encrypted
+// ciphertext of the message, but NO PLAINTEXT is visible to the server.
+model CommunityPost {
+  id             String   @id @default(cuid())
+  communityId    String
+  authorAddress  String
+  content        String   // ENCRYPTED CIPHERTEXT (AES-256-GCM or MLS payload)
+  contentHtml    String?  // ENCRYPTED HTML CIPHERTEXT
+  likes          Int      @default(0)
+  createdAt      DateTime @default(now())
+  
+  @@index([communityId])
+  @@index([authorAddress])
+}

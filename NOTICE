@@ -1,58 +1,33 @@
-NOTICE — Humanity Ledger
-========================
+================================================================================
+HUMANITY LEDGER — OFFICIAL OWNERSHIP NOTICE
+================================================================================
 
-This software product, "Humanity Ledger" (also referred to as "Whale Network",
-"QDs Protocol", and "Whale Alert Pro"), is an original work authored exclusively by:
+Project:       Humanity Ledger
+Founder:       Stefan Antonio Cirisanu
+Website:       https://humanidfi.com
+GitHub:        https://github.com/humanityledger/Humanity-Ledger
+Contact:       legal@humanidfi.com
 
-    Stefan Antonio Cirisanu
-    Organization: humanityledger
-    GitHub: https://github.com/humanityledger
-    Contact: legal@humanidfi.com
+Copyright (c) 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.
 
-Copyright (c) 2024-2026 Stefan Antonio Cirisanu. All rights reserved.
+This software is the original creative and intellectual work of Stefan Antonio
+Cirisanu. Any unauthorized reproduction, distribution, resale, or impersonation
+of this project constitutes copyright infringement and may result in civil and
+criminal liability.
 
-This NOTICE file is provided for legal and attribution purposes in accordance
-with international copyright conventions, including the Berne Convention for
-the Protection of Literary and Artistic Works (as revised in Paris, 1971).
+The following elements are protected intellectual property:
 
-ORIGINALITY
------------
-The following elements of this repository constitute original intellectual
-property of Stefan Antonio Cirisanu and are protected by copyright:
+  * The name "Humanity Ledger" and all associated logos
+  * The name "LedgerChat" and associated user interface
+  * The QD Token economic model and sovereign identity framework
+  * All source code, smart contracts, and Noir ZK circuits
+  * The Aztec Network sequencer integration architecture
+  * All original documentation, whitepapers, and design systems
 
-  - All source code files (.ts, .tsx, .js, .jsx, .sol, .nr)
-  - All cryptographic circuit definitions (Noir / Barretenberg)
-  - The QDs tokenomics model and economic architecture
-  - The Proof of Contribution protocol design
-  - All user interface design, layout, and visual components
-  - All documentation, technical specifications, and protocol descriptions
-  - The Humanity Ledger brand, trade name, and associated marks
-  - The Whale Network brand and alert classification system
+Notice to Cloners:
+  If you have forked or copied this repository, you are obligated by law to:
+  (a) NOT deploy it publicly as a competing product or service.
+  (b) NOT remove or replace attribution to Stefan Antonio Cirisanu.
+  (c) NOT monetize or sublicense any portion of this work.
 
-THIRD-PARTY COMPONENTS
------------------------
-This software incorporates third-party open-source components which remain
-subject to their respective licenses. The use of those components does not
-alter the proprietary status of the original work contained in this repository.
-A full list of third-party dependencies is available in package.json.
-
-LICENSE
--------
-This software is distributed under a proprietary license. No rights are granted
-to any party by virtue of this repository being publicly accessible.
-The full terms of the proprietary license are set out in the LICENSE file
-located in the root of this repository.
-
-UNAUTHORIZED USE
-----------------
-Any party that copies, modifies, deploys, sublicenses, or misrepresents this
-software without the express written authorization of Stefan Antonio Cirisanu
-will be subject to immediate legal action, including injunctive relief, recovery
-of damages, and statutory penalties applicable under the jurisdiction of the
-author's residence and under the laws of the European Union, including
-Directive 2004/48/EC on the enforcement of intellectual property rights.
-
-CONTACT
--------
-For licensing inquiries, partnership proposals, and authorized collaboration
-requests, contact: atfortyseven2@humanidfi.es
+================================================================================

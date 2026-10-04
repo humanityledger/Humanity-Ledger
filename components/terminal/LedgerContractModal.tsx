@@ -117,7 +117,7 @@ export function SystemContractModal() {
               disabled={!canSign}
               className={`px-8 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                 canSign
-                  ? "bg-[#050505] text-white hover:bg-black shadow-[0_4px_20px_rgba(0,0,0,0.15)] scale-100"
+                  ? "bg-white text-white hover:bg-black shadow-[0_4px_20px_rgba(0,0,0,0.15)] scale-100"
                   : "bg-[#E5E5E5] text-[#A0A0A0] cursor-not-allowed scale-[0.98]"
               }`}
             >

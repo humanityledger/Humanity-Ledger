@@ -388,9 +388,15 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 </motion.div>
 
                 <h2 className="text-[32px] font-black text-black mb-3 tracking-tight">You are in.</h2>
-                <p className="text-[15px] text-black/50 font-medium leading-relaxed mb-10 max-w-xs">
+                <p className="text-[15px] text-black/50 font-medium leading-relaxed mb-6 max-w-xs">
                   Your encrypted identity has been secured. Welcome to Ledger Chat.
                 </p>
+
+                <div className="text-center py-4 mb-6">
+                  <p className="text-[13px] text-black/50 mb-1">Your welcome gift</p>
+                  <p className="text-[32px] font-black text-[#1C1C1E]">50,000 QD</p>
+                  <p className="text-[12px] text-black/40">Quantum Dots — your starting balance</p>
+                </div>
 
                 <div className="w-full border border-black/8 rounded-2xl p-4 flex items-center justify-between mb-8 text-left">
                   <div className="flex items-center gap-3">

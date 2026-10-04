@@ -111,7 +111,7 @@ function FeatureItem({ icon, title, description }: FeatureItemProps) {
 
 function ForumShowcase() {
   return (
-    <section id="module-forum" className="w-full bg-[#050505] border-t border-white/10 py-24 md:py-32 relative overflow-hidden">
+    <section id="module-forum" className="w-full bg-white border-t border-white/10 py-24 md:py-32 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-purple-900/10 blur-[150px] rounded-full pointer-events-none" />
       <div className="w-full max-w-[1200px] mx-auto px-6 relative z-10">
         <InViewSection>
@@ -170,7 +170,7 @@ function DevelopersShowcase() {
         <InViewSection>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
             <motion.div variants={FADE_UP} className="order-2 lg:order-1 w-full max-w-full">
-              <div className="bg-[#050505] border border-white/10 rounded-lg p-6 font-mono text-[13px] leading-7 shadow-2xl overflow-x-auto w-full">
+              <div className="bg-white border border-white/10 rounded-lg p-6 font-mono text-[13px] leading-7 shadow-2xl overflow-x-auto w-full">
                 <div className="flex items-center gap-2 mb-6 border-b border-white/10 pb-4">
                   <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
@@ -212,7 +212,7 @@ function DevelopersShowcase() {
 
 function RegistryShowcase() {
   return (
-    <section id="module-registry" className="w-full bg-[#050505] border-t border-white/10 py-24 md:py-32">
+    <section id="module-registry" className="w-full bg-white border-t border-white/10 py-24 md:py-32">
       <div className="w-full max-w-[1200px] mx-auto px-6">
         <InViewSection>
           <div className="text-center mb-16 flex flex-col items-center">
@@ -329,7 +329,7 @@ function LedgerChatShowcase() {
 
 function PortfolioShowcase() {
   return (
-    <section id="module-portfolio" className="w-full bg-[#050505] border-t border-white/10 py-24 md:py-32">
+    <section id="module-portfolio" className="w-full bg-white border-t border-white/10 py-24 md:py-32">
       <div className="w-full max-w-[1200px] mx-auto px-6">
         <InViewSection>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
@@ -462,7 +462,7 @@ function StudioProvenanceShowcase() {
 
 function QDSShowcase() {
   return (
-    <section id="module-qds" className="w-full bg-[#050505] border-t border-white/10 py-24 md:py-32">
+    <section id="module-qds" className="w-full bg-white border-t border-white/10 py-24 md:py-32">
       <div className="w-full max-w-[1200px] mx-auto px-6">
         <InViewSection>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
@@ -564,7 +564,7 @@ function TokenomicsShowcase() {
 
 function LegalComplianceShowcase() {
   return (
-    <section id="module-legal" className="w-full bg-[#050505] border-t border-white/10 py-24 md:py-32">
+    <section id="module-legal" className="w-full bg-white border-t border-white/10 py-24 md:py-32">
       <div className="w-full max-w-[1200px] mx-auto px-6">
         <InViewSection>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-start">

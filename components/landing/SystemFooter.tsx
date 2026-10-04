@@ -16,7 +16,7 @@ export function SystemFooter() {
               <HLLogo size={32} theme="dark" />
             </Link>
             <p className="text-[14px] text-black/50 font-medium leading-relaxed max-w-[240px]">
-              The sovereign, decentralized messaging network. Zero-knowledge by default. Built for 2027.
+              The sovereign, decentralized messaging network. Private by default. Built for 2027.
             </p>
           </div>
 
@@ -24,7 +24,7 @@ export function SystemFooter() {
           <div className="flex flex-col gap-3">
             <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Protocol</h4>
             <Link href="/protocol/ledger-chat" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Ledger Chat</Link>
-            <Link href="/protocol/zk-identity" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">ZK Identity</Link>
+            <Link href="/protocol/zk-identity" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Sovereign Identity</Link>
             <Link href="/protocol/decentralized-relay" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Decentralized Relay</Link>
             <Link href="/developers" className="text-[14px] font-medium text-[#2C6BED] hover:text-[#1A5AE3] transition-colors">Developer Hub &rarr;</Link>
           </div>
@@ -42,7 +42,7 @@ export function SystemFooter() {
           <div className="flex flex-col gap-3">
             <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Cryptography</h4>
             <Link href="/docs/whitepaper" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Whitepaper</Link>
-            <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Aztec ZK Rollup</a>
+            <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Network Architecture</a>
             <Link href="/docs/audits" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Security Audits</Link>
             <a href="https://github.com/humanityledger" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">GitHub</a>
           </div>

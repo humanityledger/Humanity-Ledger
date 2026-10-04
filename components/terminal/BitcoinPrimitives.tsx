@@ -65,7 +65,7 @@ export default function BitcoinPrimitives() {
         <button
           onClick={handleSync}
           disabled={isSyncing}
-          className="flex items-center gap-2.5 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 shrink-0 text-white bg-[#050505] hover:bg-[#FFFFFF] hover:text-[#050505] border border-transparent hover:border-[#E5E5E5]"
+          className="flex items-center gap-2.5 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 shrink-0 text-white bg-white hover:bg-[#FFFFFF] hover:text-[#050505] border border-transparent hover:border-[#E5E5E5]"
         >
           <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
           {isSyncing ? 'Executing Sync' : 'Re-index Standards'}

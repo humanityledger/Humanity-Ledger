@@ -132,7 +132,7 @@ const SystemIntelTab: React.FC = () => {
                                                         setIsNodeActive(val);
                                                         addLog(val ? 'Requesting Node Bootstrap...' : 'Deactivating Node...', val ? 'info' : 'warning');
                                                     }}
-                                                    className="data-[state=checked]:bg-[#050505] "
+                                                    className="data-[state=checked]:bg-white "
                                                 />
                                                 <label htmlFor="node-toggle" className="text-sm font-black text-[#050505]  cursor-pointer">
                                                     {isNodeActive ? 'Node Status: ACTIVE' : 'Activate Local Node'}

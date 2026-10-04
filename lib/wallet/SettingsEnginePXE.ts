@@ -186,6 +186,8 @@ export interface LedgerProtocolSettings {
   gas_preset: 'ECONOMY' | 'STANDARD' | 'FAST' | 'INSTANT';
   /** MEV protection for transactions */
   mev_protection: boolean;
+  /** Route traffic via Tor network (requires local daemon) */
+  tor_routing: boolean;
   /** Custom RPC URL (empty = default) */
   custom_rpc_url: string;
 
@@ -301,6 +303,7 @@ export const DEFAULT_PXE_SETTINGS: LedgerProtocolSettings = {
   // Network
   gas_preset: 'STANDARD',
   mev_protection: false,
+  tor_routing: false,
   custom_rpc_url: '',
 
   // Workspaces
@@ -339,34 +342,56 @@ class SettingsEnginePXE {
     if (this.cache[address]) return this.cache[address];
 
     try {
-      const rawData = await vault.getItem(`pxe_settings_${address}`);
+      let rawData = await vault.getItem(`pxe_settings_${address}`);
+      let parsed: Partial<LedgerProtocolSettings> | null = null;
 
-      if (!rawData) {
+      // 1. Fetch from Local Vault
+      if (rawData) {
+        try {
+          parsed = JSON.parse(rawData);
+        } catch {
+          console.warn('[PXE ENGINE] Parse failed, resetting local cache');
+        }
+      }
+
+      // 2. Fetch from Global Database (Decentralized Prisma Backend)
+      if (typeof window !== 'undefined') {
+        try {
+          const res = await fetch('/api/chat/settings', {
+            credentials: 'include',
+            headers: { 'x-web3-address': address }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.settings && Object.keys(data.settings).length > 0) {
+              // Remote always wins if its last_synced_at is newer
+              if (!parsed || (data.settings.last_synced_at > (parsed.last_synced_at || 0))) {
+                parsed = data.settings;
+                // Save the newer remote state locally immediately
+                await vault.setItem(`pxe_settings_${address}`, JSON.stringify(parsed));
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[PXE ENGINE] Remote fetch error, falling back to local:', err);
+        }
+      }
+
+      if (!parsed) {
         // First run — initialize defaults and persist
         const fresh = { ...DEFAULT_PXE_SETTINGS, last_synced_at: Date.now() };
         this.cache[address] = fresh;
         await this.syncToPXE(address, fresh);
         this.broadcast(address, fresh);
-        return fresh;
-      }
-
-      // Vault already decrypts it for us, so rawData is the JSON string
-      let parsed: LedgerProtocolSettings;
-      try {
-        parsed = JSON.parse(rawData) as LedgerProtocolSettings;
-      } catch {
-        console.warn('[PXE ENGINE] Parse failed, resetting to defaults');
-        const fresh = { ...DEFAULT_PXE_SETTINGS, last_synced_at: Date.now() };
-        this.cache[address] = fresh;
-        await this.syncToPXE(address, fresh);
-        this.broadcast(address, fresh);
+        Object.entries(fresh).forEach(([k, v]) => this.applyDOMSideEffects(k as keyof LedgerProtocolSettings, v));
         return fresh;
       }
 
       // Schema migration: merge any new fields from DEFAULT_PXE_SETTINGS
-      const migrated = this.migrateSchema(parsed);
+      const migrated = this.migrateSchema(parsed as LedgerProtocolSettings);
       this.cache[address] = migrated;
       this.broadcast(address, migrated);
+      Object.entries(migrated).forEach(([k, v]) => this.applyDOMSideEffects(k as keyof LedgerProtocolSettings, v));
 
       return migrated;
     } catch (error) {
@@ -467,6 +492,7 @@ class SettingsEnginePXE {
     const fresh = { ...DEFAULT_PXE_SETTINGS, last_synced_at: Date.now() };
     this.cache[address] = fresh;
     this.broadcast(address, fresh);
+    Object.entries(fresh).forEach(([k, v]) => this.applyDOMSideEffects(k as keyof LedgerProtocolSettings, v));
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -486,7 +512,19 @@ class SettingsEnginePXE {
     try {
       const updated = { ...settings, last_synced_at: Date.now() };
       const payload = JSON.stringify(updated);
+      
+      // 1. Local Encrypted Vault Backup
       await vault.setItem(`pxe_settings_${address}`, payload);
+
+      // 2. Global Database Sync (Decentralized Prisma Backend)
+      if (typeof window !== 'undefined') {
+        fetch('/api/chat/settings', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', 'x-web3-address': address },
+          body: JSON.stringify({ settings: updated })
+        }).catch(err => console.warn('[PXE ENGINE] Remote sync error:', err));
+      }
     } catch (error) {
       console.error('[PXE ENGINE] Vault sync error:', error);
     }

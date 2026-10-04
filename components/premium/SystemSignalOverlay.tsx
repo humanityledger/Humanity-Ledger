@@ -65,10 +65,10 @@ HumanIDFi analytics`;
                 className="bg-[#FFFFFF]/90 border border-[#050505] p-8 max-w-sm w-full rounded-2xl shadow-2xl relative overflow-hidden"
             >
                 {/* Top accent */}
-                <div className="absolute top-0 left-0 w-full h-1 bg-[#050505]" />
+                <div className="absolute top-0 left-0 w-full h-1 bg-white" />
 
                 <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-full bg-[#050505] flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
                         <Target className="text-white" size={20} />
                     </div>
                     <div>
@@ -105,7 +105,7 @@ HumanIDFi analytics`;
 
                 <button 
                     onClick={copyToClipboard}
-                    className="w-full bg-[#050505] text-white py-3 rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#111] transition-colors"
+                    className="w-full bg-white text-white py-3 rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#111] transition-colors"
                 >
                     {copied ? <CheckCircle size={14} className="text-white" /> : <Copy size={14} />}
                     {copied ? 'Copied to Clipboard' : 'Copy Alpha Signal'}

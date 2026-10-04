@@ -58,7 +58,7 @@ export default function CoreWelcomeClaim({ signature, onSuccess }: { signature: 
             {/* Animated border effect */}
             <div className="absolute inset-0 bg-[conic-gradient(from_0deg,transparent_0_340deg,white_360deg)] animate-[spin_4s_linear_infinite] opacity-20" />
             
-            <div className="bg-[#050505] rounded-[22px] p-6 relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="bg-white rounded-[22px] p-6 relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
                 
                 <div className="flex items-start gap-4">
                     <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">

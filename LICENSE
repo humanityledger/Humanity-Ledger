@@ -1,21 +1,40 @@
-MIT License
+Copyright (c) 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.
 
-Copyright (c) 2026 Humanity Ledger Foundation
+Humanity Ledger — Proprietary Software License
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software and all associated assets, designs, protocols, source code,
+documentation, trademarks, trade names, and intellectual property are the
+exclusive property of Stefan Antonio Cirisanu ("Owner").
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+UNAUTHORIZED USE, REPRODUCTION, DISTRIBUTION, OR COMMERCIAL EXPLOITATION
+OF ANY PART OF THIS SOFTWARE WITHOUT THE EXPRESS WRITTEN CONSENT OF
+STEFAN ANTONIO CIRISANU IS STRICTLY PROHIBITED AND CONSTITUTES COPYRIGHT
+INFRINGEMENT UNDER APPLICABLE INTERNATIONAL LAW, INCLUDING BUT NOT LIMITED
+TO THE BERNE CONVENTION FOR THE PROTECTION OF LITERARY AND ARTISTIC WORKS.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Permitted Uses (Restricted License):
+- You MAY read the source code for personal education.
+- You MAY NOT fork, clone, resell, sublicense, or deploy a modified or
+  unmodified version of this software as a competing product or service.
+- You MAY NOT remove, obscure, or alter any copyright notices, author
+  attributions, or ownership markers contained within the source code.
+- You MAY NOT use the name "Humanity Ledger", "LedgerChat", "QD Token",
+  "Sovereign Identity", or any confusingly similar name in connection with
+  an unauthorized derivative product.
+
+DMCA & Enforcement:
+  Any infringing clone, fork, or deployment found operating without written
+  authorization will be subject to immediate DMCA takedown requests and legal
+  action in the jurisdiction of the Owner's choosing.
+
+  To report an infringing clone or to request a commercial license, contact:
+  legal@humanidfi.com
+
+Original Author & Sole Owner:
+  Stefan Antonio Cirisanu
+  Founder, Humanity Ledger
+  https://humanidfi.com
+  legal@humanidfi.com
+
+First Commit: 2024
+Last Updated: 2026

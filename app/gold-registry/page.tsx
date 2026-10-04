@@ -83,7 +83,7 @@ export default function GoldRegistryPage() {
                         <button 
                           onClick={() => triggerOnChainPing(node.id, node.name)}
                           disabled={isSimulating}
-                          className="w-full bg-[#050505] text-white px-6 py-4 rounded-xl flex items-center justify-center gap-3 hover:bg-[#111] transition-colors disabled:opacity-50"
+                          className="w-full bg-white text-white px-6 py-4 rounded-xl flex items-center justify-center gap-3 hover:bg-[#111] transition-colors disabled:opacity-50"
                         >
                            {isSimulating ? (
                              <Zap size={14} className="animate-pulse text-indigo-400" />

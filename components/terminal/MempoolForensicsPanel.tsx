@@ -226,7 +226,7 @@ export function MempoolForensicsPanel() {
               className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${
                 filter === lvl
                   ? lvl === 'ALL'
-                    ? 'bg-[#050505] text-white border-[#050505]'
+                    ? 'bg-white text-white border-[#050505]'
                     : `text-white border-transparent`
                   : 'bg-transparent text-black/40 border-black/10 hover:border-black/20'
               }`}
@@ -247,7 +247,7 @@ export function MempoolForensicsPanel() {
           className={`ml-auto flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
             isActive
               ? 'bg-red-500/10 border border-red-500/20 text-red-600 hover:bg-red-500/20'
-              : 'bg-[#050505] text-white hover:bg-black/80'
+              : 'bg-white text-white hover:bg-black/80'
           }`}
         >
           {isActive ? (

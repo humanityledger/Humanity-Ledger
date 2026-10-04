@@ -630,7 +630,7 @@ export default function AdvancedSettingsModal({ onClose }: { onClose: () => void
               {activeTabDef.icon}
             </div>
             <div>
-              <h2 className="text-[16px] font-bold text-white tracking-tight">Quantum Settings</h2>
+              <h2 className="text-[16px] font-bold text-white tracking-tight">Settings</h2>
               <p className="text-[11px] text-white/35">{activeTabDef.label}</p>
             </div>
           </div>

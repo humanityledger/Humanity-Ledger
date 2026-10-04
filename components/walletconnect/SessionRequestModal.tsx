@@ -142,7 +142,7 @@ export function SessionRequestModal() {
                     {/* Payload preview */}
                     <div className="flex flex-col gap-2">
                         <span className="text-[10px] font-black uppercase text-black/40 tracking-widest">Payload</span>
-                        <pre className="p-4 bg-[#050505] text-[#FFFFFF] rounded-xl font-mono text-[10px] break-all max-h-[160px] overflow-y-auto border border-black/20 shadow-inner whitespace-pre-wrap">
+                        <pre className="p-4 bg-white text-[#FFFFFF] rounded-xl font-mono text-[10px] break-all max-h-[160px] overflow-y-auto border border-black/20 shadow-inner whitespace-pre-wrap">
                             {JSON.stringify(methodRequest.params, null, 2)}
                         </pre>
                     </div>

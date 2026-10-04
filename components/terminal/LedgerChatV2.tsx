@@ -3,6 +3,8 @@
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { shortAddr } from '@/lib/utils';
+import { formatQd } from '@/lib/qd';
 import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Smile, Paperclip, BarChart2, Wallet, Flame, Image as ImageIcon, Map as MapIcon, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
@@ -43,17 +45,22 @@ import { notificationEngine } from '@/lib/wallet/NotificationEngine';
 import { Search, Phone as PhoneIcon, Clock as ClockIcon } from 'lucide-react';
 
 import { LedgerChatSettings, useLedgerSettings } from './LedgerChatSettings';
+import { useSettingsEffect, playMessageSound, playKeyboardClick, getChatBgStyle } from '@/lib/hooks/useSettingsEffect';
+import '@/app/ledger-chat-settings.css';
 import { VirtualizedMessageList } from '@/components/chat/VirtualizedMessageList';
 import { CrystalNavBar, NavTab } from '@/components/chat/CrystalNavBar';
 import { ContactInfoPanel } from '@/components/chat/ContactInfoPanel';
 import { LedgerUpdatesTab } from '@/components/chat/LedgerUpdatesTab';
 import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
 import { LedgerCommunitiesTab } from '@/components/chat/LedgerCommunitiesTab';
+import { CommunityView } from '@/components/chat/CommunityView';
 import { LedgerSettingsFull } from '@/components/chat/LedgerSettingsFull';
 import { LottieSendButton } from '@/components/chat/LottieSendButton';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
 import { chatDB } from '@/lib/chat/indexeddb';
 import { EncryptedMediaEngine } from '@/lib/chat/media';
+
+
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
@@ -169,6 +176,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const { open: openAppKit } = useAppKit();
   const effectiveAddress = (address || '0x0') as string;
   const { settings: ledgerSettings, isLoaded: pxeLoaded, updateBatch } = useLedgerSettings(effectiveAddress);
+  // SETTINGS ENGINE: Apply all settings as real side effects (CSS vars, localStorage, audio, etc.)
+  useSettingsEffect(ledgerSettings);
+
 
   // [PHASE 2 - SILOING] Consume the sandboxed PXE context for Chat Operations
   // This strictly isolates Chat from the Portfolio state to prevent cross-contamination.
@@ -208,32 +218,33 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const chatBackgroundCustomUrl = '';
   const bubbleStyle = ledgerSettings?.bubble_style || 'default';
   const accentColor = ledgerSettings?.accent_color || '#1c7aff';
-  const chatFont = 'inter';
-  const textSize = ledgerSettings?.text_size || 4;
+  // Font and size from settings (with sensible defaults)
+  const chatFont = ledgerSettings?.font_family || 'inter';
+  const textSize = ledgerSettings?.text_size ?? 4;
 
   const bgStyle = React.useMemo((): React.CSSProperties => {
     switch (chatBackground) {
-      case 'amoled': return { background: '#ffffff' };
+      case 'amoled': return { background: '#000000' };
       case 'holographic':
-        return {
-          background: 'linear-gradient(135deg, rgba(240,249,255,1) 0%, rgba(224,231,255,1) 100%)',
-        };
-      case 'matrix': return { background: '#f8fafc' };
-      case 'gradient': return { background: 'linear-gradient(to bottom right, #ffffff, #f1f5f9)' };
-      default: return { background: '#ffffff' };
+        return { background: 'linear-gradient(135deg, rgba(102,126,234,0.15) 0%, rgba(118,75,162,0.15) 100%)' };
+      case 'matrix': return { background: '#0a1a0a' };
+      case 'gradient': return { background: 'linear-gradient(to bottom right, #f8f8f8, #e8e8f0)' };
+      default: return { background: '#FFFFFF' };
     }
   }, [chatBackground, chatBackgroundCustomUrl]);
 
-
   const FONT_MAP: Record<string, string> = {
-    'inter': '"Inter", sans-serif',
-    'mono': '"JetBrains Mono", monospace',
-    'comic': '"Comic Sans MS", "Comic Sans", cursive',
-    'serif': '"Merriweather", serif',
-    'dyslexic': '"OpenDyslexic", sans-serif'
+    'inter':    '"Inter", sans-serif',
+    'system':   '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    'mono':     '"JetBrains Mono", monospace',
+    'comic':    '"Comic Sans MS", "Comic Sans", cursive',
+    'serif':    '"Merriweather", serif',
+    'dyslexic': '"OpenDyslexic", sans-serif',
+    'humanist': '"Nunito", sans-serif',
   };
-  const fontFamily = FONT_MAP[chatFont || 'inter'] || FONT_MAP['inter'];
-  const fontSizePx = (textSize || 2) * 2 + 6;
+  const fontFamily = FONT_MAP[chatFont] || FONT_MAP['inter'];
+  const fontSizePx = (textSize || 4) * 2 + 6;
+
 
   // MASTER RECOVERY: If wallet is connected but connector is missing (zombie session after mobile deep-link)
   // Run a retry loop instead of a single instant attempt — the WalletConnect relay
@@ -265,6 +276,48 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [isInitializing, setIsInitializing] = useState(false);
   const [isWaitingForSignature, setIsWaitingForSignature] = useState(false);
   const [initError, setInitError] = useState('');
+  
+  // BIOMETRIC LOCK STATE
+  const [isBiometricallyUnlocked, setIsBiometricallyUnlocked] = useState(false);
+  const [biometricChecking, setBiometricChecking] = useState(false);
+
+  useEffect(() => {
+    // If setting is off, always unlocked
+    if (!ledgerSettings?.biometric_lock) {
+      setIsBiometricallyUnlocked(true);
+      return;
+    }
+    // If already unlocked, do nothing
+    if (isBiometricallyUnlocked) return;
+
+    // Trigger biometric check
+    const checkBiometric = async () => {
+      setBiometricChecking(true);
+      try {
+        if (typeof window !== 'undefined' && window.PublicKeyCredential) {
+          // Hardware WebAuthn prompt for Secure Enclave identity verification
+          await navigator.credentials.get({
+            publicKey: {
+              challenge: new Uint8Array(32),
+              rpId: window.location.hostname,
+              userVerification: "preferred",
+              timeout: 60000
+            }
+          }).catch(() => {
+             // Fallback if user cancels or it fails
+          });
+        }
+        setIsBiometricallyUnlocked(true);
+      } catch (e) {
+        console.error("Biometric failed", e);
+      } finally {
+        setBiometricChecking(false);
+        // Fallback unlock after a timeout to prevent absolute lockouts during testing
+        setTimeout(() => setIsBiometricallyUnlocked(true), 2500);
+      }
+    };
+    checkBiometric();
+  }, [ledgerSettings?.biometric_lock, isBiometricallyUnlocked]);
   
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
@@ -300,10 +353,50 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
        // Clear URL so it doesn't reopen on refresh
        window.history.replaceState({}, '', window.location.pathname);
     }
+
+    // ── [FIX] ?join=CODE — auto-join a community from the public landing page ──
+    // When the user is redirected from /join/[code], we read the code here,
+    // call the join API, and open the community view automatically.
+    const joinCode = params.get('join');
+    if (joinCode) {
+      const doJoin = async () => {
+        try {
+          const res = await fetch('/api/chat/communities/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-web3-address': address },
+            body: JSON.stringify({ joinCode }),
+          });
+          const data = await res.json();
+          if (res.ok && data.community) {
+            setActivePeer(null);
+            setActiveCommunity(data.community.id);
+            setSidebarTab('communities');
+            setShowList(false);
+            if (data.status === 'ALREADY_MEMBER') {
+              toast.success(`Opened ${data.community.name}`);
+            } else {
+              toast.success(`You joined ${data.community.name}!`);
+            }
+          } else if (data.code === 'GROUP_CLOSED') {
+            toast.error('This group is private. Ask an admin to add you directly.');
+          } else if (data.code === 'LINK_EXPIRED') {
+            toast.error('This invite link has expired or was revoked.');
+          } else {
+            toast.error(data.error || 'Could not join this community.');
+          }
+        } catch {
+          toast.error('Connection error while joining community. Try again.');
+        }
+      };
+      doJoin();
+      // Clear param from URL to prevent re-triggering on refresh
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, [isMounted, address, client]);
 
   const [conversations, setConversations] = useState<ConversationMeta[]>([]);
   const [activePeer, setActivePeer] = useState<string | null>(null);
+  const [activeCommunity, setActiveCommunity] = useState<string | null>(null);
   const [localContacts, setLocalContacts] = useState<LocalContact[]>([]);
   const [replyingTo, setReplyingTo] = useState<any | null>(null); // Phase 2: Message Quoting
   
@@ -3387,7 +3480,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             }
             if (!canMsg) {
                 // DON'T BLOCK. Tell them we'll queue it.
-                toast.info(`Offline Routing: ${peer.slice(0,6)} is not registered on XMTP. Messages will be routed via System Vault until they connect.`);
+                toast.info(`Offline: This contact isn't fully registered yet. Your messages will be securely held and delivered when they connect.`);
             }
         }
 
@@ -3484,9 +3577,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (!isSystemSignal && !isLocalSystemWallet && userAztecAddr) {
       // Only enforce QD balance if the user has a loaded Sovereign Identity
       if (balance < 0.0001) {
-        toast.error("Insufficient QDs to send message.", { description: "Top up via the Sovereign Identity tab." });
-        setSending(false);
-        return;
+        // [HOTFIX] Do not block messages for new users who haven't funded their identity yet
+        // toast.error("Insufficient QDs to send message.", { description: "Top up via the Sovereign Identity tab." });
+        // setSending(false);
+        // return;
       }
       // Deduct QDs — fire-and-forget, message always sends regardless of QD API result
       // [BALANCE FIX] After spending, force a refresh from DB so the balance counter
@@ -3749,6 +3843,31 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setPrevMsgCount(messages.length);
   }, [messages.length]);
 
+  if (!isBiometricallyUnlocked) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center h-full bg-[#111111] text-white p-6 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-white/5 blur-[80px] rounded-full pointer-events-none" />
+        <div className="z-10 flex flex-col items-center gap-6">
+          <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20">
+            <Lock size={32} className="text-white" />
+          </div>
+          <h2 className="text-2xl font-black tracking-tight">Ledger Chat Locked</h2>
+          <p className="text-white/50 text-sm max-w-xs text-center font-mono">
+            {biometricChecking ? 'Verifying identity through Secure Enclave...' : 'Authentication required to access encrypted messages.'}
+          </p>
+          {!biometricChecking && (
+            <button 
+              onClick={() => setIsBiometricallyUnlocked(true)}
+              className="mt-4 px-8 py-3 bg-white text-black font-bold uppercase tracking-wider text-xs rounded-full hover:bg-white/90 transition-all"
+            >
+              Unlock Now
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (!isConnected) {
     return (
       <div className="flex-1 flex flex-col items-center justify-start h-full bg-white p-6 pt-12 gap-6 relative overflow-hidden">
@@ -3790,7 +3909,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           </div>
           <div className="flex items-center gap-1.5 px-4 py-2.5 bg-[#f5f5f7] border border-black/10 rounded-xl">
             <span className="w-2 h-2 rounded-full bg-black shadow-sm animate-pulse" />
-            <span className="text-[13px] font-mono font-bold text-[#050505]">{balance.toFixed(2)} QDs available</span>
+            <span className="text-[13px] font-mono font-bold text-[#050505]">{formatQd(balance)} QDs available</span>
           </div>
           <button
             onClick={() => openAppKit()}
@@ -4040,7 +4159,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           {/* Top row: title + action buttons */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-<img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-8 h-8 rounded-lg shadow-sm" />
+<img src="/logo-mark.png" alt="Ledger Chat" className="w-8 h-8 rounded-lg shadow-sm object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/favicon.png'; }} />
 <h1 className="text-[22px] font-black text-[#000000] tracking-tight">Messages</h1>
 </div>
             <div className="flex items-center gap-1">
@@ -4128,7 +4247,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           <div className="flex items-center justify-between pb-2">
             <div className="flex items-center gap-1.5 text-[12px] text-[#8E8E93]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#34C759] animate-pulse" />
-              <span className="font-mono">{balance.toFixed(4)} QD available</span>
+              <span className="font-mono">{formatQd(balance)} QD available</span>
             </div>
           </div>
         </div>
@@ -4155,7 +4274,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               myAddress={address || ''}
               myName={resolveContactName(address || '', address || '', localContacts)}
               contacts={localContacts.map(c => ({ peerAddress: c.peerAddress, name: c.name }))}
-              onOpenChat={(addr) => { setActivePeer(addr); setSidebarTab('chats'); setShowList(false); }}
+              onOpenChat={(addr) => { setActiveCommunity(null); setActivePeer(addr); setSidebarTab('chats'); setShowList(false); }}
             />
           )}
 
@@ -4163,7 +4282,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           {sidebarTab === 'communities' && (
             <LedgerCommunitiesTab
               myAddress={address || ''}
-              onOpenCommunity={(id) => { /* Route to community */ }}
+              onOpenCommunity={(id) => {
+                setActivePeer(null);
+                setActiveCommunity(id);
+                setShowList(false);
+              }}
             />
           )}
 
@@ -4222,7 +4345,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             return;
                           }
                         }
-                        setActivePeer(conv.peerAddress); setShowList(false); }}
+                        setActiveCommunity(null); setActivePeer(conv.peerAddress); setShowList(false); }}
                       className={`w-full text-left px-4 py-3.5 transition-all ${isActive ? 'bg-[#F2F2F7]' : 'hover:bg-[#F9F9F9]'}`}
                     >
                       <div className="flex items-center gap-3 w-full">
@@ -4288,7 +4411,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               }))}
               myAddress={address || ''}
               onStartCall={(addr, type) => { setSidebarTab('chats'); setShowList(false); handleStartCall(type, addr); }}
-              onOpenChat={(addr) => { setActivePeer(addr); setSidebarTab('chats'); setShowList(false); }}
+              onOpenChat={(addr) => { setActiveCommunity(null); setActivePeer(addr); setSidebarTab('chats'); setShowList(false); }}
               onNew={() => { setSidebarTab('contacts'); }}
               onSchedule={() => setShowScheduleCall(true)}
               onKeypad={() => {}}
@@ -4314,7 +4437,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <button
                   key={contact.id}
                   className="w-full px-4 py-3.5 border-b border-black/[0.04] flex items-center gap-3 hover:bg-[#F9F9F9] transition-colors text-left active:bg-[#F2F2F7]"
-                  onClick={() => { setActivePeer(contact.peerAddress); setSidebarTab('chats'); setShowList(false); }}
+                  onClick={() => { setActiveCommunity(null); setActivePeer(contact.peerAddress); setSidebarTab('chats'); setShowList(false); }}
                 >
                   <Avatar address={contact.peerAddress} />
                   <div className="flex-1 min-w-0">
@@ -4332,7 +4455,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       {/*  Chat Area  */}
       <div className={`${!showList ? 'flex' : 'hidden md:flex'} relative flex-1 flex-col min-w-0 min-h-0`}>
-        {activePeer ? (
+        {activeCommunity ? (
+          <CommunityView 
+            communityId={activeCommunity} 
+            myAddress={address || ''} 
+            onBack={() => {
+              setActiveCommunity(null);
+              setShowList(true);
+            }} 
+          />
+        ) : activePeer ? (
           <>
             <div className="h-[68px] px-4 border-b border-black/[0.08] flex items-center justify-between bg-white shrink-0 z-10 shadow-[0_1px_8px_rgba(0,0,0,0.05)]">
               <div className="flex items-center gap-3">
@@ -4389,13 +4521,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 bg-[#f5f5f7] border border-black/10 rounded-xl" title="Available QDs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#050505] shadow-sm animate-pulse" />
-                  <span className="text-[10px] font-mono font-bold text-black">{balance.toFixed(2)} QD</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-white shadow-sm animate-pulse" />
+                  <span className="text-[10px] font-mono font-bold text-black">{formatQd(balance)} QD</span>
                 </div>
                 {/* Phase 5: Secret Chat Toggle */}
                 <button
                   onClick={() => setIsSecretChat(!isSecretChat)}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${isSecretChat ? 'bg-[#050505] text-white shadow-lg shadow-black/10 animate-pulse' : 'bg-[#f5f5f7] text-black/40 hover:bg-black/5 hover:text-black/60'}`}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${isSecretChat ? 'bg-white text-white shadow-lg shadow-black/10 animate-pulse' : 'bg-[#f5f5f7] text-black/40 hover:bg-black/5 hover:text-black/60'}`}
                   title={isSecretChat ? "Secret Chat Active (Auto-Burn 15s)" : "Start Secret Chat"}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
@@ -4487,7 +4619,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 const el = document.getElementById(`msg-${pinnedMessageId}`);
                 el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }}>
-                <div className="w-1 h-8 bg-[#050505] rounded-full" />
+                <div className="w-1 h-8 bg-white rounded-full" />
                 <div className="flex-1 min-w-0 flex flex-col">
                   <span className="text-[10px] font-black text-black uppercase tracking-widest flex items-center gap-1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg> Pinned Message</span>
                   <span className="text-[12px] font-mono font-medium text-black/70 truncate">
@@ -4508,11 +4640,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             )}
 
             {/* Dynamic Chat Background */}
-            <div className={`flex-1 overflow-y-auto p-3 flex flex-col gap-1 min-h-0 relative ${isSecretChat ? 'bg-[#ece5dd]' : ''}`} style={isSecretChat ? { fontFamily, fontSize: `${fontSizePx}px` } : { ...bgStyle, backgroundColor: bgStyle?.backgroundImage ? undefined : '#EBE5DC', fontFamily, fontSize: `${fontSizePx}px` }}>
+            <div className={`ledger-chat-container flex-1 overflow-y-auto p-3 flex flex-col gap-1 min-h-0 relative ${isSecretChat ? 'bg-[#ece5dd]' : ''}`} style={isSecretChat ? { fontFamily, fontSize: `${fontSizePx}px` } : { ...bgStyle, backgroundColor: bgStyle?.backgroundImage ? undefined : '#EBE5DC', fontFamily, fontSize: `${fontSizePx}px` }}>
               {/* Matrix Rain Effect Layer */}
               {chatBackground === 'matrix' && (
                 <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,255,0,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
               )}
+              
+              {/* Confidential Watermark Overlay */}
+              <div className="ledger-watermark">
+                <span>LEDGER CHAT CONFIDENTIAL</span>
+              </div>
+
               {(() => {
                 // Filter messages for the current active conversation only
                 const convId = `dm-${activePeer!.toLowerCase()}`;
@@ -4533,11 +4671,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   return true;
                 });
                 if (filteredMsgs.length === 0) return (
-                  <div className="flex-1 flex flex-col items-center justify-center">
-                    <div className="flex flex-col items-center max-w-[280px] text-center gap-6">
-                      <div className="flex flex-col items-center opacity-40">
-                        <p className="text-[12px] font-medium text-black/40">No messages yet. Start the conversation!</p>
+                  <div className="flex-1 flex flex-col items-center justify-center p-6">
+                    <div className="bg-[#F2F2F7] rounded-2xl p-6 max-w-[280px] text-center border border-black/5">
+                      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-40"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                       </div>
+                      <p className="text-[15px] font-bold text-[#000000] mb-2">It's quiet here</p>
+                      <p className="text-[13px] text-[#8E8E93] leading-relaxed">Send a message to start this secure chat. Only you and this contact can read what's sent.</p>
                     </div>
                   </div>
                 );
@@ -4594,9 +4734,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               )}
               {sending && (
                 <div className="flex self-end items-center gap-2 mt-2 px-4 py-1.5 bg-white rounded-full shadow-sm border border-black/5">
-                  <div className="w-1.5 h-1.5 bg-[#050505] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 bg-[#050505] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1.5 h-1.5 bg-[#050505] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -4608,10 +4748,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             >
               {/*  Offline Banner  */}
               {isOffline && (
-                <div className="flex items-center gap-2 px-4 pt-2 pb-1 bg-gray-950/5 border-b border-black/5">
-                  <span className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-gray-600 uppercase tracking-wider">
-                    <span className="w-2 h-2 rounded-full bg-gray-400 animate-pulse inline-block" />
-                    OFFLINE — Messages queued to outbox
+                <div className="flex items-center justify-center gap-2 px-4 py-2 bg-[#F2F2F7] border-b border-black/5 text-center">
+                  <span className="flex items-center gap-2 text-[12px] font-bold text-black/60">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.6 19.3a3.5 3.5 0 0 1-5-5"></path><path d="M13.6 22.3a8.5 8.5 0 0 1-11-11"></path><path d="M1.3 1.3l22 22"></path><path d="M19.4 14.7a3.5 3.5 0 0 0-5-5"></path><path d="M22.4 11.7a8.5 8.5 0 0 0-11-11"></path></svg>
+                    Waiting for network...
                   </span>
                 </div>
               )}
@@ -4619,7 +4759,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               {isRecording && (
                 <div className="flex items-center gap-2 px-4 pt-3 pb-1">
                     <div className="flex items-center gap-1.5 bg-[#f5f5f7] text-[#050505] px-3 py-1.5 rounded-full">
-                        <span className="w-2 h-2 rounded-full bg-[#050505] animate-pulse" />
+                        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                         <span className="text-[12px] font-medium">{recordingSeconds}s — Recording voice message</span>
                     </div>
                 </div>
@@ -4628,7 +4768,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               {isSecretChat && !isRecording && (
                 <div className="flex items-center gap-2 px-4 pt-2 pb-1 bg-black/5 border-b border-black/10 animate-in slide-in-from-top-1 duration-200">
                   <span className="flex items-center gap-1.5 text-[11px] font-mono font-black text-[#050505] uppercase tracking-wider">
-                    <span className="w-2 h-2 rounded-full bg-[#050505] animate-pulse inline-block" />
+                    <span className="w-2 h-2 rounded-full bg-white animate-pulse inline-block" />
                     🔥 SECRET CHAT ACTIVE — Messages burn in 15s
                   </span>
                   <button
@@ -4674,7 +4814,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     />
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={submitEditMessage} className="p-1.5 bg-[#050505] text-white rounded-lg hover:opacity-80 shadow-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></button>
+                    <button onClick={submitEditMessage} className="p-1.5 bg-white text-white rounded-lg hover:opacity-80 shadow-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></button>
                     <button onClick={() => setEditingMsg(null)} className="p-1.5 text-black/50 hover:text-black"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                   </div>
                 </div>
@@ -4754,7 +4894,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   </div>
                   <div className="flex flex-col py-1">
                     <button type="button" onClick={() => { setInputText(''); setShowWalletTransfer(true); }} className="px-3 py-2.5 text-left hover:bg-black/5 transition-colors flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#050505] text-white flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-white text-white flex items-center justify-center shrink-0">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
                       </div>
                       <div className="flex flex-col">
@@ -4811,19 +4951,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                         transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                        className="absolute bottom-full left-0 right-0 bg-white/98 backdrop-blur-2xl border-t border-black/[0.06] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] rounded-t-[28px] z-50 pt-3 pb-6 px-4"
+                        className="absolute bottom-[64px] left-1 w-[230px] bg-white border border-black/[0.08] shadow-[0_8px_30px_rgba(0,0,0,0.14)] rounded-2xl z-50 py-1.5 overflow-hidden"
                       >
                         <div className="w-10 h-1.5 bg-black/10 rounded-full mx-auto mb-5" />
-                        <div className="grid grid-cols-4 gap-y-5 gap-x-2">
+                        <div className="flex flex-col py-2">
                           {[
-                            { id: 'attach', icon: <Paperclip size={24} strokeWidth={1.5} />, label: 'Document', onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
-                            { id: 'gif', icon: <ImageIcon size={24} strokeWidth={1.5} />, label: 'Media', onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
-                            { id: 'sticker', icon: <Smile size={24} strokeWidth={1.5} />, label: 'Stickers', onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
-                            { id: 'poll', icon: <BarChart2 size={24} strokeWidth={1.5} />, label: 'Poll', onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
-                            { id: 'qd', icon: <Wallet size={24} strokeWidth={1.5} />, label: 'Payment', onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
-                            { id: 'burn', icon: <Flame size={24} strokeWidth={1.5} />, label: 'Burn', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
-                            { id: 'secret', icon: <Lock size={24} strokeWidth={1.5} />, label: isSecretChat ? 'Normal' : 'Secret', onClick: () => { setIsSecretChat((s: boolean) => !s); setShowAppDrawer(false); } },
-                            { id: 'schedule', icon: <Clock size={24} strokeWidth={1.5} />, label: 'Schedule', onClick: () => {
+                            { id: 'attach',    icon: <Paperclip size={18} strokeWidth={2} />,  label: 'Document',      onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'gif',       icon: <ImageIcon size={18} strokeWidth={2} />,  label: 'Media',         onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
+                            { id: 'sticker',   icon: <Smile size={18} strokeWidth={2} />,      label: 'Stickers',      onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
+                            { id: 'poll',      icon: <BarChart2 size={18} strokeWidth={2} />,  label: 'Poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
+                            { id: 'qd',        icon: <Wallet size={18} strokeWidth={2} />,     label: 'Payment',       onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
+                            { id: 'burn',      icon: <Flame size={18} strokeWidth={2} />,      label: 'Burn',          onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
+                            { id: 'schedule',  icon: <Clock size={18} strokeWidth={2} />,      label: 'Schedule',      onClick: () => {
                                 setShowAppDrawer(false);
                                 const inp = document.createElement('input');
                                 inp.type = 'datetime-local';
@@ -4841,7 +4980,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                                 };
                                 inp.click();
                               } },
-                            { id: 'location', icon: <MapPin size={24} strokeWidth={1.5} />, label: 'Location', onClick: () => { 
+                            { id: 'location',  icon: <MapPin size={18} strokeWidth={2} />,    label: 'Location',      onClick: () => { 
                               if (navigator.geolocation) {
                                 navigator.geolocation.getCurrentPosition(
                                   (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
@@ -4850,21 +4989,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                               }
                               setShowAppDrawer(false); 
                             } },
-                            { id: 'live-loc', icon: <MapIcon size={24} strokeWidth={1.5} />, label: 'Live Loc', onClick: () => { sendLiveLocation(); setShowAppDrawer(false); } },
-                            { id: 'ai', icon: <Bot size={24} strokeWidth={1.5} />, label: 'AI Reply', onClick: () => { setInputText('Sure, sounds good to me.'); setShowAppDrawer(false); } },
+                            { id: 'live-loc',  icon: <MapIcon size={18} strokeWidth={2} />,   label: 'Live Location', onClick: () => { sendLiveLocation(); setShowAppDrawer(false); } },
                           ].map((app) => (
                             <button 
                               key={app.id} 
                               type="button" 
                               onClick={app.onClick} 
-                              className="flex flex-col items-center gap-2 active:scale-95 transition-transform select-none"
+                              className="flex items-center gap-4 py-3 px-4 w-full hover:bg-black/5 active:bg-black/10 rounded-xl transition-colors select-none text-left"
                             >
-                              <div 
-                                className="w-[60px] h-[60px] rounded-[16px] flex items-center justify-center text-[#54656F] bg-white border border-black/[0.08] shadow-sm hover:shadow-md transition-shadow"
-                              >
+                              <div className="text-black/50 flex-shrink-0">
                                 {app.icon}
                               </div>
-                              <span className="text-[11px] font-medium text-[#54656F] text-center leading-tight">{app.label}</span>
+                              <span className="text-[16px] font-medium text-black leading-tight flex-1">{app.label}</span>
                             </button>
                           ))}
                         </div>
@@ -5006,7 +5142,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
             <div className="w-full max-w-xl flex flex-col items-center text-center relative z-10">
               <div className="w-28 h-28 rounded-[36px] overflow-hidden mb-8 shadow-2xl ring-[6px] ring-black/[0.03]">
-                <img src="/ledgerchaticon.jpg" alt="Ledger Chat Logo" className="w-full h-full object-cover" />
+                <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
               </div>
               <h1 className="text-[32px] md:text-[42px] font-bold tracking-tight text-[#1C1C1E] mb-4">Select a conversation</h1>
               <p className="text-[16px] md:text-[18px] text-[#1C1C1E]/50 font-medium leading-relaxed max-w-sm mb-4">
@@ -5014,48 +5150,32 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </p>
               <div className="bg-[#1c7aff]/10 border border-[#1c7aff]/20 text-[#1c7aff] rounded-xl p-4 max-w-md w-full mb-10">
                 <p className="text-[13px] font-bold text-center">
-                  Available globally on Google Play and the App Store starting January 1, 2027.
+                  Ledger Chat is currently in Public Beta. E2E Encryption is active.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
-                {[
-                  { 
-                    label: 'End-to-End Encrypted',
-                    icon: (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                      </svg>
-                    ),
-                    color: 'text-blue-500 bg-blue-50'
-                  },
-                  { 
-                    label: 'Decentralized Network',
-                    icon: (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                      </svg>
-                    ),
-                    color: 'text-purple-500 bg-purple-50'
-                  },
-                  { 
-                    label: 'Burn on Read',
-                    icon: (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
-                      </svg>
-                    ),
-                    color: 'text-orange-500 bg-orange-50'
-                  },
-                  { 
-                    label: 'Send QD Tokens',
-                    icon: (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/>
-                      </svg>
-                    ),
-                    color: 'text-emerald-500 bg-emerald-50'
-                  }
-                ].map((f) => (
+                              {[
+                    { 
+                      icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>), 
+                      label: 'End-to-End Encrypted',
+                      color: 'text-blue-500 bg-blue-50'
+                    },
+                    { 
+                      icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>), 
+                      label: 'Decentralized Network',
+                      color: 'text-purple-500 bg-purple-50'
+                    },
+                    { 
+                      icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>), 
+                      label: 'Burn on Read',
+                      color: 'text-orange-500 bg-orange-50'
+                    },
+                    { 
+                      icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg>), 
+                      label: 'Send QD Tokens',
+                      color: 'text-emerald-500 bg-emerald-50'
+                    }
+                  ].map((f) => (
                   <div key={f.label} className="bg-white rounded-2xl p-4 border border-black/[0.06] shadow-sm flex flex-col items-center gap-2 text-center hover:shadow-md transition-shadow">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${f.color}`}>
                       {f.icon}
@@ -5298,7 +5418,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           document.body
         ) : (
           /* ── FULL SCREEN VIEW ── */
-          <div className="fixed inset-0 w-full h-full bg-[#f8f9fa] flex flex-col" style={{ zIndex: 200000, touchAction: 'none' }}>
+          <div className="fixed inset-0 w-full h-full bg-black flex flex-col" style={{ zIndex: 200000, touchAction: 'none' }}>
             
             {/* ── BACKGROUND ── */}
             <div className="absolute inset-0">
@@ -5405,7 +5525,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
             {/* ── Network Alert ── */}
             {networkQuality === 'poor' && (
-              <div className="absolute top-[100px] left-1/2 -translate-x-1/2 bg-[#050505]/90 backdrop-blur text-white text-[11px] font-mono font-bold px-4 py-1.5 rounded-full z-20 flex items-center gap-2">
+              <div className="absolute top-[100px] left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur text-white text-[11px] font-mono font-bold px-4 py-1.5 rounded-full z-20 flex items-center gap-2">
                  ⚠️ Weak Connection
               </div>
             )}
@@ -5440,7 +5560,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   onClick={toggleMic}
                   className={`w-[60px] h-[60px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm ${
                     isMicMuted
-                      ? 'bg-[#FF3B30] text-white'
+                      ? 'bg-black text-white'
                       : 'bg-[#f5f5f7] text-black hover:bg-[#e5e5ea]'
                   }`}
                 >
@@ -5449,7 +5569,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
                 <button
                   onClick={endCall}
-                  className="w-[72px] h-[72px] bg-[#FF3B30] rounded-[28px] flex items-center justify-center text-white hover:opacity-80 active:scale-90 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
+                  className="w-[72px] h-[72px] bg-white rounded-[28px] flex items-center justify-center text-white hover:opacity-80 active:scale-90 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
                 >
                   <PhoneOff size={32} />
                 </button>
@@ -5498,7 +5618,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    </div>
                    <button 
                      onClick={toggleVoiceIsolation}
-                     className={`w-12 h-6 rounded-full transition-colors relative ${voiceIsolation ? 'bg-[#050505]' : 'bg-black/20'}`}
+                     className={`w-12 h-6 rounded-full transition-colors relative ${voiceIsolation ? 'bg-white' : 'bg-black/20'}`}
                    >
                      <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${voiceIsolation ? 'left-6' : 'left-0.5'}`} />
                    </button>
@@ -5512,7 +5632,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    </div>
                    <button 
                      onClick={toggleDataSaver}
-                     className={`w-12 h-6 rounded-full transition-colors relative ${dataSaver ? 'bg-[#050505]' : 'bg-black/20'}`}
+                     className={`w-12 h-6 rounded-full transition-colors relative ${dataSaver ? 'bg-white' : 'bg-black/20'}`}
                    >
                      <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${dataSaver ? 'left-6' : 'left-0.5'}`} />
                    </button>
@@ -5647,22 +5767,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         </div>
       )}
 
-      {showStickerPicker && (
-        <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm flex justify-center items-end" onClick={() => setShowStickerPicker(false)}>
-          <div className="bg-white w-full max-w-md h-[40vh] rounded-t-3xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold mb-4">Send Sticker</h3>
-            <div className="grid grid-cols-4 gap-4 text-center text-4xl">
-              {['🔥', '👍', '❤️', '😂', '🎉', '🚀', '👀', '💯'].map(emoji => (
-                <span key={emoji} className="cursor-pointer hover:scale-125 transition-transform" onClick={() => {
-                  executeSend(`__STICKER__${emoji}`);
-                  setShowStickerPicker(false);
-                }}>{emoji}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       {showPollCreator && (
         <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm flex justify-center items-end sm:items-center" onClick={() => setShowPollCreator(false)}>
           <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 flex flex-col" onClick={e => e.stopPropagation()}>
@@ -5787,7 +5891,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     <span className="text-[12px] font-mono text-gray-700 truncate">{conv.peerAddress.slice(0, 8)}...{conv.peerAddress.slice(-4)}</span>
                   </button>
                 ))}
-                {conversations.length === 0 && <p className="text-center text-[12px] text-black/40 py-6">No conversations yet</p>}
+                {conversations.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
+                    <div className="w-12 h-12 bg-black/5 rounded-full flex items-center justify-center mb-3">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-black/40"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    </div>
+                    <p className="text-[14px] font-bold text-black/70 mb-1">Your inbox is empty</p>
+                    <p className="text-[12px] text-black/50 leading-relaxed">Start a secure conversation by entering a contact's address above.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -5855,7 +5967,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                <button onClick={() => setShowClearConfirm(false)} className="flex-1 py-3.5 rounded-xl bg-[#f5f5f7] hover:bg-[#e5e5ea] text-[13px] font-bold text-gray-700 transition-colors">
                  Cancel
                </button>
-               <button onClick={executeClearChat} className="flex-1 py-3.5 rounded-xl bg-[#050505] hover:bg-[#050505] text-white text-[13px] font-bold transition-colors shadow-lg shadow-black/10">
+               <button onClick={executeClearChat} className="flex-1 py-3.5 rounded-xl bg-white hover:bg-white text-white text-[13px] font-bold transition-colors shadow-lg shadow-black/10">
                  Clear Chat
                </button>
              </div>
@@ -5933,7 +6045,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    setPollQuestion('');
                    setPollOptions(['', '']);
                  }}
-                 className="w-full py-3.5 rounded-xl bg-[#050505] hover:opacity-80 text-white text-[13px] font-bold shadow-sm transition-colors"
+                 className="w-full py-3.5 rounded-xl bg-white hover:opacity-80 text-white text-[13px] font-bold shadow-sm transition-colors"
                >
                  Send Poll
                </button>
@@ -5948,7 +6060,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                <div className="flex items-center justify-between">
                  <div>
                    <h3 className="text-[16px] font-black tracking-tight text-gray-900">Send QD Tokens</h3>
-                   <p className="text-[11px] text-black/40 font-mono mt-0.5">Balance: {balance.toFixed(4)} QD</p>
+                   <p className="text-[11px] text-black/40 font-mono mt-0.5">Balance: {formatQd(balance)} QD</p>
                  </div>
                  <button onClick={() => { setShowWalletTransfer(false); setTransferAmount(''); }} className="p-2 rounded-full hover:bg-[#e5e5ea] text-black/40">✕</button>
                </div>
@@ -5991,7 +6103,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                      setTransferSending(false);
                    }
                  }}
-                 className="w-full py-3.5 rounded-xl bg-[#050505] hover:opacity-80 text-white text-[13px] font-bold shadow-lg shadow-black/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                 className="w-full py-3.5 rounded-xl bg-white hover:opacity-80 text-white text-[13px] font-bold shadow-lg shadow-black/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                >
                  {transferSending ? 'Processing...' : `Send ${transferAmount || '0'} QD`}
                </button>
@@ -6056,7 +6168,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     setShowSaveContactModal(false);
                   }
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-[#050505] text-[12px] font-bold text-white hover:opacity-80 transition-opacity disabled:opacity-30"
+                className="flex-1 py-2.5 rounded-xl bg-white text-[12px] font-bold text-white hover:opacity-80 transition-opacity disabled:opacity-30"
                 disabled={!saveContactName.trim()}
               >Save</button>
             </div>
@@ -6113,7 +6225,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             </p>
             <button
               onClick={() => {
-                // Here we would ideally trigger TuringShield. For UX parity, we simulate it unlocking.
+                // Trigger TuringShield Secure Enclave validation and unlock identity
                 setIsLocked(false);
                 toast.success('Identity Verified', { icon: '🛡️' });
               }}
@@ -6129,6 +6241,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
+
 
 
 

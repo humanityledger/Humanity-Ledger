@@ -53,7 +53,7 @@ export function ZKShieldStation() {
             {/*  ACADEMIC INTRO  */}
             <div className="p-8 border-b border-[#E5E5E5] bg-[#FFFFFF] flex items-center justify-between shrink-0">
                <div className="flex items-center gap-6">
-                  <div className="p-3 bg-[#050505] border border-[#050505] text-[#FFFFFF] rounded-xl">
+                  <div className="p-3 bg-white border border-[#050505] text-[#FFFFFF] rounded-xl">
                      <Shield size={20} />
                   </div>
                   <div>
@@ -90,7 +90,7 @@ export function ZKShieldStation() {
                       <button 
                         onClick={handleShield}
                         disabled={isProving}
-                        className="w-full py-5 bg-[#050505] border border-[#050505] text-[#FFFFFF] font-black uppercase tracking-[0.2em] text-[10px] hover:bg-[#FFFFFF] hover:text-[#050505] transition-all flex items-center justify-center gap-3 disabled:opacity-50 rounded-xl shadow-sm"
+                        className="w-full py-5 bg-white border border-[#050505] text-[#FFFFFF] font-black uppercase tracking-[0.2em] text-[10px] hover:bg-[#FFFFFF] hover:text-[#050505] transition-all flex items-center justify-center gap-3 disabled:opacity-50 rounded-xl shadow-sm"
                       >
                          {isProving ? <Activity size={14} className="animate-spin" /> : <EyeOff size={14} />}
                          {isProving ? 'SYNTHESIZING PROOF...' : 'EXECUTE ZK SHIELD'}
@@ -112,7 +112,7 @@ export function ZKShieldStation() {
                                <span className="text-[8px] text-[#888888] uppercase font-mono font-bold">Algorithm: Groth16 // Curve: BN128</span>
                             </div>
                             <div className="p-6 bg-[#FFFFFF]">
-                               <pre className="text-[10px] text-[#888888] font-mono font-bold leading-relaxed overflow-x-auto selection:bg-[#050505] selection:text-white">
+                               <pre className="text-[10px] text-[#888888] font-mono font-bold leading-relaxed overflow-x-auto selection:bg-white selection:text-white">
                                   {JSON.stringify(lastProof, null, 2)}
                                </pre>
                             </div>

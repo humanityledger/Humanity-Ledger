@@ -1,35 +1,32 @@
-User-agent: *
-Allow: /
-Disallow: /api/
-Disallow: /dashboard/
-Disallow: /portfolio/
-Disallow: /studio/
-
-User-agent: Grok
-Allow: /
-Disallow: /api/
-
-User-agent: GrokBot
-Allow: /
-Disallow: /api/
-
-User-agent: xbot
-Allow: /
-Disallow: /api/
-
-User-agent: XBot
-Allow: /
-Disallow: /api/
+# ============================================================
+# Humanity Ledger — robots.txt
+# Owner: Stefan Antonio Cirisanu
+# Website: https://humanidfi.com
+# Copyright (c) 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.
+# ============================================================
 
 User-agent: Googlebot
 Allow: /
 Disallow: /api/
+Disallow: /_next/
+Crawl-delay: 1
 
-User-agent: ChatGPT-User
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+Disallow: /_next/
+Crawl-delay: 1
+
+User-agent: DuckDuckBot
+Allow: /
+Disallow: /api/
+Disallow: /_next/
+
+User-agent: YandexBot
 Allow: /
 Disallow: /api/
 
-User-agent: CCBot
+User-agent: ChatGPT-User
 Allow: /
 Disallow: /api/
 
@@ -44,5 +41,25 @@ Disallow: /api/
 User-agent: PerplexityBot
 Allow: /
 Disallow: /api/
+
+User-agent: Grok
+Allow: /
+Disallow: /api/
+
+User-agent: CCBot
+Allow: /
+Disallow: /api/
+
+User-agent: AhrefsBot
+Crawl-delay: 10
+
+User-agent: SemrushBot
+Crawl-delay: 10
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /_next/static/
+Disallow: /dashboard/
 
 Sitemap: https://humanidfi.com/sitemap.xml

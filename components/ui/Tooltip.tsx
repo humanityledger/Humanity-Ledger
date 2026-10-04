@@ -42,7 +42,7 @@ export const Tooltip = ({ children, content, position = "top" }: { children: Rea
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className={`absolute z-[999] pointer-events-none whitespace-nowrap px-3 py-1.5 bg-[#050505] text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-xl shadow-black/10 border border-white/10 ${posStyles[position]}`}
+            className={`absolute z-[999] pointer-events-none whitespace-nowrap px-3 py-1.5 bg-white text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-xl shadow-black/10 border border-white/10 ${posStyles[position]}`}
           >
             {content}
           </motion.div>

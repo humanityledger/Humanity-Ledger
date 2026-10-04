@@ -25,6 +25,22 @@ const DynamicUniversalScanModal = dynamic(
   { ssr: false }
 );
 
+function AppStoreBadge() {
+  return (
+    <a href="#" className="block transition-transform hover:scale-105 active:scale-95">
+      <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83&releaseDate=1276560000" alt="Download on the App Store" className="h-[40px] w-auto" />
+    </a>
+  );
+}
+
+function GooglePlayBadge() {
+  return (
+    <a href="#" className="block transition-transform hover:scale-105 active:scale-95">
+      <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" className="h-[58px] w-auto -m-[9px]" />
+    </a>
+  );
+}
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -324,7 +340,9 @@ export default function ConnectPage() {
           <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" />
         </div>
         <h2 className="relative z-10 text-[32px] font-black tracking-[-0.03em] text-black mb-2">Ledger Chat</h2>
-        <p className="relative z-10 text-[14px] text-neutral-500 font-medium mb-6 text-center max-w-[280px] leading-relaxed">The world's most advanced cryptographic messenger.</p>
+        <p className="relative z-10 text-[14px] text-neutral-500 font-medium mb-6 text-center max-w-[280px] leading-relaxed">
+          The ultimate secure messenger. Perfectly comfortable for everyone, including older adults. No passwords needed.
+        </p>
         
         {/* Launch badge - sleek pill */}
         <div className="relative z-10 inline-flex items-center gap-3 pl-2 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/[0.04]">
@@ -350,7 +368,7 @@ export default function ConnectPage() {
 
           {/* Top logo */}
           <div className="relative z-20">
-            <HLLogo size={24} theme="dark" />
+            <HLLogo size={36} theme="dark" />
           </div>
 
           {/* Centre content */}
@@ -368,12 +386,14 @@ export default function ConnectPage() {
               <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" />
             </div>
 
-            <h1 className="text-[56px] xl:text-[64px] font-black tracking-[-0.04em] leading-none text-black mb-5">
-              Ledger Chat
-            </h1>
+            <h1 className="text-[56px] xl:text-[64px] font-black tracking-[-0.04em] leading-none text-black mb-3">Ledger Chat</h1>
+            <p className="text-[18px] font-semibold text-neutral-400 tracking-tight mb-5">Launching January 2027</p>
 
-            <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-10 max-w-[400px]">
-              The world's most advanced cryptographic messaging protocol. End-to-end encrypted, zero-knowledge, and fully sovereign.
+            <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-4 max-w-[420px]">
+              Ledger Chat is the world's most secure private messenger. But security means nothing if it is hard to use.
+            </p>
+            <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-10 max-w-[420px]">
+              No passwords to remember, no complex menus. Just open and connect. We designed it to be so intuitive that it is <strong>perfectly comfortable for older adults</strong> and absolutely seamless for everyone else.
             </p>
 
             {/* Launch advertisement - ultra premium pill */}
@@ -391,7 +411,7 @@ export default function ConnectPage() {
 
           {/* Bottom bar */}
           <div className="relative z-20 flex items-center justify-between opacity-40">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-black font-semibold">Zero-Knowledge Protocol</span>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-black font-semibold">Sovereign Protocol</span>
             <span className="text-[10px] font-mono uppercase tracking-widest text-black font-semibold">Timisoara R&amp;D Hub</span>
           </div>
         </div>

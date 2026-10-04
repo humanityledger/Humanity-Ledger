@@ -9,7 +9,7 @@ export default function AppChainStatus() {
         <div className="bg-white rounded-[2rem] p-8 border border-black/5 shadow-sm space-y-8">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-[#050505] flex items-center justify-center shadow-lg">
+                    <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-lg">
                         <Network className="text-white" size={24} />
                     </div>
                     <div>
@@ -49,7 +49,7 @@ export default function AppChainStatus() {
                     </div>
                 </div>
 
-                <div className="bg-[#050505] rounded-3xl p-6 space-y-4 text-white">
+                <div className="bg-white rounded-3xl p-6 space-y-4 text-white">
                     <div className="flex items-center gap-2 opacity-40">
                         <Cpu size={14} />
                         <span className="text-[9px] font-black uppercase tracking-widest">Inference Layer</span>

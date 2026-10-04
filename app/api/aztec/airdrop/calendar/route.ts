@@ -68,26 +68,30 @@ export async function POST(req: NextRequest) {
     // ── 5. Generate Native Aztec On-Chain Mint (or Fallback) ──
     const tokenAddressStr = process.env.AZTEC_TOKEN_CONTRACT_ADDRESS;
     const pxeUrl          = process.env.AZTEC_PXE_URL || 'https://node.aztec.network';
-    const relayerSecret   = process.env.AZTEC_RELAYER_SECRET || '0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6';
+    const relayerSecret   = process.env.AZTEC_RELAYER_SECRET_KEY;
 
+    // [SECURITY] Never fall back to a hardcoded key. If the relayer key is not configured,
+    // route to Mode B (DB-only ledger) immediately.
     let aztecTxHash = '';
     let explorerUrl = '';
-    let fallbackToModeB = !tokenAddressStr || tokenAddressStr === 'PENDING_DEPLOY';
+    let fallbackToModeB = !tokenAddressStr || tokenAddressStr === 'PENDING_DEPLOY' || !relayerSecret;
 
     if (!fallbackToModeB) {
       try {
-        const { EmbeddedWallet }            = await import('@aztec/wallets/embedded');
+        const { createPXEClient }           = await import('@aztec/aztec.js');
+        const { getSchnorrAccount }         = await import('@aztec/accounts/schnorr');
         const { Fr }                        = await import('@aztec/foundation/curves/bn254');
         const { AztecAddress }              = await import('@aztec/stdlib/aztec-address');
         const { TokenContract }             = await import('@aztec/noir-contracts.js/Token');
         const { SponsoredFeePaymentMethod } = await import('@aztec/aztec.js/fee');
         const { getFpcAddress }             = await import('@/lib/aztec/client');
 
-        const wallet = await EmbeddedWallet.create(pxeUrl, { ephemeral: true });
+        const pxe = createPXEClient(pxeUrl);
         
         const secretKey = Fr.fromHexString(relayerSecret.replace(/^0x/i, ''));
-        const accountManager = await wallet.createSchnorrAccount(secretKey, new Fr(0n));
-        const relayerAddr = accountManager.address;
+        const accountManager = getSchnorrAccount(pxe, secretKey, new Fr(0n), Fr.ZERO);
+        const wallet = await accountManager.getWallet();
+        const relayerAddr = wallet.getAddress();
 
         const tokenAddress  = AztecAddress.fromString(tokenAddressStr!);
         const toAddress     = AztecAddress.fromString(aztecAddress);
@@ -105,7 +109,7 @@ export async function POST(req: NextRequest) {
         explorerUrl = `${AZTEC_EXPLORER}/tx-effect/${aztecTxHash.replace('0x', '')}`;
         console.log(`[Calendar Airdrop] ✅ Native On-chain! Hash: ${aztecTxHash}`);
         
-        try { await wallet.stop(); } catch (e) {}
+        
       } catch (err: any) {
         console.warn(`[Calendar Airdrop] On-chain error (${err.message}). Falling back to Mode B.`);
         fallbackToModeB = true;

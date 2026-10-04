@@ -71,7 +71,7 @@ export function OmnichainBridgeView({ onBack }: { onBack: () => void }) {
         </button>
       </div>
 
-      <div className="bg-[#050505] text-[#00FF41] p-5 mb-6 relative overflow-hidden border border-black/20 shadow-xl">
+      <div className="bg-white text-[#00FF41] p-5 mb-6 relative overflow-hidden border border-black/20 shadow-xl">
         <div className="absolute right-0 top-0 opacity-10 transform translate-x-1/4 -translate-y-1/4">
           <ArrowRightLeft size={120} strokeWidth={0.5} />
         </div>

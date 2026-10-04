@@ -142,7 +142,7 @@ export function LedgerPortfolio() {
                     Capital Registry
                 </ScrollFloat>
                 <div className="flex items-center gap-2 mt-2 opacity-40">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#050505] " />
+                    <div className="w-1.5 h-1.5 rounded-full bg-white " />
                     <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] ">Sovereign Depth Tracking Active</span>
                 </div>
             </div>
@@ -237,7 +237,7 @@ function LedgerRow({ w }: { w: LedgerEntity }) {
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img src={ensAvatar} alt={w.label} className="w-8 h-8 rounded-full border border-[#E5E5E5]  object-cover shadow-sm" />
                     ) : (
-                        <div className="w-8 h-8 rounded-full bg-[#050505]  flex items-center justify-center text-[10px] font-black text-white  shadow-sm">
+                        <div className="w-8 h-8 rounded-full bg-white  flex items-center justify-center text-[10px] font-black text-white  shadow-sm">
                             {w.label[0]}
                         </div>
                     )}

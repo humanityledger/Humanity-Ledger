@@ -128,7 +128,7 @@ export function OmniExplorer() {
     };
 
     return (
-        <div className="relative h-full w-full min-h-0 font-sans p-0 flex flex-col selection:bg-[#050505]/20  selection:text-[#050505]  overflow-hidden bg-[#FFFFFF] ">
+        <div className="relative h-full w-full min-h-0 font-sans p-0 flex flex-col selection:bg-white/20  selection:text-[#050505]  overflow-hidden bg-[#FFFFFF] ">
             
             <div className="relative z-10 w-full h-full overflow-y-auto msv-hide-scrollbar flex flex-col gap-12">
                 {/* Header / Search Area */}
@@ -159,7 +159,7 @@ export function OmniExplorer() {
                         <button
                             onClick={handleSearch}
                             disabled={isSearching}
-                            className="absolute inset-y-2 right-2 bg-[#050505]  hover:bg-[#FFFFFF]  hover:text-[#050505]  hover:border-[#050505]  border border-transparent text-white  px-8 font-semibold text-[13px] transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded"
+                            className="absolute inset-y-2 right-2 bg-white  hover:bg-[#FFFFFF]  hover:text-[#050505]  hover:border-[#050505]  border border-transparent text-white  px-8 font-semibold text-[13px] transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded"
                         >
                             {isSearching ? 'Searching...' : 'Search'}
                         </button>
@@ -252,7 +252,7 @@ export function OmniExplorer() {
                                         />
 
                                         <div className="flex items-center gap-4 relative z-10">
-                                            <div className="w-12 h-12 bg-[#FFFFFF]  rounded-xl flex items-center justify-center border border-[#E5E5E5]  group-hover:bg-[#050505]  group-hover:text-white  transition-all">
+                                            <div className="w-12 h-12 bg-[#FFFFFF]  rounded-xl flex items-center justify-center border border-[#E5E5E5]  group-hover:bg-white  group-hover:text-white  transition-all">
                                                 <Box size={16} />
                                             </div>
                                             <div className="flex flex-col gap-1 text-left">
@@ -374,7 +374,7 @@ export function OmniExplorer() {
 
                                 <button
                                     onClick={() => { setSelectedBlock(null); setSelectedTx(null); }}
-                                    className="w-full mt-10 py-3 bg-[#050505]  text-white  rounded font-bold uppercase tracking-[0.2em] text-[10px] hover:bg-[#A0A0A0]  transition-colors"
+                                    className="w-full mt-10 py-3 bg-white  text-white  rounded font-bold uppercase tracking-[0.2em] text-[10px] hover:bg-[#A0A0A0]  transition-colors"
                                 >
                                     CLOSE
                                 </button>

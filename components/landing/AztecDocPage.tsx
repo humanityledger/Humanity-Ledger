@@ -1,11 +1,14 @@
 import React from 'react';
 import Link from 'next/link';
 
+import { MermaidDiagram } from '@/components/privacy/MermaidDiagram';
+
 export type AztecDocSection = {
   id?: string;
   title: string;
   paragraphs: string[];
   bullets?: string[];
+  diagram?: { chart: string; caption?: string };
   callout?: { title: string; body: string; href?: string; hrefLabel?: string };
 };
 
@@ -67,6 +70,11 @@ export function AztecDocPage({ eyebrow, title, subtitle, sections, children }: A
                     </li>
                   ))}
                 </ul>
+              )}
+              {section.diagram && (
+                <div className="mt-8">
+                  <MermaidDiagram chart={section.diagram.chart} caption={section.diagram.caption} />
+                </div>
               )}
               {section.callout && (
                 <div className="mt-8 rounded-2xl border border-[#2a1b4d]/15 overflow-hidden">

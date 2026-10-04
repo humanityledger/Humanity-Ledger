@@ -141,7 +141,7 @@ export function CanvasEngine() {
     return (
         <div
             ref={containerRef}
-            className="relative w-full h-full bg-[#050505] overflow-hidden cursor-grab active:cursor-grabbing text-white"
+            className="relative w-full h-full bg-white overflow-hidden cursor-grab active:cursor-grabbing text-white"
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
@@ -160,7 +160,7 @@ export function CanvasEngine() {
 
             {/* Loading Overlay */}
             {isLoading && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#050505]/80"
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80"
                      style={{ backdropFilter: 'var(--mobile-blur, blur(12px))', WebkitBackdropFilter: 'var(--mobile-blur, blur(12px))' }}>
                     <div className="text-center space-y-4">
                         <div className="w-12 h-12 border-2 border-[var(--aztec-orchid)] border-t-transparent rounded-full animate-spin mx-auto" />

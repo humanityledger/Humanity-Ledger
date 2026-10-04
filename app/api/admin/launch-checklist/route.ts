@@ -22,7 +22,7 @@ export async function GET() {
   checks.push({
     name: 'Redis Cache',
     status: redis.ok ? 'PASS' : 'WARN',
-    note: redis.mode === 'mock' ? 'Running in mock mode — add REDIS_URL env var for production' : undefined,
+    note: redis.mode === 'standalone' ? 'Running in standalone mode — add REDIS_URL env var for production' : undefined,
   });
 
   // 3. Aztec Node
@@ -75,3 +75,4 @@ export async function GET() {
     timestamp: new Date().toISOString(),
   });
 }
+

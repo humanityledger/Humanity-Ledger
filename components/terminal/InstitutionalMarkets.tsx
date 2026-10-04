@@ -305,7 +305,7 @@ function TransactionRow({ item }: { item: any }) {
                                         </p>
                                         <button 
                                             onClick={() => setDecryptionState('DECRYPTING')}
-                                            className="px-8 py-4 bg-[#050505] text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-black/80 hover:scale-105 active:scale-95 transition-all shadow-[0_8px_30px_rgba(0,0,0,0.15)] flex items-center gap-3"
+                                            className="px-8 py-4 bg-white text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-black/80 hover:scale-105 active:scale-95 transition-all shadow-[0_8px_30px_rgba(0,0,0,0.15)] flex items-center gap-3"
                                         >
                                             <Eye size={16} /> Decrypt Private Data
                                         </button>
@@ -322,7 +322,7 @@ function TransactionRow({ item }: { item: any }) {
                                         animate={{ opacity: 1, y: 0 }} 
                                         className="bg-white rounded-[2rem] border border-[#E5E5E5] p-8 shadow-xl relative overflow-hidden"
                                     >
-                                        <div className="absolute top-0 left-0 w-full h-1 bg-[#050505]" />
+                                        <div className="absolute top-0 left-0 w-full h-1 bg-white" />
                                         <div className="flex items-center justify-between mb-8">
                                             <div className="flex items-center gap-3">
                                                 <div className="p-2 bg-emerald-500/10 rounded-full">
@@ -349,7 +349,7 @@ function TransactionRow({ item }: { item: any }) {
                                                     <span className="font-black text-[#888888] uppercase tracking-widest text-[9px]">Core Execution: </span>
                                                     {realAction}
                                                 </div>
-                                                <div className="inline-flex items-center gap-2 text-[10px] bg-[#050505] text-white px-3 py-1.5 rounded-lg font-bold shadow-md">
+                                                <div className="inline-flex items-center gap-2 text-[10px] bg-white text-white px-3 py-1.5 rounded-lg font-bold shadow-md">
                                                     <Shield size={12} className="text-white" /> Humanity Sentinel Network
                                                 </div>
                                             </div>
@@ -377,7 +377,7 @@ function TransactionRow({ item }: { item: any }) {
                                             </div>
 
                                             {/* Smart Contract / Routing Method */}
-                                            <div className="md:col-span-2 p-6 bg-[#050505] rounded-2xl text-white">
+                                            <div className="md:col-span-2 p-6 bg-white rounded-2xl text-white">
                                                 <div className="flex items-center gap-2 mb-4">
                                                     <FileCode2 size={14} className="text-white/40" />
                                                     <div className="text-[9px] font-black uppercase tracking-widest text-white/40">Raw Execution Protocol</div>
@@ -485,7 +485,7 @@ function LedgerTransactionExplorer() {
                                     onClick={() => setTxTab(tab)}
                                     className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] transition-all whitespace-nowrap ${
                                         txTab === tab
-                                        ? 'bg-[#050505] text-white shadow-[0_8px_20px_rgba(0,0,0,0.15)] scale-105'
+                                        ? 'bg-white text-white shadow-[0_8px_20px_rgba(0,0,0,0.15)] scale-105'
                                         : 'bg-white text-[#888888] border border-[#E5E5E5] hover:text-[#050505] hover:border-black/20'
                                     }`}
                                 >
@@ -629,7 +629,7 @@ export function InstitutionalMarkets() {
                             {activeSection === sec.id && (
                                 <motion.div
                                     layoutId="marketsSectionUnderline"
-                                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#050505] rounded-t-full"
+                                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-t-full"
                                 />
                             )}
                             <span className="font-mono text-[9px] opacity-50 mr-1.5">{sec.tag}</span>

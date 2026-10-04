@@ -212,7 +212,7 @@ export function PreCognitiveGrid({ symbol }: PreCognitiveGridProps) {
                 <div className="flex items-center justify-between z-10 relative">
                     <div className="flex items-center gap-3">
                         <span className="text-2xl font-black italic tracking-tighter text-[#050505]">{symbol}</span>
-                        <span className="px-2 py-0.5 rounded text-[8px] font-black bg-[#050505] text-white tracking-[0.2em] shadow-sm flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded text-[8px] font-black bg-white text-white tracking-[0.2em] shadow-sm flex items-center gap-1">
                             <Zap size={8} className="text-amber-400" />
                             PRE-COG
                         </span>
@@ -239,7 +239,7 @@ export function PreCognitiveGrid({ symbol }: PreCognitiveGridProps) {
                         <canvas ref={canvasRef} width={800} height={40} className="w-full h-full absolute top-0 left-0 bg-transparent rounded pointer-events-none" />
                         
                         {/* Gauge Axis Line */}
-                        <div className="absolute top-1/2 -translate-y-1/2 w-full h-1 bg-[#050505]/5 rounded-full" />
+                        <div className="absolute top-1/2 -translate-y-1/2 w-full h-1 bg-white/5 rounded-full" />
                         
                         {/* Interactive Position Node */}
                         <motion.div 
@@ -260,7 +260,7 @@ export function PreCognitiveGrid({ symbol }: PreCognitiveGridProps) {
                             <motion.div 
                                 animate={gravityPercent > 85 ? { scale: [1, 1.08, 1] } : { scale: 1 }}
                                 transition={gravityPercent > 85 ? { duration: 0.8, repeat: Infinity, ease: "easeInOut" } : {}}
-                                className={`w-3 h-3 rounded-full bg-[#050505] border border-white transition-all duration-300 mix-blend-multiply ${auraClass}`} 
+                                className={`w-3 h-3 rounded-full bg-white border border-white transition-all duration-300 mix-blend-multiply ${auraClass}`} 
                                 style={{ backgroundColor: gravityPercent > 70 ? gaugeColor : '#050505' }}
                             />
                         </motion.div>
@@ -275,7 +275,7 @@ export function PreCognitiveGrid({ symbol }: PreCognitiveGridProps) {
                             animate={{ opacity: 1, y: 0, backdropFilter: 'blur(12px)' }}
                             exit={{ opacity: 0, y: 5, backdropFilter: 'blur(0px)' }}
                             transition={{ duration: 0.2 }}
-                            className="absolute inset-0 bg-[#050505]/90 z-30 p-5 flex flex-col justify-center overflow-auto"
+                            className="absolute inset-0 bg-white/90 z-30 p-5 flex flex-col justify-center overflow-auto"
                         >
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4 divide-x divide-white/10">

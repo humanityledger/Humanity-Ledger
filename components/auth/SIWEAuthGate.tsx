@@ -223,7 +223,7 @@ function SIWEPanel({
             >
               <Fingerprint size={16} className="opacity-80" />
               USE PASSKEY / FACE ID
-              <span className="absolute top-1 right-2 text-[8px] bg-[#050505] text-white px-2 py-0.5 rounded-full">PRO</span>
+              <span className="absolute top-1 right-2 text-[8px] bg-white text-white px-2 py-0.5 rounded-full">PRO</span>
             </motion.button>
 
             {/* Standard SIWE Auth */}

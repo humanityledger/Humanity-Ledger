@@ -151,7 +151,7 @@ const THEMES: Record<string, ThemeConfig> = {
     accentBg: 'bg-black/5',
     accentText: 'text-black/70',
     iconColor: 'text-black/30',
-    bannerVerifiedBg: 'bg-[#050505]',
+    bannerVerifiedBg: 'bg-white',
     bannerVerifiedText: 'text-white',
     bannerPendingBg: 'bg-black/5',
     bannerPendingText: 'text-black/60',

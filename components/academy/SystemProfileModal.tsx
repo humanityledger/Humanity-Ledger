@@ -15,7 +15,7 @@ export function SystemProfileModal({
 }) {
   const [activeTab, setActiveTab] = useState("IDENTITY");
 
-  // Mock states until full actions hook logic is integrated:
+  // Local states until full actions hook logic is integrated:
   const sessionLogs = [
     { timestamp: "2026-04-19 14:02:11", action: "LESSON_COMPLETED", ip: "192.168.1.1", loc: "Madrid, ES" },
     { timestamp: "2026-04-19 13:45:00", action: "TASK_SUBMISSION", ip: "192.168.1.1", loc: "Madrid, ES" },
@@ -183,3 +183,4 @@ export function SystemProfileModal({
     </AnimatePresence>
   );
 }
+

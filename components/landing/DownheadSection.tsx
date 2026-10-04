@@ -18,7 +18,7 @@ export const DownheadSection = () => {
   return (
     <section 
       ref={containerRef}
-      className="hidden lg:block downhead-cursor-zone relative py-40 bg-[#050505] overflow-hidden border-y border-white/5"
+      className="hidden lg:block downhead-cursor-zone relative py-40 bg-white overflow-hidden border-y border-white/5"
     >
       <DownheadCursor containerRef={containerRef} />
       

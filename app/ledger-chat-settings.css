@@ -1,0 +1,58 @@
+/**
+ * LedgerChat Dynamic CSS Variables
+ * These are populated at runtime by useSettingsEffect.ts
+ * based on each user's personal settings from pxeEngine.
+ */
+
+:root {
+  /* Chat background — controlled by chat_background setting */
+  --ledger-chat-bg: #FFFFFF;
+
+  /* Font size — controlled by font_size setting */
+  --ledger-chat-font-size: 15px;
+
+  /* Font family — controlled by font_family setting */
+  --ledger-chat-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* Message bubble padding — controlled by ui_density setting */
+  --ledger-message-padding: 14px;
+
+  /* Watermark overlay opacity — controlled by watermark_enabled setting */
+  --ledger-watermark-opacity: 0;
+}
+
+/* Apply font globally in chat context */
+.ledger-chat-container {
+  background: var(--ledger-chat-bg);
+  font-family: var(--ledger-chat-font-family);
+  font-size: var(--ledger-chat-font-size);
+}
+
+/* Message bubbles use density variable */
+.ledger-message-bubble {
+  padding: var(--ledger-message-padding);
+}
+
+/* Watermark overlay — always present in DOM, opacity controlled */
+.ledger-watermark {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: var(--ledger-watermark-opacity);
+  transition: opacity 0.3s ease;
+  overflow: hidden;
+  user-select: none;
+  z-index: 10;
+}
+
+.ledger-watermark span {
+  font-size: clamp(40px, 8vw, 80px);
+  font-weight: 900;
+  color: #000;
+  transform: rotate(-30deg);
+  white-space: nowrap;
+  letter-spacing: 0.3em;
+}

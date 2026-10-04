@@ -186,7 +186,7 @@ export function ProvenanceSessionGate({ children }: { children: React.ReactNode 
           {isConnected ? (
             <button
               onClick={handleManualSiwe}
-              className="w-full py-4 rounded-2xl bg-[#050505] text-[#FFFFFF] text-sm font-bold uppercase tracking-widest mt-4 flex items-center justify-center gap-2 hover:bg-black/90 active:scale-95 transition-all shadow-lg"
+              className="w-full py-4 rounded-2xl bg-white text-[#FFFFFF] text-sm font-bold uppercase tracking-widest mt-4 flex items-center justify-center gap-2 hover:bg-black/90 active:scale-95 transition-all shadow-lg"
             >
               Sign Secure Connection
             </button>

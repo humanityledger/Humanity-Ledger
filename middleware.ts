@@ -309,7 +309,7 @@ export const config = {
      * Match all request paths EXCEPT static files and Next.js internals.
      * This runs for all pages and API routes.
      */
-    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.json|fonts|images|icons).*)',
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.json|fonts|images|icons|.*\\.jpg|.*\\.png|.*\\.svg|.*\\.webp|.*\\.mp3|.*\\.wav).*)',
   ],
 };
 

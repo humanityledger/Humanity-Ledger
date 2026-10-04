@@ -126,7 +126,7 @@ export function LedgerAcademy() {
                              Back
                         </button>
                         <button onClick={markLessonComplete}
-                            className="flex-1 py-2.5 rounded text-[10px] font-bold uppercase tracking-widest bg-[#050505] text-white hover:bg-[#A0A0A0] transition-colors flex items-center justify-center gap-2 border border-transparent">
+                            className="flex-1 py-2.5 rounded text-[10px] font-bold uppercase tracking-widest bg-white text-white hover:bg-[#A0A0A0] transition-colors flex items-center justify-center gap-2 border border-transparent">
                             <CheckCircle size={13} />
                             {selectedLesson.completed ? 'COMPLETED' : 'MARK COMPLETE'}
                         </button>

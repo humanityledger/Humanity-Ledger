@@ -362,7 +362,7 @@ function NewsArticleCard({ a, index, isExpanded, setExpandedId, readTime, volati
                                     <span className="text-[11px] text-[#050505]  font-mono font-black">{impactScore} / 100</span>
                                 </div>
                                 <div className="flex justify-end items-center">
-                                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-2.5 bg-[#050505]  text-white  rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-black/80  hover:shadow-lg hover:-translate-y-0.5 transition-all w-full justify-center md:w-auto">
+                                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-2.5 bg-white  text-white  rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-black/80  hover:shadow-lg hover:-translate-y-0.5 transition-all w-full justify-center md:w-auto">
                                         Read Source <ExternalLink size={12}/>
                                     </a>
                                 </div>

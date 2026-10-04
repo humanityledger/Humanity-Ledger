@@ -151,7 +151,7 @@ export function ConnectWalletModal() {
                 <motion.div
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                     onClick={closeConnectModal}
-                    className="absolute inset-0 bg-[#050505]/40 backdrop-blur-md"
+                    className="absolute inset-0 bg-white/40 backdrop-blur-md"
                 />
 
                 {/* Modal — slides up from bottom on mobile, scales in on desktop */}
@@ -227,7 +227,7 @@ export function ConnectWalletModal() {
 
                                         {/* WALLET_CONNECT & LEDGER  compact on mobile */}
                                         <div className="space-y-1.5">
-                                            <button onClick={handleAllWallets} className="group w-full flex items-center justify-between px-3 py-2.5 sm:p-4 border border-[#050505] bg-[#050505] hover:bg-[#222] active:bg-[#111] text-white rounded-xl transition-all shadow-md">
+                                            <button onClick={handleAllWallets} className="group w-full flex items-center justify-between px-3 py-2.5 sm:p-4 border border-[#050505] bg-white hover:bg-[#222] active:bg-[#111] text-white rounded-xl transition-all shadow-md">
                                                 <div className="flex items-center gap-2.5">
                                                     <Wallet size={14} className="text-white" />
                                                     <div>
@@ -238,7 +238,7 @@ export function ConnectWalletModal() {
                                                 <ChevronRight size={13} className="text-white/60 group-hover:text-white" />
                                             </button>
 
-                                            <button onClick={handleMobileSync} className="group w-full flex items-center justify-between px-3 py-2.5 sm:p-4 border border-[#050505] bg-[#050505] hover:bg-[#222] rounded-xl transition-all shadow-md">
+                                            <button onClick={handleMobileSync} className="group w-full flex items-center justify-between px-3 py-2.5 sm:p-4 border border-[#050505] bg-white hover:bg-[#222] rounded-xl transition-all shadow-md">
                                                 <div className="flex items-center gap-3 text-white">
                                                     <QrCode size={15} />
                                                     <div className="text-left">

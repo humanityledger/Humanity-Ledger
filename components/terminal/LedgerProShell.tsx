@@ -77,7 +77,7 @@ function AztecSidebarItem({
             onClick={onClick}
             className={`relative w-full flex items-center justify-between py-2.5 px-3 rounded-xl group select-none outline-none transition-all duration-300 active:scale-95 ${
                 isActive
-                    ? 'bg-[#050505] shadow-md border border-[#1A1A1A]'
+                    ? 'bg-white shadow-md border border-[#1A1A1A]'
                     : 'bg-transparent border border-transparent hover:bg-black/[0.04]'
             } ${isLocked ? 'opacity-70 grayscale' : ''}`}
         >
@@ -259,7 +259,7 @@ export function LedgerProShell({
                     </p>
                     <button
                         onClick={unlockSession}
-                        className="px-8 py-3.5 bg-[#050505] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-black/80 transition-all active:scale-[0.98]"
+                        className="px-8 py-3.5 bg-white text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-black/80 transition-all active:scale-[0.98]"
                     >
                         Resume Session
                     </button>
@@ -380,7 +380,7 @@ export function LedgerProShell({
                                     {isActive && (
                                         <motion.span
                                             layoutId="mobileTabPill"
-                                            className="absolute top-2 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full bg-[#050505]"
+                                            className="absolute top-2 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full bg-white"
                                         />
                                     )}
                                     <span className={`transition-transform ${isActive ? 'scale-110' : 'scale-100'}`}>
@@ -459,7 +459,7 @@ export function LedgerProShell({
                                     onClick={() => { handleTabChange(item.id); setIsMenuDrawerOpen(false); }}
                                     className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
                                         isActive
-                                            ? 'bg-[#050505] text-white'
+                                            ? 'bg-white text-white'
                                             : 'bg-black/[0.02] hover:bg-black/[0.05] text-[#050505]'
                                     } disabled:opacity-40 disabled:cursor-not-allowed`}
                                 >

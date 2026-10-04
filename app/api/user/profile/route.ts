@@ -128,6 +128,7 @@ export async function PUT(req: NextRequest) {
           gasPreset: gasPreset || "STANDARD",
           mevProtection: mevProtection ?? false,
           stealthMode: stealthMode ?? false,
+          creditsBalance: 50000, // Welcome bonus — every new user starts with 50,000 QD tokens
         }
       });
       return NextResponse.json({ success: true, data: user });

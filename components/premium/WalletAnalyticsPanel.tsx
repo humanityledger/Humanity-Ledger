@@ -256,7 +256,7 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
             <motion.div 
                 initial={{ scale: 0.95, opacity: 0, y: 20 }} 
                 animate={{ scale: 1, opacity: 1, y: 0 }}
-                className="bg-[#050505]/90 border border-white/10 w-full max-w-[2560px] mx-auto rounded-[2rem] shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] relative overflow-hidden text-left"
+                className="bg-white/90 border border-white/10 w-full max-w-[2560px] mx-auto rounded-[2rem] shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] relative overflow-hidden text-left"
             >
                 {/* Background Ambient Glow */}
                 <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-blue-900/20 to-transparent pointer-events-none" />

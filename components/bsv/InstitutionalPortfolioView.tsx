@@ -36,6 +36,7 @@ import { NativeSendView } from '@/components/portfolio/NativeSendView';
 import { SystemFooter } from '@/components/landing/SystemFooter';
 import { useAztecNative } from '@/context/AztecNativeContext';
 import { Zap } from 'lucide-react';
+import { formatQd } from '@/lib/qd';
 import { useSettings } from '@/src/context/SettingsContext';
 
 
@@ -544,7 +545,7 @@ function QDBadgeInline({ onClickAztec }: { onClickAztec: () => void }) {
             className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-900/10 bg-zinc-900/5 rounded-full hover:bg-zinc-900 hover:text-white transition-colors"
         >
             <Zap size={10} className="text-amber-500" />
-            <span className="text-[9px] font-black uppercase tracking-widest">{balance.toFixed(2)} QD</span>
+            <span className="text-[9px] font-black uppercase tracking-widest">{formatQd(balance)} QD</span>
         </button>
     );
 }
@@ -609,7 +610,7 @@ function AztecAwareTabButton({ tab, activeTab, onClick }: { tab: string; activeT
                 )}
                 {isAztec && hasIdentity && (
                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-500/20 text-amber-700 text-[7px] font-black rounded-full ml-1">
-                        {balance.toFixed(1)} QD
+                        {formatQd(balance)} QD
                     </span>
                 )}
             </span>

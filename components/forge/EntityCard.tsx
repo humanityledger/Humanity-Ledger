@@ -78,7 +78,7 @@ export function EntityCard({ entity }: { entity: any }) {
         </div>
 
         {/* Action */}
-        <button className="w-full mt-2 py-3 rounded-xl bg-[#FFFFFF] border border-black/10 text-[10px] font-black uppercase tracking-widest text-[#050505] hover:bg-[#050505] hover:text-white transition-colors group/btn flex items-center justify-center gap-2">
+        <button className="w-full mt-2 py-3 rounded-xl bg-[#FFFFFF] border border-black/10 text-[10px] font-black uppercase tracking-widest text-[#050505] hover:bg-white hover:text-white transition-colors group/btn flex items-center justify-center gap-2">
            <Activity size={12} className="opacity-50 group-hover/btn:opacity-100" />
            Invoke in Vault
         </button>

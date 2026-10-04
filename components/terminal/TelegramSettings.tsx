@@ -264,7 +264,7 @@ export default function TelegramSettings({ wallet }: { wallet: string }) {
               onClick={() => setEvSignals(v => !v)}
               className={`w-full py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
                 evSignals
-                  ? 'bg-[#050505] border-[#050505] text-white'
+                  ? 'bg-white border-[#050505] text-white'
                   : 'bg-white border-[#E5E5E5] text-[#888888] hover:border-[#050505]'
               }`}
             >

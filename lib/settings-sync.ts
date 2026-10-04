@@ -46,6 +46,7 @@ export class SettingsSyncService {
       const data = await this.retryableRequest<any>(async () => {
         return fetch('/api/user/settings', {
           method: 'GET',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -91,6 +92,7 @@ export class SettingsSyncService {
 
         return fetch('/api/user/settings', {
           method: 'PUT',
+          credentials: 'include',
           headers,
           body: JSON.stringify({
             ...settings,
@@ -236,6 +238,7 @@ export class SettingsSyncService {
 
         return fetch('/api/user/settings', {
           method: 'PATCH',
+          credentials: 'include',
           headers,
           body: JSON.stringify(updates),
         });

@@ -162,7 +162,7 @@ export function PortfolioSecurityPanel() {
                   <p className="text-[11px] text-[#050505]/50 font-medium mb-4 text-center px-4">Asegúrate de que nadie esté mirando tu pantalla.</p>
                   <button 
                     onClick={() => setShowMnemonic(true)}
-                    className="px-6 py-3 rounded-xl bg-[#050505] text-white transition-all font-black text-[11px] uppercase tracking-widest active:scale-[0.96] shadow-md"
+                    className="px-6 py-3 rounded-xl bg-white text-white transition-all font-black text-[11px] uppercase tracking-widest active:scale-[0.96] shadow-md"
                   >
                     Mostrar Frase
                   </button>

@@ -207,7 +207,7 @@ export function VirtualizedFirehose() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 10 }}
                             onClick={handleJumpTop}
-                            className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 bg-[#050505] text-[#FFFFFF] text-[9px] font-black uppercase tracking-widest rounded-full shadow-lg hover:scale-105 transition-transform active:scale-95 border border-[#E5E5E5]/20"
+                            className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 bg-white text-[#FFFFFF] text-[9px] font-black uppercase tracking-widest rounded-full shadow-lg hover:scale-105 transition-transform active:scale-95 border border-[#E5E5E5]/20"
                         >
                             <ChevronUp size={12} /> Jump to Active Stream
                         </motion.button>

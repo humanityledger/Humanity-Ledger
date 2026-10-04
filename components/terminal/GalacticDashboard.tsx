@@ -48,12 +48,12 @@ interface ActivityEvent {
 
 const GenericModal = ({ title, onClose, children }: { title: string, onClose: () => void, children: React.ReactNode }) => (
   <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in" onClick={onClose}>
-    <div className="w-full max-w-4xl bg-[#050505] rounded-[40px] shadow-[0_0_80px_-20px_rgba(168,85,247,0.3)] border border-white/10 max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+    <div className="w-full max-w-4xl bg-white rounded-[40px] shadow-[0_0_80px_-20px_rgba(168,85,247,0.3)] border border-white/10 max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
       <div className="p-4 flex justify-between items-center border-b border-white/5 shrink-0 bg-[#0A0A0A] rounded-t-[40px]">
         <h2 className="text-xl font-bold ml-4 text-white tracking-widest uppercase">{title}</h2>
         <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10 transition-colors"><X size={20} className="text-white/60" /></button>
       </div>
-      <div className="overflow-y-auto p-6 custom-scrollbar bg-[#050505] rounded-b-[40px] text-white">
+      <div className="overflow-y-auto p-6 custom-scrollbar bg-white rounded-b-[40px] text-white">
         {children}
       </div>
     </div>
@@ -155,7 +155,7 @@ export function GalacticDashboard() {
   };
 
   return (
-    <div className="w-full h-screen bg-[#050505] text-white flex overflow-hidden font-sans selection:bg-white/20">
+    <div className="w-full h-screen bg-white text-white flex overflow-hidden font-sans selection:bg-white/20">
       
       {/* 
         ========================================================================
@@ -300,7 +300,7 @@ export function GalacticDashboard() {
         MAIN CONTENT AREA : QUICK ACTIONS & TABS
         ========================================================================
       */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#050505] relative overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 bg-white relative overflow-hidden">
         
         {/* Subtle grid background */}
         <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '32px 32px' }} />
@@ -471,7 +471,7 @@ export function GalacticDashboard() {
       {/* Standalone Modals */}
       {showReceive && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in" onClick={() => setShowReceive(false)}>
-          <div className="w-full max-w-4xl bg-[#050505] rounded-[40px] border border-white/10 shadow-[0_0_80px_-20px_rgba(168,85,247,0.3)] overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-4xl bg-white rounded-[40px] border border-white/10 shadow-[0_0_80px_-20px_rgba(168,85,247,0.3)] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-4 flex justify-between items-center border-b border-white/5 bg-[#0A0A0A]">
               <h2 className="text-xl font-bold ml-4 text-white tracking-widest uppercase">Receive Assets</h2>
               <button onClick={() => setShowReceive(false)} className="p-2 rounded-full hover:bg-white/10 transition-colors"><X size={20} className="text-white/60" /></button>

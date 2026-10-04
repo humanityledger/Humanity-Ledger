@@ -98,7 +98,7 @@ export const InstitutionalChart: React.FC<ChartProps> = ({
   }, [data, backgroundColor, lineColor, textColor, areaTopColor, areaBottomColor, isZScoreMode]);
 
   return (
-    <div className="w-full relative border border-white/10 rounded-2xl p-4 bg-[#050505]">
+    <div className="w-full relative border border-white/10 rounded-2xl p-4 bg-white">
        <div className="absolute top-6 left-6 z-10 flex items-center gap-2">
          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
          <h3 className="text-[10px] font-black tracking-widest uppercase opacity-70 border border-white/10 bg-white/5 px-2 py-1 rounded-sm">
