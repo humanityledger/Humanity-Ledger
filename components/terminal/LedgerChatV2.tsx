@@ -50,6 +50,7 @@ import '@/app/ledger-chat-settings.css';
 import { VirtualizedMessageList } from '@/components/chat/VirtualizedMessageList';
 import { CrystalNavBar, NavTab } from '@/components/chat/CrystalNavBar';
 import { ContactInfoPanel } from '@/components/chat/ContactInfoPanel';
+import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import { LedgerUpdatesTab } from '@/components/chat/LedgerUpdatesTab';
 import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
 import { LedgerCommunitiesTab } from '@/components/chat/LedgerCommunitiesTab';

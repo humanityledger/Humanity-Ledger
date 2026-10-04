@@ -19,9 +19,12 @@ export function TerminalSettingsPanel() {
   const { nuclearDisconnect } = useSystemSignOut();
 
   const CATEGORIES = [
+    { id: 'account', label: 'Account' },
+    { id: 'notifications', label: 'Notifications' },
     { id: 'general', label: t('GENERAL_SETTINGS') },
     { id: 'display', label: t('APPEARANCE') },
     { id: 'privacy', label: t('PRIVACY_SECURITY') },
+    { id: 'payments', label: 'Payments & Unlocks' },
     { id: 'legal', label: 'Legal & Regulatory' },
   ];
 
@@ -168,6 +171,53 @@ export function TerminalSettingsPanel() {
                  transition={{ duration: 0.2 }}
                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
               >
+                                  {activeTab === 'account' && (
+                    <>
+                       {renderInput('displayName' as any, 'Display Name', 'Your visible name in chats', 'text')}
+                       <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
+                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">Wallet Address</span>
+                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">Your primary identity</span>
+                           <input disabled value="0x... (Connected Wallet)" className="w-full bg-black/5 border border-transparent rounded-xl px-5 py-3 text-[12px] font-mono text-black/50 cursor-not-allowed" />
+                       </div>
+                       <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
+                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">Linked Devices</span>
+                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">Manage your active sessions</span>
+                           <div className="text-[12px] font-black tracking-widest text-black">1 device (this device)</div>
+                       </div>
+                       <div className="flex flex-col p-6 bg-white border border-red-500/20 rounded-2xl hover:border-red-500/40 transition-all">
+                           <span className="text-[12px] font-black uppercase tracking-widest text-red-600 mb-1.5">Danger Zone</span>
+                           <span className="text-[10px] text-red-500/60 font-mono mb-4 leading-relaxed">Permanently delete your account and history</span>
+                           <button className="w-full px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border bg-red-50 text-red-600 border-red-200 hover:bg-red-500 hover:text-white">Delete Account</button>
+                       </div>
+                    </>
+                 )}
+
+                 {activeTab === 'notifications' && (
+                    <>
+                       {renderToggle('notif_msgs' as any, 'Message Notifications', 'Alert for incoming messages')}
+                       {renderToggle('notif_calls' as any, 'Call Notifications', 'Ring for incoming calls')}
+                       {renderToggle('notif_sound' as any, 'Notification Sound', 'Play sound on new messages')}
+                       {renderToggle('dnd' as any, 'Do Not Disturb', 'Silence all notifications')}
+                       {renderToggle('notif_preview' as any, 'Message Preview', 'Show message text in notifications')}
+                    </>
+                 )}
+
+                 {activeTab === 'payments' && (
+                    <>
+                       {renderToggle('payments_enabled' as any, 'Enable Crypto Payments', 'When disabled, all payment CTAs are hidden throughout the app')}
+                       <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
+                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">Sticker Premium Plan</span>
+                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">Current: Free Plan</span>
+                           <button className="w-full px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border bg-[#25D366] text-white border-transparent hover:bg-[#20bd5a]">Upgrade for €2.99/mo</button>
+                       </div>
+                       <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
+                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">QD Balance</span>
+                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">Available utility tokens</span>
+                           <div className="text-[16px] font-black tracking-widest text-black">0.00 QD</div>
+                       </div>
+                    </>
+                 )}
+
                  {activeTab === 'general' && (
                     <>
                        {renderSelect('language', t('LANGUAGE'), t('INTERFACE_LANGUAGE'), [
