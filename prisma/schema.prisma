@@ -1665,3 +1665,27 @@ model CommunityPost {
   @@index([communityId])
   @@index([authorAddress])
 }
+
+
+// Login Geo Events - GDPR compliant (no raw IP, only hashed + country)
+model LoginGeoEvent {
+  id            String   @id @default(uuid())
+  userId        String?
+  ipHash        String
+  countryCode   String   @default("XX")
+  countryName   String   @default("Unknown")
+  region        String?
+  city          String?
+  latitude      Float?
+  longitude     Float?
+  asn           String?
+  sessionType   String   @default("UNKNOWN")
+  authMethod    String   @default("UNKNOWN")
+  deviceType    String?
+  wasSuccessful Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([countryCode])
+  @@index([createdAt])
+}

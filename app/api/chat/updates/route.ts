@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
     // Find all my contacts
     const contacts = await (prisma as any).chatContact.findMany({
-      where: { owner_peer: { owner: caller } },
+      where: { owner: caller },
       select: { peer: true }
     });
     const contactAddresses = contacts.map((c: any) => c.peer);
