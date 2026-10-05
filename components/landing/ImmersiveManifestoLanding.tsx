@@ -181,12 +181,12 @@ function GooglePlayBadge() {
 // ─── Main ────────────────────────────────────────────────────────────────────
 export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoLandingProps) {
   return (
-    <div className="w-full bg-white font-sans selection:bg-[#2C6BED]/20">
+    <div className="w-full bg-white font-sans selection:bg-[#25D366]/20">
       <LandingNav />
 
       {/* ═══ SECTION 1 — HERO ═══════════════════════════════════════════════════ */}
       <section className="relative flex items-center bg-white pt-20 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_100%_100%_at_50%_-20%,rgba(44,107,237,0.07),rgba(255,255,255,0))] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_100%_100%_at_50%_-20%,rgba(37,211,102,0.06),rgba(255,255,255,0))] pointer-events-none" />
         <div className="absolute top-0 w-full h-[1px] bg-gradient-to-r from-transparent via-black/8 to-transparent" />
 
         <div className="max-w-7xl mx-auto px-5 md:px-10 w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center py-20 lg:py-28">
@@ -202,13 +202,13 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
 
             <h1 className="text-[52px] md:text-[72px] lg:text-[88px] font-black leading-[0.95] tracking-[-0.04em] text-[#050505] mb-6">
               The private<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2C6BED] to-[#6E95F5]">messenger</span><br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#25D366] to-[#128C7E]">messenger</span><br />
               you always wanted.
             </h1>
 
             <p className="text-[18px] md:text-[21px] font-medium leading-[1.6] text-[#1C1C1E]/60 mb-10 max-w-[520px]">
               Ledger Chat is the private messenger for people who value their freedom.
-              No phone number. No blockchain fees to send messages. No surveillance. Just signal.
+              No phone number. No blockchain fees to send messages. No surveillance. Your wallet is your identity.
             </p>
 
             {/* CTA buttons */}
@@ -257,8 +257,8 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             className="relative w-full flex items-center justify-center lg:col-span-5"
           >
             <div className="relative w-full max-w-[400px] mx-auto">
-              <div className="absolute inset-0 bg-[#2C6BED] blur-[100px] opacity-8 rounded-full" />
-              <div className="relative bg-white/40 backdrop-blur-3xl border border-white/60 rounded-[48px] shadow-[0_40px_100px_rgba(44,107,237,0.10),inset_0_2px_10px_rgba(255,255,255,0.8)] p-2">
+              <div className="absolute inset-0 bg-[#25D366] blur-[100px] opacity-8 rounded-full" />
+              <div className="relative bg-white/40 backdrop-blur-3xl border border-white/60 rounded-[48px] shadow-[0_40px_100px_rgba(37,211,102,0.10),inset_0_2px_10px_rgba(255,255,255,0.8)] p-2">
                 <div className="bg-white rounded-[40px] overflow-hidden" style={{ aspectRatio: '4/5', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(0,0,0,0.04)' }}>
                   <RemoteLottie
                     path="/lottie/texting.json"
@@ -296,15 +296,15 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             {[
               {
                 icon: <MessageCircle size={26} strokeWidth={2} />,
-                color: "text-[#2C6BED]",
-                bg: "bg-[#2C6BED]/8",
+                color: "text-[#25D366]",
+                bg: "bg-[#25D366]/8",
                 title: "Private by default.",
                 desc: "Every message you send is locked on your device before it travels anywhere. Only the person you are writing to holds the key to read it. No one else — not us, not any government, not any server — can read your messages.",
               },
               {
                 icon: <Fingerprint size={26} strokeWidth={2} />,
-                color: "text-[#30D158]",
-                bg: "bg-[#30D158]/10",
+                color: "text-[#25D366]",
+                bg: "bg-[#25D366]/10",
                 title: "No phone number required.",
                 desc: "You connect to Ledger Chat using a digital wallet — a small file on your device that acts as your identity. You do not need a SIM card, a phone number, or an email address. Your account belongs entirely to you.",
               },
@@ -348,7 +348,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             className="flex flex-col gap-10"
           >
             <div>
-              <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#2C6BED] mb-4">Step by step</p>
+              <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#25D366] mb-4">Step by step</p>
               <h2 className="text-[38px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] mb-5 leading-tight">
                 How to start<br />chatting in minutes.
               </h2>
@@ -486,7 +486,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               <div key={String(label)} className={`grid grid-cols-4 px-6 py-4 items-center ${i % 2 === 0 ? '' : 'bg-[#FAFAFA]'} border-b border-black/[0.03] last:border-0`}>
                 <span className="text-[15px] font-medium text-[#1C1C1E]/80">{String(label)}</span>
                 <div className="flex justify-center">
-                  {lc ? <Check size={18} strokeWidth={3} className="text-[#30D158]" /> : <span className="text-black/20 text-lg">—</span>}
+                  {lc ? <Check size={18} strokeWidth={3} className="text-[#25D366]" /> : <span className="text-black/20 text-lg">—</span>}
                 </div>
                 <div className="flex justify-center">
                   {wa ? <Check size={18} strokeWidth={3} className="text-black/25" /> : <span className="text-black/20 text-lg">—</span>}
@@ -512,7 +512,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               className="flex flex-col gap-8"
             >
               <div>
-                <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#2C6BED] mb-4">The Next Step in Humanity</p>
+                <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#25D366] mb-4">The Next Step in Humanity</p>
                 <h2 className="text-[38px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] mb-6 leading-tight">
                   Ledger Chat is live now on the web.<br />Mobile apps coming to iOS &amp; Android.
                 </h2>
@@ -527,14 +527,14 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
                 <div className="bg-[#F6F7F9] p-6 rounded-2xl">
                   <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
-                    <CheckCircle2 size={20} className="text-[#30D158]" />
+                    <CheckCircle2 size={20} className="text-[#25D366]" />
                   </div>
                   <h4 className="text-[17px] font-bold text-[#1C1C1E] mb-2">No passwords</h4>
                   <p className="text-[15px] font-medium text-[#1C1C1E]/60">Your device itself unlocks the app using your face or fingerprint. Nothing to remember, nothing to lose.</p>
                 </div>
                 <div className="bg-[#F6F7F9] p-6 rounded-2xl">
                   <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
-                    <Smile size={20} className="text-[#2C6BED]" />
+                    <Smile size={20} className="text-[#25D366]" />
                   </div>
                   <h4 className="text-[17px] font-bold text-[#1C1C1E] mb-2">Comfortable to read</h4>
                   <p className="text-[15px] font-medium text-[#1C1C1E]/60">Clean typography, high contrast colors, and an interface that scales perfectly if you need larger text.</p>
@@ -550,7 +550,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               className="w-full bg-[#F6F7F9] rounded-[40px] overflow-hidden flex items-center justify-center p-10 relative"
               style={{ aspectRatio: '4/3' }}
             >
-              <div className="absolute inset-0 bg-gradient-to-tr from-[#2C6BED]/5 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-[#25D366]/5 to-transparent" />
               <div className="text-center relative z-10 max-w-sm">
                 <h3 className="text-[24px] font-bold text-[#1C1C1E] mb-4">"It just works."</h3>
                 <p className="text-[16px] font-medium text-[#1C1C1E]/55">
@@ -636,16 +636,16 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 title: "iPhone",
                 sub: "Requires iOS 16 or later",
                 badge: "App Store — Coming Soon",
-                color: "text-[#2C6BED]",
-                bg: "bg-[#2C6BED]/8",
+                color: "text-[#25D366]",
+                bg: "bg-[#25D366]/8",
               },
               {
                 icon: <Smartphone size={28} />,
                 title: "Android",
                 sub: "Requires Android 10 or later",
                 badge: "Google Play — Coming Soon",
-                color: "text-[#30D158]",
-                bg: "bg-[#30D158]/8",
+                color: "text-[#25D366]",
+                bg: "bg-[#25D366]/8",
               },
               {
                 icon: <Globe size={28} />,
@@ -680,7 +680,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
         </div>
       </section>
 
-      {/* ═══ SECTION 7 — WHAT IS NEW ═════════════════════════════════════════════ */}
+      {/* ═══ SECTION 7 — PROTOCOL EXPLAINED ═══════════════════════════════════ */}
       <section className="bg-white py-24 md:py-32">
         <div className="max-w-4xl mx-auto px-5 md:px-10">
           <motion.div
@@ -690,7 +690,82 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             variants={fadeUp}
             className="text-center mb-14"
           >
-            <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#2C6BED] mb-4">Latest updates</p>
+            <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#25D366] mb-4">The Protocol</p>
+            <h2 className="text-[38px] md:text-[54px] font-bold tracking-tight text-[#1C1C1E] mb-4">
+              How Ledger Chat actually works.
+            </h2>
+            <p className="text-[18px] font-medium text-[#1C1C1E]/55 max-w-2xl mx-auto leading-relaxed">
+              Complete transparency about the technology behind your private conversations.
+            </p>
+          </motion.div>
+
+          <div className="flex flex-col gap-6">
+            {/* Protocol steps */}
+            {[
+              {
+                n: "01",
+                title: "Your wallet is your account.",
+                desc: "When you open Ledger Chat, your Ethereum wallet signs a one-time cryptographic message. This proves you control the wallet without revealing your private key. No username, no password, no phone number is ever collected. If you lose access to your wallet, a recovery phrase is all you need.",
+                color: "bg-[#25D366]",
+              },
+              {
+                n: "02",
+                title: "Messages travel over XMTP — not our servers.",
+                desc: "Every message you write is encrypted on your device using your wallet's public key before it leaves. It travels over XMTP, an open decentralized messaging network. Humanity Ledger's own servers never hold, route, or decrypt your messages. The ciphertext is the only thing that ever touches any server.",
+                color: "bg-[#128C7E]",
+              },
+              {
+                n: "03",
+                title: "Calls are direct — peer to peer.",
+                desc: "When you make a voice or video call, the connection is established directly between the two devices using WebRTC. The call offer and answer are negotiated over XMTP, so even the metadata of who is calling whom is end-to-end encrypted. No central media relay server is involved.",
+                color: "bg-[#25D366]",
+              },
+              {
+                n: "04",
+                title: "Crypto payments are on-chain — no intermediary.",
+                desc: "When you send ETH, USDC, or USDT inside a chat, the transaction is signed by your wallet and submitted directly to the Ethereum network. Humanity Ledger never touches your funds, holds a balance on your behalf, or charges a fee. The recipient address you type is exactly what receives the funds.",
+                color: "bg-[#128C7E]",
+              },
+              {
+                n: "05",
+                title: "Communities are structured but sovereign.",
+                desc: "Communities live in a PostgreSQL database for their structure (channels, members, roles, posts). Chat inside a Community channel travels over XMTP with the same end-to-end encryption as direct messages. Paid channel access is verified on-chain — the admin's wallet receives the payment, not Humanity Ledger.",
+                color: "bg-[#25D366]",
+              },
+            ].map((item, i) => (
+              <motion.div
+                key={item.n}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                custom={i * 0.07}
+                variants={fadeUp}
+                className="flex gap-6 bg-[#FAFAFA] border border-black/[0.05] rounded-2xl px-6 py-6 items-start hover:border-black/10 transition-colors"
+              >
+                <div className={`shrink-0 w-10 h-10 rounded-xl ${item.color} flex items-center justify-center`}>
+                  <span className="text-[12px] font-black text-white">{item.n}</span>
+                </div>
+                <div>
+                  <h4 className="text-[17px] font-bold text-[#1C1C1E] mb-2">{item.title}</h4>
+                  <p className="text-[15px] font-medium text-[#1C1C1E]/55 leading-relaxed">{item.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ SECTION 7.5 — LATEST UPDATES ═══════════════════════════════════ */}
+      <section className="bg-[#F6F7F9] py-24 md:py-32">
+        <div className="max-w-4xl mx-auto px-5 md:px-10">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="text-center mb-14"
+          >
+            <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#25D366] mb-4">Latest updates</p>
             <h2 className="text-[38px] md:text-[54px] font-bold tracking-tight text-[#1C1C1E] mb-4">
               What we have built recently.
             </h2>
@@ -703,31 +778,37 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             {[
               {
                 tag: "New",
-                title: "Communities with rich announcements",
-                desc: "Group administrators can now write and publish formatted announcements with images, bold text, and bullet points — similar to a publication inside the group.",
-                color: "bg-[#2C6BED] text-white",
-              },
-              {
-                tag: "Improved",
-                title: "Group invite links that you control",
-                desc: "Share a single link to invite people to a group. If you change your mind, revoke the link in one tap and it stops working immediately. Private groups block new entries automatically when you close them.",
-                color: "bg-[#30D158] text-white",
+                title: "Padlock loading screen — security made visible",
+                desc: "The app now opens with a green padlock that clicks shut as your cryptographic identity is established. A visual metaphor for what the protocol actually does: locking your channel before anyone enters.",
+                color: "bg-[#25D366] text-white",
               },
               {
                 tag: "New",
-                title: "Communities with free and paid channels",
-                desc: "Create a community with multiple channels. Choose which are free for everyone and which require a one-time unlock or monthly subscription. No competitor offers this combination with crypto-native payments in the same space.",
-                color: "bg-purple-600 text-white",
+                title: "Communities — free and paid channels",
+                desc: "Create a community with multiple channels. Choose which are free for everyone and which require a one-time crypto payment to unlock. The payment goes directly to the community admin's wallet — no platform cut, no App Store fees.",
+                color: "bg-[#128C7E] text-white",
+              },
+              {
+                tag: "New",
+                title: "Native crypto payments — ETH, USDC, USDT",
+                desc: "Send real cryptocurrency to anyone in your contacts directly inside the chat interface. Powered by your connected wallet via wagmi v2. The transaction is signed and submitted on-chain. Zero intermediaries. Zero artificial tokens required.",
+                color: "bg-[#25D366] text-white",
+              },
+              {
+                tag: "New",
+                title: "Live location sharing with OpenStreetMap",
+                desc: "Share your real-time position with a contact for a defined time window. The map is rendered using OpenStreetMap — no Google APIs, no third-party tracking. Your location is shared directly to the recipient and is automatically removed from the conversation when time expires.",
+                color: "bg-[#128C7E] text-white",
               },
               {
                 tag: "Improved",
-                title: "Total Control in Your Hands",
-                desc: "Every option in the Settings screen now has a visible effect on your account. Change your theme, adjust your privacy level, toggle notifications or message previews, and see the result immediately.",
+                title: "Rich post editor for community announcements",
+                desc: "Group administrators can write formatted announcements with bold text, headings, and bullet points using a full Tiptap-powered editor. Announcements are stored and surfaced at the top of the community feed.",
                 color: "bg-orange-500 text-white",
               },
               {
                 tag: "Security",
-                title: "End to end encrypted by default, no setup required",
+                title: "End-to-end encrypted by default — no setup required",
                 desc: "All conversations in Ledger Chat are encrypted from the moment they start. You do not need to enable anything. There is no plain text fallback mode. Every message is private, always.",
                 color: "bg-[#1C1C1E] text-white",
               },
@@ -739,7 +820,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 viewport={{ once: true }}
                 custom={i * 0.07}
                 variants={fadeUp}
-                className="flex gap-5 bg-[#FAFAFA] border border-black/[0.05] rounded-2xl px-6 py-5 items-start hover:border-black/10 transition-colors"
+                className="flex gap-5 bg-white border border-black/[0.05] rounded-2xl px-6 py-5 items-start hover:border-black/10 transition-colors"
               >
                 <span className={`shrink-0 text-[11px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md mt-0.5 ${item.color}`}>
                   {item.tag}
@@ -792,8 +873,8 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl"
             >
               {[
-                { icon: <MessageSquare size={22} />, label: "Private Messages", color: "text-[#2C6BED] bg-[#2C6BED]/8" },
-                { icon: <Mic size={22} />, label: "Voice Calls", color: "text-[#30D158] bg-[#30D158]/8" },
+                { icon: <MessageSquare size={22} />, label: "Private Messages", color: "text-[#25D366] bg-[#25D366]/8" },
+                { icon: <Mic size={22} />, label: "Voice Calls", color: "text-[#25D366] bg-[#25D366]/8" },
                 { icon: <Video size={22} />, label: "Video Calls", color: "text-purple-600 bg-purple-500/8" },
                 { icon: <Wallet size={22} />, label: "Send Payments", color: "text-orange-500 bg-orange-500/8" },
                 { icon: <Bell size={22} />, label: "Message Timers", color: "text-red-500 bg-red-500/8" },
@@ -831,21 +912,21 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             variants={fadeUp}
             className="flex flex-col items-center"
           >
-            <div className="w-20 h-20 mx-auto mb-8 bg-[#1C1C1E] rounded-3xl flex items-center justify-center shadow-xl">
-              <MessageCircle size={34} className="text-white" strokeWidth={1.8} />
+            <div className="w-24 h-24 mx-auto mb-8 bg-[#25D366] rounded-3xl flex items-center justify-center shadow-[0_16px_40px_rgba(37,211,102,0.25)]">
+              <Lock size={38} className="text-white" strokeWidth={2} />
             </div>
             <h2 className="text-[42px] md:text-[60px] font-bold tracking-tight text-[#1C1C1E] mb-6 leading-tight">
               Ready to start?
             </h2>
             <p className="text-[18px] font-medium text-[#1C1C1E]/55 mb-10 max-w-xl mx-auto leading-relaxed">
-              Ledger Chat is free, requires no sign up form, no email, and no phone number.
-              Open it in your browser right now. Mobile apps for iOS &amp; Android are coming soon.
+              Ledger Chat is free to use. No sign up form, no email, no phone number, no artificial tokens.
+              Connect your wallet and your encrypted channel is ready in seconds.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <Link
                 href="/chat"
-                className="inline-flex items-center gap-2 bg-[#1C1C1E] hover:bg-black text-white font-bold text-[17px] px-10 py-4 rounded-2xl transition-all shadow-lg active:scale-95"
+                className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold text-[17px] px-10 py-4 rounded-2xl transition-all shadow-[0_12px_32px_rgba(37,211,102,0.28)] active:scale-95"
               >
                 <MessageCircle size={20} />
                 Open Ledger Chat
@@ -865,7 +946,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             </div>
 
             <p className="text-[13px] font-medium text-[#1C1C1E]/35">
-              Free forever. No ads. No subscriptions. No data sold.
+              Free forever. No ads. No artificial tokens. No data sold. Open source protocol.
             </p>
           </motion.div>
         </div>

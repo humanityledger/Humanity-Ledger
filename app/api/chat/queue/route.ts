@@ -1,9 +1,48 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/session';
 
-export async function GET() {
-  return NextResponse.json({ error: '410 Gone: Protocol upgraded to True P2P (XMTP). Centralized storage is decommissioned.' }, { status: 410 });
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: NextRequest) {
+  try {
+    const address = req.headers.get('x-web3-address');
+    if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const normalized = address.toLowerCase();
+    const messages = await prisma.pendingChatMessage.findMany({
+      where: { recipient: normalized },
+      orderBy: { createdAt: 'asc' }
+    });
+    // Delete them after fetching
+    if (messages.length > 0) {
+      await prisma.pendingChatMessage.deleteMany({
+        where: { recipient: normalized }
+      });
+    }
+    return NextResponse.json({ messages });
+  } catch (e) {
+    console.error('[queue GET]', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
 }
 
-export async function POST() {
-  return NextResponse.json({ error: '410 Gone: Protocol upgraded to True P2P (XMTP). Centralized storage is decommissioned.' }, { status: 410 });
+export async function POST(req: NextRequest) {
+  try {
+    const address = req.headers.get('x-web3-address');
+    if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { recipient, content } = await req.json();
+    if (!recipient || !content) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+
+    const msg = await prisma.pendingChatMessage.create({
+      data: {
+        sender: address.toLowerCase(),
+        recipient: recipient.toLowerCase(),
+        content
+      }
+    });
+    return NextResponse.json({ success: true, id: msg.id });
+  } catch (e) {
+    console.error('[queue POST]', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
 }

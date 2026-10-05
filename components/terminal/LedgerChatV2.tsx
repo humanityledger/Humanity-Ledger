@@ -13,10 +13,11 @@ import { useSystemAccount } from '@/hooks/useSystemAccount';
 import { useSignMessage, useReconnect } from 'wagmi';
 import { sendViaOnion, registerAsRelay } from '@/lib/onion/OnionRouter';
 import { useAppKit } from '@reown/appkit/react';
-import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations } from '@/lib/xmtp/client';
+import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue } from '@/lib/xmtp/client';
 import { QrScanner } from '@/components/terminal/QrScanner';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { PadlockLoader } from '@/components/terminal/PadlockLoader';
+import { HLLogo } from '@/components/shared/HLLogo';
 import { TuringShieldGate } from '@/components/auth/TuringShieldGate';
 import { CreateGroupModal } from '../chat/CreateGroupModal';
 import type { Client } from '@xmtp/browser-sdk';
@@ -1084,9 +1085,35 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
     window.addEventListener('quantum_wakeup_signal', handleWakeup);
     document.addEventListener('visibilitychange', handleWakeup);
+    
+    // Offline Queue listener
+    const handleOfflineMsg = async (e: any) => {
+      const { sender, content, id, createdAt } = e.detail;
+      const msgData = {
+         id,
+         senderAddress: sender,
+         content,
+         sent: new Date(createdAt),
+         status: 'delivered' as const,
+         isMe: false,
+      };
+      if (typeof window !== 'undefined' && (window as any)._active_ledger_client) {
+         import('@/lib/chat/indexeddb').then(async ({ chatDB }) => {
+             const myAddress = (window as any)._active_ledger_client.address || address;
+             if (myAddress) {
+                 await chatDB.saveMessage(myAddress, sender, msgData).catch(() => {});
+                 // Force UI to update with new messages
+                 loadConversations();
+             }
+         });
+      }
+    };
+    window.addEventListener('ledger_offline_msg', handleOfflineMsg);
+
     return () => {
       window.removeEventListener('quantum_wakeup_signal', handleWakeup);
       document.removeEventListener('visibilitychange', handleWakeup);
+      window.removeEventListener('ledger_offline_msg', handleOfflineMsg);
     };
   }, [client, address]);
 
@@ -2450,6 +2477,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         //  Step 2: Initialize client (Direct Execution) 
         const realClient = await getXMTPClient(wagmiSigner);
         setClient(realClient);
+        if (typeof window !== 'undefined') (window as any)._active_ledger_client = { address };
+        
         if (typeof localStorage !== 'undefined') {
             localStorage.setItem('ledger_xmtp_initialized', 'true');
             // [ATOMIC INDEXING] Log session event (once per session)
@@ -2466,6 +2495,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }
         await loadConversations();
         
+        // Sync Offline Queue and inject into local stream
+        try {
+            await syncOfflineQueue(realClient, address);
+        } catch (e) {
+            console.error('[LedgerChatV2] Offline queue sync failed', e);
+        }
+
         // Identity Mint logic for WalletConnect wallets
         const isWalletConnect = connector?.id?.toLowerCase().includes('walletconnect');
         if (isWalletConnect || !isLocalSystemWallet) {
@@ -4126,9 +4162,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           {/* Top row: title + action buttons */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-<img src="/logo-mark.png" alt="Ledger Chat" className="w-8 h-8 rounded-lg shadow-sm object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/favicon.png'; }} />
-<h1 className="text-[22px] font-black text-[#000000] tracking-tight">Messages</h1>
-</div>
+              <HLLogo variant="mark" size={32} theme="dark" />
+              <h1 className="text-[22px] font-black text-[#000000] tracking-tight">Ledger Chat</h1>
+            </div>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setShowUserSearch(true)}

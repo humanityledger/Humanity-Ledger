@@ -243,8 +243,8 @@ function SlashMenu({ editor, position, onClose }: { editor: any; position: { x: 
 // ─── MAIN EDITOR ─────────────────────────────────────────────────────────────
 
 export interface RichPostEditorProps {
-  /** Called with { html, text, json } when user submits */
-  onPublish: (content: { html: string; text: string; json: any }) => void | Promise<void>;
+  /** Called with { html, text, json, title } when user submits */
+  onPublish: (content: { html: string; text: string; json: any; title: string }) => void | Promise<void>;
   /** Optional title for the modal */
   title?: string;
   /** Optional initial content (HTML) */
@@ -365,7 +365,7 @@ export function RichPostEditor({
     if (!text.trim() && !postTitle.trim()) return;
     setPublishing(true);
     try {
-      await onPublish({ html, text, json: editor.getJSON() });
+      await onPublish({ html, text, json: editor.getJSON(), title: postTitle });
     } finally {
       setPublishing(false);
     }
@@ -715,9 +715,9 @@ export function RichPostEditorModal({
   communityName?: string;
   communityId?: string; // <--- Added this
   myAddress: string;
-  onPublished?: (content: { html: string; text: string; json: any }) => void;
+  onPublished?: (content: { html: string; text: string; json: any; title: string }) => void;
 }) {
-  const handlePublish = async (content: { html: string; text: string; json: any }) => {
+  const handlePublish = async (content: { html: string; text: string; json: any; title: string }) => {
     try {
       if (!communityId) {
         toast.error('No community selected');
@@ -737,6 +737,7 @@ export function RichPostEditorModal({
         },
         body: JSON.stringify({
           communityId,
+          title: content.title,
           authorAddress: myAddress.toLowerCase(), // also in body for reliability
           content: content.html,
           contentHtml: content.html,

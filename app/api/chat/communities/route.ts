@@ -41,7 +41,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ communities });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[communities GET]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { name, description, isPrivate } = await req.json();
-    if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 });
+    if (!name || typeof name !== 'string') return NextResponse.json({ error: 'Name required' }, { status: 400 });
 
     const joinCode = generateJoinCode();
 
@@ -73,7 +74,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ community });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[communities POST]', error);
+    if ((error as any)?.code === 'P2002') {
+      return NextResponse.json({ error: 'Already exists' }, { status: 409 });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -85,7 +90,7 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json();
     const { communityId, action, isPrivate } = body;
-    if (!communityId) return NextResponse.json({ error: 'Missing communityId' }, { status: 400 });
+    if (!communityId || typeof communityId !== 'string') return NextResponse.json({ error: 'Invalid communityId' }, { status: 400 });
 
     // Validate admin
     const member = await (prisma as any).communityMember.findUnique({
@@ -128,7 +133,11 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[communities PATCH]', error);
+    if ((error as any)?.code === 'P2002') {
+      return NextResponse.json({ error: 'Already exists' }, { status: 409 });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -138,7 +147,7 @@ export async function DELETE(req: NextRequest) {
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const id = req.nextUrl.searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'Missing community id' }, { status: 400 });
+    if (!id || typeof id !== 'string') return NextResponse.json({ error: 'Invalid community id' }, { status: 400 });
 
     const community = await (prisma as any).community.findUnique({
       where: { id }
@@ -151,6 +160,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[communities DELETE]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

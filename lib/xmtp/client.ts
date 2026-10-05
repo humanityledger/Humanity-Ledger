@@ -687,3 +687,25 @@ export async function resolveSenderAddress(senderInboxId: string, client?: Clien
 
 export async function getXmtpGroup(client: Client, groupId: string) { await client.conversations.sync(); const groups = await (client.conversations as any).listGroups(); return groups.find((g: any) => g.id === groupId); }
 export async function createXmtpGroup(client: Client, peerAddresses: string[]) { await client.conversations.sync(); return await (client.conversations as any).newGroup(peerAddresses); }
+
+// === OFFLINE QUEUE SYNC ===
+export async function syncOfflineQueue(client: Client, myEthAddress: string): Promise<void> {
+  try {
+    const res = await fetch('/api/chat/queue', {
+      headers: { 'x-web3-address': myEthAddress }
+    });
+    if (!res.ok) return;
+    const { messages } = await res.json();
+    if (messages && messages.length > 0) {
+      console.log('[XMTP] Syncing offline queue, found:', messages.length);
+      for (const msg of messages) {
+        if (typeof window !== 'undefined') {
+           window.dispatchEvent(new CustomEvent('ledger_offline_msg', { detail: msg }));
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[XMTP] Failed to sync offline queue', e);
+  }
+}
+

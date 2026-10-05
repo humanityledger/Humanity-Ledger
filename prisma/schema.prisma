@@ -372,8 +372,16 @@ model ChatContactRequest {
   @@index([fromAddress, status])
 }
 
-// Removed: PendingChatMessage (Centralized Offline Queue)
+model PendingChatMessage {
+  id          String   @id @default(uuid())
+  sender      String
+  recipient   String
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
 
+  @@index([recipient])
+  @@index([sender])
+}
 model ExchangePosition {
   id            String   @id @default(uuid())
   userId        String

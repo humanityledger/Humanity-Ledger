@@ -624,14 +624,9 @@ export const MessageBubble = React.memo(({
                   </button>
                 )}
                 <div
-                  className={`relative px-4 py-2.5 shadow-sm ${
-                    isMe ? 'msg-bubble-sent rounded-[20px] rounded-br-[5px]' : 'msg-bubble-recv rounded-[20px] rounded-bl-[5px]'
+                  className={`relative px-4 py-2.5 shadow-sm border ${
+                    isMe ? 'msg-bubble-sent rounded-[20px] rounded-br-[5px] bg-[#25D366] border-[#25D366]' : 'msg-bubble-recv rounded-[20px] rounded-bl-[5px] bg-white border-black/5'
                   }`}
-                  style={{
-                    background: isMe
-                      ? 'linear-gradient(145deg, #25D366 0%, #0a65e8 100%)'
-                      : '#e9e9eb',
-                  }}
                 >
                   <p
                     className={`whitespace-pre-wrap break-words leading-relaxed select-text ${
