@@ -52,6 +52,8 @@ import { CrystalNavBar, NavTab } from '@/components/chat/CrystalNavBar';
 import { ContactInfoPanel } from '@/components/chat/ContactInfoPanel';
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import { LedgerUpdatesTab } from '@/components/chat/LedgerUpdatesTab';
+import { BurnTimerSheet } from '@/components/chat/BurnTimerSheet';
+import { ScheduleMessageSheet } from '@/components/chat/ScheduleMessageSheet';
 import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
 import { LedgerCommunitiesTab } from '@/components/chat/LedgerCommunitiesTab';
 import { CommunityView } from '@/components/chat/CommunityView';
@@ -528,6 +530,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // ─── v2 + Phase 5: Chat Features ──────────────────────────────────────────────
   const [isSecretChat, setIsSecretChat] = useState(false);
   const [showPollCreator, setShowPollCreator] = useState(false);
+  const [showBurnSheet, setShowBurnSheet] = useState(false);
+  const [showScheduleSheet, setShowScheduleSheet] = useState(false);
   const [showWalletTransfer, setShowWalletTransfer] = useState(false);
   // Phase 5: Poll creator form state (hoisted to satisfy React rules of hooks)
   const [pollQuestion, setPollQuestion] = useState('');
