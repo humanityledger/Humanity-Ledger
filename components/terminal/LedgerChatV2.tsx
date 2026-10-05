@@ -230,12 +230,23 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   const bgStyle = React.useMemo((): React.CSSProperties => {
     switch (chatBackground) {
-      case 'amoled': return { background: '#000000' };
-      case 'holographic':
-        return { background: 'linear-gradient(135deg, rgba(102,126,234,0.15) 0%, rgba(118,75,162,0.15) 100%)' };
-      case 'matrix': return { background: '#0a1a0a' };
-      case 'gradient': return { background: 'linear-gradient(to bottom right, #f8f8f8, #e8e8f0)' };
-      default: return { background: '#FFFFFF' };
+      case 'minimal': return { background: '#FFFFFF' };
+      case 'dots': return { 
+          backgroundColor: '#FAFAFA', 
+          backgroundImage: 'radial-gradient(rgba(37,211,102,0.15) 1px, transparent 1px)', 
+          backgroundSize: '20px 20px'
+        };
+      case 'circuit': return {
+          backgroundColor: '#F0F2F5',
+          backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(37,211,102,0.05) 25%, rgba(37,211,102,0.05) 26%, transparent 27%, transparent 74%, rgba(37,211,102,0.05) 75%, rgba(37,211,102,0.05) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(37,211,102,0.05) 25%, rgba(37,211,102,0.05) 26%, transparent 27%, transparent 74%, rgba(37,211,102,0.05) 75%, rgba(37,211,102,0.05) 76%, transparent 77%, transparent)',
+          backgroundSize: '30px 30px'
+        };
+      case 'waves': return {
+          background: 'linear-gradient(135deg, #FFFFFF 0%, #EBE5DC 100%)'
+      };
+      case 'default':
+      default: 
+          return { backgroundColor: '#EBE5DC' };
     }
   }, [chatBackground, chatBackgroundCustomUrl]);
 
@@ -2537,7 +2548,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         const airdropData = await airdropRes.json();
                         if (airdropData.success) {
                             // Only show the welcome toast on the very first successful claim
-                            console.log('⚡ Sovereign Identity Active: 10 QDs received!', { 
+                            console.log('⚡ Sovereign Identity Active: 10 Crypto received!', { 
                                 description: 'Transaction confirmed on Aztec Mainnet.',
                                 explorerUrl: airdropData.explorerUrl
                             });
@@ -4523,7 +4534,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 </button>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 bg-[#f5f5f7] border border-black/10 rounded-xl" title="Available QDs">
+                <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 bg-[#f5f5f7] border border-black/10 rounded-xl" title="Available Crypto">
                   <span className="w-1.5 h-1.5 rounded-full bg-white shadow-sm animate-pulse" />
                   
                 </div>
@@ -4906,7 +4917,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       </div>
                     </button>
                     <button type="button" onClick={() => { setInputText(''); setShowPollCreator(true); }} className="px-3 py-2.5 text-left hover:bg-black/5 transition-colors flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                       </div>
                       <div className="flex flex-col">
@@ -5161,7 +5172,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     { 
                       icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>), 
                       label: 'End-to-End Encrypted',
-                      color: 'text-blue-500 bg-blue-50'
+                      color: 'text-[#25D366] bg-[#25D366]/10'
                     },
                     { 
                       icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>), 
@@ -5363,7 +5374,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 {activePeer ? `${activePeer.slice(0, 6)}...${activePeer.slice(-4)}` : ''}
               </p>
               <div className="flex items-center gap-1.5 mt-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse" />
                 <span className="text-white/40 text-[12px] animate-pulse">Calling...</span>
               </div>
             </div>
@@ -5793,13 +5804,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       {showWalletTransfer && (
         <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm flex justify-center items-end sm:items-center" onClick={() => setShowWalletTransfer(false)}>
           <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 flex flex-col" onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold mb-2 text-lg text-center">Transfer QD</h3>
+            <h3 className="font-bold mb-2 text-lg text-center">Transfer Crypto</h3>
             <p className="text-gray-500 text-sm text-center mb-6">Send funds directly via L2 Aztec Network</p>
             <div className="flex items-center justify-center gap-2 mb-6 text-4xl font-black text-gray-800">
-              $ <input id="qd-amount" type="number" placeholder="0.00" className="w-32 bg-transparent outline-none" />
+              $ <input id="crypto-amount" type="number" placeholder="0.00" className="w-32 bg-transparent outline-none" />
             </div>
             <button className="w-full bg-[#FF9500] text-white py-3 rounded-xl font-bold" onClick={() => {
-              const amt = document.getElementById('qd-amount').value;
+              const amt = document.getElementById('crypto-amount').value;
               if (amt && Number(amt) > 0) {
                 executeSend(`__PAYMENT__${amt}`);
                 setShowWalletTransfer(false);

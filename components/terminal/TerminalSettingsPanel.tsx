@@ -211,9 +211,9 @@ export function TerminalSettingsPanel() {
                            <button className="w-full px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border bg-[#25D366] text-white border-transparent hover:bg-[#20bd5a]">Upgrade for €2.99/mo</button>
                        </div>
                        <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
-                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">QD Balance</span>
-                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">Available utility tokens</span>
-                           <div className="text-[16px] font-black tracking-widest text-black">0.00 QD</div>
+                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">Crypto Balance</span>
+                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">Available crypto</span>
+                           <div className="text-[16px] font-black tracking-widest text-black">0.00 ETH</div>
                        </div>
                     </>
                  )}
@@ -297,7 +297,7 @@ export function TerminalSettingsPanel() {
                         </p>
                      </div>
                   )}
-               </motion.div>
+               {activeTab === 'chat' && (<div className='col-span-1 md:col-span-2'><p>Coming soon</p></div>)}\n               {activeTab === 'accessibility' && (<div className='col-span-1 md:col-span-2'><p>Coming soon</p></div>)}\n               {activeTab === 'appearance' && (<div className='col-span-1 md:col-span-2'><p>Coming soon</p></div>)}\n               </motion.div>
            </AnimatePresence>
          </div>
       </div>
