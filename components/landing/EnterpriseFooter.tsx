@@ -86,7 +86,7 @@ export function EnterpriseFooter() {
                         />
                         <DownloadButton
                             icon={<Apple className="w-6 h-6" />}
-                            title="iOS & Android"
+                            title="Mobile App — Coming Soon"
                             subtitle="Próximamente 2026"
                             onClick={() => handleDownloadClick('mobile')}
                             gradient="from-pink-500 to-purple-500"

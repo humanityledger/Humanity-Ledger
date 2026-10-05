@@ -123,10 +123,10 @@ export function MobileManifesto() {
           {/* Jan 1 2027 Announcement */}
           <motion.div variants={FADE_UP} className="mt-8 bg-white/80 backdrop-blur-md border border-[#EBEBEB] rounded-2xl p-4 shadow-sm w-full max-w-[300px] mx-auto text-center">
             <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0A0A0A] mb-1">
-              January 1, 2027
+              Live Now · Mobile Coming
             </div>
             <p className="text-[9px] font-mono text-[#666] uppercase tracking-[0.1em] leading-relaxed">
-              Global release on App Store & Google Play
+              Mobile apps for iOS & Android coming soon
             </p>
           </motion.div>
 

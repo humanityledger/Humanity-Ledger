@@ -19,7 +19,7 @@ const faqs = [
   },
   {
     q: "When will the mobile apps launch?",
-    a: "On January 1, 2027, the first ecosystem apps (LedgerChat, Portfolio, and Markets) will be officially launched on the App Store and Google Play, fully integrating our compliance and privacy layers for a broader audience."
+    a: "Ledger Chat is live now on web. Mobile apps for iOS and Android are coming soon. The full ecosysteally launched on the App Store and Google Play, fully integrating our compliance and privacy layers for a broader audience."
   }
 ];
 

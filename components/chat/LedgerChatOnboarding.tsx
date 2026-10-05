@@ -180,7 +180,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                   Get Started <ChevronRight size={18} />
                 </button>
                 <p className="text-[12px] text-black/30 mt-6">
-                  Available globally on Google Play &amp; App Store — January 1, 2027
+                  Available on the web now. Mobile apps coming soon.
                 </p>
               </motion.div>
             )}

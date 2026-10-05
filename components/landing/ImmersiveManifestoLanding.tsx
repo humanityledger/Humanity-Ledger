@@ -134,40 +134,40 @@ function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
   );
 }
 
-// App Store badge (High Quality)
+// App Store badge — coming soon notify
 function AppStoreBadge() {
   return (
     <a
       href="#notify"
-      className="flex items-center gap-2.5 bg-black hover:bg-[#1A1A1C] text-white px-5 py-2.5 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-white/5"
+      className="flex items-center gap-3 bg-black hover:bg-[#1A1A1C] text-white px-5 py-3 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-white/5 min-w-[150px]"
     >
-      <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
-        <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-1.996.04-3.875 1.154-4.908 2.946-2.096 3.633-.535 9.022 1.503 11.966 1.002 1.455 2.164 3.107 3.738 3.045 1.492-.061 2.062-.977 3.864-.977 1.782 0 2.316.977 3.882.94 1.625-.04 2.637-1.492 3.626-2.947 1.144-1.674 1.616-3.298 1.637-3.385-.035-.015-3.176-1.22-3.208-4.887-.033-3.076 2.518-4.572 2.636-4.64-1.442-2.115-3.666-2.404-4.48-2.464-1.92-.196-3.754 1.134-4.698 1.134-.999-.022-2.52-1.123-3.96-1.123h.01a5.59 5.59 0 001.007-6.745zm4.847-1.19c.772-1.025 1.258-2.42 1.109-3.79-.115.01-.252.023-.396.023-1.408 0-2.955-.83-3.816-1.916-.764-.95-1.326-2.39-1.15-3.75 1.246.05 2.809.835 3.633 1.83.694.848 1.233 2.174 1.082 3.499.043.01.094.015.138.015.14 0 .285-.018.423-.058a5.526 5.526 0 00-1.023 4.147z"/>
+      <svg viewBox="0 0 814 1000" width="24" height="24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105.3-42.1-165.9-40.8c-60.6 1.2-109 61.6-165.9 61.6s-88.9-61.6-157.5-123.1C20.5 764.6 0 640.1 0 535.1c0-215.1 140.5-328.7 279.5-328.7 74.4 0 136.6 49.2 183.1 49.2 44.6 0 114.6-51.7 201.2-51.7 31.3 0 108.2 4 168.9 57.8zM504.1 43.6c29.6-36 51.7-86.2 51.7-136.3 0-7-.6-14.1-1.9-19.8-48.7 1.9-106 33.5-139.3 74.5-27.3 32.7-51.7 82.3-51.7 132.4 0 7.6 1.3 15.1 1.9 17.7 3.2.6 8.3 1.3 13.4 1.3 44 0 98.7-29.2 125.9-69.8z"/>
       </svg>
       <div className="flex flex-col text-left">
-        <span className="text-[9px] font-medium opacity-80 leading-none mb-0.5 tracking-wide">Download on the</span>
-        <span className="text-[17px] font-bold leading-none tracking-tight">App Store</span>
+        <span className="text-[9px] font-medium opacity-70 leading-none mb-0.5 tracking-widest uppercase">Download on the</span>
+        <span className="text-[16px] font-bold leading-none tracking-tight">App Store</span>
       </div>
     </a>
   );
 }
 
-// Google Play badge (High Quality)
+// Google Play badge — coming soon notify
 function GooglePlayBadge() {
   return (
     <a
       href="#notify"
-      className="flex items-center gap-2.5 bg-black hover:bg-[#1A1A1C] text-white px-5 py-2.5 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-white/5"
+      className="flex items-center gap-3 bg-black hover:bg-[#1A1A1C] text-white px-5 py-3 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-white/5 min-w-[150px]"
     >
-      <svg viewBox="0 0 24 24" width="26" height="26">
-        <path fill="#4CAF50" d="M3.7,2.2l12.7,12.7L21.3,9L3.7,2.2z"/>
-        <path fill="#FFC107" d="M16.4,14.9L3.7,21.8l0,0C4,22,4.4,22,4.8,21.8l16.1-9.3L16.4,14.9z"/>
-        <path fill="#F44336" d="M3.7,2.2L3.7,2.2C3.3,2.4,3,2.9,3,3.4v17.2c0,0.5,0.3,1,0.7,1.2l12.7-12.7L3.7,2.2z"/>
-        <path fill="#2196F3" d="M21.3,9L16.4,14.9l4.5-4.5C21.6,9.8,21.6,9.4,21.3,9z"/>
+      <svg viewBox="0 0 512 512" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#4CAF50" d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1z"/>
+        <path fill="#FF3D00" d="m186 13 139.3 221.3-60.1 60.1L71.4 130.9C85.3 58.7 131.8 18.1 186 13z"/>
+        <path fill="#FFD600" d="M104.6 13C51.1 33.5 13 88.5 13 154.7v202.6c0 66.2 38.1 121.2 91.6 141.7L325.3 277.7 104.6 13z"/>
+        <path fill="#2196F3" d="M385.4 174.2 104.6 499c53.5 20.5 99.5-2.1 116.3-18.9L499 310.2c-13.9-65.8-57.4-113.9-113.6-136z"/>
       </svg>
       <div className="flex flex-col text-left">
-        <span className="text-[9px] font-medium opacity-80 leading-none mb-0.5 tracking-wide">GET IT ON</span>
-        <span className="text-[17px] font-bold leading-none tracking-tight">Google Play</span>
+        <span className="text-[9px] font-medium opacity-70 leading-none mb-0.5 tracking-widest uppercase">Get it on</span>
+        <span className="text-[16px] font-bold leading-none tracking-tight">Google Play</span>
       </div>
     </a>
   );
@@ -202,7 +202,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             >
               <div className="w-2.5 h-2.5 rounded-full bg-[#30D158] animate-pulse shadow-[0_0_12px_rgba(48,209,88,0.6)]" />
               <span className="text-[13px] font-bold text-[#1C1C1E] uppercase tracking-[0.1em]">
-                Launching January 2027 — iOS & Android
+                Live Now — Web · iOS & Android Coming Soon
               </span>
             </motion.div>
 
@@ -213,15 +213,15 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             </h1>
 
             <p className="text-[18px] md:text-[21px] font-medium leading-[1.6] text-[#1C1C1E]/60 mb-10 max-w-[520px]">
-              Ledger Chat is a messaging app where only you and the person you are talking to can read what is written.
-              No phone number required. No ads. No data collection. Ever.
+              Ledger Chat is the private messenger for people who value their freedom.
+              No phone number. No blockchain fees to send messages. No surveillance. Just signal.
             </p>
 
             {/* CTA buttons */}
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-8">
               <Link
                 href="/chat"
-                className="bg-white hover:bg-[#1A1A1A] text-white font-bold text-[16px] px-8 py-4 rounded-2xl transition-all shadow-[0_8px_24px_rgba(0,0,0,0.12)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
+                className="bg-[#1A1A1A] hover:bg-black text-white font-bold text-[16px] px-8 py-4 rounded-2xl transition-all shadow-[0_8px_24px_rgba(0,0,0,0.12)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
               >
                 <MessageCircle size={20} />
                 Open Ledger Chat
@@ -368,7 +368,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               <Step
                 n="1"
                 title="Download the app."
-                desc="Install Ledger Chat from the App Store or Google Play. It is free. It will always be free. There are no hidden fees or premium tiers for private messaging."
+                desc="Ledger Chat is free forever. No subscription, no blockchain fees to chat. There are no hidden fees or premium tiers for private messaging."
               />
               <Step
                 n="2"
@@ -481,7 +481,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               <div>
                 <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#2C6BED] mb-4">The Next Step in Humanity</p>
                 <h2 className="text-[38px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] mb-6 leading-tight">
-                  Ledger Chat available 1/01/2027<br />on AppStore &amp; Google Play
+                  Ledger Chat is live now on the web.<br />Mobile apps coming to iOS &amp; Android.
                 </h2>
                 <p className="text-[18px] font-medium text-[#1C1C1E]/60 leading-relaxed mb-6">
                   Technology should adapt to people, not the other way around. We believe privacy is a fundamental human right, but it only works if it is effortless to use.
@@ -602,7 +602,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 icon: <Smartphone size={28} />,
                 title: "iPhone",
                 sub: "Requires iOS 16 or later",
-                badge: "App Store — January 2027",
+                badge: "App Store — Coming Soon",
                 color: "text-[#2C6BED]",
                 bg: "bg-[#2C6BED]/8",
               },
@@ -610,7 +610,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 icon: <Smartphone size={28} />,
                 title: "Android",
                 sub: "Requires Android 10 or later",
-                badge: "Google Play — January 2027",
+                badge: "Google Play — Coming Soon",
                 color: "text-[#30D158]",
                 bg: "bg-[#30D158]/8",
               },
@@ -682,8 +682,8 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               },
               {
                 tag: "New",
-                title: "50,000 QD tokens for every new member",
-                desc: "Every person who creates a Ledger Chat account receives 50,000 QD tokens automatically. These tokens let you send payments inside conversations and access certain features in the app.",
+                title: "Communities with free and paid channels",
+                desc: "Create a community with multiple channels. Choose which are free for everyone and which require a one-time unlock or monthly subscription. No competitor offers this combination with crypto-native payments in the same space.",
                 color: "bg-purple-600 text-white",
               },
               {
@@ -806,7 +806,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             </h2>
             <p className="text-[18px] font-medium text-[#1C1C1E]/55 mb-10 max-w-xl mx-auto leading-relaxed">
               Ledger Chat is free, requires no sign up form, no email, and no phone number.
-              Open it in your browser right now or wait for the mobile app in January 2027.
+              Open it in your browser right now. Mobile apps for iOS &amp; Android are coming soon.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -815,15 +815,15 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 className="inline-flex items-center gap-2 bg-[#1C1C1E] hover:bg-black text-white font-bold text-[17px] px-10 py-4 rounded-2xl transition-all shadow-lg active:scale-95"
               >
                 <MessageCircle size={20} />
-                Open in Browser
+                Open Ledger Chat
               </Link>
-              <a
-                href="#notify"
+              <Link
+                href="/communities"
                 className="inline-flex items-center gap-2 bg-[#F6F7F9] hover:bg-[#EBEBEB] text-[#1C1C1E] font-bold text-[17px] px-10 py-4 rounded-2xl transition-all active:scale-95"
               >
-                <Bell size={18} />
-                Notify me at Launch
-              </a>
+                <Users size={18} />
+                Explore Communities
+              </Link>
             </div>
 
             <div className="flex flex-row gap-3 flex-wrap justify-center mb-6">

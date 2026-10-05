@@ -27,16 +27,31 @@ const DynamicUniversalScanModal = dynamic(
 
 function AppStoreBadge() {
   return (
-    <a href="#" className="block transition-transform hover:scale-105 active:scale-95">
-      <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83&releaseDate=1276560000" alt="Download on the App Store" className="h-[40px] w-auto" />
+    <a href="#" className="flex items-center gap-3 bg-black hover:bg-[#1A1A1C] text-white px-5 py-3 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-white/5 min-w-[150px]">
+      <svg viewBox="0 0 814 1000" width="22" height="22" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105.3-42.1-165.9-40.8c-60.6 1.2-109 61.6-165.9 61.6s-88.9-61.6-157.5-123.1C20.5 764.6 0 640.1 0 535.1c0-215.1 140.5-328.7 279.5-328.7 74.4 0 136.6 49.2 183.1 49.2 44.6 0 114.6-51.7 201.2-51.7 31.3 0 108.2 4 168.9 57.8zM504.1 43.6c29.6-36 51.7-86.2 51.7-136.3 0-7-.6-14.1-1.9-19.8-48.7 1.9-106 33.5-139.3 74.5-27.3 32.7-51.7 82.3-51.7 132.4 0 7.6 1.3 15.1 1.9 17.7 3.2.6 8.3 1.3 13.4 1.3 44 0 98.7-29.2 125.9-69.8z"/>
+      </svg>
+      <div className="flex flex-col text-left">
+        <span className="text-[9px] font-medium opacity-70 leading-none mb-0.5 tracking-widest uppercase">Download on the</span>
+        <span className="text-[15px] font-bold leading-none tracking-tight">App Store</span>
+      </div>
     </a>
   );
 }
 
 function GooglePlayBadge() {
   return (
-    <a href="#" className="block transition-transform hover:scale-105 active:scale-95">
-      <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" className="h-[58px] w-auto -m-[9px]" />
+    <a href="#" className="flex items-center gap-3 bg-black hover:bg-[#1A1A1C] text-white px-5 py-3 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-white/5 min-w-[150px]">
+      <svg viewBox="0 0 512 512" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#4CAF50" d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1z"/>
+        <path fill="#FF3D00" d="m186 13 139.3 221.3-60.1 60.1L71.4 130.9C85.3 58.7 131.8 18.1 186 13z"/>
+        <path fill="#FFD600" d="M104.6 13C51.1 33.5 13 88.5 13 154.7v202.6c0 66.2 38.1 121.2 91.6 141.7L325.3 277.7 104.6 13z"/>
+        <path fill="#2196F3" d="M385.4 174.2 104.6 499c53.5 20.5 99.5-2.1 116.3-18.9L499 310.2c-13.9-65.8-57.4-113.9-113.6-136z"/>
+      </svg>
+      <div className="flex flex-col text-left">
+        <span className="text-[9px] font-medium opacity-70 leading-none mb-0.5 tracking-widest uppercase">Get it on</span>
+        <span className="text-[15px] font-bold leading-none tracking-tight">Google Play</span>
+      </div>
     </a>
   );
 }
@@ -344,15 +359,10 @@ export default function ConnectPage() {
           The ultimate secure messenger. Perfectly comfortable for everyone, including older adults. No passwords needed.
         </p>
         
-        {/* Launch badge - sleek pill */}
-        <div className="relative z-10 inline-flex items-center gap-3 pl-2 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/[0.04]">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-inner" style={{ background: 'linear-gradient(135deg, #1c7aff, #ff2a85)' }}>
-            <span className="text-white font-bold text-xs tracking-widest">27</span>
-          </div>
-          <div className="flex flex-col text-left">
-            <span className="text-[8.5px] font-mono uppercase tracking-[0.2em] font-bold" style={{ color: '#ff2a85' }}>Global Launch</span>
-            <span className="text-[13px] font-bold tracking-tight text-black leading-tight">January 1, 2027</span>
-          </div>
+        {/* Live status badge */}
+        <div className="relative z-10 inline-flex items-center gap-3 pl-3 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-[#25D366]/20">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#25D366] animate-pulse block shrink-0" />
+          <span className="text-[12px] font-bold tracking-tight text-black">Live Now · Mobile Apps Coming</span>
         </div>
       </div>
 
@@ -387,24 +397,23 @@ export default function ConnectPage() {
             </div>
 
             <h1 className="text-[56px] xl:text-[64px] font-black tracking-[-0.04em] leading-none text-black mb-3">Ledger Chat</h1>
-            <p className="text-[18px] font-semibold text-neutral-400 tracking-tight mb-5">Launching January 2027</p>
+            <p className="text-[15px] font-semibold text-[#25D366] tracking-tight mb-5 flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#25D366] inline-block animate-pulse" /> Live Now on Web</p>
 
             <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-4 max-w-[420px]">
-              Ledger Chat is the world's most secure private messenger. But security means nothing if it is hard to use.
+              Ledger Chat is the private messenger you've always wanted. E2E encrypted by default, no phone number required, no fees to send messages.
             </p>
             <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-10 max-w-[420px]">
               No passwords to remember, no complex menus. Just open and connect. We designed it to be so intuitive that it is <strong>perfectly comfortable for older adults</strong> and absolutely seamless for everyone else.
             </p>
 
-            {/* Launch advertisement - ultra premium pill */}
-            <div className="relative inline-flex items-center gap-4 pl-3 pr-6 py-3 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.05)] border border-black/[0.04] transition-all hover:shadow-[0_12px_40px_rgba(255,42,133,0.1)] cursor-default">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#1c7aff]/[0.015] to-[#ff2a85]/[0.015] rounded-full pointer-events-none" />
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-inner" style={{ background: 'linear-gradient(135deg, #1c7aff, #ff2a85)' }}>
-                <span className="text-white font-bold text-sm tracking-widest">27</span>
+            {/* Product status — live */}
+            <div className="relative inline-flex items-center gap-4 pl-3 pr-6 py-3 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.05)] border border-black/[0.04] transition-all cursor-default">
+              <div className="w-10 h-10 rounded-full bg-[#25D366]/10 flex items-center justify-center shrink-0">
+                <span className="w-3 h-3 rounded-full bg-[#25D366] animate-pulse block" />
               </div>
               <div className="flex flex-col text-left">
-                <span className="text-[9.5px] font-mono uppercase tracking-[0.2em] font-bold" style={{ color: '#ff2a85' }}>Global Launch</span>
-                <span className="text-[14.5px] font-bold tracking-tight text-black leading-tight">January 1, 2027</span>
+                <span className="text-[9.5px] font-mono uppercase tracking-[0.2em] font-bold text-[#25D366]">Status</span>
+                <span className="text-[14.5px] font-bold tracking-tight text-black leading-tight">Live · Mobile Apps Coming Soon</span>
               </div>
             </div>
           </motion.div>
