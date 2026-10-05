@@ -16,6 +16,7 @@ import { useAppKit } from '@reown/appkit/react';
 import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations } from '@/lib/xmtp/client';
 import { QrScanner } from '@/components/terminal/QrScanner';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
+import { PadlockLoader } from '@/components/terminal/PadlockLoader';
 import { TuringShieldGate } from '@/components/auth/TuringShieldGate';
 import { CreateGroupModal } from '../chat/CreateGroupModal';
 import type { Client } from '@xmtp/browser-sdk';
@@ -3957,105 +3958,30 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     );
   }
 
-  //  Loading / Auto-init state 
+  //  Loading / Padlock Auth Screen
   if (!client) {
     return (
       <TuringShieldGate>
-      <div className="flex-1 flex flex-col h-full bg-[#FAFAFA] items-center justify-center p-6 relative overflow-hidden">
-        
-        {/* The Unique Decentralized Sync Pattern */}
-        <div className="relative flex items-center justify-center w-[200px] h-[200px] mb-8">
-          <motion.div
-            animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
-            transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-            className="absolute w-3 h-3 bg-[#25D366] rounded-full z-20 shadow-[0_0_24px_rgba(37,211,102,0.8)]"
-          />
-          
-          {[0, 1, 2].map((i) => (
-            <motion.div
-              key={i}
-              animate={{ rotate: i % 2 === 0 ? 360 : -360, scale: [1, 1.03, 1] }}
-              transition={{
-                rotate: { repeat: Infinity, duration: 8 + i * 3, ease: "linear" },
-                scale: { repeat: Infinity, duration: 3, ease: "easeInOut", delay: i * 0.5 }
-              }}
-              className="absolute rounded-full border border-black/[0.04] z-10"
-              style={{
-                width: `${100 + i * 45}px`,
-                height: `${100 + i * 45}px`,
-                borderStyle: i === 1 ? 'dashed' : 'solid',
-                borderWidth: '1px',
-              }}
-            >
-              <div 
-                className="absolute w-1.5 h-1.5 rounded-full" 
-                style={{
-                  backgroundColor: i === 1 ? '#25D366' : 'black',
-                  top: '-0.75px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  opacity: 0.3 + (i * 0.2)
-                }} 
-              />
-            </motion.div>
-          ))}
-        </div>
-
-        {initError ? (
-          <div className="z-30 w-full max-w-sm flex flex-col gap-4">
-            <div className="w-full bg-white text-[#111B21] text-[13px] p-4 rounded-2xl border border-black/5 shadow-xl text-center leading-relaxed">
-              {initError}
-            </div>
-            
-            {(initError.toLowerCase().includes('limit') || initError.toLowerCase().includes('10/10')) ? (
-              <div className="flex flex-col gap-2 w-full">
-                <button 
-                  onClick={() => {
-                    try {
-                      const keys = Object.keys(localStorage).filter(k => k.startsWith('xmtp') || k.startsWith('ledger_xmtp') || k.includes('xmtp'));
-                      keys.forEach(k => localStorage.removeItem(k));
-                      if (typeof indexedDB !== 'undefined') {
-                        const dbNames = ['xmtp', 'xmtp-v2', 'xmtp-prod', 'xmtp-dev'];
-                        dbNames.forEach(name => { try { indexedDB.deleteDatabase(name); } catch(e) {} });
-                      }
-                    } catch(e) {}
-                    setInitError('');
-                    setTimeout(() => initClient(), 500);
-                  }} 
-                  className="w-full py-4 bg-black text-white rounded-[16px] font-semibold text-[14px] active:scale-[0.98] transition-all"
-                >
-                  Clear Cache & Retry
-                </button>
-                <button onClick={() => { setInitError(''); initClient(); }} className="w-full py-4 bg-white text-black rounded-[16px] border border-black/10 font-semibold text-[14px] active:scale-[0.98] transition-all">
-                  Retry Without Clearing
-                </button>
-              </div>
-            ) : (initError.includes('wallet connection lost') || initError.includes('Connect your wallet') || initError.toLowerCase().includes('unknown signer')) ? (
-              <div className="flex flex-col gap-2 w-full">
-                <button onClick={() => openAppKit()} className="w-full py-4 bg-black text-white rounded-[16px] font-semibold text-[14px] active:scale-[0.98] transition-all">
-                  Reconnect Wallet
-                </button>
-                <button onClick={() => { reconnect(); initClient(); }} className="w-full py-4 bg-white text-black rounded-[16px] border border-black/10 font-semibold text-[14px] active:scale-[0.98] transition-all">
-                  Refresh Session
-                </button>
-              </div>
-            ) : (
-              <button onClick={initClient} disabled={isInitializing} className="w-full py-4 bg-black text-white rounded-[16px] font-semibold text-[14px] active:scale-[0.98] transition-all disabled:opacity-50">
-                Try Again
-              </button>
-            )}
-          </div>
-        ) : !isInitializing ? (
-          <div className="z-30 w-full max-w-sm flex justify-center mt-4">
-            <button
-              onClick={initClient}
-              className="w-full py-4 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-[18px] font-semibold text-[15px] active:scale-[0.98] transition-all shadow-[0_8px_20px_rgba(37,211,102,0.2)]"
-            >
-              Activate Transport
-            </button>
-          </div>
-        ) : null}
-      </div>
+      <PadlockLoader
+        isInitializing={isInitializing}
+        isWaitingForSignature={isWaitingForSignature}
+        initError={initError}
+        onActivate={initClient}
+        onClearAndRetry={() => {
+          try {
+            const keys = Object.keys(localStorage).filter(k => k.startsWith('xmtp') || k.includes('xmtp'));
+            keys.forEach(k => localStorage.removeItem(k));
+            if (typeof indexedDB !== 'undefined') {
+              ['xmtp', 'xmtp-v2', 'xmtp-prod', 'xmtp-dev'].forEach(name => { try { indexedDB.deleteDatabase(name); } catch(e) {} });
+            }
+          } catch(e) {}
+          setInitError('');
+          setTimeout(() => initClient(), 500);
+        }}
+        onReconnect={() => { openAppKit(); }}
+        onRefreshSession={() => { reconnect(); initClient(); }}
+        onClearError={() => setInitError('')}
+      />
       </TuringShieldGate>
     );
   }
