@@ -415,9 +415,14 @@ export async function sendMessage(
         
         // [CRITICAL FIX] Must sync the DM before sending, or messages get lost 
         // in local MLS state desync on XMTP v3+
-        try { await dm.sync(); } catch {}
+        try {
+          const syncTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('sync timeout')), 5000));
+          await Promise.race([dm.sync(), syncTimeout]);
+        } catch {}
         
-        await dm.send(content);
+        // [4G/5G FIX] Wrap send in 15s timeout to prevent hanging on poor connections
+        const sendTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('send timeout')), 15000));
+        await Promise.race([dm.send(content), sendTimeout]);
         // Sync after send to confirm delivery — ignore sync errors, message is already sent
         try { await dm.sync(); } catch {}
         return; // SUCCESS — do not fall through to offline queue

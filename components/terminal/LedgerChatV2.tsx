@@ -1193,6 +1193,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address]); // address is the only real dep — executeSend accessed via ref
 
+  
+  // [4G/5G RESILIENCE] Network change handler - re-sync XMTP when connection changes
+  useEffect(() => {
+    const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    if (!conn) return;
+    const handleNetworkChange = () => {
+      console.log('[Network] Type changed to:', conn.effectiveType, '| downlink:', conn.downlink, 'Mbps');
+      if (client && address) {
+        try { (client as any).conversations?.sync?.().catch(() => {}); } catch {}
+      }
+    };
+    conn.addEventListener('change', handleNetworkChange);
+    return () => conn.removeEventListener('change', handleNetworkChange);
+  }, [client, address]);
+
   // Extreme Security: Draft Persistence & Typing Telemetry
   useEffect(() => {
     if (!activePeer || !address) return;
@@ -1338,6 +1353,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           ],
           sdpSemantics: 'unified-plan',
           iceTransportPolicy: 'all' as RTCIceTransportPolicy,
+          // [4G/5G] Pre-gather 10 ICE candidates, bundle all media on one port, require RTCP mux
+          bundlePolicy: 'max-bundle',
+          rtcpMuxPolicy: 'require',
+          iceCandidatePoolSize: 10,
         },
       });
 
@@ -4138,7 +4157,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             peerAddress={activePeer}
             peerName={getDisplayName(activePeer)}
             onClose={() => setShowContactInfo(false)}
-            onVoiceCall={() => { setShowContactInfo(false); handleStartCall('voice', activePeer); }}
+            onVoiceCall={() => { setShowContactInfo(false); handleStartCall('audio', activePeer); }}
             onVideoCall={() => { setShowContactInfo(false); handleStartCall('video', activePeer); }}
             onSearch={() => { setShowContactInfo(false); setShowSearch(true); }}
             onBlock={() => {
