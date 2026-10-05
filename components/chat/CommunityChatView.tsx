@@ -1,7 +1,11 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Plus, MapPin, Image as ImageIcon, CircleDollarSign, Smile, BarChart2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { MessageBubble } from './MessageBubble';
+import { NativeCryptoSendModal } from './NativeCryptoSendModal';
+import { AnimatePresence, motion } from 'framer-motion';
+// Add some poll/burn mock imports or inline modals if needed, but for now we'll do minimal inline
 
 export function CommunityChatView({ communityId, myAddress }: { communityId: string; myAddress: string }) {
   const [messages, setMessages] = useState<any[]>([]);
@@ -10,6 +14,9 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
   const bottomRef = useRef<HTMLDivElement>(null);
   const seenAddresses = useRef<Set<string>>(new Set());
   const [systemEvents, setSystemEvents] = useState<{ id: string; text: string }[]>([]);
+
+  const [showAppDrawer, setShowAppDrawer] = useState(false);
+  const [showWalletTransfer, setShowWalletTransfer] = useState(false);
 
   const fetchMessages = async () => {
     try {
@@ -31,7 +38,7 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
         }
       });
       setMessages(ordered);
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      // setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     } catch (e) {
       console.error('[CommunityChatView] fetch error', e);
     }
@@ -44,15 +51,11 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
     return () => clearInterval(int);
   }, [communityId]);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  const executeSend = async (txt: string) => {
     if (!myAddress || myAddress.trim() === '') {
       toast.error('Wallet not connected');
       return;
     }
-    const txt = input.trim();
-    setInput('');
     setSending(true);
     // Optimistic insert
     const optimistic = { id: `opt-${Date.now()}`, authorAddress: myAddress.toLowerCase(), content: txt, createdAt: new Date().toISOString() };
@@ -79,10 +82,28 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
     }
   };
 
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    const txt = input.trim();
+    setInput('');
+    await executeSend(txt);
+  };
+
   const allEvents = [...systemEvents];
 
+  // Helper for app drawer clicks
+  const sendLocation = () => {
+    if (!navigator.geolocation) { toast.error('Geolocation not supported'); return; }
+    toast.info('Fetching location...');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => executeSend(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
+      () => toast.error('Location permission denied')
+    );
+  };
+
   return (
-    <div className="flex flex-col h-full bg-[#F2F2F7] overflow-hidden">
+    <div className="flex flex-col h-full bg-[#F2F2F7] overflow-hidden relative">
       <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-2">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center min-h-[200px] opacity-50 space-y-2">
@@ -110,42 +131,103 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
                   {(m.authorAddress || '').slice(0, 6)}...{(m.authorAddress || '').slice(-4)}
                 </span>
               )}
-              <div className={`px-4 py-2.5 rounded-2xl max-w-[80%] text-[15px] leading-snug ${
-                isMe
-                  ? 'bg-[#007AFF] text-white rounded-br-sm'
-                  : 'bg-white border border-black/5 text-black rounded-bl-sm'
-              } shadow-sm`}>
-                {m.content}
-              </div>
+              <MessageBubble 
+                msg={m} 
+                isMe={isMe} 
+                showDate={false}
+                dateStr=""
+                isSecretChat={false}
+                fontFamily="Inter, sans-serif"
+                fontSizePx={15}
+                clientInboxId={myAddress}
+                onReply={() => {}}
+                onReact={() => {}}
+                onContextMenu={() => {}}
+                onOpenLightbox={() => {}}
+                formatMessagePreview={(c) => c}
+              />
             </div>
           );
         })}
         {allEvents.map(ev => (
-          <div key={ev.id} className="flex justify-center">
+          <div key={ev.id} className="flex justify-center my-2">
             <span className="text-[11px] text-black/40 bg-black/5 rounded-full px-3 py-1">{ev.text}</span>
           </div>
         ))}
         <div ref={bottomRef} />
       </div>
-      <div className="p-3 bg-white border-t border-black/5 shrink-0 pb-[env(safe-area-inset-bottom,12px)]">
-        <form onSubmit={handleSend} className="flex gap-2">
+
+      <div className="p-3 bg-white border-t border-black/5 shrink-0 pb-[env(safe-area-inset-bottom,12px)] relative">
+        <form onSubmit={handleSend} className="flex gap-2 items-center">
+          <button 
+            type="button" 
+            onClick={() => setShowAppDrawer(v => !v)}
+            className="w-9 h-9 rounded-full bg-[#F2F2F7] flex items-center justify-center hover:bg-[#E5E5EA] transition-colors shrink-0 text-[#007AFF]"
+          >
+            <Plus size={20} />
+          </button>
           <input
             value={input}
             onChange={e => setInput(e.target.value)}
             placeholder="Message community..."
             disabled={sending}
-            className="flex-1 bg-[#F2F2F7] border border-black/5 rounded-full px-5 py-2.5 outline-none text-[15px] disabled:opacity-50"
+            className="flex-1 bg-[#F2F2F7] border border-black/5 rounded-full px-5 py-2 outline-none text-[15px] disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={!input.trim() || sending}
-            className="w-10 h-10 bg-[#007AFF] text-white rounded-full flex items-center justify-center disabled:opacity-40 transition-opacity shrink-0"
+            className="w-9 h-9 bg-[#007AFF] text-white rounded-full flex items-center justify-center disabled:opacity-40 transition-opacity shrink-0"
           >
             <Send size={16} className="-ml-0.5" />
           </button>
         </form>
+
+        {/* APP DRAWER */}
+        <AnimatePresence>
+          {showAppDrawer && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mt-3"
+            >
+              <div className="grid grid-cols-4 gap-4 px-2 py-4">
+                <button onClick={() => { setShowAppDrawer(false); sendLocation(); }} className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-2xl bg-green-500 text-white flex items-center justify-center shadow-sm"><MapPin size={22} /></div>
+                  <span className="text-[11px] font-semibold text-[#1C1C1E]">Location</span>
+                </button>
+                <button onClick={() => { setShowAppDrawer(false); setShowWalletTransfer(true); }} className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-sm"><CircleDollarSign size={22} /></div>
+                  <span className="text-[11px] font-semibold text-[#1C1C1E]">Send Crypto</span>
+                </button>
+                <button onClick={() => { setShowAppDrawer(false); executeSend('[STICKER]:fire'); }} className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-sm"><Smile size={22} /></div>
+                  <span className="text-[11px] font-semibold text-[#1C1C1E]">Sticker</span>
+                </button>
+                <button onClick={() => { setShowAppDrawer(false); toast.info('Polls in communities coming in next update'); }} className="flex flex-col items-center gap-2 opacity-50">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-500 text-white flex items-center justify-center shadow-sm"><BarChart2 size={22} /></div>
+                  <span className="text-[11px] font-semibold text-[#1C1C1E]">Poll</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
+      {/* Crypto Transfer Modal */}
+      {showWalletTransfer && (
+        <NativeCryptoSendModal
+          isOpen={showWalletTransfer}
+          recipientAddress={"0x0000000000000000000000000000000000000000"} // Community pool/treasury logic could go here
+          onClose={() => setShowWalletTransfer(false)}
+          onSent={(txHash, amount, token) => {
+            const payload = JSON.stringify({ amount, token, txHash, to: 'Community' });
+            executeSend(`__PAYMENT__::${payload}`);
+            setShowWalletTransfer(false);
+          }}
+        />
+      )}
+
     </div>
   );
 }
-

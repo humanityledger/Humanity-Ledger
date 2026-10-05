@@ -3575,28 +3575,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         .replace(/\bidiot|moron|stupid\b/gi, 'someone with a different view');
     }
 
-    // --- QD DEDUCTION LOGIC ---
-    // [FIX] Only gate on QDs if the user has an Sovereign Identity connected.
-    // If aztecAddress is null (user hasn't claimed yet), balance = 0 is expected
-    // and we should NOT block messaging — they can claim their identity later.
-    // The tiny 0.0001 QD cost per message is essentially free and serves as
-    // spam prevention only for users who already have an identity.
-    const { aztecAddress: userAztecAddr } = aztecNative;
-    if (!isSystemSignal && !isLocalSystemWallet && userAztecAddr) {
-      // Only enforce QD balance if the user has a loaded Sovereign Identity
-      if (balance < 0.0001) {
-        // [HOTFIX] Do not block messages for new users who haven't funded their identity yet
-        // toast.error("Insufficient QDs to send message.", { description: "Top up via the Sovereign Identity tab." });
-        // setSending(false);
-        // return;
-      }
-      // Deduct QDs — fire-and-forget, message always sends regardless of QD API result
-      // [BALANCE FIX] After spending, force a refresh from DB so the balance counter
-      // reflects the real server-side balance, not just the optimistic local deduction.
-      spendQDs(0.0001, 'Ledger Chat message').then(() => {
-        refreshBalance().catch(() => {}); // Reconcile balance with DB after spend
-      }).catch((e: any) => console.warn('[Ledger Chat] QD deduction failed (non-blocking):', e));
-    }
+    // ── Messages are 100% free — no QD deduction per message (Axel strategy) ──
+    // Chat must always be free. QDs are only for optional premium features.
+    // Rate limiting is handled by the checkRateLimit() call above.
 
     if (address) {
         localStorage.removeItem(`ledger_draft_${address.toLowerCase()}_${activePeer.toLowerCase()}`);
