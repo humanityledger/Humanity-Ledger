@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.0.0] - 2026-10-05 - "Ledger Chat: Communities & Native Crypto P2P"
+
+### Phase 9: Massive Feature Expansion (The Signal/Discord Killer Update)
+
+#### Ledger Communities (Discord/Telegram Competitor)
+- `feat(communities)`: Complete architectural integration of Ledger Communities (`/communities`).
+- `feat(communities/db)`: New Prisma models `Community`, `CommunityChannel`, `CommunityMember` supporting massively scalable groups.
+- `feat(communities/freemium)`: Support for free channels alongside **token-gated and paid-entry channels**.
+- `feat(communities/editor)`: Immersive `RichPostEditor.tsx` using Tiptap v2 for announcements and rich content.
+
+#### Native Crypto Transport (P2P Payments)
+- `feat(crypto/p2p)`: Full native crypto transfer flow via Wagmi v2 (`useSendTransaction`, `useWriteContract`).
+- `feat(crypto/ui)`: `NativeCryptoSendModal.tsx` for sending ETH, USDC, and USDT completely P2P inside chat.
+- `refactor(qd)`: Complete elimination of QD (Quantum Dots) per-message fees. Messaging is now 100% free.
+
+#### Chat App & UI Overhaul
+- `feat(chat/location)`: Real-time Live Location sharing embedded natively using OpenStreetMap iframes.
+- `feat(chat/burn)`: Burn Timers & Scheduled messages sheet logic fully integrated.
+- `feat(chat/ui)`: Massive UI overhaul across `LedgerChatV2.tsx`, adopting an immersive, minimalist Web3 green (`#25D366`) and white aesthetic, dropping all dark mode for an Apple/Signal-level design maturity.
+- `feat(loader/ui)`: Replaced standard generic spinners with a mesmerising, textless, CSS/Framer Motion-powered decentralized synchronization geometric pattern.
+- `fix(bugs)`: Squashed critical bugs including the Framer Motion `removeChild` crash during AnimatePresence teardown, broken Apple SVG badges, and hardcoded wallet addresses in Communities.
+
 ## [4.0.0] — 2026-07-10 — "Immersive Landing & Aztec Mainnet Integration"
 
 ### Phase 8: Sovereign Landing & Aztec Production Readiness

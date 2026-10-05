@@ -46,7 +46,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
       });
   };
 
-  const AVATAR_COLORS = ['#007AFF','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
+  const AVATAR_COLORS = ['#25D366','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
   const avatarColor = communityId ? AVATAR_COLORS[parseInt(communityId.charCodeAt(0).toString(), 10) % AVATAR_COLORS.length] : '#000';
 
   return (
@@ -115,7 +115,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                         }}
                         title="Click to message this user"
                       >
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500" />
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-#25D366 to-purple-500" />
                         <span className="text-[12px] font-medium text-black/60 hover:text-black">{post.authorAddress.slice(0,6)}...{post.authorAddress.slice(-4)}</span>
                         <span className="text-[12px] text-black/20">•</span>
                         <span className="text-[12px] font-medium text-black/40">{new Date(post.createdAt).toLocaleDateString()}</span>
@@ -150,6 +150,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
         {activeTab === 'settings' && (
           <CommunitySettingsPanel community={community} myAddress={myAddress} />
         )}
+        {showChannelsModal && <ChannelManagement />}
       </div>
 
       <RichPostEditorModal 
@@ -181,6 +182,72 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     }; });
 
   useEffect(() => { localStorage.setItem('com_perm_' + community.id, JSON.stringify(permissions)); }, [permissions, community.id]);
+  
+  const [showChannelsModal, setShowChannelsModal] = useState(false);
+  const ChannelManagement = () => (
+    <div className="fixed inset-0 z-[9999] bg-[#FAFAFA] flex flex-col">
+      <div className="flex items-center gap-4 px-6 py-4 border-b border-black/5 bg-white">
+        <button onClick={() => setShowChannelsModal(false)} className="p-2 bg-[#F2F2F7] rounded-full text-[#25D366]">
+          <ChevronLeft size={20} />
+        </button>
+        <h2 className="text-[20px] font-bold">Channels & Monetization</h2>
+      </div>
+      <div className="p-6 overflow-y-auto max-w-2xl mx-auto w-full flex-1">
+        <div className="bg-white rounded-[24px] border border-black/5 p-6 mb-6 shadow-sm">
+          <h3 className="text-[17px] font-bold mb-4 flex items-center gap-2"><Lock size={18} className="text-[#25D366]"/> Paid Entry Channels</h3>
+          <p className="text-[14px] text-black/50 mb-6">Create exclusive zones. Users must pay crypto (ETH, USDC, USDT) directly to your wallet to unlock them.</p>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-[16px]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center"><Lock size={18} /></div>
+                <div>
+                  <p className="font-bold text-[15px]"># alpha-signals</p>
+                  <p className="text-[12px] text-black/40">Price: 0.05 ETH</p>
+                </div>
+              </div>
+              <button className="px-4 py-2 bg-white text-black font-semibold rounded-[12px] text-[13px] shadow-sm">Edit</button>
+            </div>
+            
+            <div className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-[16px]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#25D366]/10 text-[#25D366] flex items-center justify-center"><Lock size={18} /></div>
+                <div>
+                  <p className="font-bold text-[15px]"># vip-lounge</p>
+                  <p className="text-[12px] text-black/40">Price: 50 USDC</p>
+                </div>
+              </div>
+              <button className="px-4 py-2 bg-white text-black font-semibold rounded-[12px] text-[13px] shadow-sm">Edit</button>
+            </div>
+          </div>
+          
+          <button className="w-full mt-6 py-4 bg-[#25D366]/10 text-[#25D366] font-bold rounded-[16px] flex items-center justify-center gap-2 hover:bg-[#25D366]/20 transition-colors">
+            <Plus size={18} /> Create Paid Channel
+          </button>
+        </div>
+
+        <div className="bg-white rounded-[24px] border border-black/5 p-6 shadow-sm">
+          <h3 className="text-[17px] font-bold mb-4 flex items-center gap-2"><Globe size={18} className="text-[#25D366]"/> Public Channels</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-[16px]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-black/5 text-black flex items-center justify-center"><Hash size={18} /></div>
+                <div>
+                  <p className="font-bold text-[15px]"># announcements</p>
+                  <p className="text-[12px] text-black/40">Free • Read-only</p>
+                </div>
+              </div>
+              <button className="px-4 py-2 bg-white text-black font-semibold rounded-[12px] text-[13px] shadow-sm">Edit</button>
+            </div>
+          </div>
+          <button className="w-full mt-6 py-4 bg-black/5 text-black font-bold rounded-[16px] flex items-center justify-center gap-2 hover:bg-black/10 transition-colors">
+            <Plus size={18} /> Create Free Channel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   const [isPrivate, setIsPrivate] = useState<boolean>(community?.isPrivate ?? false);
   const [savingPrivacy, setSavingPrivacy] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -241,13 +308,13 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
         <p className={`text-[15px] font-bold ${danger ? 'text-red-500' : 'text-[#1C1C1E]'}`}>{label}</p>
         {desc && <p className="text-[13px] text-black/50 leading-snug mt-0.5">{desc}</p>}
       </div>
-      <div className={`relative w-[48px] h-[28px] rounded-full transition-colors duration-300 shrink-0 shadow-inner ${checked ? (danger ? 'bg-red-500' : 'bg-[#007AFF]') : 'bg-black/10'}`}>
+      <div className={`relative w-[48px] h-[28px] rounded-full transition-colors duration-300 shrink-0 shadow-inner ${checked ? (danger ? 'bg-red-500' : 'bg-[#25D366]') : 'bg-black/10'}`}>
         <div className={`absolute top-[2px] left-[2px] w-[24px] h-[24px] bg-white rounded-full shadow-[0_2px_5px_rgba(0,0,0,0.2)] transition-transform duration-300 ${checked ? 'translate-x-[20px]' : 'translate-x-0'}`} />
       </div>
     </div>
   );
 
-  const SubMenuAction = ({ icon: Icon, label, value, color = 'text-[#007AFF]' }: any) => (
+  const SubMenuAction = ({ icon: Icon, label, value, color = 'text-[#25D366]' }: any) => (
 <div onClick={() => toast.success(label + ' configuration synced')} className="w-full">
     <div className="flex items-center justify-between py-3.5 cursor-pointer hover:bg-black/5 transition-colors px-5 -mx-5">
       <div className="flex items-center gap-3">
@@ -268,7 +335,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-6 pb-32">
       {/* Profile Header */}
       <div className="bg-white rounded-3xl p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] flex items-center gap-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-500/10 to-transparent rounded-bl-[100px] pointer-events-none" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-#25D366/10 to-transparent rounded-bl-[100px] pointer-events-none" />
         <div className="w-[88px] h-[88px] rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-4xl font-black shadow-[0_8px_16px_rgba(79,70,229,0.25)] shrink-0">
           {community?.name?.slice(0, 2).toUpperCase()}
         </div>
@@ -276,7 +343,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
           <h2 className="text-[24px] font-black text-[#1C1C1E] tracking-tight truncate">{community?.name}</h2>
           <p className="text-[14px] text-black/50 mt-1 line-clamp-2">{community?.description || 'No description provided for this community.'}</p>
           <div className="flex flex-wrap items-center gap-2 mt-3">
-            <span className="text-[12px] font-bold text-[#007AFF] bg-[#007AFF]/10 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Users size={14}/> {community?.members} Members</span>
+            <span className="text-[12px] font-bold text-[#25D366] bg-[#25D366]/10 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Users size={14}/> {community?.members} Members</span>
             <button
               onClick={() => togglePrivacy(!isPrivate)}
               disabled={savingPrivacy}
@@ -293,7 +360,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
       {/* Invite Link */}
       <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] overflow-hidden">
         <div className="px-6 py-4 border-b border-black/[0.04] bg-[#FAFAFA]/50 flex items-center justify-between">
-          <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#007AFF]">Invitation Link</p>
+          <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#25D366]">Invitation Link</p>
           <button 
             onClick={async () => {
               if (!confirm('Are you sure you want to revoke this link? The old link will stop working instantly.')) return;
@@ -316,7 +383,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
           </button>
         </div>
         <div className="p-6 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-[#007AFF]/10 flex items-center justify-center text-[#007AFF] shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center text-[#25D366] shrink-0">
             <LinkIcon size={20} strokeWidth={2.5} />
           </div>
           <div className="flex-1 min-w-0">
@@ -342,11 +409,11 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
         {/* Members & Roles */}
         <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] overflow-hidden">
           <div className="px-6 py-4 border-b border-black/[0.04] bg-[#FAFAFA]/50">
-            <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#007AFF]">Management</p>
+            <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#25D366]">Management</p>
           </div>
           <div className="px-6 py-2">
             <SubMenuAction icon={Shield} label="Administrators" value="1" color="text-indigo-500" />
-            <SubMenuAction icon={Users} label="Members" value={community?.members?.toString() || "1"} color="text-blue-500" />
+            <SubMenuAction icon={Users} label="Members" value={community?.members?.toString() || "1"} color="text-#25D366" />
             <SubMenuAction icon={Lock} label="Restricted Users" value="0" color="text-orange-500" />
             <SubMenuAction icon={X} label="Banned Users" value="0" color="text-red-500" />
             <SubMenuAction icon={Eye} label="Recent Actions" value="Logs" color="text-teal-500" />
@@ -356,7 +423,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
         {/* Group Features */}
         <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] overflow-hidden">
           <div className="px-6 py-4 border-b border-black/[0.04] bg-[#FAFAFA]/50">
-            <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#007AFF]">Features</p>
+            <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#25D366]">Features</p>
           </div>
           <div className="px-6 py-2 flex flex-col divide-y divide-black/5">
             <Toggle 
@@ -392,7 +459,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
       {/* Permissions */}
       <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] overflow-hidden">
         <div className="px-6 py-4 border-b border-black/[0.04] bg-[#FAFAFA]/50 flex items-center justify-between">
-          <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#007AFF]">Global Permissions</p>
+          <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#25D366]">Global Permissions</p>
           <span className="text-[11px] font-bold text-black/40">What can members do?</span>
         </div>
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
@@ -410,7 +477,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
             {/* Members List */}
       <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] overflow-hidden mt-6">
         <div className="px-6 py-4 border-b border-black/[0.04] bg-[#FAFAFA]/50">
-          <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#007AFF]">Group Members</p>
+          <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#25D366]">Group Members</p>
         </div>
         <div className="p-6 flex flex-col divide-y divide-black/5">
           {community?.members?.length > 0 ? (
@@ -440,7 +507,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
                 <p className="text-[15px] font-bold text-[#1C1C1E]">Slow Mode</p>
                 <p className="text-[13px] text-black/50 mt-0.5">Members must wait before sending another message</p>
               </div>
-              <span className="text-[14px] font-bold text-[#007AFF]">
+              <span className="text-[14px] font-bold text-[#25D366]">
                 {features.slowMode === 0 ? 'Off' : features.slowMode < 60 ? `${features.slowMode}s` : features.slowMode === 60 ? '1m' : features.slowMode === 300 ? '5m' : features.slowMode === 900 ? '15m' : '1h'}
               </span>
             </div>
@@ -449,7 +516,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
               min="0" max="6" step="1" 
               value={[0, 10, 30, 60, 300, 900, 3600].indexOf(features.slowMode)}
               onChange={(e) => setFeatures(p => ({...p, slowMode: [0, 10, 30, 60, 300, 900, 3600][parseInt(e.target.value)]}))}
-              className="w-full accent-[#007AFF] h-1.5 bg-black/10 rounded-lg appearance-none cursor-pointer" 
+              className="w-full accent-[#25D366] h-1.5 bg-black/10 rounded-lg appearance-none cursor-pointer" 
             />
             <div className="flex justify-between text-[10px] font-bold text-black/30 mt-2 px-1">
               <span>OFF</span><span>10s</span><span>30s</span><span>1m</span><span>5m</span><span>15m</span><span>1h</span>
