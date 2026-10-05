@@ -221,7 +221,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const chatBackground = ledgerSettings?.chat_background || 'default';
   const chatBackgroundCustomUrl = '';
   const bubbleStyle = ledgerSettings?.bubble_style || 'default';
-  const accentColor = ledgerSettings?.accent_color || '#1c7aff';
+  const accentColor = ledgerSettings?.accent_color || '#25D366';
   // Font and size from settings (with sensible defaults)
   const chatFont = ledgerSettings?.font_family || 'inter';
   const textSize = ledgerSettings?.text_size ?? 4;
@@ -4106,10 +4106,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl relative">
             <h2 className="text-[18px] font-bold text-black mb-2">Schedule Call</h2>
             <p className="text-[13px] text-black/50 mb-6">Schedule an encrypted audio/video call. This will be added to your local sovereign calendar.</p>
-            <input type="datetime-local" className="w-full bg-[#f5f5f7] border-none rounded-xl p-4 text-[14px] font-medium text-black focus:ring-2 focus:ring-[#1c7aff] mb-4" />
+            <input type="datetime-local" className="w-full bg-[#f5f5f7] border-none rounded-xl p-4 text-[14px] font-medium text-black focus:ring-2 focus:ring-[#25D366] mb-4" />
             <div className="flex gap-3">
               <button onClick={() => setShowScheduleCall(false)} className="flex-1 py-3 bg-[#f5f5f7] hover:bg-[#e5e5ea] text-black font-bold text-[14px] rounded-xl">Cancel</button>
-              <button onClick={() => { setShowScheduleCall(false); toast.success('Call scheduled locally.'); }} className="flex-1 py-3 bg-[#1c7aff] hover:bg-[#0056d6] text-white font-bold text-[14px] rounded-xl">Save</button>
+              <button onClick={() => { setShowScheduleCall(false); toast.success('Call scheduled locally.'); }} className="flex-1 py-3 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold text-[14px] rounded-xl">Save</button>
             </div>
           </div>
         </div>
@@ -4190,7 +4190,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
         {/* ── Sidebar Header ── */}
         {/* [iOS FIX] Use env(safe-area-inset-top) so "Messages" title doesn't hide behind the notch/status bar */}
-        <div className="pb-0 px-4 border-b border-black/[0.06] bg-white" style={{ paddingTop: 'max(16px, env(safe-area-inset-top, 16px))' }}>
+        <div className="pb-0 px-4 border-b border-black/[0.05] bg-[#F9F9F9]" style={{ paddingTop: 'max(16px, env(safe-area-inset-top, 16px))' }}>
           {/* Top row: title + action buttons */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
@@ -4200,7 +4200,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setShowUserSearch(true)}
-                className="w-10 h-10 rounded-full bg-[#F2F2F7] flex items-center justify-center text-[#007AFF] hover:bg-[#E5E5EA] transition-all active:scale-95"
+                className="w-10 h-10 rounded-full bg-[#F2F2F7] flex items-center justify-center text-[#25D366] hover:bg-[#E5E5EA] transition-all active:scale-95"
                 title="Find people"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -4211,14 +4211,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   // focus the input below
                   setTimeout(() => document.getElementById('ledger-new-chat-input')?.focus(), 100);
                 }}
-                className="w-10 h-10 rounded-full bg-[#007AFF] flex items-center justify-center text-white hover:bg-[#0071E3] transition-all active:scale-95 shadow-sm"
+                className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center text-white hover:bg-[#128C7E] transition-all active:scale-95 shadow-sm"
                 title="New conversation"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
               <button
                 onClick={() => setShowCreateGroup(true)}
-                className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white hover:bg-indigo-600 transition-all active:scale-95 shadow-sm"
+                className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center text-white hover:bg-[#128C7E] transition-all active:scale-95 shadow-sm"
                 title="New Group Chat"
               >
                 <UserPlus size={18} strokeWidth={2.5} />
@@ -4237,13 +4237,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 value={peerInput}
                 onChange={e => setPeerInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleStartConversation()}
-                className="w-full bg-[#F2F2F7] rounded-[12px] pl-9 pr-3 py-2.5 text-[16px] text-[#000000] placeholder:text-[#8E8E93] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 transition-all"
+                className="w-full bg-[#F2F2F7] rounded-[12px] pl-9 pr-3 py-2.5 text-[16px] text-[#000000] placeholder:text-[#8E8E93] focus:outline-none focus:ring-2 focus:ring-[#25D366]/30 transition-all"
               />
             </div>
             <button
               onClick={handleStartConversation}
               disabled={sending || !peerInput.trim()}
-              className="h-[42px] px-4 bg-[#007AFF] disabled:bg-[#C7C7CC] rounded-[12px] flex items-center justify-center text-white font-bold text-[14px] hover:bg-[#0071E3] transition-all active:scale-95 disabled:cursor-not-allowed whitespace-nowrap"
+              className="h-[42px] px-4 bg-[#25D366] disabled:bg-[#C7C7CC] rounded-[12px] flex items-center justify-center text-white font-bold text-[14px] hover:bg-[#128C7E] transition-all active:scale-95 disabled:cursor-not-allowed whitespace-nowrap"
             >
               Open
             </button>
@@ -4412,7 +4412,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-[13px] text-[#8E8E93] truncate">{formatMessagePreview(conv.lastMessage)}</p>
                               {conv.unreadCount && conv.unreadCount > 0 ? (
-                                <div className="min-w-[20px] h-5 bg-[#007AFF] rounded-full flex items-center justify-center px-1.5 shrink-0">
+                                <div className="min-w-[20px] h-5 bg-[#25D366] rounded-full flex items-center justify-center px-1.5 shrink-0">
                                   <span className="text-[11px] font-bold text-white tabular-nums">
                                     {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                                   </span>
@@ -4501,7 +4501,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           />
         ) : activePeer ? (
           <>
-            <div className="h-[68px] px-4 border-b border-black/[0.08] flex items-center justify-between bg-white shrink-0 z-10 shadow-[0_1px_8px_rgba(0,0,0,0.05)]">
+            <div className="h-[68px] px-4 border-b border-black/[0.05] flex items-center justify-between bg-white/80 backdrop-blur-xl shrink-0 z-10 shadow-[0_4px_30px_rgba(0,0,0,0.03)]">
               <div className="flex items-center gap-3">
                 <button onClick={() => setShowList(true)} className="md:hidden p-1.5 rounded-lg hover:bg-black/5 text-black/40 text-[10px] font-black tracking-wider mr-1">
                   ←
@@ -4562,7 +4562,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 {/* Phase 5: Secret Chat Toggle */}
                 <button
                   onClick={() => setIsSecretChat(!isSecretChat)}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${isSecretChat ? 'bg-white text-white shadow-lg shadow-black/10 animate-pulse' : 'bg-[#f5f5f7] text-black/40 hover:bg-black/5 hover:text-black/60'}`}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${isSecretChat ? 'bg-black text-white shadow-lg shadow-black/10 animate-pulse' : 'bg-[#f5f5f7] text-black/40 hover:bg-black/5 hover:text-black/60'}`}
                   title={isSecretChat ? "Secret Chat Active (Auto-Burn 15s)" : "Start Secret Chat"}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
@@ -4675,7 +4675,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             )}
 
             {/* Dynamic Chat Background */}
-            <div className={`ledger-chat-container flex-1 overflow-y-auto p-3 flex flex-col gap-1 min-h-0 relative ${isSecretChat ? 'bg-[#ece5dd]' : ''}`} style={isSecretChat ? { fontFamily, fontSize: `${fontSizePx}px` } : { ...bgStyle, backgroundColor: bgStyle?.backgroundImage ? undefined : '#EBE5DC', fontFamily, fontSize: `${fontSizePx}px` }}>
+            <div className={`ledger-chat-container flex-1 overflow-y-auto p-3 flex flex-col gap-1 min-h-0 relative ${isSecretChat ? 'bg-[#ece5dd]' : ''}`} style={isSecretChat ? { fontFamily, fontSize: `${fontSizePx}px` } : { ...bgStyle, backgroundColor: '#EBE5DC', backgroundImage: "url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%2325D366\' fill-opacity=\'0.07\' fill-rule=\'evenodd\'/%3E%3C/svg%3E')", backgroundAttachment: 'fixed', fontFamily, fontSize: `${fontSizePx}px` }}>
               {/* Matrix Rain Effect Layer */}
               {chatBackground === 'matrix' && (
                 <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,255,0,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -5173,7 +5173,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center bg-[#f9f9fb] relative overflow-y-auto p-6 md:p-12 border-l border-black/10 shadow-inner">
             {/* Ambient glows */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#1c7aff]/5 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#25D366]/5 rounded-full blur-[120px] pointer-events-none" />
 
             <div className="w-full max-w-xl flex flex-col items-center text-center relative z-10">
               <div className="w-28 h-28 rounded-[36px] overflow-hidden mb-8 shadow-2xl ring-[6px] ring-black/[0.03]">
@@ -5183,7 +5183,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               <p className="text-[16px] md:text-[18px] text-[#1C1C1E]/50 font-medium leading-relaxed max-w-sm mb-4">
                 Choose from your existing contacts, or start a new conversation by entering a wallet address.
               </p>
-              <div className="bg-[#1c7aff]/10 border border-[#1c7aff]/20 text-[#1c7aff] rounded-xl p-4 max-w-md w-full mb-10">
+              <div className="bg-[#25D366]/10 border border-[#25D366]/20 text-[#25D366] rounded-xl p-4 max-w-md w-full mb-10">
                 <p className="text-[13px] font-bold text-center">
                   Ledger Chat is currently in Public Beta. E2E Encryption is active.
                 </p>
@@ -5809,7 +5809,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             <input id="poll-q" type="text" placeholder="Ask a question..." className="w-full bg-gray-100 p-3 rounded-xl mb-4 outline-none font-medium" />
             <input id="poll-o1" type="text" placeholder="Option 1" className="w-full bg-gray-50 p-3 rounded-xl mb-2 outline-none" />
             <input id="poll-o2" type="text" placeholder="Option 2" className="w-full bg-gray-50 p-3 rounded-xl mb-4 outline-none" />
-            <button className="w-full bg-[#007AFF] text-white py-3 rounded-xl font-bold" onClick={() => {
+            <button className="w-full bg-[#25D366] text-white py-3 rounded-xl font-bold" onClick={() => {
               const q = document.getElementById('poll-q').value;
               const o1 = document.getElementById('poll-o1').value;
               const o2 = document.getElementById('poll-o2').value;

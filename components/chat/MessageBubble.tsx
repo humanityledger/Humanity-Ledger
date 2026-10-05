@@ -53,7 +53,7 @@ const PollBubble = React.memo(({ content, msg, isMe, onVotePoll, clientInboxId }
 
   return (
     <div className={`rounded-[18px] overflow-hidden shadow-md min-w-[220px] max-w-[280px] border ${
-      isMe ? 'bg-[#1c7aff] border-transparent' : 'bg-white border-black/8'
+      isMe ? 'bg-[#25D366] border-transparent' : 'bg-white border-black/8'
     }`}>
       <div className="px-4 pt-3 pb-3">
         <div className={`flex items-center gap-1.5 mb-2 ${isMe ? 'text-white/70' : 'text-black/40'}`}>
@@ -75,19 +75,19 @@ const PollBubble = React.memo(({ content, msg, isMe, onVotePoll, clientInboxId }
                 className={`relative w-full text-left rounded-xl px-3 py-2 overflow-hidden transition-all duration-200 active:scale-[0.98] ${
                   isMe
                     ? isSelected ? 'bg-white/30' : 'bg-white/15 hover:bg-white/25'
-                    : isSelected ? 'bg-[#1c7aff]/12 border border-[#1c7aff]/25' : 'bg-[#f2f2f7] hover:bg-[#e8e8ed]'
+                    : isSelected ? 'bg-[#25D366]/12 border border-[#25D366]/25' : 'bg-[#f2f2f7] hover:bg-[#e8e8ed]'
                 }`}
               >
                 {totalVotes > 0 && (
                   <div
-                    className={`absolute inset-y-0 left-0 rounded-xl transition-all duration-700 ${isMe ? 'bg-white/15' : 'bg-[#1c7aff]/8'}`}
+                    className={`absolute inset-y-0 left-0 rounded-xl transition-all duration-700 ${isMe ? 'bg-white/15' : 'bg-[#25D366]/8'}`}
                     style={{ width: `${pct}%` }}
                   />
                 )}
                 <div className="relative flex items-center justify-between gap-2">
                   <span className={`text-[13px] font-medium ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>{opt}</span>
                   <div className="flex items-center gap-1 shrink-0">
-                    {isSelected && <Check size={10} className={isMe ? 'text-white' : 'text-[#1c7aff]'} />}
+                    {isSelected && <Check size={10} className={isMe ? 'text-white' : 'text-[#25D366]'} />}
                     {totalVotes > 0 && <span className={`text-[11px] font-mono font-bold ${isMe ? 'text-white/70' : 'text-black/40'}`}>{pct}%</span>}
                   </div>
                 </div>
@@ -163,7 +163,7 @@ const LocationBubble = React.memo(({ coords, isMe, isLive }: { coords: string; i
         href={googleMapsUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className={`flex items-center gap-2 px-3 py-2.5 ${isMe ? 'bg-[#1c7aff] text-white' : 'bg-white text-[#1c1c1e]'}`}
+        className={`flex items-center gap-2 px-3 py-2.5 ${isMe ? 'bg-[#25D366] text-white' : 'bg-white text-[#1c1c1e]'}`}
       >
         <MapPin size={14} className={isMe ? 'text-white/80' : 'text-red-500'} />
         <div className="flex flex-col flex-1">
@@ -181,7 +181,7 @@ LocationBubble.displayName = 'LocationBubble';
 const CallOfferBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
   const isVideo = content.includes(':video');
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-[18px] min-w-[160px] shadow border ${isMe ? 'bg-[#1c7aff] border-transparent' : 'bg-white border-black/8'}`}>
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-[18px] min-w-[160px] shadow border ${isMe ? 'bg-[#25D366] border-transparent' : 'bg-white border-black/8'}`}>
       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isMe ? 'bg-white/20' : 'bg-[#ff3b30]/10'}`}>
         <PhoneOff size={16} className={isMe ? 'text-white' : 'text-[#ff3b30]'} />
       </div>
@@ -199,10 +199,10 @@ const GroupCallBubble = React.memo(({ content, isMe, onJoinGroupCall }: { conten
   const pwd = parts[2] || '';
   const isPrivate = pwd.length > 0;
   return (
-    <div className={`flex flex-col gap-2 px-4 py-3 rounded-[18px] min-w-[220px] shadow border ${isMe ? 'bg-[#34C759] border-transparent' : 'bg-white border-black/8'}`}>
+    <div className={`flex flex-col gap-2 px-4 py-3 rounded-[18px] min-w-[220px] shadow border ${isMe ? 'bg-[#25D366] border-transparent' : 'bg-white border-black/8'}`}>
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isMe ? 'bg-white/20' : 'bg-[#34C759]/10'}`}>
-          <Video size={20} className={isMe ? 'text-white' : 'text-[#34C759]'} />
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isMe ? 'bg-white/20' : 'bg-[#25D366]/10'}`}>
+          <Video size={20} className={isMe ? 'text-white' : 'text-[#25D366]'} />
         </div>
         <div className="flex flex-col">
           <span className={`text-[13px] font-semibold ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>
@@ -223,7 +223,7 @@ const GroupCallBubble = React.memo(({ content, isMe, onJoinGroupCall }: { conten
       )}
       <button
         onClick={() => onJoinGroupCall ? onJoinGroupCall(roomId, pwd) : (window.location.href = `/chat?joinRoom=${roomId}&pwd=${encodeURIComponent(pwd)}`)}
-        className={`mt-1 w-full flex items-center justify-center py-2 rounded-xl font-bold text-xs hover:bg-[#30b551] active:scale-95 transition-all ${isMe ? "bg-white text-[#34C759]" : "bg-[#34C759] text-white"}`}
+        className={`mt-1 w-full flex items-center justify-center py-2 rounded-xl font-bold text-xs hover:bg-[#30b551] active:scale-95 transition-all ${isMe ? "bg-white text-[#25D366]" : "bg-[#25D366] text-white"}`}
       >
         {isMe ? 'Manage Call' : 'Join Call'}
       </button>
@@ -234,7 +234,7 @@ const GroupCallBubble = React.memo(({ content, isMe, onJoinGroupCall }: { conten
 
 const MissedCallBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-[18px] min-w-[160px] shadow border ${isMe ? 'bg-[#1c7aff] border-transparent' : 'bg-white border-black/8'}`}>
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-[18px] min-w-[160px] shadow border ${isMe ? 'bg-[#25D366] border-transparent' : 'bg-white border-black/8'}`}>
       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isMe ? 'bg-white/20' : 'bg-[#ff3b30]/10'}`}>
         <PhoneMissed size={16} className={isMe ? 'text-white' : 'text-[#ff3b30]'} />
       </div>
@@ -430,8 +430,8 @@ export const MessageBubble = React.memo(({
       const el = document.getElementById(`msg-${replyMsg.id}`);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.classList.add('ring-2', 'ring-[#1c7aff]/30', 'transition-all', 'duration-300');
-        setTimeout(() => el.classList.remove('ring-2', 'ring-[#1c7aff]/30', 'transition-all', 'duration-300'), 1500);
+        el.classList.add('ring-2', 'ring-[#25D366]/30', 'transition-all', 'duration-300');
+        setTimeout(() => el.classList.remove('ring-2', 'ring-[#25D366]/30', 'transition-all', 'duration-300'), 1500);
       }
     }
   };
@@ -552,13 +552,13 @@ export const MessageBubble = React.memo(({
             ) : isPremium ? (
               <RenderPremiumSticker code={content.replace('__STICKER__', '')} size="96px" />
             ) : isAudio && audioSrc ? (
-              <div className={`px-3 py-2 rounded-[18px] shadow border ${isMe ? 'bg-[#1c7aff] border-transparent rounded-br-[4px]' : 'bg-white border-black/8 rounded-bl-[4px]'}`}>
+              <div className={`px-3 py-2 rounded-[18px] shadow border ${isMe ? 'bg-[#25D366] border-transparent rounded-br-[4px]' : 'bg-white border-black/8 rounded-bl-[4px]'}`}>
                 <CustomAudioPlayer src={audioSrc} isMe={isMe} />
               </div>
             ) : isLocation && locationCoords ? (
               <LocationBubble coords={locationCoords} isMe={isMe} isLive={content.startsWith('[LIVELOCATION]')} />
             ) : attachment ? (
-              <div className={`rounded-[18px] overflow-hidden border shadow relative group ${isMe ? 'bg-[#1c7aff] border-transparent rounded-br-[4px]' : 'bg-white border-black/8 rounded-bl-[4px]'}`}>
+              <div className={`rounded-[18px] overflow-hidden border shadow relative group ${isMe ? 'bg-[#25D366] border-transparent rounded-br-[4px]' : 'bg-white border-black/8 rounded-bl-[4px]'}`}>
                 
                 {/* Vault Save Button */}
                 <button 
@@ -616,9 +616,9 @@ export const MessageBubble = React.memo(({
                       isMe ? 'bg-white/10 border-white/10' : 'bg-black/5 border-black/8'
                     }`}
                   >
-                    <div className={`w-0.5 self-stretch rounded-full ${isMe ? 'bg-white/60' : 'bg-[#1c7aff]'}`} />
+                    <div className={`w-0.5 self-stretch rounded-full ${isMe ? 'bg-white/60' : 'bg-[#25D366]'}`} />
                     <div className="flex flex-col min-w-0">
-                      <p className={`text-[10px] font-bold mb-0.5 ${isMe ? 'text-white/70' : 'text-[#1c7aff]'}`}>Replying to</p>
+                      <p className={`text-[10px] font-bold mb-0.5 ${isMe ? 'text-white/70' : 'text-[#25D366]'}`}>Replying to</p>
                       <p className={`text-[11px] truncate ${isMe ? 'text-white/60' : 'text-black/50'}`}>{formatMessagePreview(replyMsg.content)}</p>
                     </div>
                   </button>
@@ -629,7 +629,7 @@ export const MessageBubble = React.memo(({
                   }`}
                   style={{
                     background: isMe
-                      ? 'linear-gradient(145deg, #1c7aff 0%, #0a65e8 100%)'
+                      ? 'linear-gradient(145deg, #25D366 0%, #0a65e8 100%)'
                       : '#e9e9eb',
                   }}
                 >
@@ -652,7 +652,7 @@ export const MessageBubble = React.memo(({
                           onClick={() => onReact(msg.id, emoji)}
                           className={`text-[13px] px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm border transition-all active:scale-95 ${
                             users.includes(clientInboxId || '')
-                              ? 'bg-[#1c7aff] border-[#1c7aff] text-white'
+                              ? 'bg-[#25D366] border-[#25D366] text-white'
                               : 'bg-white border-black/10 text-[#1c1c1e]'
                           }`}
                         >
@@ -674,7 +674,7 @@ export const MessageBubble = React.memo(({
               {new Date(sentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
             {isMe && !msg.failed && (
-              <span className={msg.status === 'read' && (window as any).__ledger_read_receipts !== false ? 'text-[#1c7aff]' : 'text-black/25'}>
+              <span className={msg.status === 'read' && (window as any).__ledger_read_receipts !== false ? 'text-[#25D366]' : 'text-black/25'}>
                 {msg.status === 'scheduled'
                   ? <Clock size={10} className="text-orange-400 inline" />
                   : (msg.status === 'read' || msg.status === 'delivered') && (window as any).__ledger_read_receipts !== false

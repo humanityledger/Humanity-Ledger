@@ -720,31 +720,36 @@ export function RichPostEditorModal({
   const handlePublish = async (content: { html: string; text: string; json: any }) => {
     try {
       if (!communityId) {
-        console.error('Missing communityId');
+        toast.error('No community selected');
         return;
       }
       if (!myAddress || myAddress.trim() === '') {
         toast.error('Wallet not connected — cannot publish post');
         return;
       }
-      
-      const res = await fetch('/api/chat/community-posts', {
+
+      // Use /api/chat/communities/posts (the correct unified endpoint)
+      const res = await fetch('/api/chat/communities/posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
-        body: JSON.stringify({ 
-          communityId, 
-          content: content.html, 
+        headers: {
+          'Content-Type': 'application/json',
+          'x-web3-address': myAddress,
+        },
+        body: JSON.stringify({
+          communityId,
+          authorAddress: myAddress.toLowerCase(), // also in body for reliability
+          content: content.html,
+          contentHtml: content.html,
           plainText: content.text,
-          contentJson: content.json
         }),
       });
-      
+
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         toast.error(errData.error || 'Failed to publish post');
         return;
       }
-      
+
       toast.success('Post published!');
       onPublished?.(content);
       onClose();
@@ -754,38 +759,35 @@ export function RichPostEditorModal({
     }
   };
 
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div key="editor-modal-wrapper">
-          {/* Backdrop */}
-          <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-[9990] bg-black/50 backdrop-blur-sm"
-          />
+  // ── CRITICAL FIX: use a flat portal-style render to avoid the React
+  // "removeChild" crash that occurs when AnimatePresence tries to unmount
+  // nested motion.divs that were moved in the DOM by the browser.
+  // We render backdrop + sheet as two siblings, NOT nested inside a wrapper.
+  if (!open) return null;
 
-          {/* Editor panel */}
-          <motion.div
-            key="editor"
-            initial={{ opacity: 0, y: '100%' }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: '100%' }}
-            transition={{ type: 'spring', stiffness: 380, damping: 40 }}
-            className="fixed bottom-0 left-0 right-0 z-[9991] w-full h-[90vh] rounded-t-[32px] overflow-hidden shadow-2xl"
-          >
-            <RichPostEditor
-              title={communityName ? `Post in ${communityName}` : 'New Post'}
-              communityName={communityName}
-              onPublish={handlePublish}
-              onClose={onClose}
-            />
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+  return (
+    <>
+      {/* Backdrop — plain div, no animation, avoids reconciliation issues */}
+      <div
+        className="fixed inset-0 z-[9990] bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Editor panel — single motion.div, no nesting */}
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 360, damping: 38 }}
+        className="fixed bottom-0 left-0 right-0 z-[9991] w-full h-[90vh] rounded-t-[32px] overflow-hidden shadow-2xl"
+      >
+        <RichPostEditor
+          title={communityName ? `Post in ${communityName}` : 'New Post'}
+          communityName={communityName}
+          onPublish={handlePublish}
+          onClose={onClose}
+        />
+      </motion.div>
+    </>
   );
 }

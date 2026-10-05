@@ -142,9 +142,9 @@ function AppStoreBadge() {
       className="inline-flex items-center gap-[10px] bg-black text-white px-[14px] py-[8px] rounded-[10px] border border-white/[0.12] hover:bg-[#111] active:scale-[0.97] transition-all select-none"
       style={{ height: '50px', minWidth: '148px' }}
     >
-      {/* Official Apple logo SVG */}
-      <svg width="24" height="29" viewBox="0 0 814 1000" fill="white" xmlns="http://www.w3.org/2000/svg">
-        <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105.3-42.1-165.9-40.8c-60.6 1.2-109 61.6-165.9 61.6s-88.9-61.6-157.5-123.1C20.5 764.6 0 640.1 0 535.1c0-215.1 140.5-328.7 279.5-328.7 74.4 0 136.6 49.2 183.1 49.2 44.6 0 114.6-51.7 201.2-51.7 31.3 0 108.2 4 168.9 57.8zM504.1 43.6c29.6-36 51.7-86.2 51.7-136.3 0-7-.6-14.1-1.9-19.8-48.7 1.9-106 33.5-139.3 74.5-27.3 32.7-51.7 82.3-51.7 132.4 0 7.6 1.3 15.1 1.9 17.7 3.2.6 8.3 1.3 13.4 1.3 44 0 98.7-29.2 125.9-69.8z"/>
+      {/* Official Apple logo — correct viewBox so the leaf doesn't clip */}
+      <svg width="20" height="24" viewBox="0 0 170 209" fill="white" xmlns="http://www.w3.org/2000/svg">
+        <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.2-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.75 3.35-4.94.21-9.84-1.96-14.72-6.52-3.13-2.73-7.05-7.41-11.76-14.03-5.04-7.08-9.19-15.29-12.43-24.65-3.47-10.11-5.21-19.9-5.21-29.38 0-10.86 2.35-20.23 7.06-28.1 3.7-6.31 8.63-11.3 14.82-14.99 6.19-3.69 12.87-5.57 20.07-5.69 3.94 0 9.1 1.22 15.53 3.61 6.41 2.4 10.52 3.62 12.32 3.62 1.35 0 5.92-1.43 13.68-4.27 7.33-2.65 13.52-3.75 18.6-3.32 13.75 1.11 24.08 6.52 30.95 16.26-12.29 7.45-18.37 17.87-18.25 31.22.11 10.41 3.88 19.07 11.3 25.95 3.36 3.19 7.11 5.65 11.27 7.4-.9 2.62-1.86 5.12-2.88 7.52zM113.22 3.48c0 8.16-2.98 15.78-8.92 22.84-7.17 8.38-15.84 13.23-25.23 12.47-.12-.98-.19-2-.19-3.07 0-7.83 3.41-16.21 9.46-23.07 3.02-3.48 6.86-6.37 11.52-8.69 4.65-2.29 9.05-3.55 13.18-3.77.12 1.1.18 2.2.18 3.29z"/>
       </svg>
       <div className="flex flex-col text-left leading-none">
         <span className="text-[10px] font-normal opacity-75 tracking-wide mb-[2px]">Download on the</span>
@@ -198,18 +198,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             variants={fadeUp}
             className="flex flex-col items-center text-center lg:items-start lg:text-left lg:col-span-7 relative z-10"
           >
-            {/* Launch date badge */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1, duration: 0.5 }}
-              className="flex items-center gap-2.5 mb-8 bg-white border border-black/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-full px-5 py-2.5"
-            >
-              <div className="w-2.5 h-2.5 rounded-full bg-[#30D158] animate-pulse shadow-[0_0_12px_rgba(48,209,88,0.6)]" />
-              <span className="text-[13px] font-bold text-[#1C1C1E] uppercase tracking-[0.1em]">
-                Live Now — Web · iOS & Android Coming Soon
-              </span>
-            </motion.div>
+
 
             <h1 className="text-[52px] md:text-[72px] lg:text-[88px] font-black leading-[0.95] tracking-[-0.04em] text-[#050505] mb-6">
               The private<br />
