@@ -566,6 +566,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
             Delete Community
           </button>
           <p className="text-[12px] text-red-500/70 text-center">This action cannot be undone. All messages and posts will be permanently destroyed from the network.</p>
+        </div>
       </div>
       {showChannelsModal && <ChannelManagement />}
     </div>
