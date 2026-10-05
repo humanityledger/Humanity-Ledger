@@ -1,23 +1,19 @@
 import re
 
-# Fix 1
-p1 = r'd:\Projects\Wallet Human Polymarket ID\app\api\chat\contacts\request\[action]\route.ts'
-with open(p1, 'r', encoding='utf-8') as f:
-    c1 = f.read()
+with open("components/landing/ImmersiveManifestoLanding.tsx", "r", encoding="utf-8") as f:
+    content = f.read()
 
-# Replace any NextRequest signature
-c1 = re.sub(
-    r'export async function POST\(req: NextRequest, { params }: { params: { action: string } }\) {',
-    r'export async function POST(req: NextRequest, { params }: { params: Promise<{ action: string }> }) {\n    const resolvedParams = await params;\n    const action = resolvedParams.action;',
-    c1
-)
-with open(p1, 'w', encoding='utf-8') as f:
-    f.write(c1)
+# Add import
+if "import { LedgerShowcase }" not in content:
+    content = content.replace("import { HLLogo } from '@/components/shared/HLLogo';", "import { HLLogo } from '@/components/shared/HLLogo';\nimport { LedgerShowcase } from './LedgerShowcase';")
 
-# Fix 4
-p4 = r'd:\Projects\Wallet Human Polymarket ID\components\terminal\LedgerChat.tsx'
-with open(p4, 'r', encoding='utf-8') as f:
-    c4 = f.read()
-c4 = c4.replace('style="custom"', 'style="default"')
-with open(p4, 'w', encoding='utf-8') as f:
-    f.write(c4)
+# Replace section 3
+pattern = re.compile(r'<section id="how-it-works".*?<\/section>', re.DOTALL)
+content = pattern.sub('<LedgerShowcase />', content)
+
+# Remove the comment just before it too to be clean
+pattern2 = re.compile(r'\{\/\*.*?SECTION 3.*?\*\/\}', re.DOTALL)
+content = pattern2.sub('', content)
+
+with open("components/landing/ImmersiveManifestoLanding.tsx", "w", encoding="utf-8") as f:
+    f.write(content)
