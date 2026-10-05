@@ -20,6 +20,10 @@ The **Humanity Ledger** is a next-generation, privacy-first decentralized commun
 ## Abstract
 Traditional communication platforms (like Discord, Telegram, and Signal) harvest data and metadata, compromising user sovereignty, or rely on centralized infrastructure. The Humanity Ledger reverses this paradigm. By decoupling the interface from centralized backend servers, users interact directly with decentralized protocols. Your identity is secured by smart contracts, and your communications are shielded by military-grade end-to-end encryption via the XMTP network. 
 
+## Architectural Authority
+**Notice to Developers and AI Agents:** 
+The structural decisions, priorities, and roadmap for this project are governed by the [PROTOCOL_SPEC.md](./PROTOCOL_SPEC.md). That document has **absolute authority** over this README and all other commercial documentation. Ledger Chat is the first reference client of the Humanity Ledger protocol, not the protocol itself. 
+
 ## Core Technologies
 The Humanity Ledger is powered by a robust stack of decentralized protocols and modern Web frameworks:
 
