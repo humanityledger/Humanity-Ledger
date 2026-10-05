@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Phone, Video, Search, ChevronRight, X, Lock, Bell, Image,
+  Phone, Video, Search, ChevronRight, X, Lock, Bell, Image as ImageIcon,
   Database, Star, Palette, Camera, Clock, Shield, Key, Users,
   Share2, Heart, List, Download, Trash2, Ban, Flag, Plus,
   MessageCircle, Link, FileText, ArrowLeft, Copy, Check
@@ -29,43 +29,46 @@ const initials = (name: string, addr: string) => {
   return addr ? addr.slice(2, 4).toUpperCase() : 'XX';
 };
 
-// Custom Minimalist Toggle
+// Modern iOS-style Switch Toggle
 const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
   <button
     onClick={() => onChange(!value)}
-    className={`w-10 h-5 border border-black rounded-none flex items-center p-0.5 transition-colors ${value ? 'bg-black' : 'bg-transparent'}`}
+    className={`w-[44px] h-[24px] rounded-full flex items-center p-1 transition-colors duration-300 ease-in-out ${value ? 'bg-[#25D366]' : 'bg-[#E5E5EA]'}`}
   >
-    <div className={`w-3.5 h-3.5 bg-current transition-transform ${value ? 'translate-x-5 text-white' : 'translate-x-0 text-black'}`} />
+    <motion.div 
+      layout
+      className={`w-4 h-4 bg-white rounded-full shadow-sm`}
+      animate={{ x: value ? 20 : 0 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+    />
   </button>
 );
 
-const Row = ({ icon, label, value, onTap, danger = false, toggle, onToggle }: {
-  icon: React.ReactNode; label: string; value?: string;
-  onTap?: () => void; danger?: boolean;
-  toggle?: boolean; onToggle?: (v: boolean) => void;
-}) => (
+const Row = ({ icon, label, value, onTap, danger = false, toggle, onToggle }: any) => (
   <button
     onClick={onTap}
-    className={`w-full flex items-center justify-between py-3 border-b border-black/10 group ${onTap || onToggle !== undefined ? 'hover:border-black transition-colors' : ''} text-left`}
+    className="w-full flex items-center justify-between py-3.5 px-2 group text-left hover:bg-black/[0.02] transition-colors rounded-xl"
   >
-    <div className="flex items-center gap-4">
-      <span className={`shrink-0 ${danger ? 'text-red-500' : 'text-black/40 group-hover:text-black transition-colors'}`}>{icon}</span>
-      <span className={`text-[13px] font-bold uppercase tracking-wider ${danger ? 'text-red-500' : 'text-black'}`}>{label}</span>
+    <div className="flex items-center gap-3.5">
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${danger ? 'bg-red-50 text-red-500' : 'bg-[#F2F2F7] text-[#1C1C1E]/60 group-hover:text-[#25D366] group-hover:bg-[#25D366]/10'} transition-colors`}>
+        {React.cloneElement(icon, { size: 16 })}
+      </div>
+      <span className={`text-[15px] font-medium ${danger ? 'text-red-500' : 'text-[#1C1C1E]'}`}>{label}</span>
     </div>
     <div className="flex items-center gap-3">
-      {value && <span className="text-[12px] font-mono text-black/50">{value}</span>}
+      {value && <span className="text-[14px] text-[#8E8E93]">{value}</span>}
       {onToggle !== undefined && toggle !== undefined ? (
         <Toggle value={toggle} onChange={onToggle} />
       ) : onTap ? (
-        <ChevronRight size={14} className="text-black/20 group-hover:text-black transition-colors shrink-0" />
+        <ChevronRight size={16} className="text-[#C7C7CC] group-hover:text-[#8E8E93] transition-colors shrink-0" />
       ) : null}
     </div>
   </button>
 );
 
 const Section = ({ title, children }: { title?: string; children: React.ReactNode }) => (
-  <div className="mb-10">
-    {title && <p className="mb-4 text-[10px] font-mono uppercase tracking-[0.2em] text-black/40">{title}</p>}
+  <div className="mb-6 bg-white rounded-2xl border border-black/[0.04] p-2 shadow-sm">
+    {title && <p className="px-3 pt-2 pb-1 text-[12px] font-semibold tracking-wide text-[#8E8E93] uppercase">{title}</p>}
     <div className="flex flex-col">
       {children}
     </div>
@@ -73,16 +76,21 @@ const Section = ({ title, children }: { title?: string; children: React.ReactNod
 );
 
 const Modal = ({ title, onClose, children }: { title: string, onClose: () => void, children: React.ReactNode }) => (
-  <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-white/80 backdrop-blur-md">
-    <div className="bg-white border border-black w-full max-w-md flex flex-col max-h-[80vh] shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
-      <div className="flex items-center justify-between p-5 border-b border-black bg-[#F8F8F8]">
-        <h3 className="font-bold uppercase tracking-widest text-[13px]">{title}</h3>
-        <button onClick={onClose} className="p-1 hover:bg-black hover:text-white transition-colors"><X size={18} /></button>
+  <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+      className="bg-white rounded-3xl w-full max-w-sm flex flex-col max-h-[80vh] shadow-2xl overflow-hidden"
+    >
+      <div className="flex items-center justify-between p-5 border-b border-black/[0.05] bg-white">
+        <h3 className="font-bold text-[16px] text-[#1C1C1E]">{title}</h3>
+        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA] transition-colors"><X size={18} /></button>
       </div>
-      <div className="p-6 overflow-y-auto">
+      <div className="p-6 overflow-y-auto bg-[#F9F9F9]">
         {children}
       </div>
-    </div>
+    </motion.div>
   </div>
 );
 
@@ -97,9 +105,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   
   const [toast, setToast] = useState<string | null>(null);
   const [modal, setModal] = useState<string | null>(null);
-  const [listInput, setListInput] = useState('');
-  const [theme, setTheme] = useState('Minimal');
-
+  
   const displayName = peerName || shortAddr(peerAddress);
 
   useEffect(() => {
@@ -107,7 +113,6 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
     setLockChat(!!localStorage.getItem('ledger_locked_' + peerAddress));
     setIsMuted(!!localStorage.getItem('ledger_muted_' + peerAddress));
     setDisappearing((localStorage.getItem('ledger_disappearing_' + peerAddress) as any) || 'off');
-    setTheme(localStorage.getItem('ledger_theme_' + peerAddress) || 'Minimal');
     const favs = JSON.parse(localStorage.getItem('ledger_favourites') || '[]');
     setIsFav(favs.includes(peerAddress));
   }, [peerAddress]);
@@ -117,22 +122,10 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
     setTimeout(() => setToast(null), 3000);
   };
 
-  const [advPrivacy, setAdvPrivacy] = useState({
-    hideRead: !!localStorage.getItem(`ledger_adv_privacy_${peerAddress}_hideRead`),
-    blockScreenshots: !!localStorage.getItem(`ledger_adv_privacy_${peerAddress}_blockScreenshots`),
-    forwardProtection: !!localStorage.getItem(`ledger_adv_privacy_${peerAddress}_forwardProtection`),
-  });
-
-  const handleAdvPrivacy = (key: keyof typeof advPrivacy, val: boolean) => {
-    setAdvPrivacy(prev => ({ ...prev, [key]: val }));
-    if (val) localStorage.setItem(`ledger_adv_privacy_${peerAddress}_${key}`, '1');
-    else localStorage.removeItem(`ledger_adv_privacy_${peerAddress}_${key}`);
-  };
-
   const handleMute = (v: boolean) => {
     setIsMuted(v);
-    if (v) { localStorage.setItem('ledger_muted_' + peerAddress, '1'); showToast('Chat notifications muted'); }
-    else { localStorage.removeItem('ledger_muted_' + peerAddress); showToast('Notifications restored'); }
+    if (v) { localStorage.setItem('ledger_muted_' + peerAddress, '1'); showToast('Notifications muted'); }
+    else { localStorage.removeItem('ledger_muted_' + peerAddress); showToast('Notifications unmuted'); }
   };
 
   const toggleFav = () => {
@@ -140,273 +133,167 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
     if (isFav) {
       localStorage.setItem('ledger_favourites', JSON.stringify(favs.filter((f: string) => f !== peerAddress)));
       setIsFav(false);
-      showToast('Removed from Identity Registry');
+      showToast('Removed from Favorites');
     } else {
       localStorage.setItem('ledger_favourites', JSON.stringify([...favs, peerAddress]));
       setIsFav(true);
-      showToast('Registered to Identity Registry');
+      showToast('Added to Favorites');
     }
   };
 
-  const handleTheme = (t: string) => {
-    setTheme(t);
-    localStorage.setItem('ledger_theme_' + peerAddress, t);
-    setModal(null);
-  };
-
-  const handleSavePhotos = (v: boolean) => {
-    setSaveToPhotos(v);
-    if (v) localStorage.setItem('ledger_save_photos_' + peerAddress, '1');
-    else localStorage.removeItem('ledger_save_photos_' + peerAddress);
-  };
-
-  const handleLock = (v: boolean) => {
-    setLockChat(v);
-    if (v) { localStorage.setItem('ledger_locked_' + peerAddress, '1'); showToast('State shielding engaged'); }
-    else localStorage.removeItem('ledger_locked_' + peerAddress);
-  };
-
-  const copyText = (txt: string, msg: string) => {
-    navigator.clipboard.writeText(txt);
-    showToast(msg);
-    setModal(null);
-  };
-
-  const handleShare = async () => {
-    const url = 'https://humanidfi.com/connect?peer=' + peerAddress;
-    if (navigator.share) {
-      try { await navigator.share({ title: displayName, text: peerAddress, url }); } catch (e) {}
-    } else copyText(url, 'Connection protocol copied');
-  };
-
-  const handleExport = () => {
-    const chatText = messages.map(m => `[${new Date(m.timestamp).toISOString()}] ${m.senderInboxId === peerAddress ? peerAddress : 'Me'}: ${m.content}`).join('\n');
-    const blob = new Blob([chatText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ledger-state-${peerAddress.slice(0, 8)}.txt`;
-    a.click();
-  };
-
-  const handleReport = async () => {
-    try {
-      await fetch('/api/chat/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reporter: myAddress, reported: peerAddress, reason: 'spam' })
-      });
-      showToast('Telemetry report dispatched.');
-    } catch (e) {
-      showToast('Report dispatch failed.');
-    }
-  };
-
-  const getStarred = () => JSON.parse(localStorage.getItem('ledger_starred_' + peerAddress) || '[]');
-  const handleDisappearing = (opt: any) => {
-    setDisappearing(opt);
-    localStorage.setItem('ledger_disappearing_' + peerAddress, opt);
-  };
-
-  const handleAddList = () => {
-    if (!listInput.trim()) return;
-    const lists = JSON.parse(localStorage.getItem('ledger_lists') || '{}');
-    if (!lists[listInput]) lists[listInput] = [];
-    if (!lists[listInput].includes(peerAddress)) lists[listInput].push(peerAddress);
-    localStorage.setItem('ledger_lists', JSON.stringify(lists));
-    showToast(`Added to list: ${listInput}`);
-    setModal(null);
+  const [copied, setCopied] = useState(false);
+  const copyAddress = () => {
+    navigator.clipboard.writeText(peerAddress);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <motion.div
-      initial={{ x: '100%', opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: '100%', opacity: 0 }}
-      transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
-      className="absolute inset-0 z-[200] bg-[#FAFAFA] flex flex-col overflow-y-auto font-sans"
-    >
-      <div className="sticky top-0 z-10 bg-[#FAFAFA]/90 backdrop-blur-lg border-b border-black/10 px-6 py-4 flex items-center justify-between">
-        <button onClick={onClose} className="p-2 -ml-2 text-black/50 hover:text-black transition-colors">
-          <ArrowLeft size={20} />
-        </button>
-        <span className="text-[11px] font-mono tracking-[0.2em] uppercase font-bold text-black">Contact Profile</span>
-        <div className="w-8" />
-      </div>
-
-      <div className="p-8 pb-12 flex flex-col max-w-2xl mx-auto w-full items-center">
-        <div className="w-24 h-24 bg-black flex items-center justify-center mb-6 border border-black/10 shadow-2xl relative">
-          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
-          <span className="text-3xl font-serif italic text-white z-10">{initials(displayName, peerAddress)}</span>
-        </div>
-        <h2 className="text-2xl font-bold tracking-tight mb-2 text-black">{displayName}</h2>
-        <p className="text-[12px] font-mono text-black/40 break-all text-center">{peerAddress}</p>
-
-        <div className="flex gap-4 mt-8 w-full max-w-md">
-          <button onClick={onVoiceCall} className="flex-1 flex flex-col items-center gap-3 py-4 border border-black/10 hover:bg-black hover:text-white transition-all group">
-            <Phone size={18} className="text-black group-hover:text-white" />
-            <span className="text-[10px] font-mono uppercase tracking-widest">Audio</span>
-          </button>
-          <button onClick={onVideoCall} className="flex-1 flex flex-col items-center gap-3 py-4 border border-black/10 hover:bg-black hover:text-white transition-all group">
-            <Video size={18} className="text-black group-hover:text-white" />
-            <span className="text-[10px] font-mono uppercase tracking-widest">Video</span>
-          </button>
-          <button onClick={onSearch} className="flex-1 flex flex-col items-center gap-3 py-4 border border-black/10 hover:bg-black hover:text-white transition-all group">
-            <Search size={18} className="text-black group-hover:text-white" />
-            <span className="text-[10px] font-mono uppercase tracking-widest">Query</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="px-8 pb-12 flex flex-col">
-        <Section title="Media & Storage">
-          <Row icon={<Image size={16} />} label="Encrypted Artifacts" value={`${messages.filter(m => m.content.match(/https?:\/\//)).length}`} onTap={() => setModal('media')} />
-          <Row icon={<Database size={16} />} label="State Footprint" value={`${((messages.length * 50) / 1024).toFixed(1)} KB`} onTap={() => setModal('storage')} />
-          <Row icon={<Star size={16} />} label="Saved Vectors" value={`${getStarred().length}`} onTap={() => setModal('starred')} />
-        </Section>
-
-        <Section title="Protocol Parameters">
-          <Row icon={<Bell size={16} />} label="Mute Telemetry" toggle={isMuted} onToggle={handleMute} />
-          <Row icon={<Palette size={16} />} label="Interface Theme" value={theme} onTap={() => setModal('theme')} />
-          <Row icon={<Camera size={16} />} label="Save Media Local" toggle={saveToPhotos} onToggle={handleSavePhotos} />
-        </Section>
-
-        <Section title="Cryptographic Constraints">
-          <Row icon={<Clock size={16} />} label="Burn-on-Read" value={disappearing} onTap={() => setModal('disappearing')} />
-          <Row icon={<Lock size={16} />} label="State Shielding" toggle={lockChat} onToggle={handleLock} />
-          <Row icon={<Shield size={16} />} label="Advanced ZK Parameters" onTap={() => setModal('advPrivacy')} />
-          <Row icon={<Key size={16} />} label="ECDH Fingerprint" value="Verified" onTap={() => setModal('encryption')} />
-        </Section>
-
-        <Section title="Actions">
-          <Row icon={<Share2 size={16} />} label="Export Protocol Link" onTap={handleShare} />
-          <Row icon={<Heart size={16} className={isFav ? 'fill-black' : ''} />} label={isFav ? "Remove Vector" : "Save Identity Vector"} onTap={toggleFav} />
-          <Row icon={<List size={16} />} label="Add to List" onTap={() => setModal('list')} />
-          <Row icon={<Download size={16} />} label="Extract State Log" onTap={handleExport} />
-          <Row icon={<Trash2 size={16} />} label="Obliterate State" onTap={() => onClearChat?.()} />
-        </Section>
-
-        <Section title="Danger Zone">
-          <Row icon={<Ban size={16} />} label={`Block Identity`} onTap={onBlock} danger />
-          <Row icon={<Flag size={16} />} label={`Report Malfeasance`} onTap={handleReport} danger />
-        </Section>
-      </div>
-
-      {toast && (
-        <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 font-mono text-[11px] uppercase tracking-widest z-[400] whitespace-nowrap shadow-2xl">
-          {toast}
-        </motion.div>
-      )}
-
-      {/* Modals */}
-      {modal === 'media' && (
-        <Modal title="Encrypted Artifacts" onClose={() => setModal(null)}>
-          <div className="text-sm font-mono text-black/50 flex flex-col gap-3">
-            {messages.filter(m => m.content.match(/https?:\/\//) || m.content.length > 200).map(m => (
-              <div key={m.id} className="p-3 border border-black/10">{m.content.slice(0,50)}...</div>
-            ))}
-            {messages.filter(m => m.content.match(/https?:\/\//) || m.content.length > 200).length === 0 && 'No artifacts detected in current state.'}
+    <>
+      <motion.div 
+        initial={{ x: 380 }}
+        animate={{ x: 0 }}
+        exit={{ x: 380 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="w-full md:w-[380px] h-full flex flex-col bg-[#F6F7F9] border-l border-[#D1D7DB] z-50 absolute right-0 md:relative shrink-0 shadow-2xl md:shadow-none"
+      >
+        <div className="h-[60px] flex items-center justify-between px-4 bg-[#F0F2F5] shrink-0">
+          <div className="flex items-center gap-4">
+            <button onClick={onClose} className="text-[#54656F] hover:text-[#111B21] transition-colors"><X size={24} /></button>
+            <h2 className="text-[16px] font-semibold text-[#111B21]">Contact Info</h2>
           </div>
-        </Modal>
-      )}
+        </div>
 
-      {modal === 'storage' && (
-        <Modal title="State Footprint" onClose={() => setModal(null)}>
-          <div className="flex flex-col items-center py-6">
-            <Database size={32} className="text-black mb-6" />
-            <h4 className="text-4xl font-black font-sans">{((messages.length * 50) / 1024).toFixed(2)} KB</h4>
-            <p className="text-[11px] font-mono uppercase tracking-widest text-black/40 mt-2">{messages.length} data packets</p>
-          </div>
-        </Modal>
-      )}
-
-      {modal === 'starred' && (
-        <Modal title="Saved Vectors" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-3">
-            {getStarred().map((sm: any, i: number) => (
-              <div key={i} className="p-4 border border-black flex flex-col gap-2 bg-[#F8F8F8]">
-                <p className="text-sm font-sans">{sm.content}</p>
-                <p className="text-[10px] font-mono text-black/40">{new Date(sm.timestamp).toLocaleString()}</p>
+        <div className="flex-1 overflow-y-auto">
+          {/* Header Card */}
+          <div className="bg-white py-8 px-4 flex flex-col items-center justify-center mb-2 shadow-sm">
+            <div className="relative">
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-white text-[42px] font-bold shadow-lg mb-4">
+                {initials(displayName, peerAddress)}
               </div>
-            ))}
-            {getStarred().length === 0 && <p className="text-sm font-mono text-black/50">No saved vectors.</p>}
-          </div>
-        </Modal>
-      )}
+              {isFav && <div className="absolute bottom-4 right-0 w-8 h-8 bg-yellow-400 rounded-full border-4 border-white flex items-center justify-center text-white"><Star size={14} fill="currentColor" /></div>}
+            </div>
+            
+            <h1 className="text-[24px] font-semibold text-[#111B21]">{displayName}</h1>
+            <p className="text-[14px] text-[#667781] font-mono mt-1 mb-6">{shortAddr(peerAddress)}</p>
 
-      {modal === 'theme' && (
-        <Modal title="Interface Theme" onClose={() => setModal(null)}>
-          <div className="grid grid-cols-2 gap-4">
-            {['Minimal', 'Terminal', 'OLED Black', 'Cyber'].map(t => (
-              <button key={t} onClick={() => handleTheme(t)} className={`p-4 border text-[12px] font-mono uppercase tracking-widest ${theme === t ? 'border-black bg-black text-white' : 'border-black/20 text-black hover:border-black'}`}>
-                {t}
+            <div className="flex gap-4 w-full justify-center">
+              <button onClick={onVoiceCall} className="flex flex-col items-center gap-2 text-[#25D366] hover:opacity-80 transition-opacity">
+                <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center"><Phone size={22} /></div>
+                <span className="text-[13px] font-medium">Audio</span>
               </button>
-            ))}
-          </div>
-        </Modal>
-      )}
-
-      {modal === 'disappearing' && (
-        <Modal title="Burn-on-Read Settings" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-3">
-            {['off', '24h', '7d', '90d'].map(opt => (
-              <button key={opt} onClick={() => { handleDisappearing(opt); setModal(null); }} className={`p-4 border text-[12px] font-mono uppercase tracking-widest text-left ${disappearing === opt ? 'border-black bg-black text-white' : 'border-black/20 text-black hover:border-black'}`}>
-                {opt === 'off' ? 'Disabled' : `${opt} Obliteration`}
+              <button onClick={onVideoCall} className="flex flex-col items-center gap-2 text-[#25D366] hover:opacity-80 transition-opacity">
+                <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center"><Video size={24} /></div>
+                <span className="text-[13px] font-medium">Video</span>
               </button>
-            ))}
-          </div>
-        </Modal>
-      )}
-
-      {modal === 'advPrivacy' && (
-        <Modal title="Advanced ZK Parameters" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-6">
-            <div className="flex justify-between items-center">
-              <span className="text-[12px] font-bold uppercase tracking-wider">Obfuscate Read State</span>
-              <Toggle value={advPrivacy.hideRead} onChange={(v) => handleAdvPrivacy('hideRead', v)} />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-[12px] font-bold uppercase tracking-wider">Screenshot Blackout</span>
-              <Toggle value={advPrivacy.blockScreenshots} onChange={(v) => handleAdvPrivacy('blockScreenshots', v)} />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-[12px] font-bold uppercase tracking-wider">Anti-Forward Propagation</span>
-              <Toggle value={advPrivacy.forwardProtection} onChange={(v) => handleAdvPrivacy('forwardProtection', v)} />
+              <button onClick={onSearch} className="flex flex-col items-center gap-2 text-[#25D366] hover:opacity-80 transition-opacity">
+                <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center"><Search size={22} /></div>
+                <span className="text-[13px] font-medium">Search</span>
+              </button>
             </div>
           </div>
-        </Modal>
-      )}
 
-      {modal === 'encryption' && (
-        <Modal title="Cryptographic Integrity" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-6 items-center text-center py-6">
-            <Key size={32} className="text-black" />
-            <p className="text-[12px] font-mono text-black/60 uppercase tracking-widest leading-relaxed">
-              Payloads are secured via ECDH key exchange. XMTP Node routing fingerprint:
-            </p>
-            <p className="font-mono text-xs bg-black text-white p-4 break-all w-full">{peerAddress}</p>
-            <button onClick={() => copyText(peerAddress, 'Fingerprint copied')} className="px-6 py-3 border border-black hover:bg-black hover:text-white transition-colors text-[11px] font-bold uppercase tracking-widest">
-              Copy Hash
-            </button>
+          <div className="p-4 flex flex-col gap-2">
+            <Section title="About">
+              <Row icon={<Copy />} label="Wallet Address" value={shortAddr(peerAddress)} onTap={copyAddress} />
+              <Row icon={<Star />} label="Favorite Contact" toggle={isFav} onToggle={toggleFav} />
+            </Section>
+
+            <Section title="Media, Links, and Docs">
+              <Row icon={<ImageIcon />} label="Shared Media" value="0" onTap={() => setModal('media')} />
+              <Row icon={<Star />} label="Starred Messages" value="None" onTap={() => setModal('starred')} />
+            </Section>
+
+            <Section title="Privacy & Security">
+              <Row icon={<Bell />} label="Mute Notifications" toggle={isMuted} onToggle={handleMute} />
+              <Row icon={<Clock />} label="Disappearing Messages" value={disappearing === 'off' ? 'Off' : disappearing} onTap={() => setModal('disappearing')} />
+              <Row icon={<Lock />} label="Lock Chat with PIN" toggle={lockChat} onToggle={(v: boolean) => {
+                setLockChat(v);
+                if (v) {
+                  localStorage.setItem('ledger_locked_' + peerAddress, '1');
+                  showToast('Chat locked locally');
+                } else {
+                  localStorage.removeItem('ledger_locked_' + peerAddress);
+                  showToast('Chat unlocked');
+                }
+              }} />
+              <Row icon={<Shield />} label="Encryption" value="End-to-End" onTap={() => setModal('encryption')} />
+            </Section>
+
+            <Section title="Actions">
+              <Row icon={<Share2 />} label="Share Contact" onTap={() => showToast('Sharing not available in beta')} />
+              <Row icon={<Download />} label="Export Chat" onTap={() => showToast('Exporting conversation...')} />
+              <Row icon={<Trash2 />} label="Clear Chat" danger onTap={onClearChat} />
+            </Section>
+
+            <Section>
+              <Row icon={<Ban />} label="Block Contact" danger onTap={onBlock} />
+              <Row icon={<Flag />} label="Report Contact" danger onTap={() => showToast('Contact reported to local blocklist.')} />
+            </Section>
           </div>
-        </Modal>
-      )}
+        </div>
+      </motion.div>
 
-      {modal === 'list' && (
-        <Modal title="Add to List" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-4">
-            <input 
-              type="text" 
-              placeholder="List name (e.g. Team, Family)" 
-              value={listInput} 
-              onChange={e => setListInput(e.target.value)}
-              className="w-full border border-black px-4 py-3 outline-none focus:bg-black/5 font-mono text-sm uppercase"
-            />
-            <button onClick={handleAddList} className="bg-black text-white py-3 font-bold uppercase tracking-widest text-[12px]">Append Vector</button>
-          </div>
-        </Modal>
-      )}
+      <AnimatePresence>
+        {toast && (
+          <motion.div initial={{ opacity: 0, y: 50, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-[#111B21] text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 z-[400]"
+          >
+            {copied ? <Check size={16} className="text-[#25D366]" /> : <Shield size={16} className="text-[#25D366]" />}
+            <span className="text-[14px] font-medium">{toast}</span>
+          </motion.div>
+        )}
 
-    </motion.div>
+        {modal === 'disappearing' && (
+          <Modal title="Disappearing Messages" onClose={() => setModal(null)}>
+            <div className="flex flex-col gap-3">
+              <p className="text-[13px] text-[#667781] mb-2 leading-relaxed">For more privacy, new messages will disappear from this device for everyone after the selected duration.</p>
+              {['off', '24h', '7d', '90d'].map(opt => (
+                <button key={opt} onClick={() => {
+                  setDisappearing(opt as any);
+                  localStorage.setItem('ledger_disappearing_' + peerAddress, opt);
+                  setModal(null);
+                  showToast(`Timer set to ${opt}`);
+                }} className="flex items-center justify-between p-4 rounded-xl bg-white border border-black/[0.05] hover:border-[#25D366] transition-colors">
+                  <span className="text-[15px] font-semibold text-[#111B21]">{opt === 'off' ? 'Off' : `${opt} timer`}</span>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${disappearing === opt ? 'border-[#25D366]' : 'border-[#D1D7DB]'}`}>
+                    {disappearing === opt && <div className="w-2.5 h-2.5 bg-[#25D366] rounded-full" />}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </Modal>
+        )}
+
+        {modal === 'encryption' && (
+          <Modal title="End-to-End Encryption" onClose={() => setModal(null)}>
+            <div className="flex flex-col items-center text-center gap-4 py-4">
+              <div className="w-16 h-16 bg-[#25D366]/10 text-[#25D366] rounded-full flex items-center justify-center mb-2">
+                <Lock size={32} />
+              </div>
+              <p className="text-[14px] text-[#111B21] font-medium">Messages and calls are end-to-end encrypted.</p>
+              <p className="text-[13px] text-[#667781] leading-relaxed">No one outside of this chat, not even Humanity Ledger, can read or listen to them.</p>
+              <div className="mt-4 p-4 bg-[#F0F2F5] rounded-xl w-full">
+                <p className="text-[11px] font-mono text-[#667781] break-all tracking-wider text-center">
+                  {myAddress} - {peerAddress}
+                </p>
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {modal === 'media' && (
+          <Modal title="Media, Links, and Docs" onClose={() => setModal(null)}>
+            <div className="flex flex-col items-center text-center gap-4 py-8">
+              <div className="w-16 h-16 bg-[#F0F2F5] text-[#8E8E93] rounded-full flex items-center justify-center mb-2">
+                <ImageIcon size={32} />
+              </div>
+              <p className="text-[14px] text-[#111B21] font-medium">No media shared yet</p>
+              <p className="text-[13px] text-[#667781] leading-relaxed">Photos and videos sent in this chat will appear here.</p>
+            </div>
+          </Modal>
+        )}
+      </AnimatePresence>
+    </>
   );
 };

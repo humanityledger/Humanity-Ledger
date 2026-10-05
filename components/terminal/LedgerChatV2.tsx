@@ -4143,6 +4143,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             onSearch={() => { setShowContactInfo(false); setShowSearch(true); }}
             onBlock={() => {
               setShowContactInfo(false);
+              setBlockedPeers(prev => {
+                const next = new Set(prev);
+                next.add(activePeer.toLowerCase());
+                vault.setItem('ledger_blocked', JSON.stringify(Array.from(next)));
+                return next;
+              });
+              setActivePeer(null);
               toast.error(`${getDisplayName(activePeer)} has been blocked.`);
             }}
           />
@@ -4285,7 +4292,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           }}
         />
 
-        <div className="flex-1 overflow-y-auto flex flex-col bg-[#F2F2F7]">
+        <div className="flex-1 overflow-y-auto flex flex-col bg-[#F2F2F7]" style={bgStyle}>
 
           {/* ── UPDATES TAB ── */}
           {sidebarTab === 'updates' && (
