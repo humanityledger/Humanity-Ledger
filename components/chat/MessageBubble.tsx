@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
-import { FastForward, MapPin, Clock, PhoneOff, PhoneMissed, Video, Check, CheckCheck, Pencil, Lock } from 'lucide-react';
+import { FastForward, MapPin, Clock, PhoneOff, PhoneMissed, Video, Check, CheckCheck, Pencil, Lock, ExternalLink } from 'lucide-react';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { StickerPicker, PREMIUM_STICKERS, RenderPremiumSticker } from './StickerPicker';
 
@@ -127,6 +127,55 @@ const PaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: bo
   );
 });
 PaymentBubble.displayName = 'PaymentBubble';
+
+// ─── Location Bubble ─────────────────────────────────────────────────────────
+const LocationBubble = React.memo(({ coords, isMe, isLive }: { coords: string; isMe: boolean; isLive: boolean }) => {
+  const [lat, lon] = coords.split(',').map(Number);
+  if (isNaN(lat) || isNaN(lon)) return null;
+
+  // OpenStreetMap embed — no API key needed
+  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.01},${lat - 0.01},${lon + 0.01},${lat + 0.01}&layer=mapnik&marker=${lat},${lon}`;
+  const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+
+  return (
+    <div className={`rounded-[18px] overflow-hidden shadow-md border min-w-[240px] max-w-[280px] ${isMe ? 'border-transparent' : 'border-black/8'}`}>
+      {/* Map embed */}
+      <div className="relative w-full h-[160px] bg-[#e8f4f8]">
+        <iframe
+          src={mapUrl}
+          width="100%"
+          height="160"
+          style={{ border: 'none', display: 'block' }}
+          title="Location"
+          loading="lazy"
+          sandbox="allow-scripts allow-same-origin"
+        />
+        {/* Live indicator overlay */}
+        {isLive && (
+          <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-full shadow-sm pointer-events-none">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse block" />
+            <span className="text-[10px] font-black uppercase tracking-wider text-red-500">Live</span>
+          </div>
+        )}
+      </div>
+      {/* Footer link */}
+      <a
+        href={googleMapsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`flex items-center gap-2 px-3 py-2.5 ${isMe ? 'bg-[#1c7aff] text-white' : 'bg-white text-[#1c1c1e]'}`}
+      >
+        <MapPin size={14} className={isMe ? 'text-white/80' : 'text-red-500'} />
+        <div className="flex flex-col flex-1">
+          <span className="text-[12px] font-semibold">{isLive ? 'Live Location' : 'Shared Location'}</span>
+          <span className="text-[10px] font-mono opacity-60">{lat.toFixed(4)}, {lon.toFixed(4)}</span>
+        </div>
+        <ExternalLink size={12} className="opacity-50" />
+      </a>
+    </div>
+  );
+});
+LocationBubble.displayName = 'LocationBubble';
 
 // â”€â”€â”€ Call Offer Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CallOfferBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
@@ -328,11 +377,13 @@ export const MessageBubble = React.memo(({
   const isAudio      = content.startsWith('__AUDIO__');
   const isMedia      = content.startsWith('__MEDIA__:');
   const isGif        = content.startsWith('[GIF]');
-  const isLocation   = content.startsWith('[LOCATION]');
+  const isLocation   = content.startsWith('[LOCATION]') || content.startsWith('[LIVELOCATION]');
   const isSystemMsg  = content.startsWith('__PIN__') || content.startsWith('__REVOKE__') || content.startsWith('__READ__') || content.startsWith('__VOTE__') || content.startsWith('__EDIT__') || content.startsWith('__UNPIN__');
   const audioSrc     = isAudio ? content.slice('__AUDIO__'.length) : null;
   const gifUrl       = isGif ? content.slice('[GIF]'.length) : null;
-  const locationCoords = isLocation ? content.slice('[LOCATION]'.length) : null;
+  const locationCoords = isLocation
+    ? (content.startsWith('[LIVELOCATION]') ? content.slice('[LIVELOCATION]'.length) : content.slice('[LOCATION]'.length))
+    : null;
   
   let mediaObj = null;
   if (isMedia) {
@@ -505,17 +556,7 @@ export const MessageBubble = React.memo(({
                 <CustomAudioPlayer src={audioSrc} isMe={isMe} />
               </div>
             ) : isLocation && locationCoords ? (
-              <a
-                href={`https://www.google.com/maps?q=${locationCoords}`}
-                target="_blank" rel="noopener noreferrer"
-                className={`flex items-center gap-2.5 px-4 py-3 rounded-[18px] shadow border ${isMe ? 'bg-[#1c7aff] text-white border-transparent rounded-br-[4px]' : 'bg-white text-[#1c1c1e] border-black/8 rounded-bl-[4px]'}`}
-              >
-                <MapPin size={16} className={isMe ? 'text-white/80' : 'text-[#ff3b30]'} />
-                <div className="flex flex-col">
-                  <span className="text-[13px] font-semibold">Live Location</span>
-                  <span className="text-[11px] font-mono opacity-60">{locationCoords}</span>
-                </div>
-              </a>
+              <LocationBubble coords={locationCoords} isMe={isMe} isLive={content.startsWith('[LIVELOCATION]')} />
             ) : attachment ? (
               <div className={`rounded-[18px] overflow-hidden border shadow relative group ${isMe ? 'bg-[#1c7aff] border-transparent rounded-br-[4px]' : 'bg-white border-black/8 rounded-bl-[4px]'}`}>
                 
@@ -541,7 +582,16 @@ export const MessageBubble = React.memo(({
                   <Lock size={14} />
                 </button>
 
-                {attachment.mime.startsWith('image/') || ['jpg','jpeg','png','gif','webp'].includes(attachment.name.split('.').pop()?.toLowerCase() || '') ? (
+                {attachment.mime.startsWith('video/') || ['mp4','mov','webm','ogg'].includes(attachment.name.split('.').pop()?.toLowerCase() || '') ? (
+                  <video
+                    src={attachment.url}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="max-w-[240px] max-h-[200px] rounded-[14px]"
+                    style={{ display: 'block' }}
+                  />
+                ) : attachment.mime.startsWith('image/') || ['jpg','jpeg','png','gif','webp'].includes(attachment.name.split('.').pop()?.toLowerCase() || '') ? (
                   <button onClick={() => onOpenLightbox(attachment.url)} className="block">
                     <img src={attachment.url} alt={attachment.name} className="max-w-[220px] max-h-[280px] object-cover" />
                   </button>

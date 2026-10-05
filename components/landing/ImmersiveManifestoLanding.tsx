@@ -134,44 +134,49 @@ function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
   );
 }
 
-// App Store badge — coming soon notify
+// ─── App Store Badge (Official look — matches Apple's badge exactly) ──────────
 function AppStoreBadge() {
   return (
     <a
-      href="#notify"
-      className="flex items-center gap-3 bg-black hover:bg-[#1A1A1C] text-white px-5 py-3 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-white/5 min-w-[150px]"
+      href="#"
+      className="inline-flex items-center gap-[10px] bg-black text-white px-[14px] py-[8px] rounded-[10px] border border-white/[0.12] hover:bg-[#111] active:scale-[0.97] transition-all select-none"
+      style={{ height: '50px', minWidth: '148px' }}
     >
-      <svg viewBox="0 0 814 1000" width="24" height="24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      {/* Official Apple logo SVG */}
+      <svg width="24" height="29" viewBox="0 0 814 1000" fill="white" xmlns="http://www.w3.org/2000/svg">
         <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105.3-42.1-165.9-40.8c-60.6 1.2-109 61.6-165.9 61.6s-88.9-61.6-157.5-123.1C20.5 764.6 0 640.1 0 535.1c0-215.1 140.5-328.7 279.5-328.7 74.4 0 136.6 49.2 183.1 49.2 44.6 0 114.6-51.7 201.2-51.7 31.3 0 108.2 4 168.9 57.8zM504.1 43.6c29.6-36 51.7-86.2 51.7-136.3 0-7-.6-14.1-1.9-19.8-48.7 1.9-106 33.5-139.3 74.5-27.3 32.7-51.7 82.3-51.7 132.4 0 7.6 1.3 15.1 1.9 17.7 3.2.6 8.3 1.3 13.4 1.3 44 0 98.7-29.2 125.9-69.8z"/>
       </svg>
-      <div className="flex flex-col text-left">
-        <span className="text-[9px] font-medium opacity-70 leading-none mb-0.5 tracking-widest uppercase">Download on the</span>
-        <span className="text-[16px] font-bold leading-none tracking-tight">App Store</span>
+      <div className="flex flex-col text-left leading-none">
+        <span className="text-[10px] font-normal opacity-75 tracking-wide mb-[2px]">Download on the</span>
+        <span className="text-[19px] font-semibold tracking-[-0.3px]">App Store</span>
       </div>
     </a>
   );
 }
 
-// Google Play badge — coming soon notify
+// ─── Google Play Badge (Official look — matches Google's badge exactly) ────────
 function GooglePlayBadge() {
   return (
     <a
-      href="#notify"
-      className="flex items-center gap-3 bg-black hover:bg-[#1A1A1C] text-white px-5 py-3 rounded-xl transition-all active:scale-95 shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-white/5 min-w-[150px]"
+      href="#"
+      className="inline-flex items-center gap-[10px] bg-black text-white px-[14px] py-[8px] rounded-[10px] border border-white/[0.12] hover:bg-[#111] active:scale-[0.97] transition-all select-none"
+      style={{ height: '50px', minWidth: '162px' }}
     >
-      <svg viewBox="0 0 512 512" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-        <path fill="#4CAF50" d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1z"/>
-        <path fill="#FF3D00" d="m186 13 139.3 221.3-60.1 60.1L71.4 130.9C85.3 58.7 131.8 18.1 186 13z"/>
-        <path fill="#FFD600" d="M104.6 13C51.1 33.5 13 88.5 13 154.7v202.6c0 66.2 38.1 121.2 91.6 141.7L325.3 277.7 104.6 13z"/>
-        <path fill="#2196F3" d="M385.4 174.2 104.6 499c53.5 20.5 99.5-2.1 116.3-18.9L499 310.2c-13.9-65.8-57.4-113.9-113.6-136z"/>
+      {/* Official Google Play triangle logo */}
+      <svg width="24" height="27" viewBox="0 0 40 45" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M1.5 0.7L22.1 21.3L1.5 41.9C0.6 41.4 0 40.5 0 39.4V2.2C0 1.1 0.6 0.2 1.5 0.7Z" fill="#4CAF50"/>
+        <path d="M33.1 15L22.1 21.3L29.7 28.9L40.6 22.7C41.8 22 41.8 20.7 40.6 20L33.1 15Z" fill="#FFC107"/>
+        <path d="M1.5 41.9L22.1 21.3L29.7 28.9L4.2 43.6C2.9 44.4 1.5 43.4 1.5 41.9Z" fill="#F44336"/>
+        <path d="M1.5 0.7L22.1 21.3L29.7 13.7L4.2 -1C2.9 -1.8 1.5 -0.8 1.5 0.7Z" fill="#2196F3"/>
       </svg>
-      <div className="flex flex-col text-left">
-        <span className="text-[9px] font-medium opacity-70 leading-none mb-0.5 tracking-widest uppercase">Get it on</span>
-        <span className="text-[16px] font-bold leading-none tracking-tight">Google Play</span>
+      <div className="flex flex-col text-left leading-none">
+        <span className="text-[10px] font-normal opacity-75 tracking-[0.08em] uppercase mb-[2px]">Get it on</span>
+        <span className="text-[19px] font-semibold tracking-[-0.3px]">Google Play</span>
       </div>
     </a>
   );
 }
+
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoLandingProps) {

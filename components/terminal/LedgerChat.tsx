@@ -4838,7 +4838,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       </div>
                       <div className="flex flex-col">
                         <span className="text-[13px] font-bold text-[#050505]">/pay</span>
-                        <span className="text-[10px] font-mono text-black/50">Send QD Tokens</span>
+                        <span className="text-[10px] font-mono text-black/50">Send Crypto</span>
                       </div>
                     </button>
                     <button type="button" onClick={() => { setInputText(''); setShowPollCreator(true); }} className="px-3 py-2.5 text-left hover:bg-black/5 transition-colors flex items-center gap-3">
@@ -5102,7 +5102,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     color: 'text-orange-500 bg-orange-50'
                   },
                   { 
-                    label: 'Send QD Tokens',
+                    label: 'Send Crypto',
                     icon: (
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/>
@@ -5798,7 +5798,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
              <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl flex flex-col gap-4">
                <div className="flex items-center justify-between">
                  <div>
-                   <h3 className="text-[16px] font-black tracking-tight text-gray-900">Send QD Tokens</h3>
+                   <h3 className="text-[16px] font-black tracking-tight text-gray-900">Send Crypto</h3>
                    <p className="text-[11px] text-black/40 font-mono mt-0.5">Balance: {balance.toFixed(4)} QD</p>
                  </div>
                  <button onClick={() => { setShowWalletTransfer(false); setTransferAmount(''); }} className="p-2 rounded-full hover:bg-[#e5e5ea] text-black/40">âœ•</button>
@@ -5809,7 +5809,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                <p className="text-[12px] text-black/50 text-center font-mono">To: {shortAddr(activePeer!)}</p>
                <input
                  type="number"
-                 placeholder="Amount in QD..."
+                 placeholder="0.00"
                  value={transferAmount}
                  onChange={e => setTransferAmount(e.target.value)}
                  min="0.01"

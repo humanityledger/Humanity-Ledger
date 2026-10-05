@@ -53,6 +53,7 @@ import { ContactInfoPanel } from '@/components/chat/ContactInfoPanel';
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import { LedgerUpdatesTab } from '@/components/chat/LedgerUpdatesTab';
 import { BurnTimerSheet } from '@/components/chat/BurnTimerSheet';
+import { NativeCryptoSendModal } from '@/components/chat/NativeCryptoSendModal';
 import { ScheduleMessageSheet } from '@/components/chat/ScheduleMessageSheet';
 import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
 import { LedgerCommunitiesTab } from '@/components/chat/LedgerCommunitiesTab';
@@ -552,6 +553,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showGifPicker, setShowGifPicker] = useState(false); // GIF picker
   const [showStickerPicker, setShowStickerPicker] = useState(false); // Sticker picker
   const [showAppDrawer, setShowAppDrawer] = useState(false); // iMessage style + menu
+  const [liveLocationWatchId, setLiveLocationWatchId] = useState<number | null>(null); // watchPosition ID for live location
+  const [isLiveLocationActive, setIsLiveLocationActive] = useState(false); // whether live location is broadcasting
   const [gifSearch, setGifSearch] = useState(''); // GIF search query — start empty so user types first
   const [gifResults, setGifResults] = useState<string[]>([]); // GIF URLs
   const [linkPreview, setLinkPreview] = useState<{ url: string, title: string, description: string, image?: string } | null>(null);
@@ -3765,6 +3768,52 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   };
 
+  // ─── Live Location: watchPosition-based real-time sharing ───────────────────
+  const startLiveLocation = useCallback(() => {
+    if (liveLocationWatchId !== null) {
+      // Already tracking — stop it
+      navigator.geolocation.clearWatch(liveLocationWatchId);
+      setLiveLocationWatchId(null);
+      setIsLiveLocationActive(false);
+      toast.success('Live location stopped');
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      toast.error('Geolocation not supported by this browser');
+      return;
+    }
+
+    // Send initial position immediately
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        executeSendRef.current?.(`[LIVELOCATION]${pos.coords.latitude},${pos.coords.longitude}`);
+      },
+      () => toast.error('Location permission denied')
+    );
+
+    // Watch for continuous updates (~10s cadence via maximumAge)
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        executeSendRef.current?.(`[LIVELOCATION]${pos.coords.latitude},${pos.coords.longitude}`);
+      },
+      (err) => console.warn('[Live Location] watchPosition error:', err),
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+    );
+
+    setLiveLocationWatchId(watchId);
+    setIsLiveLocationActive(true);
+    toast.success('Live location started — sharing position');
+
+    // Auto-stop after 15 minutes
+    setTimeout(() => {
+      navigator.geolocation.clearWatch(watchId);
+      setLiveLocationWatchId(null);
+      setIsLiveLocationActive(false);
+      toast.info('Live location expired after 15 minutes');
+    }, 15 * 60 * 1000);
+  }, [liveLocationWatchId]);
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
@@ -3914,7 +3963,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           </div>
           <div className="flex items-center gap-1.5 px-4 py-2.5 bg-[#f5f5f7] border border-black/10 rounded-xl">
             <span className="w-2 h-2 rounded-full bg-black shadow-sm animate-pulse" />
-            <span className="text-[13px] font-mono font-bold text-[#050505]">{formatQd(balance)} QDs available</span>
+            <span className="text-[13px] font-mono font-bold text-[#050505]">Ledger Chat</span>
           </div>
           <button
             onClick={() => openAppKit()}
@@ -4252,7 +4301,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           <div className="flex items-center justify-between pb-2">
             <div className="flex items-center gap-1.5 text-[12px] text-[#8E8E93]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#34C759] animate-pulse" />
-              <span className="font-mono">{formatQd(balance)} QD available</span>
+              <span className="font-mono">Ledger Chat</span>
             </div>
           </div>
         </div>
@@ -4527,7 +4576,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               <div className="flex items-center gap-1.5">
                 <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 bg-[#f5f5f7] border border-black/10 rounded-xl" title="Available QDs">
                   <span className="w-1.5 h-1.5 rounded-full bg-white shadow-sm animate-pulse" />
-                  <span className="text-[10px] font-mono font-bold text-black">{formatQd(balance)} QD</span>
+                  
                 </div>
                 {/* Phase 5: Secret Chat Toggle */}
                 <button
@@ -4904,7 +4953,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       </div>
                       <div className="flex flex-col">
                         <span className="text-[13px] font-bold text-[#050505]">/pay</span>
-                        <span className="text-[10px] font-mono text-black/50">Send QD Tokens</span>
+                        <span className="text-[10px] font-mono text-black/50">Send Crypto</span>
                       </div>
                     </button>
                     <button type="button" onClick={() => { setInputText(''); setShowPollCreator(true); }} className="px-3 py-2.5 text-left hover:bg-black/5 transition-colors flex items-center gap-3">
@@ -4994,7 +5043,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                               }
                               setShowAppDrawer(false); 
                             } },
-                            { id: 'live-loc',  icon: <MapIcon size={18} strokeWidth={2} />,   label: 'Live Location', onClick: () => { sendLiveLocation(); setShowAppDrawer(false); } },
+                            { id: 'live-loc',  icon: <MapIcon size={18} strokeWidth={2} />,   label: isLiveLocationActive ? '🔴 Stop Live Location' : 'Live Location', onClick: () => { startLiveLocation(); setShowAppDrawer(false); } },
                           ].map((app) => (
                             <button 
                               key={app.id} 
@@ -5177,7 +5226,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     },
                     { 
                       icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg>), 
-                      label: 'Send QD Tokens',
+                      label: 'Send Crypto',
                       color: 'text-emerald-500 bg-emerald-50'
                     }
                   ].map((f) => (
@@ -6058,62 +6107,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
            </div>
        )}
 
-       {/* Phase 5: Wallet QD Transfer Modal */}
-       {showWalletTransfer && (
-           <div className="fixed inset-0 z-[1000] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-             <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl flex flex-col gap-4">
-               <div className="flex items-center justify-between">
-                 <div>
-                   <h3 className="text-[16px] font-black tracking-tight text-gray-900">Send QD Tokens</h3>
-                   <p className="text-[11px] text-black/40 font-mono mt-0.5">Balance: {formatQd(balance)} QD</p>
-                 </div>
-                 <button onClick={() => { setShowWalletTransfer(false); setTransferAmount(''); }} className="p-2 rounded-full hover:bg-[#e5e5ea] text-black/40">✕</button>
-               </div>
-               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br bg-[#f5f5f7] border border-black/10 flex items-center justify-center self-center shadow-sm">
-                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#050505" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-               </div>
-               <p className="text-[12px] text-black/50 text-center font-mono">To: {shortAddr(activePeer!)}</p>
-               <input
-                 type="number"
-                 placeholder="Amount in QD..."
-                 value={transferAmount}
-                 onChange={e => setTransferAmount(e.target.value)}
-                 min="0.01"
-                 step="0.01"
-                 className="w-full px-4 py-3 rounded-xl border border-black/10 text-[18px] font-black text-center focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10 font-mono"
-               />
-               <button
-                 disabled={!transferAmount || parseFloat(transferAmount) <= 0 || parseFloat(transferAmount) > balance || transferSending}
-                 onClick={async () => {
-                   const parsed = parseFloat(transferAmount);
-                   if (isNaN(parsed) || parsed <= 0 || parsed > balance) return;
-                   if (!activePeer) { toast.error('No recipient selected.'); return; }
-                   setTransferSending(true);
-                   try {
-                     // CRITICAL FIX: pass activePeer as recipient — previously QDs went to 0x000 burn address!
-                     const ok = await spendQDs(parsed, `Transfer to ${shortAddr(activePeer!)}`, activePeer);
-                     if (!ok) {
-                       toast.error('Transfer failed. Check your Sovereign Identity balance.');
-                       return;
-                     }
-                     // Only send XMTP payment signal AFTER confirmed transfer
-                     executeSend(`__PAYMENT__::${parsed}`);
-                     refreshBalanceRef.current().catch(() => {}); // Refresh sender QD balance
-                     toast.success(`Sent ${parsed} QD to ${shortAddr(activePeer!)}!`);
-                     setShowWalletTransfer(false);
-                     setTransferAmount('');
-                   } catch {
-                     toast.error('Transfer failed. Please try again.');
-                   } finally {
-                     setTransferSending(false);
-                   }
-                 }}
-                 className="w-full py-3.5 rounded-xl bg-white hover:opacity-80 text-white text-[13px] font-bold shadow-lg shadow-black/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-               >
-                 {transferSending ? 'Processing...' : `Send ${transferAmount || '0'} QD`}
-               </button>
-             </div>
-           </div>
+       {/* ── Native Crypto Send Modal (replaces QD Transfer) ── */}
+       {showWalletTransfer && activePeer && (
+         <NativeCryptoSendModal
+           isOpen={showWalletTransfer}
+           recipientAddress={activePeer}
+           onClose={() => { setShowWalletTransfer(false); setTransferAmount(''); }}
+           onSent={(txHash, amount, token) => {
+             const payload = JSON.stringify({ amount, token, txHash, to: activePeer });
+             executeSend(`__PAYMENT__::${payload}`);
+             setShowWalletTransfer(false);
+             setTransferAmount('');
+           }}
+         />
        )}
 
       </div>
