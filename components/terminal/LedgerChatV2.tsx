@@ -3961,94 +3961,100 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   if (!client) {
     return (
       <TuringShieldGate>
-      <div className="flex-1 flex flex-col h-full bg-white items-center justify-start p-6 pt-12 relative overflow-hidden">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-black/5 blur-[100px] rounded-full pointer-events-none" />
-
-        <div className="relative z-10 w-full max-w-md bg-white border border-[#EBEBEB] shadow-2xl rounded-3xl p-10 flex flex-col items-center">
+      <div className="flex-1 flex flex-col h-full bg-[#FAFAFA] items-center justify-center p-6 relative overflow-hidden">
+        
+        {/* The Unique Decentralized Sync Pattern */}
+        <div className="relative flex items-center justify-center w-[200px] h-[200px] mb-8">
+          <motion.div
+            animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
+            transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+            className="absolute w-3 h-3 bg-[#25D366] rounded-full z-20 shadow-[0_0_24px_rgba(37,211,102,0.8)]"
+          />
           
-          <div className="w-20 h-20 rounded-full border border-[#EBEBEB] bg-white flex items-center justify-center shadow-sm mb-8">
-            {isInitializing ? (
-              <div className="w-8 h-8 rounded-full border-2 border-black/10 border-t-black animate-spin" />
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={i}
+              animate={{ rotate: i % 2 === 0 ? 360 : -360, scale: [1, 1.03, 1] }}
+              transition={{
+                rotate: { repeat: Infinity, duration: 8 + i * 3, ease: "linear" },
+                scale: { repeat: Infinity, duration: 3, ease: "easeInOut", delay: i * 0.5 }
+              }}
+              className="absolute rounded-full border border-black/[0.04] z-10"
+              style={{
+                width: `${100 + i * 45}px`,
+                height: `${100 + i * 45}px`,
+                borderStyle: i === 1 ? 'dashed' : 'solid',
+                borderWidth: '1px',
+              }}
+            >
+              <div 
+                className="absolute w-1.5 h-1.5 rounded-full" 
+                style={{
+                  backgroundColor: i === 1 ? '#25D366' : 'black',
+                  top: '-0.75px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  opacity: 0.3 + (i * 0.2)
+                }} 
+              />
+            </motion.div>
+          ))}
+        </div>
+
+        {initError ? (
+          <div className="z-30 w-full max-w-sm flex flex-col gap-4">
+            <div className="w-full bg-white text-[#111B21] text-[13px] p-4 rounded-2xl border border-black/5 shadow-xl text-center leading-relaxed">
+              {initError}
+            </div>
+            
+            {(initError.toLowerCase().includes('limit') || initError.toLowerCase().includes('10/10')) ? (
+              <div className="flex flex-col gap-2 w-full">
+                <button 
+                  onClick={() => {
+                    try {
+                      const keys = Object.keys(localStorage).filter(k => k.startsWith('xmtp') || k.startsWith('ledger_xmtp') || k.includes('xmtp'));
+                      keys.forEach(k => localStorage.removeItem(k));
+                      if (typeof indexedDB !== 'undefined') {
+                        const dbNames = ['xmtp', 'xmtp-v2', 'xmtp-prod', 'xmtp-dev'];
+                        dbNames.forEach(name => { try { indexedDB.deleteDatabase(name); } catch(e) {} });
+                      }
+                    } catch(e) {}
+                    setInitError('');
+                    setTimeout(() => initClient(), 500);
+                  }} 
+                  className="w-full py-4 bg-black text-white rounded-[16px] font-semibold text-[14px] active:scale-[0.98] transition-all"
+                >
+                  Clear Cache & Retry
+                </button>
+                <button onClick={() => { setInitError(''); initClient(); }} className="w-full py-4 bg-white text-black rounded-[16px] border border-black/10 font-semibold text-[14px] active:scale-[0.98] transition-all">
+                  Retry Without Clearing
+                </button>
+              </div>
+            ) : (initError.includes('wallet connection lost') || initError.includes('Connect your wallet') || initError.toLowerCase().includes('unknown signer')) ? (
+              <div className="flex flex-col gap-2 w-full">
+                <button onClick={() => openAppKit()} className="w-full py-4 bg-black text-white rounded-[16px] font-semibold text-[14px] active:scale-[0.98] transition-all">
+                  Reconnect Wallet
+                </button>
+                <button onClick={() => { reconnect(); initClient(); }} className="w-full py-4 bg-white text-black rounded-[16px] border border-black/10 font-semibold text-[14px] active:scale-[0.98] transition-all">
+                  Refresh Session
+                </button>
+              </div>
             ) : (
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-black">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-              </svg>
+              <button onClick={initClient} disabled={isInitializing} className="w-full py-4 bg-black text-white rounded-[16px] font-semibold text-[14px] active:scale-[0.98] transition-all disabled:opacity-50">
+                Try Again
+              </button>
             )}
           </div>
-
-          <h2 className="text-[28px] font-black tracking-tight text-black mb-3 text-center">
-            Zero Knowledge <br /> <span className="text-black/30">Transport.</span>
-          </h2>
-          
-          <p className="text-[14px] font-medium text-[#555] text-center leading-[1.6] mb-10 max-w-[280px]">
-            {isWaitingForSignature ? <span className="text-blue-600 font-bold">Please check your wallet or extension and sign the request...</span> : isInitializing ? "Deriving session keys and verifying hardware enclave..." : "Activate your cryptographic identity to access the sovereign network."}
-          </p>
-
-          {initError ? (
-            <div className="flex flex-col items-center gap-4 w-full">
-              <div className="w-full bg-[#f5f5f7] text-[#050505] text-[13px] font-medium p-4 rounded-xl border border-black/10 text-center leading-relaxed">
-                {initError}
-              </div>
-              
-              {(initError.toLowerCase().includes('limit') || initError.toLowerCase().includes('10/10')) ? (
-                <div className="flex flex-col gap-3 w-full">
-                  <button 
-                    onClick={() => {
-                      // Clear all XMTP-related IndexedDB and localStorage keys so a fresh installation can be created
-                      try {
-                        const keys = Object.keys(localStorage).filter(k => k.startsWith('xmtp') || k.startsWith('ledger_xmtp') || k.includes('xmtp'));
-                        keys.forEach(k => localStorage.removeItem(k));
-                        // Delete XMTP IndexedDB databases
-                        if (typeof indexedDB !== 'undefined') {
-                          const dbNames = ['xmtp', 'xmtp-v2', 'xmtp-prod', 'xmtp-dev'];
-                          dbNames.forEach(name => { try { indexedDB.deleteDatabase(name); } catch(e) {} });
-                        }
-                      } catch(e) { console.warn('Cache clear partial', e); }
-                      setInitError('');
-                      setTimeout(() => initClient(), 500);
-                    }} 
-                    className="w-full h-[56px] bg-black text-white rounded-2xl font-bold tracking-wide active:scale-[0.98] transition-all"
-                  >
-                    Clear Cache &amp; Retry
-                  </button>
-                  <button onClick={() => { setInitError(''); initClient(); }} className="w-full h-[56px] bg-white border border-[#EBEBEB] text-black rounded-2xl font-bold tracking-wide active:scale-[0.98] transition-all">
-                    Retry Without Clearing
-                  </button>
-                </div>
-              ) : (initError.includes('wallet connection lost') || initError.includes('Connect your wallet') || initError.toLowerCase().includes('unknown signer')) ? (
-                <div className="flex flex-col gap-3 w-full">
-                  <button onClick={() => openAppKit()} className="w-full h-[56px] bg-black text-white rounded-2xl font-bold tracking-wide active:scale-[0.98] transition-all">
-                    Reconnect Wallet
-                  </button>
-                  <button onClick={() => { reconnect(); initClient(); }} className="w-full h-[56px] bg-white border border-[#EBEBEB] text-black rounded-2xl font-bold tracking-wide active:scale-[0.98] transition-all">
-                    Refresh Session
-                  </button>
-                </div>
-              ) : (
-                <button onClick={initClient} disabled={isInitializing} className="w-full h-[56px] bg-black text-white rounded-2xl font-bold tracking-wide active:scale-[0.98] transition-all disabled:opacity-50">
-                  Try Again
-                </button>
-              )}
-            </div>
-
-          ) : !isInitializing ? (
-            <div className="flex flex-col gap-4 w-full">
-              <button
-                onClick={initClient}
-                className="w-full h-[56px] bg-black hover:bg-black/85 text-white rounded-2xl font-bold text-[14px] tracking-wide active:scale-[0.98] transition-all shadow-lg shadow-black/20"
-              >
-                Activate Identity
-              </button>
-              <p className="text-[9px] font-mono uppercase tracking-widest text-black/30 text-center">Protocol-level cryptographic activation</p>
-            </div>
-          ) : (
-            isMobile && (
-              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-black mt-6 text-center animate-pulse">
-                Confirm signature in wallet
-              </p>
-            )
-          )}
-        </div>
+        ) : !isInitializing ? (
+          <div className="z-30 w-full max-w-sm flex justify-center mt-4">
+            <button
+              onClick={initClient}
+              className="w-full py-4 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-[18px] font-semibold text-[15px] active:scale-[0.98] transition-all shadow-[0_8px_20px_rgba(37,211,102,0.2)]"
+            >
+              Activate Transport
+            </button>
+          </div>
+        ) : null}
       </div>
       </TuringShieldGate>
     );

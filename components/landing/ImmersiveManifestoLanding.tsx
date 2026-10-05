@@ -392,10 +392,49 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, ease: EASE }}
-            className="w-full bg-[#F6F7F9] rounded-[40px] overflow-hidden flex items-center justify-center p-6"
-            style={{ aspectRatio: '1/1' }}
+            className="w-full bg-[#F6F7F9] rounded-[40px] overflow-hidden p-8 md:p-12 relative flex flex-col justify-center"
+            style={{ minHeight: '500px' }}
           >
-            <RemoteLottie path="/lottie/map-world.json" loop width="100%" height="100%" />
+            {/* Minimalist Grid Pattern Background */}
+            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, black 1px, transparent 0)', backgroundSize: '24px 24px' }} />
+            
+            <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Feature 1 */}
+              <div className="bg-white rounded-[24px] p-6 shadow-sm border border-black/[0.03] flex flex-col items-start hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 rounded-full bg-[#25D366]/10 text-[#25D366] flex items-center justify-center mb-4">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </div>
+                <h3 className="text-[17px] font-bold text-[#1C1C1E] mb-2">Communities</h3>
+                <p className="text-[14px] text-[#1C1C1E]/60 leading-relaxed">Build massive groups. Organize with free and premium channels. Zero limits on members.</p>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="bg-white rounded-[24px] p-6 shadow-sm border border-black/[0.03] flex flex-col items-start hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center mb-4">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg>
+                </div>
+                <h3 className="text-[17px] font-bold text-[#1C1C1E] mb-2">Native Crypto</h3>
+                <p className="text-[14px] text-[#1C1C1E]/60 leading-relaxed">Send and receive USDC, USDT, or ETH instantly within any chat. No fees, true peer-to-peer.</p>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="bg-white rounded-[24px] p-6 shadow-sm border border-black/[0.03] flex flex-col items-start hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 rounded-full bg-purple-500/10 text-purple-600 flex items-center justify-center mb-4">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <h3 className="text-[17px] font-bold text-[#1C1C1E] mb-2">Zero-Knowledge</h3>
+                <p className="text-[14px] text-[#1C1C1E]/60 leading-relaxed">Military-grade E2E encryption. No central servers read your messages. Total privacy.</p>
+              </div>
+
+              {/* Feature 4 */}
+              <div className="bg-white rounded-[24px] p-6 shadow-sm border border-black/[0.03] flex flex-col items-start hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center mb-4">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <h3 className="text-[17px] font-bold text-[#1C1C1E] mb-2">Live Sync</h3>
+                <p className="text-[14px] text-[#1C1C1E]/60 leading-relaxed">Offline support. Sync instantly across all your devices securely without losing any history.</p>
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>
