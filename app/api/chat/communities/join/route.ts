@@ -65,12 +65,13 @@ export async function POST(req: NextRequest) {
 
     // Create a system post announcing the new member
     try {
-      await (prisma as any).$executeRawUnsafe(
-        `INSERT INTO "CommunityPost" ("id", "communityId", "authorAddress", "content", "plainText", "createdAt", "updatedAt")
-         VALUES (gen_random_uuid()::text, $1, 'system', $2, $2, NOW(), NOW())`,
-        community.id,
-        `__SYSTEM__${caller} joined the group`
-      );
+      await (prisma as any).communityPost.create({
+        data: {
+          communityId: community.id,
+          authorAddress: 'system',
+          content: `__SYSTEM__${caller} joined the group`
+        }
+      });
     } catch (e) {
       console.error('Failed to post welcome message:', e);
     }
