@@ -150,7 +150,6 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
         {activeTab === 'settings' && (
           <CommunitySettingsPanel community={community} myAddress={myAddress} />
         )}
-        {showChannelsModal && <ChannelManagement />}
       </div>
 
       <RichPostEditorModal 
@@ -314,8 +313,8 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     </div>
   );
 
-  const SubMenuAction = ({ icon: Icon, label, value, color = 'text-[#25D366]' }: any) => (
-<div onClick={() => toast.success(label + ' configuration synced')} className="w-full">
+  const SubMenuAction = ({ icon: Icon, label, value, color = 'text-[#25D366]', onClick }: any) => (
+<div onClick={onClick || (() => toast.success(label + ' configuration synced'))} className="w-full">
     <div className="flex items-center justify-between py-3.5 cursor-pointer hover:bg-black/5 transition-colors px-5 -mx-5">
       <div className="flex items-center gap-3">
         <div className={`w-8 h-8 rounded-xl bg-black/5 flex items-center justify-center ${color}`}>
@@ -412,8 +411,9 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
             <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#25D366]">Management</p>
           </div>
           <div className="px-6 py-2">
+            <SubMenuAction icon={Hash} label="Channels & Monetization" value="Config" color="text-[#25D366]" onClick={() => setShowChannelsModal(true)} />
             <SubMenuAction icon={Shield} label="Administrators" value="1" color="text-indigo-500" />
-            <SubMenuAction icon={Users} label="Members" value={community?.members?.toString() || "1"} color="text-#25D366" />
+            <SubMenuAction icon={Users} label="Members" value={community?.members?.toString() || "1"} color="text-black" />
             <SubMenuAction icon={Lock} label="Restricted Users" value="0" color="text-orange-500" />
             <SubMenuAction icon={X} label="Banned Users" value="0" color="text-red-500" />
             <SubMenuAction icon={Eye} label="Recent Actions" value="Logs" color="text-teal-500" />
@@ -566,8 +566,8 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
             Delete Community
           </button>
           <p className="text-[12px] text-red-500/70 text-center">This action cannot be undone. All messages and posts will be permanently destroyed from the network.</p>
-        </div>
       </div>
+      {showChannelsModal && <ChannelManagement />}
     </div>
   );
 }

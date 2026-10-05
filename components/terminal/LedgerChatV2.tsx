@@ -944,6 +944,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // Stores the native XMTP DM convo ID (UUID) for the currently active peer.
   // Used as fallback when inboxId→address resolution fails in the stream loop.
   const activeXmtpDmIdRef = useRef<string | null>(null);
+  // [BUG FIX] Dedicated ref for the active peer's inboxId — MUST be a separate ref, NOT a
+  // property on activeXmtpDmIdRef, because setting .current = null would wipe sibling props.
+  const activePeerInboxIdRef = useRef<string>('');
   // Cache canReceiveMessages result per address to skip redundant network lookups
   const canReceiveCache = useRef<Map<string, boolean>>(new Map());
   // Track if initClient is already in-flight to prevent double-calls on mobile
@@ -2657,8 +2660,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     activePeerDmIdRef.current = `dm-${activePeer.toLowerCase()}`;
     peerToConvId.current.set(activePeer.toLowerCase(), activePeerDmIdRef.current);
     convIdToPeer.current.set(activePeerDmIdRef.current, activePeer);
-    // Reset native XMTP dm id — will be resolved by fetchHistorical
+    // Reset native XMTP dm id AND peer inboxId — will be resolved by fetchHistorical
     activeXmtpDmIdRef.current = null;
+    activePeerInboxIdRef.current = '';
   }, [client, activePeer]);
 
   //  Global XMTP Stream 
@@ -2980,7 +2984,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             // against the active peer's known inboxId. This is the last resort that prevents
             // messages from being silently routed to background-conversation notifications
             // when they should appear in the open chat.
-            const activePeerInboxId = (activeXmtpDmIdRef as any).peerInboxId ?? '';
+            const activePeerInboxId = activePeerInboxIdRef.current ?? '';
             const belongsToActiveBySenderInboxId =
               fromPeer &&
               !!msg.senderInboxId &&
@@ -3212,7 +3216,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               const memberIds = (xmtpDm as any).memberInboxIds ?? [];
               const selfId = (client as any).inboxId ?? "";
               const peerId = memberIds.find((id: string) => id !== selfId) ?? "";
-              if (peerId) (activeXmtpDmIdRef as any).peerInboxId = peerId;
+              if (peerId) activePeerInboxIdRef.current = peerId;
             } catch {}
           }
         } catch {}
@@ -3224,41 +3228,38 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }
         
         // FETCH PENDING MESSAGES (OFFLINE ROUTING)
+        // [BUG FIX] The route is /api/chat/queue NOT /api/chat/pending.
+        // The response shape is { messages: [...] } NOT { pending: [...] }.
+        // The timestamp field from PendingChatMessage is createdAt, NOT timestamp.
         let pendingServer: any[] = [];
         try {
-          const pRes = await fetch(`/api/chat/pending?address=${address}`, { 
+          const pRes = await fetch(`/api/chat/queue`, { 
             cache: 'no-store',
-            headers: { 'x-web3-address': address || '' }
-          });
+            headers: { 'x-web3-address': address || '' } });
           if (pRes.ok) {
             const pData = await pRes.json();
-            if (pData.pending && Array.isArray(pData.pending)) {
-               // [FIX] API now returns ONLY messages where we are the recipient.
-               // Every message here is from the peer (incoming), so we filter to
-               // the active peer and mark the sender correctly.
-               pendingServer = pData.pending
-                 /* Removed filter because API already filters by peer now */
+            const msgs = pData.messages;
+            if (msgs && Array.isArray(msgs) && msgs.length > 0) {
+               // Filter to messages from the active peer only
+               const fromActivePeer = msgs.filter((p: any) => 
+                 p.sender?.toLowerCase() === activePeer.toLowerCase()
+               );
+               pendingServer = fromActivePeer
                  .filter((p: any) => typeof p.content !== 'string' || !p.content.startsWith('__CALL_'))
                  .map((p: any) => ({
-                   id: p.id,
-                   // Since every pending message here is FROM the peer TO us,
-                   // senderInboxId = activePeer (will be compared as ETH addr in isMe check)
+                   id: p.id ?? `queue-${Date.now()}-${Math.random()}`,
                    senderInboxId: activePeer.toLowerCase(),
                    content: p.content,
-                   sentAtNs: new Date(p.timestamp).getTime(),
+                   sentAtNs: new Date(p.createdAt ?? p.timestamp ?? Date.now()).getTime(),
                    conversationId: `dm-${activePeer.toLowerCase()}`
                 }));
-               
-               // CONSUME all pending messages (they are all incoming — API contract guarantees this)
-               if (pendingServer.length > 0) {
-                 fetch(`/api/chat/pending?address=${address}&peer=${activePeer}`, {
-                   method: 'DELETE',
-                   headers: { 'x-web3-address': address || '' }
-                 }).catch(err => console.warn('[PendingConsume] Failed to clear delivered messages:', err));
-               }
+              
+              if (pendingServer.length > 0) {
+                console.log(`[Offline Queue] Delivering ${pendingServer.length} queued messages from ${activePeer}`);
+              }
             }
           }
-        } catch (e) { console.error('Failed to fetch pending messages', e); }
+        } catch (e) { console.warn('[Offline Queue] Failed to fetch pending messages:', e); }
         
         const rawMappedMsgs = raw
           .map((m: any) => {
@@ -3480,11 +3481,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
   }, [client, activePeer, address]);
 
+  // [BUG FIX] Separate flag for opening a new conversation — previously used the shared
+  // 'sending' flag, which caused executeSend to silently abort the user's first message
+  // because (!isSystemSignal && sending) returned true while the peer lookup was in-flight.
+  const [isStartingConversation, setIsStartingConversation] = useState(false);
+
   const handleStartConversationWithPeer = async (peerAddr: string) => {
-      // [FIX] Removed `|| sending` — that global flag blocked chat initialization
-      // while a background message was in-flight, causing silent failures.
-      if (!client || !peerAddr) return;
-      setSending(true);
+      if (!client || !peerAddr || isStartingConversation) return;
+      setIsStartingConversation(true);
       try {
         let peer = peerAddr.trim();
         if (peer.toLowerCase().startsWith('ethereum:')) {
@@ -3500,12 +3504,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               peer = data.users[0].address;
             } else {
               toast.error(`User not found: ${peer}`);
-              setSending(false);
+              setIsStartingConversation(false);
               return;
             }
           } catch {
             toast.error('User search unavailable. Please enter a 0x wallet address.');
-            setSending(false);
+            setIsStartingConversation(false);
             return;
           }
         }
@@ -3513,7 +3517,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         // Accept both EVM (42 chars: 0x + 40) and Aztec (66 chars: 0x + 64) addresses
         if (!/^0x[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$/.test(peer)) {
             toast.error('Invalid address format. Use a wallet address or @username.');
-            setSending(false);
+            setIsStartingConversation(false);
             return;
         }
 
@@ -3524,16 +3528,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 if (canMsg) canReceiveCache.current.set(peer.toLowerCase(), true);
             }
             if (!canMsg) {
-                // DON'T BLOCK. Tell them we'll queue it.
                 toast.info(`Offline: This contact isn't fully registered yet. Your messages will be securely held and delivered when they connect.`);
             }
         }
 
         const newConv = { peerAddress: peer, lastMessage: '', lastAt: new Date() };
 
-        // [FIX] Extract syncToAddressBook OUTSIDE the setConversations updater.
-        // Side-effects inside state updaters are an anti-pattern — React can call
-        // the updater multiple times in StrictMode, causing duplicate API calls.
         let needsSync = false;
         setConversations(prev => {
             const exists = prev.find(c => c.peerAddress.toLowerCase() === peer.toLowerCase());
@@ -3559,7 +3559,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       } catch {
         alert('Invalid address.');
       } finally {
-        setSending(false);
+        setIsStartingConversation(false);
       }
   };
 
