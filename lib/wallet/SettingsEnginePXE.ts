@@ -204,6 +204,48 @@ export interface LedgerProtocolSettings {
   last_synced_at: number;
   /** Schema version for migration compatibility */
   schema_version: number;
+
+  // ─────────────────────────────────────────────────────
+  //  EXTENDED SETTINGS (Settings Panel v2)
+  // ─────────────────────────────────────────────────────
+  /** Notification for reactions to my messages */
+  notifications_reactions?: boolean;
+  /** Notification for incoming voice calls */
+  notifications_calls?: boolean;
+  /** Notification for incoming video calls */
+  notifications_video_calls?: boolean;
+  /** Show typing indicators */
+  typing_indicators?: boolean;
+  /** Auto-download photos */
+  auto_download_photos?: boolean;
+  /** Auto-download videos */
+  auto_download_videos?: boolean;
+  /** Press Enter to send (vs Shift+Enter) */
+  enter_to_send?: boolean;
+  /** High-quality audio for calls */
+  high_quality_audio?: boolean;
+  /** HD video for calls */
+  hd_video?: boolean;
+  /** Noise suppression for calls */
+  noise_suppression?: boolean;
+  /** Echo cancellation for calls */
+  echo_cancellation?: boolean;
+  /** Do not disturb mode */
+  do_not_disturb?: boolean;
+  /** Hide notification content preview */
+  hide_notification_content?: boolean;
+  /** Auto-lock timer label */
+  auto_lock_timer?: string;
+  /** ZK Obfuscation enabled */
+  zkObfuscation?: boolean;
+  /** Require wallet signature each session */
+  requireSignature?: boolean;
+  /** Anti-screenshot mode */
+  anti_screenshot?: boolean;
+  /** Save to photos gallery */
+  saveToPhotos?: boolean;
+  /** Disappearing messages timer */
+  disappearing_messages?: string;
 }
 
 // ───────────────────────────────────────────────────────────────────────────
