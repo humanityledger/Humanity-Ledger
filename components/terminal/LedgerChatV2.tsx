@@ -2399,19 +2399,24 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           }
           
           // FETCH PENDING MESSAGES (OFFLINE ROUTING) — works for both HL and WalletConnect users
-          const pRes = await fetch(`/api/chat/pending?address=${address}`, { headers: authHeader, cache: 'no-store' });
+          // [BUG FIX] Route is /api/chat/queue (not /api/chat/pending).
+          // Auth via x-web3-address header. Response shape: { messages: [...] } not { pending: [...] }.
+          // Timestamp field is createdAt (PendingChatMessage schema), not timestamp.
+          const pRes = await fetch('/api/chat/queue', { headers: authHeader, cache: 'no-store' });
           if (pRes.ok) {
              const pData = await pRes.json();
-             if (pData.pending && Array.isArray(pData.pending)) {
-                 pData.pending.forEach((p: any) => {
-                     const peer = p.sender.toLowerCase() === address.toLowerCase() ? p.recipient : p.sender;
+             if (pData.messages && Array.isArray(pData.messages)) {
+                 pData.messages.forEach((p: any) => {
+                     const peer = p.sender?.toLowerCase() === address.toLowerCase() ? p.recipient : p.sender;
+                     if (!peer) return;
                      const existing = merged.find(c => c.peerAddress.toLowerCase() === peer.toLowerCase());
+                     const ts = p.createdAt ?? p.timestamp ?? Date.now();
                      if (!existing) {
-                         merged.push({ peerAddress: peer, lastMessage: p.content.slice(0, 30), lastAt: new Date(p.timestamp) });
+                         merged.push({ peerAddress: peer, lastMessage: p.content.slice(0, 30), lastAt: new Date(ts) });
                      } else {
-                         if (!existing.lastAt || new Date(p.timestamp) > new Date(existing.lastAt)) {
+                         if (!existing.lastAt || new Date(ts) > new Date(existing.lastAt)) {
                              existing.lastMessage = p.content.slice(0, 30);
-                             existing.lastAt = new Date(p.timestamp);
+                             existing.lastAt = new Date(ts);
                          }
                      }
                  });
