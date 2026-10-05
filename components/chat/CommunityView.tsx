@@ -169,7 +169,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
 // ─── SETTINGS PANEL (Telegram Style - Ultimate Edition) ────────────────────────
 
 function CommunitySettingsPanel({ community, myAddress }: { community: any; myAddress: string }) {
-  const [permissions, setPermissions] = useState(() => { try { const s = localStorage.getItem('com_perm_' + community.id); if (s) return JSON.parse(s); } catch {} return {
+  const [permissions, setPermissions] = useState(() => { try { const s = localStorage.getItem('com_perm_' + community?.id); if (s) return JSON.parse(s); } catch {} return {
     sendMessages: true,
     sendMedia: true,
     sendStickers: true,
@@ -180,7 +180,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     changeInfo: false,
     }; });
 
-  useEffect(() => { localStorage.setItem('com_perm_' + community.id, JSON.stringify(permissions)); }, [permissions, community.id]);
+  useEffect(() => { localStorage.setItem('com_perm_' + community?.id, JSON.stringify(permissions)); }, [permissions, community?.id]);
   
   const [showChannelsModal, setShowChannelsModal] = useState(false);
   const ChannelManagement = () => (
@@ -260,7 +260,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
       const res = await fetch('/api/chat/communities', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
-        body: JSON.stringify({ communityId: community.id, action: 'UPDATE_INFO', name: editName, description: editDesc }),
+        body: JSON.stringify({ communityId: community?.id, action: 'UPDATE_INFO', name: editName, description: editDesc }),
       });
       if (res.ok) {
         toast.success('Profile updated');
@@ -278,7 +278,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
       const res = await fetch('/api/chat/communities', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
-        body: JSON.stringify({ communityId: community.id, action: 'UPDATE_PRIVACY', isPrivate: newVal }),
+        body: JSON.stringify({ communityId: community?.id, action: 'UPDATE_PRIVACY', isPrivate: newVal }),
       });
       if (res.ok) {
         setIsPrivate(newVal);
@@ -290,7 +290,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     }
   };
 
-  const [features, setFeatures] = useState(() => { try { const s = localStorage.getItem('com_feat_' + community.id); if (s) return JSON.parse(s); } catch {} return {
+  const [features, setFeatures] = useState(() => { try { const s = localStorage.getItem('com_feat_' + community?.id); if (s) return JSON.parse(s); } catch {} return {
     historyVisible: true,
     topicsEnabled: false,
     reactions: 'all', // 'all', 'some', 'none'
@@ -299,7 +299,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     joinCaptcha: false,
     }; });
 
-  useEffect(() => { localStorage.setItem('com_feat_' + community.id, JSON.stringify(features)); }, [features, community.id]);
+  useEffect(() => { localStorage.setItem('com_feat_' + community?.id, JSON.stringify(features)); }, [features, community?.id]);
 
   const Toggle = ({ label, desc, checked, onChange, danger = false }: any) => (
     <div className="flex items-center justify-between py-3 cursor-pointer group" onClick={() => { onChange(!checked); toast.success('Settings synced to workspace'); }}>
@@ -336,7 +336,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
       <div className="bg-white rounded-3xl p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] flex items-center gap-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-#25D366/10 to-transparent rounded-bl-[100px] pointer-events-none" />
         <div className="w-[88px] h-[88px] rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-4xl font-black shadow-[0_8px_16px_rgba(79,70,229,0.25)] shrink-0">
-          {community?.name?.slice(0, 2).toUpperCase()}
+          {(community?.name || 'C').slice(0, 2).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0 z-10">
           <h2 className="text-[24px] font-black text-[#1C1C1E] tracking-tight truncate">{community?.name}</h2>
@@ -367,7 +367,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
                 const res = await fetch('/api/chat/communities', {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ communityId: community.id, action: 'REVOKE_LINK' })
+                  body: JSON.stringify({ communityId: community?.id, action: 'REVOKE_LINK' })
                 });
                 if (res.ok) {
                   const data = await res.json();
@@ -483,7 +483,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
           {community?.members?.length > 0 ? (
             community.members.map((m: any) => (
               <div key={m.id} className="py-3 first:pt-0 last:pb-0 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center font-bold text-xs">{m.walletAddress?.slice(2,4).toUpperCase()}</div>
+                <div className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center font-bold text-xs">{(m.walletAddress || '0x00').slice(2,4).toUpperCase()}</div>
                 <div className="flex flex-col">
                   <span className="text-[14px] font-bold font-mono">{m.walletAddress?.slice(0, 6)}...{m.walletAddress?.slice(-4)}</span>
                   <span className="text-[11px] text-black/40 uppercase font-bold">{m.role}</span>
@@ -552,7 +552,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
               const confirm2 = confirm(`FINAL WARNING: This action cannot be undone. All data will be wiped.`);
               if (!confirm2) return;
               try {
-                const res = await fetch(`/api/chat/communities?id=${community.id}`, { method: 'DELETE' });
+                const res = await fetch(`/api/chat/communities?id=${community?.id}`, { method: 'DELETE' });
                 if (res.ok) {
                   window.location.reload();
                 } else {

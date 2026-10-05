@@ -4119,7 +4119,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       {/* ── CONTACT INFO PANEL ── */}
       <AnimatePresence>
         {showContactInfo && activePeer && (
-          <ContactInfoPanel
+          <ContactInfoPanel key="contact-info-panel"
             myAddress={effectiveAddress || ''}
             messages={messages.filter((m: any) => m.conversationId === `dm-${activePeer?.toLowerCase()}`)}
             onClearChat={() => {
@@ -4159,7 +4159,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       {/* ── FULL SETTINGS (WhatsApp parity) ── */}
       <AnimatePresence>
         {showFullSettings && (
-          <LedgerSettingsFull
+          <LedgerSettingsFull key="ledger-settings-full"
             myAddress={effectiveAddress || ''}
             myName={getDisplayName(effectiveAddress || '')}
             onClose={() => setShowFullSettings(false)}
