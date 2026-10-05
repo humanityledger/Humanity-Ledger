@@ -29,49 +29,86 @@ const initials = (name: string, addr: string) => {
   return addr ? addr.slice(2, 4).toUpperCase() : 'XX';
 };
 
-// Modern iOS-style Switch Toggle
-const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
+// ─── iOS-style Toggle ─────────────────────────────────────────────────────────
+const Toggle = ({ value, onChange }: { value: boolean; onChange?: (v: boolean) => void }) => (
   <button
-    onClick={() => onChange(!value)}
-    className={`w-[44px] h-[24px] rounded-full flex items-center p-1 transition-colors duration-300 ease-in-out ${value ? 'bg-[#25D366]' : 'bg-[#E5E5EA]'}`}
+    type="button"
+    onClick={() => onChange?.(!value)}
+    className={`w-[51px] h-[31px] rounded-full flex items-center px-[2px] transition-all duration-200 shrink-0 ${
+      value ? 'bg-[#25D366]' : 'bg-[#E5E5EA]'
+    }`}
+    aria-pressed={value}
   >
-    <motion.div 
-      layout
-      className={`w-4 h-4 bg-white rounded-full shadow-sm`}
-      animate={{ x: value ? 20 : 0 }}
-      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-    />
+    <div className={`w-[27px] h-[27px] rounded-full bg-white shadow-md transform transition-transform duration-200 ${
+      value ? 'translate-x-[20px]' : 'translate-x-0'
+    }`} />
   </button>
 );
 
-const Row = ({ icon, label, value, onTap, danger = false, toggle, onToggle }: any) => (
+// ─── Setting Row ─────────────────────────────────────────────────────────────
+const Row = ({
+  icon, label, sublabel, value, onTap, danger = false,
+  toggle, onToggle, badge, disabled = false
+}: {
+  icon?: React.ReactNode; label: string; sublabel?: string; value?: string;
+  onTap?: () => void; danger?: boolean; toggle?: boolean;
+  onToggle?: (v: boolean) => void; badge?: string; disabled?: boolean;
+}) => (
   <button
-    onClick={onTap}
-    className="w-full flex items-center justify-between py-3.5 px-2 group text-left hover:bg-black/[0.02] transition-colors rounded-xl"
+    type="button"
+    disabled={disabled}
+    onClick={() => {
+      if (disabled) return;
+      if (onTap) onTap();
+      else if (onToggle !== undefined && toggle !== undefined) onToggle(!toggle);
+    }}
+    className={`w-full flex items-center gap-3.5 px-0 py-3.5 border-b border-[#F2F2F7] last:border-0 text-left transition-colors ${
+      disabled ? 'opacity-40 cursor-not-allowed' : onTap ? 'active:bg-[#F2F2F7] cursor-pointer' : 'cursor-default'
+    }`}
   >
-    <div className="flex items-center gap-3.5">
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${danger ? 'bg-red-50 text-red-500' : 'bg-[#F2F2F7] text-[#1C1C1E]/60 group-hover:text-[#25D366] group-hover:bg-[#25D366]/10'} transition-colors`}>
-        {React.cloneElement(icon, { size: 16 })}
+    {icon && (
+      <div className={`w-[34px] h-[34px] rounded-[9px] flex items-center justify-center shrink-0 ${
+        danger ? 'bg-red-50' : 'bg-[#F2F2F7]'
+      }`}>
+        <span className={danger ? 'text-red-500' : 'text-[#3C3C43]'}>{icon}</span>
       </div>
-      <span className={`text-[15px] font-medium ${danger ? 'text-red-500' : 'text-[#1C1C1E]'}`}>{label}</span>
+    )}
+    <div className="flex-1 min-w-0">
+      <p className={`text-[15px] font-medium leading-tight ${danger ? 'text-red-500' : 'text-[#1C1C1E]'}`}>{label}</p>
+      {sublabel && <p className="text-[12px] text-[#8E8E93] mt-0.5 leading-snug">{sublabel}</p>}
     </div>
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2 shrink-0">
+      {badge && (
+        <span className="bg-[#FF3B30] text-white text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+          {badge}
+        </span>
+      )}
       {value && <span className="text-[14px] text-[#8E8E93]">{value}</span>}
       {onToggle !== undefined && toggle !== undefined ? (
         <Toggle value={toggle} onChange={onToggle} />
       ) : onTap ? (
-        <ChevronRight size={16} className="text-[#C7C7CC] group-hover:text-[#8E8E93] transition-colors shrink-0" />
+        <ChevronRight size={16} className="text-[#C7C7CC]" />
       ) : null}
     </div>
   </button>
 );
 
-const Section = ({ title, children }: { title?: string; children: React.ReactNode }) => (
-  <div className="mb-6 bg-white rounded-2xl border border-black/[0.04] p-2 shadow-sm">
-    {title && <p className="px-3 pt-2 pb-1 text-[12px] font-semibold tracking-wide text-[#8E8E93] uppercase">{title}</p>}
-    <div className="flex flex-col">
+// ─── Settings Group ───────────────────────────────────────────────────────────
+const Group = ({ title, footer, children }: {
+  title?: string; footer?: string; children: React.ReactNode;
+}) => (
+  <div className="mb-6">
+    {title && (
+      <p className="text-[12px] font-semibold text-[#6D6D72] uppercase tracking-wider px-1 mb-1.5">
+        {title}
+      </p>
+    )}
+    <div className="bg-white rounded-[14px] overflow-hidden shadow-sm px-4">
       {children}
     </div>
+    {footer && (
+      <p className="text-[12px] text-[#8E8E93] px-1 mt-2 leading-relaxed">{footer}</p>
+    )}
   </div>
 );
 
@@ -155,7 +192,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
         animate={{ x: 0 }}
         exit={{ x: 380 }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-full md:w-[380px] h-full flex flex-col bg-[#F6F7F9] border-l border-[#D1D7DB] z-50 absolute right-0 md:relative shrink-0 shadow-2xl md:shadow-none"
+        className="w-full md:w-[380px] h-full flex flex-col bg-[#F2F2F7] border-l border-[#D1D7DB] z-50 absolute right-0 md:relative shrink-0 shadow-2xl md:shadow-none"
       >
         <div className="h-[60px] flex items-center justify-between px-4 bg-[#F0F2F5] shrink-0">
           <div className="flex items-center gap-4">
@@ -166,7 +203,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
 
         <div className="flex-1 overflow-y-auto">
           {/* Header Card */}
-          <div className="bg-white py-8 px-4 flex flex-col items-center justify-center mb-2 shadow-sm">
+          <div className="bg-white py-8 px-4 flex flex-col items-center justify-center mb-6 shadow-sm">
             <div className="relative">
               <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-white text-[42px] font-bold shadow-lg mb-4">
                 {initials(displayName, peerAddress)}
@@ -194,17 +231,17 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           </div>
 
           <div className="p-4 flex flex-col gap-2">
-            <Section title="About">
+            <Group title="About">
               <Row icon={<Copy />} label="Wallet Address" value={shortAddr(peerAddress)} onTap={copyAddress} />
               <Row icon={<Star />} label="Favorite Contact" toggle={isFav} onToggle={toggleFav} />
-            </Section>
+            </Group>
 
-            <Section title="Media, Links, and Docs">
+            <Group title="Media, Links, and Docs">
               <Row icon={<ImageIcon />} label="Shared Media" value="0" onTap={() => setModal('media')} />
               <Row icon={<Star />} label="Starred Messages" value="None" onTap={() => setModal('starred')} />
-            </Section>
+            </Group>
 
-            <Section title="Privacy & Security">
+            <Group title="Privacy & Security">
               <Row icon={<Bell />} label="Mute Notifications" toggle={isMuted} onToggle={handleMute} />
               <Row icon={<Clock />} label="Disappearing Messages" value={disappearing === 'off' ? 'Off' : disappearing} onTap={() => setModal('disappearing')} />
               <Row icon={<Lock />} label="Lock Chat with PIN" toggle={lockChat} onToggle={(v: boolean) => {
@@ -218,18 +255,18 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
                 }
               }} />
               <Row icon={<Shield />} label="Encryption" value="End-to-End" onTap={() => setModal('encryption')} />
-            </Section>
+            </Group>
 
-            <Section title="Actions">
+            <Group title="Actions">
               <Row icon={<Share2 />} label="Share Contact" onTap={() => showToast('Sharing not available in beta')} />
               <Row icon={<Download />} label="Export Chat" onTap={() => showToast('Exporting conversation...')} />
               <Row icon={<Trash2 />} label="Clear Chat" danger onTap={onClearChat} />
-            </Section>
+            </Group>
 
-            <Section>
+            <Group>
               <Row icon={<Ban />} label="Block Contact" danger onTap={onBlock} />
               <Row icon={<Flag />} label="Report Contact" danger onTap={() => showToast('Contact reported to local blocklist.')} />
-            </Section>
+            </Group>
           </div>
         </div>
       </motion.div>

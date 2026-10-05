@@ -4180,101 +4180,49 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       <div className={`${showList ? 'flex' : 'hidden md:flex'} w-full md:w-80 lg:w-96 flex-col border-r border-black/[0.08] bg-white shrink-0 h-full overflow-hidden`}>
 
         {/* ── Sidebar Header ── */}
-        {/* [iOS FIX] Use env(safe-area-inset-top) so "Messages" title doesn't hide behind the notch/status bar */}
-        <div className="pb-0 px-4 border-b border-black/[0.05] bg-[#F9F9F9]" style={{ paddingTop: 'max(16px, env(safe-area-inset-top, 16px))' }}>
-          {/* Top row: title + action buttons */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <HLLogo variant="mark" size={32} theme="dark" />
-              <h1 className="text-[22px] font-black text-[#000000] tracking-tight">Ledger Chat</h1>
+        <div className="px-4 py-3 border-b border-black/[0.05] bg-[#F9F9F9] flex flex-col gap-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}>
+          {/* Top row: Identity + Quick Actions */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setShowFullSettings(true)}>
+              <Avatar address={effectiveAddress} size={36} />
+              <div className="flex flex-col">
+                <span className="text-[15px] font-bold text-[#000000] truncate max-w-[120px]">{getDisplayName(effectiveAddress)}</span>
+                <div className="flex items-center gap-1.5 text-[10px] text-[#25D366] font-semibold tracking-wide">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse" />
+                  LEDGER CHAT
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => setShowUserSearch(true)}
-                className="w-10 h-10 rounded-full bg-[#F2F2F7] flex items-center justify-center text-[#25D366] hover:bg-[#E5E5EA] transition-all active:scale-95"
-                title="Find people"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <button onClick={() => setShowContactRequests(true)} className="relative w-9 h-9 rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] transition-colors" title="Contact Requests">
+                <Bell size={18} />
+                {pendingRequestCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500"></span>
+                )}
               </button>
-              <button
-                onClick={() => {
-                  setPeerInput('');
-                  // focus the input below
-                  setTimeout(() => document.getElementById('ledger-new-chat-input')?.focus(), 100);
-                }}
-                className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center text-white hover:bg-[#128C7E] transition-all active:scale-95 shadow-sm"
-                title="New conversation"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <button onClick={() => setShowCreateGroup(true)} className="w-9 h-9 rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] transition-colors" title="New Group">
+                <Users size={18} />
               </button>
-              <button
-                onClick={() => setShowCreateGroup(true)}
-                className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center text-white hover:bg-[#128C7E] transition-all active:scale-95 shadow-sm"
-                title="New Group Chat"
-              >
-                <UserPlus size={18} strokeWidth={2.5} />
+              <button onClick={() => setShowFullSettings(true)} className="w-9 h-9 rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] transition-colors" title="Settings">
+                <Settings size={18} />
               </button>
             </div>
           </div>
 
-          {/* New chat input */}
-          <div className="flex gap-2 mb-3">
-            <div className="flex-1 relative">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-black/30 pointer-events-none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input
-                id="ledger-new-chat-input"
-                type="text"
-                placeholder="@username or 0x wallet address"
-                value={peerInput}
-                onChange={e => setPeerInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleStartConversation()}
-                className="w-full bg-[#F2F2F7] rounded-[12px] pl-9 pr-3 py-2.5 text-[16px] text-[#000000] placeholder:text-[#8E8E93] focus:outline-none focus:ring-2 focus:ring-[#25D366]/30 transition-all"
-              />
+          {/* Search / New Chat Input */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center justify-center pointer-events-none">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-black/30"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </div>
-            <button
-              onClick={handleStartConversation}
-              disabled={sending || !peerInput.trim()}
-              className="h-[42px] px-4 bg-[#25D366] disabled:bg-[#C7C7CC] rounded-[12px] flex items-center justify-center text-white font-bold text-[14px] hover:bg-[#128C7E] transition-all active:scale-95 disabled:cursor-not-allowed whitespace-nowrap"
-            >
-              Open
-            </button>
-          </div>
-
-          {/* Secondary actions row: QR, Vault, Settings */}
-          <div className="flex items-center gap-2 pb-3">
-            <button onClick={() => setShowScanner(true)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[10px] bg-[#F2F2F7] text-[#000000] hover:bg-[#E5E5EA] transition-all text-[12px] font-semibold active:scale-95">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><line x1="21" y1="21" x2="21" y2="21.01"/><path d="M16 11V9a2 2 0 0 1 2-2h3"/><line x1="21" y1="9" x2="21" y2="9.01"/></svg>
-              Scan QR
-            </button>
-            <button onClick={() => setShowMyQR(true)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[10px] bg-[#F2F2F7] text-[#000000] hover:bg-[#E5E5EA] transition-all text-[12px] font-semibold active:scale-95">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              My QR
-            </button>
-            <button onClick={() => setShowContactRequests(true)} className="relative flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#F2F2F7] text-[#000000] hover:bg-[#E5E5EA] transition-all text-[12px] font-semibold active:scale-95">
-              <Bell size={13} />
-              {pendingRequestCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">
-                  {pendingRequestCount}
-                </span>
-              )}
-            </button>
-            <button onClick={() => setShowVault(true)} className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#F2F2F7] text-[#000000] hover:bg-[#E5E5EA] transition-all text-[12px] font-semibold active:scale-95">
-              <Lock size={13} />
-            </button>
-            <button onClick={() => window.location.href = '/portfolio'} className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#F2F2F7] text-[#000000] hover:bg-[#E5E5EA] transition-all text-[12px] font-semibold active:scale-95">
-              <PieChart size={13} />
-            </button>
-            <button onClick={() => setShowFullSettings(true)} className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#F2F2F7] text-[#000000] hover:bg-[#E5E5EA] transition-all text-[12px] font-semibold active:scale-95">
-              <Settings size={13} />
-            </button>
-          </div>
-
-          {/* QD Balance */}
-          <div className="flex items-center justify-between pb-2">
-            <div className="flex items-center gap-1.5 text-[12px] text-[#8E8E93]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#34C759] animate-pulse" />
-              <span className="font-mono">Ledger Chat</span>
-            </div>
+            <input
+              id="ledger-new-chat-input"
+              type="text"
+              placeholder="Search or start new chat..."
+              value={peerInput}
+              onChange={e => setPeerInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleStartConversation()}
+              className="w-full bg-[#EFEFF0] rounded-xl pl-9 pr-3 py-2 text-[14px] text-[#000000] placeholder:text-[#8E8E93] focus:outline-none focus:ring-2 focus:ring-[#25D366]/30 transition-all"
+            />
           </div>
         </div>
 
