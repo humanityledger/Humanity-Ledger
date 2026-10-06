@@ -1013,7 +1013,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
             </>
-          )
+          )}
 
           {/* PAYMENTS TAB */}
           {activeTab === 'payments' && (
@@ -1062,7 +1062,6 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               </Group>
             </div>
           )}
-}
 
         </div>
       </div>
