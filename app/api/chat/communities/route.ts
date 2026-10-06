@@ -27,7 +27,9 @@ export async function GET(req: NextRequest) {
       include: {
         community: {
           include: {
-            _count: { select: { members: true } }
+            _count: { select: { members: true } },
+            channels: { orderBy: { position: 'asc' } },
+            permissions: true
           }
         }
       }
@@ -68,6 +70,15 @@ export async function POST(req: NextRequest) {
             walletAddress: caller,
             role: 'ADMIN'
           }
+        },
+        channels: {
+          create: [
+            { name: 'general', description: 'General discussion', isPaid: false, position: 0 },
+            { name: 'announcements', description: 'Server announcements', isPaid: false, position: 1 }
+          ]
+        },
+        permissions: {
+          create: {}
         }
       }
     });
@@ -121,6 +132,55 @@ export async function PATCH(req: NextRequest) {
         }
       });
       return NextResponse.json({ ok: true, community: updated });
+    }
+
+    if (action === 'CREATE_CHANNEL') {
+      const { name, description, isPaid, price, currency } = body;
+      const count = await (prisma as any).communityChannel.count({ where: { communityId } });
+      const channel = await (prisma as any).communityChannel.create({
+        data: {
+          communityId,
+          name,
+          description: description || '',
+          isPaid: Boolean(isPaid),
+          price: price ? parseFloat(price) : null,
+          currency: currency || null,
+          position: count
+        }
+      });
+      return NextResponse.json({ ok: true, channel });
+    }
+
+    if (action === 'UPDATE_CHANNEL') {
+      const { channelId, name, description, isPaid, price, currency, position } = body;
+      const channel = await (prisma as any).communityChannel.update({
+        where: { id: channelId },
+        data: {
+          ...(name !== undefined && { name }),
+          ...(description !== undefined && { description }),
+          ...(isPaid !== undefined && { isPaid }),
+          ...(price !== undefined && { price: price === null ? null : parseFloat(price) }),
+          ...(currency !== undefined && { currency }),
+          ...(position !== undefined && { position })
+        }
+      });
+      return NextResponse.json({ ok: true, channel });
+    }
+    
+    if (action === 'DELETE_CHANNEL') {
+      const { channelId } = body;
+      await (prisma as any).communityChannel.delete({ where: { id: channelId } });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (action === 'UPDATE_PERMISSIONS') {
+      const { permissions } = body;
+      const updated = await (prisma as any).communityPermission.upsert({
+        where: { communityId },
+        create: { communityId, ...permissions },
+        update: { ...permissions }
+      });
+      return NextResponse.json({ ok: true, permissions: updated });
     }
 
     if (action === 'UPDATE_PRIVACY') {
