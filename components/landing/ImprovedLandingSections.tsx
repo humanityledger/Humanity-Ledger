@@ -67,7 +67,7 @@ function FeatureCard({ icon, title, description, delay }: {
             transition={{ duration: 0.6, delay }}
             className="bg-white/40 backdrop-blur-md border border-white/60 rounded-[2.5rem] p-8 lg:p-10 hover:bg-white/60 transition-all duration-500 group relative overflow-hidden"
         >
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-[#25D366]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
             <div className="relative z-10">
                 <div className="w-16 h-16 bg-[#1F1F1F] rounded-2xl flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform duration-300">
@@ -260,4 +260,5 @@ function DownloadButton({
         </button>
     );
 }
+
 

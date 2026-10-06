@@ -70,7 +70,7 @@ export function ArchitectureJourney() {
         <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[2px] bg-slate-100 hidden md:block">
           <motion.div 
             style={{ scaleY: pathLength }}
-            className="w-full h-full bg-gradient-to-b from-blue-500 via-indigo-500 to-emerald-500 origin-top shadow-[0_10px_30px_rgba(99,102,241,0.2)] transform-gpu"
+            className="w-full h-full bg-gradient-to-b from-[#25D366] via-indigo-500 to-emerald-500 origin-top shadow-[0_10px_30px_rgba(99,102,241,0.2)] transform-gpu"
           />
           
           {/* Energy Surge (Legendary detail) */}
@@ -147,4 +147,5 @@ function ArchitectureStep({ node, index }: { node: typeof ARCHITECTURE_NODES[0],
     </motion.div>
   );
 }
+
 

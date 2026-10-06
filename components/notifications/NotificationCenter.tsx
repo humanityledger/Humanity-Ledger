@@ -26,8 +26,8 @@ export default function NotificationCenter() {
         switch(type) {
             case 'security': return <ShieldAlert size={16} className="text-red-500" />;
             case 'transaction': return <BadgePercent size={16} className="text-green-500" />;
-            case 'social': return <MessageCircle size={16} className="text-blue-500" />;
-            case 'system': return <Info size={16} className="text-blue-500" />;
+            case 'social': return <MessageCircle size={16} className="text-[#25D366]" />;
+            case 'system': return <Info size={16} className="text-[#25D366]" />;
             default: return <Bell size={16} className="text-gray-500" />;
         }
     };
@@ -131,7 +131,7 @@ export default function NotificationCenter() {
                                             
                                             {/* Unread Dot */}
                                             {!n.read && (
-                                                <div className="absolute top-1/2 right-3 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full" />
+                                                <div className="absolute top-1/2 right-3 -translate-y-1/2 w-2 h-2 bg-[#25D366] rounded-full" />
                                             )}
                                         </div>
                                     ))
@@ -155,4 +155,5 @@ export default function NotificationCenter() {
         </div>
     );
 }
+
 

@@ -12,7 +12,7 @@ export default function NFCHardware() {
         <div className="w-full h-full min-h-[500px] flex flex-col items-center justify-center p-8 bg-[#EAEADF] relative overflow-hidden rounded-[40px]">
             
             {/* Ambient Pulse */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-3xl pointer-events-none animate-pulse" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#25D366]/5 rounded-full blur-3xl pointer-events-none animate-pulse" />
 
             <AnimatePresence mode="wait">
                 
@@ -26,8 +26,8 @@ export default function NFCHardware() {
                         className="text-center space-y-8 relative z-10 max-w-md"
                     >
                         <div className="relative mx-auto w-32 h-32">
-                           <div className="absolute inset-0 bg-blue-500/10 rounded-full animate-ping" />
-                           <div className="relative w-full h-full bg-white rounded-full flex items-center justify-center shadow-xl border border-blue-500/10">
+                           <div className="absolute inset-0 bg-[#25D366]/10 rounded-full animate-ping" />
+                           <div className="relative w-full h-full bg-white rounded-full flex items-center justify-center shadow-xl border border-[#25D366]/10">
                                 <Wifi size={48} className="text-blue-600" />
                            </div>
                         </div>
@@ -147,4 +147,5 @@ export default function NFCHardware() {
         </div>
     );
 }
+
 

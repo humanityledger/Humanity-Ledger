@@ -68,7 +68,7 @@ export default function NetworkMonitor() {
         </div>
 
         <div className="flex items-center gap-5 mb-10 relative z-10">
-            <div className="p-4 bg-blue-500/10 rounded-2xl border border-blue-500/20 shadow-xl backdrop-blur-md">
+            <div className="p-4 bg-[#25D366]/10 rounded-2xl border border-[#25D366]/20 shadow-xl backdrop-blur-md">
                 <Globe className="text-blue-400" size={32} />
             </div>
             <div>
@@ -121,8 +121,8 @@ export default function NetworkMonitor() {
                 </div>
                 <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-2">
-                        <Cpu size={16} className="text-blue-500" />
-                        <span className="text-xs font-black text-blue-500 uppercase tracking-widest">Base RPC</span>
+                        <Cpu size={16} className="text-[#25D366]" />
+                        <span className="text-xs font-black text-[#25D366] uppercase tracking-widest">Base RPC</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-full bg-green-500" />
@@ -153,4 +153,5 @@ export default function NetworkMonitor() {
     </div>
   );
 }
+
 

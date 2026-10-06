@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 const backers = [
-    { name: 'Coinglass', color: 'text-blue-400', glow: 'shadow-blue-500/20' },
+    { name: 'Coinglass', color: 'text-blue-400', glow: 'shadow-[#25D366]/20' },
     { name: 'CoinGecko', color: 'text-emerald-400', glow: 'shadow-emerald-500/20' },
     { name: 'Kernel Ventures', color: 'text-purple-400', glow: 'shadow-purple-500/20' },
     { name: 'Good News Ventures', color: 'text-orange-400', glow: 'shadow-orange-500/20' },
@@ -35,7 +35,7 @@ export function BackersSection() {
                     viewport={{ once: true }}
                     className="flex flex-col items-center mb-16"
                 >
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-500 mb-3">{t.backers.badge}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#25D366] mb-3">{t.backers.badge}</span>
                     <h2 className="text-3xl font-black text-white tracking-widest uppercase">{t.backers.title}</h2>
                 </motion.div>
 
@@ -80,8 +80,9 @@ export function BackersSection() {
             </div>
 
             {/* Bottom Glow Sweep */}
-            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#25D366]/20 to-transparent" />
         </section>
     );
 }
+
 

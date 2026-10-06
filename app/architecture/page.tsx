@@ -77,7 +77,7 @@ export default function ArchitecturePage() {
           <div className="space-y-6">
             <div className="flex">
               <div className="flex-shrink-0 mr-6">
-                <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-700 border-2 border-blue-500">A</div>
+                <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-700 border-2 border-[#25D366]">A</div>
               </div>
               <div>
                 <h4 className="text-xl font-bold mb-2">Universal Identity</h4>
@@ -87,7 +87,7 @@ export default function ArchitecturePage() {
             
             <div className="flex">
               <div className="flex-shrink-0 mr-6">
-                <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-700 border-2 border-blue-500">B</div>
+                <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-700 border-2 border-[#25D366]">B</div>
               </div>
               <div>
                 <h4 className="text-xl font-bold mb-2">Universal Assets</h4>
@@ -97,7 +97,7 @@ export default function ArchitecturePage() {
 
             <div className="flex">
               <div className="flex-shrink-0 mr-6">
-                <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-700 border-2 border-blue-500">C</div>
+                <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-700 border-2 border-[#25D366]">C</div>
               </div>
               <div>
                 <h4 className="text-xl font-bold mb-2">Mini-App Platform</h4>
@@ -121,3 +121,4 @@ export default function ArchitecturePage() {
     </DocLayout>
   );
 }
+

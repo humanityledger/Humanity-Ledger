@@ -209,3 +209,4 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
     </motion.div>
   );
 }
+

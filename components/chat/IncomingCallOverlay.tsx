@@ -102,7 +102,7 @@ export function IncomingCallOverlay() {
                   repeat: Infinity,
                   ease: "easeInOut"
                 }}
-                className="absolute inset-0 rounded-full bg-blue-500/20"
+                className="absolute inset-0 rounded-full bg-[#25D366]/20"
                 style={{ zIndex: -1 }}
               />
               <motion.div
@@ -161,3 +161,4 @@ export function IncomingCallOverlay() {
     </AnimatePresence>
   );
 }
+

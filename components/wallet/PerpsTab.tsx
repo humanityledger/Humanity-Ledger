@@ -88,3 +88,4 @@ export default function PerpsTab({ perps, isLoading }: PerpsTabProps) {
     );
 }
 
+

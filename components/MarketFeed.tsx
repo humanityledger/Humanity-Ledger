@@ -33,7 +33,7 @@ export const MarketFeed = () => {
                     <TrendingUp className="text-cyan-400" />
                     Mercados en Base Sepolia
                 </h3>
-                <span className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-200 text-xs font-mono">
+                <span className="px-3 py-1 rounded-full bg-[#25D366]/10 border border-[#25D366]/20 text-blue-200 text-xs font-mono">
                     {isLoading ? "Sincronizando..." : `${markets.length} Activos`}
                 </span>
             </div>
@@ -121,4 +121,5 @@ export const MarketFeed = () => {
         </div>
     );
 };
+
 

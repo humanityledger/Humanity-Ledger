@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 
 const stats = [
   { id: 1, label: 'Quantum Shielded Txs', value: '1.2M', trend: '+14,000%', color: 'text-green-500' },
-  { id: 2, label: 'Active ZK Relayers', value: '4,096', trend: '+8,500%', color: 'text-blue-500' },
+  { id: 2, label: 'Active ZK Relayers', value: '4,096', trend: '+8,500%', color: 'text-[#25D366]' },
   { id: 3, label: 'Global Node Density', value: '89.4%', trend: '+3,200%', color: 'text-purple-500' },
   { id: 4, label: 'Data Encryption Depth', value: 'Tier 5', trend: 'MAX', color: 'text-orange-500' },
 ];
@@ -126,3 +126,4 @@ export function SightInsightTab() {
     </div>
   );
 }
+

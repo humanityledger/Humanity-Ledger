@@ -34,7 +34,7 @@ export default function LedgerVerificationReport({
       <motion.div 
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        className="bg-[#0B0E11] border border-blue-500/30 w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.2)] relative"
+        className="bg-[#0B0E11] border border-[#25D366]/30 w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.2)] relative"
       >
         {/* Header/Banner */}
         <div className="h-32 bg-gradient-to-r from-blue-900/40 via-blue-600/20 to-purple-900/40 relative">
@@ -79,7 +79,7 @@ export default function LedgerVerificationReport({
                         <motion.div 
                             initial={{ width: 0 }}
                             animate={{ width: `${influenceScore}%` }}
-                            className="h-full bg-blue-500"
+                            className="h-full bg-[#25D366]"
                         />
                     </div>
                 </div>
@@ -98,8 +98,8 @@ export default function LedgerVerificationReport({
 
             {/* AI Forensic Audit Section */}
             {forensics && (
-                <div className="bg-blue-600/5 border border-blue-500/20 rounded-[1.5rem] p-6 space-y-4">
-                    <div className="flex items-center justify-between pb-2 border-b border-blue-500/10">
+                <div className="bg-blue-600/5 border border-[#25D366]/20 rounded-[1.5rem] p-6 space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#25D366]/10">
                         <div className="flex items-center gap-2 text-blue-400">
                             <BrainCircuit size={20} />
                             <span className="text-xs font-black uppercase tracking-widest">Deep AI Forensic Audit</span>
@@ -152,7 +152,7 @@ export default function LedgerVerificationReport({
                             transition={{ delay: i * 0.1 }}
                             className="flex items-center gap-3 text-gray-300"
                         >
-                            <CheckCircle2 size={18} className="text-blue-500 shrink-0" />
+                            <CheckCircle2 size={18} className="text-[#25D366] shrink-0" />
                             <span className="text-sm font-medium">{item}</span>
                         </motion.div>
                     )) : (
@@ -185,4 +185,5 @@ export default function LedgerVerificationReport({
     </div>
   );
 }
+
 

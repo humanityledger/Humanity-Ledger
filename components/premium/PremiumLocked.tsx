@@ -55,7 +55,7 @@ export default function PremiumLocked({
           }}
         />
         <motion.div
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl"
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#25D366]/20 rounded-full blur-3xl"
           animate={{
             scale: [1.2, 1, 1.2],
             opacity: [0.5, 0.3, 0.5],
@@ -88,7 +88,7 @@ export default function PremiumLocked({
             ease: "easeInOut"
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full blur-2xl opacity-50" />
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-[#25D366] rounded-full blur-2xl opacity-50" />
           <div className="relative bg-gradient-to-br from-purple-500 via-purple-600 to-blue-600 p-8 rounded-3xl shadow-2xl">
             <IconComponent className="w-16 h-16 text-white" strokeWidth={1.5} />
           </div>
@@ -134,7 +134,7 @@ export default function PremiumLocked({
               transition={{ delay: 0.2 + i * 0.1 }}
               className="flex items-center justify-center gap-2 text-sm text-gray-300"
             >
-              <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-purple-500 to-blue-500" />
+              <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-purple-500 to-[#25D366]" />
               <span>{item}</span>
             </motion.div>
           ))}
@@ -173,4 +173,5 @@ export default function PremiumLocked({
     </div>
   );
 }
+
 

@@ -21,7 +21,7 @@ const RANK_STYLES = [
 
 const LABEL_COLORS: Record<string, string> = {
     'Taproot': 'text-green-400 bg-green-500/10 border-green-500/20',
-    'SegWit Wallet': 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+    'SegWit Wallet': 'text-blue-400 bg-[#25D366]/10 border-[#25D366]/20',
     'P2SH / Exchange': 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
     'Legacy / Miner': 'text-purple-400 bg-purple-500/10 border-purple-500/20',
 };
@@ -182,4 +182,5 @@ export function LedgerLeaderboard({ leaderboard, onSelectAddress, watchedAddress
         </div>
     );
 }
+
 

@@ -132,7 +132,7 @@ export default function PricingModal({ isOpen, onClose, onSubscribe }: PricingMo
           </div>
 
           {/* Pro Tier */}
-          <div className="p-6 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl border-2 border-blue-500 relative overflow-hidden shadow-lg col-span-2 md:col-span-1">
+          <div className="p-6 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl border-2 border-[#25D366] relative overflow-hidden shadow-lg col-span-2 md:col-span-1">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
             
@@ -204,4 +204,5 @@ export default function PricingModal({ isOpen, onClose, onSubscribe }: PricingMo
     </div>
   );
 }
+
 

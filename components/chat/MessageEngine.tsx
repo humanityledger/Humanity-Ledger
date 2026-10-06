@@ -595,7 +595,7 @@ function MessageBubble({
         {!stealthMode && formatTime(msg.sentAt)}
         {msg.isMine && showReadReceipts && (
           (msg.readAt || (now - msg.sentAt > 2500))
-            ? <CheckCheck size={13} className="text-blue-500" />
+            ? <CheckCheck size={13} className="text-[#25D366]" />
             : <Check size={13} className="text-black/30" />
         )}
       </div>
@@ -815,3 +815,4 @@ function LocationBubble({
     </div>
   );
 }
+

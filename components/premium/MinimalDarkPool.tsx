@@ -61,26 +61,26 @@ export function MinimalDarkPool() {
         >
             {/* Background Radar Effect */}
             <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full border border-blue-500/30 animate-[spin_8s_linear_infinite]">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full border border-[#25D366]/30 animate-[spin_8s_linear_infinite]">
                     <div className="w-1/2 h-[2px] bg-gradient-to-r from-transparent to-blue-400 origin-left" />
                 </div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full border border-blue-500/20 shadow-[0_0_50px_rgba(59,130,246,0.1)]" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] rounded-full border border-blue-500/20 shadow-[0_0_50px_rgba(59,130,246,0.1)] animate-ping" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full border border-[#25D366]/20 shadow-[0_0_50px_rgba(59,130,246,0.1)]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] rounded-full border border-[#25D366]/20 shadow-[0_0_50px_rgba(59,130,246,0.1)] animate-ping" />
             </div>
 
             {/* Header */}
             <div className="relative z-10 flex justify-between items-center mb-8 border-b border-white/10 pb-6">
                 <div>
                     <h2 className="text-white text-2xl font-black tracking-widest uppercase flex items-center gap-3">
-                        <Waves className="text-blue-500" size={28} />
+                        <Waves className="text-[#25D366]" size={28} />
                         Active Dark Pool
                     </h2>
-                    <p className="text-blue-500/50 text-xs mt-1 tracking-[0.2em] uppercase">On-Chain Entity Analytics</p>
+                    <p className="text-[#25D366]/50 text-xs mt-1 tracking-[0.2em] uppercase">On-Chain Entity Analytics</p>
                 </div>
                 <div className="flex items-center gap-4">
                     {!audioInitialized ? (
                         <button 
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 text-blue-400 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-blue-600/30 transition-colors animate-pulse border border-blue-500/30"
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 text-blue-400 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-blue-600/30 transition-colors animate-pulse border border-[#25D366]/30"
                         >
                             <Bell size={14} /> Enable Sonar
                         </button>
@@ -95,9 +95,9 @@ export function MinimalDarkPool() {
             {/* List */}
             <div className="relative z-10 flex-1 overflow-y-auto pr-4 space-y-3 custom-scrollbar">
                 {ledgerEvents.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-blue-500/50 space-y-6">
+                    <div className="h-full flex flex-col items-center justify-center text-[#25D366]/50 space-y-6">
                         <div className="relative">
-                            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full animate-pulse" />
+                            <div className="absolute inset-0 bg-[#25D366]/20 blur-xl rounded-full animate-pulse" />
                             <Activity size={64} className="relative animate-bounce text-blue-400" />
                         </div>
                         <span className="text-sm font-bold tracking-[0.3em] uppercase animate-pulse">Scanning Deep Network...</span>
@@ -128,10 +128,10 @@ function MinimalLedgerRow({ event, isNew }: { event: LedgerEvent, isNew: boolean
             animate={{ opacity: 1, x: 0, backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.5 }}
-            className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${isNew ? 'border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'border-white/5 hover:border-white/20'}`}
+            className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${isNew ? 'border-[#25D366]/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'border-white/5 hover:border-white/20'}`}
         >
             <div className="flex items-center gap-6 w-1/3">
-                <div className={`w-2 h-2 rounded-full ${eventAny.rawUsd >= 5000000 ? 'bg-purple-500' : 'bg-blue-500'}`} />
+                <div className={`w-2 h-2 rounded-full ${eventAny.rawUsd >= 5000000 ? 'bg-purple-500' : 'bg-[#25D366]'}`} />
                 <div>
                     <div className="text-white font-bold flex items-center gap-2">
                         {event.wallet}
@@ -156,4 +156,5 @@ function MinimalLedgerRow({ event, isNew }: { event: LedgerEvent, isNew: boolean
         </motion.div>
     );
 }
+
 

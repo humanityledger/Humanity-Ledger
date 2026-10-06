@@ -41,7 +41,7 @@ export default function NetworkGuard() {
 
                 <button
                     onClick={() => switchChain({ chainId: POLYGON_ID })}
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold tracking-brand shadow-lg transition-all transform hover:-translate-y-1 active:scale-95"
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-[#25D366] text-white font-bold tracking-brand shadow-lg transition-all transform hover:-translate-y-1 active:scale-95"
                 >
                     Cambiar a Polygon
                 </button>
@@ -49,4 +49,5 @@ export default function NetworkGuard() {
         </div>
     );
 }
+
 

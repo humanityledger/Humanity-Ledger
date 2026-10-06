@@ -143,8 +143,8 @@ export function OnboardingFlow({
                 key="step4" variants={variants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.3 }}
                 className="w-full flex flex-col items-center text-center px-4 absolute top-1/2 -translate-y-1/2"
               >
-                <div className="mb-8 w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <Bell className="text-blue-500" size={32} />
+                <div className="mb-8 w-20 h-20 rounded-full bg-[#25D366]/10 flex items-center justify-center">
+                  <Bell className="text-[#25D366]" size={32} />
                 </div>
                 <h1 className="text-2xl font-black text-black mb-4 tracking-tighter">Stay connected</h1>
                 <p className="text-[14px] text-black/60 font-mono leading-relaxed max-w-sm mb-2">
@@ -189,3 +189,4 @@ export function OnboardingFlow({
     </div>
   );
 }
+

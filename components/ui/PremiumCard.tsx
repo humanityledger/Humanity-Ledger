@@ -22,7 +22,7 @@ export function PremiumCard({
   const glowStyles = {
     purple: 'hover:shadow-purple-500/20',
     green: 'hover:shadow-green-500/20',
-    blue: 'hover:shadow-blue-500/20',
+    blue: 'hover:shadow-[#25D366]/20',
     none: ''
   };
 
@@ -47,4 +47,5 @@ export function PremiumCard({
     </motion.div>
   );
 }
+
 

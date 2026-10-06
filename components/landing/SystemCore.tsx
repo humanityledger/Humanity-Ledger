@@ -10,7 +10,7 @@ const MODULES = [
         subtitle: "Motor Predictivo L1",
         description: "Millimetric mempool analysis processing thousands of transactions per second. Anticipate Elite flows before confirmation.",
         color: "from-blue-600 to-indigo-600",
-        shadow: "shadow-blue-500/20"
+        shadow: "shadow-[#25D366]/20"
     },
     {
         id: "arbitrage",
@@ -103,4 +103,5 @@ export function SystemCore() {
         </section>
     );
 }
+
 

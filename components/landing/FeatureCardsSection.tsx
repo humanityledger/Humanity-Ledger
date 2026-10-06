@@ -40,7 +40,7 @@ export function FeatureCardsSection() {
                     className="text-5xl md:text-8xl font-black text-white tracking-tighter uppercase mb-4 drop-shadow-[0_0_50px_rgba(255,255,255,0.1)]"
                 >
                     {t('features.welcome_to')}<br/>
-                    <span className="text-blue-500">Humanity Ledger</span>
+                    <span className="text-[#25D366]">Humanity Ledger</span>
                 </motion.h3>
             </div>
 
@@ -91,5 +91,6 @@ export function FeatureCardsSection() {
         </div>
     );
 }
+
 
 

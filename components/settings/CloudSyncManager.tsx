@@ -40,7 +40,7 @@ export function CloudSyncManager() {
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header  Real Cloud Sync */}
-            <div className="p-8 bg-gradient-to-br from-[#00f2ea]/10 to-blue-500/10 rounded-[2rem] border border-[#00f2ea]/20 relative overflow-hidden">
+            <div className="p-8 bg-gradient-to-br from-[#00f2ea]/10 to-[#25D366]/10 rounded-[2rem] border border-[#00f2ea]/20 relative overflow-hidden">
                 <div className="absolute right-0 top-0 p-4 opacity-10">
                     <Cloud className="w-40 h-40 text-[#00f2ea]" />
                 </div>
@@ -105,4 +105,5 @@ export function CloudSyncManager() {
         </div>
     );
 }
+
 

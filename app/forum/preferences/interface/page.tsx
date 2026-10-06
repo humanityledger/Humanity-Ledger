@@ -32,7 +32,7 @@ export default function InterfacePreferencesPage() {
                 value="light" 
                 checked={theme === 'light'} 
                 onChange={(e) => setTheme(e.target.value)}
-                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 focus:ring-[#25D366]"
               />
               <span className="text-sm font-medium text-black dark:text-white">Light</span>
             </label>
@@ -43,7 +43,7 @@ export default function InterfacePreferencesPage() {
                 value="dark" 
                 checked={theme === 'dark'} 
                 onChange={(e) => setTheme(e.target.value)}
-                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 focus:ring-[#25D366]"
               />
               <span className="text-sm font-medium text-black dark:text-white">Dark</span>
             </label>
@@ -54,7 +54,7 @@ export default function InterfacePreferencesPage() {
                 value="system" 
                 checked={theme === 'system'} 
                 onChange={(e) => setTheme(e.target.value)}
-                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 focus:ring-[#25D366]"
               />
               <span className="text-sm font-medium text-black dark:text-white">System automatic</span>
             </label>
@@ -67,7 +67,7 @@ export default function InterfacePreferencesPage() {
           <select 
             value={textSize}
             onChange={(e) => setTextSize(e.target.value)}
-            className="w-full max-w-xs bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-2 text-sm font-medium text-black dark:text-white outline-none focus:border-blue-500 transition-colors"
+            className="w-full max-w-xs bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-2 text-sm font-medium text-black dark:text-white outline-none focus:border-[#25D366] transition-colors"
           >
             <option value="smallest">Smallest</option>
             <option value="smaller">Smaller</option>
@@ -104,3 +104,4 @@ export default function InterfacePreferencesPage() {
     </div>
   );
 }
+

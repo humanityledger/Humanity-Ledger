@@ -27,7 +27,7 @@ export function TerminalExecutionLog({
 
   const getColor = (level: string) => {
     switch (level) {
-      case "INFO": return "text-blue-500";
+      case "INFO": return "text-[#25D366]";
       case "WARN": return "text-amber-500";
       case "ERROR": return "text-red-500";
       case "SUCCESS": return "text-emerald-500";
@@ -85,3 +85,4 @@ export function TerminalExecutionLog({
     </div>
   );
 }
+

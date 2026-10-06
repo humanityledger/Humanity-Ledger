@@ -187,7 +187,7 @@ export default function DeadMansSwitchModal({ isOpen, onClose }: DeadMansSwitchM
 
             {/* Not connected */}
             {!isConnected && (
-              <div className="flex items-start gap-3 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl mb-4">
+              <div className="flex items-start gap-3 p-4 bg-[#25D366]/10 border border-[#25D366]/20 rounded-xl mb-4">
                 <Lock className="text-blue-400 shrink-0 mt-0.5" size={16} />
                 <p className="text-blue-300 text-xs">Connect your wallet to interact with the on-chain switch.</p>
               </div>
@@ -279,7 +279,7 @@ export default function DeadMansSwitchModal({ isOpen, onClose }: DeadMansSwitchM
                     <button
                       onClick={handlePropose}
                       disabled={loading || !newBackup}
-                      className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-white/10 disabled:text-white/30 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 transition-all"
+                      className="w-full py-2.5 bg-blue-600 hover:bg-[#25D366] disabled:bg-white/10 disabled:text-white/30 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 transition-all"
                     >
                       {loading ? <Loader2 className="animate-spin" size={16} /> : <Shield size={16} />}
                       {loading ? 'Signing…' : 'Propose New Backup (step 1/2)'}
@@ -338,3 +338,4 @@ export default function DeadMansSwitchModal({ isOpen, onClose }: DeadMansSwitchM
     </AnimatePresence>
   );
 }
+

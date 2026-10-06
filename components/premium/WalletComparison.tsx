@@ -50,10 +50,10 @@ export default function WalletComparison({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-black text-white flex items-center gap-2">
-          <BarChart3 className="text-blue-500" />
+          <BarChart3 className="text-[#25D366]" />
           Wallet Comparison
         </h2>
-        {!isPremium && <span className="text-xs font-bold text-blue-400 uppercase border border-blue-500/30 px-2 py-1 rounded-full">Limit: 3 Wallets (Free)</span>}
+        {!isPremium && <span className="text-xs font-bold text-blue-400 uppercase border border-[#25D366]/30 px-2 py-1 rounded-full">Limit: 3 Wallets (Free)</span>}
       </div>
 
       {/* Wallet Selection */}
@@ -70,7 +70,7 @@ export default function WalletComparison({
                 disabled={isDisabled}
                 className={`p-4 rounded-xl border-2 transition-all text-left group relative overflow-hidden ${
                   isSelected
-                    ? 'border-blue-500 bg-blue-500/10'
+                    ? 'border-[#25D366] bg-[#25D366]/10'
                     : isCurrentlyWatched
                       ? 'border-emerald-500/50 bg-emerald-500/5 hover:border-emerald-500'
                       : isDisabled 
@@ -96,7 +96,7 @@ export default function WalletComparison({
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center"
+                      className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center"
                     >
                       <span className="text-white text-xs"></span>
                     </motion.div>
@@ -178,7 +178,7 @@ export default function WalletComparison({
                         transition={{ duration: 0.8, delay: index * 0.1 }}
                         className={`h-full rounded-full ${
                           index === 0 ? 'bg-gradient-to-r from-purple-500 to-pink-500' :
-                          index === 1 ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
+                          index === 1 ? 'bg-gradient-to-r from-[#25D366] to-cyan-500' :
                           'bg-gradient-to-r from-green-500 to-emerald-500'
                         }`}
                       />
@@ -216,7 +216,7 @@ export default function WalletComparison({
                       </td>
                       <td className="px-4 py-3 text-right text-white font-mono text-xs">{wallet.txCount || 0}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-full text-[10px] font-black uppercase">
+                        <span className="px-2 py-0.5 bg-[#25D366]/10 text-blue-400 rounded-full text-[10px] font-black uppercase">
                           Rank #{wallet.rank || '???'}
                         </span>
                       </td>
@@ -244,4 +244,5 @@ export default function WalletComparison({
     </div>
   );
 }
+
 

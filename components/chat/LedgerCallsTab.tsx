@@ -28,7 +28,7 @@ interface LedgerCallsTabProps {
   onFavorites: () => void;
 }
 
-const AVATAR_COLORS = ['#007AFF','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
+const AVATAR_COLORS = ['#25D366','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
 const avatarColor = (addr: string) => AVATAR_COLORS[parseInt(addr?.slice(2,4) || '0', 16) % AVATAR_COLORS.length];
 const initials = (name: string | undefined, addr: string) => name ? name.slice(0,2).toUpperCase() : addr ? addr.slice(2,4).toUpperCase() : '??';
 const shortAddr = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
@@ -68,20 +68,20 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps & CallQuickActionsProp
       <div className="bg-white mb-2 px-4 py-3">
         <div className="flex gap-3">
           {[
-            { icon: <Plus size={20} />, label: 'New Call', action: onNew, color: '#007AFF' },
-            { icon: <Calendar size={20} />, label: 'Schedule', action: onSchedule, color: '#007AFF' },
-            { icon: <Hash size={20} />, label: 'Keypad', action: () => setShowKeypad(v => !v), color: '#007AFF' },
-            { icon: <Star size={20} />, label: 'Favourites', action: onFavorites, color: '#007AFF' },
+            { icon: <Plus size={20} />, label: 'New Call', action: onNew, color: '#25D366' },
+            { icon: <Calendar size={20} />, label: 'Schedule', action: onSchedule, color: '#25D366' },
+            { icon: <Hash size={20} />, label: 'Keypad', action: () => setShowKeypad(v => !v), color: '#25D366' },
+            { icon: <Star size={20} />, label: 'Favourites', action: onFavorites, color: '#25D366' },
           ].map(({ icon, label, action, color }) => (
             <button
               key={label}
               onClick={action}
               className="flex-1 flex flex-col items-center gap-1.5 py-2"
             >
-              <div className="w-[46px] h-[46px] rounded-2xl bg-[#007AFF]/10 flex items-center justify-center" style={{ color }}>
+              <div className="w-[46px] h-[46px] rounded-2xl bg-[#25D366]/10 flex items-center justify-center" style={{ color }}>
                 {icon}
               </div>
-              <span className="text-[11px] font-semibold text-[#007AFF]">{label}</span>
+              <span className="text-[11px] font-semibold text-[#25D366]">{label}</span>
             </button>
           ))}
         </div>
@@ -125,7 +125,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps & CallQuickActionsProp
                 </button>
                 <button
                   onClick={() => { if (dialInput) { onStartCall(dialInput, 'video'); setShowKeypad(false); setDialInput(''); } }}
-                  className="flex-1 py-3 bg-[#007AFF] rounded-2xl flex items-center justify-center gap-2 text-white font-semibold"
+                  className="flex-1 py-3 bg-[#25D366] rounded-2xl flex items-center justify-center gap-2 text-white font-semibold"
                 >
                   <Video size={20} /> Video
                 </button>
@@ -164,7 +164,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps & CallQuickActionsProp
               <div className="flex items-center gap-1.5 mt-0.5">
                 {call.missed ? <PhoneMissed size={13} className="text-[#FF3B30]" /> :
                   call.direction === 'incoming' ? <PhoneIncoming size={13} className="text-[#34C759]" /> :
-                  <PhoneOutgoing size={13} className="text-[#007AFF]" />}
+                  <PhoneOutgoing size={13} className="text-[#25D366]" />}
                 <span className={`text-[13px] ${call.missed ? 'text-[#FF3B30]' : 'text-[#8E8E93]'}`}>
                   {call.missed ? 'Missed' : call.direction === 'incoming' ? 'Incoming' : 'Outgoing'}
                   {call.type === 'video' ? ' Video' : ''}
@@ -176,9 +176,9 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps & CallQuickActionsProp
               <span className="text-[12px] text-[#8E8E93]">{formatTime(call.timestamp)}</span>
               <button
                 onClick={e => { e.stopPropagation(); onStartCall(call.peerAddress, call.type); }}
-                className="w-8 h-8 rounded-full bg-[#007AFF]/10 flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center"
               >
-                {call.type === 'video' ? <Video size={15} className="text-[#007AFF]" /> : <Phone size={15} className="text-[#007AFF]" />}
+                {call.type === 'video' ? <Video size={15} className="text-[#25D366]" /> : <Phone size={15} className="text-[#25D366]" />}
               </button>
             </div>
           </button>
@@ -193,3 +193,4 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps & CallQuickActionsProp
     </div>
   );
 };
+

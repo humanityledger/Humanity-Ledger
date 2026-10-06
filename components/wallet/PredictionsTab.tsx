@@ -95,3 +95,4 @@ export default function PredictionsTab({ predictions, isLoading }: PredictionsTa
     );
 }
 
+

@@ -161,8 +161,8 @@ export default function AztecPrivacyHub() {
           <div className="space-y-4 mt-12">
             <div className="glass-panel p-4 rounded-2xl flex items-center justify-between border border-white/5 bg-black/40">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                  <div className={`w-4 h-4 rounded-full bg-blue-500 ${isConnected ? 'animate-pulse' : ''}`} />
+                <div className="w-8 h-8 rounded-full bg-[#25D366]/20 flex items-center justify-center">
+                  <div className={`w-4 h-4 rounded-full bg-[#25D366] ${isConnected ? 'animate-pulse' : ''}`} />
                 </div>
                 <div>
                   <div className="text-xs font-bold text-white">Network State</div>
@@ -237,7 +237,7 @@ export default function AztecPrivacyHub() {
                       <div className="text-[10px] uppercase tracking-widest mt-1 font-black">
                         {node.status === 'verified' && <span className="text-green-500">Confirmed</span>}
                         {node.status === 'processing' && <span className="text-purple-500">Pending</span>}
-                        {node.status === 'active' && <span className="text-blue-500">Confirming</span>}
+                        {node.status === 'active' && <span className="text-[#25D366]">Confirming</span>}
                       </div>
                     </div>
                   </div>
@@ -260,3 +260,4 @@ export default function AztecPrivacyHub() {
     </div>
   );
 }
+

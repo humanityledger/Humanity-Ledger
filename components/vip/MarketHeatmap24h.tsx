@@ -562,3 +562,4 @@ export function MarketHeatmap24h() {
     </div>
   );
 }
+

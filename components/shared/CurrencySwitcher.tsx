@@ -19,7 +19,7 @@ export function CurrencySwitcher() {
   const options: { id: CurrencyCode; label: string; icon: any; color: string }[] = [
     { id: 'USD', label: 'USD', icon: Globe, color: 'text-emerald-500' },
     { id: 'EUR', label: 'EUR', icon: Coins, color: 'text-indigo-500' },
-    { id: 'GBP', label: 'GBP', icon: Coins, color: 'text-blue-500' },
+    { id: 'GBP', label: 'GBP', icon: Coins, color: 'text-[#25D366]' },
     { id: 'CHF', label: 'CHF', icon: Coins, color: 'text-red-500' },
     { id: 'BTC', label: 'BTC', icon: Bitcoin, color: 'text-amber-500' },
     { id: 'SEK', label: 'SEK', icon: Coins, color: 'text-blue-400' },
@@ -83,3 +83,4 @@ export function CurrencySwitcher() {
     </div>
   );
 }
+

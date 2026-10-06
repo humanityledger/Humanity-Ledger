@@ -108,7 +108,7 @@ const PRODUCTS = [
         desc: "Link wallets locally via PXE",
         icon: "🔗",
         color: "bg-blue-50 border-blue-100",
-        dot: "bg-blue-500",
+        dot: "bg-[#25D366]",
       },
       {
         label: "Decrypt",
@@ -427,4 +427,5 @@ export function SeeInActionSection() {
     </section>
   );
 }
+
 

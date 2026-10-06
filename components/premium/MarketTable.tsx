@@ -386,3 +386,4 @@ function CoinIcon({ src, alt }: { src: string, alt: string }) {
     );
 }
 
+

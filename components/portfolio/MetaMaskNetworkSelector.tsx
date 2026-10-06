@@ -210,3 +210,4 @@ export function MetaMaskNetworkSelector({ activeNetworkId, onNetworkChange }: { 
         </div>
     );
 }
+

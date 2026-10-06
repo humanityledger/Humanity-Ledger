@@ -16,10 +16,10 @@ const tabs: { id: NavTab; label: string; icon: (active: boolean) => React.ReactN
     label: 'Updates',
     icon: (active) => (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="9" stroke={active ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" />
-        <circle cx="12" cy="12" r="4" fill={active ? '#007AFF' : '#8E8E93'} />
+        <circle cx="12" cy="12" r="9" stroke={active ? '#25D366' : '#8E8E93'} strokeWidth="1.8" />
+        <circle cx="12" cy="12" r="4" fill={active ? '#25D366' : '#8E8E93'} />
         <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.64 5.64l1.41 1.41M16.95 16.95l1.41 1.41M5.64 18.36l1.41-1.41M16.95 7.05l1.41-1.41"
-          stroke={active ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" />
+          stroke={active ? '#25D366' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" />
       </svg>
     )
   },
@@ -29,7 +29,7 @@ const tabs: { id: NavTab; label: string; icon: (active: boolean) => React.ReactN
     icon: (active) => (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
         <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.6 4.35 2 2 0 0 1 3.57 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.1 6.1l.9-.9a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"
-          fill={active ? '#007AFF' : 'none'} stroke={active ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          fill={active ? '#25D366' : 'none'} stroke={active ? '#25D366' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     )
   },
@@ -38,9 +38,9 @@ const tabs: { id: NavTab; label: string; icon: (active: boolean) => React.ReactN
     label: 'Communities',
     icon: (active) => (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={active ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" />
-        <circle cx="9" cy="7" r="4" stroke={active ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" fill={active ? '#007AFF22' : 'none'} />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke={active ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={active ? '#25D366' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" />
+        <circle cx="9" cy="7" r="4" stroke={active ? '#25D366' : '#8E8E93'} strokeWidth="1.8" fill={active ? '#25D36622' : 'none'} />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke={active ? '#25D366' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" />
       </svg>
     )
   },
@@ -50,7 +50,7 @@ const tabs: { id: NavTab; label: string; icon: (active: boolean) => React.ReactN
     icon: (active) => (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-          fill={active ? '#007AFF' : 'none'} stroke={active ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          fill={active ? '#25D366' : 'none'} stroke={active ? '#25D366' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     )
   }
@@ -83,7 +83,7 @@ export const CrystalNavBar: React.FC<CrystalNavBarProps> = ({ activeTab, onTabCh
               {isActive && (
                 <motion.div
                   layoutId="nav-indicator"
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-[#007AFF]"
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-[#25D366]"
                   transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}
@@ -101,7 +101,7 @@ export const CrystalNavBar: React.FC<CrystalNavBarProps> = ({ activeTab, onTabCh
               {/* Label */}
               <span
                 className="text-[10px] font-semibold tracking-wide"
-                style={{ color: isActive ? '#007AFF' : '#8E8E93' }}
+                style={{ color: isActive ? '#25D366' : '#8E8E93' }}
               >
                 {tab.label}
               </span>
@@ -112,3 +112,4 @@ export const CrystalNavBar: React.FC<CrystalNavBarProps> = ({ activeTab, onTabCh
     </nav>
   );
 };
+

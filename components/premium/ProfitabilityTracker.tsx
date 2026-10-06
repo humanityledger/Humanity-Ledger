@@ -32,7 +32,7 @@ export default function ProfitabilityTracker({ pnlData, isLoading }: Profitabili
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full mx-auto"
+          className="w-16 h-16 border-4 border-[#25D366]/30 border-t-[#25D366] rounded-full mx-auto"
         />
         <p className="text-gray-500 mt-4">Calculating P&L...</p>
       </div>
@@ -199,4 +199,5 @@ export default function ProfitabilityTracker({ pnlData, isLoading }: Profitabili
     </div>
   );
 }
+
 

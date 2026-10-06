@@ -62,7 +62,7 @@ export function LedgerDetectionVisual() {
 
                     <h2 className="text-4xl md:text-6xl font-black text-white leading-tight">
                         {t.landing.visual.title} 
-                        <span className="block italic text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-500">
+                        <span className="block italic text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-[#25D366]">
                             {t.landing.visual.precision}
                         </span>
                     </h2>
@@ -165,5 +165,6 @@ function Feature({ icon: Icon, label, val }: any) {
         </div>
     );
 }
+
 
 

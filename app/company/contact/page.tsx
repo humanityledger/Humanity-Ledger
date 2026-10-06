@@ -124,7 +124,7 @@ export default function ContactPage() {
                             <p className="text-sm text-white/70">Chat with the community, get support, share ideas.</p>
                         </a>
 
-                        <a href="https://twitter.com/HumanityLedger" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-blue-600/20 to-cyan-600/20 p-6 rounded-xl border border-blue-500/30 hover:scale-105 transition-transform">
+                        <a href="https://twitter.com/HumanityLedger" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-blue-600/20 to-cyan-600/20 p-6 rounded-xl border border-[#25D366]/30 hover:scale-105 transition-transform">
                             <Twitter size={32} className="text-blue-400 mb-3" />
                             <h3 className="font-bold mb-2">Twitter</h3>
                             <p className="text-sm text-white/70">Latest updates, announcements, and crypto insights.</p>
@@ -157,7 +157,7 @@ export default function ContactPage() {
                             <p>Spain</p>
                         </div>
 
-                        <div className="bg-blue-600/10 border border-blue-500/30 p-4 rounded-lg mt-6">
+                        <div className="bg-blue-600/10 border border-[#25D366]/30 p-4 rounded-lg mt-6">
                             <p className="text-sm">
                                 <strong>Note:</strong> We operate as a remote-first team. For fastest response, please email rather than mailing physical correspondence.
                             </p>
@@ -253,4 +253,5 @@ export default function ContactPage() {
         </DocLayout>
     );
 }
+
 

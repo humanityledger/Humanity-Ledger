@@ -26,7 +26,7 @@ export function BlockDetailDashboard({ hash }: BlockDetailDashboardProps) {
     if (isLoading || !block) {
         return (
             <div className="min-h-screen bg-[#0D0D12] pt-24 pb-12 px-6 flex justify-center">
-                 <Loader className="animate-spin text-blue-500" size={40} />
+                 <Loader className="animate-spin text-[#25D366]" size={40} />
             </div>
         );
     }
@@ -113,4 +113,5 @@ export function BlockDetailDashboard({ hash }: BlockDetailDashboardProps) {
         </div>
     );
 }
+
 

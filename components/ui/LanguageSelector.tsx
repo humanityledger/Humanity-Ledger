@@ -52,7 +52,7 @@ export function LanguageSelector() {
                                         className={cn(
                                             "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors",
                                             locale === lang.code
-                                                ? "bg-blue-500/20 text-blue-300"
+                                                ? "bg-[#25D366]/20 text-blue-300"
                                                 : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
                                         )}
                                     >
@@ -71,4 +71,5 @@ export function LanguageSelector() {
         </div>
     );
 }
+
 

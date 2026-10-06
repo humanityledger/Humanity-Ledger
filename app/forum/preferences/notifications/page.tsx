@@ -48,7 +48,7 @@ export default function NotificationsPreferencesPage() {
         <section>
           <h3 className="text-sm font-bold text-black dark:text-white mb-4">Active Notifications</h3>
           <p className="text-xs text-black/50 dark:text-white/50 mb-3">Browser push notifications when you are active on the site.</p>
-          <button className="px-4 py-2 border border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg text-sm font-bold transition-colors">
+          <button className="px-4 py-2 border border-[#25D366] text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg text-sm font-bold transition-colors">
             Enable Push Notifications
           </button>
         </section>
@@ -57,7 +57,7 @@ export default function NotificationsPreferencesPage() {
         <section>
           <h3 className="text-sm font-bold text-black dark:text-white mb-4">Notification Schedule</h3>
           <p className="text-xs text-black/50 dark:text-white/50 mb-3">Pause notifications during certain hours.</p>
-          <select className="w-full max-w-xs bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-2 text-sm font-medium text-black dark:text-white outline-none focus:border-blue-500 transition-colors">
+          <select className="w-full max-w-xs bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-2 text-sm font-medium text-black dark:text-white outline-none focus:border-[#25D366] transition-colors">
             <option value="never">Never pause (Always send)</option>
             <option value="weekends">Pause on weekends</option>
             <option value="custom">Custom schedule...</option>
@@ -79,3 +79,4 @@ export default function NotificationsPreferencesPage() {
     </div>
   );
 }
+

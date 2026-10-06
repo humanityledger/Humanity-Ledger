@@ -20,7 +20,7 @@ export default function SimpleDashboard() {
     const displayStats = useMemo(() => {
         if (!stats) return [
             { label: 'Total Balance', value: '$0.00', icon: Wallet, color: 'text-emerald-500' },
-            { label: 'Today Gain', value: '0.0%', icon: TrendingUp, color: 'text-blue-500' },
+            { label: 'Today Gain', value: '0.0%', icon: TrendingUp, color: 'text-[#25D366]' },
             { label: 'Active Positions', value: '0', icon: LayoutDashboard, color: 'text-purple-500' },
             { label: 'Security Score', value: '0/100', icon: Shield, color: 'text-amber-500' }
         ];
@@ -94,4 +94,5 @@ export default function SimpleDashboard() {
         </div>
     );
 }
+
 

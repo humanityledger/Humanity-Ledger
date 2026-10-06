@@ -81,7 +81,7 @@ export default function AccountPreferencesPage() {
             type="text" 
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full max-w-md bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-2 text-sm font-medium text-black dark:text-white outline-none focus:border-blue-500 transition-colors mb-1"
+            className="w-full max-w-md bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-2 text-sm font-medium text-black dark:text-white outline-none focus:border-[#25D366] transition-colors mb-1"
           />
           <p className="text-xs text-black/50 dark:text-white/50">Your full name (optional)</p>
         </section>
@@ -111,3 +111,4 @@ export default function AccountPreferencesPage() {
     </div>
   );
 }
+

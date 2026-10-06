@@ -240,7 +240,7 @@ export function TuringAcademicShield() {
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
                 className={`border-2 border-dashed rounded-2xl p-8 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center gap-4
-                  ${isDragging ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50/50'}`}
+                  ${isDragging ? 'border-[#25D366] bg-blue-50 scale-[1.02]' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50/50'}`}
                 onClick={() => fileInputRef.current?.click()}
               >
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors duration-300 ${isDragging ? 'bg-blue-100' : 'bg-gray-100'}`}>
@@ -272,7 +272,7 @@ export function TuringAcademicShield() {
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder={t('textareaPlaceholder')}
-                  className="w-full h-48 bg-white border border-gray-200 rounded-2xl p-5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 resize-none text-sm transition-all shadow-inner"
+                  className="w-full h-48 bg-white border border-gray-200 rounded-2xl p-5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#25D366]/10 focus:border-blue-400 resize-none text-sm transition-all shadow-inner"
                 />
                 {text && (
                   <div className="absolute bottom-4 right-4 text-xs font-semibold text-gray-400 bg-white px-2 py-1 rounded-md border border-gray-100 shadow-sm">
@@ -297,7 +297,7 @@ export function TuringAcademicShield() {
           {isProcessing && (
             <div className="flex flex-col items-center gap-12 py-10 max-w-2xl mx-auto">
               <div className="relative">
-                <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-20 rounded-full animate-pulse" />
+                <div className="absolute inset-0 bg-[#25D366] blur-2xl opacity-20 rounded-full animate-pulse" />
                 <div className="w-24 h-24 bg-white border border-gray-100 shadow-xl rounded-2xl flex items-center justify-center relative z-10">
                   <Loader2 size={40} className="text-blue-600 animate-spin" />
                 </div>
@@ -430,7 +430,7 @@ export function TuringAcademicShield() {
 
               {/* ZK Commitment - Minimalist Premium */}
               <div className="bg-gray-900 rounded-[20px] p-6 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#25D366]/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/3 pointer-events-none" />
                 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10 mb-4">
                   <div className="flex items-center gap-2">
@@ -487,3 +487,4 @@ export function TuringAcademicShield() {
     </div>
   );
 }
+

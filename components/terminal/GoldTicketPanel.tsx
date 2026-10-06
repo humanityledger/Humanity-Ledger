@@ -826,3 +826,4 @@ export function GoldTicketPanel() {
     </div>
   );
 }
+

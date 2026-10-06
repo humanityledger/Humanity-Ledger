@@ -77,7 +77,7 @@ export default function ChangelogPage() {
 
                     <div className="space-y-8">
                         {/* v2.0.0 */}
-                        <div className="border-l-4 border-blue-500 pl-6">
+                        <div className="border-l-4 border-[#25D366] pl-6">
                             <h3 className="text-2xl font-bold mb-1">v2.0.0</h3>
                             <p className="text-black/60 mb-4">January 15, 2026</p>
 
@@ -185,7 +185,7 @@ export default function ChangelogPage() {
                             </ul>
                         </div>
 
-                        <div className="bg-blue-600/10 border border-blue-500/30 p-6 rounded-xl">
+                        <div className="bg-blue-600/10 border border-[#25D366]/30 p-6 rounded-xl">
                             <h3 className="font-bold mb-2">v3.0.0 - Q3 2026 (Planned)</h3>
                             <ul className="list-disc pl-6 space-y-1 text-sm text-black/70">
                                 <li><strong>Mobile Apps:</strong> Native iOS and Android applications</li>
@@ -216,4 +216,5 @@ export default function ChangelogPage() {
         </DocLayout>
     );
 }
+
 

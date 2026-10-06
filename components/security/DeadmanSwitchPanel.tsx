@@ -240,7 +240,7 @@ export function DeadmanSwitchPanel() {
               <div className="bg-blue-950/30 border border-blue-700/40 rounded-2xl px-5 py-4 space-y-3">
                 <p className="text-blue-300 text-xs font-bold uppercase tracking-widest">Pending Backup Change</p>
                 <p className="text-blue-400 text-[11px] font-mono">{status.pendingBackup}</p>
-                <p className="text-blue-500 text-[10px]">Becomes effective: {unixToDate(status.pendingBackupTime)}</p>
+                <p className="text-[#25D366] text-[10px]">Becomes effective: {unixToDate(status.pendingBackupTime)}</p>
                 {Number(status.pendingBackupTime) * 1000 < Date.now() && (
                   <button
                     disabled={!!txPending}
@@ -363,3 +363,4 @@ export function DeadmanSwitchPanel() {
     </div>
   );
 }
+

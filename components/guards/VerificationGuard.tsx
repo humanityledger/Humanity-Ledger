@@ -20,7 +20,7 @@ export default function VerificationGuard({ children }: { children: React.ReactN
     if (isLoading || !isVerified) {
         return (
             <div className="h-screen w-full flex flex-col items-center justify-center bg-black text-white gap-4">
-                <Loader2 className="animate-spin text-blue-500" size={48} />
+                <Loader2 className="animate-spin text-[#25D366]" size={48} />
                 <p className="text-sm font-light tracking-[0.2em] animate-pulse">
                     VERIFYING IDENTITY...
                 </p>
@@ -31,4 +31,5 @@ export default function VerificationGuard({ children }: { children: React.ReactN
     // Si es humano, adelante
     return <>{children}</>;
 }
+
 

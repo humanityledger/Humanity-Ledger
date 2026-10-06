@@ -39,7 +39,7 @@ export function NetworkStatusWidget() {
         >
             <Link href="/ledger">
                 <motion.div 
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full glass-premium border border-white/10 hover:border-blue-500/50 transition-all cursor-pointer group"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full glass-premium border border-white/10 hover:border-[#25D366]/50 transition-all cursor-pointer group"
                     whileHover={{ scale: 1.02 }}
                 >
                     <div className="relative">
@@ -103,4 +103,5 @@ export function NetworkStatusWidget() {
         </div>
     );
 }
+
 

@@ -119,7 +119,7 @@ export function TransactionDetailPanel({ transaction, onClose, btcToUsd }: Trans
                                 {transaction.rbfEnabled ? 'RBF enabled' : 'RBF disabled'}
                             </span>
 
-                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-600/20 text-blue-400 border border-blue-500/30">
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-600/20 text-blue-400 border border-[#25D366]/30">
                                 Version {transaction.version}
                             </span>
 
@@ -160,4 +160,5 @@ export function TransactionDetailPanel({ transaction, onClose, btcToUsd }: Trans
         </AnimatePresence>
     );
 }
+
 

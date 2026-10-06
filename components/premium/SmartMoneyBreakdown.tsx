@@ -97,7 +97,7 @@ export default function SmartMoneyBreakdown({ address }: SmartMoneyBreakdownProp
 
   const getScoreGradient = (s: number) => {
     if (s >= 80) return 'from-green-500 to-emerald-500';
-    if (s >= 60) return 'from-blue-500 to-cyan-500';
+    if (s >= 60) return 'from-[#25D366] to-cyan-500';
     if (s >= 40) return 'from-yellow-500 to-amber-500';
     if (s >= 20) return 'from-orange-500 to-indigo-500';
     return 'from-indigo-500 to-pink-500';
@@ -307,4 +307,5 @@ function StatPill({ icon, label, value }: {
     </div>
   );
 }
+
 

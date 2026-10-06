@@ -110,7 +110,7 @@ export function IntelFeed() {
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${pool.badge === 'SAFE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
                                                 pool.badge === 'DEGEN' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
                                                     pool.badge === 'RISKY' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                                        'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                                        'bg-[#25D366]/10 text-blue-400 border-[#25D366]/20'
                                                 }`}>
                                                 {pool.badge}
                                             </span>
@@ -129,4 +129,5 @@ export function IntelFeed() {
         </div>
     );
 }
+
 

@@ -122,7 +122,7 @@ export function TransactionManagerView({ onBack }: { onBack: () => void }) {
                             <div key={currentNonce} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border border-black/10 bg-white hover:border-black/30 transition-colors gap-4 shadow-sm">
                                 <div className="flex flex-col gap-1">
                                     <span className="text-[11px] font-bold uppercase tracking-widest text-black flex items-center gap-2">
-                                        <div className="w-2 h-2 bg-blue-500 animate-pulse" />
+                                        <div className="w-2 h-2 bg-[#25D366] animate-pulse" />
                                         PENDING TRANSACTION
                                     </span>
                                     <span className="text-[10px] font-bold text-black/50">Network Nonce: {currentNonce}</span>
@@ -160,3 +160,4 @@ export function TransactionManagerView({ onBack }: { onBack: () => void }) {
         </motion.div>
     );
 }
+

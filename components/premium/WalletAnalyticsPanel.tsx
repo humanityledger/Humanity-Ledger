@@ -159,7 +159,7 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
                         </p>
 
                         {isAuthError && (
-                            <div className="bg-blue-600/10 border border-blue-500/30 rounded-2xl p-5 mb-8 text-left">
+                            <div className="bg-blue-600/10 border border-[#25D366]/30 rounded-2xl p-5 mb-8 text-left">
                                 <h4 className="text-blue-400 font-bold text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
                                     <Sparkles size={14} />
                                     Action Required
@@ -194,7 +194,7 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
                                     href="https://terminal.alchemy.com/" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="flex-1 px-8 py-4 bg-blue-600 hover:bg-blue-500 rounded-2xl text-white transition-all font-bold text-sm shadow-lg shadow-blue-900/40 flex items-center justify-center gap-2"
+                                    className="flex-1 px-8 py-4 bg-blue-600 hover:bg-[#25D366] rounded-2xl text-white transition-all font-bold text-sm shadow-lg shadow-blue-900/40 flex items-center justify-center gap-2"
                                 >
                                     Get API Key
                                 </a>
@@ -224,7 +224,7 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
                     animate={{ scale: 1, opacity: 1 }}
                     className="bg-black/40 border border-white/10 w-full max-w-2xl rounded-3xl p-12 shadow-[0_0_100px_rgba(59,130,246,0.2)] text-center relative overflow-hidden"
                 >
-                    <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 via-purple-500/10 to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-tr from-[#25D366]/10 via-purple-500/10 to-transparent pointer-events-none" />
                     <Sparkles size={48} className="mx-auto text-blue-400 mb-6 animate-pulse" />
                     <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 mb-2">
                         Fetching data...
@@ -286,7 +286,7 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
                         <div>
                             <h2 className="text-xl md:text-3xl font-black text-white tracking-tight flex items-center gap-3">
                                 <span className="truncate max-w-[150px] md:max-w-none">{label}</span>
-                                <span className="px-2 py-0.5 rounded text-[8px] md:text-[10px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-black uppercase tracking-wider">
+                                <span className="px-2 py-0.5 rounded text-[8px] md:text-[10px] font-bold bg-gradient-to-r from-[#25D366] to-purple-500 text-black uppercase tracking-wider">
                                     Verified
                                 </span>
                             </h2>
@@ -312,7 +312,7 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex-shrink-0 px-6 py-4 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${
                                 activeTab === tab.id
-                                    ? 'border-blue-500 text-white bg-blue-500/10'
+                                    ? 'border-[#25D366] text-white bg-[#25D366]/10'
                                     : 'border-transparent text-gray-500 hover:text-gray-300'
                             }`}
                         >
@@ -335,7 +335,7 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`w-full px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-between group ${
                                     activeTab === tab.id
-                                        ? 'bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-white border border-blue-500/30'
+                                        ? 'bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-white border border-[#25D366]/30'
                                         : 'text-gray-500 hover:bg-white/5 hover:text-gray-300 border border-transparent'
                                 }`}
                             >
@@ -346,7 +346,7 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
                                     {tab.label}
                                 </div>
                                 {tab.count !== undefined && tab.count > 0 && (
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-blue-500/20 text-blue-300' : 'bg-white/5 text-gray-600'}`}>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-[#25D366]/20 text-blue-300' : 'bg-white/5 text-gray-600'}`}>
                                         {tab.count}
                                     </span>
                                 )}
@@ -404,10 +404,10 @@ function OverviewTab({ analytics, netWorth, stakingPositions, liquidityPools }: 
                 <motion.div 
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-[2rem] flex items-center justify-between"
+                    className="p-6 bg-[#25D366]/10 border border-[#25D366]/20 rounded-[2rem] flex items-center justify-between"
                 >
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
+                        <div className="w-12 h-12 rounded-2xl bg-[#25D366]/20 flex items-center justify-center border border-[#25D366]/30">
                             <ShieldCheck size={24} className="text-blue-400" />
                         </div>
                         <div>
@@ -451,7 +451,7 @@ function OverviewTab({ analytics, netWorth, stakingPositions, liquidityPools }: 
                     value={(analytics.totalTransactions || 0).toLocaleString()} 
                     subtext="Blockchain Ledger"
                     icon={<Activity size={24} />} 
-                    gradient="from-blue-500 to-cyan-500" 
+                    gradient="from-[#25D366] to-cyan-500" 
                 />
                 <StatCard 
                     label="Activity Score" 
@@ -469,7 +469,7 @@ function OverviewTab({ analytics, netWorth, stakingPositions, liquidityPools }: 
                 />
 
                 {(analytics.influenceScore || 0) > 0 && (
-                    <div className="col-span-full md:col-span-2 bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-2xl p-6">
+                    <div className="col-span-full md:col-span-2 bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-[#25D366]/30 rounded-2xl p-6">
                         <div className="flex justify-between items-start mb-4">
                             <div>
                                 <h4 className="text-blue-400 font-bold text-xs uppercase tracking-widest mb-1 flex items-center gap-2">
@@ -478,7 +478,7 @@ function OverviewTab({ analytics, netWorth, stakingPositions, liquidityPools }: 
                                 </h4>
                                 <div className="text-4xl font-black text-white">{analytics.influenceScore || 0}<span className="text-lg text-gray-500 ml-1">/100</span></div>
                             </div>
-                            <div className="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full">
+                            <div className="px-3 py-1 bg-[#25D366]/20 border border-[#25D366]/30 rounded-full">
                                 <span className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">Elite Rank</span>
                             </div>
                         </div>
@@ -502,7 +502,7 @@ function OverviewTab({ analytics, netWorth, stakingPositions, liquidityPools }: 
                         <div className="space-y-3">
                             {analytics.ledgerEvidence.map((ev, i) => (
                                 <div key={i} className="flex items-center gap-2 text-sm text-gray-300">
-                                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full shrink-0" />
+                                    <div className="w-1.5 h-1.5 bg-[#25D366] rounded-full shrink-0" />
                                     <span>{ev}</span>
                                 </div>
                             ))}
@@ -772,7 +772,7 @@ function StakingTab({ data }: { data: StakingPosition[] }) {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.05 }}
-                    className="p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-white/10 rounded-3xl relative overflow-hidden group"
+                    className="p-6 bg-gradient-to-br from-[#25D366]/10 to-purple-500/10 border border-white/10 rounded-3xl relative overflow-hidden group"
                 >
                     {(pos as any).onChain && (
                         <div className="absolute top-2 right-2 px-2 py-1 bg-green-500/20 border border-green-500/30 rounded-lg text-[8px] font-black text-green-400 uppercase tracking-widest z-20">
@@ -910,4 +910,5 @@ function PnLTab({ data }: { data: PnLBreakdown[] }) {
         </motion.div>
     );
 }
+
 

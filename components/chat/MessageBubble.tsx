@@ -5,6 +5,18 @@ import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
 import { FastForward, MapPin, Clock, PhoneOff, PhoneMissed, Video, Check, CheckCheck, Pencil, Lock, ExternalLink } from 'lucide-react';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { StickerPicker, PREMIUM_STICKERS, RenderPremiumSticker } from './StickerPicker';
+import { useLinkPreview, extractFirstUrl, LinkPreviewCard } from './LedgerLinkPreview';
+
+const BubbleLinkPreview = React.memo(({ url, isMe }: { url: string; isMe: boolean }) => {
+  const { preview } = useLinkPreview(url);
+  if (!preview) return null;
+  return (
+    <div className={`mt-2 ${isMe ? 'opacity-90' : 'opacity-100'}`}>
+      <LinkPreviewCard preview={preview} compact={true} />
+    </div>
+  );
+});
+BubbleLinkPreview.displayName = 'BubbleLinkPreview';
 
 export interface MessageProps {
   msg: any;
@@ -639,6 +651,11 @@ export const MessageBubble = React.memo(({
                       <span className={`text-[9px] ml-1.5 italic ${isMe ? 'text-white/40' : 'text-black/30'}`}>edited</span>
                     )}
                   </p>
+                  {(() => {
+                    const firstUrl = extractFirstUrl(content);
+                    if (!firstUrl) return null;
+                    return <BubbleLinkPreview url={firstUrl} isMe={isMe} />;
+                  })()}
                   {msg.reactions && Object.keys(msg.reactions).length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {Object.entries(msg.reactions).map(([emoji, users]: [string, any]) => (

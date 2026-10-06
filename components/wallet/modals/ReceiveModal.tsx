@@ -77,7 +77,7 @@ export default function ReceiveModal({ isOpen, onClose, userAddress, chainId, in
             case 'invoice':
                 return { title: 'Create Invoice', desc: 'Generate payment request', icon: <Banknote className="text-emerald-400" size={24} />, color: 'bg-emerald-500/20' };
             case 'nfc':
-                return { title: 'NFC Receive', desc: 'Tap to share address', icon: <Wifi className="text-blue-400" size={24} />, color: 'bg-blue-500/20' };
+                return { title: 'NFC Receive', desc: 'Tap to share address', icon: <Wifi className="text-blue-400" size={24} />, color: 'bg-[#25D366]/20' };
             default:
                 return { title: 'Receive Crypto', desc: 'Scan QR or copy address', icon: <QrCode className="text-green-400" size={24} />, color: 'bg-green-500/20' };
         }
@@ -133,7 +133,7 @@ export default function ReceiveModal({ isOpen, onClose, userAddress, chainId, in
 
                         {initialMode === 'nfc' && (
                              <div className="mb-6 flex flex-col items-center justify-center py-8 border-2 border-dashed border-white/10 rounded-2xl bg-white/5">
-                                <div className={`p-4 rounded-full bg-blue-500/10 mb-2 ${isScanning ? 'animate-pulse' : ''}`}>
+                                <div className={`p-4 rounded-full bg-[#25D366]/10 mb-2 ${isScanning ? 'animate-pulse' : ''}`}>
                                     <Wifi size={32} className="text-blue-400" />
                                 </div>
                                 <p className="text-white font-bold">{isScanning ? 'Ready to Tap...' : 'NFC Active'}</p>
@@ -183,4 +183,5 @@ export default function ReceiveModal({ isOpen, onClose, userAddress, chainId, in
         </AnimatePresence>
     );
 }
+
 

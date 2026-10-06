@@ -34,7 +34,7 @@ export const FEATURE_CARDS: FeatureCard[] = [
       "No seed phrases to remember or lose"
     ],
     icon: <Shield />,
-    gradient: "from-blue-500 to-cyan-600"
+    gradient: "from-[#25D366] to-cyan-600"
   },
   {
     id: 2,
@@ -338,7 +338,7 @@ export const FEATURE_CARDS: FeatureCard[] = [
       "Export to CSV/Excel"
     ],
     icon: <Activity />,
-    gradient: "from-blue-500 to-indigo-600"
+    gradient: "from-[#25D366] to-indigo-600"
   },
   {
     id: 22,
@@ -443,7 +443,7 @@ export const FEATURE_CARDS: FeatureCard[] = [
       "Historical flow replays"
     ],
     icon: <GitBranch />,
-    gradient: "from-blue-500 to-cyan-600"
+    gradient: "from-[#25D366] to-cyan-600"
   },
   {
     id: 29,
@@ -520,7 +520,7 @@ export const FEATURE_CARDS: FeatureCard[] = [
       "Transaction status tracking"
     ],
     icon: <Cable />,
-    gradient: "from-blue-500 to-cyan-600"
+    gradient: "from-[#25D366] to-cyan-600"
   },
   {
     id: 34,
@@ -672,7 +672,7 @@ export const FEATURE_CARDS: FeatureCard[] = [
       "Historical vote tracking"
     ],
     icon: <Vote />,
-    gradient: "from-blue-500 to-indigo-600"
+    gradient: "from-[#25D366] to-indigo-600"
   },
   {
     id: 44,
@@ -780,3 +780,4 @@ export const FEATURE_CARDS: FeatureCard[] = [
     gradient: "from-green-500 to-emerald-600"
   }
 ];
+

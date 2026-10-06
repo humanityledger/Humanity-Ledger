@@ -15,7 +15,7 @@ interface Props {
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
-    low: 'text-blue-400 border-blue-500/20 bg-blue-500/5',
+    low: 'text-blue-400 border-[#25D366]/20 bg-[#25D366]/5',
     medium: 'text-yellow-400 border-yellow-500/20 bg-yellow-500/5',
     high: 'text-orange-400 border-orange-500/20 bg-orange-500/5',
     critical: 'text-indigo-400 border-indigo-500/20 bg-indigo-500/5',
@@ -216,4 +216,5 @@ export function HumanityLedgers({ alerts, threshold, onThresholdChange }: Props)
         </div>
     );
 }
+
 

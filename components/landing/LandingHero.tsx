@@ -123,7 +123,7 @@ export function LandingHero({ onStart }: LandingHeroProps) {
                                 }`}>
                                     <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-10 shadow-2xl shadow-black/50 relative overflow-hidden flex flex-col items-center text-center">
                                         
-                                        <div className="w-16 h-16 rounded-full bg-blue-500/10 flex flex-col items-center justify-center mb-6 border border-blue-500/20">
+                                        <div className="w-16 h-16 rounded-full bg-[#25D366]/10 flex flex-col items-center justify-center mb-6 border border-[#25D366]/20">
                                             <Lock className="w-6 h-6 text-blue-400" />
                                         </div>
                                         
@@ -156,7 +156,7 @@ export function LandingHero({ onStart }: LandingHeroProps) {
                                 <div className="w-full flex justify-center pb-2">
                                      <button 
                                         onClick={() => router.push('/portfolio')}
-                                        className="w-full bg-blue-600 hover:bg-blue-500 text-white h-14 rounded-2xl font-black uppercase tracking-widest text-xs transition-colors"
+                                        className="w-full bg-blue-600 hover:bg-[#25D366] text-white h-14 rounded-2xl font-black uppercase tracking-widest text-xs transition-colors"
                                     >
                                         Launch Application
                                     </button>
@@ -169,5 +169,6 @@ export function LandingHero({ onStart }: LandingHeroProps) {
         </div>
     );
 }
+
 
 

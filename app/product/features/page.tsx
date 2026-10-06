@@ -56,7 +56,7 @@ export default function FeaturesPage() {
                         </div>
 
                         {/* Multi-Chain Wallet */}
-                        <div className="bg-gradient-to-br from-blue-600/10 to-cyan-600/10 p-6 rounded-xl border border-blue-500/30">
+                        <div className="bg-gradient-to-br from-blue-600/10 to-cyan-600/10 p-6 rounded-xl border border-[#25D366]/30">
                             <div className="flex items-center gap-3 mb-4">
                                 <Wallet className="text-blue-400" size={32} />
                                 <h3 className="text-2xl font-bold">Multi-Chain Wallet</h3>
@@ -375,7 +375,7 @@ export default function FeaturesPage() {
                             <p className="text-xs text-green-400 mt-2">Q3 2026</p>
                         </div>
 
-                        <div className="bg-gradient-to-br from-blue-600/10 to-cyan-600/10 p-4 rounded-lg border border-blue-500/30">
+                        <div className="bg-gradient-to-br from-blue-600/10 to-cyan-600/10 p-4 rounded-lg border border-[#25D366]/30">
                             <h4 className="font-bold mb-2"> DeFi Yield Aggregator</h4>
                             <p className="text-sm text-white/70">Auto-compound yields across protocols with one click.</p>
                             <p className="text-xs text-blue-400 mt-2">Q4 2026</p>
@@ -420,4 +420,5 @@ export default function FeaturesPage() {
         </DocLayout>
     );
 }
+
 

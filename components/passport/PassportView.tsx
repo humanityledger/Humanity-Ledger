@@ -665,3 +665,4 @@ export function PassportView({ passport }: { passport: ProductPassportPublic }) 
     </div>
   );
 }
+

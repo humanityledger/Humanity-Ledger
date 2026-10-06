@@ -271,7 +271,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 className="w-full max-w-sm mx-auto flex flex-col"
               >
                 <div className="mb-8 text-center">
-                  <div className="inline-flex items-center justify-center p-3 bg-blue-500/10 rounded-2xl mb-4 text-blue-500">
+                  <div className="inline-flex items-center justify-center p-3 bg-[#25D366]/10 rounded-2xl mb-4 text-[#25D366]">
                     <Globe size={24} />
                   </div>
                   <h2 className="text-3xl font-black tracking-tight mb-2">About You</h2>
@@ -286,7 +286,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                       <select
                         value={country}
                         onChange={(e) => setCountry(e.target.value)}
-                        className="w-full bg-white border border-black/10 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-3.5 pl-11 pr-10 text-[16px] font-medium text-black outline-none transition-all appearance-none cursor-pointer shadow-sm"
+                        className="w-full bg-white border border-black/10 focus:border-[#25D366] focus:ring-4 focus:ring-[#25D366]/10 rounded-xl py-3.5 pl-11 pr-10 text-[16px] font-medium text-black outline-none transition-all appearance-none cursor-pointer shadow-sm"
                       >
                         {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
@@ -301,7 +301,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                       onChange={(e) => setBio(e.target.value)}
                       placeholder="Building the future of finance..."
                       rows={4}
-                      className="w-full bg-white border border-black/10 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl p-4 text-[16px] font-medium text-black outline-none transition-all resize-none placeholder:text-black/25 shadow-sm"
+                      className="w-full bg-white border border-black/10 focus:border-[#25D366] focus:ring-4 focus:ring-[#25D366]/10 rounded-xl p-4 text-[16px] font-medium text-black outline-none transition-all resize-none placeholder:text-black/25 shadow-sm"
                     />
                   </div>
                 </div>
@@ -457,4 +457,5 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
     </div>
   );
 }
+
 

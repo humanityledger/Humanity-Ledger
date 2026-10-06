@@ -33,7 +33,7 @@ const actions: Action[] = [
   { 
     label: "Send", 
     icon: ArrowUpRight, 
-    color: "bg-blue-500",
+    color: "bg-[#25D366]",
     subitems: [
         { label: "Direct", icon: ArrowUpRight, desc: "Standard wallet-to-wallet", mode: "standard" },
         { label: "Bridge", icon: Globe, desc: "Move assets to other chains", mode: "bridge" },
@@ -100,4 +100,5 @@ export function ActionCluster({ onAction }: ActionClusterProps) {
     </div>
   );
 }
+
 

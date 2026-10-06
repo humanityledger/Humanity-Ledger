@@ -95,7 +95,7 @@ function TransactionRow({ tx }: { tx: Transaction }) {
         >
             <div className="flex items-center gap-6">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                    tx.chain === 'ETHEREUM' ? 'bg-blue-50 text-blue-500' :
+                    tx.chain === 'ETHEREUM' ? 'bg-blue-50 text-[#25D366]' :
                     tx.chain === 'SOLANA' ? 'bg-purple-50 text-purple-500' :
                     'bg-black/5 text-black/40'
                 }`}>
@@ -143,3 +143,4 @@ function TransactionRow({ tx }: { tx: Transaction }) {
         </motion.div>
     );
 }
+

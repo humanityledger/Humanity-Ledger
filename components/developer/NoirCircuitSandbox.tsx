@@ -479,7 +479,7 @@ contract ZKVerifier {
         
         {/* Helper description for the selected architecture */}
         <div className="bg-blue-50/50 border border-blue-100 p-3 rounded-lg flex items-start gap-3">
-          <div className="text-blue-500 mt-0.5"><Zap size={14} /></div>
+          <div className="text-[#25D366] mt-0.5"><Zap size={14} /></div>
           <div>
             <div className="text-[11px] font-bold text-blue-900">{CIRCUIT_EXAMPLES[selectedExample].label}</div>
             <div className="text-[11px] text-blue-700 mt-0.5">{CIRCUIT_EXAMPLES[selectedExample].description}</div>
@@ -575,5 +575,6 @@ contract ZKVerifier {
     </section>
   );
 }
+
 
 

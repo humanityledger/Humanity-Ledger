@@ -3811,7 +3811,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       <div key="ledger-loading-ui" className="flex-1 flex flex-col h-full bg-[#F6F7F9] items-center justify-center p-6 relative overflow-hidden">
         {/* Animated Background Gradients */}
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#34C759]/20 blur-[120px] rounded-full pointer-events-none animate-pulse" style={{ animationDuration: "4s" }} />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-blue-500/20 blur-[100px] rounded-full pointer-events-none animate-pulse" style={{ animationDuration: "5s", animationDelay: "1s" }} />
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[#25D366]/20 blur-[100px] rounded-full pointer-events-none animate-pulse" style={{ animationDuration: "5s", animationDelay: "1s" }} />
 
         <div className="relative z-10 w-full max-w-sm bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-[0_0_80px_rgba(52,199,89,0.1)] rounded-[40px] p-10 flex flex-col items-center">
           
@@ -3820,7 +3820,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             {isInitializing && (
               <>
                 <div className="absolute inset-0 rounded-full border border-[#34C759]/30 animate-[spin_3s_linear_infinite]" />
-                <div className="absolute inset-2 rounded-full border border-blue-500/30 animate-[spin_4s_linear_infinite_reverse]" />
+                <div className="absolute inset-2 rounded-full border border-[#25D366]/30 animate-[spin_4s_linear_infinite_reverse]" />
                 <div className="absolute inset-4 rounded-full border-t border-[#34C759] animate-[spin_1.5s_ease-in-out_infinite]" />
               </>
             )}
@@ -4099,7 +4099,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setShowUserSearch(true)}
-                className="w-10 h-10 rounded-full bg-[#F2F2F7] flex items-center justify-center text-[#007AFF] hover:bg-[#E5E5EA] transition-all active:scale-95"
+                className="w-10 h-10 rounded-full bg-[#F2F2F7] flex items-center justify-center text-[#25D366] hover:bg-[#E5E5EA] transition-all active:scale-95"
                 title="Find people"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -4110,7 +4110,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   // focus the input below
                   setTimeout(() => document.getElementById('ledger-new-chat-input')?.focus(), 100);
                 }}
-                className="w-10 h-10 rounded-full bg-[#007AFF] flex items-center justify-center text-white hover:bg-[#0071E3] transition-all active:scale-95 shadow-sm"
+                className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center text-white hover:bg-[#0071E3] transition-all active:scale-95 shadow-sm"
                 title="New conversation"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -4129,13 +4129,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 value={peerInput}
                 onChange={e => setPeerInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleStartConversation()}
-                className="w-full bg-[#F2F2F7] rounded-[12px] pl-9 pr-3 py-2.5 text-[16px] text-[#000000] placeholder:text-[#8E8E93] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 transition-all"
+                className="w-full bg-[#F2F2F7] rounded-[12px] pl-9 pr-3 py-2.5 text-[16px] text-[#000000] placeholder:text-[#8E8E93] focus:outline-none focus:ring-2 focus:ring-[#25D366]/30 transition-all"
               />
             </div>
             <button
               onClick={handleStartConversation}
               disabled={sending || !peerInput.trim()}
-              className="h-[42px] px-4 bg-[#007AFF] disabled:bg-[#C7C7CC] rounded-[12px] flex items-center justify-center text-white font-bold text-[14px] hover:bg-[#0071E3] transition-all active:scale-95 disabled:cursor-not-allowed whitespace-nowrap"
+              className="h-[42px] px-4 bg-[#25D366] disabled:bg-[#C7C7CC] rounded-[12px] flex items-center justify-center text-white font-bold text-[14px] hover:bg-[#0071E3] transition-all active:scale-95 disabled:cursor-not-allowed whitespace-nowrap"
             >
               Open
             </button>
@@ -4176,7 +4176,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             <button
               onClick={() => setShowJoinModal(true)}
               title="Join Call by Room ID"
-              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#007AFF]/10 text-[#007AFF] hover:bg-[#007AFF]/20 transition-all text-[12px] font-semibold active:scale-95"
+              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-all text-[12px] font-semibold active:scale-95"
             >
               <Radio size={13} />
             </button>
@@ -4202,21 +4202,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               onClick={() => { setSidebarTab(tab); if (tab === 'groups') setShowSyndicateModal(true); }}
               className={`flex-1 py-3 flex flex-col items-center gap-0.5 transition-all ${
                 sidebarTab === tab
-                  ? 'text-[#007AFF]'
+                  ? 'text-[#25D366]'
                   : 'text-[#8E8E93] hover:text-[#000000]'
               }`}
             >
               {tab === 'chats' ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={sidebarTab === 'chats' ? '#007AFF' : 'none'} stroke={sidebarTab === 'chats' ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill={sidebarTab === 'chats' ? '#25D366' : 'none'} stroke={sidebarTab === 'chats' ? '#25D366' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               ) : tab === 'calls' ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={sidebarTab === 'calls' ? '#007AFF' : 'none'} stroke={sidebarTab === 'calls' ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.6 4.35 2 2 0 0 1 3.57 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.1 6.1l.9-.9a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill={sidebarTab === 'calls' ? '#25D366' : 'none'} stroke={sidebarTab === 'calls' ? '#25D366' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.6 4.35 2 2 0 0 1 3.57 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.1 6.1l.9-.9a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
               ) : tab === 'contacts' ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={sidebarTab === 'contacts' ? '#007AFF' : 'none'} stroke={sidebarTab === 'contacts' ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill={sidebarTab === 'contacts' ? '#25D366' : 'none'} stroke={sidebarTab === 'contacts' ? '#25D366' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               ) : (
                 /* Groups icon */
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={sidebarTab === 'groups' ? '#007AFF' : 'none'} stroke={sidebarTab === 'groups' ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill={sidebarTab === 'groups' ? '#25D366' : 'none'} stroke={sidebarTab === 'groups' ? '#25D366' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               )}
-              <span className={`text-[10px] font-semibold tracking-wide ${sidebarTab === tab ? 'text-[#007AFF]' : 'text-[#8E8E93]'}`}>
+              <span className={`text-[10px] font-semibold tracking-wide ${sidebarTab === tab ? 'text-[#25D366]' : 'text-[#8E8E93]'}`}>
                 {tab === 'groups' ? 'Groups' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </span>
             </button>
@@ -4305,7 +4305,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-[13px] text-[#8E8E93] truncate">{formatMessagePreview(conv.lastMessage)}</p>
                               {conv.unreadCount && conv.unreadCount > 0 ? (
-                                <div className="min-w-[20px] h-5 bg-[#007AFF] rounded-full flex items-center justify-center px-1.5 shrink-0">
+                                <div className="min-w-[20px] h-5 bg-[#25D366] rounded-full flex items-center justify-center px-1.5 shrink-0">
                                   <span className="text-[11px] font-bold text-white tabular-nums">
                                     {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                                   </span>
@@ -4368,7 +4368,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       <span className="text-[12px] text-[#8E8E93]">{timeLabel}</span>
                       <button
                         onClick={e => { e.stopPropagation(); setSidebarTab('chats'); setShowList(false); handleStartCall(call.type, call.peerAddress); }}
-                        className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center text-[#007AFF] hover:bg-[#E5E5EA] transition-all active:scale-90"
+                        className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center text-[#25D366] hover:bg-[#E5E5EA] transition-all active:scale-90"
                         title={`Call back (${call.type})`}
                       >
                         {call.type === 'video' ? <Video size={14} /> : <Phone size={14} />}
@@ -4842,7 +4842,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       </div>
                     </button>
                     <button type="button" onClick={() => { setInputText(''); setShowPollCreator(true); }} className="px-3 py-2.5 text-left hover:bg-black/5 transition-colors flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                       </div>
                       <div className="flex flex-col">
@@ -5081,7 +5081,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                       </svg>
                     ),
-                    color: 'text-blue-500 bg-blue-50'
+                    color: 'text-[#25D366] bg-blue-50'
                   },
                   { 
                     label: 'Decentralized Network',
@@ -5936,6 +5936,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
 
 
 

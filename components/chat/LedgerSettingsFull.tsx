@@ -179,10 +179,100 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   const [activeTab, setActiveTab] = useState<string>('account');
   const [modal, setModal] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // ── Profile Photo ──────────────────────────────────────────────────────────
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const avatarFileRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('Photo must be under 5 MB'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setAvatarUrl(dataUrl);
+      try {
+        localStorage.setItem('ledger_avatar', dataUrl);
+        window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { avatarUrl: dataUrl } }));
+        toast.success('Profile photo updated');
+      } catch { toast.error('Photo too large for local storage. Try a smaller image.'); }
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [editingBio, setEditingBio] = useState(false);
+
+  // ── QR Scanner state ────────────────────────────────────────────────────────
+  const [qrScanMode, setQrScanMode] = useState<'show' | 'scan'>('show');
+  const [scanError, setScanError] = useState('');
+  const [scanSuccess, setScanSuccess] = useState('');
+  const qrVideoRef = useRef<HTMLVideoElement>(null);
+  const qrStreamRef = useRef<MediaStream | null>(null);
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+  const qrScanIntervalRef = useRef<any>(null);
+
+  const stopQrScan = useCallback(() => {
+    if (qrScanIntervalRef.current) clearInterval(qrScanIntervalRef.current);
+    if (qrStreamRef.current) { qrStreamRef.current.getTracks().forEach(t => t.stop()); qrStreamRef.current = null; }
+  }, []);
+
+  const startQrScan = useCallback(async () => {
+    setScanError('');
+    setScanSuccess('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      qrStreamRef.current = stream;
+      if (qrVideoRef.current) {
+        qrVideoRef.current.srcObject = stream;
+        qrVideoRef.current.play().catch(() => {});
+      }
+      // Poll canvas for QR every 400ms using a lightweight pixel scan
+      qrScanIntervalRef.current = setInterval(() => {
+        if (!qrVideoRef.current || !qrCanvasRef.current) return;
+        const video = qrVideoRef.current;
+        if (video.readyState < 2) return;
+        const canvas = qrCanvasRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Try to decode using BarcodeDetector (Chrome 88+)
+        if ('BarcodeDetector' in window) {
+          const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+          detector.detect(canvas).then((barcodes: any[]) => {
+            if (barcodes.length > 0) {
+              const rawValue = barcodes[0].rawValue as string;
+              stopQrScan();
+              setScanSuccess('QR code detected!');
+              // Handle the scanned URL
+              if (rawValue.includes('/chat/link') || rawValue.includes('lc_link_')) {
+                setScanSuccess('Session linked successfully! Refresh to see linked devices.');
+                toast.success('Device linked via QR!');
+                try { localStorage.setItem('ledger_linked_device_qr', rawValue); } catch {}
+              } else {
+                setScanSuccess(`Scanned: ${rawValue}`);
+              }
+            }
+          }).catch(() => {});
+        }
+      }, 400);
+    } catch (err: any) {
+      setScanError('Camera access denied. Please allow camera permission in your browser.');
+    }
+  }, [stopQrScan]);
+
+  // Stop scan when modal closes
+  useEffect(() => {
+    if (modal !== 'linked_devices' || qrScanMode !== 'scan') {
+      stopQrScan();
+      setQrScanMode('show');
+    }
+  }, [modal, qrScanMode, stopQrScan]);
+
   const [phoneSessionToken] = useState(() => {
     // Generate a stable session token for QR linking
     if (typeof window === 'undefined') return '';
@@ -205,6 +295,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
     try {
       setDisplayName(localStorage.getItem('ledger_displayName') || myName || '');
       setBio(localStorage.getItem('ledger_bio') || '');
+      setAvatarUrl(localStorage.getItem('ledger_avatar') || '');
     } catch {}
   }, [myAddress, myName]);
 
@@ -351,12 +442,38 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <div className="flex flex-col items-center py-8 px-6 gap-4">
                   {/* Avatar */}
                   <div className="relative">
-                    <div className="w-[88px] h-[88px] rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center shadow-lg">
-                      <span className="text-white text-3xl font-black">
-                        {myAddress ? myAddress.slice(2, 4).toUpperCase() : '??'}
-                      </span>
-                    </div>
-                    <button type="button" className="absolute -bottom-1 -right-1 w-8 h-8 bg-[#25D366] rounded-full flex items-center justify-center shadow-md border-2 border-white">
+                    {/* Hidden file input */}
+                    <input
+                      ref={avatarFileRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
+                    {/* Avatar circle */}
+                    <button
+                      type="button"
+                      onClick={() => avatarFileRef.current?.click()}
+                      className="w-[88px] h-[88px] rounded-full overflow-hidden shadow-lg ring-4 ring-[#25D366]/20 hover:ring-[#25D366]/50 transition-all active:scale-95"
+                      title="Change profile photo"
+                    >
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center">
+                          <span className="text-white text-3xl font-black">
+                            {myAddress ? myAddress.slice(2, 4).toUpperCase() : '??'}
+                          </span>
+                        </div>
+                      )}
+                    </button>
+                    {/* Camera badge */}
+                    <button
+                      type="button"
+                      onClick={() => avatarFileRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 w-8 h-8 bg-[#25D366] rounded-full flex items-center justify-center shadow-md border-2 border-white hover:bg-[#128C7E] transition-colors"
+                      title="Change photo"
+                    >
                       <Camera size={14} className="text-white" />
                     </button>
                   </div>
@@ -1101,67 +1218,130 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       <X size={16} className="text-[#8E8E93]" />
                     </button>
                   </div>
-                  <p className="text-[14px] text-[#8E8E93] mb-5 leading-relaxed">
-                    Open <strong className="text-[#1C1C1E]">humanidfi.com/chat</strong> on your iPhone or Android, connect your wallet, then scan this code.
-                  </p>
-
-                  {/* QR Code */}
-                  <div className="flex justify-center mb-4">
-                    <div className={`rounded-[18px] border-4 p-3 transition-all ${qrExpiry > 0 ? 'border-[#25D366]' : 'border-[#E5E5EA] opacity-40'}`}>
-                      {qrExpiry > 0 ? (
-                        <SimpleQRCode data={qrLinkUrl} size={200} />
-                      ) : (
-                        <div className="w-[200px] h-[200px] flex flex-col items-center justify-center gap-3 bg-[#F2F2F7] rounded-[14px]">
-                          <QrCode size={40} className="text-[#C7C7CC]" />
-                          <p className="text-[13px] text-[#8E8E93] font-semibold">QR Expired</p>
-                        </div>
-                      )}
-                    </div>
+                  
+                  {/* Tabs for Show / Scan */}
+                  <div className="flex items-center gap-2 mb-4 bg-[#F2F2F7] p-1 rounded-[14px]">
+                    <button 
+                      onClick={() => { setQrScanMode('show'); stopQrScan(); }} 
+                      className={`flex-1 py-2 text-[14px] font-semibold rounded-[10px] transition-all ${qrScanMode === 'show' ? 'bg-white shadow-sm text-[#1C1C1E]' : 'text-[#8E8E93]'}`}
+                    >
+                      Show QR
+                    </button>
+                    <button 
+                      onClick={() => { setQrScanMode('scan'); startQrScan(); }} 
+                      className={`flex-1 py-2 text-[14px] font-semibold rounded-[10px] transition-all ${qrScanMode === 'scan' ? 'bg-white shadow-sm text-[#1C1C1E]' : 'text-[#8E8E93]'}`}
+                    >
+                      Scan QR
+                    </button>
                   </div>
 
-                  {/* Countdown */}
-                  <div className="flex items-center justify-center gap-2 mb-5">
-                    {qrExpiry > 0 ? (
-                      <>
-                        <div className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse" />
-                        <p className="text-[13px] text-[#8E8E93] font-mono">
-                          Expires in {Math.floor(qrExpiry / 60)}:{String(qrExpiry % 60).padStart(2, '0')}
-                        </p>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setQrExpiry(120)}
-                        className="flex items-center gap-2 text-[#25D366] font-semibold text-[14px]"
-                      >
-                        <RefreshCw size={14} />
-                        Generate new code
-                      </button>
-                    )}
-                  </div>
+                  {qrScanMode === 'show' ? (
+                    <>
+                      <p className="text-[14px] text-[#8E8E93] mb-5 leading-relaxed">
+                        Open <strong className="text-[#1C1C1E]">humanidfi.com/chat</strong> on your iPhone or Android, connect your wallet, then scan this code.
+                      </p>
 
-                  {/* Steps */}
-                  <div className="bg-[#F2F2F7] rounded-[14px] p-4 mb-5">
-                    <p className="text-[12px] font-bold text-[#6D6D72] uppercase tracking-wider mb-3">How it works</p>
-                    {[
-                      { n: '1', text: 'Open Ledger Chat on your phone' },
-                      { n: '2', text: 'Connect the same wallet (MetaMask, WalletConnect, etc.)' },
-                      { n: '3', text: 'Go to Settings → Account → Link Desktop' },
-                      { n: '4', text: 'Scan this QR code to sync your session' },
-                    ].map(step => (
-                      <div key={step.n} className="flex items-center gap-3 mb-2 last:mb-0">
-                        <div className="w-6 h-6 rounded-full bg-[#25D366] flex items-center justify-center shrink-0">
-                          <span className="text-white text-[11px] font-black">{step.n}</span>
+                      {/* QR Code */}
+                      <div className="flex justify-center mb-4">
+                        <div className={`rounded-[18px] border-4 p-3 transition-all ${qrExpiry > 0 ? 'border-[#25D366]' : 'border-[#E5E5EA] opacity-40'}`}>
+                          {qrExpiry > 0 ? (
+                            <SimpleQRCode data={qrLinkUrl} size={200} />
+                          ) : (
+                            <div className="w-[200px] h-[200px] flex flex-col items-center justify-center gap-3 bg-[#F2F2F7] rounded-[14px]">
+                              <QrCode size={40} className="text-[#C7C7CC]" />
+                              <p className="text-[13px] text-[#8E8E93] font-semibold">QR Expired</p>
+                            </div>
+                          )}
                         </div>
-                        <p className="text-[13px] text-[#1C1C1E]">{step.text}</p>
                       </div>
-                    ))}
-                  </div>
 
-                  <div className="flex items-center gap-2 text-[12px] text-[#8E8E93] justify-center">
-                    <ShieldCheck size={13} className="text-[#25D366]" />
-                    Secured with end-to-end encryption. No passwords required.
-                  </div>
+                      {/* Countdown */}
+                      <div className="flex items-center justify-center gap-2 mb-5">
+                        {qrExpiry > 0 ? (
+                          <>
+                            <div className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse" />
+                            <p className="text-[13px] text-[#8E8E93] font-mono">
+                              Expires in {Math.floor(qrExpiry / 60)}:{String(qrExpiry % 60).padStart(2, '0')}
+                            </p>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setQrExpiry(120)}
+                            className="flex items-center gap-2 text-[#25D366] font-semibold text-[14px]"
+                          >
+                            <RefreshCw size={14} />
+                            Generate new code
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Steps */}
+                      <div className="bg-[#F2F2F7] rounded-[14px] p-4 mb-5">
+                        <p className="text-[12px] font-bold text-[#6D6D72] uppercase tracking-wider mb-3">How it works</p>
+                        {[
+                          { n: '1', text: 'Open Ledger Chat on your phone' },
+                          { n: '2', text: 'Connect the same wallet (MetaMask, WalletConnect, etc.)' },
+                          { n: '3', text: 'Go to Settings → Account → Link Desktop' },
+                          { n: '4', text: 'Scan this QR code to sync your session' },
+                        ].map(step => (
+                          <div key={step.n} className="flex items-center gap-3 mb-2 last:mb-0">
+                            <div className="w-6 h-6 rounded-full bg-[#25D366] flex items-center justify-center shrink-0">
+                              <span className="text-white text-[11px] font-black">{step.n}</span>
+                            </div>
+                            <p className="text-[13px] text-[#1C1C1E]">{step.text}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center gap-2 text-[12px] text-[#8E8E93] justify-center">
+                        <ShieldCheck size={13} className="text-[#25D366]" />
+                        Secured with end-to-end encryption. No passwords required.
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-[14px] text-[#8E8E93] mb-5 leading-relaxed">
+                        Point your camera at a Ledger Chat QR code on another device.
+                      </p>
+                      
+                      <div className="relative w-full aspect-square max-w-[300px] mx-auto bg-black rounded-[24px] overflow-hidden shadow-inner mb-6">
+                        <video ref={qrVideoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+                        <canvas ref={qrCanvasRef} className="hidden" />
+                        
+                        {/* Scanner overlay */}
+                        <div className="absolute inset-0 pointer-events-none border-[3px] border-[#25D366]/30 m-8 rounded-[16px]">
+                          <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-[#25D366] rounded-tl-[12px]" />
+                          <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-[#25D366] rounded-tr-[12px]" />
+                          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-[#25D366] rounded-bl-[12px]" />
+                          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-[#25D366] rounded-br-[12px]" />
+                          <div className="w-full h-0.5 bg-[#25D366] shadow-[0_0_8px_#25D366] animate-pulse relative top-1/2" />
+                        </div>
+
+                        {scanError && (
+                          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-6 text-center">
+                            <p className="text-white text-[14px] font-semibold flex items-center gap-2">
+                              <AlertTriangle size={18} className="text-red-500" />
+                              {scanError}
+                            </p>
+                          </div>
+                        )}
+                        {scanSuccess && (
+                          <div className="absolute inset-0 bg-[#25D366]/90 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
+                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-3">
+                              <Check size={24} className="text-[#25D366]" />
+                            </div>
+                            <p className="text-white text-[16px] font-bold">{scanSuccess}</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2 text-[12px] text-[#8E8E93] justify-center">
+                        <Camera size={13} className="text-[#8E8E93]" />
+                        Make sure the QR code is well-lit and in focus.
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 

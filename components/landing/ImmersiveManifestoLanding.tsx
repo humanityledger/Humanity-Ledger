@@ -410,7 +410,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
 
               {/* Feature 2 */}
               <div className="bg-white rounded-[24px] p-6 shadow-sm border border-black/[0.03] flex flex-col items-start hover:shadow-md transition-shadow">
-                <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center mb-4">
+                <div className="w-12 h-12 rounded-full bg-[#25D366]/10 text-blue-600 flex items-center justify-center mb-4">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg>
                 </div>
                 <h3 className="text-[17px] font-bold text-[#1C1C1E] mb-2">Native Crypto</h3>
@@ -876,6 +876,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
     </div>
   );
 }
+
 
 
 

@@ -27,7 +27,7 @@ export function LegendaryLoader({ title, subtitle }: LegendaryLoaderProps) {
                     className="mb-8"
                 >
                     <div className="relative">
-                        <div className="absolute inset-0 bg-blue-500/10 blur-2xl rounded-full animate-pulse" />
+                        <div className="absolute inset-0 bg-[#25D366]/10 blur-2xl rounded-full animate-pulse" />
                         <Shield size={64} className="text-slate-900 relative z-10 drop-shadow-[0_0_15px_rgba(0,0,0,0.1)]" />
                     </div>
                 </motion.div>
@@ -69,4 +69,5 @@ export function LegendaryLoader({ title, subtitle }: LegendaryLoaderProps) {
         </div>
     );
 }
+
 

@@ -81,7 +81,7 @@ export function SatoshiDetector({ ledgerAddresses = [] }: Props) {
 
   const alertColors = {
     CRITICAL: { border: 'border-cyan-400/60', bg: 'bg-cyan-500/10', text: 'text-cyan-400', badge: 'SATOSHI ERA' },
-    HIGH: { border: 'border-blue-500/40', bg: 'bg-blue-500/8', text: 'text-blue-400', badge: 'SLEEPING 8Y' },
+    HIGH: { border: 'border-[#25D366]/40', bg: 'bg-[#25D366]/8', text: 'text-blue-400', badge: 'SLEEPING 8Y' },
     WATCH: { border: 'border-yellow-500/30', bg: 'bg-yellow-500/5', text: 'text-yellow-400', badge: 'WATCHED' },
     NORMAL: { border: 'border-white/5', bg: 'bg-white/2', text: 'text-gray-400', badge: 'ACTIVE' },
   };
@@ -203,4 +203,5 @@ export function SatoshiDetector({ ledgerAddresses = [] }: Props) {
     </div>
   );
 }
+
 

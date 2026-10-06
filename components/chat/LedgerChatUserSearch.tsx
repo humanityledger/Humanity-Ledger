@@ -314,3 +314,4 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
     </motion.div>
   );
 }
+

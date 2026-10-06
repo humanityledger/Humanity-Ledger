@@ -33,7 +33,7 @@ export function TransactionStatusBanner({ voteId }: TransactionStatusBannerProps
 
     const getStatusColor = () => {
         switch (status) {
-            case 'CONFIRMED': return 'bg-blue-500/10 border-blue-500/20 text-blue-400';
+            case 'CONFIRMED': return 'bg-[#25D366]/10 border-[#25D366]/20 text-blue-400';
             case 'FAILED': return 'bg-red-500/10 border-red-500/20 text-red-400';
             default: return 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400';
         }
@@ -78,4 +78,5 @@ export function TransactionStatusBanner({ voteId }: TransactionStatusBannerProps
         </div>
     );
 }
+
 

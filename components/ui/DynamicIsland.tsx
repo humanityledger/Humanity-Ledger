@@ -221,7 +221,7 @@ export function DynamicIsland() {
                 <div className="flex flex-col flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="text-[13px] font-bold text-white truncate">{payload?.title || 'New Message'}</span>
-                    {!expanded && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+                    {!expanded && <div className="w-2 h-2 rounded-full bg-[#25D366]" />}
                   </div>
                   {expanded && (
                     <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[13px] text-white/70 truncate mt-1">
@@ -291,3 +291,4 @@ export function DynamicIsland() {
     </div>
   );
 }
+

@@ -73,9 +73,9 @@ export default function DeFiPositionsPanel({ positions, totalValueUsd, protocolC
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-6 bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-2xl relative overflow-hidden"
+          className="p-6 bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-[#25D366]/30 rounded-2xl relative overflow-hidden"
         >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 blur-3xl" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#25D366]/20 blur-3xl" />
           <div className="relative z-10">
             <p className="text-xs uppercase tracking-widest text-blue-400 font-bold mb-1">Total DeFi</p>
             <p className="text-4xl font-black text-white">${safeToLocaleString(totalValueUsd)}</p>
@@ -128,7 +128,7 @@ export default function DeFiPositionsPanel({ positions, totalValueUsd, protocolC
               <div className="p-6 border-b border-white/10 bg-gradient-to-r from-white/5 to-transparent">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/20 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#25D366]/20 to-purple-500/20 border border-white/20 flex items-center justify-center">
                       <Layers size={28} className="text-blue-400" />
                     </div>
                     <div>
@@ -195,4 +195,5 @@ export default function DeFiPositionsPanel({ positions, totalValueUsd, protocolC
     </div>
   );
 }
+
 

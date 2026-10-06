@@ -87,7 +87,7 @@ export const LedgerShowcase = () => {
             <div className="h-[88px] bg-white pt-10 px-4 flex items-center justify-between border-b border-black/[0.05]">
               <div className="flex items-center gap-2">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#111B21" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-[12px] font-bold">DT</div>
+                <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center text-white text-[12px] font-bold">DT</div>
                 <h4 className="font-bold text-[14px] text-[#111B21]">Dave Tech</h4>
               </div>
             </div>
@@ -146,7 +146,7 @@ export const LedgerShowcase = () => {
               <div className="absolute top-48 inset-x-0 flex justify-center z-20">
                 <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2">
                   <div className="flex -space-x-2">
-                     <div className="w-6 h-6 rounded-full bg-blue-500 border-2 border-[#1C1C1E]"></div>
+                     <div className="w-6 h-6 rounded-full bg-[#25D366] border-2 border-[#1C1C1E]"></div>
                      <div className="w-6 h-6 rounded-full bg-orange-500 border-2 border-[#1C1C1E]"></div>
                      <div className="w-6 h-6 rounded-full bg-green-500 border-2 border-[#1C1C1E]"></div>
                   </div>
@@ -182,3 +182,4 @@ export const LedgerShowcase = () => {
     </section>
   );
 };
+

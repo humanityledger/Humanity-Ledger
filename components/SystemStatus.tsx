@@ -13,10 +13,11 @@ export default function SystemStatus() {
     if (!mounted) return null;
 
     return (
-        <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-blue-500/80 font-mono">
+        <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#25D366]/80 font-mono">
             <Activity size={12} className="animate-pulse" />
             <span>System Normal | v2.0</span>
         </div>
     );
 }
+
 

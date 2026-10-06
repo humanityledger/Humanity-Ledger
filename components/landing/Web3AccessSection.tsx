@@ -35,7 +35,7 @@ export function Web3AccessSection() {
                 </div>
 
                 <div className="w-full md:w-1/3 h-64 md:h-full relative flex items-center justify-center">
-                     <div className="w-40 h-40 md:w-56 md:h-56 bg-gradient-to-br from-blue-500 to-indigo-700 rounded-3xl transform rotate-12 rotate-y-12 shadow-[0_20px_50px_rgba(0,0,255,0.3)] animate-float" />
+                     <div className="w-40 h-40 md:w-56 md:h-56 bg-gradient-to-br from-[#25D366] to-indigo-700 rounded-3xl transform rotate-12 rotate-y-12 shadow-[0_20px_50px_rgba(0,0,255,0.3)] animate-float" />
                 </div>
             </div>
 
@@ -150,4 +150,5 @@ function SubscribeCard() {
         </div>
     );
 }
+
 

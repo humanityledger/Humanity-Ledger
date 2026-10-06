@@ -365,7 +365,7 @@ function CreateRuleModal({ isOpen, onClose, onCreate }: { isOpen: boolean, onClo
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. LEDGER WATCHER ALPHA" 
-              className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 text-white font-bold transition-all"
+              className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-[#25D366] text-white font-bold transition-all"
             />
           </div>
 
@@ -412,7 +412,7 @@ function AlertCard({ alert, index, onCopyAttest, onMarkRead }: {
 }) {
   const getPriorityStyles = (priority: string) => {
     switch(priority) {
-      case 'critical': return 'border-blue-500 bg-blue-600/5 shadow-blue-900/10';
+      case 'critical': return 'border-[#25D366] bg-blue-600/5 shadow-blue-900/10';
       case 'high': return 'border-purple-500 bg-purple-600/5 shadow-purple-900/10';
       case 'medium': return 'border-white/20 bg-white/5';
       default: return 'border-gray-800 bg-gray-900/5';
@@ -443,7 +443,7 @@ function AlertCard({ alert, index, onCopyAttest, onMarkRead }: {
                 <span className="px-2 py-0.5 bg-blue-600 text-[8px] font-black text-white rounded uppercase tracking-[0.2em]">Critical</span>
             )}
             {!alert.read && (
-              <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-ping" />
+              <div className="w-2.5 h-2.5 bg-[#25D366] rounded-full animate-ping" />
             )}
           </div>
           
@@ -454,7 +454,7 @@ function AlertCard({ alert, index, onCopyAttest, onMarkRead }: {
               <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black tracking-widest uppercase ${
                 alert.action.type === 'BUY' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
                 alert.action.type === 'SELL' ? 'bg-red-500/10 text-red-100 border border-red-500/20' :
-                'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                'bg-[#25D366]/10 text-blue-400 border border-[#25D366]/20'
               }`}>
                 {alert.action.type}
               </div>
@@ -518,4 +518,5 @@ function ActionBadge({ icon, label }: { icon: string; label: string }) {
     </span>
   );
 }
+
 

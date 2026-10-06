@@ -42,7 +42,7 @@ function ExpandableFeature({ feature }: ExpandableFeatureProps) {
             <h3 className="text-2xl font-black text-white mb-2 group-hover:text-blue-400 transition-colors uppercase tracking-widest">
               {title}
             </h3>
-            <p className="text-blue-500/60 text-xs font-mono uppercase tracking-[0.2em] mb-3">
+            <p className="text-[#25D366]/60 text-xs font-mono uppercase tracking-[0.2em] mb-3">
               {subtitle}
             </p>
             <p className="text-zinc-300 font-medium text-lg leading-tight">
@@ -89,8 +89,8 @@ function ExpandableFeature({ feature }: ExpandableFeatureProps) {
                   </div>
 
                   {/* Human Edge */}
-                  <div className="bg-blue-500/5 border border-blue-500/20 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden group/edge">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[60px] rounded-full translate-x-10 -translate-y-10" />
+                  <div className="bg-[#25D366]/5 border border-[#25D366]/20 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden group/edge">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[#25D366]/10 blur-[60px] rounded-full translate-x-10 -translate-y-10" />
                     <h4 className="text-sm font-black text-blue-400 mb-4 font-mono uppercase tracking-[0.3em] relative z-10">
                       {t('ecosystem.why_hero')}
                     </h4>
@@ -114,7 +114,7 @@ function ExpandableFeature({ feature }: ExpandableFeatureProps) {
 
                 {/* Right: Lottie Animation */}
                 <div className="flex items-center justify-center relative">
-                   <div className="absolute inset-0 bg-blue-500/5 blur-[100px] rounded-full animate-pulse" />
+                   <div className="absolute inset-0 bg-[#25D366]/5 blur-[100px] rounded-full animate-pulse" />
                    <div className="w-full max-w-md aspect-square relative z-10">
                     <ScrollLottie
                       src={feature.lottieSrc}
@@ -199,4 +199,5 @@ export function EcosystemSection() {
     </div>
   );
 }
+
 
