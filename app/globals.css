@@ -1838,3 +1838,9 @@ html.watermark-active body::after {
   pointer-events: none;
   z-index: 9999;
 }
+
+/* --- AppKit Modal Scaling for Desktop --- */
+w3m-modal {
+  zoom: 1.25;
+}
+

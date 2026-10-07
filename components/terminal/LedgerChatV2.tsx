@@ -4019,9 +4019,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         <p className="text-[14px] font-medium text-[#555] text-center max-w-sm leading-relaxed relative z-10 px-4">
           Establish an end to end encrypted connection. Your keys never leave your device.
         </p>
+        
+        {typeof window !== 'undefined' && (window as any).electronAPI?.isElectron && (
+          <div className="relative z-10 bg-[#F7F7F6] border border-black/10 rounded-xl p-4 max-w-sm text-center mt-2">
+            <p className="text-[12px] font-bold text-black uppercase tracking-wider mb-1">Desktop App Notice</p>
+            <p className="text-[12px] text-black/60 leading-relaxed">
+              Browser extensions cannot run inside desktop apps. Please click "Connect" and <b>scan the QR code with your mobile wallet app</b> to link your identity.
+            </p>
+          </div>
+        )}
+
         <button 
           onClick={() => openAppKit()} 
-          className="relative z-10 h-[56px] px-8 bg-black hover:bg-black/85 text-white rounded-2xl text-[14px] font-bold tracking-wide active:scale-[0.98] transition-all shadow-lg shadow-black/20 flex items-center justify-center"
+          className="relative z-10 mt-2 h-[56px] px-8 bg-black hover:bg-black/85 text-white rounded-2xl text-[14px] font-bold tracking-wide active:scale-[0.98] transition-all shadow-lg shadow-black/20 flex items-center justify-center"
         >
           Connect Identity
         </button>
