@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAccount, useBalance, useDisconnect } from 'wagmi';
 import { toast } from 'sonner';
+import jsQR from 'jsqr';
 import { useLedgerSettings } from '../terminal/LedgerChatSettings';
 
 interface LedgerSettingsFullProps {
@@ -269,24 +270,34 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const handleQrCode = (rawValue: string) => {
+          stopQrScan();
+          if (rawValue.includes('/chat/link') || rawValue.includes('lc_link_')) {
+            setScanSuccess('Session linked successfully! Refresh to see linked devices.');
+            toast.success('Device linked via QR!');
+            try { localStorage.setItem('ledger_linked_device_qr', rawValue); } catch {}
+          } else {
+            setScanError('Invalid QR code. Please scan a Ledger Chat link code.');
+            setTimeout(() => setScanError(''), 3000);
+          }
+        };
+
         // Try to decode using BarcodeDetector (Chrome 88+)
         if ('BarcodeDetector' in window) {
           const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
           detector.detect(canvas).then((barcodes: any[]) => {
             if (barcodes.length > 0) {
-              const rawValue = barcodes[0].rawValue as string;
-              stopQrScan();
-              setScanSuccess('QR code detected!');
-              // Handle the scanned URL
-              if (rawValue.includes('/chat/link') || rawValue.includes('lc_link_')) {
-                setScanSuccess('Session linked successfully! Refresh to see linked devices.');
-                toast.success('Device linked via QR!');
-                try { localStorage.setItem('ledger_linked_device_qr', rawValue); } catch {}
-              } else {
-                setScanSuccess(`Scanned: ${rawValue}`);
-              }
+              handleQrCode(barcodes[0].rawValue as string);
             }
           }).catch(() => {});
+        } else {
+          // Fallback to jsQR for Firefox, Safari, etc.
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+          if (code && code.data) {
+            handleQrCode(code.data);
+          }
         }
       }, 400);
     } catch (err: any) {
