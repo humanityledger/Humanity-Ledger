@@ -298,7 +298,8 @@ export function TerminalSettingsPanel() {
                         </p>
                      </div>
                   )}
-           </AnimatePresence>
+               </motion.div>
+            </AnimatePresence>
          </div>
       </div>
     </div>

@@ -4732,6 +4732,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           formatMessagePreview={formatMessagePreview}
                           onVotePoll={(pollId, idx) => executeSend(`__VOTE__${pollId}__::${idx}`)}
                           onEditMsg={(id, current) => setEditingMsg({ id, content: current })}
+                          bubbleStyle={bubbleStyle}
                         />
                       );
                     }}

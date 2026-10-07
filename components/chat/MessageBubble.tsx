@@ -26,6 +26,7 @@ export interface MessageProps {
   isSecretChat: boolean;
   fontFamily: string;
   fontSizePx: number;
+  bubbleStyle?: string;
   clientInboxId: string | undefined;
   onReply: (msg: any) => void;
   onReact: (msgId: string, emoji: string) => void;
@@ -347,7 +348,7 @@ TapbackPicker.displayName = 'TapbackPicker';
 
 // â”€â”€â”€ Main MessageBubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const MessageBubble = React.memo(({
-  msg, isMe, showDate, dateStr, isSecretChat, fontFamily, fontSizePx,
+  msg, isMe, showDate, dateStr, isSecretChat, fontFamily, fontSizePx, bubbleStyle = 'default',
   clientInboxId, onReply, onReact, onContextMenu, onOpenLightbox,
   formatMessagePreview, onVotePoll, onEditMsg, onJoinGroupCall,
 }: MessageProps) => {
@@ -636,8 +637,13 @@ export const MessageBubble = React.memo(({
                   </button>
                 )}
                 <div
-                  className={`relative px-4 py-2.5 shadow-sm border ${
-                    isMe ? 'msg-bubble-sent rounded-[20px] rounded-br-[5px] bg-[#25D366] border-[#25D366]' : 'msg-bubble-recv rounded-[20px] rounded-bl-[5px] bg-white border-black/5'
+                  className={`relative shadow-sm border ${
+                    bubbleStyle === 'compact' ? 'px-3 py-1.5' :
+                    bubbleStyle === 'wide' ? 'px-5 py-3 w-full' : 'px-4 py-2.5'
+                  } ${
+                    bubbleStyle === 'wide'
+                      ? (isMe ? 'rounded-[16px] bg-[#25D366] border-[#25D366]' : 'rounded-[16px] bg-white border-black/5')
+                      : (isMe ? 'msg-bubble-sent rounded-[20px] rounded-br-[5px] bg-[#25D366] border-[#25D366]' : 'msg-bubble-recv rounded-[20px] rounded-bl-[5px] bg-white border-black/5')
                   }`}
                 >
                   <p

@@ -1736,3 +1736,15 @@ model CommunityPermission {
 
   community       Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
 }
+
+model PushSubscription {
+  id            String   @id @default(uuid())
+  walletAddress String   @unique
+  endpoint      String   @db.Text
+  p256dh        String
+  auth          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([walletAddress])
+}
