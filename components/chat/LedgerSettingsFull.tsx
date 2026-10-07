@@ -716,6 +716,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
+              <Group title="Contacts">
                 <Row
                   icon={<Link size={18} />}
                   label="Sync Address Book"
