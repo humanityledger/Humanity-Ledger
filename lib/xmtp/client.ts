@@ -398,7 +398,7 @@ export async function sendMessage(
     // Ethereum address (42 chars, starts with 0x). If checksumAddress silently returned
     // a malformed/lowercase string, throw immediately. Sending to a broken address
     // appears to succeed locally but the recipient NEVER receives the message.
-    if (!normalizedTo || !/^0x[a-fA-F0-9]{40}$/.test(normalizedTo)) {
+    if (!normalizedTo || normalizedTo.length !== 42) {
       throw new Error(`[XMTP] sendMessage: Invalid or non-checksum address after normalization: "${normalizedTo}". Message not sent.`);
     }
 
@@ -713,4 +713,5 @@ export async function syncOfflineQueue(client: Client, myEthAddress: string): Pr
     console.error('[XMTP] Failed to sync offline queue', e);
   }
 }
+
 
