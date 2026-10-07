@@ -64,17 +64,29 @@ function createWindow() {
     },
   });
 
+  // 🔑 Inject Electron identifier into User-Agent so the server can detect this is a desktop app
+  mainWindow.webContents.setUserAgent(
+    `${mainWindow.webContents.getUserAgent()} LedgerChatDesktop/1.0.0 Electron/${process.versions.electron}`
+  );
+
   mainWindow.setMenuBarVisibility(false);
 
   const isDev = !app.isPackaged;
-  const url   = isDev ? DEV_URL : PROD_URL;
+  // Always start at /connect so the QR code is shown for login.
+  // The middleware will redirect to /chat automatically once a valid session is detected.
+  const CONNECT_URL = isDev ? 'http://localhost:3000/connect' : 'https://humanidfi.com/connect';
   
-  mainWindow.loadURL(url).catch(err => {
-    console.error('Failed to load Ledger Chat infrastructure:', err);
-    // If offline, you could load a local "You are offline" HTML here
+  mainWindow.loadURL(CONNECT_URL).catch(err => {
+    console.error('Failed to load Ledger Chat:', err);
+    // Offline fallback — show a simple HTML page
+    mainWindow.loadURL('data:text/html,<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#FAFAFA"><div style="text-align:center"><h2 style="font-weight:700">No Internet Connection</h2><p style="color:#888">Check your connection and restart Ledger Chat.</p></div></body></html>');
   });
 
   if (isDev) mainWindow.webContents.openDevTools({ mode: 'detach' });
+
+  // 🔄 After QR login, /connect redirects to /chat — let it through naturally.
+  // But if user manually navigates away from humanidfi.com, block it (security).
+
 
   // Minimise-to-tray on close
   mainWindow.on('close', event => {

@@ -186,7 +186,14 @@ export default function ConnectPage() {
     try { if (sessionStorage.getItem("__disconnected__") === "1" || localStorage.getItem("__disconnected__") === "1") return; } catch {}
     const hasCookie = document.cookie.split("; ").some(r => r.startsWith("system_handshake="));
     const hasLocal = (() => { try { const r = localStorage.getItem("system_session_v2"); if (!r) return false; const p = JSON.parse(r); return p && p.exp && p.exp > Date.now(); } catch { return false; } })();
-    if (hasCookie || hasLocal) setLinked(true);
+    if (hasCookie || hasLocal) {
+      setLinked(true);
+      // Auto-redirect to /chat if already logged in (important for Electron .exe)
+      const rp = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+      const returnUrl = rp.get("redirect") || rp.get("returnUrl") || "/chat";
+      const safe = returnUrl.startsWith("/") && !returnUrl.startsWith("//") ? returnUrl : "/chat";
+      setTimeout(() => { window.location.replace(safe); }, 500);
+    }
   }, [setLinked]);
 
   const initEphemeral = useCallback(async () => {
