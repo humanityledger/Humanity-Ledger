@@ -174,6 +174,35 @@ const TABS = [
   { id: 'payments',      label: 'Payments',       icon: Zap },
 ];
 
+const BlockListModal = () => {
+  const [blocked, setBlocked] = useState<string[]>([]);
+  useEffect(() => {
+    try { setBlocked(JSON.parse(localStorage.getItem('ledger_blocked_users') || '[]')); } catch {}
+  }, []);
+  const unblock = (addr: string) => {
+    const updated = blocked.filter(a => a !== addr);
+    setBlocked(updated);
+    localStorage.setItem('ledger_blocked_users', JSON.stringify(updated));
+  };
+  return (
+    <div className="px-6 pb-6">
+      <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-5">Blocked Addresses</h3>
+      {blocked.length === 0 ? (
+        <p className="text-[14px] text-[#8E8E93] text-center py-4">No blocked users</p>
+      ) : (
+        <div className="max-h-[300px] overflow-y-auto">
+          {blocked.map(addr => (
+            <div key={addr} className="flex items-center justify-between p-3 bg-[#F2F2F7] rounded-[14px] mb-2">
+              <span className="font-mono text-[13px] text-[#1C1C1E]">{addr}</span>
+              <button onClick={() => unblock(addr)} className="text-[12px] font-bold text-[#FF3B30] px-3 py-1 bg-white rounded-full shadow-sm">Unblock</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddress, myName, onClose }) => {
   const [activeTab, setActiveTab] = useState<string>('account');
@@ -687,19 +716,18 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title="Contacts">
                 <Row
                   icon={<Link size={18} />}
                   label="Sync Address Book"
                   sublabel="Find friends already on Ledger Chat"
-                  toggle={false}
-                  onToggle={() => toast.info('Address book sync coming soon')}
+                  toggle={!!settings.address_book_sync}
+                  onToggle={v => { updateSetting('address_book_sync' as any, v); toast.success(v ? 'Address book sync enabled' : 'Address book sync disabled'); }}
                 />
                 <Row
                   icon={<BellOff size={18} />}
                   label="Blocked Addresses"
                   sublabel="Manage blocked wallets"
-                  onTap={() => toast.info('Block list coming soon')}
+                  onTap={() => setModal('blocked_list')}
                 />
               </Group>
             </>
@@ -1104,7 +1132,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
               <Group title="Manage" footer="Clearing cache removes temporary data only. Your conversations are stored via XMTP and are safe.">
                 <Row icon={<RefreshCw size={18} />} label="Clear Cache" sublabel="Remove temporary files" onTap={() => setModal('clearCache')} />
-                <Row icon={<HardDrive size={18} />} label="Manage Media" sublabel="Photos, videos, and files" onTap={() => toast.info('Media manager coming soon')} />
+                <Row icon={<HardDrive size={18} />} label="Manage Media" sublabel="Photos, videos, and files" onTap={() => setModal('manage_media')} />
               </Group>
 
               <Group>
@@ -1175,7 +1203,22 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               </Group>
               <Group label="Transaction History">
                 <Row label="View Full History" onTap={() => window.open('/payments/history', '_blank')} />
-                <Row label="Export CSV" onTap={() => toast.success('Export feature coming soon')} />
+                <Row label="Export CSV" onTap={() => {
+                  try {
+                    const rows = [['Date', 'Type', 'Amount', 'To/From', 'Status']];
+                    for (let i = 0; i < localStorage.length; i++) {
+                      const k = localStorage.key(i)!;
+                      if (k.startsWith('ledger_tx_')) {
+                        try { const tx = JSON.parse(localStorage.getItem(k) || '{}'); rows.push([tx.date || '', tx.type || '', tx.amount || '', tx.peer || '', tx.status || '']); } catch {}
+                      }
+                    }
+                    if (rows.length === 1) { toast.info('No transactions recorded yet'); return; }
+                    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `ledger-payments-${Date.now()}.csv`; a.click();
+                    toast.success('CSV exported');
+                  } catch { toast.error('Export failed'); }
+                }} />
               </Group>
             </div>
           )}
@@ -1571,6 +1614,54 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   </button>
                 </div>
               )}
+
+              {/* ── Blocked Addresses ── */}
+              {modal === 'blocked_list' && (() => {
+                const blocked: string[] = (() => { try { return JSON.parse(localStorage.getItem('ledger_blocked_users') || '[]'); } catch { return []; } })();
+                return (
+                  <div className="px-6 pb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-[20px] font-bold text-[#1C1C1E]">Blocked Addresses</h3>
+                      <button type="button" onClick={() => setModal(null)} className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center"><X size={16} className="text-[#8E8E93]" /></button>
+                    </div>
+                    {blocked.length === 0 ? (
+                      <div className="py-12 flex flex-col items-center gap-3 text-[#8E8E93]">
+                        <Shield size={40} className="opacity-30" />
+                        <p className="text-[15px] font-medium">No blocked addresses</p>
+                        <p className="text-[13px] text-center">Blocked wallets won't be able to send you messages</p>
+                      </div>
+                    ) : blocked.map((addr: string) => (
+                      <div key={addr} className="flex items-center justify-between bg-[#F2F2F7] rounded-2xl px-4 py-3 mb-2">
+                        <p className="text-[14px] font-semibold text-[#1C1C1E] font-mono">{addr.slice(0, 8)}...{addr.slice(-6)}</p>
+                        <button type="button" onClick={() => { const upd = blocked.filter(b => b !== addr); localStorage.setItem('ledger_blocked_users', JSON.stringify(upd)); toast.success('Unblocked'); setModal(null); }} className="text-[13px] text-[#25D366] font-bold px-3 py-1.5 rounded-xl hover:bg-[#25D366]/10">Unblock</button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* ── Manage Media ── */}
+              {modal === 'manage_media' && (() => {
+                let totalBytes = 0; let mediaCount = 0;
+                try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i)!; if (k.startsWith('ledger_')) { const v = localStorage.getItem(k) || ''; if (v.startsWith('data:')) { totalBytes += v.length * 0.75; mediaCount++; } } } } catch {}
+                const mb = (totalBytes / (1024 * 1024)).toFixed(2);
+                return (
+                  <div className="px-6 pb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-[20px] font-bold text-[#1C1C1E]">Manage Media</h3>
+                      <button type="button" onClick={() => setModal(null)} className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center"><X size={16} className="text-[#8E8E93]" /></button>
+                    </div>
+                    <div className="bg-[#F2F2F7] rounded-2xl p-5 mb-5">
+                      <p className="text-[13px] text-[#8E8E93] mb-1">Cached media storage</p>
+                      <p className="text-[28px] font-bold text-[#1C1C1E]">{mb} <span className="text-[16px] font-medium text-[#8E8E93]">MB</span></p>
+                      <p className="text-[12px] text-[#8E8E93] mt-1">{mediaCount} media item{mediaCount !== 1 ? 's' : ''}</p>
+                      <div className="mt-3 h-2 bg-[#E5E5EA] rounded-full overflow-hidden"><div className="h-full bg-[#25D366] rounded-full" style={{ width: `${Math.min((parseFloat(mb) / 10) * 100, 100)}%` }} /></div>
+                    </div>
+                    <button type="button" onClick={() => { let n = 0; for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i)!; if (k.startsWith('ledger_') && (localStorage.getItem(k) || '').startsWith('data:')) { localStorage.removeItem(k); n++; } } toast.success(`Cleared ${n} item${n !== 1 ? 's' : ''}`); setModal(null); }} className="w-full py-4 bg-[#FF3B30] rounded-2xl text-white font-bold text-[16px] mb-2">Clear Media Cache</button>
+                    <button type="button" onClick={() => setModal(null)} className="w-full py-3 text-[#8E8E93] font-semibold text-[16px]">Cancel</button>
+                  </div>
+                );
+              })()}
 
             </motion.div>
           </motion.div>

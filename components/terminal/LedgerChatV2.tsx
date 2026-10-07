@@ -88,9 +88,31 @@ export interface LedgerChatProps {
   forceAutoInit?: boolean;
 }
 
-function Avatar({ address }: { address: string }) {
-  const initials = address.slice(2, 4).toUpperCase();
-  const hue = parseInt(address.slice(2, 8), 16) % 360;
+function Avatar({ address, isMe = false }: { address: string; isMe?: boolean }) {
+  const [savedAvatar, setSavedAvatar] = React.useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem('ledger_avatar') || '';
+  });
+
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.avatarUrl !== undefined) setSavedAvatar(detail.avatarUrl);
+    };
+    window.addEventListener('ledger_settings_update', handler);
+    return () => window.removeEventListener('ledger_settings_update', handler);
+  }, []);
+
+  if (isMe && savedAvatar) {
+    return (
+      <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 ring-1 ring-black/5">
+        <img src={savedAvatar} alt="" className="w-full h-full object-cover" />
+      </div>
+    );
+  }
+
+  const initials = address ? address.slice(2, 4).toUpperCase() : '??';
+  const hue = address ? parseInt(address.slice(2, 8), 16) % 360 : 0;
   return (
     <div
       className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0"
@@ -4203,7 +4225,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           {/* Top row: Identity + Quick Actions */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setShowFullSettings(true)}>
-              <Avatar address={effectiveAddress} size={36} />
+              <Avatar address={effectiveAddress} isMe={true} />
               <div className="flex flex-col">
                 <span className="text-[15px] font-bold text-[#000000] truncate max-w-[120px]">{getDisplayName(effectiveAddress)}</span>
                 <div className="flex items-center gap-1.5 text-[10px] text-[#25D366] font-semibold tracking-wide">
