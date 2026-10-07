@@ -2758,6 +2758,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const prevSet = new Set(prev.map(c => c.peerAddress.toLowerCase()));
             const toAdd: ConversationMeta[] = newPeerAddrs
               .filter(a => !prevSet.has(a.toLowerCase()))
+              .filter(a => a.toLowerCase() !== address?.toLowerCase()) // never add self
               .map(a => ({
                 peerAddress: a,
                 lastMessage: ' New message received',
@@ -4364,7 +4365,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   </div>
                 </div>
               ) : (
-            conversations.filter(conv => showArchived ? archivedPeers.has(conv.peerAddress.toLowerCase()) : !archivedPeers.has(conv.peerAddress.toLowerCase())).map((conv, i) => {
+            conversations
+              .filter(conv => conv.peerAddress?.toLowerCase() !== address?.toLowerCase()) // never show self-conversations
+              .filter(conv => showArchived ? archivedPeers.has(conv.peerAddress.toLowerCase()) : !archivedPeers.has(conv.peerAddress.toLowerCase())).map((conv, i) => {
               const isActive = activePeer?.toLowerCase() === conv.peerAddress.toLowerCase();
               const contactName = resolveContactName(effectiveAddress, conv.peerAddress);
               const displayLabel = contactName || shortAddr(conv.peerAddress);
@@ -4699,38 +4702,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <span>LEDGER CHAT CONFIDENTIAL</span>
               </div>
               
-              {/* XMTP Diagnostics Panel */}
-              {process.env.NODE_ENV !== 'production' || true ? (
-                <div className="z-10 bg-yellow-50 border border-yellow-300 rounded p-2 mb-2 text-[10px] font-mono text-black/80">
-                  <div className="font-bold mb-1">🔍 XMTP Diagnostics</div>
-                  <div>Client Inbox: {(client as any)?.inboxId ? (client as any).inboxId.slice(0,12)+'...' : '❌ NOT INIT'}</div>
-                  <div>Active Peer: {activePeer ? activePeer.slice(0,10)+'...' : '❌ NONE'}</div>
-                  <div>State Msgs Total: {messages.length} | Shown: {messages.filter(m => m.conversationId === (activePeer ? `dm-${activePeer.toLowerCase()}` : '')).length}</div>
-                  <div>XMTP Network Raw: {typeof window !== 'undefined' ? ((window as any).__xmtp_raw_count ?? '?') : '?'} msgs</div>
-                  <div className="mt-1 flex gap-2 flex-wrap">
-                    <button onClick={async () => {
-                      if (!client || !activePeer) return;
-                      try {
-                        const { canReceiveMessages } = await import('@/lib/xmtp/client');
-                        const can = await canReceiveMessages(client, activePeer);
-                        toast[can ? 'success' : 'error'](`Peer is ${can ? 'ON ✓' : 'NOT ON ✗'} XMTP`);
-                      } catch (e) { toast.error('Check failed'); }
-                    }} className="bg-black/10 px-2 py-0.5 rounded">Test Peer</button>
-                    <button onClick={async () => {
-                      if (!client || !activePeer) return;
-                      try {
-                        toast.info('Force-syncing XMTP...');
-                        await client.conversations.sync();
-                        toast.success('Sync done — reloading messages');
-                      } catch (e) { toast.error('Sync failed: ' + (e as any)?.message); }
-                    }} className="bg-black/10 px-2 py-0.5 rounded">Force Sync</button>
-                    <button onClick={() => {
-                      localStorage.clear();
-                      window.location.reload();
-                    }} className="bg-red-500 text-white px-2 py-0.5 rounded">Hard Reset</button><button onClick={async () => { if (!client) return; toast.info("Quantum Auditing..."); try { await client.conversations.sync(); const dms = await client.conversations.listDms(); let totalMsgs = 0; for (const d of dms) { try { await d.sync(); const msgs = await d.messages(); totalMsgs += msgs.length; } catch(e) {} } toast.success(`Audit complete: Found ${dms.length} Conv. & ${totalMsgs} Total Messages`); } catch(e) { toast.error("Audit failed"); } }} className="bg-purple-600 text-white px-2 py-0.5 rounded ml-2">Quantum Audit</button>
-                  </div>
-                </div>
-              ) : null}
+              {/* E2E Encrypted Badge */}
+              <div className="flex items-center justify-center gap-1.5 py-2 mb-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <span className="text-[11px] text-[#8E8E93] font-medium">End-to-end encrypted · Secured by XMTP</span>
+              </div>
 
               {(() => {
                 // Filter messages for the current active conversation only
@@ -4747,7 +4725,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   if (c.startsWith('__EDIT__')) return false;
                   if (c.startsWith('__READ__')) return false;
                   if (c.startsWith('__VOTE__')) return false;
-                  if (c.startsWith('__PAYMENT__')) return false;
+                  // __PAYMENT__ messages ARE rendered (as PaymentBubble) — do NOT filter them out
                   if (c.startsWith('__TYPING__')) return false;
                   return true;
                 });
