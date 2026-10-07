@@ -584,8 +584,14 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <Row
                   icon={<Smartphone size={18} />}
                   label="Link Phone"
-                  sublabel="Scan QR code with your iOS or Android device"
-                  onTap={() => setModal('linked_devices')}
+                  sublabel="Show QR code to link another device"
+                  onTap={() => { setQrScanMode('show'); setModal('linked_devices'); }}
+                />
+                <Row
+                  icon={<Camera size={18} />}
+                  label="Scan QR Code"
+                  sublabel="Scan a code to link to a desktop"
+                  onTap={() => { setQrScanMode('scan'); setModal('linked_devices'); }}
                 />
                 <Row
                   icon={<Monitor size={18} />}
@@ -922,6 +928,12 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   label="Manage Linked Devices"
                   sublabel="View and revoke linked phone sessions"
                   onTap={() => { setActiveTab('account'); setTimeout(() => setModal('linked_devices'), 200); }}
+                />
+                <Row
+                  icon={<QrCode size={18} />}
+                  label="Scan QR Code"
+                  sublabel="Point camera to link this device"
+                  onTap={() => { setActiveTab('account'); setQrScanMode('scan'); setTimeout(() => setModal('linked_devices'), 200); }}
                 />
               </Group>
 
