@@ -616,11 +616,25 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     _setCallState(s);
   }, []);
   useEffect(() => {
+    const autoLockSetting = (ledgerSettings as any)?.auto_lock_timer;
+    // Parse the setting: 'Never', 'Immediately', '1 min', '5 min', '30 min', '1 hour'
+    const getLockMs = () => {
+      if (!autoLockSetting || autoLockSetting === 'Never') return null;
+      if (autoLockSetting === 'Immediately') return 5000;
+      if (autoLockSetting === '1 min') return 60000;
+      if (autoLockSetting === '5 min') return 300000;
+      if (autoLockSetting === '30 min') return 1800000;
+      if (autoLockSetting === '1 hour') return 3600000;
+      return 60000; // default 1 min
+    };
+    const lockMs = getLockMs();
+    if (!lockMs) return; // 'Never' — no lock timer
+
     let timeoutId: NodeJS.Timeout;
     const resetTimer = () => {
       clearTimeout(timeoutId);
       if (!isLocked) {
-        timeoutId = setTimeout(() => setIsLocked(true), 60000); // 60 seconds
+        timeoutId = setTimeout(() => setIsLocked(true), lockMs);
       }
     };
     
@@ -636,7 +650,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       window.removeEventListener('keydown', resetTimer);
       window.removeEventListener('touchstart', resetTimer);
     };
-  }, [isLocked]);
+  }, [isLocked, ledgerSettings]);
 
 
   useEffect(() => {
@@ -1241,8 +1255,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       localStorage.removeItem(draftKey);
     }
 
-    // Typing telemetry: only fire when there is actual text
+    // Typing telemetry: only fire when there is actual text AND setting is enabled
     if (!inputText.trim()) return;
+    if (ledgerSettings?.typing_indicators === false) return;
     const sendTyping = async () => {
         try {
             await fetch('/api/chat/telemetry', {
@@ -1255,7 +1270,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
     const timeoutId = setTimeout(sendTyping, 500); 
     return () => clearTimeout(timeoutId);
-  }, [inputText, activePeer, address]);
+  }, [inputText, activePeer, address, ledgerSettings]);
 
   // Utility: immediately clear typing signal on the server (call after send)
   const stopTypingSignal = async () => {
@@ -3022,14 +3037,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             // all received messages because the equality check was always failing.
             const normalizedMsgPeer = msgConvPeer?.toLowerCase() ?? '';
             const normalizedActivePeer = currentActivePeer?.toLowerCase() ?? '';
-            const ETH_ADDR = /^0x[a-fA-F0-9]{40}$/;
-            // [ROOT FIX] belongsToActive now has TWO paths:
-            // 1. ETH address resolved successfully → direct address match (fast path)
-            // 2. Address resolution failed → compare native XMTP convoId against activeXmtpDmIdRef
-            //    (the saved dm.id from when we opened the chat). This prevents silent drops
-            //    when the inboxIdToAddressCache was broken (recursive cacheInboxId bug).
             const belongsToActiveByAddr =
-              ETH_ADDR.test(normalizedMsgPeer) &&
               !!normalizedActivePeer &&
               normalizedMsgPeer === normalizedActivePeer;
             const belongsToActiveByConvoId =
@@ -3121,7 +3129,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   if (!document.hidden) {
                     if (ledgerSettings?.notification_sound !== false) { playReceiveSound(); };
                     triggerHaptic(ledgerSettings?.haptics_intensity ?? 0);
-                    if (ledgerSettings?.show_read_receipts !== false && /^0x[a-fA-F0-9]{40}$/.test(msgConvPeer)) {
+                    if (ledgerSettings?.show_read_receipts !== false && /^0x[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$/.test(msgConvPeer)) {
                       sendMessage(client, msgConvPeer, `__READ__${realId}`, address).catch(e => console.warn('Failed to send read receipt', e));
                     }
                   } else {
@@ -3157,18 +3165,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             } else {
               // Belongs to a different (background) conversation
               if (fromPeer && !content.startsWith('__')) {
-                // Phase 5: Push Notifications & Dynamic Island when receiving a message in background chat
-                if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                const dnd = (ledgerSettings as any)?.do_not_disturb;
+                const notifEnabled = ledgerSettings?.notifications_private !== false;
+                if (!dnd && notifEnabled && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                  const showPreview = !(ledgerSettings as any)?.hide_notification_content;
                   new Notification(`Ledger Chat: ${shortAddr(msgConvPeer || 'Unknown')}`, {
-                    body: formatMessagePreview(content),
+                    body: showPreview ? formatMessagePreview(content) : 'New message',
                     icon: '/favicon.ico'
                   });
                 }
-                // Trigger Dynamic Island
-                useDynamicIsland.getState().setState('notification', {
-                  title: shortAddr(msgConvPeer || 'Unknown'),
-                  subtitle: formatMessagePreview(content),
-                }, 4000);
+                if (!dnd) {
+                  useDynamicIsland.getState().setState('notification', {
+                    title: shortAddr(msgConvPeer || 'Unknown'),
+                    subtitle: formatMessagePreview(content),
+                  }, 4000);
+                }
               }
               let needsSync = false;
               setConversations(prev => {
@@ -3261,8 +3272,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         // Capture the native XMTP conversation ID so the stream loop can
         // route messages correctly even when inboxId→address resolution fails.
         try {
-          const { checksumAddress: cs } = await import('viem');
-          const normalizedPeer = cs(activePeer);
+          const { getAddress } = await import('viem');
+          let normalizedPeer = activePeer;
+          try { normalizedPeer = getAddress(activePeer); } catch {}
           const xmtpDm = await client.conversations.newDmWithIdentifier({
             identifier: normalizedPeer, identifierKind: 'Ethereum'
           });
@@ -4655,7 +4667,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             )}
 
             {/* Dynamic Chat Background */}
-            <div className={`ledger-chat-container flex-1 overflow-y-auto p-3 flex flex-col gap-1 min-h-0 relative ${isSecretChat ? 'bg-[#ece5dd]' : ''}`} style={isSecretChat ? { fontFamily, fontSize: `${fontSizePx}px` } : { ...bgStyle, backgroundColor: '#EBE5DC', backgroundImage: "url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%2325D366\' fill-opacity=\'0.07\' fill-rule=\'evenodd\'/%3E%3C/svg%3E')", backgroundAttachment: 'fixed', fontFamily, fontSize: `${fontSizePx}px` }}>
+            <div className={`ledger-chat-container flex-1 overflow-y-auto p-3 flex flex-col gap-1 min-h-0 relative ${isSecretChat ? 'bg-[#ece5dd]' : ''} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={isSecretChat ? { fontFamily, fontSize: `${fontSizePx}px` } : { backgroundColor: '#EBE5DC', backgroundImage: "url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%2325D366\' fill-opacity=\'0.07\' fill-rule=\'evenodd\'/%3E%3C/svg%3E')", backgroundAttachment: 'fixed', ...bgStyle, fontFamily, fontSize: `${fontSizePx}px` }}>
               {/* Matrix Rain Effect Layer */}
               {chatBackground === 'matrix' && (
                 <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,255,0,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -5113,7 +5125,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           onKeyDown={e => {
                             if (ledgerSettings?.mechanical_keyboard) playKeyClick();
                             const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
-                            if (e.key === 'Enter' && !e.shiftKey && !isTouch) {
+                            const enterToSend = ledgerSettings?.enter_to_send !== false;
+                            if (e.key === 'Enter' && !e.shiftKey && !isTouch && enterToSend) {
                               e.preventDefault();
                               if (inputText.trim() && !isUploading) {
                                 handleSend(e as any);
