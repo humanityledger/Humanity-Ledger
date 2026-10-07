@@ -4688,12 +4688,32 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               <div className="ledger-watermark">
                 <span>LEDGER CHAT CONFIDENTIAL</span>
               </div>
+              
+              {/* XMTP Diagnostics Panel */}
+              {process.env.NODE_ENV !== 'production' || true ? (
+                <div className="z-10 bg-yellow-50 border border-yellow-300 rounded p-2 mb-2 text-[10px] font-mono text-black/80">
+                  <div className="font-bold mb-1">XMTP Diagnostics</div>
+                  <div>Client Inbox: {(client as any)?.inboxId ? (client as any).inboxId.slice(0,12)+'...' : 'NOT INIT'}</div>
+                  <div>Active Peer: {activePeer ? activePeer.slice(0,10)+'...' : 'NONE'}</div>
+                  <div>Conv ID Filter: {activePeer ? `dm-${activePeer.toLowerCase()}` : 'NONE'}</div>
+                  <div>State Msgs Total: {messages.length}</div>
+                  <div>State Msgs Filtered: {messages.filter(m => m.conversationId === (activePeer ? `dm-${activePeer.toLowerCase()}` : '')).length}</div>
+                  <button onClick={async () => {
+                    if (!client || !activePeer) return;
+                    try {
+                      const { canReceiveMessages } = await import('@/lib/xmtp/client');
+                      const can = await canReceiveMessages(client, activePeer);
+                      toast[can ? 'success' : 'error'](`${activePeer.slice(0,6)}... is ${can ? 'ON' : 'NOT ON'} XMTP`);
+                    } catch (e) { toast.error('Check failed'); }
+                  }} className="mt-1 bg-black/10 px-2 py-0.5 rounded">Test Peer</button>
+                </div>
+              ) : null}
 
               {(() => {
                 // Filter messages for the current active conversation only
                 const convId = `dm-${activePeer!.toLowerCase()}`;
                 const filteredMsgs = messages.filter(m => {
-                  if (m.conversationId !== convId && m.conversationId !== `dm-${activePeer!.toLowerCase()}`) return false;
+                  if (m.conversationId !== convId) return false;
                   if (m.burnAtNs && m.burnAtNs <= Date.now()) return false;
                   const c = typeof m.content === 'string' ? m.content : '';
                   if (c.startsWith('__CALL_')) return false;
