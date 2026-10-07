@@ -4252,7 +4252,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       fontFamily,
     }}>
       {/*  Sidebar: Conversation List — fixed width on desktop, full screen on mobile when no chat is active  */}
-      <div className={`${showList ? 'flex' : 'hidden md:flex'} w-full md:w-80 lg:w-96 flex-col border-r border-black/[0.08] bg-white shrink-0 h-full overflow-hidden`}>
+      <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'hidden md:flex' : 'flex') : (showList ? 'flex' : 'hidden md:flex')} w-full md:w-80 lg:w-96 flex-col border-r border-black/[0.08] bg-white shrink-0 h-full overflow-hidden`}>
 
         {/* ── Sidebar Header ── */}
         <div className="px-4 py-3 border-b border-black/[0.05] bg-[#F9F9F9] flex flex-col gap-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}>
@@ -4505,7 +4505,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       </div>
 
       {/*  Chat Area  */}
-      <div className={`${!showList ? 'flex' : 'hidden md:flex'} relative flex-1 flex-col min-w-0 min-h-0`}>
+      <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'flex' : 'hidden md:flex') : (!showList ? 'flex' : 'hidden md:flex')} relative flex-1 flex-col min-w-0 min-h-0`}>
         {activeCommunity ? (
           <CommunityView 
             communityId={activeCommunity} 

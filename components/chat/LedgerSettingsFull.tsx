@@ -271,14 +271,22 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
         if (!ctx) return;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        const handleQrCode = (rawValue: string) => {
+        const handleQrCode = async (rawValue: string) => {
           stopQrScan();
-          if (rawValue.includes('/chat/link') || rawValue.includes('lc_link_')) {
-            setScanSuccess('Session linked successfully! Refresh to see linked devices.');
-            toast.success('Device linked via QR!');
-            try { localStorage.setItem('ledger_linked_device_qr', rawValue); } catch {}
-          } else {
-            setScanError('Invalid QR code. Please scan a Ledger Chat link code.');
+          try {
+            setScanSuccess('Initiating secure handshake...');
+            const result = await completeSessionHandshake(rawValue);
+            if (result.ok) {
+              setScanSuccess('Device linked successfully! The desktop will now log in automatically.');
+              toast.success('Desktop linked securely');
+              try { localStorage.setItem('ledger_linked_device_qr', rawValue); } catch {}
+              setTimeout(() => setModal(''), 2000);
+            } else {
+              setScanError(result.message || 'Invalid QR code. Please scan a Ledger Chat login code.');
+              setTimeout(() => setScanError(''), 4000);
+            }
+          } catch (e) {
+            setScanError('Failed to link device.');
             setTimeout(() => setScanError(''), 3000);
           }
         };
@@ -591,17 +599,17 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               </div>
 
               {/* Linked Devices — QR Phone Linking */}
-              <Group title="Linked Devices" footer="Open Ledger Chat on your phone and scan this QR code to link your session. Messages sync in real-time across all linked devices.">
+              <Group title="Linked Devices" footer="Link another desktop exactly like WhatsApp Web. Open Ledger Chat on the new device, then scan its QR code from this device.">
                 <Row
                   icon={<Smartphone size={18} />}
-                  label="Link Phone"
+                  label="Show Device QR (Coming Soon)"
                   sublabel="Show QR code to link another device"
                   onTap={() => { setQrScanMode('show'); setModal('linked_devices'); }}
                 />
                 <Row
                   icon={<Camera size={18} />}
                   label="Scan QR Code"
-                  sublabel="Scan a code to link to a desktop"
+                  sublabel="Scan the login code from another screen"
                   onTap={() => { setQrScanMode('scan'); setModal('linked_devices'); }}
                 />
                 <Row
