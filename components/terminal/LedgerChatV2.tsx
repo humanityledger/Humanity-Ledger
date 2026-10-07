@@ -2802,15 +2802,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           const gen = streamMessages(client, activeAbortController.signal);
           for await (const msg of gen as any) {
             if (cancelled) { activeAbortController.abort(); break; }
-            
-            // [AUDIT FIX] Dynamically fetch selfInboxId to avoid stale closure if client rotates
-            const selfInboxId = (client as any).inboxId ?? '';
-            const fromPeer = msg.senderInboxId !== selfInboxId;
-            const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-            const sentAtNs = nsToDate(msg.sentAtNs ?? msg.sentAt).getTime();
-            const currentActivePeer = activePeerRef.current?.toLowerCase();
-            
-            let resolvedPeerAddr = msg.conversation?.peerAddress?.toLowerCase() || '';
+            try {
+              // [AUDIT FIX] Dynamically fetch selfInboxId to avoid stale closure if client rotates
+              const selfInboxId = (client as any).inboxId ?? '';
+              const fromPeer = msg.senderInboxId !== selfInboxId;
+              const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+              const sentAtNs = nsToDate(msg.sentAtNs ?? msg.sentAt).getTime();
+              const currentActivePeer = activePeerRef.current?.toLowerCase();
+              
+              let resolvedPeerAddr = msg.conversation?.peerAddress?.toLowerCase() || '';
             if (!resolvedPeerAddr) {
               try {
                 if (fromPeer) {
@@ -3213,6 +3213,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 syncToAddressBook(msgConvPeer);
               }
             }
+            } catch (msgErr) {
+              console.error('[XMTP Stream] Error processing message:', msgErr);
+            }
           }
           await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (e: any) {
@@ -3283,23 +3286,45 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         // Capture the native XMTP conversation ID so the stream loop can
         // route messages correctly even when inboxId→address resolution fails.
         try {
-          const { getAddress } = await import('viem');
-          let normalizedPeer = activePeer;
-          try { normalizedPeer = getAddress(activePeer); } catch {}
-          const xmtpDm = await client.conversations.newDmWithIdentifier({
-            identifier: normalizedPeer, identifierKind: 'Ethereum'
-          });
-          if (xmtpDm?.id) {
-            activeXmtpDmIdRef.current = xmtpDm.id;
-            // [CRITICAL FIX] Populate peerInboxId so stream routing fallback works
-            try {
-              const memberIds = (xmtpDm as any).memberInboxIds ?? [];
-              const selfId = (client as any).inboxId ?? "";
+          if (raw && raw.length > 0) {
+            // BEST SOURCE OF TRUTH: The actual messages fetched
+            const firstMsg = raw[0];
+            const convoId = firstMsg.conversation?.id || firstMsg.conversationId || firstMsg.groupId;
+            if (convoId) activeXmtpDmIdRef.current = convoId;
+            
+            const selfId = (client as any).inboxId ?? "";
+            const peerMsg = raw.find((m: any) => m.senderInboxId && m.senderInboxId !== selfId);
+            if (peerMsg) activePeerInboxIdRef.current = peerMsg.senderInboxId;
+          } else {
+            // FALLBACK: Find existing DM in listDms safely without creating a ghost
+            const { getAddress } = await import('viem');
+            let normalizedPeer = activePeer;
+            try { normalizedPeer = getAddress(activePeer); } catch {}
+            
+            const dms = await client.conversations.listDms();
+            const selfId = (client as any).inboxId ?? "";
+            let foundDm = null;
+            
+            for (const d of dms) {
+              const pAddr = await extractPeerAddress(d, selfId, address || "").catch(() => null);
+              if (pAddr && pAddr.toLowerCase() === normalizedPeer.toLowerCase()) {
+                foundDm = d;
+                break;
+              }
+            }
+            
+            if (foundDm) {
+              activeXmtpDmIdRef.current = foundDm.id;
+              const memberIds = typeof foundDm.members === 'function' 
+                ? (await foundDm.members()).map((m: any) => m.inboxId) 
+                : (foundDm.memberInboxIds ?? []);
               const peerId = memberIds.find((id: string) => id !== selfId) ?? "";
               if (peerId) activePeerInboxIdRef.current = peerId;
-            } catch {}
+            }
           }
-        } catch {}
+        } catch (e) {
+          console.warn('[Ledger Chat] Failed to resolve DM IDs securely:', e);
+        }
         
         const clearTsMs = parseInt(localStorage.getItem(`ledger_cleared_${address}_${activePeer.toLowerCase()}`) || '0', 10);
         if (clearTsMs > 0) {
