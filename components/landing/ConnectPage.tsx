@@ -286,7 +286,7 @@ export default function ConnectPage() {
             setLinked(true); redirectingRef.current = true;
             const rp = new URLSearchParams(window.location.search);
             const rv = rp.get("returnUrl") || rp.get("redirect_url");
-            const safe = (rv && rv !== "/portfolio" && !rv.startsWith("/terminal")) ? rv : "/hub";
+            const safe = (rv && rv !== '/portfolio' && !rv.startsWith('/terminal')) ? rv : '/chat';
             window.location.replace(safe); return;
           }
         }
@@ -313,7 +313,7 @@ export default function ConnectPage() {
           setLinked(true); redirectingRef.current = true;
           const rp = new URLSearchParams(window.location.search);
           const rv = rp.get("returnUrl") || rp.get("redirect_url");
-          window.location.replace((rv && !rv.startsWith("/terminal")) ? rv : "/hub");
+          window.location.replace((rv && !rv.startsWith('/terminal')) ? rv : '/chat');
         } else { setAuthStatus("failed"); signingRef.current = false; }
       } catch (e: any) {
         if (e?.message?.toLowerCase().includes("rejected") || e?.message?.toLowerCase().includes("cancelled")) toast.error("Signature declined");

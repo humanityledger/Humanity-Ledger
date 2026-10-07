@@ -42,7 +42,33 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
     if (file) {
       const reader = new FileReader();
       reader.onload = (ev) => {
-        if (ev.target?.result) setAvatar(ev.target.result as string);
+        if (ev.target?.result) {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_SIZE = 256;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_SIZE) {
+                height *= MAX_SIZE / width;
+                width = MAX_SIZE;
+              }
+            } else {
+              if (height > MAX_SIZE) {
+                width *= MAX_SIZE / height;
+                height = MAX_SIZE;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, width, height);
+            setAvatar(canvas.toDataURL('image/jpeg', 0.8));
+          };
+          img.src = ev.target.result as string;
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -104,20 +130,33 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
     }
 
     try {
-      await fetch('/api/users/register', {
+      await fetch('/api/user/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           walletAddress: address,
           displayName: displayName.trim(),
           chatName: finalUsername.replace('@', ''),
           bio: bio.trim() || `From ${country}`,
+          avatarUrl: avatar || undefined,
         }),
       });
     } catch {}
 
+    // Persist avatar so it shows immediately everywhere in the app
     if (typeof window !== 'undefined') {
+      if (avatar) {
+        try { localStorage.setItem('ledger_avatar', avatar); } catch {}
+        // Notify the app that avatar changed
+        window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { avatarUrl: avatar } }));
+      }
       localStorage.setItem(`ledger_onboarded_${address}`, 'true');
+    }
+
+    // Request notification permission if the user opted in
+    if (notificationsEnabled && typeof window !== 'undefined' && 'Notification' in window) {
+      try { await Notification.requestPermission(); } catch {}
     }
 
     setIsSubmitting(false);
@@ -326,7 +365,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 className="w-full max-w-sm mx-auto flex flex-col"
               >
                 <div className="mb-8 text-center">
-                  <div className="inline-flex items-center justify-center p-3 bg-purple-500/10 rounded-2xl mb-4 text-purple-600">
+                  <div className="inline-flex items-center justify-center p-3 bg-[#25D366]/10 rounded-2xl mb-4 text-[#25D366]">
                     <Key size={24} />
                   </div>
                   <h2 className="text-3xl font-black tracking-tight mb-2">Vault Security</h2>
@@ -343,7 +382,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                       <div
                         key={i}
                         className={`w-12 h-14 rounded-xl flex items-center justify-center text-2xl font-black transition-all ${
-                          pin.length > i ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30 scale-105' : 'bg-black/5 text-transparent'
+                          pin.length > i ? 'bg-[#25D366] text-white shadow-lg shadow-[#25D366]/30 scale-105' : 'bg-black/5 text-transparent'
                         }`}
                       >
                         {pin.length > i ? '•' : ''}
@@ -372,7 +411,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                       <select
                         value={privacyLastSeen}
                         onChange={(e) => setPrivacyLastSeen(e.target.value as any)}
-                        className="w-full bg-white border border-black/10 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 rounded-xl py-3.5 pl-4 pr-10 text-[16px] font-medium text-black outline-none transition-all appearance-none cursor-pointer shadow-sm"
+                        className="w-full bg-white border border-black/10 focus:border-[#25D366] focus:ring-4 focus:ring-[#25D366]/10 rounded-xl py-3.5 pl-4 pr-10 text-[16px] font-medium text-black outline-none transition-all appearance-none cursor-pointer shadow-sm"
                       >
                         <option value="everybody">Visible to Everybody</option>
                         <option value="contacts">My Contacts Only</option>
@@ -386,7 +425,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 <button
                   onClick={handleNext}
                   disabled={pin.length !== 6}
-                  className="w-full py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-black/10 disabled:text-black/40 active:scale-95 rounded-2xl text-white font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/30 disabled:shadow-none"
+                  className="w-full py-4 bg-[#25D366] hover:bg-[#128C7E] disabled:bg-black/10 disabled:text-black/40 active:scale-95 rounded-2xl text-white font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#25D366]/30 disabled:shadow-none"
                 >
                   Secure Account <ChevronRight size={20} />
                 </button>
