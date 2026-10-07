@@ -118,10 +118,10 @@ PollBubble.displayName = 'PollBubble';
 // â”€â”€â”€ Payment Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
   const raw = content.replace('__PAYMENT__::', '');
-  let amount = '?', recipient = '';
+  let amount = '?', recipient = '', token = 'QDs', txHash = '';
   try {
     const parsed = JSON.parse(raw);
-    amount = parsed.amount ?? parsed;
+    amount = parsed.amount ?? parsed; token = parsed.token || 'QDs'; txHash = parsed.txHash || '';
     recipient = parsed.to ? `${String(parsed.to).slice(0, 6)}...${String(parsed.to).slice(-4)}` : '';
   } catch { amount = raw; }
   return (
@@ -131,9 +131,9 @@ const PaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: bo
           <div className={`w-7 h-7 rounded-full flex items-center justify-center ${isMe ? 'bg-white/25' : 'bg-[#30d158]/15'}`}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isMe ? 'white' : '#30d158'} strokeWidth="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
           </div>
-          <span className={`text-[11px] font-bold uppercase tracking-widest ${isMe ? 'text-white/80' : 'text-[#30d158]'}`}>QD Transfer</span>
+          <span className={`text-[11px] font-bold uppercase tracking-widest ${isMe ? 'text-white/80' : 'text-[#30d158]'}`}>Crypto Transfer</span>
         </div>
-        <p className={`text-[22px] font-black tracking-tight ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>{amount} <span className="text-[14px] font-semibold opacity-70">QDs</span></p>
+        <p className={`text-[22px] font-black tracking-tight ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>{amount} <span className="text-[14px] font-semibold opacity-70">{token}</span></p>
         {recipient && <p className={`text-[11px] font-mono ${isMe ? 'text-white/60' : 'text-black/40'}`}>â†’ {recipient}</p>}
       </div>
     </div>

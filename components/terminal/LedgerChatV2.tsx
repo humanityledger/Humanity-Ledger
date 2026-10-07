@@ -491,6 +491,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [reactionMenu, setReactionMenu] = useState<string | null>(null); // Phase 2: Emoji Reactions
   const [pinnedMessageId, setPinnedMessageId] = useState<string | null>(null); // Phase 3: Pinned
   const [burnTimer, setBurnTimer] = useState<number | null>(null); // Phase 3: Self-Destruct TTL
+  const [isFetchingChat, setIsFetchingChat] = useState<boolean>(false);
   const [messages, setMessages] = useState<any[]>([]);
   // [CRITICAL FIX #3 SUPPORT] Ref kept in sync with messages state so that the
   // stream's for-await loop can read the latest snapshot without a stale closure.
@@ -3251,9 +3252,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     let cancelled = false;
     let isFetching = false;
 
-    const fetchHistorical = async () => {
+    const fetchHistorical = async (isInitial = false) => {
       if (isFetching || cancelled) return;
       isFetching = true;
+      if (isInitial) setIsFetchingChat(true);
       try {
         // [1] Load instantly from IndexedDB cache
         const dmId = `dm-${activePeer.toLowerCase()}`;
@@ -3530,13 +3532,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         console.warn('[Chat] load messages failed:', e);
       } finally {
         isFetching = false;
+        setIsFetchingChat(false);
       }
     };
 
-    fetchHistorical();
+    fetchHistorical(true);
 
     // Fallback polling for the active conversation history
-    const pollId = setInterval(fetchHistorical, 5000);
+    const pollId = setInterval(() => fetchHistorical(false), 5000);
 
     const fetchFriendRequests = async () => {
       if (!address) return;
@@ -4748,17 +4751,27 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   if (c.startsWith('__TYPING__')) return false;
                   return true;
                 });
-                if (filteredMsgs.length === 0) return (
-                  <div className="flex-1 flex flex-col items-center justify-center p-6">
-                    <div className="bg-[#F2F2F7] rounded-2xl p-6 max-w-[280px] text-center border border-black/5">
-                      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-40"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                if (filteredMsgs.length === 0) {
+                  if (isFetchingChat) {
+                    return (
+                      <div className="flex-1 flex flex-col items-center justify-center p-6">
+                        <div className="w-8 h-8 border-4 border-black/10 border-t-[#25D366] rounded-full animate-spin"></div>
+                        <p className="mt-4 text-[12px] font-bold text-black/40 uppercase tracking-widest">Syncing History</p>
                       </div>
-                      <p className="text-[15px] font-bold text-[#000000] mb-2">It's quiet here</p>
-                      <p className="text-[13px] text-[#8E8E93] leading-relaxed">Send a message to start this secure chat. Only you and this contact can read what's sent.</p>
+                    );
+                  }
+                  return (
+                    <div className="flex-1 flex flex-col items-center justify-center p-6">
+                      <div className="bg-[#F2F2F7] rounded-2xl p-6 max-w-[280px] text-center border border-black/5">
+                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-40"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                        </div>
+                        <p className="text-[15px] font-bold text-[#000000] mb-2">It's quiet here</p>
+                        <p className="text-[13px] text-[#8E8E93] leading-relaxed">Send a message to start this secure chat. Only you and this contact can read what's sent.</p>
+                      </div>
                     </div>
-                  </div>
-                );
+                  );
+                }
                 return (
                   <VirtualizedMessageList
                     messages={filteredMsgs}
