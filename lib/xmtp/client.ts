@@ -365,7 +365,8 @@ export async function getDmId(client: Client, peerAddress: string): Promise<stri
     identifier: normalized,
     identifierKind: 'Ethereum',
   };
-  const dm = await client.conversations.newDmWithIdentifier(identifier);
+  const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
+          const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
   return dm.id;
 }
 
@@ -411,7 +412,8 @@ export async function sendMessage(
       try {
         // Always try direct XMTP send first (newDmWithIdentifier handles
         // both "already exists" and "create new" cases atomically)
-        const dm = await client.conversations.newDmWithIdentifier(identifier);
+        const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
+          const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
         
         // [CRITICAL FIX] Must sync the DM before sending, or messages get lost 
         // in local MLS state desync on XMTP v3+
@@ -585,7 +587,8 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
       identifier: normalizedPeer,
       identifierKind: 'Ethereum',
     };
-    const dm = await client.conversations.newDmWithIdentifier(identifier);
+    const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
+          const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
     
     // 3. Sync DM and fetch messages
     await dm.sync().catch(console.warn);
@@ -713,5 +716,6 @@ export async function syncOfflineQueue(client: Client, myEthAddress: string): Pr
     console.error('[XMTP] Failed to sync offline queue', e);
   }
 }
+
 
 

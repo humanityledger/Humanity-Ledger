@@ -1844,3 +1844,6 @@ w3m-modal {
   zoom: 1.25;
 }
 
+
+w3m-modal, appkit-modal, wui-qr-code { transform: scale(1.5) !important; transform-origin: center center; }
+

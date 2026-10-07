@@ -3208,6 +3208,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               }
             }
           }
+          await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (e: any) {
           const errMsg = (e?.message || String(e) || '').toLowerCase();
           // GroupInactive = stale MLS epoch. Silently re-sync and restart stream.
