@@ -2816,7 +2816,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   const senderAddr = await resolveSenderAddress(msg.senderInboxId, client);
                   resolvedPeerAddr = senderAddr?.toLowerCase() || '';
                 } else if (msg.conversation) {
-                  const dmPeer = await extractPeerAddress(msg.conversation, selfInboxId);
+                  const dmPeer = await extractPeerAddress(msg.conversation, selfInboxId, address || "");
                   resolvedPeerAddr = dmPeer?.toLowerCase() || '';
                 }
               } catch (e) {
@@ -2841,7 +2841,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 }
                 
                 if (dm) {
-                  const dmPeer = await extractPeerAddress(dm, selfInboxId);
+                  const dmPeer = await extractPeerAddress(dm, selfInboxId, address || "");
                   resolvedPeerAddr = dmPeer?.toLowerCase() || '';
                 }
               } catch (e) {
@@ -3018,7 +3018,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             }
 
             // Phase 5: Intercept Payment Signals for Auto-Sync
-            if (typeof mappedContent === 'string' && mappedContent.startsWith('__PAYMENT__')) {
+            if (typeof mappedContent === 'string' && false /* __PAYMENT__ bubbles are rendered */) {
               // Reconcile balance from server because the sender just transferred QDs to our address
               refreshBalanceRef.current().catch(() => {});
             }
@@ -3082,7 +3082,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 mappedContent.startsWith('__CALL_') ||
                 mappedContent.startsWith('__READ__') ||
                 mappedContent.startsWith('__VOTE__') ||
-                mappedContent.startsWith('__PAYMENT__')
+                false /* __PAYMENT__ bubbles are rendered */
               )) {
                 // Signal consumed — do not insert into message list
                 continue;
@@ -4727,7 +4727,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     <button onClick={() => {
                       localStorage.clear();
                       window.location.reload();
-                    }} className="bg-red-500 text-white px-2 py-0.5 rounded">Hard Reset</button>
+                    }} className="bg-red-500 text-white px-2 py-0.5 rounded">Hard Reset</button><button onClick={async () => { if (!client) return; toast.info("Quantum Auditing..."); try { await client.conversations.sync(); const dms = await client.conversations.listDms(); let totalMsgs = 0; for (const d of dms) { try { await d.sync(); const msgs = await d.messages(); totalMsgs += msgs.length; } catch(e) {} } toast.success(`Audit complete: Found ${dms.length} Conv. & ${totalMsgs} Total Messages`); } catch(e) { toast.error("Audit failed"); } }} className="bg-purple-600 text-white px-2 py-0.5 rounded ml-2">Quantum Audit</button>
                   </div>
                 </div>
               ) : null}
