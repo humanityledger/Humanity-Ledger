@@ -4698,14 +4698,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   <div>Conv ID Filter: {activePeer ? `dm-${activePeer.toLowerCase()}` : 'NONE'}</div>
                   <div>State Msgs Total: {messages.length}</div>
                   <div>State Msgs Filtered: {messages.filter(m => m.conversationId === (activePeer ? `dm-${activePeer.toLowerCase()}` : '')).length}</div>
-                  <button onClick={async () => {
-                    if (!client || !activePeer) return;
-                    try {
-                      const { canReceiveMessages } = await import('@/lib/xmtp/client');
-                      const can = await canReceiveMessages(client, activePeer);
-                      toast[can ? 'success' : 'error'](`${activePeer.slice(0,6)}... is ${can ? 'ON' : 'NOT ON'} XMTP`);
-                    } catch (e) { toast.error('Check failed'); }
-                  }} className="mt-1 bg-black/10 px-2 py-0.5 rounded">Test Peer</button>
+                  <div className="mt-1 flex gap-2">
+                    <button onClick={async () => {
+                      if (!client || !activePeer) return;
+                      try {
+                        const { canReceiveMessages } = await import('@/lib/xmtp/client');
+                        const can = await canReceiveMessages(client, activePeer);
+                        toast[can ? 'success' : 'error'](`${activePeer.slice(0,6)}... is ${can ? 'ON' : 'NOT ON'} XMTP`);
+                      } catch (e) { toast.error('Check failed'); }
+                    }} className="bg-black/10 px-2 py-0.5 rounded">Test Peer</button>
+                    <button onClick={() => {
+                      localStorage.clear();
+                      window.location.reload();
+                    }} className="bg-red-500 text-white px-2 py-0.5 rounded">HARD RESET & RELOAD</button>
+                  </div>
                 </div>
               ) : null}
 
