@@ -366,7 +366,7 @@ export async function getDmId(client: Client, peerAddress: string): Promise<stri
     identifierKind: 'Ethereum',
   };
   const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
-          const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
+  const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
   return dm.id;
 }
 
@@ -413,7 +413,7 @@ export async function sendMessage(
         // Always try direct XMTP send first (newDmWithIdentifier handles
         // both "already exists" and "create new" cases atomically)
         const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
-          const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
+        const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
         
         // [CRITICAL FIX] Must sync the DM before sending, or messages get lost 
         // in local MLS state desync on XMTP v3+

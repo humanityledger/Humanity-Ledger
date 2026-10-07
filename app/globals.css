@@ -1839,11 +1839,30 @@ html.watermark-active body::after {
   z-index: 9999;
 }
 
-/* --- AppKit Modal Scaling for Desktop --- */
+/* --- AppKit Modal Sizing for Desktop .exe (Electron) --- */
+/* Use min-width / min-height to expand the container naturally, NO transform/scale/zoom
+   which clips the QR code. The modal web-component must overflow visible so the full 
+   QR matrix is always scannable. */
 w3m-modal {
-  zoom: 1.25;
+  --w3m-qr-size: 320px !important;
 }
 
+/* Expand the inner card so QR is never cropped */
+w3m-modal wui-card,
+wui-card {
+  min-width: 420px !important;
+  max-width: 520px !important;
+}
 
-w3m-modal, appkit-modal, wui-qr-code { transform: scale(1.5) !important; transform-origin: center center; }
+/* The QR svg/canvas inside the modal */
+wui-qr-code {
+  width: 320px !important;
+  height: 320px !important;
+}
+
+wui-qr-code canvas,
+wui-qr-code svg {
+  width: 100% !important;
+  height: 100% !important;
+}
 
