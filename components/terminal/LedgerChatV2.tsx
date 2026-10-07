@@ -3057,6 +3057,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               msg.senderInboxId.toLowerCase() === activePeerInboxId.toLowerCase();
             const belongsToActive = belongsToActiveByAddr || belongsToActiveByConvoId || belongsToActiveBySenderInboxId;
 
+            // DIAGNOSTICS LOGGING
+            console.log(`[XMTP Stream] New MSG | fromPeer:${fromPeer} | msgPeer:${normalizedMsgPeer} | activePeer:${normalizedActivePeer} | convoId:${convoId} | activeDmId:${activeXmtpDmIdRef.current}`);
+            console.log(`[XMTP Stream] belongsToActive:${belongsToActive} (Addr:${belongsToActiveByAddr}, Convo:${belongsToActiveByConvoId}, Inbox:${belongsToActiveBySenderInboxId})`);
+            (window as any).__xmtp_last_stream_msg = { msgPeer: normalizedMsgPeer, activePeer: normalizedActivePeer, belongsToActive };
 
             // [CRITICAL BUG FIX] If the message belongs to the active chat via the convoId fallback, 
             // msgConvPeer is a hash, meaning mappedMsg.conversationId was set to dm-<hash>.

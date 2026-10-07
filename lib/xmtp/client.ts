@@ -410,10 +410,26 @@ export async function sendMessage(
 
     for (let i = 0; i < 3; i++) {
       try {
-        // Always try direct XMTP send first (newDmWithIdentifier handles
-        // both "already exists" and "create new" cases atomically)
-        const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
-        const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
+        // [CRITICAL FIX v6] Find existing DM first to prevent MLS split-brain
+        // When sending, calling newDmWithIdentifier without checking listDms
+        // can create a ghost conversation that the recipient's client ignores.
+        let dm: any = null;
+        const selfInboxId = (client as any).inboxId ?? '';
+        try {
+          const dms = await client.conversations.listDms();
+          for (const d of dms) {
+            const peerAddr = await extractPeerAddress(d, selfInboxId).catch(() => null);
+            if (peerAddr && peerAddr.toLowerCase() === normalizedTo.toLowerCase()) {
+              dm = d;
+              break;
+            }
+          }
+        } catch (listErr) {}
+
+        if (!dm) {
+          const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
+          dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
+        }
         
         // [CRITICAL FIX] Must sync the DM before sending, or messages get lost 
         // in local MLS state desync on XMTP v3+
