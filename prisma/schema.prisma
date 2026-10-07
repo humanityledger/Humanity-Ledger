@@ -1668,6 +1668,7 @@ model CommunityPost {
   communityId    String
   authorAddress  String
   content        String   // ENCRYPTED CIPHERTEXT (AES-256-GCM or MLS payload)
+  title          String?
   contentHtml    String?  // ENCRYPTED HTML CIPHERTEXT
   likes          Int      @default(0)
   createdAt      DateTime @default(now())

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { communityId, content, contentHtml, plainText } = body;
+    const { communityId, title, content, contentHtml, plainText } = body;
 
     // authorAddress comes from body OR from the x-web3-address header
     const authorAddress =
@@ -25,6 +25,7 @@ export async function POST(req: Request) {
       data: {
         communityId,
         authorAddress: authorAddress.toLowerCase(),
+        title,
         content,
         contentHtml: contentHtml || content,
       },
