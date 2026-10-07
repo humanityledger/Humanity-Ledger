@@ -3269,6 +3269,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         // [2] Fetch fresh from XMTP network
         let raw = await getMessages(client, activePeer);
         if (cancelled) return;
+        console.log(`[XMTP fetchHistorical] raw msgs from network: ${raw.length} for peer ${activePeer.slice(0,10)}`);
+        (window as any).__xmtp_raw_count = raw.length;
+        (window as any).__xmtp_peer = activePeer;
 
         // Capture the native XMTP conversation ID so the stream loop can
         // route messages correctly even when inboxId→address resolution fails.
@@ -4692,25 +4695,32 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               {/* XMTP Diagnostics Panel */}
               {process.env.NODE_ENV !== 'production' || true ? (
                 <div className="z-10 bg-yellow-50 border border-yellow-300 rounded p-2 mb-2 text-[10px] font-mono text-black/80">
-                  <div className="font-bold mb-1">XMTP Diagnostics</div>
-                  <div>Client Inbox: {(client as any)?.inboxId ? (client as any).inboxId.slice(0,12)+'...' : 'NOT INIT'}</div>
-                  <div>Active Peer: {activePeer ? activePeer.slice(0,10)+'...' : 'NONE'}</div>
-                  <div>Conv ID Filter: {activePeer ? `dm-${activePeer.toLowerCase()}` : 'NONE'}</div>
-                  <div>State Msgs Total: {messages.length}</div>
-                  <div>State Msgs Filtered: {messages.filter(m => m.conversationId === (activePeer ? `dm-${activePeer.toLowerCase()}` : '')).length}</div>
-                  <div className="mt-1 flex gap-2">
+                  <div className="font-bold mb-1">🔍 XMTP Diagnostics</div>
+                  <div>Client Inbox: {(client as any)?.inboxId ? (client as any).inboxId.slice(0,12)+'...' : '❌ NOT INIT'}</div>
+                  <div>Active Peer: {activePeer ? activePeer.slice(0,10)+'...' : '❌ NONE'}</div>
+                  <div>State Msgs Total: {messages.length} | Shown: {messages.filter(m => m.conversationId === (activePeer ? `dm-${activePeer.toLowerCase()}` : '')).length}</div>
+                  <div>XMTP Network Raw: {typeof window !== 'undefined' ? ((window as any).__xmtp_raw_count ?? '?') : '?'} msgs</div>
+                  <div className="mt-1 flex gap-2 flex-wrap">
                     <button onClick={async () => {
                       if (!client || !activePeer) return;
                       try {
                         const { canReceiveMessages } = await import('@/lib/xmtp/client');
                         const can = await canReceiveMessages(client, activePeer);
-                        toast[can ? 'success' : 'error'](`${activePeer.slice(0,6)}... is ${can ? 'ON' : 'NOT ON'} XMTP`);
+                        toast[can ? 'success' : 'error'](`Peer is ${can ? 'ON ✓' : 'NOT ON ✗'} XMTP`);
                       } catch (e) { toast.error('Check failed'); }
                     }} className="bg-black/10 px-2 py-0.5 rounded">Test Peer</button>
+                    <button onClick={async () => {
+                      if (!client || !activePeer) return;
+                      try {
+                        toast.info('Force-syncing XMTP...');
+                        await client.conversations.sync();
+                        toast.success('Sync done — reloading messages');
+                      } catch (e) { toast.error('Sync failed: ' + (e as any)?.message); }
+                    }} className="bg-black/10 px-2 py-0.5 rounded">Force Sync</button>
                     <button onClick={() => {
                       localStorage.clear();
                       window.location.reload();
-                    }} className="bg-red-500 text-white px-2 py-0.5 rounded">HARD RESET & RELOAD</button>
+                    }} className="bg-red-500 text-white px-2 py-0.5 rounded">Hard Reset</button>
                   </div>
                 </div>
               ) : null}

@@ -578,7 +578,7 @@ export async function extractPeerAddress(dm: any, selfInboxId: string): Promise<
  */
 export async function getMessages(client: Client, peerAddress: string): Promise<any[]> {
   try {
-    // 1. Sync globally
+    // 1. Sync conversations globally — ensures DM list is up to date
     await client.conversations.sync().catch(console.warn);
 
     // 2. Get active DM with peer — ALWAYS use checksummed address
@@ -587,19 +587,65 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
       identifier: normalizedPeer,
       identifierKind: 'Ethereum',
     };
-    const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
-          const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
-    
-    // 3. Sync DM and fetch messages
-    await dm.sync().catch(console.warn);
+
+    // [CRITICAL FIX v6] Try to find the DM in the local list FIRST.
+    // newDmWithIdentifier creates a new DM if one doesn't exist, which on XMTP v5.3.0
+    // can occasionally return a freshly-created (empty) conversation instead of the existing one.
+    // Using the existing DM object from listDms() gives us reliable message access.
+    let dm: any = null;
+    const selfInboxId = (client as any).inboxId ?? '';
+    try {
+      const dms: any[] = await client.conversations.listDms();
+      for (const d of dms) {
+        const peerAddr = await extractPeerAddress(d, selfInboxId).catch(() => null);
+        if (peerAddr && peerAddr.toLowerCase() === normalizedPeer.toLowerCase()) {
+          dm = d;
+          break;
+        }
+      }
+    } catch (listErr) {
+      console.warn('[XMTP] listDms failed, falling back to newDmWithIdentifier', listErr);
+    }
+
+    // Fallback: create/get DM via identifier if not found in list
+    if (!dm) {
+      const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
+      dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
+    }
+
+    if (!dm) return [];
+
+    // 3. CRITICAL: Sync the specific DM from the network (not just local cache)
+    // First sync — pulls network state
+    try {
+      await dm.sync();
+    } catch (syncErr) {
+      console.warn('[XMTP] dm.sync() first attempt failed:', syncErr);
+    }
+
+    // 4. Fetch messages (now from properly synced state)
     const msgs = await dm.messages();
-    
+
+    // 5. If we got 0 messages but this is an existing DM, do a second sync and retry
+    // (XMTP MLS sometimes needs two syncs on first open or after key rotation)
+    if ((!msgs || msgs.length === 0)) {
+      try {
+        await client.conversations.sync();
+        await dm.sync();
+        const retryMsgs = await dm.messages();
+        return retryMsgs ?? [];
+      } catch (retryErr) {
+        console.warn('[XMTP] Retry sync/messages failed:', retryErr);
+      }
+    }
+
     return msgs ?? [];
   } catch (e) {
     console.warn('[XMTP] getMessages failed:', e);
     return [];
   }
 }
+
 
 /**
  * Discover all DMs from the network and return new peer addresses
