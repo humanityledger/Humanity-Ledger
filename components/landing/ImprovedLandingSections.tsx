@@ -205,6 +205,12 @@ export function DownloadCTASection() {
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
                         <DownloadButton
+                            icon={<Download className="w-6 h-6" />}
+                            text="App de Windows"
+                            subtext="Descargar .exe (64-bit)"
+                            onClick={() => window.open('/LedgerChat-Setup-1.0.0.exe', '_blank')}
+                        />
+                        <DownloadButton
                             icon={<Chrome className="w-6 h-6" />}
                             text="Extensión de Chrome"
                             subtext="Disponible ahora"
@@ -230,15 +236,18 @@ function DownloadButton({
     icon, 
     text, 
     subtext, 
-    disabled = false 
+    disabled = false,
+    onClick
 }: { 
     icon: React.ReactNode; 
     text: string; 
     subtext: string; 
     disabled?: boolean;
+    onClick?: () => void;
 }) {
     return (
         <button
+            onClick={onClick}
             disabled={disabled}
             className={`
                 group relative px-8 py-5 rounded-[2rem] font-bold text-lg
