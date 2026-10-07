@@ -8,6 +8,7 @@ import { Loader2, Shield, Scale, FileText, Lock, Globe, ExternalLink } from 'luc
 import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { useAccount, useBalance } from 'wagmi';
 
 // We will construct categories inside the component to use the hook.
 
@@ -177,12 +178,12 @@ export function TerminalSettingsPanel() {
                        <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
                            <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">Wallet Address</span>
                            <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">Your primary identity</span>
-                           <input disabled value="0x... (Connected Wallet)" className="w-full bg-black/5 border border-transparent rounded-xl px-5 py-3 text-[12px] font-mono text-black/50 cursor-not-allowed" />
+                           <input disabled value={address ? `${address.slice(0, 6)}...${address.slice(-4)} (Connected Wallet)` : "Not Connected"} className="w-full bg-black/5 border border-transparent rounded-xl px-5 py-3 text-[12px] font-mono text-black/50 cursor-not-allowed" />
                        </div>
                        <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
                            <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">Linked Devices</span>
                            <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">Manage your active sessions</span>
-                           <div className="text-[12px] font-black tracking-widest text-black">1 device (this device)</div>
+                           <div className="text-[12px] font-black tracking-widest text-black">{typeof window !== "undefined" && localStorage.getItem("ledger_linked_device_qr") ? "2 devices" : "1 device (this device)"}</div>
                        </div>
                        <div className="flex flex-col p-6 bg-white border border-red-500/20 rounded-2xl hover:border-red-500/40 transition-all">
                            <span className="text-[12px] font-black uppercase tracking-widest text-red-600 mb-1.5">Danger Zone</span>
@@ -213,7 +214,7 @@ export function TerminalSettingsPanel() {
                        <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
                            <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">Crypto Balance</span>
                            <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">Available crypto</span>
-                           <div className="text-[16px] font-black tracking-widest text-black">0.00 ETH</div>
+                           <div className="text-[16px] font-black tracking-widest text-black">{balance ? parseFloat(balance.formatted).toFixed(4) : "0.00"} {balance?.symbol || "ETH"}</div>
                        </div>
                     </>
                  )}
@@ -297,7 +298,6 @@ export function TerminalSettingsPanel() {
                         </p>
                      </div>
                   )}
-               {activeTab === 'chat' && (<div className='col-span-1 md:col-span-2'><p>Coming soon</p></div>)}\n               {activeTab === 'accessibility' && (<div className='col-span-1 md:col-span-2'><p>Coming soon</p></div>)}\n               {activeTab === 'appearance' && (<div className='col-span-1 md:col-span-2'><p>Coming soon</p></div>)}\n               </motion.div>
            </AnimatePresence>
          </div>
       </div>
