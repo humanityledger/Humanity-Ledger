@@ -1,1 +1,0 @@
-==Start of PDF==' in data.get('content', ''):\n                content = data['content']\n                start_idx = content.find('==Start of PDF==')\n                end_idx = content.find('==End of PDF==

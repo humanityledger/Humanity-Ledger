@@ -1,1 +1,0 @@
-fetch('https://node.aztec.network/pxe', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({jsonrpc: '2.0', id: 1, method: 'pxe_getContractInstance', params: [{address: '0x1441491b59934ec64f8c98f17c91f23c01ca2a45dbb35caf123146ec76f9970c'}]})}).then(r => r.text()).then(console.log)

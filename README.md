@@ -2,9 +2,14 @@
 
 The **Humanity Ledger** is a next-generation, privacy-first decentralized communication and identity ecosystem. Built upon the principles of cryptographic sovereignty and zero-knowledge architecture, it provides an uncompromisingly secure platform for messaging, WebRTC calling, and Community building.
 
-![Status](https://img.shields.io/badge/Status-Production-success)
-![License](https://img.shields.io/badge/License-MIT-blue)
+![Status](https://img.shields.io/badge/Status-Beta-yellow)
+![License](https://img.shields.io/badge/License-Proprietary-red)
 ![Network](https://img.shields.io/badge/Network-Ethereum%20%7C%20XMTP-lightgrey)
+
+
+> [!NOTE]
+> **Status:** Ledger Chat is live in public beta. The ZK proving layer (Noir circuits) and Aztec L2 integration are in active development and **not yet connected** to the production frontend. See [docs/ACADEMIC_CLAIMS.md](docs/ACADEMIC_CLAIMS.md) for a transparent component status matrix.
+
 
 ## Table of Contents
 - [Abstract](#abstract)
