@@ -99,6 +99,17 @@ export class ChatDatabase {
       request.onerror = () => reject(request.error);
     });
   }
+
+  async clearAll(): Promise<void> {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['messages', 'conversations'], 'readwrite');
+      transaction.objectStore('messages').clear();
+      transaction.objectStore('conversations').clear();
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
 }
 
 export const chatDB = new ChatDatabase();

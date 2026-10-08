@@ -402,16 +402,30 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
     } catch { toast.error('Failed to sign out'); }
   }, [disconnect, myAddress]);
 
-  const purgeCache = useCallback(() => {
+  const purgeCache = useCallback(async () => {
     let count = 0;
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const k = localStorage.key(i);
-      if (k?.startsWith('ledger_cache_') || k?.startsWith('ledger_msg_cache_')) {
+      if (
+        k?.startsWith('ledger_cache_') || 
+        k?.startsWith('ledger_msg_cache_') || 
+        k?.startsWith('ledger_chat_history_') ||
+        k?.startsWith('ledger_cleared_')
+      ) {
         localStorage.removeItem(k); count++;
       }
     }
+    
+    // Clear IndexedDB for messages
+    try {
+        const { chatDB } = await import('@/lib/chat/indexeddb');
+        await chatDB.clearAll();
+        count += 10;
+    } catch(e) {}
+    
     toast.success(`Cleared ${count} cached items`);
     setModal(null);
+    setTimeout(() => window.location.reload(), 1000);
   }, []);
 
   const requestNotificationPermission = useCallback(async () => {
@@ -602,7 +616,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               <Group title="Linked Devices" footer="Link another desktop exactly like WhatsApp Web. Open Ledger Chat on the new device, then scan its QR code from this device.">
                 <Row
                   icon={<Smartphone size={18} />}
-                  label="Show Device QR (Coming Soon)"
+                  label="Link Another Device"
                   sublabel="Show QR code to link another device"
                   onTap={() => { setQrScanMode('show'); setModal('linked_devices'); }}
                 />

@@ -2810,7 +2810,25 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               const sentAtNs = nsToDate(msg.sentAtNs ?? msg.sentAt).getTime();
               const currentActivePeer = activePeerRef.current?.toLowerCase();
               
-              let resolvedPeerAddr = msg.conversation?.peerAddress?.toLowerCase() || '';
+              // [CRITICAL FIX v7] FAST PATH: If the message sender's inboxId is the currently
+              // active peer's known inboxId, resolve instantly without ANY network calls.
+              // This is the case for 99% of messages in an active conversation.
+              let resolvedPeerAddr = '';
+              
+              if (fromPeer && msg.senderInboxId && activePeerInboxIdRef.current &&
+                  msg.senderInboxId.toLowerCase() === activePeerInboxIdRef.current.toLowerCase()) {
+                resolvedPeerAddr = currentActivePeer || '';
+              }
+              
+              // Second fast path: check the global inboxId→address cache
+              if (!resolvedPeerAddr && fromPeer && msg.senderInboxId) {
+                const cached = await resolveSenderAddress(msg.senderInboxId, undefined as any);
+                if (cached) resolvedPeerAddr = cached.toLowerCase();
+              }
+              
+              if (!resolvedPeerAddr) {
+              resolvedPeerAddr = msg.conversation?.peerAddress?.toLowerCase() || '';
+            }
             if (!resolvedPeerAddr) {
               try {
                 if (fromPeer) {
@@ -2829,25 +2847,34 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const convoId = msg.convoId || msg.conversationId || msg.groupId || msg.conversation?.id || '';
             if (!resolvedPeerAddr && convoId) {
               try {
-                let dms = await client.conversations.listDms();
-                let dm = dms.find((d: any) => d.id === convoId);
-                
-                // [AUDIT FIX] If the DM is missing from local cache (new chat),
-                // perform a quick sync. This is much better than corrupting the UI
-                // with a raw convoId hash that breaks routing and deduplication.
-                if (!dm) {
-                  await client.conversations.sync();
-                  dms = await client.conversations.listDms();
-                  dm = dms.find((d: any) => d.id === convoId);
-                }
-                
-                if (dm) {
-                  const dmPeer = await extractPeerAddress(dm, selfInboxId, address || "");
-                  resolvedPeerAddr = dmPeer?.toLowerCase() || '';
+                // Check convIdToPeer cache first (populated by fetchHistorical)
+                const cachedPeer = convIdToPeer.current.get(convoId);
+                if (cachedPeer) {
+                  resolvedPeerAddr = cachedPeer.toLowerCase();
+                } else {
+                  let dms = await client.conversations.listDms();
+                  let dm = dms.find((d: any) => d.id === convoId);
+                  
+                  // [AUDIT FIX] If the DM is missing from local cache (new chat),
+                  // perform a quick sync. This is much better than corrupting the UI
+                  // with a raw convoId hash that breaks routing and deduplication.
+                  if (!dm) {
+                    await client.conversations.sync();
+                    dms = await client.conversations.listDms();
+                    dm = dms.find((d: any) => d.id === convoId);
+                  }
+                  
+                  if (dm) {
+                    const dmPeer = await extractPeerAddress(dm, selfInboxId, address || "");
+                    resolvedPeerAddr = dmPeer?.toLowerCase() || '';
+                    // Cache this mapping for future messages
+                    if (resolvedPeerAddr && convoId) convIdToPeer.current.set(convoId, resolvedPeerAddr);
+                  }
                 }
               } catch (e) {
                 console.warn('Failed to resolve convoId to peer address', e);
               }
+            }
             }
             
             // [AUDIT FIX] If all resolutions fail, fall back to convoId or senderInboxId 
@@ -3057,11 +3084,25 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               !!msg.senderInboxId &&
               !!activePeerInboxId &&
               msg.senderInboxId.toLowerCase() === activePeerInboxId.toLowerCase();
-            const belongsToActive = belongsToActiveByAddr || belongsToActiveByConvoId || belongsToActiveBySenderInboxId;
+            
+            // [CRITICAL FIX #4] If we literally just sent this message, it is in optimisticContentMap.
+            // This is absolute proof that the message belongs to the active peer!
+            const isKnownOptimistic = !fromPeer && optimisticContentMap.current.has(content);
+            
+            const belongsToActive = belongsToActiveByAddr || belongsToActiveByConvoId || belongsToActiveBySenderInboxId || isKnownOptimistic;
+
+            if (belongsToActive && convoId && !activeXmtpDmIdRef.current) {
+              // Lock in the convoId for future messages if we were missing it
+              activeXmtpDmIdRef.current = convoId;
+            }
+            if (belongsToActive && fromPeer && msg.senderInboxId && !activePeerInboxIdRef.current) {
+              // Lock in the peer inboxId for future messages if we were missing it
+              activePeerInboxIdRef.current = msg.senderInboxId;
+            }
 
             // DIAGNOSTICS LOGGING
             console.log(`[XMTP Stream] New MSG | fromPeer:${fromPeer} | msgPeer:${normalizedMsgPeer} | activePeer:${normalizedActivePeer} | convoId:${convoId} | activeDmId:${activeXmtpDmIdRef.current}`);
-            console.log(`[XMTP Stream] belongsToActive:${belongsToActive} (Addr:${belongsToActiveByAddr}, Convo:${belongsToActiveByConvoId}, Inbox:${belongsToActiveBySenderInboxId})`);
+            console.log(`[XMTP Stream] belongsToActive:${belongsToActive} (Addr:${belongsToActiveByAddr}, Convo:${belongsToActiveByConvoId}, Inbox:${belongsToActiveBySenderInboxId}, Opt:${isKnownOptimistic})`);
             (window as any).__xmtp_last_stream_msg = { msgPeer: normalizedMsgPeer, activePeer: normalizedActivePeer, belongsToActive };
 
             // [CRITICAL BUG FIX] If the message belongs to the active chat via the convoId fallback, 
@@ -3114,18 +3155,28 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     }
                   }
                   // Strategy 2: fallback — find any optimistic with identical content
-                  // within a 30-second window (handles slow networks and retry delays)
                   const optIdx = prev.findIndex(
                     m => m.id.startsWith('optimistic-') &&
-                         m.content === content &&
-                         Math.abs(m.sentAtNs - sentAtNs) < 30_000
+                         m.content === content
                   );
                   if (optIdx !== -1) {
                     const next = [...prev];
                     next[optIdx] = mappedMsg;
                     return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
                   }
-                  // Strategy 3: no optimistic found (e.g. second tab) — insert if not duplicate
+                  // Strategy 3: check if it's a transformed message (like __BURN__)
+                  const burnIdx = prev.findIndex(
+                    m => m.id.startsWith('optimistic-') &&
+                         typeof m.content === 'string' &&
+                         m.content.startsWith('__BURN_') &&
+                         m.content.endsWith('__::' + content)
+                  );
+                  if (burnIdx !== -1) {
+                    const next = [...prev];
+                    next[burnIdx] = mappedMsg;
+                    return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
+                  }
+                  // Strategy 4: no optimistic found (e.g. second tab) — insert if not duplicate
                   return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
                 }
 
@@ -3290,7 +3341,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             // BEST SOURCE OF TRUTH: The actual messages fetched
             const firstMsg = raw[0];
             const convoId = firstMsg.conversation?.id || firstMsg.conversationId || firstMsg.groupId;
-            if (convoId) activeXmtpDmIdRef.current = convoId;
+            if (convoId) {
+              activeXmtpDmIdRef.current = convoId;
+              // Cache for stream routing: convoId → peer eth address
+              convIdToPeer.current.set(convoId, activePeer.toLowerCase());
+            }
             
             const selfId = (client as any).inboxId ?? "";
             const peerMsg = raw.find((m: any) => m.senderInboxId && m.senderInboxId !== selfId);
@@ -3521,20 +3576,25 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           // For each NEW confirmed message, find and remove its optimistic twin
           const optimisticToRemove = new Set<string>();
           for (const confirmed of newConfirmed) {
-            // Strategy 1: exact match via optimisticContentMap (fastest)
-            const knownOptId = optimisticContentMap.current.get(confirmed.content);
-            if (knownOptId && existingIds.has(knownOptId)) {
-              optimisticToRemove.add(knownOptId);
-              optimisticContentMap.current.delete(confirmed.content);
+            // Check for identical content first, which covers the majority of cases.
+            // Ignore time window completely if content matches perfectly.
+            const exactTwin = prev.find(
+              m => m.id.startsWith('optimistic-') &&
+                   m.conversationId === activeId &&
+                   m.content === confirmed.content
+            );
+            if (exactTwin) {
+              optimisticToRemove.add(exactTwin.id);
             } else {
-              // Strategy 2: content + time window match (handles encoding edge cases)
-              const twin = prev.find(
+              // Strategy 2: check if it's a transformed message (like __BURN__)
+              const burnTwin = prev.find(
                 m => m.id.startsWith('optimistic-') &&
                      m.conversationId === activeId &&
-                     m.content === confirmed.content &&
-                     Math.abs(m.sentAtNs - confirmed.sentAtNs) < 30_000
+                     typeof m.content === 'string' &&
+                     m.content.startsWith('__BURN_') &&
+                     m.content.endsWith('__::' + confirmed.content)
               );
-              if (twin) optimisticToRemove.add(twin.id);
+              if (burnTwin) optimisticToRemove.add(burnTwin.id);
             }
           }
           

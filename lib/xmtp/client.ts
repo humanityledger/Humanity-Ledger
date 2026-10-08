@@ -116,6 +116,27 @@ export async function resolveInboxIdToAddress(inboxId: string, client?: Client):
     // Silently fail — not all installations expose this
   }
 
+  // [CRITICAL FIX] Fallback to scanning listDms() to find the address
+  // In v5.3.0, inboxStateFromInboxIds may fail. We can securely resolve
+  // any inboxId that we already have a DM with by scanning our DMs.
+  if (client) {
+    try {
+      const dms = await client.conversations.listDms();
+      for (const dm of dms) {
+        const members = typeof dm.members === 'function' ? await dm.members() : (dm.members ?? []);
+        const targetMember = members.find((m: any) => m.inboxId?.toLowerCase() === inboxId.toLowerCase());
+        if (targetMember) {
+          const addrs = targetMember.accountAddresses || targetMember.addresses || [];
+          if (addrs && addrs.length > 0) {
+            const addr = addrs[0].toLowerCase();
+            cacheInboxId(inboxId.toLowerCase(), addr);
+            return addr;
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
   return null;
 }
 
