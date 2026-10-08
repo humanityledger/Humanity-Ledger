@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { Resend } from 'resend';
 
 // Resend instance  fallback for dev but required for prod
-const resend = new Resend(process.env.RESEND_API_KEY || 're_mock_key');
+const resend = new Resend(process.env.RESEND_API_KEY as string);
 
 const TIER_NAMES: Record<string, string> = {
   STARTER: 'Starter',

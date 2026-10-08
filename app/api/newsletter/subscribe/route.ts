@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { randomBytes } from 'crypto';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy');
+const resend = new Resend(process.env.RESEND_API_KEY as string);
 
 // Schema de validación
 const SubscribeSchema = z.object({

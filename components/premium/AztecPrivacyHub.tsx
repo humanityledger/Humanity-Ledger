@@ -25,7 +25,7 @@ interface ShieldedNode {
   valueParsed: string;
 }
 
-const ETHERSCAN_API = 'https://api.etherscan.io/api';
+
 
 function statusFromConfirmations(conf: string): ShieldedNode['status'] {
   const n = parseInt(conf);
@@ -52,8 +52,8 @@ export default function AztecPrivacyHub() {
 
     try {
       // Fetch last 5 txs for the connected wallet from Etherscan
-      const apiKey = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || '';
-      const url = `${ETHERSCAN_API}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=5&sort=desc&apikey=${apiKey}`;
+      
+      const url = `/api/internal/etherscan?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=5&sort=desc`;
       const res = await fetch(url);
       const json = await res.json();
 
@@ -68,7 +68,7 @@ export default function AztecPrivacyHub() {
         }));
         setNodes(mapped);
         // anonymity set = total txs in Etherscan for this address
-        const countRes = await fetch(`${ETHERSCAN_API}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&sort=desc&apikey=${apiKey}`);
+        const countRes = await fetch(`/api/internal/etherscan?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&sort=desc`);
         const countJson = await countRes.json();
         if (countJson.status === '1') {
           setAnonymitySet(parseInt(countJson.result?.[0]?.nonce || '0') + 1);
@@ -79,7 +79,7 @@ export default function AztecPrivacyHub() {
         setNodes([]);
       }
     } catch (e) {
-      setError('Etherscan API unavailable. Add NEXT_PUBLIC_ETHERSCAN_API_KEY to .env.');
+      setError('Etherscan API unavailable.');
     } finally {
       setIsLoading(false);
     }

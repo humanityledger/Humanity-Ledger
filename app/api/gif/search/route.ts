@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     // Using a more robust Tenor API key or fallback.
     // If we exceed quota, we should degrade gracefully.
     // We use the public key as fallback, but if they add an ENV var, we use that.
-    const apiKey = process.env.TENOR_API_KEY || 'AIzaSyAyimkuYQYF_FXVALexPubfQgShfu7Md68';
+    const apiKey = process.env.TENOR_API_KEY;
     
     const response = await fetch(
       `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${apiKey}&limit=20&media_filter=gif`

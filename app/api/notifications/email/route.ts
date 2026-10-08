@@ -9,7 +9,7 @@ import { safeToFixed, safeToLocaleString } from '@/lib/utils/number-format';
 
 // Initialize Resend with a dummy key if missing to prevent build crash
 // In production, the key must be present for emails to work.
-const apiKey = process.env.RESEND_API_KEY || 're_123456789'; 
+const apiKey = process.env.RESEND_API_KEY as string; 
 const resend = new Resend(apiKey);
 
 export async function POST(request: NextRequest) {
