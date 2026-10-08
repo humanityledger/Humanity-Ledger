@@ -218,7 +218,7 @@ export default function TransactionHistory({ authUserId, transactions: propTrans
 
 function StatCard({ title, value, icon, color }: { title: string; value: string | number; icon: React.ReactNode; color: string }) {
     const colors: Record<string, string> = {
-        blue: 'bg-[#25D366]/10 text-blue-600',
+        blue: 'bg-[#25D366]/10 text-emerald-600',
         red: 'bg-red-500/10 text-red-600',
         green: 'bg-green-500/10 text-green-600',
         orange: 'bg-orange-500/10 text-orange-600',

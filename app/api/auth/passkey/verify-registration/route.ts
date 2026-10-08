@@ -55,6 +55,6 @@ export async function POST(req: Request) {
 
     } catch (error: any) {
         console.error('[WebAuthn] Verify Registration Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

@@ -87,7 +87,7 @@ export default function GlassLogin() {
             className="relative w-full max-w-[340px] overflow-hidden rounded-3xl border border-white/10 bg-gray-900/30 backdrop-blur-2xl shadow-2xl ring-1 ring-white/5"
         >
             {/* Top glow effect */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-blue-400/50 to-transparent blur-sm" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent blur-sm" />
 
             {/* Main Content */}
             <div className="flex flex-col items-center p-8 pt-10">

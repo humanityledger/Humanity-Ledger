@@ -14,7 +14,7 @@ interface StatusComposerProps {
 }
 
 const GRADIENT_PRESETS = [
-  'linear-gradient(135deg, #1c7aff 0%, #a855f7 100%)',
+  'linear-gradient(135deg, #25D366 0%, #a855f7 100%)',
   'linear-gradient(135deg, #f97316 0%, #ec4899 100%)',
   'linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%)',
   'linear-gradient(135deg, #10b981 0%, #059669 100%)',
@@ -23,7 +23,7 @@ const GRADIENT_PRESETS = [
 ];
 
 const SOLID_PRESETS = [
-  '#000000', '#1c1c1e', '#1c7aff', '#30d158',
+  '#000000', '#1c1c1e', '#25D366', '#30d158',
   '#ff3b30', '#ff9500', '#af52de', '#636366',
 ];
 

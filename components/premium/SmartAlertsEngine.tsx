@@ -230,13 +230,13 @@ export default function SmartAlertsEngine({ isPremium, selectedWalletAddress }: 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
             <div className="p-3 bg-white/10 rounded-2xl border border-white/20 shadow-xl backdrop-blur-md">
-                <BellRing className="text-blue-400" size={28} />
+                <BellRing className="text-emerald-400" size={28} />
             </div>
             <div>
               <h2 className="text-3xl font-black text-white flex items-center gap-3 tracking-tighter uppercase italic">
                 Elite Intel
                 {unreadCount > 0 && (
-                  <span className="px-3 py-1 bg-blue-600 text-white text-[10px] font-black rounded-full uppercase tracking-widest shadow-lg shadow-blue-900/40 animate-pulse">
+                  <span className="px-3 py-1 bg-emerald-600 text-white text-[10px] font-black rounded-full uppercase tracking-widest shadow-lg shadow-emerald-900/40 animate-pulse">
                     {unreadCount} NEW SIGNAL
                   </span>
                 )}
@@ -263,7 +263,7 @@ export default function SmartAlertsEngine({ isPremium, selectedWalletAddress }: 
             key={f}
             onClick={() => setFilter(f)}
             className={`flex-1 py-3 px-4 rounded-xl text-xs font-black transition-all capitalize tracking-widest ${
-              filter === f ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:bg-white/5 hover:text-white'
+              filter === f ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' : 'text-gray-500 hover:bg-white/5 hover:text-white'
             }`}
           >
             {f}
@@ -300,7 +300,7 @@ export default function SmartAlertsEngine({ isPremium, selectedWalletAddress }: 
             <Filter size={120} />
         </div>
         <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 uppercase italic tracking-tighter">
-          <Zap className="text-blue-400" />
+          <Zap className="text-emerald-400" />
           Active Protocols
         </h3>
 
@@ -377,7 +377,7 @@ function CreateRuleModal({ isOpen, onClose, onCreate }: { isOpen: boolean, onClo
                   key={ch}
                   onClick={() => setActions(prev => ({ ...prev, [ch]: !prev[ch] }))}
                   className={`p-4 rounded-2xl border-2 font-black transition-all text-[10px] uppercase tracking-widest flex items-center gap-3 ${
-                    actions[ch] ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-900/40' : 'bg-white/5 text-gray-500 border-white/5 hover:border-white/10'
+                    actions[ch] ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-900/40' : 'bg-white/5 text-gray-500 border-white/5 hover:border-white/10'
                   }`}
                 >
                   <span className="text-lg">
@@ -412,7 +412,7 @@ function AlertCard({ alert, index, onCopyAttest, onMarkRead }: {
 }) {
   const getPriorityStyles = (priority: string) => {
     switch(priority) {
-      case 'critical': return 'border-[#25D366] bg-blue-600/5 shadow-blue-900/10';
+      case 'critical': return 'border-[#25D366] bg-emerald-600/5 shadow-emerald-900/10';
       case 'high': return 'border-purple-500 bg-purple-600/5 shadow-purple-900/10';
       case 'medium': return 'border-white/20 bg-white/5';
       default: return 'border-gray-800 bg-gray-900/5';
@@ -440,7 +440,7 @@ function AlertCard({ alert, index, onCopyAttest, onMarkRead }: {
           <div className="flex items-center gap-3 mb-3">
             <span className="text-xl font-black text-white uppercase italic tracking-tighter">{alert.title}</span>
             {alert.priority === 'critical' && (
-                <span className="px-2 py-0.5 bg-blue-600 text-[8px] font-black text-white rounded uppercase tracking-[0.2em]">Critical</span>
+                <span className="px-2 py-0.5 bg-emerald-600 text-[8px] font-black text-white rounded uppercase tracking-[0.2em]">Critical</span>
             )}
             {!alert.read && (
               <div className="w-2.5 h-2.5 bg-[#25D366] rounded-full animate-ping" />
@@ -454,7 +454,7 @@ function AlertCard({ alert, index, onCopyAttest, onMarkRead }: {
               <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black tracking-widest uppercase ${
                 alert.action.type === 'BUY' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
                 alert.action.type === 'SELL' ? 'bg-red-500/10 text-red-100 border border-red-500/20' :
-                'bg-[#25D366]/10 text-blue-400 border border-[#25D366]/20'
+                'bg-[#25D366]/10 text-emerald-400 border border-[#25D366]/20'
               }`}>
                 {alert.action.type}
               </div>
@@ -480,7 +480,7 @@ function AlertCard({ alert, index, onCopyAttest, onMarkRead }: {
                 <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">{alert.walletLabel}</span>
             </div>
             <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-blue-600/50" />
+                <div className="w-2 h-2 rounded-full bg-emerald-600/50" />
                 <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">
                   {new Date(alert.timestamp).toLocaleTimeString()}
                 </span>
@@ -488,7 +488,7 @@ function AlertCard({ alert, index, onCopyAttest, onMarkRead }: {
             {alert.copyable && (
               <button
                 onClick={() => onCopyAttest(alert)}
-                className="text-[10px] font-black text-blue-400 hover:text-blue-300 flex items-center gap-2 uppercase tracking-widest ml-auto"
+                className="text-[10px] font-black text-emerald-400 hover:text-emerald-300 flex items-center gap-2 uppercase tracking-widest ml-auto"
               >
                 <Copy size={14} />
                 Mirror Execution
@@ -503,7 +503,7 @@ function AlertCard({ alert, index, onCopyAttest, onMarkRead }: {
             className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl"
             title="Mark as analyzed"
           >
-            <CheckCircle size={24} className="text-blue-400" />
+            <CheckCircle size={24} className="text-emerald-400" />
           </button>
         )}
       </div>

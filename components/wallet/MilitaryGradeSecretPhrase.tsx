@@ -135,7 +135,7 @@ Wallet: Humanity Ledger Terminal v4.0
                     description="SHA-512 Hashing"
                 />
                 <StatCard
-                    icon={<Check className="text-blue-400" />}
+                    icon={<Check className="text-emerald-400" />}
                     label="Checksum"
                     value="Valid"
                     description="CRC32 Integrity"
@@ -164,7 +164,7 @@ Wallet: Humanity Ledger Terminal v4.0
             <div className="bg-white/50 backdrop-blur-xl border-2 border-purple-300 rounded-3xl p-8 mb-8 relative overflow-hidden">
                 {/* Background Pattern */}
                 <div className="absolute inset-0 opacity-5">
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-blue-600" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-emerald-600" />
                 </div>
 
                 <div className="relative z-10">
@@ -254,7 +254,7 @@ Wallet: Humanity Ledger Terminal v4.0
 
                     <button
                         onClick={handleVerification}
-                        className="mt-6 w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-black text-lg hover:scale-105 active:scale-95 transition-transform"
+                        className="mt-6 w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-emerald-600 text-white rounded-xl font-black text-lg hover:scale-105 active:scale-95 transition-transform"
                     >
                         Verify and Confirm
                     </button>

@@ -15,7 +15,7 @@ interface Props {
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
-    low: 'text-blue-400 border-[#25D366]/20 bg-[#25D366]/5',
+    low: 'text-emerald-400 border-[#25D366]/20 bg-[#25D366]/5',
     medium: 'text-yellow-400 border-yellow-500/20 bg-yellow-500/5',
     high: 'text-orange-400 border-orange-500/20 bg-orange-500/5',
     critical: 'text-indigo-400 border-indigo-500/20 bg-indigo-500/5',
@@ -204,7 +204,7 @@ export function HumanityLedgers({ alerts, threshold, onThresholdChange }: Props)
                             </div>
                             
                             <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                                <Link href={`/network/tx/${alert.txid}`} className="text-blue-400/60 text-[10px] font-mono hover:text-blue-400 truncate max-w-[140px]">
+                                <Link href={`/network/tx/${alert.txid}`} className="text-emerald-400/60 text-[10px] font-mono hover:text-emerald-400 truncate max-w-[140px]">
                                     {alert.txid}
                                 </Link>
                                 <span className="text-[9px] text-gray-600 uppercase tracking-tighter">Settlement Confirmed</span>

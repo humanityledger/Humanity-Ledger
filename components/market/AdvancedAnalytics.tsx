@@ -69,7 +69,7 @@ export function AdvancedAnalytics() {
             {/* Header / Ticker */}
             <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-6">
                 <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-emerald-600 rounded-lg flex items-center justify-center">
                         <Activity size={20} />
                     </div>
                     <div>
@@ -128,7 +128,7 @@ export function AdvancedAnalytics() {
                     <div className="bg-white/5 rounded-xl border border-white/5 p-4 flex-1">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-bold text-sm flex items-center gap-2">
-                                <Globe size={14} className="text-blue-400" />
+                                <Globe size={14} className="text-emerald-400" />
                                 Ledger Radar
                             </h3>
                         </div>

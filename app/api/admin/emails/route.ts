@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error fetching emails:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error', details: error.message },
+      { error: 'Internal Server Error', details: 'Error details redacted' },
       { status: 500 }
     );
   }

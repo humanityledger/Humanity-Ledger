@@ -17,7 +17,7 @@ export function Web3AccessSection() {
             
             {/* 1. New to Web3? Card (Blue Style) */}
             <div className="w-full bg-[#Dbf1ff] rounded-3xl p-10 md:p-14 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-10 shadow-lg group">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/20 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
                 
                 <div className="flex-1 text-center md:text-left z-10">
                     <h2 className="text-5xl md:text-7xl font-black text-[#031d47] mb-6 leading-[0.9] tracking-tighter uppercase font-heading">
@@ -28,7 +28,7 @@ export function Web3AccessSection() {
                     </p>
                     <button 
                         onClick={() => router.push('/wallet')}
-                        className="bg-[#030b36] text-white px-8 py-4 rounded-full font-black text-lg hover:bg-blue-900 transition-all active:scale-95 shadow-xl hover:shadow-2xl uppercase tracking-widest"
+                        className="bg-[#030b36] text-white px-8 py-4 rounded-full font-black text-lg hover:bg-emerald-900 transition-all active:scale-95 shadow-xl hover:shadow-2xl uppercase tracking-widest"
                     >
                         {t('web3.new_cta')}
                     </button>

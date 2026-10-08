@@ -9,7 +9,7 @@ async function resolveCaller(req: NextRequest) {
   if (verified) return verified.toLowerCase();
   const session = await getSession();
   if (session?.userId) return session.userId.toLowerCase();
-  return req.headers.get('x-web3-address')?.toLowerCase();
+  return null; // Spoofing vector closed
 }
 
 /**
@@ -43,14 +43,7 @@ export async function GET(req: NextRequest) {
 
     // 2. Calculate balance dynamically from the ledger
     const callerSafe = caller.replace(/'/g, "''");
-    const result = await prisma.$queryRawUnsafe(`
-      SELECT 
-        COALESCE(SUM(CASE WHEN direction = 'IN' THEN delta ELSE 0 END), 0) -
-        COALESCE(SUM(CASE WHEN direction = 'OUT' THEN delta ELSE 0 END), 0) as available,
-        COUNT(*) as version
-      FROM "QDCreditLedger"
-      WHERE "address" = '${callerSafe}'
-    `) as any[];
+    const result = await prisma.$queryRaw`SELECT COALESCE(SUM(CASE WHEN direction = 'IN' THEN delta ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN direction = 'OUT' THEN delta ELSE 0 END), 0) as available, COUNT(*) as version FROM "QDCreditLedger" WHERE "address" = ` as any[];
 
     // LC-258, LC-346: Exact contract shape
     const available = result[0]?.available || 0;

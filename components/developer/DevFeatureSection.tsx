@@ -38,7 +38,7 @@ export function DevFeatureSection({ title, description, details, lottieSrc, alig
                     <ul className="space-y-4">
                         {details.map((point, i) => (
                             <li key={i} className="flex items-start gap-4 text-neutral-600 font-mono text-sm border-l-2 border-neutral-200 pl-4">
-                                <span className="text-blue-600 font-bold">0{i + 1}.</span>
+                                <span className="text-emerald-600 font-bold">0{i + 1}.</span>
                                 {point}
                             </li>
                         ))}
@@ -62,7 +62,7 @@ export function DevFeatureSection({ title, description, details, lottieSrc, alig
                     className="flex-1 relative w-full h-[500px]"
                 >
                     {/* Background blob for depth */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-blue-50/50 to-purple-50/50 rounded-full blur-3xl opacity-50 transform scale-75" />
+                    <div className="absolute inset-0 bg-gradient-to-tr from-emerald-50/50 to-purple-50/50 rounded-full blur-3xl opacity-50 transform scale-75" />
                     
                     <div className="relative z-10 w-full h-full drop-shadow-2xl">
                         <ScrollLottie src={lottieSrc} className="w-full h-full" speed={1} />

@@ -188,8 +188,8 @@ export default function DeadMansSwitchModal({ isOpen, onClose }: DeadMansSwitchM
             {/* Not connected */}
             {!isConnected && (
               <div className="flex items-start gap-3 p-4 bg-[#25D366]/10 border border-[#25D366]/20 rounded-xl mb-4">
-                <Lock className="text-blue-400 shrink-0 mt-0.5" size={16} />
-                <p className="text-blue-300 text-xs">Connect your wallet to interact with the on-chain switch.</p>
+                <Lock className="text-emerald-400 shrink-0 mt-0.5" size={16} />
+                <p className="text-emerald-300 text-xs">Connect your wallet to interact with the on-chain switch.</p>
               </div>
             )}
 
@@ -279,7 +279,7 @@ export default function DeadMansSwitchModal({ isOpen, onClose }: DeadMansSwitchM
                     <button
                       onClick={handlePropose}
                       disabled={loading || !newBackup}
-                      className="w-full py-2.5 bg-blue-600 hover:bg-[#25D366] disabled:bg-white/10 disabled:text-white/30 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 transition-all"
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-[#25D366] disabled:bg-white/10 disabled:text-white/30 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 transition-all"
                     >
                       {loading ? <Loader2 className="animate-spin" size={16} /> : <Shield size={16} />}
                       {loading ? 'Signing…' : 'Propose New Backup (step 1/2)'}
@@ -299,14 +299,14 @@ export default function DeadMansSwitchModal({ isOpen, onClose }: DeadMansSwitchM
             {/* TX feedback */}
             {txHash && (
               <div className="mt-3 flex items-center gap-2 p-3 bg-white/5 border border-white/10 rounded-xl">
-                <Loader2 className="text-blue-400 animate-spin shrink-0" size={14} />
+                <Loader2 className="text-emerald-400 animate-spin shrink-0" size={14} />
                 <div className="flex-1 min-w-0">
                   <p className="text-white/60 text-xs">Pending confirmation…</p>
                   <a
                     href={`https://polygonscan.com/tx/${txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-400 text-xs font-mono hover:underline flex items-center gap-1 truncate"
+                    className="text-emerald-400 text-xs font-mono hover:underline flex items-center gap-1 truncate"
                   >
                     {txHash.slice(0, 20)}… <ExternalLink size={10} />
                   </a>

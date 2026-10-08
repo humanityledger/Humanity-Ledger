@@ -159,12 +159,12 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
                         </p>
 
                         {isAuthError && (
-                            <div className="bg-blue-600/10 border border-[#25D366]/30 rounded-2xl p-5 mb-8 text-left">
-                                <h4 className="text-blue-400 font-bold text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <div className="bg-emerald-600/10 border border-[#25D366]/30 rounded-2xl p-5 mb-8 text-left">
+                                <h4 className="text-emerald-400 font-bold text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
                                     <Sparkles size={14} />
                                     Action Required
                                 </h4>
-                                <p className="text-xs text-blue-200/70 leading-relaxed font-medium">
+                                <p className="text-xs text-emerald-200/70 leading-relaxed font-medium">
                                     The **Alchemy API Key** is missing or invalid. Please update your environment variables with a valid key from the Alchemy Dashboard to enable live synchronization.
                                 </p>
                             </div>
@@ -194,7 +194,7 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
                                     href="https://terminal.alchemy.com/" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="flex-1 px-8 py-4 bg-blue-600 hover:bg-[#25D366] rounded-2xl text-white transition-all font-bold text-sm shadow-lg shadow-blue-900/40 flex items-center justify-center gap-2"
+                                    className="flex-1 px-8 py-4 bg-emerald-600 hover:bg-[#25D366] rounded-2xl text-white transition-all font-bold text-sm shadow-lg shadow-emerald-900/40 flex items-center justify-center gap-2"
                                 >
                                     Get API Key
                                 </a>
@@ -225,11 +225,11 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
                     className="bg-black/40 border border-white/10 w-full max-w-2xl rounded-3xl p-12 shadow-[0_0_100px_rgba(59,130,246,0.2)] text-center relative overflow-hidden"
                 >
                     <div className="absolute inset-0 bg-gradient-to-tr from-[#25D366]/10 via-purple-500/10 to-transparent pointer-events-none" />
-                    <Sparkles size={48} className="mx-auto text-blue-400 mb-6 animate-pulse" />
+                    <Sparkles size={48} className="mx-auto text-emerald-400 mb-6 animate-pulse" />
                     <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 mb-2">
                         Fetching data...
                     </h2>
-                    <p className="text-blue-200/60 font-mono text-sm tracking-widest uppercase">
+                    <p className="text-emerald-200/60 font-mono text-sm tracking-widest uppercase">
                         Scanning Multichain History...
                     </p>
                 </motion.div>
@@ -259,7 +259,7 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
                 className="bg-white/90 border border-white/10 w-full max-w-[2560px] mx-auto rounded-[2rem] shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] relative overflow-hidden text-left"
             >
                 {/* Background Ambient Glow */}
-                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-blue-900/20 to-transparent pointer-events-none" />
+                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-emerald-900/20 to-transparent pointer-events-none" />
                 <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-900/10 blur-[100px] pointer-events-none" />
 
                 {/* API LIMIT WARNING */}
@@ -278,9 +278,9 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
                 {/* Header */}
                 <div className="flex justify-between items-start p-6 md:p-8 border-b border-white/5 relative z-10">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 p-[1px] shadow-lg shadow-blue-900/50">
+                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-purple-600 p-[1px] shadow-lg shadow-emerald-900/50">
                             <div className="w-full h-full bg-black rounded-2xl flex items-center justify-center">
-                                <Activity className="text-blue-400" size={24} />
+                                <Activity className="text-emerald-400" size={24} />
                             </div>
                         </div>
                         <div>
@@ -335,18 +335,18 @@ export default function WalletAnalyticsPanel({ address, label, analytics: initia
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`w-full px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-between group ${
                                     activeTab === tab.id
-                                        ? 'bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-white border border-[#25D366]/30'
+                                        ? 'bg-gradient-to-r from-emerald-600/20 to-purple-600/20 text-white border border-[#25D366]/30'
                                         : 'text-gray-500 hover:bg-white/5 hover:text-gray-300 border border-transparent'
                                 }`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <span className={`${activeTab === tab.id ? 'text-blue-400' : 'text-gray-600 group-hover:text-gray-400'}`}>
+                                    <span className={`${activeTab === tab.id ? 'text-emerald-400' : 'text-gray-600 group-hover:text-gray-400'}`}>
                                         {tab.icon}
                                     </span>
                                     {tab.label}
                                 </div>
                                 {tab.count !== undefined && tab.count > 0 && (
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-[#25D366]/20 text-blue-300' : 'bg-white/5 text-gray-600'}`}>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-[#25D366]/20 text-emerald-300' : 'bg-white/5 text-gray-600'}`}>
                                         {tab.count}
                                     </span>
                                 )}
@@ -408,16 +408,16 @@ function OverviewTab({ analytics, netWorth, stakingPositions, liquidityPools }: 
                 >
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-[#25D366]/20 flex items-center justify-center border border-[#25D366]/30">
-                            <ShieldCheck size={24} className="text-blue-400" />
+                            <ShieldCheck size={24} className="text-emerald-400" />
                         </div>
                         <div>
                             <h4 className="text-sm font-black text-white uppercase tracking-widest leading-none mb-1">Scientific Analysis Active</h4>
-                            <p className="text-xs text-blue-200/60 font-medium">Direct DeFi positions detected via RPC Multicall.</p>
+                            <p className="text-xs text-emerald-200/60 font-medium">Direct DeFi positions detected via RPC Multicall.</p>
                         </div>
                     </div>
                     {stakingPositions.find((p: any) => p.details?.healthFactor) && (
                         <div className="text-right">
-                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block leading-none mb-1">Salud Global (Aave)</span>
+                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block leading-none mb-1">Salud Global (Aave)</span>
                             <span className="text-2xl font-black text-white leading-none">
                                 {safeToFixed((stakingPositions.find((p: any) => (p as any).details?.healthFactor) as any).details.healthFactor, 2)}
                             </span>
@@ -469,34 +469,34 @@ function OverviewTab({ analytics, netWorth, stakingPositions, liquidityPools }: 
                 />
 
                 {(analytics.influenceScore || 0) > 0 && (
-                    <div className="col-span-full md:col-span-2 bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-[#25D366]/30 rounded-2xl p-6">
+                    <div className="col-span-full md:col-span-2 bg-gradient-to-br from-emerald-600/20 to-purple-600/20 border border-[#25D366]/30 rounded-2xl p-6">
                         <div className="flex justify-between items-start mb-4">
                             <div>
-                                <h4 className="text-blue-400 font-bold text-xs uppercase tracking-widest mb-1 flex items-center gap-2">
+                                <h4 className="text-emerald-400 font-bold text-xs uppercase tracking-widest mb-1 flex items-center gap-2">
                                     <Zap size={14} />
                                     Market Influence Score
                                 </h4>
                                 <div className="text-4xl font-black text-white">{analytics.influenceScore || 0}<span className="text-lg text-gray-500 ml-1">/100</span></div>
                             </div>
                             <div className="px-3 py-1 bg-[#25D366]/20 border border-[#25D366]/30 rounded-full">
-                                <span className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">Elite Rank</span>
+                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter">Elite Rank</span>
                             </div>
                         </div>
                         <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
                             <motion.div 
                                 initial={{ width: 0 }}
                                 animate={{ width: `${analytics.influenceScore || 0}%` }}
-                                className="h-full bg-gradient-to-r from-blue-600 via-blue-400 to-purple-500"
+                                className="h-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-purple-500"
                             />
                         </div>
-                        <p className="text-xs text-blue-200/60 mt-3 font-medium">Quantified based on elite-grade volume and wealth triggers.</p>
+                        <p className="text-xs text-emerald-200/60 mt-3 font-medium">Quantified based on elite-grade volume and wealth triggers.</p>
                     </div>
                 )}
 
                 {analytics.ledgerEvidence && analytics.ledgerEvidence.length > 0 && (
                     <div className="col-span-full md:col-span-2 bg-white/5 border border-white/10 rounded-2xl p-6">
                         <h4 className="text-gray-400 font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <FileCode size={14} className="text-blue-400" />
+                            <FileCode size={14} className="text-emerald-400" />
                             Verification Evidence
                         </h4>
                         <div className="space-y-3">
@@ -574,7 +574,7 @@ function HeatmapTab({ data }: { data: HourlyActivity[] }) {
                                 boxShadow: d.txCount > 0 ? `0 0 ${d.txCount * 2}px rgba(59, 130, 246, 0.5)` : 'none'
                             }}
                         >
-                            {d.txCount > 0 && <div className="absolute inset-0 bg-blue-400/20 blur-md" />}
+                            {d.txCount > 0 && <div className="absolute inset-0 bg-emerald-400/20 blur-md" />}
                         </div>
                         <span className="text-[10px] text-gray-600 mt-2 font-mono group-hover:text-white transition-colors">
                             {d.hour}H
@@ -612,9 +612,9 @@ function CounterpartiesTab({ data }: { data: Counterparty[] }) {
                         <div>
                             <div className="flex items-center gap-2">
                                 <p className="font-mono text-white text-lg">{cp.address.slice(0, 6)}...{cp.address.slice(-4)}</p>
-                                <Users size={14} className="text-gray-600 group-hover:text-blue-400 transition-colors" />
+                                <Users size={14} className="text-gray-600 group-hover:text-emerald-400 transition-colors" />
                             </div>
-                            {cp.label && <p className="text-xs text-blue-400 mt-0.5 font-bold uppercase tracking-wider">{cp.label}</p>}
+                            {cp.label && <p className="text-xs text-emerald-400 mt-0.5 font-bold uppercase tracking-wider">{cp.label}</p>}
                         </div>
                     </div>
                     <div className="text-right">
@@ -780,11 +780,11 @@ function StakingTab({ data }: { data: StakingPosition[] }) {
                         </div>
                     )}
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Zap size={60} className="text-blue-400" />
+                        <Zap size={60} className="text-emerald-400" />
                     </div>
                     <div className="flex justify-between items-start mb-4">
                         <div>
-                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block mb-1">{pos.protocol}</span>
+                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-1">{pos.protocol}</span>
                             <h4 className="text-2xl font-black text-white">{safeToFixed(pos.amount, 4)} {pos.token}</h4>
                         </div>
                         <div className="flex flex-col items-end gap-2">

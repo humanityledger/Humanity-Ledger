@@ -221,7 +221,7 @@ Always Access Humanity Ledger through your bookmark to ensure you're on the offi
                   {!hasBookmark && (
                     <button
                       onClick={promptBookmark}
-                      className="flex items-center gap-2 text-sm font-bold text-[#1F1F1F] hover:text-blue-600 transition-colors"
+                      className="flex items-center gap-2 text-sm font-bold text-[#1F1F1F] hover:text-emerald-600 transition-colors"
                     >
                       <Bookmark size={16} />
                       Bookmark this site for safety

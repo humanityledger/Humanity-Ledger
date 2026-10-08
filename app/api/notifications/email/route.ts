@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Failed to send email',
-        details: error.message,
+        details: 'Error details redacted',
       },
       { status: 500 }
     );

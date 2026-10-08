@@ -78,8 +78,8 @@ export const MainVault = ({ onConnect }: MainVaultProps) => {
             {/* Bottom Section: Status & Connect */}
             {isConnected && (
                 <div className="mt-6 pt-6 border-t border-white/5 relative z-10">
-                    <div className="flex items-center gap-2 text-blue-400 bg-[#25D366]/10 px-4 py-2 rounded-lg w-fit">
-                        <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                    <div className="flex items-center gap-2 text-emerald-400 bg-[#25D366]/10 px-4 py-2 rounded-lg w-fit">
+                        <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
                         <span className="text-sm font-bold">WALLET CONNECTED</span>
                     </div>
                 </div>

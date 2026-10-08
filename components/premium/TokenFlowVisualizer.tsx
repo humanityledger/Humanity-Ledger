@@ -150,7 +150,7 @@ export default function TokenFlowVisualizer({ isPremium }: { isPremium: boolean 
       {/* Token Flow Diagram */}
       <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 border border-[#1F1F1F]/10">
         <h3 className="text-lg font-black text-[#1F1F1F] mb-4 flex items-center gap-2">
-          <GitBranch className="text-blue-600" />
+          <GitBranch className="text-emerald-600" />
           Token Flow Analysis
         </h3>
 
@@ -229,10 +229,10 @@ export default function TokenFlowVisualizer({ isPremium }: { isPremium: boolean 
           <div className="text-sm text-green-700 mt-1">From copy attesting</div>
         </div>
 
-        <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-          <div className="text-sm text-blue-700 font-bold mb-1">Win Rate</div>
-          <div className="text-2xl font-black text-blue-600">85.7%</div>
-          <div className="text-sm text-blue-700 mt-1">24 wins / 4 losses</div>
+        <div className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200">
+          <div className="text-sm text-emerald-700 font-bold mb-1">Win Rate</div>
+          <div className="text-2xl font-black text-emerald-600">85.7%</div>
+          <div className="text-sm text-emerald-700 mt-1">24 wins / 4 losses</div>
         </div>
 
         <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200">
@@ -267,7 +267,7 @@ function CopySignalCard({ signal, index }: { signal: CopyAttestingSignal; index:
           <div className="flex items-center gap-2 mb-2">
             <Star className="text-yellow-500 fill-current" size={16} />
             <span className="font-black text-[#1F1F1F]">{signal.walletLabel}</span>
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">
+            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">
               {signal.winRate}% Win Rate
             </span>
             <span className="text-xs text-[#1F1F1F]/60">

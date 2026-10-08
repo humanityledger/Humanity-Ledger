@@ -9,7 +9,7 @@ async function resolveCaller(req: NextRequest) {
   if (verified) return verified.toLowerCase();
   const session = await getSession();
   if (session?.userId) return session.userId.toLowerCase();
-  return req.headers.get('x-web3-address')?.toLowerCase();
+  return null; // Spoofing vector closed
 }
 
 export async function GET(req: NextRequest) {
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ settings: userSettings?.settings || {} });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
@@ -42,6 +42,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ settings: updated.settings });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

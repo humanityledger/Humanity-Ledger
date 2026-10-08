@@ -69,11 +69,11 @@ export default function NetworkMonitor() {
 
         <div className="flex items-center gap-5 mb-10 relative z-10">
             <div className="p-4 bg-[#25D366]/10 rounded-2xl border border-[#25D366]/20 shadow-xl backdrop-blur-md">
-                <Globe className="text-blue-400" size={32} />
+                <Globe className="text-emerald-400" size={32} />
             </div>
             <div>
                 <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic">Node Network Core</h3>
-                <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mt-1">DEDICATED NODE UPLINK ESTABLISHED</p>
+                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em] mt-1">DEDICATED NODE UPLINK ESTABLISHED</p>
             </div>
         </div>
 
@@ -115,8 +115,8 @@ export default function NetworkMonitor() {
             </div>
 
             {/* BASE NODE */}
-             <div className="p-4 bg-blue-600/5 border border-blue-600/20 rounded-2xl relative overflow-hidden group">
-                <div className="absolute -right-4 -top-4 text-blue-600/10 group-hover:text-blue-600/20 transition-all">
+             <div className="p-4 bg-emerald-600/5 border border-emerald-600/20 rounded-2xl relative overflow-hidden group">
+                <div className="absolute -right-4 -top-4 text-emerald-600/10 group-hover:text-emerald-600/20 transition-all">
                     <Zap size={80} />
                 </div>
                 <div className="flex justify-between items-start mb-4">
@@ -144,7 +144,7 @@ export default function NetworkMonitor() {
                         </div>
                         <div className="text-right">
                              <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Status</div>
-                             <div className="font-black text-blue-400">OPERATIONAL</div>
+                             <div className="font-black text-emerald-400">OPERATIONAL</div>
                         </div>
                     </div>
                 </div>

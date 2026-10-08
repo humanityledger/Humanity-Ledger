@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isAdmin } from '@/lib/admin';
 
-export async function GET() {
+export async function GET(req: Request) {
+    const address = (req as any).headers?.get?.('x-verified-session-address') || '';
+    if (!isAdmin(address)) {
+        return NextResponse.json({ error: 'Admin only — 403 Forbidden' }, { status: 403 });
+    }
     try {
         const users = await prisma.user.findMany({
             where: {
@@ -17,34 +22,12 @@ export async function GET() {
             return NextResponse.json({ success: true, message: "No mock users found." });
         }
 
-        // Delete associated records first
-        await prisma.forumNotification.deleteMany({
-            where: { OR: [{ userId: { in: userIds } }, { actorId: { in: userIds } }] }
-        });
+        await prisma.blockchainTransaction.deleteMany({ where: { userId: { in: userIds } } });
+        await prisma.user.deleteMany({ where: { id: { in: userIds } } });
 
-        await prisma.forumLike.deleteMany({
-            where: { userId: { in: userIds } }
-        });
-
-        await prisma.forumPost.deleteMany({
-            where: { authorId: { in: userIds } }
-        });
-
-        await prisma.forumTopic.deleteMany({
-            where: { authorId: { in: userIds } }
-        });
-
-        // Delete users
-        const delRes = await prisma.user.deleteMany({
-            where: { id: { in: userIds } }
-        });
-
-        return NextResponse.json({ 
-            success: true, 
-            deletedUsers: delRes.count,
-            message: `Successfully purged ${delRes.count} mock personas and their associated data.`
-        });
+        return NextResponse.json({ success: true, purged: userIds.length });
     } catch (error: any) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        console.error('[purge-mock-temp]', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

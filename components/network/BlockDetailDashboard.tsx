@@ -40,7 +40,7 @@ export function BlockDetailDashboard({ hash }: BlockDetailDashboardProps) {
                         <ArrowLeft size={20} />
                     </Link>
                     <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-sm text-blue-400 font-bold uppercase tracking-wider">
+                        <div className="flex items-center gap-2 text-sm text-emerald-400 font-bold uppercase tracking-wider">
                             Block
                         </div>
                         <h1 className="text-3xl font-bold text-white flex items-center gap-2">

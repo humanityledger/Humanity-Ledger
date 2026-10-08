@@ -28,7 +28,7 @@ export default function NFCHardware() {
                         <div className="relative mx-auto w-32 h-32">
                            <div className="absolute inset-0 bg-[#25D366]/10 rounded-full animate-ping" />
                            <div className="relative w-full h-full bg-white rounded-full flex items-center justify-center shadow-xl border border-[#25D366]/10">
-                                <Wifi size={48} className="text-blue-600" />
+                                <Wifi size={48} className="text-emerald-600" />
                            </div>
                         </div>
 
@@ -83,7 +83,7 @@ export default function NFCHardware() {
                                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
                                 className="absolute bottom-0 left-1/2 -translate-x-1/2 z-10"
                             >
-                                <CreditCard size={80} className="text-blue-600 filling-blue-600/20" />
+                                <CreditCard size={80} className="text-emerald-600 filling-emerald-600/20" />
                             </motion.div>
                          </div>
 
@@ -95,7 +95,7 @@ export default function NFCHardware() {
                         {!isSupported && (
                             <button 
                                 onClick={simulateScan}
-                                className="mt-8 px-6 py-3 bg-blue-100 text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-200"
+                                className="mt-8 px-6 py-3 bg-emerald-100 text-emerald-700 rounded-xl font-bold text-sm hover:bg-emerald-200"
                             >
                                 [DEV] Simulate Tap
                             </button>
@@ -139,7 +139,7 @@ export default function NFCHardware() {
                     <motion.div key="error" className="text-center space-y-6">
                         <AlertCircle size={64} className="text-red-500 mx-auto" />
                         <h3 className="text-xl font-bold">Scanning Failed</h3>
-                        <button onClick={reset} className="text-blue-600 font-bold underline">Try Again</button>
+                        <button onClick={reset} className="text-emerald-600 font-bold underline">Try Again</button>
                     </motion.div>
                 )}
 

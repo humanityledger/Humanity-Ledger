@@ -64,7 +64,7 @@ export function LegendaryDownhead() {
 
           {/* Block */}
           <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-white/60">
-            <Activity size={12} className="text-blue-400" />
+            <Activity size={12} className="text-emerald-400" />
             <span className="text-white font-bold">{stats.currentBlock || "Sync..."}</span>
           </div>
 

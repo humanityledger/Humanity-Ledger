@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
     
     return NextResponse.json({ 
       error: 'Failed to generate comprehensive wallet analytics',
-      details: error.message,
+      details: 'Error details redacted',
       isPartial: true,
       address,
       lastUpdated: new Date()

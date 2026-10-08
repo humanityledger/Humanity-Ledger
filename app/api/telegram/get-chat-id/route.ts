@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({
       error: 'Failed to get chat IDs',
-      details: error.message,
+      details: 'Error details redacted',
       instructions: 'Make sure you have sent /start to your bot first',
     }, { status: 500 });
   }

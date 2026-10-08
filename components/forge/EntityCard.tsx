@@ -14,7 +14,7 @@ export function EntityCard({ entity }: { entity: any }) {
   const getTierGradient = (tier: string) => {
     switch(tier) {
       case 'MEGALODON': return 'from-purple-600 to-pink-500';
-      case 'LEVIATHAN': return 'from-blue-600 to-indigo-500';
+      case 'LEVIATHAN': return 'from-emerald-600 to-indigo-500';
       case 'KRAKEN': return 'from-cyan-500 to-emerald-500';
       default: return 'from-gray-500 to-slate-400';
     }

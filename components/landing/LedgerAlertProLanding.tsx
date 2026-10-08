@@ -367,7 +367,7 @@ export function HumanityLedgerProLanding() {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className="px-16 py-6 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black uppercase tracking-[0.3em] text-sm rounded-full shadow-[0_0_50px_rgba(6,182,212,0.5)]"
+                  className="px-16 py-6 bg-gradient-to-r from-cyan-600 to-emerald-600 text-white font-black uppercase tracking-[0.3em] text-sm rounded-full shadow-[0_0_50px_rgba(6,182,212,0.5)]"
                 >
                   Join the Elite
                 </motion.button>

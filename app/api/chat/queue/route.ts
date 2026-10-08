@@ -6,7 +6,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const address = req.headers.get('x-web3-address');
+    const session = await require('@/lib/session').getSession();
+    const address = session?.userId;
     if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const normalized = address.toLowerCase();
     const messages = await prisma.pendingChatMessage.findMany({
@@ -28,7 +29,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const address = req.headers.get('x-web3-address');
+    const session = await require('@/lib/session').getSession();
+    const address = session?.userId;
     if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { recipient, content } = await req.json();
     if (!recipient || !content) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });

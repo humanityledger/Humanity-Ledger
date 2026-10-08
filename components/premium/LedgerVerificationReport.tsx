@@ -37,11 +37,11 @@ export default function LedgerVerificationReport({
         className="bg-[#0B0E11] border border-[#25D366]/30 w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.2)] relative"
       >
         {/* Header/Banner */}
-        <div className="h-32 bg-gradient-to-r from-blue-900/40 via-blue-600/20 to-purple-900/40 relative">
+        <div className="h-32 bg-gradient-to-r from-emerald-900/40 via-emerald-600/20 to-purple-900/40 relative">
             <div className="absolute inset-0 flex items-center justify-center">
                 <div className="flex flex-col items-center">
-                    <ShieldCheck size={48} className="text-blue-400 mb-2 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                    <h2 className="text-xs font-black text-blue-400 uppercase tracking-[0.3em]">Ledger Identity Verified</h2>
+                    <ShieldCheck size={48} className="text-emerald-400 mb-2 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                    <h2 className="text-xs font-black text-emerald-400 uppercase tracking-[0.3em]">Ledger Identity Verified</h2>
                 </div>
             </div>
             <button 
@@ -61,7 +61,7 @@ export default function LedgerVerificationReport({
                 </div>
                 <div className="text-right">
                     <div className="text-xs font-bold text-gray-500 uppercase mb-1">Status Institucional</div>
-                    <div className="px-4 py-1.5 bg-blue-600 text-white rounded-full text-sm font-black uppercase shadow-lg shadow-blue-900/40">
+                    <div className="px-4 py-1.5 bg-emerald-600 text-white rounded-full text-sm font-black uppercase shadow-lg shadow-emerald-900/40">
                         {category}
                     </div>
                 </div>
@@ -70,7 +70,7 @@ export default function LedgerVerificationReport({
             {/* Metrics Grid */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white/5 border border-white/10 rounded-[1.5rem] p-6">
-                    <div className="flex items-center gap-3 text-blue-400 mb-2">
+                    <div className="flex items-center gap-3 text-emerald-400 mb-2">
                         <Zap size={20} />
                         <span className="text-xs font-bold uppercase tracking-widest">Influence Score</span>
                     </div>
@@ -98,9 +98,9 @@ export default function LedgerVerificationReport({
 
             {/* AI Forensic Audit Section */}
             {forensics && (
-                <div className="bg-blue-600/5 border border-[#25D366]/20 rounded-[1.5rem] p-6 space-y-4">
+                <div className="bg-emerald-600/5 border border-[#25D366]/20 rounded-[1.5rem] p-6 space-y-4">
                     <div className="flex items-center justify-between pb-2 border-b border-[#25D366]/10">
-                        <div className="flex items-center gap-2 text-blue-400">
+                        <div className="flex items-center gap-2 text-emerald-400">
                             <BrainCircuit size={20} />
                             <span className="text-xs font-black uppercase tracking-widest">Deep AI Forensic Audit</span>
                         </div>
@@ -122,7 +122,7 @@ export default function LedgerVerificationReport({
                             <div key={idx} className="flex gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
                                 <div className={`shrink-0 mt-0.5 ${
                                     signal.type === 'negative' ? 'text-indigo-400' : 
-                                    signal.type === 'positive' ? 'text-green-400' : 'text-blue-400'
+                                    signal.type === 'positive' ? 'text-green-400' : 'text-emerald-400'
                                 }`}>
                                     {signal.type === 'negative' ? <AlertTriangle size={14} /> : 
                                      signal.type === 'positive' ? <Fingerprint size={14} /> : <Activity size={14} />}
@@ -175,7 +175,7 @@ export default function LedgerVerificationReport({
                 </div>
                 <button 
                    onClick={onClose}
-                   className="bg-white text-black px-8 py-3 rounded-xl font-black hover:bg-blue-50 transition-colors shadow-xl"
+                   className="bg-white text-black px-8 py-3 rounded-xl font-black hover:bg-emerald-50 transition-colors shadow-xl"
                 >
                     ENTENDIDO
                 </button>

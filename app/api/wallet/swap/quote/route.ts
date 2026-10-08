@@ -53,7 +53,7 @@ export async function POST(req: Request) {
 
     } catch (error: any) {
         console.error('Swap quote error:', error);
-        return NextResponse.json({ error: error.message || 'Failed to get quote' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
 

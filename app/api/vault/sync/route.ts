@@ -113,6 +113,6 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         console.error('GC API Error:', error);
-        return NextResponse.json({ error: 'Internal GC Error', details: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal GC Error', details: 'Error details redacted' }, { status: 500 });
     }
 }

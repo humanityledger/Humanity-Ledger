@@ -93,7 +93,7 @@ export function ForumHeader() {
           <div className="relative">
             <button 
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="w-8 h-8 rounded-full bg-blue-100 text-blue-600   flex items-center justify-center font-bold overflow-hidden"
+              className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600   flex items-center justify-center font-bold overflow-hidden"
             >
               <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ledger" alt="Avatar" className="w-full h-full object-cover" />
             </button>

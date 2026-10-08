@@ -109,7 +109,7 @@ export async function GET(req: any) {
         
         return NextResponse.json({ settings: mapDbToStore(user) });
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
 
@@ -198,7 +198,7 @@ async function handleUpdate(req: any) {
 
         return NextResponse.json({ success: true, settings: mapDbToStore(updatedUser || updateData) });
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
 

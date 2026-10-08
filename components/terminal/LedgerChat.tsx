@@ -228,7 +228,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const chatBackground = ledgerSettings?.chat_background || 'default';
   const chatBackgroundCustomUrl = '';
   const bubbleStyle = ledgerSettings?.bubble_style || 'default';
-  const accentColor = ledgerSettings?.accent_color || '#1c7aff';
+  const accentColor = ledgerSettings?.accent_color || '#25D366';
   const chatFont = 'inter';
   const textSize = ledgerSettings?.text_size || 4;
 
@@ -4957,7 +4957,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     <button
                       type="button"
                       onClick={() => { setShowEmojiPicker(d => !d); setShowAppDrawer(false); }}
-                      className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all duration-300 mt-auto mb-0.5 ${showEmojiPicker ? 'bg-[#1c7aff] text-white shadow-md scale-105' : 'bg-transparent text-[#8e8e93] hover:bg-[#E5E5EA] hover:text-[#000000]'}`}
+                      className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all duration-300 mt-auto mb-0.5 ${showEmojiPicker ? 'bg-[#25D366] text-white shadow-md scale-105' : 'bg-transparent text-[#8e8e93] hover:bg-[#E5E5EA] hover:text-[#000000]'}`}
                     >
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                     </button>
@@ -4978,7 +4978,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                               }}
                             /> </motion.div> </motion.div> )} </AnimatePresence>
 
-                    <div className="flex-1 bg-white border border-[#c8c8cc] rounded-3xl flex items-end relative shadow-sm overflow-hidden min-h-[38px] transition-all focus-within:border-blue-400">
+                    <div className="flex-1 bg-white border border-[#c8c8cc] rounded-3xl flex items-end relative shadow-sm overflow-hidden min-h-[38px] transition-all focus-within:border-emerald-400">
                       {isRecording ? (
                         <div className="flex-1 flex items-center justify-between px-4 py-2 bg-[#f5f5f7] h-[38px]">
                           <div className="flex items-center gap-2">
@@ -5062,10 +5062,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center bg-[#f9f9fb] relative overflow-y-auto p-6 md:p-12 border-l border-black/10 shadow-inner">
             {/* Ambient glows */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#1c7aff]/5 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#25D366]/5 rounded-full blur-[120px] pointer-events-none" />
 
             <div className="w-full max-w-xl flex flex-col items-center text-center relative z-10">
-              <div className="w-20 h-20 rounded-[28px] bg-gradient-to-br from-[#1c7aff] to-[#5856D6] flex items-center justify-center mb-8 shadow-2xl">
+              <div className="w-20 h-20 rounded-[28px] bg-gradient-to-br from-[#25D366] to-[#5856D6] flex items-center justify-center mb-8 shadow-2xl">
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
               </div>
               <h1 className="text-[32px] md:text-[42px] font-bold tracking-tight text-[#1C1C1E] mb-4">Select a conversation</h1>
@@ -5081,7 +5081,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                       </svg>
                     ),
-                    color: 'text-[#25D366] bg-blue-50'
+                    color: 'text-[#25D366] bg-emerald-50'
                   },
                   { 
                     label: 'Decentralized Network',

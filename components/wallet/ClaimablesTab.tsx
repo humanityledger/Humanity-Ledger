@@ -28,20 +28,20 @@ export default function ClaimablesTab({ claimables, isLoading }: ClaimablesTabPr
                     <Gift size={24} />
                 </div>
                 <p className="font-medium">No claimable rewards found.</p>
-                <button className="mt-4 text-blue-600 hover:text-blue-700 font-bold hover:underline">Check Airdrops</button>
+                <button className="mt-4 text-emerald-600 hover:text-emerald-700 font-bold hover:underline">Check Airdrops</button>
             </div>
         );
     }
 
     return (
         <div className="space-y-3 px-4">
-            <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
+            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center text-white">
                     <Sparkles size={20} />
                 </div>
                 <div>
-                   <p className="text-xs font-black text-blue-900 uppercase tracking-tighter">Instant Discovery</p>
-                   <p className="text-sm font-bold text-blue-700">You have {claimables.length} rewards ready to claim.</p>
+                   <p className="text-xs font-black text-emerald-900 uppercase tracking-tighter">Instant Discovery</p>
+                   <p className="text-sm font-bold text-emerald-700">You have {claimables.length} rewards ready to claim.</p>
                 </div>
             </div>
 
@@ -60,7 +60,7 @@ export default function ClaimablesTab({ claimables, isLoading }: ClaimablesTabPr
                         <div>
                             <div className="font-black text-neutral-900">{item.name}</div>
                             <div className="text-xs text-neutral-500 font-bold flex items-center gap-1">
-                                {item.protocol}  <span className="text-blue-600">{item.type}</span>
+                                {item.protocol}  <span className="text-emerald-600">{item.type}</span>
                             </div>
                         </div>
                     </div>

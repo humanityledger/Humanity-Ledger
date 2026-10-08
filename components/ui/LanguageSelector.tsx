@@ -23,7 +23,7 @@ export function LanguageSelector() {
                 onClick={() => setIsOpen(!isOpen)}
                 className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 backdrop-blur-md transition-colors text-sm font-medium text-gray-200"
             >
-                <Globe size={16} className="text-blue-400" />
+                <Globe size={16} className="text-emerald-400" />
                 <span className="uppercase">{locale}</span>
             </button>
 
@@ -52,7 +52,7 @@ export function LanguageSelector() {
                                         className={cn(
                                             "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors",
                                             locale === lang.code
-                                                ? "bg-[#25D366]/20 text-blue-300"
+                                                ? "bg-[#25D366]/20 text-emerald-300"
                                                 : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
                                         )}
                                     >

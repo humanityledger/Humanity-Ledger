@@ -22,7 +22,7 @@ export function CommunityInfo() {
             lottieSrc: "https://lottie.host/8e4d2f1c-9bfa-4b77-8db5-3c5f1b2e6a9d/RainCoins.lottie",
             title: "Global Reach",
             subtitle: "Operations in 45+ countries worldwide",
-            color: "bg-blue-600"
+            color: "bg-emerald-600"
         },
         {
             lottieSrc: "https://lottie.host/0a1b2c3d-4e5f-6g7h-8i9j-0k1l2m3n4o5p/CoinSwap3D.lottie",

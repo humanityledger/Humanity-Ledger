@@ -53,7 +53,7 @@ export default function WalletComparison({
           <BarChart3 className="text-[#25D366]" />
           Wallet Comparison
         </h2>
-        {!isPremium && <span className="text-xs font-bold text-blue-400 uppercase border border-[#25D366]/30 px-2 py-1 rounded-full">Limit: 3 Wallets (Free)</span>}
+        {!isPremium && <span className="text-xs font-bold text-emerald-400 uppercase border border-[#25D366]/30 px-2 py-1 rounded-full">Limit: 3 Wallets (Free)</span>}
       </div>
 
       {/* Wallet Selection */}
@@ -91,7 +91,7 @@ export default function WalletComparison({
                     </div>
                 )}
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-white truncate group-hover:text-blue-200 transition-colors">{wallet.label}</span>
+                  <span className="font-bold text-white truncate group-hover:text-emerald-200 transition-colors">{wallet.label}</span>
                   {isSelected && (
                     <motion.div
                       initial={{ scale: 0 }}
@@ -131,7 +131,7 @@ export default function WalletComparison({
                 key={m.id}
                 onClick={() => setMetric(m.id as any)}
                 className={`flex-1 min-w-[80px] py-2 px-3 rounded-lg font-bold text-xs transition-all ${
-                  metric === m.id ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
+                  metric === m.id ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
                 }`}
               >
                 {m.label}
@@ -216,7 +216,7 @@ export default function WalletComparison({
                       </td>
                       <td className="px-4 py-3 text-right text-white font-mono text-xs">{wallet.txCount || 0}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className="px-2 py-0.5 bg-[#25D366]/10 text-blue-400 rounded-full text-[10px] font-black uppercase">
+                        <span className="px-2 py-0.5 bg-[#25D366]/10 text-emerald-400 rounded-full text-[10px] font-black uppercase">
                           Rank #{wallet.rank || '???'}
                         </span>
                       </td>

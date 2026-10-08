@@ -62,7 +62,7 @@ export function MinimalDarkPool() {
             {/* Background Radar Effect */}
             <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full border border-[#25D366]/30 animate-[spin_8s_linear_infinite]">
-                    <div className="w-1/2 h-[2px] bg-gradient-to-r from-transparent to-blue-400 origin-left" />
+                    <div className="w-1/2 h-[2px] bg-gradient-to-r from-transparent to-emerald-400 origin-left" />
                 </div>
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full border border-[#25D366]/20 shadow-[0_0_50px_rgba(59,130,246,0.1)]" />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] rounded-full border border-[#25D366]/20 shadow-[0_0_50px_rgba(59,130,246,0.1)] animate-ping" />
@@ -80,7 +80,7 @@ export function MinimalDarkPool() {
                 <div className="flex items-center gap-4">
                     {!audioInitialized ? (
                         <button 
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 text-blue-400 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-blue-600/30 transition-colors animate-pulse border border-[#25D366]/30"
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600/20 text-emerald-400 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-emerald-600/30 transition-colors animate-pulse border border-[#25D366]/30"
                         >
                             <Bell size={14} /> Enable Sonar
                         </button>
@@ -98,7 +98,7 @@ export function MinimalDarkPool() {
                     <div className="h-full flex flex-col items-center justify-center text-[#25D366]/50 space-y-6">
                         <div className="relative">
                             <div className="absolute inset-0 bg-[#25D366]/20 blur-xl rounded-full animate-pulse" />
-                            <Activity size={64} className="relative animate-bounce text-blue-400" />
+                            <Activity size={64} className="relative animate-bounce text-emerald-400" />
                         </div>
                         <span className="text-sm font-bold tracking-[0.3em] uppercase animate-pulse">Scanning Deep Network...</span>
                         <span className="text-[10px] text-white/30 uppercase tracking-widest max-w-[200px] text-center leading-relaxed">Awaiting Elite transfers exceeding $500k USD.</span>
@@ -143,7 +143,7 @@ function MinimalLedgerRow({ event, isNew }: { event: LedgerEvent, isNew: boolean
 
             <div className="w-1/3 text-center">
                 <div className="text-white/80 font-bold">{event.amount} <span className="text-white/40">{event.token}</span></div>
-                <div className="text-blue-400/70 text-xs mt-0.5">{event.action}</div>
+                <div className="text-emerald-400/70 text-xs mt-0.5">{event.action}</div>
             </div>
 
             <div className="w-1/3 flex flex-col items-end">

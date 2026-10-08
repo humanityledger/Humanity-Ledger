@@ -25,7 +25,7 @@ export async function GET() {
         return NextResponse.json({ 
             block: "0", 
             status: "offline", 
-            error: e.message 
+            error: 'Internal Server Error' 
         });
     }
 }

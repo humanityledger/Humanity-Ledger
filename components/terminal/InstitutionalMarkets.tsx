@@ -368,7 +368,7 @@ function TransactionRow({ item }: { item: any }) {
                                                     <span className={`text-[11px] font-mono font-black px-3 py-1 rounded-lg border ${
                                                         realSentiment.includes('BULLISH') ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
                                                         realSentiment.includes('BEARISH') ? 'bg-red-50 border-red-200 text-red-700' :
-                                                        realSentiment.includes('HIGH CONVICTION') ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                                                        realSentiment.includes('HIGH CONVICTION') ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
                                                         'bg-[#F5F5F5] border-[#E5E5E5] text-[#555555]'
                                                     }`}>
                                                         {realSentiment}

@@ -515,7 +515,7 @@ export function GoldTicketPanel() {
                 toast.success(
                   <span className="flex flex-col gap-1">
                     <span>Registration Complete — Welcome to the System Ledger</span>
-                    <a href={sigData.aztecExplorerUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 underline font-mono">
+                    <a href={sigData.aztecExplorerUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 underline font-mono">
                       Verify on AztecScan
                     </a>
                   </span>,

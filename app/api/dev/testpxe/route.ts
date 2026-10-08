@@ -34,7 +34,7 @@ export async function GET() {
       nodeInfo = (await nodeInfoRes.json()).result;
       nodeBlock = (await nodeBlockRes.json()).result;
     } catch (e: any) {
-      nodeInfo = { error: e.message };
+      nodeInfo = { error: 'Internal Server Error' };
     }
 
     return NextResponse.json({
@@ -45,7 +45,7 @@ export async function GET() {
   } catch (e: any) {
     return NextResponse.json({ 
       success: false, 
-      error: e.message, 
+      error: 'Internal Server Error', 
       pxeUrl,
       hint: 'Ensure AZTEC_PXE_URL points to a running PXE sidecar.',
     }, { status: 500 });

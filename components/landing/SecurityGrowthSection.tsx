@@ -83,28 +83,28 @@ export function SecurityGrowthSection() {
                     title={t('growth.card1_title')}
                     subtitle={t('growth.card1_desc')}
                     lottieSize="md"
-                    className="bg-blue-600/10 border-[#25D366]/20 rounded-[2.5rem] hover:bg-blue-600/20 transition-all duration-500"
+                    className="bg-emerald-600/10 border-[#25D366]/20 rounded-[2.5rem] hover:bg-emerald-600/20 transition-all duration-500"
                 />
                 <LottieCard
                     lottieSrc="https://lottie.host/1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p/FastLightning.lottie"
                     title={t('growth.card2_title')}
                     subtitle={t('growth.card2_desc')}
                     lottieSize="md"
-                    className="bg-blue-600/10 border-[#25D366]/20 rounded-[2.5rem] hover:bg-blue-600/20 transition-all duration-500"
+                    className="bg-emerald-600/10 border-[#25D366]/20 rounded-[2.5rem] hover:bg-emerald-600/20 transition-all duration-500"
                 />
                 <LottieCard
                     lottieSrc="https://lottie.host/0a1b2c3d-4e5f-6g7h-8i9j-0k1l2m3n4o5p/CoinSwap3D.lottie"
                     title={t('growth.card3_title')}
                     subtitle={t('growth.card3_desc')}
                     lottieSize="md"
-                    className="bg-blue-600/10 border-[#25D366]/20 rounded-[2.5rem] hover:bg-blue-600/20 transition-all duration-500"
+                    className="bg-emerald-600/10 border-[#25D366]/20 rounded-[2.5rem] hover:bg-emerald-600/20 transition-all duration-500"
                 />
                 <LottieCard
                     lottieSrc="https://lottie.host/57803657-6105-4752-921c-308101452631/ShieldSecure.lottie"
                     title={t('growth.card4_title')}
                     subtitle={t('growth.card4_desc')}
                     lottieSize="md"
-                    className="bg-blue-600/10 border-[#25D366]/20 rounded-[2.5rem] hover:bg-blue-600/20 transition-all duration-500"
+                    className="bg-emerald-600/10 border-[#25D366]/20 rounded-[2.5rem] hover:bg-emerald-600/20 transition-all duration-500"
                 />
             </div>
 

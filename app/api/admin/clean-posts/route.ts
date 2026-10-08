@@ -80,6 +80,6 @@ export async function GET(req: Request) {
       preservedTitles: allTopics.filter((t: any) => keepIds.includes(t.id)).map((t: any) => t.title),
     });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -9,7 +9,7 @@ async function resolveCaller(req: NextRequest) {
   if (verified) return verified.toLowerCase();
   const session = await getSession();
   if (session?.userId) return session.userId.toLowerCase();
-  return req.headers.get('x-web3-address')?.toLowerCase();
+  return null; // Spoofing vector closed
 }
 
 /**
@@ -59,22 +59,14 @@ export async function POST(req: NextRequest) {
     `).catch(() => {});
 
     // Check idempotency
-    const existing = await prisma.$queryRawUnsafe(`
-      SELECT id FROM "QDCreditLedger" WHERE "idempotencyKey" = '${idempotencySafe}' LIMIT 1
-    `) as any[];
+    const existing = await prisma.$queryRaw`SELECT id FROM "QDCreditLedger" WHERE "idempotencyKey" =  LIMIT 1` as any[];
 
     if (existing.length > 0) {
       return NextResponse.json({ success: true, message: 'Already processed' });
     }
 
     // Check balance
-    const result = await prisma.$queryRawUnsafe(`
-      SELECT 
-        COALESCE(SUM(CASE WHEN direction = 'IN' THEN delta ELSE 0 END), 0) -
-        COALESCE(SUM(CASE WHEN direction = 'OUT' THEN delta ELSE 0 END), 0) as available
-      FROM "QDCreditLedger"
-      WHERE "address" = '${callerSafe}'
-    `) as any[];
+    const result = await prisma.$queryRaw`SELECT COALESCE(SUM(CASE WHEN direction = 'IN' THEN delta ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN direction = 'OUT' THEN delta ELSE 0 END), 0) as available FROM "QDCreditLedger" WHERE "address" = ` as any[];
 
     const available = result[0]?.available || 0;
     const totalDeduction = amount + fee;
@@ -110,6 +102,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, txRef });
   } catch (error: any) {
     console.error('[Transfer API]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

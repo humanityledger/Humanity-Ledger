@@ -79,6 +79,6 @@ Please explore the settings panel to configure your preferences, and maintain pr
     return NextResponse.json({ success: true, message: 'Forum reset successfully. 65 fictitious users deleted and welcome message created.' });
   } catch (error: any) {
     console.error('Error resetting forum:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
   }
 }

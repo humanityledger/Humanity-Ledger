@@ -61,7 +61,7 @@ export function FeatureCardsSection() {
                  <PerspectiveCard 
                     title={t('card2.title')}
                     subtitle={t('card2.desc')}
-                    color="bg-blue-600"
+                    color="bg-emerald-600"
                     rotate={15}
                     zIndex={10}
                     translate={{ x: 140, y: 20 }}

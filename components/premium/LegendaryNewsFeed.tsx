@@ -88,7 +88,7 @@ export default function LegendaryNewsFeed({ isPremium, walletAddress }: Legendar
             className="text-4xl font-black text-white flex items-center gap-4"
           >
             <div className="p-2 bg-[#25D366]/20 rounded-lg">
-                <BrainCircuit className="text-blue-400 w-8 h-8" />
+                <BrainCircuit className="text-emerald-400 w-8 h-8" />
             </div>
             Humanity Ledger <span className="text-[#25D366]">OPERATIONS</span>
           </motion.h1>
@@ -101,7 +101,7 @@ export default function LegendaryNewsFeed({ isPremium, walletAddress }: Legendar
           <button
             onClick={handleSync}
             disabled={syncing || !isPremium}
-            className="group px-6 py-3 bg-blue-600 hover:bg-[#25D366] text-white rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg shadow-blue-900/20 disabled:opacity-50"
+            className="group px-6 py-3 bg-emerald-600 hover:bg-[#25D366] text-white rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg shadow-emerald-900/20 disabled:opacity-50"
           >
             <RefreshCw size={18} className={syncing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'} />
             {syncing ? 'PROCESSING...' : 'UPDATE NODES'}
@@ -148,7 +148,7 @@ export default function LegendaryNewsFeed({ isPremium, walletAddress }: Legendar
 }
 
 function LegendaryNewsCard({ article, index }: { article: NewsArticle; index: number }) {
-  const veracityColor = article.isFake ? 'text-indigo-500' : 'text-blue-400';
+  const veracityColor = article.isFake ? 'text-indigo-500' : 'text-emerald-400';
   // If verifying or 0 score, show gray
   const score = article.veracityScore || 0;
   
@@ -174,7 +174,7 @@ function LegendaryNewsCard({ article, index }: { article: NewsArticle; index: nu
         
         {/* Source Badge (Top Left) */}
         <div className="absolute top-4 left-4 z-20 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-2">
-            {article.isFake ? <ShieldAlert size={14} className="text-indigo-500" /> : <ShieldCheck size={14} className="text-blue-400" />}
+            {article.isFake ? <ShieldAlert size={14} className="text-indigo-500" /> : <ShieldCheck size={14} className="text-emerald-400" />}
             <span className="text-[10px] font-black uppercase tracking-widest text-white/90">
                 {article.source}
             </span>
@@ -192,7 +192,7 @@ function LegendaryNewsCard({ article, index }: { article: NewsArticle; index: nu
       <div className="p-6 flex flex-col flex-grow -mt-6 relative z-20">
         
         {/* Headline */}
-        <h3 className="text-xl font-black text-white leading-tight mb-4 group-hover:text-blue-400 transition-colors">
+        <h3 className="text-xl font-black text-white leading-tight mb-4 group-hover:text-emerald-400 transition-colors">
           {article.title}
         </h3>
 

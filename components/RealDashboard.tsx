@@ -47,7 +47,7 @@ export default function RealDashboard() {
                     )}
                     <p className="text-center text-xs text-gray-500 mt-3">Saldo: {safeToFixed(balance, 2)} AUTH</p>
                 </div>
-                {txHash && <a href={`https://aztecscan.xyz`} target="_blank" className="block text-center text-xs text-blue-400 mt-4 underline">Ver en Aztecscan</a>}
+                {txHash && <a href={`https://aztecscan.xyz`} target="_blank" className="block text-center text-xs text-emerald-400 mt-4 underline">Ver en Aztecscan</a>}
             </div>
 
             {/* TARJETA DE GOBERNANZA */}
@@ -66,7 +66,7 @@ export default function RealDashboard() {
                     verification_level={VerificationLevel.Orb}
                 >
                     {({ open }: { open: () => void }) => (
-                        <button onClick={open} disabled={power === 0} className={`w-full py-4 rounded-xl font-bold transition ${power === 0 ? "bg-gray-100 text-gray-400" : "bg-blue-600 text-white hover:bg-blue-700"}`}>
+                        <button onClick={open} disabled={power === 0} className={`w-full py-4 rounded-xl font-bold transition ${power === 0 ? "bg-gray-100 text-gray-400" : "bg-emerald-600 text-white hover:bg-emerald-700"}`}>
                             {power === 0 ? " Haz ZAP para Votar" : "️ Votar"}
                         </button>
                     )}

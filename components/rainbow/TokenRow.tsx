@@ -28,7 +28,7 @@ const getChainName = (id?: number) => {
 const getChainColor = (id?: number) => {
     switch(id) {
         case 137: return "bg-purple-500/10 text-purple-400 border-purple-500/20";
-        case 8453: return "bg-[#25D366]/10 text-blue-400 border-[#25D366]/20";
+        case 8453: return "bg-[#25D366]/10 text-emerald-400 border-[#25D366]/20";
         case 42161: return "bg-sky-500/10 text-sky-400 border-sky-500/20";
         case 10: return "bg-red-500/10 text-red-400 border-red-500/20";
         case 480: return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 const backers = [
-    { name: 'Coinglass', color: 'text-blue-400', glow: 'shadow-[#25D366]/20' },
+    { name: 'Coinglass', color: 'text-emerald-400', glow: 'shadow-[#25D366]/20' },
     { name: 'CoinGecko', color: 'text-emerald-400', glow: 'shadow-emerald-500/20' },
     { name: 'Kernel Ventures', color: 'text-purple-400', glow: 'shadow-purple-500/20' },
     { name: 'Good News Ventures', color: 'text-orange-400', glow: 'shadow-orange-500/20' },
@@ -25,7 +25,7 @@ export function BackersSection() {
         <section className="relative py-24 overflow-hidden bg-black border-y border-white/[0.02]">
             {/* Background Atmosphere */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[300px] bg-blue-600/5 blur-[120px] rounded-full" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[300px] bg-emerald-600/5 blur-[120px] rounded-full" />
             </div>
 
             <div className="relative z-10 max-w-[2560px] mx-auto px-6 text-left">

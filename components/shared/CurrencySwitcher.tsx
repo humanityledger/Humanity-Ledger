@@ -22,7 +22,7 @@ export function CurrencySwitcher() {
     { id: 'GBP', label: 'GBP', icon: Coins, color: 'text-[#25D366]' },
     { id: 'CHF', label: 'CHF', icon: Coins, color: 'text-red-500' },
     { id: 'BTC', label: 'BTC', icon: Bitcoin, color: 'text-amber-500' },
-    { id: 'SEK', label: 'SEK', icon: Coins, color: 'text-blue-400' },
+    { id: 'SEK', label: 'SEK', icon: Coins, color: 'text-emerald-400' },
     { id: 'NOK', label: 'NOK', icon: Coins, color: 'text-red-400' },
     { id: 'DKK', label: 'DKK', icon: Coins, color: 'text-red-600' },
     { id: 'PLN', label: 'PLN', icon: Coins, color: 'text-red-300' },

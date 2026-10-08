@@ -500,7 +500,7 @@ function getSpendMeta(tx: any): { icon: string; label: string; color: string; bg
     return { icon: '🎁', label: 'Monthly Airdrop',      color: 'text-purple-700',  bg: 'bg-purple-50',  border: 'border-purple-200' };
   }
   if (reason.toLowerCase().includes('video call') || reason.toLowerCase().includes('audio call')) {
-    return { icon: '📹', label: reason,                 color: 'text-blue-700',    bg: 'bg-blue-50',    border: 'border-blue-200'   };
+    return { icon: '📹', label: reason,                 color: 'text-emerald-700',    bg: 'bg-emerald-50',    border: 'border-emerald-200'   };
   }
   if (reason.toLowerCase().includes('noir') || reason.toLowerCase().includes('zk proof')) {
     return { icon: '🔐', label: reason,                 color: 'text-amber-700',   bg: 'bg-amber-50',   border: 'border-amber-200'  };

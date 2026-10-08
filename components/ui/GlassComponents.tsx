@@ -75,7 +75,7 @@ export const PrimaryButton = ({ children, className, glow = false, ...props }: P
 // --- GLASS BADGE ---
 export const GlassBadge = ({ children, color = "blue" }: { children: React.ReactNode, color?: "blue" | "purple" | "green" | "red" }) => {
     const colors = {
-        blue: "bg-[#25D366]/10 text-blue-200 border-[#25D366]/20",
+        blue: "bg-[#25D366]/10 text-emerald-200 border-[#25D366]/20",
         purple: "bg-purple-500/10 text-purple-200 border-purple-500/20",
         green: "bg-green-500/10 text-green-200 border-green-500/20",
         red: "bg-red-500/10 text-red-200 border-red-500/20",

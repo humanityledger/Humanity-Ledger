@@ -9,7 +9,7 @@ async function resolveCaller(req: NextRequest) {
   if (verified) return verified.toLowerCase();
   const session = await getSession();
   if (session?.userId) return session.userId.toLowerCase();
-  return req.headers.get('x-web3-address')?.toLowerCase();
+  return null; // Spoofing vector closed
 }
 
 // GET /api/chat/updates
@@ -48,22 +48,12 @@ export async function GET(req: NextRequest) {
 
     const callerSafe = caller.replace(/'/g, "''");
 
-    const updates = await prisma.$queryRawUnsafe(`
-      SELECT * FROM "StatusUpdate"
-      WHERE "expiresAt" > NOW()
-      AND (
-        "ownerAddress" = '${callerSafe}'
-        OR ("ownerAddress" IN (${peersList}) AND "privacy" IN ('everyone', 'contacts'))
-        OR "privacy" = 'everyone'
-      )
-      ORDER BY "createdAt" DESC
-      LIMIT 50
-    `) as any[];
+    const updates = await prisma.statusUpdate.findMany({ where: { expiresAt: { gt: new Date() }, OR: [ { ownerAddress: caller }, { ownerAddress: { in: contactAddresses || [] }, privacy: { in: ["everyone", "contacts"] } }, { privacy: "everyone" } ] }, orderBy: { createdAt: "desc" }, take: 50 });
 
     return NextResponse.json({ updates });
   } catch (error: any) {
     console.error('[Updates API]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
@@ -116,6 +106,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ update });
   } catch (error: any) {
     console.error('[Updates POST]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

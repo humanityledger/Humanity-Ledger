@@ -103,7 +103,7 @@ export function SightInsightTab() {
               </div>
             </div>
             <div className="text-right">
-              <span className="text-xs font-black bg-blue-100 text-blue-800 px-3 py-1 rounded-full uppercase tracking-wider">Expanding</span>
+              <span className="text-xs font-black bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full uppercase tracking-wider">Expanding</span>
             </div>
           </div>
 

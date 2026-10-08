@@ -27,7 +27,7 @@ export default function NetworkSwitcher() {
                 {isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin text-white/70" />
                 ) : (
-                    <Globe className={`w-4 h-4 ${activeChain?.name === 'Polygon' ? 'text-emerald-400' : 'text-blue-400'}`} />
+                    <Globe className={`w-4 h-4 ${activeChain?.name === 'Polygon' ? 'text-emerald-400' : 'text-emerald-400'}`} />
                 )}
                 <span className="text-sm font-medium">{activeChain?.name || "Unknown"}</span>
                 <ChevronDown className={`w-4 h-4 text-white/50 transition-transform ${isOpen ? "rotate-180" : ""}`} />

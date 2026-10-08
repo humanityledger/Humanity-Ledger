@@ -415,7 +415,7 @@ export default function ScanPage() {
             
             {needsWallet ? (
               <div className="flex flex-col gap-3 w-full">
-                <button onClick={() => openAppKit()} className="w-full py-4 bg-[#1c7aff] text-white font-bold text-[15px] rounded-xl shadow-lg">
+                <button onClick={() => openAppKit()} className="w-full py-4 bg-[#25D366] text-white font-bold text-[15px] rounded-xl shadow-lg">
                   Connect Wallet
                 </button>
                 {pinScanData && (
@@ -436,7 +436,7 @@ export default function ScanPage() {
         {status === 'pin_required' && (
           <div className="absolute inset-0 bg-black/80 backdrop-blur-2xl z-50 flex flex-col items-center justify-center p-6">
             <div className="w-full max-w-sm flex flex-col items-center">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1c7aff] to-[#ff2a85] flex items-center justify-center mb-6 shadow-lg shadow-[#ff2a85]/30">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#25D366] to-[#ff2a85] flex items-center justify-center mb-6 shadow-lg shadow-[#ff2a85]/30">
                 <Shield size={28} className="text-white" />
               </div>
               <h2 className="text-white font-bold text-2xl mb-2">Enter Visual PIN</h2>
@@ -453,7 +453,7 @@ export default function ScanPage() {
                     inputMode="numeric"
                     maxLength={1}
                     value={pinInput[i] || ''}
-                    className="w-14 h-16 text-center text-2xl font-bold bg-[#1A1A1A] border-2 border-white/10 rounded-2xl focus:outline-none focus:border-[#1c7aff] focus:bg-[#2A2A2A] transition-all text-white shadow-inner"
+                    className="w-14 h-16 text-center text-2xl font-bold bg-[#1A1A1A] border-2 border-white/10 rounded-2xl focus:outline-none focus:border-[#25D366] focus:bg-[#2A2A2A] transition-all text-white shadow-inner"
                     onChange={(e) => {
                       const val = e.target.value.replace(/\D/g, '');
                       const next = pinInput.split('');
@@ -489,7 +489,7 @@ export default function ScanPage() {
           <div className="absolute inset-0 bg-black/80 backdrop-blur-2xl z-50 flex flex-col items-center justify-center p-6">
              <div className="flex flex-col items-center gap-6">
                {status === 'verifying_pin' ? (
-                 <Loader2 className="animate-spin text-[#1c7aff]" size={48} />
+                 <Loader2 className="animate-spin text-[#25D366]" size={48} />
                ) : (
                  <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/30">
                    <CheckCircle size={40} className="text-green-400" />

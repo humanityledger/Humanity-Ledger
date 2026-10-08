@@ -46,7 +46,7 @@ export function MetaMaskInterface({ onConnect }: { onConnect?: () => void }) {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={onConnect}
-          className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-cyan-900/40 hover:shadow-cyan-500/50 transition-all cursor-pointer z-50 text-lg"
+          className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-cyan-600 to-emerald-600 text-white font-bold rounded-2xl shadow-lg shadow-cyan-900/40 hover:shadow-cyan-500/50 transition-all cursor-pointer z-50 text-lg"
         >
           Connect Identity
         </motion.button>

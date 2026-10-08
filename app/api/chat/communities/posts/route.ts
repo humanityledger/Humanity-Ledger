@@ -9,10 +9,9 @@ export async function POST(req: Request) {
     const { communityId, title, content, contentHtml, plainText } = body;
 
     // authorAddress comes from body OR from the x-web3-address header
-    const authorAddress =
-      body.authorAddress ||
-      (req.headers as any).get?.('x-web3-address') ||
-      '';
+    const session = await require('@/lib/session').getSession();
+    const authorAddress = session?.userId;
+    if (!authorAddress) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     if (!communityId || !content || !authorAddress) {
       return NextResponse.json(
@@ -34,7 +33,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ post, status: 'PUBLISHED' });
   } catch (e: any) {
     console.error('[community-posts POST]', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 

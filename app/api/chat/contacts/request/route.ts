@@ -21,9 +21,7 @@ async function resolveCallerAddress(req: NextRequest): Promise<string | null> {
   if (session?.userId) return session.userId.toLowerCase();
   // Priority 3: client-supplied header — trusted for non-sensitive ops (contact requests).
   // Anti-spoofing is enforced by cross-checking the address against the body in POST handlers.
-  const web3 = req.headers.get('x-web3-address');
-  if (web3) return web3.toLowerCase();
-  return null;
+  return null; // Spoofing vector closed
 }
 
 

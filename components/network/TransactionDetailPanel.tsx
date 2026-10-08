@@ -46,7 +46,7 @@ export function TransactionDetailPanel({ transaction, onClose, btcToUsd }: Trans
                         <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Transaction</p>
                         <Link 
                             href={`/network/transactions/${transaction.hash}`}
-                            className="font-mono text-sm text-blue-400 hover:text-blue-300 flex items-center gap-2 break-all transition-colors"
+                            className="font-mono text-sm text-emerald-400 hover:text-emerald-300 flex items-center gap-2 break-all transition-colors"
                         >
                             {transaction.hash}
                             <ExternalLink size={14} className="flex-shrink-0" />
@@ -119,7 +119,7 @@ export function TransactionDetailPanel({ transaction, onClose, btcToUsd }: Trans
                                 {transaction.rbfEnabled ? 'RBF enabled' : 'RBF disabled'}
                             </span>
 
-                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-600/20 text-blue-400 border border-[#25D366]/30">
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-600/20 text-emerald-400 border border-[#25D366]/30">
                                 Version {transaction.version}
                             </span>
 

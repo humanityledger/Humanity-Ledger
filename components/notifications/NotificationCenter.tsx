@@ -108,7 +108,7 @@ export default function NotificationCenter() {
                                     notifications.map((n: any) => (
                                         <div 
                                             key={n.id} 
-                                            className={`p-4 border-b border-[#1F1F1F]/5 hover:bg-[#FFFFFF] transition-colors relative group ${!n.read ? 'bg-blue-50/30' : ''}`}
+                                            className={`p-4 border-b border-[#1F1F1F]/5 hover:bg-[#FFFFFF] transition-colors relative group ${!n.read ? 'bg-emerald-50/30' : ''}`}
                                         >
                                             <div className="flex gap-3">
                                                 <div className={`mt-1 w-8 h-8 rounded-full bg-white border border-[#1F1F1F]/5 flex items-center justify-center shadow-sm shrink-0`}>

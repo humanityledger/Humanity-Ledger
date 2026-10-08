@@ -24,7 +24,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ success: true, message: 'Scan complete' });
     } catch (error: any) {
         console.error('[Cron] Failed:', error);
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }
 }
 

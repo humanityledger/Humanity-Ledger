@@ -590,7 +590,7 @@ function DataView({ s, update, address }: any) {
 
   return (
     <div className="p-4 space-y-6 pb-20">
-      <div className="bg-black text-white border-[3px] border-black p-6 flex flex-col items-center shadow-[6px_6px_0_0_#1c7aff]">
+      <div className="bg-black text-white border-[3px] border-black p-6 flex flex-col items-center shadow-[6px_6px_0_0_#25D366]">
         <div className="w-full flex justify-between items-end mb-4">
           <div className="flex flex-col">
             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Local Sent</span>
@@ -598,14 +598,14 @@ function DataView({ s, update, address }: any) {
           </div>
           <div className="flex flex-col items-end">
             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Local Rcvd</span>
-            <span className="text-xl font-black text-[#1c7aff]">{stats.received} KB</span>
+            <span className="text-xl font-black text-[#25D366]">{stats.received} KB</span>
           </div>
         </div>
         <div className="w-full h-3 bg-zinc-800 border border-white flex mb-4">
           <div className="h-full bg-white" style={{ width: `${Math.min(30, stats.sent / (stats.sent + stats.received + 1) * 100)}%` }} />
-          <div className="h-full bg-[#1c7aff]" style={{ width: `${Math.min(70, stats.received / (stats.sent + stats.received + 1) * 100)}%` }} />
+          <div className="h-full bg-[#25D366]" style={{ width: `${Math.min(70, stats.received / (stats.sent + stats.received + 1) * 100)}%` }} />
         </div>
-        <button onClick={purgeCacheWithConfirm} className="w-full py-2 bg-white text-black font-black uppercase text-sm border-2 border-transparent hover:border-[#1c7aff] active:bg-zinc-200">
+        <button onClick={purgeCacheWithConfirm} className="w-full py-2 bg-white text-black font-black uppercase text-sm border-2 border-transparent hover:border-[#25D366] active:bg-zinc-200">
           Clear Cache
         </button>
       </div>
@@ -649,7 +649,7 @@ function AppearanceView({ s, update }: any) {
       <SH title="Theme" />
       <div className="grid grid-cols-2 gap-3">
         {(['brutalist', 'monochrome', 'neon_void', 'terminal'] as const).map(theme => (
-          <div key={theme} onClick={() => update('theme', theme)} className={`border-[3px] p-4 cursor-pointer flex flex-col items-center gap-1 transition-all ${s.theme === theme ? 'bg-black text-white border-black shadow-[4px_4px_0_0_#1c7aff]' : 'bg-white border-black text-black hover:bg-zinc-100'}`}>
+          <div key={theme} onClick={() => update('theme', theme)} className={`border-[3px] p-4 cursor-pointer flex flex-col items-center gap-1 transition-all ${s.theme === theme ? 'bg-black text-white border-black shadow-[4px_4px_0_0_#25D366]' : 'bg-white border-black text-black hover:bg-zinc-100'}`}>
             <span className="font-black uppercase text-[11px] tracking-widest">{theme.replace('_', ' ')}</span>
           </div>
         ))}
@@ -862,7 +862,7 @@ function DevicesView() {
 
   return (
     <div className="p-4 space-y-6 pb-20">
-      <button onClick={() => toast.info('To link a new device, open Ledger Chat on that device and sign in with the same wallet.')} className="w-full py-4 bg-[#1c7aff] text-white font-black uppercase tracking-widest border-[3px] border-black shadow-[6px_6px_0_0_#000] active:translate-y-1">
+      <button onClick={() => toast.info('To link a new device, open Ledger Chat on that device and sign in with the same wallet.')} className="w-full py-4 bg-[#25D366] text-white font-black uppercase tracking-widest border-[3px] border-black shadow-[6px_6px_0_0_#000] active:translate-y-1">
         Link New Device
       </button>
       <SH title="Active Sessions" />
@@ -945,9 +945,9 @@ function WorkspacesView({ s, update }: any) {
 function GhostModeView({ s, update }: any) {
   return (
     <div className="p-4 space-y-6 pb-20">
-      <div className="bg-black border-[3px] border-black p-5 shadow-[6px_6px_0_0_#1c7aff]">
+      <div className="bg-black border-[3px] border-black p-5 shadow-[6px_6px_0_0_#25D366]">
         <div className="flex items-center gap-3 mb-2">
-          <Bot size={24} className="text-[#1c7aff]" />
+          <Bot size={24} className="text-[#25D366]" />
           <span className="text-white font-black text-lg uppercase">AI Ghost Mode</span>
         </div>
         <p className="text-zinc-400 text-[12px] font-bold">When enabled, Ledger Chat will automatically reply to incoming messages on your behalf while you are away.</p>
@@ -1051,36 +1051,36 @@ function PremiumView() {
 
   return (
     <div className="p-4 pb-20 flex flex-col items-center">
-      <div className="w-32 h-32 border-[4px] border-[#1c7aff] bg-black flex items-center justify-center shadow-[10px_10px_0_0_#1c7aff] mb-8">
-        <Crown size={48} className="text-[#1c7aff]" />
+      <div className="w-32 h-32 border-[4px] border-[#25D366] bg-black flex items-center justify-center shadow-[10px_10px_0_0_#25D366] mb-8">
+        <Crown size={48} className="text-[#25D366]" />
       </div>
       <h1 className="text-3xl font-black uppercase text-center mb-2">Ledger Pro</h1>
       <p className="text-sm font-bold text-zinc-600 text-center mb-6 max-w-xs">Unlimited limits. Autonomous tooling. Complete sovereignty.</p>
 
-      <div className="w-full bg-black border-[3px] border-[#1c7aff] p-3 mb-4 flex items-center gap-2 shadow-[4px_4px_0_0_#1c7aff]">
-        <span className="text-[10px] font-black text-[#1c7aff] uppercase tracking-widest">? Paid with QD Tokens Ã¯Â¿Â½ Decentralized & On-chain</span>
+      <div className="w-full bg-black border-[3px] border-[#25D366] p-3 mb-4 flex items-center gap-2 shadow-[4px_4px_0_0_#25D366]">
+        <span className="text-[10px] font-black text-[#25D366] uppercase tracking-widest">? Paid with QD Tokens Ã¯Â¿Â½ Decentralized & On-chain</span>
       </div>
       
       <div className="w-full flex gap-4 mb-8">
         <div className="flex-1 border-[3px] border-black bg-white p-4 flex flex-col shadow-[4px_4px_0_0_#000]">
           <span className="font-black">MONTHLY</span>
-          <span className="font-black text-[#1c7aff] text-xl mt-2">4,500 QD</span>
+          <span className="font-black text-[#25D366] text-xl mt-2">4,500 QD</span>
           <button
             onClick={() => handlePayment('monthly', 4500)}
             disabled={isPaying}
-            className="mt-3 py-2 bg-[#1c7aff] text-white font-black text-[11px] uppercase border-2 border-black disabled:opacity-50"
+            className="mt-3 py-2 bg-[#25D366] text-white font-black text-[11px] uppercase border-2 border-black disabled:opacity-50"
           >
             {isPaying ? 'PROCESSING...' : 'SELECT'}
           </button>
         </div>
-        <div className="flex-1 border-[3px] border-[#1c7aff] bg-black text-white p-4 flex flex-col shadow-[4px_4px_0_0_#1c7aff]">
-          <span className="text-[10px] bg-[#1c7aff] px-1 py-0.5 w-fit font-black mb-1">-35%</span>
+        <div className="flex-1 border-[3px] border-[#25D366] bg-black text-white p-4 flex flex-col shadow-[4px_4px_0_0_#25D366]">
+          <span className="text-[10px] bg-[#25D366] px-1 py-0.5 w-fit font-black mb-1">-35%</span>
           <span className="font-black">ANNUAL</span>
-          <span className="font-black text-[#1c7aff] text-xl mt-2">2,800 QD<span className="text-sm text-zinc-400">/mo</span></span>
+          <span className="font-black text-[#25D366] text-xl mt-2">2,800 QD<span className="text-sm text-zinc-400">/mo</span></span>
           <button
             onClick={() => handlePayment('annual', 33600)}
             disabled={isPaying}
-            className="mt-3 py-2 bg-[#1c7aff] text-white font-black text-[11px] uppercase border-2 border-[#1c7aff] disabled:opacity-50"
+            className="mt-3 py-2 bg-[#25D366] text-white font-black text-[11px] uppercase border-2 border-[#25D366] disabled:opacity-50"
           >
             {isPaying ? 'PROCESSING...' : 'SELECT'}
           </button>

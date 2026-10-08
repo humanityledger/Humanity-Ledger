@@ -39,7 +39,7 @@ function ExpandableFeature({ feature }: ExpandableFeatureProps) {
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <h3 className="text-2xl font-black text-white mb-2 group-hover:text-blue-400 transition-colors uppercase tracking-widest">
+            <h3 className="text-2xl font-black text-white mb-2 group-hover:text-emerald-400 transition-colors uppercase tracking-widest">
               {title}
             </h3>
             <p className="text-[#25D366]/60 text-xs font-mono uppercase tracking-[0.2em] mb-3">
@@ -76,7 +76,7 @@ function ExpandableFeature({ feature }: ExpandableFeatureProps) {
                 <div className="space-y-8">
                   {/* Deep Dive */}
                   <div>
-                    <h4 className="text-sm font-black text-blue-400 mb-6 font-mono uppercase tracking-[0.3em]">
+                    <h4 className="text-sm font-black text-emerald-400 mb-6 font-mono uppercase tracking-[0.3em]">
                       {t('ecosystem.deep_dive')}
                     </h4>
                     <div className="space-y-6">
@@ -91,7 +91,7 @@ function ExpandableFeature({ feature }: ExpandableFeatureProps) {
                   {/* Human Edge */}
                   <div className="bg-[#25D366]/5 border border-[#25D366]/20 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden group/edge">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-[#25D366]/10 blur-[60px] rounded-full translate-x-10 -translate-y-10" />
-                    <h4 className="text-sm font-black text-blue-400 mb-4 font-mono uppercase tracking-[0.3em] relative z-10">
+                    <h4 className="text-sm font-black text-emerald-400 mb-4 font-mono uppercase tracking-[0.3em] relative z-10">
                       {t('ecosystem.why_hero')}
                     </h4>
                     <p className="text-white leading-relaxed text-lg font-bold relative z-10">
@@ -104,7 +104,7 @@ function ExpandableFeature({ feature }: ExpandableFeatureProps) {
                     <motion.a
                       whileHover={{ x: 5 }}
                       href={feature.cta.link}
-                      className="inline-flex items-center gap-3 text-blue-400 hover:text-blue-300 font-black uppercase tracking-[0.2em] text-sm transition-colors border-b-2 border-blue-400/20 pb-1"
+                      className="inline-flex items-center gap-3 text-emerald-400 hover:text-emerald-300 font-black uppercase tracking-[0.2em] text-sm transition-colors border-b-2 border-emerald-400/20 pb-1"
                     >
                       {ctaText}
                       <ExternalLink className="w-4 h-4" />

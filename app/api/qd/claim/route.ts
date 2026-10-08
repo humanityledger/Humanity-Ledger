@@ -9,7 +9,7 @@ async function resolveCaller(req: NextRequest) {
   if (verified) return verified.toLowerCase();
   const session = await getSession();
   if (session?.userId) return session.userId.toLowerCase();
-  return req.headers.get('x-web3-address')?.toLowerCase();
+  return null; // Spoofing vector closed
 }
 
 /**
@@ -41,11 +41,7 @@ export async function POST(req: NextRequest) {
     `).catch(() => {});
 
     // Check last claim
-    const lastClaims = await prisma.$queryRawUnsafe(`
-      SELECT "createdAt" FROM "QDCreditLedger" 
-      WHERE "address" = '${callerSafe}' AND "reason" = 'claim_daily'
-      ORDER BY "createdAt" DESC LIMIT 1
-    `) as any[];
+    const lastClaims = await prisma.$queryRaw`SELECT "createdAt" FROM "QDCreditLedger" WHERE "address" =  AND "reason" = 'claim_daily' ORDER BY "createdAt" DESC LIMIT 1` as any[];
 
     if (lastClaims.length > 0) {
       const lastClaimTime = new Date(lastClaims[0].createdAt).getTime();
@@ -67,6 +63,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, amount: 100 });
   } catch (error: any) {
     console.error('[Claim API]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

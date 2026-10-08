@@ -130,7 +130,7 @@ export function NetworkMapPanel() {
         style={{ backgroundImage: "radial-gradient(#000 1px, transparent 1px)", backgroundSize: "32px 32px" }}
       />
       {/* Ambient glows */}
-      <div className="absolute top-0 left-1/4 w-[700px] h-[700px] bg-blue-100/25 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-[700px] h-[700px] bg-emerald-100/25 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-[700px] h-[700px] bg-emerald-100/15 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute top-1/2 left-1/2 w-[500px] h-[500px] bg-violet-100/10 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
 
@@ -500,7 +500,7 @@ export function NetworkMapPanel() {
               SECTION 4 — DATA & INDEXING LAYER
           ══════════════════════════════════════════════════ */}
           <div className="relative flex flex-col w-full">
-            <div className="absolute -inset-8 md:-inset-12 bg-blue-50/20 backdrop-blur-md rounded-[3rem] border border-blue-100/40 shadow-[0_20px_60px_-20px_rgba(59,130,246,0.04)] z-0" />
+            <div className="absolute -inset-8 md:-inset-12 bg-emerald-50/20 backdrop-blur-md rounded-[3rem] border border-emerald-100/40 shadow-[0_20px_60px_-20px_rgba(59,130,246,0.04)] z-0" />
             <div className="relative z-10 w-full">
               <SectionHeader number="4" label="Data & Indexing Layer" />
 

@@ -43,7 +43,7 @@ export function LedgerDetectionVisual() {
             {/* Ambient Background Glow */}
             <div className="absolute inset-0 pointer-events-none">
                 <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-[160px] transition-all duration-1000 ${
-                    isDetecting ? 'bg-emerald-500/20' : 'bg-blue-600/5'
+                    isDetecting ? 'bg-emerald-500/20' : 'bg-emerald-600/5'
                 }`} />
             </div>
 

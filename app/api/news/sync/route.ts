@@ -53,7 +53,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ 
             success: false, 
             error: "Internal sync failure",
-            details: error.message 
+            details: 'Error details redacted' 
         }, { status: 500 });
     }
 }

@@ -69,8 +69,8 @@ export function ScheduleMessageSheet({ isOpen, onSchedule, onClose }: ScheduleMe
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#1c7aff]/10 flex items-center justify-center">
-                  <Clock size={20} className="text-[#1c7aff]" />
+                <div className="w-10 h-10 rounded-2xl bg-[#25D366]/10 flex items-center justify-center">
+                  <Clock size={20} className="text-[#25D366]" />
                 </div>
                 <div>
                   <p className="text-[16px] font-black text-[#1C1C1E]">Schedule Message</p>
@@ -94,7 +94,7 @@ export function ScheduleMessageSheet({ isOpen, onSchedule, onClose }: ScheduleMe
                     <button
                       key={opt.label}
                       onClick={() => setSelectedDateStr(toLocalInput(opt.getValue()))}
-                      className="px-3 py-1.5 rounded-xl bg-[#F2F2F7] hover:bg-[#1c7aff] hover:text-white text-[#1C1C1E] text-[13px] font-bold transition-all"
+                      className="px-3 py-1.5 rounded-xl bg-[#F2F2F7] hover:bg-[#25D366] hover:text-white text-[#1C1C1E] text-[13px] font-bold transition-all"
                     >
                       {opt.label}
                     </button>
@@ -106,7 +106,7 @@ export function ScheduleMessageSheet({ isOpen, onSchedule, onClose }: ScheduleMe
               <div>
                 <p className="text-[11px] font-black uppercase tracking-widest text-black/30 mb-2">Custom Time</p>
                 <div className="flex items-center gap-2 bg-[#F2F2F7] rounded-2xl p-3">
-                  <Calendar size={18} className="text-[#1c7aff] shrink-0" />
+                  <Calendar size={18} className="text-[#25D366] shrink-0" />
                   <input
                     type="datetime-local"
                     value={selectedDateStr}
@@ -120,7 +120,7 @@ export function ScheduleMessageSheet({ isOpen, onSchedule, onClose }: ScheduleMe
               {/* Confirm */}
               <button
                 onClick={handleConfirm}
-                className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-[#1c7aff] text-white font-black text-[15px] active:scale-[0.98] transition-all"
+                className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-[#25D366] text-white font-black text-[15px] active:scale-[0.98] transition-all"
               >
                 <Send size={16} />
                 Schedule Message

@@ -88,7 +88,7 @@ export const LedgerCard = ({ address: propAddress, balance: propBalance, change2
                     {/* HEADER: LOGO & CHIP */}
                     <div className="flex justify-between items-start mb-6">
                         <div className="flex items-center gap-2 text-white/60 bg-black/20 px-3 py-1.5 rounded-full text-xs font-mono border border-white/5">
-                            <Shield size={12} className={cn("text-[#00ff9d]", accountType === 'WATCH_ONLY' && "text-blue-400")} />
+                            <Shield size={12} className={cn("text-[#00ff9d]", accountType === 'WATCH_ONLY' && "text-emerald-400")} />
                             {accountType === 'WATCH_ONLY' ? 'WATCH ONLY' : 'LEDGER SECURED'}
                         </div>
                         <div className="w-12 h-8 rounded-md bg-gradient-to-br from-yellow-400/20 to-yellow-600/20 border border-white/10 flex items-center justify-center relative overflow-hidden">

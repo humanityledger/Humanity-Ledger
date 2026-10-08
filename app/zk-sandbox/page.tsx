@@ -121,7 +121,7 @@ export default function ZkSandboxPage() {
 
 <span className="text-pink-400">use</span> dep::std;
 
-<span className="text-pink-400">fn</span> <span className="text-blue-400">main</span>(
+<span className="text-pink-400">fn</span> <span className="text-emerald-400">main</span>(
   <span className="text-slate-500">// Public Inputs (Visible to verifier)</span>
   identity_commitment: <span className="text-pink-400">pub</span> Field,
   current_year: <span className="text-pink-400">pub</span> u32,

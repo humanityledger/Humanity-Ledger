@@ -53,6 +53,6 @@ export async function POST() {
         return NextResponse.json({ ok: true, syncedCount });
     } catch (e: any) {
         console.error('[Academy Sync]', e);
-        return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
+        return NextResponse.json({ ok: false, error: 'Internal Server Error' }, { status: 500 });
     }
 }

@@ -37,7 +37,7 @@ export async function GET() {
             blocks: 0, 
             difficulty: 0, 
             bestBlockHash: "SYNC_PENDING", 
-            error: e.message 
+            error: 'Internal Server Error' 
         });
     }
 }

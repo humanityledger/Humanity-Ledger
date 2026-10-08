@@ -60,6 +60,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Error issuing card:', error);
-    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error', details: 'Error details redacted' }, { status: 500 });
   }
 }

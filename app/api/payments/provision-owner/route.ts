@@ -33,6 +33,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, tier: 'ARCHIVE_PROVER' });
     } catch (e: any) {
         console.error('[OWNER_PROVISION_ERROR]', e);
-        return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
+        return NextResponse.json({ ok: false, error: 'Internal Server Error' }, { status: 500 });
     }
 }

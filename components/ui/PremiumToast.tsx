@@ -67,7 +67,7 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
     success: <CheckCircle className="w-5 h-5 text-green-400" />,
     error: <XCircle className="w-5 h-5 text-red-400" />,
     warning: <AlertCircle className="w-5 h-5 text-yellow-400" />,
-    info: <Info className="w-5 h-5 text-blue-400" />,
+    info: <Info className="w-5 h-5 text-emerald-400" />,
   };
 
   const colors = {

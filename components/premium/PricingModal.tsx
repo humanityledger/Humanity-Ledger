@@ -132,7 +132,7 @@ export default function PricingModal({ isOpen, onClose, onSubscribe }: PricingMo
           </div>
 
           {/* Pro Tier */}
-          <div className="p-6 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl border-2 border-[#25D366] relative overflow-hidden shadow-lg col-span-2 md:col-span-1">
+          <div className="p-6 bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl border-2 border-[#25D366] relative overflow-hidden shadow-lg col-span-2 md:col-span-1">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
             
@@ -159,7 +159,7 @@ export default function PricingModal({ isOpen, onClose, onSubscribe }: PricingMo
               <ul className="grid grid-cols-2 gap-2 mb-8">
                 {features.map((feature, i) => (
                   <li key={i} className="flex items-start gap-2 text-[11px] font-bold text-white">
-                    <Check size={14} className="mt-0.5 flex-shrink-0 text-blue-300" />
+                    <Check size={14} className="mt-0.5 flex-shrink-0 text-emerald-300" />
                     {feature}
                   </li>
                 ))}
@@ -167,7 +167,7 @@ export default function PricingModal({ isOpen, onClose, onSubscribe }: PricingMo
 
               <button
                 onClick={handleSubscribe}
-                className="w-full py-5 bg-white text-blue-600 rounded-2xl font-black text-xl hover:bg-white/90 transition-all flex items-center justify-center gap-3 shadow-xl shadow-blue-900/40 hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full py-5 bg-white text-emerald-600 rounded-2xl font-black text-xl hover:bg-white/90 transition-all flex items-center justify-center gap-3 shadow-xl shadow-emerald-900/40 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Zap size={24} />
                 DESBLOQUEAR TODO EL PANEL

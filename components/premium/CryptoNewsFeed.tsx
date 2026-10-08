@@ -142,7 +142,7 @@ export default function CryptoNewsFeed({ isPremium, walletAddress, tokens = [] }
             onClick={() => setFilter(f as any)}
             className={`px-4 py-2 rounded-xl font-bold transition-all capitalize ${
               filter === f
-                ? 'bg-blue-600 text-white shadow-lg'
+                ? 'bg-emerald-600 text-white shadow-lg'
                 : 'bg-white/5 text-gray-400 hover:bg-white/10'
             }`}
           >
@@ -159,7 +159,7 @@ export default function CryptoNewsFeed({ isPremium, walletAddress, tokens = [] }
       {/* News Grid */}
       {loading && articles.length === 0 ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent" />
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-600 border-t-transparent" />
         </div>
       ) : (
         <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${!isPremium ? 'opacity-30 pointer-events-none select-none filter blur-sm' : ''}`}>
@@ -230,7 +230,7 @@ function NewsCard({
       </div>
 
       {/* Title */}
-      <h3 className="font-black text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
+      <h3 className="font-black text-white mb-2 line-clamp-2 group-hover:text-emerald-400 transition-colors">
         {article.title}
       </h3>
 
@@ -249,7 +249,7 @@ function NewsCard({
           ))}
         </div>
 
-        <div className="flex items-center gap-1 text-xs font-bold text-blue-400 group-hover:gap-2 transition-all">
+        <div className="flex items-center gap-1 text-xs font-bold text-emerald-400 group-hover:gap-2 transition-all">
           Read More
           <ExternalLink size={12} />
         </div>

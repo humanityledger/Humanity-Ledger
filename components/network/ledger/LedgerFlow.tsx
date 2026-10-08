@@ -81,9 +81,9 @@ export function LedgerFlow({ nodes, links }: Props) {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <Waves className="text-blue-400" size={22} />
+                    <Waves className="text-emerald-400" size={22} />
                     <h2 className="text-white font-bold text-lg">Ledger Flow</h2>
-                    <span className="text-[10px] font-black bg-[#25D366]/20 text-blue-300 px-2 py-0.5 rounded-full border border-[#25D366]/30 ml-1">LIVE</span>
+                    <span className="text-[10px] font-black bg-[#25D366]/20 text-emerald-300 px-2 py-0.5 rounded-full border border-[#25D366]/30 ml-1">LIVE</span>
                 </div>
                 <span className="text-xs text-gray-600">BTC flow visualization</span>
             </div>

@@ -162,7 +162,7 @@ function NotificationItem({ type, title, subtitle, time }: {
 }) {
     const colors = {
         success: 'bg-green-100 border-green-300',
-        info: 'bg-blue-100 border-blue-300',
+        info: 'bg-emerald-100 border-emerald-300',
         warning: 'bg-orange-100 border-orange-300'
     };
 
@@ -264,7 +264,7 @@ function DownloadButton({
                 <div className="text-xs opacity-70 font-normal">{subtext}</div>
             </div>
             {!disabled && (
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 rounded-[2rem] transition-opacity -z-10" />
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-emerald-600 opacity-0 group-hover:opacity-100 rounded-[2rem] transition-opacity -z-10" />
             )}
         </button>
     );

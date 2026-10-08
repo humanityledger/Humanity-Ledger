@@ -128,7 +128,7 @@ export default function AztecPrivacyHub() {
           <button
             onClick={() => { fetchTxs(); handleRoutePrivacy(); }}
             disabled={isRouting || isLoading || !isConnected}
-            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:shadow-[0_0_20px_rgba(147,51,234,0.4)] transition-all disabled:opacity-50"
+            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-emerald-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:shadow-[0_0_20px_rgba(147,51,234,0.4)] transition-all disabled:opacity-50"
           >
             {isLoading ? <RefreshCw size={16} className="animate-spin" /> : <EyeOff size={16} />}
             <span>{isLoading ? 'Fetching...' : 'Refresh On-Chain'}</span>
@@ -166,7 +166,7 @@ export default function AztecPrivacyHub() {
                 </div>
                 <div>
                   <div className="text-xs font-bold text-white">Network State</div>
-                  <div className="text-[10px] text-blue-400 font-mono">{isConnected ? 'Ethereum Mainnet' : 'Disconnected'}</div>
+                  <div className="text-[10px] text-emerald-400 font-mono">{isConnected ? 'Ethereum Mainnet' : 'Disconnected'}</div>
                 </div>
               </div>
             </div>
@@ -229,7 +229,7 @@ export default function AztecPrivacyHub() {
                     <div className="flex flex-col items-center justify-center w-10 h-10 rounded-xl bg-white/5 border border-white/10">
                       {node.status === 'verified' ? <Shield size={16} className="text-green-400" />
                         : node.status === 'processing' ? <Layers size={16} className="text-purple-400" />
-                        : <Zap size={16} className="text-blue-400" />}
+                        : <Zap size={16} className="text-emerald-400" />}
                     </div>
                     <div>
                       <div className="text-sm font-mono text-white/80 group-hover:text-white transition-colors">{node.hash}</div>

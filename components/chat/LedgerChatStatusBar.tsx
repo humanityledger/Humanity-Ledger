@@ -170,11 +170,11 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
           >
             <div className="relative">
               <div
-                className={`w-[50px] h-[50px] rounded-full flex items-center justify-center border-2 ${myStatuses.length > 0 ? 'border-[#1c7aff]' : 'border-black/20 border-dashed'}`}
+                className={`w-[50px] h-[50px] rounded-full flex items-center justify-center border-2 ${myStatuses.length > 0 ? 'border-[#25D366]' : 'border-black/20 border-dashed'}`}
               >
                 <AddressAvatar address={address} size={42} showSaved={true} />
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[#1c7aff] rounded-full border-2 border-white flex items-center justify-center">
+              <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[#25D366] rounded-full border-2 border-white flex items-center justify-center">
                 <span className="text-white text-[10px] font-black leading-none">+</span>
               </div>
             </div>

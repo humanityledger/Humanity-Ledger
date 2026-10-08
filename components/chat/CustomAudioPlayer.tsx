@@ -118,7 +118,7 @@ export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean })
                     key={i} 
                     className={`flex-1 rounded-full transition-colors duration-150 ${
                       isActive 
-                        ? (isMe ? 'bg-white' : 'bg-[#1c7aff]') 
+                        ? (isMe ? 'bg-white' : 'bg-[#25D366]') 
                         : (isMe ? 'bg-white/30' : 'bg-black/15')
                     }`}
                     style={{ height: `${height}%` }}

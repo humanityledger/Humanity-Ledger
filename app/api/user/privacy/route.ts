@@ -53,6 +53,6 @@ export async function GET(req: Request) {
     });
   } catch (e: any) {
     console.error('[user/privacy] Error:', e.message);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

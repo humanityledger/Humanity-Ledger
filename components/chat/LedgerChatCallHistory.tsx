@@ -178,7 +178,7 @@ export function LedgerChatCallHistory({
                     </div>
                   </div>
                   {/* Call-back icon */}
-                  <div className="text-[#1c7aff] shrink-0">
+                  <div className="text-[#25D366] shrink-0">
                     {call.type === 'video' ? <Video size={18} /> : <Phone size={18} />}
                   </div>
                 </button>
@@ -227,7 +227,7 @@ export function LedgerChatCallHistory({
                 </button>
                 <button
                   onClick={() => handleCallBack('video')}
-                  className="w-full h-14 flex items-center justify-center gap-3 bg-[#1c7aff] text-white rounded-2xl font-black text-[15px] uppercase tracking-wide active:scale-[0.98] transition-transform"
+                  className="w-full h-14 flex items-center justify-center gap-3 bg-[#25D366] text-white rounded-2xl font-black text-[15px] uppercase tracking-wide active:scale-[0.98] transition-transform"
                 >
                   <Video size={20} />
                   Video Call

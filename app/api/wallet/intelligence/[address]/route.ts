@@ -37,7 +37,7 @@ export async function GET(
     return NextResponse.json({ 
       error: 'Failed to fetch wallet analytics',
 
-      details: error.message 
+      details: 'Error details redacted' 
     }, { status: 500 });
   }
 }

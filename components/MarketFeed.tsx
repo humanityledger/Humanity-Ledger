@@ -33,7 +33,7 @@ export const MarketFeed = () => {
                     <TrendingUp className="text-cyan-400" />
                     Mercados en Base Sepolia
                 </h3>
-                <span className="px-3 py-1 rounded-full bg-[#25D366]/10 border border-[#25D366]/20 text-blue-200 text-xs font-mono">
+                <span className="px-3 py-1 rounded-full bg-[#25D366]/10 border border-[#25D366]/20 text-emerald-200 text-xs font-mono">
                     {isLoading ? "Sincronizando..." : `${markets.length} Activos`}
                 </span>
             </div>
@@ -53,7 +53,7 @@ export const MarketFeed = () => {
                         <AlertCircle className="text-white/40" size={32} />
                     </div>
                     <h3 className="text-xl text-white font-bold">No active markets</h3>
-                    <p className="text-blue-200/50 mt-2 max-w-md mx-auto">
+                    <p className="text-emerald-200/50 mt-2 max-w-md mx-auto">
                         The blockchain is quiet. Be the first to create a prediction above.
                     </p>
                 </GlassCard>
@@ -102,7 +102,7 @@ export const MarketFeed = () => {
 
                                 {/* Footer de Métricas */}
                                 <div className="flex items-center justify-between border-t border-white/10 pt-4 mt-2">
-                                    <div className="flex items-center gap-2 text-xs text-blue-200/50 font-mono">
+                                    <div className="flex items-center gap-2 text-xs text-emerald-200/50 font-mono">
                                         <BarChart3 size={14} />
                                         <span>Vol: {safeToFixed(market.volume, 0)} TKN</span>
                                     </div>

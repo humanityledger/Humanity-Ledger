@@ -62,7 +62,7 @@ export function LegendaryLoader({ title, subtitle }: LegendaryLoaderProps) {
                             repeat: Infinity, 
                             ease: "easeInOut" 
                         }}
-                        className="w-full h-full bg-gradient-to-r from-transparent via-blue-400 to-transparent"
+                        className="w-full h-full bg-gradient-to-r from-transparent via-emerald-400 to-transparent"
                     />
                 </div>
             </div>

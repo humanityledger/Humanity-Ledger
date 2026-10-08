@@ -29,7 +29,7 @@ export function NetworkSwitcher() {
             case 137: return 'bg-purple-500'; // Polygon
             case 10: return 'bg-red-500'; // Optimism
             case 42161: return 'bg-cyan-500'; // Arbitrum
-            case 8453: return 'bg-blue-600'; // Base
+            case 8453: return 'bg-emerald-600'; // Base
             default: return 'bg-gray-500';
         }
     };

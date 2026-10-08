@@ -192,7 +192,7 @@ export function LedgerChatStories({ stories, initialPeerIndex = 0, onClose, myAd
             onPointerUp={() => setIsPaused(false)}
             onPointerLeave={() => setIsPaused(false)}
             onContextMenu={e => e.preventDefault()}
-            style={{ backgroundColor: activeStory.type === 'text' ? activeStory.backgroundColor || '#1c7aff' : '#000' }}
+            style={{ backgroundColor: activeStory.type === 'text' ? activeStory.backgroundColor || '#25D366' : '#000' }}
           >
             <AnimatePresence mode="wait">
               <motion.div
