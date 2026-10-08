@@ -22,7 +22,7 @@ export async function uploadAttachment(
   const maxInlineSize = 512 * 1024; // 512KB
 
   // Check available backend
-  const hasR2 = !!(process.env.NEXT_PUBLIC_R2_ENDPOINT && process.env.NEXT_PUBLIC_R2_BUCKET);
+  const hasR2 = !!process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
   if (!hasR2 || file.size > maxInlineSize * 100) {
     // Try to upload to server API
