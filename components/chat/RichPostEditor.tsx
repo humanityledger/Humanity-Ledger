@@ -715,7 +715,7 @@ export function RichPostEditorModal({
   communityName?: string;
   communityId?: string; // <--- Added this
   myAddress: string;
-  onPublished?: (content: { html: string; text: string; json: any }) => void;
+  onPublished?: (post: any) => void;
 }) {
   const handlePublish = async (content: { html: string; text: string; json: any }) => {
     try {
@@ -751,7 +751,7 @@ export function RichPostEditorModal({
       }
 
       toast.success('Post published!');
-      onPublished?.(content);
+      onPublished?.(data.post || content);
       onClose();
     } catch (e) {
       console.error('[RichPostEditorModal] Publish failed:', e);

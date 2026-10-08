@@ -5458,7 +5458,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
             <div className="w-full max-w-xl flex flex-col items-center text-center relative z-10">
               <div className="w-28 h-28 rounded-[36px] overflow-hidden mb-8 shadow-2xl ring-[6px] ring-black/[0.03]">
-                <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                <div className="w-full h-full flex items-center justify-center bg-[#25D366]/10 text-[#25D366]"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
               </div>
               <h1 className="text-[32px] md:text-[42px] font-bold tracking-tight text-[#1C1C1E] mb-4">Select a conversation</h1>
               <p className="text-[16px] md:text-[18px] text-[#1C1C1E]/50 font-medium leading-relaxed max-w-sm mb-4">
@@ -5514,7 +5514,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           style={{
             zIndex: 200000,
             touchAction: 'none',
-            background: 'linear-gradient(160deg, #0f0f14 0%, #1a1a2e 40%, #16213e 100%)',
+            background: '#EBE5DC',
           }}
         >
           {/* Top label */}
@@ -5583,7 +5583,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   className="w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg"
                   style={{ background: 'rgba(255,59,48,0.85)', backdropFilter: 'blur(10px)' }}
                 >
-                  <PhoneOff size={28} className="text-white" />
+                  <PhoneOff size={28} className="text-[#1C1C1E]" />
                 </button>
                 <span className="text-white/40 text-[11px] font-medium tracking-wider uppercase">Decline</span>
               </div>
@@ -5609,7 +5609,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   className="w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg"
                   style={{ background: 'rgba(52,199,89,0.90)', backdropFilter: 'blur(10px)' }}
                 >
-                  <Phone size={28} className="text-white" />
+                  <Phone size={28} className="text-[#1C1C1E]" />
                 </button>
                 <span className="text-white/40 text-[11px] font-medium tracking-wider uppercase">Answer</span>
               </div>
@@ -5626,7 +5626,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           style={{
             zIndex: 200000,
             touchAction: 'none',
-            background: 'linear-gradient(160deg, #0f0f14 0%, #1a1a2e 40%, #16213e 100%)',
+            background: '#EBE5DC',
           }}
         >
           {/* Top label */}
@@ -5689,7 +5689,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               className="w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg"
               style={{ background: 'rgba(255,59,48,0.85)', backdropFilter: 'blur(10px)' }}
             >
-              <PhoneOff size={28} className="text-white" />
+              <PhoneOff size={28} className="text-[#1C1C1E]" />
             </button>
             <span className="text-white/40 text-[11px] font-medium mt-3 uppercase tracking-wider">Cancel</span>
           </div>

@@ -159,8 +159,12 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
         myAddress={myAddress}
         communityName={community?.name}
         communityId={communityId}
-        onPublished={() => {
-          fetchPosts();
+        onPublished={(newPost) => {
+          if (newPost && newPost.id) {
+             setPosts(prev => [newPost, ...prev]);
+          } else {
+             fetchPosts();
+          }
         }}
       />
     </div>
