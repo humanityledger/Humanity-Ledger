@@ -622,9 +622,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const getLockMs = () => {
       if (!autoLockSetting || autoLockSetting === 'Never') return null;
       if (autoLockSetting === 'Immediately') return 5000;
-      if (autoLockSetting === '1 min') return 60000;
-      if (autoLockSetting === '5 min') return 300000;
-      if (autoLockSetting === '30 min') return 1800000;
+      if (autoLockSetting === '1 minute') return 60000;
+      if (autoLockSetting === '5 minutes') return 300000;
+      if (autoLockSetting === '15 minutes') return 900000;
       if (autoLockSetting === '1 hour') return 3600000;
       return 60000; // default 1 min
     };
@@ -3177,6 +3177,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
                   }
                   // Strategy 4: no optimistic found (e.g. second tab) — insert if not duplicate
+                  if (prev.some(m => m.id === mappedMsg.id)) return prev;
                   return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
                 }
 
@@ -3206,6 +3207,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     }, 1500);
                   }
                 }
+                if (prev.some(m => m.id === mappedMsg.id)) return prev;
                 return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
               });
 
@@ -3778,6 +3780,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         .replace(/\bidiot|moron|stupid\b/gi, 'someone with a different view');
     }
 
+    // Auto-Delete
+    if ((ledgerSettings as any)?.auto_delete_timer && !isSystemSignal) {
+      const timer = (ledgerSettings as any).auto_delete_timer;
+      if (timer === '1 hour') finalContent = `__BURN_3600__::${finalContent}`;
+      else if (timer === '1 day') finalContent = `__BURN_86400__::${finalContent}`;
+      else if (timer === '1 week') finalContent = `__BURN_604800__::${finalContent}`;
+    }
+
     // ── Messages are 100% free — no QD deduction per message (Axel strategy) ──
     // Chat must always be free. QDs are only for optional premium features.
     // Rate limiting is handled by the checkRateLimit() call above.
@@ -3795,10 +3805,22 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         // can find and replace this optimistic message atomically when it arrives.
         optimisticContentMap.current.set(finalContent, optimisticId); // FIX: must match what XMTP echoes back
 
+        let displayContent = finalContent;
+        let burnAtNs: number | undefined = undefined;
+        if (finalContent.startsWith('__BURN_')) {
+          const parts = finalContent.split('__::');
+          if (parts.length >= 2) {
+            const seconds = parseInt(parts[0].replace('__BURN_', ''), 10);
+            displayContent = parts.slice(1).join('__::');
+            burnAtNs = Date.now() + (seconds * 1000);
+          }
+        }
+
         const optimisticMsg = {
           id: optimisticId,
           senderInboxId: client?.inboxId || '',
-          content: finalContent,
+          content: displayContent,
+          burnAtNs,
           sentAtNs: Date.now(),
           conversationId: `dm-${activePeer.toLowerCase()}`
         };

@@ -409,8 +409,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       if (
         k?.startsWith('ledger_cache_') || 
         k?.startsWith('ledger_msg_cache_') || 
-        k?.startsWith('ledger_chat_history_') ||
-        k?.startsWith('ledger_cleared_')
+        k?.startsWith('ledger_chat_history_')
       ) {
         localStorage.removeItem(k); count++;
       }
