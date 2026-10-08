@@ -1,5 +1,5 @@
-import DOMPurify from 'dompurify';
 'use client';
+import DOMPurify from 'dompurify';
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -515,6 +515,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     </div>
   );
 }
+
 
 
 
