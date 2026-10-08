@@ -15,6 +15,7 @@ import { useAccount, useBalance, useDisconnect } from 'wagmi';
 import { toast } from 'sonner';
 import jsQR from 'jsqr';
 import { useLedgerSettings } from '../terminal/LedgerChatSettings';
+import { usePushNotifications } from '@/lib/push/usePushNotifications';
 
 interface LedgerSettingsFullProps {
   myAddress: string;
@@ -337,6 +338,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   const { data: balance } = useBalance({ address: address as `0x${string}` });
   const { disconnect } = useDisconnect();
   const { settings, updateSetting } = useLedgerSettings(myAddress);
+  const push = usePushNotifications(myAddress);
 
   // Load saved profile info
   useEffect(() => {
@@ -803,6 +805,44 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   </button>
                 </div>
               )}
+
+              <Group title="Push Notifications">
+                <div className="px-4 py-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-[15px] font-semibold text-[#1C1C1E]">Background Notifications</p>
+                    <p className="text-[12px] text-[#8E8E93] mt-0.5">
+                      {!push.isSupported
+                        ? 'Not supported in this browser'
+                        : push.permission === 'denied'
+                        ? 'Blocked in browser settings — enable in Site Settings'
+                        : 'Get notified even when the app is closed'}
+                    </p>
+                  </div>
+                  {push.isSupported && push.permission !== 'denied' && (
+                    push.isSubscribed ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] text-[#25D366] font-bold">✓ On</span>
+                        <button onClick={push.unsubscribe} className="text-[12px] text-[#8E8E93] underline">Off</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          const ok = await push.subscribe();
+                          if (ok) toast.success('Notifications enabled!');
+                          else toast.error('Could not enable notifications');
+                        }}
+                        disabled={push.isLoading}
+                        className="px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white text-[13px] font-bold rounded-xl disabled:opacity-50 transition-colors"
+                      >
+                        {push.isLoading ? 'Enabling…' : 'Enable'}
+                      </button>
+                    )
+                  )}
+                  {push.permission === 'denied' && (
+                    <span className="text-[12px] text-red-500 font-semibold">Blocked</span>
+                  )}
+                </div>
+              </Group>
 
               <Group title="Messages">
                 <Row

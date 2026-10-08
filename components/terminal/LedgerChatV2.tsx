@@ -58,6 +58,8 @@ import { BurnTimerSheet } from '@/components/chat/BurnTimerSheet';
 import { NativeCryptoSendModal } from '@/components/chat/NativeCryptoSendModal';
 import { ScheduleMessageSheet } from '@/components/chat/ScheduleMessageSheet';
 import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
+import { isBotCommand, executeBotCommand } from '@/lib/bots/botInterceptor';
+import { usePushNotifications } from '@/lib/push/usePushNotifications';
 import { LedgerCommunitiesTab } from '@/components/chat/LedgerCommunitiesTab';
 import { CommunityView } from '@/components/chat/CommunityView';
 import { LedgerSettingsFull } from '@/components/chat/LedgerSettingsFull';
@@ -437,7 +439,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [activePeer, setActivePeer] = useState<string | null>(null);
   const [activeCommunity, setActiveCommunity] = useState<string | null>(null);
   const [localContacts, setLocalContacts] = useState<LocalContact[]>([]);
+  const push = usePushNotifications(address || undefined);
   const [replyingTo, setReplyingTo] = useState<any | null>(null); // Phase 2: Message Quoting
+  const [threadParentId, setThreadParentId] = useState<string | null>(null);
+  const [showBotSuggestions, setShowBotSuggestions] = useState(false);
+  const BOT_COMMANDS_LIST = [
+    { cmd: '/price', hint: '/price ETH — Get crypto price' },
+    { cmd: '/ens', hint: '/ens vitalik.eth — Resolve ENS name' },
+    { cmd: '/gas', hint: '/gas — Current Ethereum gas prices' },
+    { cmd: '/help', hint: '/help — Show all commands' },
+  ];
   
   // High-End Feature States
   const [showCallHistory, setShowCallHistory] = useState(false);
@@ -3136,6 +3147,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 lastAt: mappedMsg.sentAtNs
               }).catch(() => {});
 
+              // Push notification when tab is hidden
+              if (fromPeer && mappedMsg.senderInboxId !== (client as any)?.inboxId) {
+                push.notifyIfHidden(fromPeer, mappedContent || content);
+              }
+
               setMessages(prev => {
                 // Guard: if real ID already in list (can happen on reconnect), skip
                 if (prev.some(m => m.id === realId)) return prev;
@@ -3752,6 +3768,31 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const isSystemSignal = content.startsWith('__CALL_') || isReaction || isVote;
     if (!isSystemSignal && sending) return;
 
+    // Bot command interception
+    if (isBotCommand(content)) {
+      const botResponse = await executeBotCommand(content);
+      if (botResponse) {
+        const cmdMsg = {
+          id: `bot-cmd-${Date.now()}`,
+          senderInboxId: (client as any)?.inboxId || '',
+          content: content,
+          sentAtNs: Date.now(),
+          conversationId: `dm-${activePeer?.toLowerCase()}`
+        };
+        const botMsg = {
+          id: `bot-${Date.now()}`,
+          senderInboxId: '__bot__',
+          content: `🤖 ${botResponse}`,
+          sentAtNs: Date.now() + 1,
+          conversationId: `dm-${activePeer?.toLowerCase()}`
+        };
+        setMessages((prev: any[]) => [...prev, cmdMsg, botMsg].sort((a, b) => a.sentAtNs - b.sentAtNs));
+        setMessage('');
+        setShowBotSuggestions(false);
+        return; 
+      }
+    }
+
     if (!isSystemSignal) setSending(true);
     
     // Phase 2: Message Quoting
@@ -3759,6 +3800,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (replyingTo && !isSystemSignal) {
       finalContent = `__REPLY__${replyingTo.id}__::${content}`;
       setReplyingTo(null);
+    }
+    // Thread support
+    if (threadParentId && !isSystemSignal) {
+      finalContent = `__THREAD__${threadParentId}__::${finalContent}`;
+      setThreadParentId(null);
     }
 
     // Smart macros
@@ -4880,6 +4926,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           fontSizePx={fontSizePx}
                           clientInboxId={client?.inboxId}
                           onReply={(msgToReply) => setReplyingTo(msgToReply)}
+                          onThreadReply={(msgToThread) => setThreadParentId(msgToThread.id)}
                           onReact={(msgId, emoji) => executeSend(`__REACT__${msgId}__::${emoji}`)}
                           onContextMenu={(e, id, content) => {
                             if (e?.type === 'revoke') {
@@ -5185,6 +5232,34 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   )}
                   </AnimatePresence>
 
+                  {/* Thread and Bot UI */}
+                  {threadParentId && (
+                    <div className="flex items-center justify-between px-4 py-2 bg-[#25D366]/8 border-b border-[#25D366]/20">
+                      <div className="flex items-center gap-2">
+                        <div className="w-0.5 h-4 bg-[#25D366] rounded-full" />
+                        <span className="text-[12px] font-semibold text-[#25D366]">Replying in thread</span>
+                      </div>
+                      <button onClick={() => setThreadParentId(null)} className="text-[#8E8E93] hover:text-[#1C1C1E]">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
+
+                  {showBotSuggestions && (
+                    <div className="absolute bottom-[60px] left-2 right-2 bg-white border border-[#E5E5EA] rounded-2xl shadow-lg overflow-hidden z-50">
+                      {BOT_COMMANDS_LIST.filter(b => b.cmd.startsWith(inputText)).map(bot => (
+                        <button
+                          key={bot.cmd}
+                          onClick={() => { setInputText(bot.cmd + ' '); setShowBotSuggestions(false); }}
+                          className="flex items-center gap-3 w-full px-4 py-3 hover:bg-[#F2F2F7] text-left transition-colors"
+                        >
+                          <span className="text-[14px] font-mono font-bold text-[#25D366]">{bot.cmd}</span>
+                          <span className="text-[12px] text-[#8E8E93]">{bot.hint.split(' — ')[1]}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {/* ── Main Input Row (WhatsApp/Signal style) ── */}
                   <div className="flex items-end gap-2 px-2 pb-3 pt-2 w-full relative z-40 bg-[#F0F2F5]">
                     <button
@@ -5260,6 +5335,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           value={inputText}
                           onChange={e => {
                             setInputText(e.target.value);
+                            setShowBotSuggestions(e.target.value.startsWith('/') && e.target.value.length < 10);
                             e.target.style.height = '44px';
                             e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
                             const now = Date.now();

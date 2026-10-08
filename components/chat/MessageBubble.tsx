@@ -33,6 +33,7 @@ export interface MessageProps {
   onContextMenu: (e: any, id: string, content: string) => void;
   onOpenLightbox: (url: string) => void;
   formatMessagePreview: (c: string) => string;
+  onThreadReply?: (msg: any) => void;
   onVotePoll?: (pollId: string, optionIndex: number) => void;
   onEditMsg?: (id: string, currentContent: string) => void;
   onJoinGroupCall?: (roomId: string, password: string) => void;
@@ -280,14 +281,15 @@ StickerBubble.displayName = 'StickerBubble';
 
 // â”€â”€â”€ Context Menu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const IMessageContextMenu = React.memo(({
-  isMe, content, onClose, onReply, onEdit, onCopy, onRevoke, msgId
+  isMe, content, onClose, onReply, onThreadReply, onEdit, onCopy, onRevoke, msgId
 }: {
   isMe: boolean; content: string; msgId: string;
-  onClose: () => void; onReply: () => void; onEdit: () => void;
+  onClose: () => void; onReply: () => void; onThreadReply?: () => void; onEdit: () => void;
   onCopy: () => void; onRevoke: () => void;
 }) => {
   const actions = [
     { label: 'Reply', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>, fn: onReply },
+    ...(onThreadReply ? [{ label: 'Reply in Thread', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, fn: onThreadReply }] : []),
     ...(isMe ? [{ label: 'Edit', icon: <Pencil size={16} />, fn: onEdit }] : []),
     { label: 'Copy', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>, fn: onCopy },
     ...(isMe ? [{ label: 'Unsend', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>, fn: onRevoke }] : []),
@@ -350,7 +352,7 @@ TapbackPicker.displayName = 'TapbackPicker';
 export const MessageBubble = React.memo(({
   msg, isMe, showDate, dateStr, isSecretChat, fontFamily, fontSizePx, bubbleStyle = 'default',
   clientInboxId, onReply, onReact, onContextMenu, onOpenLightbox,
-  formatMessagePreview, onVotePoll, onEditMsg, onJoinGroupCall,
+  formatMessagePreview, onThreadReply, onVotePoll, onEditMsg, onJoinGroupCall,
 }: MessageProps) => {
   const controls = useAnimation();
   const [showTapback, setShowTapback] = useState(false);
@@ -377,6 +379,17 @@ export const MessageBubble = React.memo(({
       const replyToId = p[0].replace('__REPLY__', '');
       content = p.slice(1).join('__::');
       replyMsg = { id: replyToId, content: 'Replied Message' };
+    }
+  }
+
+  let isThread = false;
+  let threadParentId: string | null = null;
+  if (content.startsWith('__THREAD__')) {
+    const p = content.split('__::');
+    if (p.length >= 2) {
+      threadParentId = p[0].replace('__THREAD__', '');
+      content = p.slice(1).join('__::');
+      isThread = true;
     }
   }
 
@@ -522,6 +535,12 @@ export const MessageBubble = React.memo(({
               <FastForward size={10} /> Forwarded from {forwardFrom.substring(0, 8)}...
             </div>
           )}
+          {isThread && (
+            <div className={`flex items-center gap-1.5 mb-1.5 opacity-70 px-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
+              <div className="w-0.5 h-4 bg-[#25D366] rounded-full" />
+              <span className="text-[11px] font-semibold text-[#25D366]">Thread reply</span>
+            </div>
+          )}
 
           <div className="relative">
             <AnimatePresence>
@@ -535,6 +554,7 @@ export const MessageBubble = React.memo(({
                   isMe={isMe} content={content} msgId={msg.id}
                   onClose={() => setShowCtxMenu(false)}
                   onReply={() => onReply(msg)}
+                  onThreadReply={() => onThreadReply?.(msg)}
                   onEdit={handleEdit}
                   onCopy={handleCopy}
                   onRevoke={handleRevoke}
@@ -621,6 +641,20 @@ export const MessageBubble = React.memo(({
               </div>
             ) : (
               // â”€â”€ Standard Text Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              msg.senderInboxId === '__bot__' ? (
+                <div className="bg-[#F2F2F7] rounded-2xl p-3 border-l-4 border-[#25D366]">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-[10px] font-bold text-[#25D366] uppercase tracking-wider">Ledger Bot</span>
+                  </div>
+                  <div className="text-[14px] text-[#1C1C1E] whitespace-pre-wrap">
+                    {content.replace(/^🤖 /, '').split('\n').map((line, i) => (
+                      <p key={i} className={line.startsWith('**') ? 'font-bold text-[#25D366]' : ''}>
+                        {line.replace(/\*\*/g, '')}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ) : (
               <div className="relative">
                 {replyMsg && (
                   <button
@@ -682,6 +716,7 @@ export const MessageBubble = React.memo(({
                   )}
                 </div>
               </div>
+              )
             )}
           </div>
 
