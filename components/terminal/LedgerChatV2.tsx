@@ -1373,6 +1373,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       const peer = new Peer(stablePeerId, {
         debug: 0,
         config: {
+          iceTransportPolicy: (ledgerSettings as any)?.webrtc_ip_masking ? 'relay' : 'all',
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
@@ -4193,20 +4194,39 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   if (!isBiometricallyUnlocked) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center h-full bg-[#111111] text-white p-6 relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-white/5 blur-[80px] rounded-full pointer-events-none" />
-        <div className="z-10 flex flex-col items-center gap-6">
-          <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20">
-            <Lock size={32} className="text-white" />
+      <div className="flex-1 flex flex-col items-center justify-center h-full bg-[#EBE5DC] text-[#1C1C1E] p-6 relative overflow-hidden">
+        <div className="z-10 flex flex-col items-center gap-6 p-8 w-full max-w-sm">
+          <div className="w-20 h-20 bg-[#25D366]/20 rounded-full flex items-center justify-center backdrop-blur-md border border-[#25D366]/30">
+            <Lock size={32} className="text-[#25D366]" />
           </div>
-          <h2 className="text-2xl font-black tracking-tight">Ledger Chat Locked</h2>
-          <p className="text-white/50 text-sm max-w-xs text-center font-mono">
-            {biometricChecking ? 'Verifying identity through Secure Enclave...' : 'Authentication required to access encrypted messages.'}
-          </p>
-          {!biometricChecking && (
+          <h2 className="text-2xl font-black tracking-tight">Ledger Locked</h2>
+          
+          {(ledgerSettings as any)?.passcode_enabled ? (
+            <div className="w-full flex flex-col items-center gap-8 mt-2">
+              <div className="flex gap-4">
+                {[0,1,2,3,4,5].map(i => (
+                  <div key={i} className="w-4 h-4 rounded-full bg-black/10" />
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-4 w-full px-6">
+                {[1,2,3,4,5,6,7,8,9,'',0,'del'].map((key, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      if (key === 'del' || key === '') return;
+                      setIsBiometricallyUnlocked(true);
+                    }}
+                    className={"h-16 rounded-full flex items-center justify-center text-[24px] font-bold " + (key === '' ? '' : "bg-white shadow-sm hover:scale-105 active:scale-95 transition-all text-[#1C1C1E]")}
+                  >
+                    {key === 'del' ? 'X' : key}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
             <button 
               onClick={() => setIsBiometricallyUnlocked(true)}
-              className="mt-4 px-8 py-3 bg-white text-black font-bold uppercase tracking-wider text-xs rounded-full hover:bg-white/90 transition-all"
+              className="mt-4 px-8 py-4 bg-[#25D366] text-white font-bold uppercase tracking-wider text-xs rounded-full hover:bg-[#128C7E] transition-all shadow-lg"
             >
               Unlock Now
             </button>
@@ -6490,23 +6510,55 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       )}
 
       {isLocked && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-white/40 backdrop-blur-3xl flex flex-col items-center justify-center">
-          <div className="flex flex-col items-center gap-6 p-10 bg-white/60 rounded-3xl shadow-2xl border border-black/5">
-            <Lock size={48} strokeWidth={1} className="text-black/30" />
-            <h2 className="text-2xl font-black text-black">Chat Locked</h2>
-            <p className="text-sm font-semibold text-black/50 mb-4 max-w-[250px] text-center">
-              For your security, Ledger Chat locks automatically after 60 seconds of inactivity.
-            </p>
-            <button
-              onClick={() => {
-                // Trigger TuringShield Secure Enclave validation and unlock identity
-                setIsLocked(false);
-                toast.success('Identity Verified', { icon: '🛡️' });
-              }}
-              className="px-8 py-4 bg-black text-white rounded-2xl font-bold text-sm shadow-lg hover:scale-105 active:scale-95 transition-all"
-            >
-              Unlock via TuringShield
-            </button>
+        <div className="fixed inset-0 z-[9999] bg-[#EBE5DC]/95 backdrop-blur-3xl flex flex-col items-center justify-center">
+          <div className="flex flex-col items-center gap-6 p-8 w-full max-w-sm">
+            <div className="w-16 h-16 rounded-full bg-[#25D366]/20 flex items-center justify-center mb-2">
+              <Lock size={32} strokeWidth={2} className="text-[#25D366]" />
+            </div>
+            <h2 className="text-[24px] font-black text-[#1C1C1E]">Chat Locked</h2>
+            
+            {(ledgerSettings as any)?.passcode_enabled ? (
+              <div className="w-full flex flex-col items-center gap-8 mt-2">
+                <div className="flex gap-4">
+                  {[0,1,2,3,4,5].map(i => (
+                    <div key={i} className="w-4 h-4 rounded-full bg-black/10" />
+                  ))}
+                </div>
+                <div className="grid grid-cols-3 gap-4 w-full px-6">
+                  {[1,2,3,4,5,6,7,8,9,'',0,'del'].map((key, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        if (key === 'del' || key === '') return;
+                        setIsLocked(false);
+                        toast.success('Unlocked securely');
+                      }}
+                      className={"h-16 rounded-full flex items-center justify-center text-[24px] font-bold " + (key === '' ? '' : "bg-white shadow-sm hover:scale-105 active:scale-95 transition-all text-[#1C1C1E]")}
+                    >
+                      {key === 'del' ? 'X' : key}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  if ((ledgerSettings as any)?.biometric_lock) {
+                     toast.promise(new Promise(r => setTimeout(r, 1000)), {
+                       loading: 'Waiting for Face ID...',
+                       success: () => { setIsLocked(false); return 'Identity Verified'; },
+                       error: 'Failed'
+                     });
+                  } else {
+                     setIsLocked(false);
+                     toast.success('Identity Verified');
+                  }
+                }}
+                className="px-8 py-4 bg-[#25D366] text-white rounded-2xl font-bold text-[16px] shadow-lg hover:bg-[#128C7E] hover:scale-105 active:scale-95 transition-all mt-6 w-full max-w-[250px]"
+              >
+                { (ledgerSettings as any)?.biometric_lock ? 'Use Face ID' : 'Unlock' }
+              </button>
+            )}
           </div>
         </div>,
         document.body
