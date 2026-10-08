@@ -356,7 +356,8 @@ export const MessageBubble = React.memo(({
 }: MessageProps) => {
   const controls = useAnimation();
   const [showTapback, setShowTapback] = useState(false);
-  
+  const [showCtxMenu, setShowCtxMenu] = useState(false);
+
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sentTime = typeof msg.sentAtNs === 'number' ? new Date(msg.sentAtNs) : (msg.sent || msg.sentAt || new Date());
