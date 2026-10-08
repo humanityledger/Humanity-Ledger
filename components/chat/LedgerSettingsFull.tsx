@@ -444,7 +444,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
   // The QR deep-link URL encodes wallet address + token for mobile app
   const qrLinkUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/chat/link?addr=${myAddress}&token=${phoneSessionToken}&exp=${Date.now() + qrExpiry * 1000}`
+    ? `${window.location.protocol === 'file:' ? 'https://humanidfi.com' : window.location.origin}/chat/link?addr=${myAddress}&token=${phoneSessionToken}&exp=${Date.now() + qrExpiry * 1000}`
     : '';
 
   return (
@@ -539,6 +539,19 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       <Camera size={14} className="text-white" />
                     </button>
                   </div>
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAvatarUrl('');
+                        localStorage.removeItem('ledger_avatar');
+                        window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { avatarUrl: '' } }));
+                      }}
+                      className="text-[13px] font-semibold text-red-500 hover:text-red-600 transition-colors"
+                    >
+                      Remove photo
+                    </button>
+                  )}
 
                   {/* Display name */}
                   {editingName ? (
