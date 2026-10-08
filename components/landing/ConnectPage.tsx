@@ -525,37 +525,7 @@ export default function ConnectPage() {
               ) : (
                 <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-2">
                   {!isMobile && (
-                    <div className="mb-4 p-4 rounded-2xl border border-black/8 bg-[#F7F7F6] flex flex-col items-center gap-3">
-                      <p className="text-[9px] font-mono uppercase tracking-[0.3em] text-black/30">Scan with mobile wallet</p>
-                      <div className="p-3 bg-white border border-black/8 rounded-xl">
-                        {syncStatus === "AWAITING" && qrData
-                          ? <QRCodeSVG value={qrData} size={156} fgColor="#000000" bgColor="#FFFFFF" level="L" includeMargin={false} />
-                          : syncStatus === "ERROR"
-                          ? <div className="w-[156px] h-[156px] flex flex-col items-center justify-center gap-3">
-                              <Shield size={18} className="text-black/20" />
-                              <button onClick={() => { setSyncStatus("IDLE"); setQrSession(null); setQrData(""); }} className="text-[9px] font-mono uppercase tracking-widest text-black border border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors rounded">Retry</button>
-                            </div>
-                          : <div className="w-[156px] h-[156px] flex items-center justify-center"><Loader2 size={18} className="animate-spin text-black/15" /></div>
-                        }
-                      </div>
-                      {pinCode && syncStatus === "AWAITING" && (
-                        <div className="flex flex-col items-center gap-1.5">
-                          <p className="text-[8px] font-mono uppercase tracking-[0.2em] text-black/25">Security PIN</p>
-                          <div className="flex gap-1.5">
-                            {pinCode.split("").map((d, i) => (
-                              <div key={i} className="w-8 h-9 border border-black/15 rounded-lg flex items-center justify-center bg-white">
-                                <span className="text-[14px] font-black text-black">{d}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {!isMobile && (
                     <>
-                      <Divider label="or connect browser wallet" />
                       <div className="flex flex-col gap-2">
                         {DESKTOP_WALLETS.map(w => (
                           <WalletRow key={w.id} logo={w.logo} name={w.name} badge={w.badge}

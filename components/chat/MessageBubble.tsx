@@ -356,7 +356,7 @@ export const MessageBubble = React.memo(({
 }: MessageProps) => {
   const controls = useAnimation();
   const [showTapback, setShowTapback] = useState(false);
-  const [showCtxMenu, setShowCtxMenu] = useState(false);
+  
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sentTime = typeof msg.sentAtNs === 'number' ? new Date(msg.sentAtNs) : (msg.sent || msg.sentAt || new Date());
@@ -528,7 +528,11 @@ export const MessageBubble = React.memo(({
           onMouseDown={handleLongPressStart}
           onMouseUp={handleLongPressEnd}
           onMouseLeave={handleLongPressEnd}
-          onContextMenu={(e) => { e.preventDefault(); setShowCtxMenu(true); setShowTapback(false); }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setShowTapback(false);
+            onContextMenu(e, msg.id, content);
+          }}
         >
           {forwardFrom && (
             <div className="flex items-center gap-1.5 text-[10px] font-bold font-mono mb-1 text-black/40 px-2">
@@ -546,19 +550,6 @@ export const MessageBubble = React.memo(({
             <AnimatePresence>
               {showTapback && (
                 <TapbackPicker isMe={isMe} onReact={(e) => onReact(msg.id, e)} onClose={() => setShowTapback(false)} />
-              )}
-            </AnimatePresence>
-            <AnimatePresence>
-              {showCtxMenu && (
-                <IMessageContextMenu
-                  isMe={isMe} content={content} msgId={msg.id}
-                  onClose={() => setShowCtxMenu(false)}
-                  onReply={() => onReply(msg)}
-                  onThreadReply={() => onThreadReply?.(msg)}
-                  onEdit={handleEdit}
-                  onCopy={handleCopy}
-                  onRevoke={handleRevoke}
-                />
               )}
             </AnimatePresence>
 

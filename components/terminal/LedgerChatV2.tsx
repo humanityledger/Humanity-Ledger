@@ -2784,6 +2784,49 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             return updated;
           });
         }
+        
+        // --- 10000% GUARANTEE FALLBACK POLL FOR ACTIVE PEER ---
+        if (activePeerRef.current) {
+           try {
+              const rawMsgs = await getMessages(client, activePeerRef.current);
+              if (rawMsgs && rawMsgs.length > 0 && !cancelled) {
+                 setMessages(prev => {
+                    const existingIds = new Set(prev.map(m => m.id));
+                    const newRaw = rawMsgs.filter(m => m.id && !existingIds.has(m.id));
+                    if (newRaw.length === 0) return prev;
+                    
+                    const selfId = (client as any).inboxId ?? "";
+                    const mapped = newRaw.map((m: any) => {
+                       const isFromPeer = m.senderInboxId !== selfId;
+                       let content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+                       return {
+                          id: m.id,
+                          content: content,
+                          senderAddress: isFromPeer ? activePeerRef.current! : (address || ''),
+                          sentAtNs: nsToDate(m.sentAtNs ?? m.sentAt).getTime(),
+                          status: 'delivered',
+                          conversationId: `dm-${activePeerRef.current!.toLowerCase()}`
+                       };
+                    });
+                    
+                    // Exclude system messages from rendering
+                    const toAppend = mapped.filter(m => {
+                       if (m.content.startsWith('__REACT__') || m.content.startsWith('__READ__') || m.content.startsWith('__TYPING__') || m.content.startsWith('__VOTE__') || m.content.startsWith('__EDIT__') || m.content.startsWith('__REVOKE__')) {
+                           return false; // Real intercepts are handled by stream
+                       }
+                       return true;
+                    });
+                    
+                    if (toAppend.length === 0) return prev;
+                    return [...prev, ...toAppend].sort((a, b) => a.sentAtNs - b.sentAtNs);
+                 });
+              }
+           } catch (pollErr) {
+              console.warn('[Ledger Chat] Active peer fallback poll failed:', pollErr);
+           }
+        }
+        // --------------------------------------------------------
+
       } catch (e) {
         console.warn('[Ledger Chat] Global sync error:', e);
       }
@@ -6066,7 +6109,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
            <div 
              className="absolute bg-white  border border-black/10  rounded-2xl shadow-xl p-2 min-w-[160px] flex flex-col"
              style={{ 
-               top: Math.min(contextMenu.y / (typeof window !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).zoom || '1') : 1), window.innerHeight - 150), 
+               top: Math.min(contextMenu.y / (typeof window !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).zoom || '1') : 1), window.innerHeight - 250), 
                left: Math.min(contextMenu.x / (typeof window !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).zoom || '1') : 1), window.innerWidth - 180) 
              }}
              onClick={e => e.stopPropagation()}
@@ -6085,6 +6128,23 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg> Reply
              </button>
              <button onClick={() => {
+                 setThreadParentId(contextMenu.id);
+                 setContextMenu(null);
+             }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Reply in Thread
+             </button>
+             
+             {/* Only show Edit if message was sent by me */}
+             {messages.find(m => m.id === contextMenu.id)?.senderAddress?.toLowerCase() === address?.toLowerCase() && (
+               <button onClick={() => {
+                   setEditingMsg({ id: contextMenu.id, content: contextMenu.content });
+                   setContextMenu(null);
+               }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit
+               </button>
+             )}
+
+             <button onClick={() => {
                  setForwardMsg({ id: contextMenu.id, content: contextMenu.content });
                  setContextMenu(null);
              }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left">
@@ -6096,18 +6156,22 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
              }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg> Pin Message
              </button>
-             <button onClick={() => {
-                 setMessages(prev => prev.filter(m => m.id !== contextMenu.id));
-                 executeSend(`__REVOKE__${contextMenu.id}`);
-                 setContextMenu(null);
-             }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left">
-                <Trash2 size={14} /> Delete for everyone
-             </button>
-             <button onClick={() => {
-                 reportMessage(contextMenu.id, contextMenu.content);
-             }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-red-500 text-left">
-                🚩 Report Message
-             </button>
+             
+             {messages.find(m => m.id === contextMenu.id)?.senderAddress?.toLowerCase() === address?.toLowerCase() ? (
+               <button onClick={() => {
+                   setMessages(prev => prev.filter(m => m.id !== contextMenu.id));
+                   executeSend(`__REVOKE__${contextMenu.id}`);
+                   setContextMenu(null);
+               }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left">
+                  <Trash2 size={14} /> Unsend
+               </button>
+             ) : (
+               <button onClick={() => {
+                   reportMessage(contextMenu.id, contextMenu.content);
+               }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-red-500 text-left">
+                  🚩 Report Message
+               </button>
+             )}
            </div>
          </div>,
          document.body
