@@ -6,7 +6,7 @@ export async function GET(req: Request) {
   const apiKey = process.env.ETHERSCAN_API_KEY || '';
   if (!apiKey) return NextResponse.json({ error: 'Etherscan API key not configured' }, { status: 500 });
   try {
-    const res = await fetch(\https://api.etherscan.io/api?\&apikey=\\);
+    const res = await fetch(`https://api.etherscan.io/api?${query}&apikey=${apiKey}`);
     const data = await res.json();
     return NextResponse.json(data);
   } catch (error) {
