@@ -1,9 +1,10 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Plus, MapPin, CircleDollarSign, Smile, BarChart2 } from 'lucide-react';
+import { Send, Plus, MapPin, CircleDollarSign, Smile, BarChart2, Paperclip, Mic } from 'lucide-react';
 import { toast } from 'sonner';
 import { MessageBubble } from './MessageBubble';
 import { NativeCryptoSendModal } from './NativeCryptoSendModal';
+import { LedgerChatVoiceNote } from '@/components/chat/LedgerChatVoiceNote';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export function CommunityChatView({ communityId, myAddress }: { communityId: string; myAddress: string }) {
@@ -17,6 +18,29 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
   const [showWalletTransfer, setShowWalletTransfer] = useState(false);
   const [cryptoRecipient, setCryptoRecipient] = useState('');
   const [showRecipientInput, setShowRecipientInput] = useState(false);
+  const [showPollCreator, setShowPollCreator] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [recordingVoice, setRecordingVoice] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { toast.error("File exceeds 20MB limit."); return; }
+    
+    // Quick compression or direct read
+    const reader = new FileReader();
+    reader.onload = async () => {
+      let b64 = reader.result as string;
+      const type = file.type;
+      
+      // Send directly as base64 chunk via XMTP
+      const payload = `__MEDIA__${type}__::${b64}`;
+      await executeSend(payload);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const fetchMessages = async () => {
     try {
@@ -219,8 +243,8 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
                   <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-sm"><Smile size={22} /></div>
                   <span className="text-[11px] font-semibold text-[#1C1C1E]">Sticker</span>
                 </button>
-                <button onClick={() => { setShowAppDrawer(false); toast.info('Polls coming soon'); }} className="flex flex-col items-center gap-2 opacity-50">
-                  <div className="w-12 h-12 rounded-2xl bg-purple-500 text-white flex items-center justify-center shadow-sm"><BarChart2 size={22} /></div>
+                <button onClick={() => { setShowAppDrawer(false); setShowPollCreator(true); }} className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-2xl bg-[#25D366] text-white flex items-center justify-center shadow-sm"><BarChart2 size={22} /></div>
                   <span className="text-[11px] font-semibold text-[#1C1C1E]">Poll</span>
                 </button>
               </div>
@@ -228,7 +252,8 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
           )}
         </AnimatePresence>
 
-        <form onSubmit={handleSend} className="flex gap-2 items-center">
+        <form onSubmit={handleSend} className="flex gap-2 items-center bg-white rounded-3xl p-1.5 shadow-sm border border-black/5 relative">
+          <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*,video/*,application/pdf" />
           <button
             type="button"
             onClick={() => setShowAppDrawer(v => !v)}
@@ -236,20 +261,47 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
           >
             <Plus size={20} />
           </button>
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            placeholder="Message community..."
-            disabled={sending}
-            className="flex-1 bg-[#F2F2F7] border border-black/5 rounded-full px-5 py-2 outline-none text-[15px] disabled:opacity-50"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || sending}
-            className="w-9 h-9 bg-[#25D366] text-white rounded-full flex items-center justify-center disabled:opacity-40 transition-opacity shrink-0"
-          >
-            <Send size={16} className="-ml-0.5" />
-          </button>
+          
+          {recordingVoice ? (
+            <div className="flex-1 flex items-center h-[36px]">
+              <LedgerChatVoiceNote 
+                onSend={async (b64) => {
+                  setRecordingVoice(false);
+                  await executeSend(b64);
+                }} 
+                onCancel={() => setRecordingVoice(false)} 
+              />
+            </div>
+          ) : (
+            <>
+              <input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                placeholder="Message community..."
+                disabled={sending}
+                className="flex-1 bg-transparent px-2 outline-none text-[15px] disabled:opacity-50 min-w-0"
+              />
+              
+              {!input.trim() ? (
+                <>
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-[#8E8E93] hover:text-[#25D366] transition-colors rounded-full hover:bg-[#F2F2F7]">
+                    <Paperclip size={20} />
+                  </button>
+                  <button type="button" onClick={() => setRecordingVoice(true)} className="p-2 text-[#8E8E93] hover:text-[#25D366] transition-colors rounded-full hover:bg-[#F2F2F7]">
+                    <Mic size={20} />
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={sending}
+                  className="w-9 h-9 bg-[#25D366] text-white rounded-full flex items-center justify-center disabled:opacity-40 transition-opacity shrink-0 hover:bg-[#128C7E]"
+                >
+                  <Send size={16} className="-ml-0.5" />
+                </button>
+              )}
+            </>
+          )}
         </form>
       </div>
 
@@ -265,6 +317,59 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
             setShowWalletTransfer(false);
           }}
         />
+      )}
+      
+      {/* Poll Creator Modal */}
+      {showPollCreator && (
+          <div className="fixed inset-0 z-[1000] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[16px] font-black tracking-tight text-gray-900">Create Poll</h3>
+                <button onClick={() => { setShowPollCreator(false); setPollQuestion(''); setPollOptions(['', '']); }} className="p-2 rounded-full hover:bg-[#e5e5ea] text-black/40">✕</button>
+              </div>
+              <input
+                type="text"
+                placeholder="Ask a question..."
+                value={pollQuestion}
+                onChange={e => setPollQuestion(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-black/10 text-[13px] font-medium focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10"
+              />
+              <div className="flex flex-col gap-2">
+                {pollOptions.map((opt, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      placeholder={`Option ${i + 1}`}
+                      value={opt}
+                      onChange={e => setPollOptions(prev => prev.map((o, j) => j === i ? e.target.value : o))}
+                      className="flex-1 px-3 py-2 rounded-xl border border-black/10 text-[13px] focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10"
+                    />
+                    {pollOptions.length > 2 && (
+                      <button onClick={() => setPollOptions(prev => prev.filter((_, j) => j !== i))} className="text-black/40 hover:text-black/60 text-[12px] font-black">✕</button>
+                    )}
+                  </div>
+                ))}
+                {pollOptions.length < 5 && (
+                  <button onClick={() => setPollOptions(prev => [...prev, ''])} className="text-black text-[12px] font-bold hover:underline text-left">+ Add option</button>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  const validOpts = pollOptions.filter(o => o.trim());
+                  if (!pollQuestion.trim() || validOpts.length < 2) return;
+                  const pollId = `poll_${Date.now()}`;
+                  const payload = `__POLL__${pollId}__::${pollQuestion.trim()}__::${validOpts.join('|')}`;
+                  executeSend(payload);
+                  setShowPollCreator(false);
+                  setPollQuestion('');
+                  setPollOptions(['', '']);
+                }}
+                className="w-full py-3.5 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white text-[13px] font-bold shadow-sm transition-colors"
+              >
+                Send Poll
+              </button>
+            </div>
+          </div>
       )}
     </div>
   );

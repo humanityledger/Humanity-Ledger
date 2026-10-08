@@ -6201,7 +6201,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    setPollQuestion('');
                    setPollOptions(['', '']);
                  }}
-                 className="w-full py-3.5 rounded-xl bg-white hover:opacity-80 text-white text-[13px] font-bold shadow-sm transition-colors"
+                 className="w-full py-3.5 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white text-[13px] font-bold shadow-sm transition-colors"
                >
                  Send Poll
                </button>
