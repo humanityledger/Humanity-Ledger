@@ -9,8 +9,8 @@ export default function DeviceLinkPage() {
   const [message, setMessage] = useState('Processing device link...');
 
   useEffect(() => {
-    const token = params.get('token');
-    const action = params.get('action');
+    const token = params?.get('token');
+    const action = params?.get('action');
 
     if (action === 'device' && token) {
       // Import device bundle

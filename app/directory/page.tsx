@@ -10,7 +10,7 @@ export default async function DirectoryPage() {
   let communities: any[] = [];
   try {
     communities = await prisma.community.findMany({
-      where: { isPublic: true },
+      where: { isPublic: true } as any,
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: { _count: { select: { members: true, channels: true } } }
