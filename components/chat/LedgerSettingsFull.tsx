@@ -967,20 +967,6 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title="Linked Devices">
-                <Row
-                  icon={<Smartphone size={18} />}
-                  label="Manage Linked Devices"
-                  sublabel="View and revoke linked phone sessions"
-                  onTap={() => { setActiveTab('account'); setTimeout(() => setModal('linked_devices'), 200); }}
-                />
-                <Row
-                  icon={<QrCode size={18} />}
-                  label="Scan QR Code"
-                  sublabel="Point camera to link this device"
-                  onTap={() => { setActiveTab('account'); setQrScanMode('scan'); setTimeout(() => setModal('linked_devices'), 200); }}
-                />
-              </Group>
 
               <Group title="Danger Zone" footer="These actions are permanent and cannot be undone.">
                 <Row icon={<RefreshCw size={18} />} label="Clear All Caches" onTap={() => setModal('clearCache')} />
