@@ -400,6 +400,35 @@ export async function getDmId(client: Client, peerAddress: string): Promise<stri
  * appear to succeed locally but the peer will never receive the message.
  * After sending, syncs the conversation to confirm delivery.
  */
+
+/**
+ * Resolves the EXACT casing of the peer's Ethereum address that is registered on XMTP.
+ * Sending to the wrong casing on XMTP v5.3.0 creates a ghost DM.
+ */
+export async function getRegisteredAddress(address: string): Promise<string> {
+  try {
+    const identifier = { identifier: address, identifierKind: 'Ethereum' };
+    const result = await Client.canMessage([identifier as any], XMTP_ENV);
+    
+    if (result instanceof Map) {
+      const lower = address.toLowerCase();
+      for (const [key, val] of result.entries()) {
+        if (key.toLowerCase() === lower && val) return key;
+      }
+    } else if (result && typeof result === 'object') {
+      const lower = address.toLowerCase();
+      for (const key of Object.keys(result)) {
+        if (key.toLowerCase() === lower && (result as any)[key]) return key;
+      }
+    }
+  } catch (e) {
+    console.warn('[XMTP] getRegisteredAddress error', e);
+  }
+  
+  // Fallback to viem checksum if we couldn't resolve exactly
+  return await checksumAddress(address);
+}
+
 export async function sendMessage(
   client: Client,
   toAddress: string,
@@ -414,7 +443,7 @@ export async function sendMessage(
   let lastErr: any;
 
   if (!isAztecAddress) {
-    const normalizedTo = await checksumAddress(toAddress);
+    const normalizedTo = await getRegisteredAddress(toAddress);
 
     // [CRITICAL FIX #1] Validate the normalized address is a real EIP-55 checksummed
     // Ethereum address (42 chars, starts with 0x). If checksumAddress silently returned
@@ -624,7 +653,7 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
     await client.conversations.sync().catch(console.warn);
 
     // 2. Get active DM with peer — ALWAYS use checksummed address
-    const normalizedPeer = await checksumAddress(peerAddress);
+    const normalizedPeer = await getRegisteredAddress(peerAddress);
     const identifier: XmtpIdentifier = {
       identifier: normalizedPeer,
       identifierKind: 'Ethereum',
