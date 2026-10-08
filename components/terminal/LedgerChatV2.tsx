@@ -2875,7 +2875,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 console.warn('Failed to resolve convoId to peer address', e);
               }
             }
-            }
             
             // [AUDIT FIX] If all resolutions fail, fall back to convoId or senderInboxId 
             // to prevent the message from being silently dropped.
