@@ -1,5 +1,5 @@
 'use client';
-import { QDCodec } from './qd-codec';
+
 /**
  * XMTP E2E Encrypted Chat Client
  *
@@ -252,12 +252,12 @@ export async function getXMTPClient(
   try {
     // Client.create wrapped in 8s timeout — WASM load or network hang must NEVER freeze UI
     const createTimeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('XMTP_INIT_TIMEOUT: Client.create timed out after 8s. WASM or network may be unavailable.')), 8000)
+      setTimeout(() => reject(new Error('XMTP_INIT_TIMEOUT: Client.create timed out after 20s. WASM or network may be unavailable.')), 20000)
     );
     client = await Promise.race([
       Client.create(signer, {
         env: XMTP_ENV,
-        codecs: [new QDCodec()],
+        codecs: [],
         dbEncryptionKey,
         appVersion: 'LedgerNetwork-Privacy-Node/1.0.0-obfuscated',
       }),

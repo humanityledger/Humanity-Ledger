@@ -105,7 +105,20 @@ function Avatar({ address, isMe = false }: { address: string; isMe?: boolean }) 
     return () => window.removeEventListener('ledger_settings_update', handler);
   }, []);
 
-  if (isMe && savedAvatar) {
+  React.useEffect(() => {
+    if (!isMe && address && typeof window !== \'undefined\') {
+      const cached = localStorage.getItem(\'peer_avatar_\' + address);
+      if (cached) { setSavedAvatar(cached); return; }
+      fetch(/api/user/search?q=).then(res => res.json()).then(data => {
+        if (data.users && data.users.length > 0 && data.users[0].avatarUrl) {
+          setSavedAvatar(data.users[0].avatarUrl);
+          localStorage.setItem(\'peer_avatar_\' + address, data.users[0].avatarUrl);
+        }
+      }).catch(e => console.error(e));
+    }
+  }, [address, isMe]);
+
+  if (savedAvatar) {
     return (
       <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 ring-1 ring-black/5">
         <img src={savedAvatar} alt="" className="w-full h-full object-cover" />
@@ -214,9 +227,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // This strictly isolates Chat from the Portfolio state to prevent cross-contamination.
   const { getSiloedPXE } = useAztec();
   const aztecNative = useAztecNative();
-  const { spendQDs, balance, aztecAddress, refresh: refreshBalance } = aztecNative;
-  const refreshBalanceRef = useRef<() => Promise<void>>(async () => {});
-  useEffect(() => { refreshBalanceRef.current = refreshBalance; }, [refreshBalance]);
 
   // Mechanical keyboard click sound
   const playKeyClick = () => {
@@ -2522,7 +2532,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setInitError('');
 
     let attempts = 0;
-    const maxAttempts = 4; // Extra attempt for post-revocation retry
+    const maxAttempts = 2; // Extra attempt for post-revocation retry
 
     // [XMTP-FIX] Define wagmiSigner OUTSIDE the try-block so the catch handler
     // can access it when triggering automatic installation revocation.
@@ -2590,55 +2600,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             console.error('[LedgerChatV2] Offline queue sync failed', e);
         }
 
-        // Identity Mint logic for WalletConnect wallets
-        const isWalletConnect = connector?.id?.toLowerCase().includes('walletconnect');
-        if (isWalletConnect || !isLocalSystemWallet) {
-            const mintKey = `qds_identity_mint_${address}`;
-            if (typeof localStorage !== 'undefined' && !localStorage.getItem(mintKey)) {
-                // ✅ OPTIMISTIC LOCK: mark as attempted BEFORE the API call.
-                localStorage.setItem(mintKey, 'true');
-                try {
-                    // Step 1: Use the Aztec address from Context if available, else derive it deterministically
-                    let targetAztecAddress = aztecAddress;
-                    if (!targetAztecAddress) {
-                        const deriveRes = await fetch('/api/aztec/derive-address', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ evmAddress: address })
-                        });
-                        const deriveData = await deriveRes.json();
-                        if (deriveData.success) {
-                            targetAztecAddress = deriveData.aztecAddress;
-                        }
-                    }
-                    
-                    if (targetAztecAddress) {
-                        // Step 2: Trigger the airdrop script explicitly via the API route
-                        const airdropRes = await fetch('/api/aztec/airdrop', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ address: targetAztecAddress, amount: 10 })
-                        });
-                        const airdropData = await airdropRes.json();
-                        if (airdropData.success) {
-                            // Only show the welcome toast on the very first successful claim
-                            console.log('⚡ Sovereign Identity Active: 10 Crypto received!', { 
-                                description: 'Transaction confirmed on Aztec Mainnet.',
-                                explorerUrl: airdropData.explorerUrl
-                            });
-                        }
-                        // On any other response (Already received, error, etc.):
-                        // the optimistic lock above already prevents the next attempt.
-                    }
-                } catch (e) {
-                    console.error('Identity Airdrop Failed:', e);
-                    // Do NOT remove the localStorage key on error — the lock stays.
-                    // If the claim truly failed on-chain, the user can claim via the
-                    // AztecAirdropCalendar (monthly claim UI) instead.
-                }
-            }
-        }
-
         setIsInitializing(false);
         initInFlight.current = false;
         return; // Success
@@ -2700,6 +2661,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // Skip email users — they don't have a wallet signer for XMTP.
     if (isConnected && address && !isEmailUser && !client && !initInFlight.current && !initError) {
       initClient();
+      // [SAFETY TIMEOUT] If init hasn't resolved in 45s, reset state to unblock the UI
+      const safetyTimer = setTimeout(() => {
+        if (initInFlight.current) {
+          console.warn('[LedgerChat] Init safety timeout reached - resetting state');
+          setIsInitializing(false);
+          initInFlight.current = false;
+          setInitError('Connection timed out. Please tap "Enter Ledger Chat" to retry.');
+        }
+      }, 45_000);
+      return () => clearTimeout(safetyTimer);
     }
   }, [isConnected, address, isEmailUser, client, initError, initClient, forceAutoInit]);
 
