@@ -758,43 +758,116 @@ export async function discoverNewPeers(
   }
 }
 
-/** Async generator streaming all incoming messages in real time with AbortSignal support */
+/** Async generator streaming all incoming messages in real time with AbortSignal support.
+ *
+ * XMTP browser-sdk v5 Worker exposes streamAllMessages(callback, onFail) -> StreamCloser.
+ * The higher-level Client class exposes streamAllMessages() -> Promise<AsyncStreamProxy>.
+ * We use the callback form because that is what the browser SDK worker actually exposes,
+ * and convert it into an async generator via a bounded queue so the rest of the app can
+ * use `for await (const msg of streamMessages(...))` unchanged.
+ */
 export async function* streamMessages(client: Client, signal?: AbortSignal) {
-  // Sync before streaming to ensure we have the latest state
+  // Sync first so we don't miss messages that arrived before the stream opens.
   try { await client.conversations.sync(); } catch {}
 
-  const stream = await client.conversations.streamAllMessages();
+  if (signal?.aborted) return;
 
-  let onAbort: (() => void) | undefined;
-  if (signal) {
-    // [AUDIT FIX] Don't register a listener if signal is already aborted.
-    if (signal.aborted) {
-      return; // immediately clean up without yielding anything
-    }
-    onAbort = () => {
-      try {
-        if (typeof (stream as any).return === 'function') {
-          (stream as any).return();
-        }
-      } catch {}
-    };
-    signal.addEventListener('abort', onAbort);
-  }
-
+  // Try the v5 high-level AsyncStreamProxy path first (Client.conversations.streamAllMessages())
+  // If it returns something iterable, use it directly.
+  let streamResult: any;
   try {
-    for await (const message of stream as any) {
-      if (signal?.aborted) break;
-      yield message;
-    }
-  } finally {
-    if (signal && onAbort) {
-      signal.removeEventListener('abort', onAbort);
+    streamResult = await (client.conversations as any).streamAllMessages();
+  } catch {}
+
+  // If streamResult is an async iterable (has [Symbol.asyncIterator]), use it directly
+  if (streamResult && typeof streamResult[Symbol.asyncIterator] === 'function') {
+    let onAbort: (() => void) | undefined;
+    if (signal) {
+      onAbort = () => {
+        try { if (typeof streamResult.return === 'function') streamResult.return(); } catch {}
+      };
+      signal.addEventListener('abort', onAbort);
     }
     try {
-      if (typeof (stream as any).return === 'function') {
-        (stream as any).return();
+      for await (const message of streamResult) {
+        if (signal?.aborted) break;
+        yield message;
       }
-    } catch {}
+    } finally {
+      if (signal && onAbort) signal.removeEventListener('abort', onAbort);
+      try { if (typeof streamResult.return === 'function') streamResult.return(); } catch {}
+    }
+    return;
+  }
+
+  // Fallback: Worker callback-based API: streamAllMessages(callback, onFail) -> StreamCloser
+  // Convert to async generator via a bounded message queue + promise signalling.
+  type Resolve = (value: { msg: any } | { done: true }) => void;
+  const queue: any[] = [];
+  let waiting: Resolve | null = null;
+  let closed = false;
+  let streamCloser: any;
+
+  const enqueue = (msg: any) => {
+    if (closed) return;
+    if (waiting) {
+      const resolve = waiting;
+      waiting = null;
+      resolve({ msg });
+    } else {
+      queue.push(msg);
+    }
+  };
+
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    if (waiting) {
+      const resolve = waiting;
+      waiting = null;
+      resolve({ done: true });
+    }
+  };
+
+  try {
+    streamCloser = (client.conversations as any).streamAllMessages(
+      (msg: any) => enqueue(msg),
+      () => close(), // onFail → close stream gracefully
+    );
+  } catch (e) {
+    console.warn('[XMTP] streamAllMessages callback API failed:', e);
+    return;
+  }
+
+  const onAbort = () => close();
+  if (signal) signal.addEventListener('abort', onAbort);
+
+  try {
+    while (!closed) {
+      if (signal?.aborted) break;
+      if (queue.length > 0) {
+        yield queue.shift();
+      } else {
+        // Wait for the next message
+        const next = await new Promise<{ msg: any } | { done: true }>((resolve) => {
+          if (queue.length > 0) {
+            resolve({ msg: queue.shift() });
+          } else if (closed) {
+            resolve({ done: true });
+          } else {
+            waiting = resolve;
+          }
+        });
+        if ('done' in next) break;
+        if (signal?.aborted) break;
+        yield next.msg;
+      }
+    }
+  } finally {
+    closed = true;
+    if (signal) signal.removeEventListener('abort', onAbort);
+    try { if (streamCloser && typeof streamCloser.end === 'function') streamCloser.end(); } catch {}
+    try { if (streamCloser && typeof streamCloser.close === 'function') streamCloser.close(); } catch {}
   }
 }
 
