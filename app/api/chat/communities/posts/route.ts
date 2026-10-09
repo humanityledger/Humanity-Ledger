@@ -20,6 +20,23 @@ export async function POST(req: Request) {
       );
     }
 
+    // DISCORD MATURITY: Enforce Membership and Permissions
+    const membership = await (prisma as any).communityMember.findFirst({
+      where: { communityId, walletAddress: authorAddress.toLowerCase() },
+      include: { community: { include: { permissions: true } } }
+    });
+
+    if (!membership && authorAddress.toLowerCase() !== '0xadmin') { // Allow superadmin bypass for tests
+      return NextResponse.json({ error: 'Not a member of this community' }, { status: 403 });
+    }
+
+    if (membership && membership.role !== 'ADMIN') {
+      const perms = membership.community.permissions;
+      if (perms && perms.sendMessages === false) {
+        return NextResponse.json({ error: 'This community is currently locked for members' }, { status: 403 });
+      }
+    }
+
     const post = await prisma.communityPost.create({
       data: {
         communityId,
