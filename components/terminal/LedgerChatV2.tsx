@@ -2740,7 +2740,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     conversations.forEach(c => knownPeersRef.current.add(c.peerAddress.toLowerCase()));
 
     // Track last direct message poll time to avoid re-delivering
-    const directMsgSinceRef = useRef(Date.now() - 30000);
+    const directMsgSinceRef = useRef(Date.now() - 7 * 24 * 60 * 60 * 1000); // Check last 7 days on first load to restore full history
     
     const syncGlobal = async () => {
       try {
@@ -2760,25 +2760,33 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 if (confirmedMsgIds.current.has(dmId)) continue;
                 confirmedMsgIds.current.add(dmId);
                 
-                const senderLower = dm.sender?.toLowerCase() ?? '';
+                const isMeMsg = dm.sender?.toLowerCase() === address?.toLowerCase();
+                const peerAddress = isMeMsg ? dm.recipient : dm.sender;
+                const peerLower = peerAddress?.toLowerCase() ?? '';
                 const activePeerLower = activePeerRef.current?.toLowerCase() ?? '';
-                const isFromActivePeer = senderLower === activePeerLower;
+                const isFromActivePeer = peerLower === activePeerLower;
                 
                 const msgObj = {
                   id: dmId,
                   content: dm.content,
                   senderAddress: dm.sender,
                   sentAtNs: dm.createdAt,
-                  conversationId: `dm-${senderLower}`,
-                  isMe: false,
+                  conversationId: `dm-${peerLower}`,
+                  isMe: isMeMsg,
                   status: 'delivered'
                 };
                 
+                // CRITICAL FIX: Persist fallback DB message to IndexedDB so it survives reloads
+                if (typeof chatDB !== 'undefined' && chatDB.saveMessages) {
+                  chatDB.saveMessages([msgObj]).catch(() => {});
+                  chatDB.saveConversation({ peerAddress: peerAddress, lastAt: dm.createdAt }).catch(() => {});
+                }
+                
                 setConversations(prev => {
-                  const existing = prev.find(c => c.peerAddress.toLowerCase() === senderLower);
-                  const newEntry = { peerAddress: dm.sender, lastMessage: dm.content, lastAt: new Date(dm.createdAt) };
+                  const existing = prev.find(c => c.peerAddress.toLowerCase() === peerLower);
+                  const newEntry = { peerAddress: peerAddress, lastMessage: dm.content, lastAt: new Date(dm.createdAt) };
                   if (existing) {
-                    return [newEntry, ...prev.filter(c => c.peerAddress.toLowerCase() !== senderLower)];
+                    return [newEntry, ...prev.filter(c => c.peerAddress.toLowerCase() !== peerLower)];
                   }
                   return [newEntry, ...prev];
                 });
