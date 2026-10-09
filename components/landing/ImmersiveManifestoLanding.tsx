@@ -201,14 +201,11 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
 
 
             <h1 className="text-[52px] md:text-[72px] lg:text-[88px] font-black leading-[0.95] tracking-[-0.04em] text-[#050505] mb-6">
-              The private<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2C6BED] to-[#6E95F5]">messenger</span><br />
-              you always wanted.
+              Decentralized<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2C6BED] to-[#6E95F5]">communication</span><br />for a free society.
             </h1>
 
             <p className="text-[18px] md:text-[21px] font-medium leading-[1.6] text-[#1C1C1E]/60 mb-10 max-w-[520px]">
-              Ledger Chat is the private messenger for people who value their freedom.
-              No phone number. No blockchain fees to send messages. No surveillance. Just signal.
+              Humanity Ledger provides a cryptographic, peer-to-peer messaging protocol designed for absolute privacy. No phone numbers, no central servers, and no surveillance. True sovereignty over your digital identity.
             </p>
 
             {/* CTA buttons */}
@@ -218,10 +215,10 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 className="bg-[#1A1A1A] hover:bg-black text-white font-bold text-[16px] px-8 py-4 rounded-2xl transition-all shadow-[0_8px_24px_rgba(0,0,0,0.12)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
               >
                 <MessageCircle size={20} />
-                Open Ledger Chat
+                Launch Client
               </Link>
               <Link
-                href="#how-it-works"
+                href="#protocol-architecture"
                 className="bg-white hover:bg-[#F6F7F9] text-[#050505] border border-black/10 font-bold text-[16px] px-8 py-4 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
               >
                 How it works
@@ -237,9 +234,9 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             {/* Trust indicators */}
             <div className="flex flex-wrap justify-center lg:justify-start items-center gap-x-6 gap-y-3">
               {[
-                { icon: <Lock size={14} />, label: "End to end encrypted" },
-                { icon: <Shield size={14} />, label: "No phone number needed" },
-                { icon: <Globe size={14} />, label: "Works on any device" },
+                { icon: <Lock size={14} />, label: "Zero-Knowledge Encryption" },
+                { icon: <Shield size={14} />, label: "Self-Sovereign Identity" },
+                { icon: <Globe size={14} />, label: "Cross-Platform Network" },
               ].map((f) => (
                 <div key={f.label} className="flex items-center gap-2 text-[13px] font-bold text-[#1C1C1E]/45">
                   <span className="text-[#1C1C1E]/60">{f.icon}</span>
@@ -273,7 +270,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
         </div>
       </section>
 
-      {/* ═══ SECTION 2 — WHAT IS LEDGER CHAT ════════════════════════════════════ */}
+      {/* ═══ SECTION 2 — PROTOCOL ARCHITECTURE ════════════════════════════════════ */}
       <section className="bg-[#F6F7F9] py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-5 md:px-10">
           <motion.div
@@ -284,11 +281,10 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             className="text-center mb-16"
           >
             <h2 className="text-[38px] md:text-[54px] font-bold tracking-tight text-[#1C1C1E] mb-5 leading-tight">
-              What is Ledger Chat?
+              What is Humanity Ledger?
             </h2>
             <p className="text-[18px] md:text-[20px] font-medium text-[#1C1C1E]/55 max-w-2xl mx-auto leading-relaxed">
-              Ledger Chat is a private messaging app built from the ground up to keep your conversations
-              between you and the people you choose. Nothing more.
+              Humanity Ledger is a sovereign communication protocol built from the ground up to guarantee cryptographic privacy. It ensures your data remains exclusively between you and your intended recipients.
             </p>
           </motion.div>
 
@@ -298,22 +294,22 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 icon: <MessageCircle size={26} strokeWidth={2} />,
                 color: "text-[#2C6BED]",
                 bg: "bg-[#2C6BED]/8",
-                title: "Private by default.",
-                desc: "Every message you send is locked on your device before it travels anywhere. Only the person you are writing to holds the key to read it. No one else — not us, not any government, not any server — can read your messages.",
+                title: "Cryptographically Private.",
+                desc: "Every message is end-to-end encrypted on your device using the XMTP protocol. Only the recipient holds the cryptographic key required to decrypt it. Your communications cannot be intercepted by any third party.",
               },
               {
                 icon: <Fingerprint size={26} strokeWidth={2} />,
                 color: "text-[#30D158]",
                 bg: "bg-[#30D158]/10",
-                title: "No phone number required.",
-                desc: "You connect to Ledger Chat using a digital wallet — a small file on your device that acts as your identity. You do not need a SIM card, a phone number, or an email address. Your account belongs entirely to you.",
+                title: "Self-Sovereign Identity.",
+                desc: "Your identity is anchored to a cryptographic keypair rather than a phone number or email address. This eliminates reliance on telecom providers and ensures you retain absolute control over your account.",
               },
               {
                 icon: <Globe size={26} strokeWidth={2} />,
                 color: "text-purple-600",
                 bg: "bg-purple-500/8",
-                title: "No servers store your data.",
-                desc: "Messages travel directly between people rather than through a central company server. This means there is no database of your conversations that can be hacked, sold, or handed to anyone.",
+                title: "Decentralized Infrastructure.",
+                desc: "The protocol leverages decentralized node networks rather than centralized corporate servers. There is no central database that can be compromised, sold, or subpoenaed by authorities.",
               },
             ].map((card, i) => (
               <motion.div
@@ -337,7 +333,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
       </section>
 
       {/* ═══ SECTION 3 — HOW IT WORKS (Step by Step) ════════════════════════════ */}
-      <section id="how-it-works" className="bg-white py-24 md:py-32">
+      <section id="protocol-architecture" className="bg-white py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-5 md:px-10 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
 
           <motion.div
@@ -350,34 +346,33 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             <div>
               <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#2C6BED] mb-4">Step by step</p>
               <h2 className="text-[38px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] mb-5 leading-tight">
-                How to start<br />chatting in minutes.
+                Protocol Initialization<br />in under 3 minutes.
               </h2>
               <p className="text-[17px] font-medium text-[#1C1C1E]/55 leading-relaxed">
-                You do not need any technical knowledge. Anyone who can use a smartphone can set up
-                Ledger Chat in under three minutes.
+                Despite its cryptographic foundations, the protocol is designed for seamless adoption. Anyone can establish a secure identity and begin communicating instantly.
               </p>
             </div>
 
             <div className="flex flex-col gap-8">
               <Step
                 n="1"
-                title="Download the app."
-                desc="Ledger Chat is free forever. No subscription, no blockchain fees to chat. There are no hidden fees or premium tiers for private messaging."
+                title="Access the Client."
+                desc="The client interface is accessible and free of charge. Message transmission via the XMTP network requires no gas fees, tokens, or premium subscription tiers."
               />
               <Step
                 n="2"
-                title="Create your identity."
-                desc="Tap 'Create Wallet' when the app opens. Your device generates a unique key pair in under a second. This is your account. Write down the recovery phrase shown to you and store it safely — this is the only thing that can restore your account."
+                title="Generate Identity."
+                desc="Generate a secure, non-custodial keypair directly on your device. This cryptographic key acts as your decentralized identity. Ensure you safely back up your recovery phrase as it is the only mechanism for account recovery."
               />
               <Step
                 n="3"
-                title="Find someone to talk to."
-                desc="Share your Ledger Chat address with a friend, or search for someone by their address directly in the app. You can also scan a QR code in person to add a contact instantly."
+                title="Establish Connections."
+                desc="Share your public address to establish a secure channel, or discover peers via the protocol's directory. QR code scanning enables immediate, trustless in-person handshakes."
               />
               <Step
                 n="4"
-                title="Start the conversation."
-                desc="Tap on a contact and start writing. Your message is encrypted the moment you press Send. It arrives on their device and only their device. You can also make voice and video calls in the same conversation."
+                title="Initiate Secure Communication."
+                desc="All messages are encrypted client-side before transmission. The protocol ensures that payloads can only be decrypted by the intended recipient's private key."
               />
             </div>
 
@@ -450,11 +445,10 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             className="text-center mb-16"
           >
             <h2 className="text-[38px] md:text-[54px] font-bold tracking-tight text-[#1C1C1E] mb-5">
-              What makes Ledger Chat different?
+              What makes Humanity Ledger different?
             </h2>
             <p className="text-[18px] font-medium text-[#1C1C1E]/55 max-w-2xl mx-auto leading-relaxed">
-              Most messaging apps are built around advertising revenue. Ledger Chat is built
-              around you.
+              Corporate platforms monetize user data. Humanity Ledger is engineered as a public good for self-sovereign individuals.
             </p>
           </motion.div>
 
@@ -468,7 +462,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
           >
             <div className="grid grid-cols-4 bg-[#FAFAFA] border-b border-black/5 px-6 py-4">
               <div className="text-[13px] font-black uppercase tracking-widest text-black/30">Feature</div>
-              <div className="text-[13px] font-black uppercase tracking-widest text-[#1C1C1E] text-center">Ledger Chat</div>
+              <div className="text-[13px] font-black uppercase tracking-widest text-[#1C1C1E] text-center">Humanity Ledger</div>
               <div className="text-[13px] font-black uppercase tracking-widest text-black/30 text-center">WhatsApp</div>
               <div className="text-[13px] font-black uppercase tracking-widest text-black/30 text-center">Telegram</div>
             </div>
@@ -476,12 +470,12 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               ["No phone number required", true, false, false],
               ["Messages encrypted End to end", true, true, false],
               ["No ads, ever", true, true, false],
-              ["No company can read your messages", true, false, false],
-              ["No data collected about you", true, false, false],
+              ["Zero metadata or message visibility to protocol", true, false, false],
+              ["No telemetry or data harvesting", true, false, false],
               ["Send money in a conversation", true, false, false],
               ["Voice and video calls", true, true, true],
               ["Group communities", true, true, true],
-              ["Account never tied to your real identity", true, false, false],
+              ["No KYC or real-world identity linkage", true, false, false],
             ].map(([label, lc, wa, tg], i) => (
               <div key={String(label)} className={`grid grid-cols-4 px-6 py-4 items-center ${i % 2 === 0 ? '' : 'bg-[#FAFAFA]'} border-b border-black/[0.03] last:border-0`}>
                 <span className="text-[15px] font-medium text-[#1C1C1E]/80">{String(label)}</span>
@@ -512,15 +506,15 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               className="flex flex-col gap-8"
             >
               <div>
-                <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#2C6BED] mb-4">The Next Step in Humanity</p>
+                <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#2C6BED] mb-4">The Evolution of Digital Sovereignty</p>
                 <h2 className="text-[38px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] mb-6 leading-tight">
-                  Ledger Chat is live now on the web.<br />Mobile apps coming to iOS &amp; Android.
+                  Humanity Ledger Protocol is active.<br />Mobile clients in development for iOS &amp; Android.
                 </h2>
                 <p className="text-[18px] font-medium text-[#1C1C1E]/60 leading-relaxed mb-6">
-                  Technology should adapt to people, not the other way around. We believe privacy is a fundamental human right, but it only works if it is effortless to use.
+                  Privacy is a fundamental human right, but cryptographic adoption requires seamless user experience. We engineered the protocol to abstract complexity without compromising security guarantees.
                 </p>
                 <p className="text-[18px] font-medium text-[#1C1C1E]/60 leading-relaxed">
-                  Ledger Chat eliminates the friction of modern applications. There are no passwords to forget, no complex settings to configure, and no menus hidden behind technical jargon. It is as simple as opening the app and talking.
+                  The client implementation eliminates friction. Identity management relies on secure enclaves rather than passwords, and complex cryptographic operations are performed seamlessly in the background.
                 </p>
               </div>
 
@@ -529,15 +523,15 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                   <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
                     <CheckCircle2 size={20} className="text-[#30D158]" />
                   </div>
-                  <h4 className="text-[17px] font-bold text-[#1C1C1E] mb-2">No passwords</h4>
-                  <p className="text-[15px] font-medium text-[#1C1C1E]/60">Your device itself unlocks the app using your face or fingerprint. Nothing to remember, nothing to lose.</p>
+                  <h4 className="text-[17px] font-bold text-[#1C1C1E] mb-2">Passkey &amp; Enclave Authentication</h4>
+                  <p className="text-[15px] font-medium text-[#1C1C1E]/60">Biometric hardware enclaves generate and protect your session keys locally.</p>
                 </div>
                 <div className="bg-[#F6F7F9] p-6 rounded-2xl">
                   <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
                     <Smile size={20} className="text-[#2C6BED]" />
                   </div>
-                  <h4 className="text-[17px] font-bold text-[#1C1C1E] mb-2">Comfortable to read</h4>
-                  <p className="text-[15px] font-medium text-[#1C1C1E]/60">Clean typography, high contrast colors, and an interface that scales perfectly if you need larger text.</p>
+                  <h4 className="text-[17px] font-bold text-[#1C1C1E] mb-2">Human-Centric Interface</h4>
+                  <p className="text-[15px] font-medium text-[#1C1C1E]/60">Designed with clarity and accessibility to make cryptographic communication intuitive for all demographics.</p>
                 </div>
               </div>
             </motion.div>
@@ -552,9 +546,9 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-[#2C6BED]/5 to-transparent" />
               <div className="text-center relative z-10 max-w-sm">
-                <h3 className="text-[24px] font-bold text-[#1C1C1E] mb-4">"It just works."</h3>
+                <h3 className="text-[24px] font-bold text-[#1C1C1E] mb-4">"Seamless Cryptography."</h3>
                 <p className="text-[16px] font-medium text-[#1C1C1E]/55">
-                  We have taken the most advanced security in the world and hidden it entirely behind an interface that feels as familiar and welcoming as writing a letter.
+                  We integrated zero-knowledge proofs and advanced end-to-end encryption behind an interface that feels as intuitive as traditional messengers.
                 </p>
               </div>
             </motion.div>
@@ -586,25 +580,24 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
           >
             <div>
               <h2 className="text-[38px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] mb-5 leading-tight">
-                Everything you need.<br />Nothing you do not.
+                Comprehensive capabilities.<br />Zero compromises.
               </h2>
               <p className="text-[17px] font-medium text-[#1C1C1E]/55 leading-relaxed">
-                Ledger Chat gives you every tool you expect from a modern messaging app,
-                without the parts designed to keep you tracked or watched.
+                The protocol supports all features expected from modern communication platforms, completely stripped of telemetry, tracking, and surveillance architecture.
               </p>
             </div>
 
             <div className="flex flex-col gap-4">
-              <FeatureCheck text="Send text, photos, videos, voice messages, and files" />
-              <FeatureCheck text="Make clear, private voice and video calls with no quality loss" />
-              <FeatureCheck text="Create group chats and communities for up to thousands of people" />
-              <FeatureCheck text="Set messages to delete automatically after they are read" />
-              <FeatureCheck text="Send money to anyone in your contacts, instantly and for free" />
-              <FeatureCheck text="React to messages with any emoji" />
-              <FeatureCheck text="Share your location safely for a limited time only" />
-              <FeatureCheck text="Create polls to collect opinions from a group" />
-              <FeatureCheck text="Start encrypted audio and video calls from any conversation" />
-              <FeatureCheck text="Use a QR code to add contacts when you meet in person" />
+              <FeatureCheck text="Transmit arbitrary payloads: text, rich media, and encrypted files" />
+              <FeatureCheck text="Establish high-fidelity, peer-to-peer VoIP and video streams" />
+              <FeatureCheck text="Deploy scalable, token-gated communities and group clusters" />
+              <FeatureCheck text="Execute autonomous ephemeral message deletion (burn-after-reading)" />
+              <FeatureCheck text="Route frictionless peer-to-peer crypto assets across the network" />
+              <FeatureCheck text="Submit verifiable cryptographic signatures for message reactions" />
+              <FeatureCheck text="Broadcast ephemeral location beacons with strict TTL parameters" />
+              <FeatureCheck text="Deploy trustless consensus polls within community nodes" />
+              <FeatureCheck text="Initiate secure, WebRTC-based communication handshakes seamlessly" />
+              <FeatureCheck text="Execute physical cryptographic handshakes via dynamic QR scanning" />
             </div>
           </motion.div>
         </div>
@@ -621,11 +614,11 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             className="text-center mb-14"
           >
             <h2 className="text-[38px] md:text-[54px] font-bold tracking-tight text-[#1C1C1E] mb-4">
-              Available on all your devices.
+              Universal Network Architecture.
             </h2>
             <p className="text-[18px] font-medium text-[#1C1C1E]/55 max-w-xl mx-auto">
-              Ledger Chat works on iPhone, Android phones, and any web browser.
-              Your conversations stay in sync across all of them automatically.
+              The protocol client is natively compatible with all modern browser engines, iOS, and Android architectures.
+              The distributed network seamlessly synchronizes your encrypted state vectors.
             </p>
           </motion.div>
 
@@ -633,25 +626,25 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             {[
               {
                 icon: <Smartphone size={28} />,
-                title: "iPhone",
-                sub: "Requires iOS 16 or later",
+                title: "iOS Enclave",
+                sub: "Minimum requirement: iOS 16.0+",
                 badge: "App Store — Coming Soon",
                 color: "text-[#2C6BED]",
                 bg: "bg-[#2C6BED]/8",
               },
               {
                 icon: <Smartphone size={28} />,
-                title: "Android",
-                sub: "Requires Android 10 or later",
+                title: "Android Enclave",
+                sub: "Minimum requirement: API Level 29+",
                 badge: "Google Play — Coming Soon",
                 color: "text-[#30D158]",
                 bg: "bg-[#30D158]/8",
               },
               {
                 icon: <Globe size={28} />,
-                title: "Web Browser",
+                title: "Web Client",
                 sub: "Chrome, Safari, Firefox — no download",
-                badge: "Available now at humanidfi.com",
+                badge: "Active Protocol Node (Mainnet)",
                 color: "text-purple-600",
                 bg: "bg-purple-500/8",
               },
@@ -692,10 +685,10 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
           >
             <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#2C6BED] mb-4">Latest updates</p>
             <h2 className="text-[38px] md:text-[54px] font-bold tracking-tight text-[#1C1C1E] mb-4">
-              What we have built recently.
+              Recent Protocol Advancements.
             </h2>
             <p className="text-[18px] font-medium text-[#1C1C1E]/55">
-              Ledger Chat improves every week. Here is a summary of the most recent additions.
+              The protocol undergoes continuous iterative development. Below is a summary of recent architectural and client enhancements.
             </p>
           </motion.div>
 
@@ -703,32 +696,32 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             {[
               {
                 tag: "New",
-                title: "Communities with rich announcements",
+                title: "Rich-Text Announcement Channels",
                 desc: "Group administrators can now write and publish formatted announcements with images, bold text, and bullet points — similar to a publication inside the group.",
                 color: "bg-[#2C6BED] text-white",
               },
               {
                 tag: "Improved",
-                title: "Group invite links that you control",
-                desc: "Share a single link to invite people to a group. If you change your mind, revoke the link in one tap and it stops working immediately. Private groups block new entries automatically when you close them.",
+                title: "Cryptographic Invite Links",
+                desc: "Distribute deterministic invite links for community access. Cryptographic revocation is instantaneous.",
                 color: "bg-[#30D158] text-white",
               },
               {
                 tag: "New",
-                title: "Communities with free and paid channels",
-                desc: "Create a community with multiple channels. Choose which are free for everyone and which require a one-time unlock or monthly subscription. No competitor offers this combination with crypto-native payments in the same space.",
+                title: "Token-Gated Community Channels",
+                desc: "Deploy multi-channel communities with native token-gating. Configure access based on USDC, ETH, or NFT ownership seamlessly.",
                 color: "bg-purple-600 text-white",
               },
               {
                 tag: "Improved",
-                title: "Total Control in Your Hands",
-                desc: "Every option in the Settings screen now has a visible effect on your account. Change your theme, adjust your privacy level, toggle notifications or message previews, and see the result immediately.",
+                title: "Granular Privacy Controls",
+                desc: "Clients provide comprehensive configuration over cryptographic preferences, metadata exposure, and network behavior.",
                 color: "bg-orange-500 text-white",
               },
               {
                 tag: "Security",
-                title: "End to end encrypted by default, no setup required",
-                desc: "All conversations in Ledger Chat are encrypted from the moment they start. You do not need to enable anything. There is no plain text fallback mode. Every message is private, always.",
+                title: "Default End-to-End Encryption",
+                desc: "All communication channels are encrypted client-side by default. The protocol explicitly prohibits unencrypted fallback vectors.",
                 color: "bg-[#1C1C1E] text-white",
               },
             ].map((item, i) => (
@@ -776,11 +769,10 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               className="max-w-3xl text-center"
             >
               <h2 className="text-[38px] md:text-[56px] font-bold tracking-tight text-[#1C1C1E] mb-6 leading-tight">
-                Everything you know.<br />And then some.
+                Uncompromising Utility.<br />Sovereign Architecture.
               </h2>
               <p className="text-[18px] md:text-[20px] font-medium text-[#1C1C1E]/55 leading-relaxed mb-12">
-                Ledger Chat has every feature the most popular messaging apps offer, and adds things
-                that no other app provides today.
+                Humanity Ledger provides full parity with centralized messengers while natively supporting smart contract execution, peer-to-peer asset routing, and zero-knowledge identity primitives.
               </p>
             </motion.div>
 
@@ -835,11 +827,10 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               <MessageCircle size={34} className="text-white" strokeWidth={1.8} />
             </div>
             <h2 className="text-[42px] md:text-[60px] font-bold tracking-tight text-[#1C1C1E] mb-6 leading-tight">
-              Ready to start?
+              Initiate Connection.
             </h2>
             <p className="text-[18px] font-medium text-[#1C1C1E]/55 mb-10 max-w-xl mx-auto leading-relaxed">
-              Ledger Chat is free, requires no sign up form, no email, and no phone number.
-              Open it in your browser right now. Mobile apps for iOS &amp; Android are coming soon.
+              Humanity Ledger is open-source, permissionless, and inherently private. Access the decentralized client directly in your browser. Dedicated hardware enclaves for iOS and Android are in active development.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -848,7 +839,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 className="inline-flex items-center gap-2 bg-[#1C1C1E] hover:bg-black text-white font-bold text-[17px] px-10 py-4 rounded-2xl transition-all shadow-lg active:scale-95"
               >
                 <MessageCircle size={20} />
-                Open Ledger Chat
+                Launch Client
               </Link>
               <Link
                 href="/communities"
@@ -865,7 +856,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             </div>
 
             <p className="text-[13px] font-medium text-[#1C1C1E]/35">
-              Free forever. No ads. No subscriptions. No data sold.
+              Permissionless by default. No ads, no metadata extraction, no corporate surveillance.
             </p>
           </motion.div>
         </div>
@@ -876,6 +867,17 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
