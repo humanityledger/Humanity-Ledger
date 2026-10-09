@@ -421,11 +421,11 @@ export default function ConnectPage() {
             </div>
 
             <h1 className="text-[52px] xl:text-[64px] font-black tracking-[-0.04em] leading-[1.05] text-black mb-6">
-              Sovereign Identity Protocol
+              Universal Communication Protocol
             </h1>
 
             <p className="text-[18px] text-neutral-500 leading-[1.6] font-medium mb-12 max-w-[480px]">
-              Connect to Humanity Ledger to access your decentralized portfolio, participate in zero-knowledge governance, and communicate securely over the XMTP network.
+              Connect to Humanity Ledger to access your private portfolio, verify your identity securely, and communicate with military-grade encryption.
             </p>
 
             <div className="grid grid-cols-2 gap-x-8 gap-y-10 w-full">
@@ -433,8 +433,8 @@ export default function ConnectPage() {
                 <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
                   <Shield size={20} strokeWidth={1.5} />
                 </div>
-                <h3 className="font-bold text-[15px] text-black">Zero-Knowledge</h3>
-                <p className="text-[13px] text-black/50 leading-relaxed">Cryptographic proofs via Aztec Network. Validate identity without exposing personal data.</p>
+                <h3 className="font-bold text-[15px] text-black">Private Verification</h3>
+                <p className="text-[13px] text-black/50 leading-relaxed">Cryptographic proofs via Aztec Network. Validate your identity locally without exposing personal data.</p>
               </div>
               <div className="flex flex-col gap-2">
                 <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
@@ -447,14 +447,14 @@ export default function ConnectPage() {
                 <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
                   <Wallet size={20} strokeWidth={1.5} />
                 </div>
-                <h3 className="font-bold text-[15px] text-black">Sovereign Asset Hub</h3>
+                <h3 className="font-bold text-[15px] text-black">Institutional Asset Hub</h3>
                 <p className="text-[13px] text-black/50 leading-relaxed">Institutional-grade dashboard to track, stake, and secure digital assets.</p>
               </div>
               <div className="flex flex-col gap-2">
                 <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
                   <CheckCircle2 size={20} strokeWidth={1.5} />
                 </div>
-                <h3 className="font-bold text-[15px] text-black">EIP-4361 Standard</h3>
+                <h3 className="font-bold text-[15px] text-black">Wallet Authentication</h3>
                 <p className="text-[13px] text-black/50 leading-relaxed">Sign-In with Ethereum authentication. You are the sole custodian of your session.</p>
               </div>
             </div>

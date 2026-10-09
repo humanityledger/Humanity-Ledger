@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Mark undelivered ones as delivered
-    const undeliveredIds = messages.filter(m => !m.delivered).map(m => m.id);
+    const undeliveredIds = messages.filter(m => !m.delivered && m.recipient === address).map(m => m.id);
     if (undeliveredIds.length > 0) {
       await prisma.directMessage.updateMany({
         where: { id: { in: undeliveredIds } },
