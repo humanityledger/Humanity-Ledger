@@ -192,7 +192,17 @@ export async function GET(req: NextRequest) {
       }
     }
     
-    return NextResponse.json({ hasPin: !!storedPinHash });
+    if (!storedPinHash) {
+      const clearanceTs = Date.now();
+      const clearanceSecret = (() => { const s = process.env.ENCLAVE_PIN_SECRET || process.env.JWT_SECRET; if (!s) throw new Error('CRITICAL: Missing ENCLAVE_PIN_SECRET'); return s; })();
+      const clearanceToken = crypto
+        .createHmac('sha256', clearanceSecret)
+        .update(`${userId}:cleared:${clearanceTs}`)
+        .digest('hex');
+      return NextResponse.json({ hasPin: false, clearanceToken, clearanceTs });
+    }
+
+    return NextResponse.json({ hasPin: true });
   } catch (err) {
     return NextResponse.json({ hasPin: false });
   }

@@ -195,20 +195,10 @@ export function TuringShieldGate({
         .then(res => res.json())
         .then(async data => {
           if (data && data.hasPin === false) {
-            // First time user: get a clearance token via default PIN automatically
-            try {
-              const res = await fetch('/api/auth/enclave-pin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pin: '777777' }),
-              });
-              const postData = await res.json();
-              if (postData.success && postData.clearanceToken) {
-                setTempClearanceToken(postData.clearanceToken);
-                setTempClearanceTs(postData.clearanceTs);
-              }
-            } catch (err) {
-              console.error('Failed to get default clearance token', err);
+            // First time user: use the server-provided clearance token
+            if (data.clearanceToken && data.clearanceTs) {
+              setTempClearanceToken(data.clearanceToken);
+              setTempClearanceTs(data.clearanceTs);
             }
             setIsFirstTime(true);
             setSettingPin(true);
@@ -860,5 +850,6 @@ export function TuringShieldGate({
     </div>
   );
 }
+
 
 
