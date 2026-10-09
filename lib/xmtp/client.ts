@@ -471,7 +471,7 @@ export async function sendMessage(
         try {
           const dms = await client.conversations.listDms();
           for (const d of dms) {
-            const peerAddr = await extractPeerAddress(d, selfInboxId, (client as any).accountAddress).catch(() => null);
+            const peerAddr = await extractPeerAddress(d, selfInboxId, (client as any).accountAddress, client).catch(() => null);
             if (peerAddr && peerAddr.toLowerCase() === finalTo.toLowerCase()) {
               dm = d;
               break;
@@ -574,7 +574,7 @@ export async function listConversations(client: Client): Promise<any[]> {
  * Extract the peer Ethereum address from a DM conversation object.
  * Checks members array first, then peerInboxId resolution, with cache.
  */
-export async function extractPeerAddress(dm: any, selfInboxId: string, selfEthAddress?: string): Promise<string | null> {
+export async function extractPeerAddress(dm: any, selfInboxId: string, selfEthAddress?: string, client?: Client): Promise<string | null> {
   try {
     const members: any[] = typeof dm.members === 'function' ? await dm.members() : (dm.members ?? []);
 
@@ -622,7 +622,7 @@ export async function extractPeerAddress(dm: any, selfInboxId: string, selfEthAd
       const cached = inboxIdToAddressCache.get(peerInboxId.toLowerCase());
       if (cached) return cached;
       // Try network resolution
-      const resolved = await resolveInboxIdToAddress(peerInboxId);
+      const resolved = await resolveInboxIdToAddress(peerInboxId, client);
       if (resolved) return resolved;
     }
   } catch (e) {
@@ -671,7 +671,7 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
     try {
       const dms: any[] = await client.conversations.listDms();
       for (const d of dms) {
-        const peerAddr = await extractPeerAddress(d, selfInboxId, (client as any).accountAddress).catch(() => null);
+        const peerAddr = await extractPeerAddress(d, selfInboxId, (client as any).accountAddress, client).catch(() => null);
         if (peerAddr && peerAddr.toLowerCase() === normalizedPeer.toLowerCase()) {
           dm = d;
           break;
@@ -739,7 +739,7 @@ export async function discoverNewPeers(
 
     for (const dm of dms) {
       try {
-        const peerAddr = await extractPeerAddress(dm, selfInboxId, (client as any).accountAddress);
+        const peerAddr = await extractPeerAddress(dm, selfInboxId, (client as any).accountAddress, client);
         if (
           peerAddr &&
           /^0x[a-fA-F0-9]{40}$/i.test(peerAddr) &&

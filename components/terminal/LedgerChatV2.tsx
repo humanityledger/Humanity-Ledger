@@ -2817,7 +2817,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
 
     syncGlobal();
-    const globalPoll = setInterval(syncGlobal, 2000);
+    const globalPoll = setInterval(syncGlobal, 15000);
 
     // ─── GLOBAL XMTP STREAM ────────────────────────────────────────────────────
     // DEDUPLICATION CONTRACT:
@@ -3676,7 +3676,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     fetchHistorical(true);
 
     // Fallback polling for the active conversation history
-    const pollId = setInterval(() => fetchHistorical(false), 5000);
+    const pollId = setInterval(() => fetchHistorical(false), 12000);
 
     const fetchFriendRequests = async () => {
       if (!address) return;
