@@ -1016,6 +1016,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // [BUG FIX] Dedicated ref for the active peer's inboxId — MUST be a separate ref, NOT a
   // property on activeXmtpDmIdRef, because setting .current = null would wipe sibling props.
   const activePeerInboxIdRef = useRef<string>('');
+  
+  // Track last direct message poll time to avoid re-delivering
+  const directMsgSinceRef = useRef(Date.now() - 7 * 24 * 60 * 60 * 1000);
   // Cache canReceiveMessages result per address to skip redundant network lookups
   const canReceiveCache = useRef<Map<string, boolean>>(new Map());
   // Track if initClient is already in-flight to prevent double-calls on mobile
@@ -2739,8 +2742,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // Seed the persistent ref with already-known conversations
     conversations.forEach(c => knownPeersRef.current.add(c.peerAddress.toLowerCase()));
 
-    // Track last direct message poll time to avoid re-delivering
-    const directMsgSinceRef = useRef(Date.now() - 7 * 24 * 60 * 60 * 1000); // Check last 7 days on first load to restore full history
     
     const syncGlobal = async () => {
       try {

@@ -413,42 +413,61 @@ export default function ConnectPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-20 flex flex-col items-center text-center gap-0 w-full max-w-[480px] mx-auto"
+            className="relative z-20 flex flex-col justify-center gap-0 w-full max-w-[560px] mx-auto mt-[-40px]"
           >
-            {/* Ledger Chat icon — hero */}
-            <div
-              className="w-[140px] h-[140px] rounded-[42px] overflow-hidden mb-10 transition-transform duration-700 hover:scale-[1.03] cursor-default bg-white"
-              style={{ boxShadow: '0 30px 60px -15px rgba(255,42,133,0.3), inset 0 1px 2px rgba(255,255,255,0.8), 0 0 0 1px rgba(0,0,0,0.03)' }}
-            >
-              <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" />
+            <div className="inline-flex items-center gap-3 pl-3 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/5 w-fit mb-8">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#25D366] animate-pulse block shrink-0" />
+              <span className="text-[12px] font-mono uppercase tracking-widest text-black/60 font-semibold">Protocol Active</span>
             </div>
 
-            <h1 className="text-[56px] xl:text-[64px] font-black tracking-[-0.04em] leading-none text-black mb-3">Ledger Chat</h1>
-            <p className="text-[15px] font-semibold text-[#25D366] tracking-tight mb-5 flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#25D366] inline-block animate-pulse" /> Live Now on Web</p>
+            <h1 className="text-[52px] xl:text-[64px] font-black tracking-[-0.04em] leading-[1.05] text-black mb-6">
+              Sovereign Identity Protocol
+            </h1>
 
-            <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-4 max-w-[420px]">
-              Ledger Chat is the private messenger you've always wanted. E2E encrypted by default, no phone number required, no fees to send messages.
-            </p>
-            <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-10 max-w-[420px]">
-              No passwords to remember, no complex menus. Just open and connect. We designed it to be so intuitive that it is <strong>perfectly comfortable for older adults</strong> and absolutely seamless for everyone else.
+            <p className="text-[18px] text-neutral-500 leading-[1.6] font-medium mb-12 max-w-[480px]">
+              Connect to Humanity Ledger to access your decentralized portfolio, participate in zero-knowledge governance, and communicate securely over the XMTP network.
             </p>
 
-            {/* Product status — live */}
-            <div className="relative inline-flex items-center gap-4 pl-3 pr-6 py-3 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.05)] border border-black/[0.04] transition-all cursor-default">
-              <div className="w-10 h-10 rounded-full bg-[#25D366]/10 flex items-center justify-center shrink-0">
-                <span className="w-3 h-3 rounded-full bg-[#25D366] animate-pulse block" />
+            <div className="grid grid-cols-2 gap-x-8 gap-y-10 w-full">
+              <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
+                  <Shield size={20} strokeWidth={1.5} />
+                </div>
+                <h3 className="font-bold text-[15px] text-black">Zero-Knowledge</h3>
+                <p className="text-[13px] text-black/50 leading-relaxed">Cryptographic proofs via Aztec Network. Validate identity without exposing personal data.</p>
               </div>
-              <div className="flex flex-col text-left">
-                <span className="text-[9.5px] font-mono uppercase tracking-[0.2em] font-bold text-[#25D366]">Status</span>
-                <span className="text-[14.5px] font-bold tracking-tight text-black leading-tight">Live · Mobile Apps Coming Soon</span>
+              <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
+                  <Lock size={20} strokeWidth={1.5} />
+                </div>
+                <h3 className="font-bold text-[15px] text-black">End-to-End Encrypted</h3>
+                <p className="text-[13px] text-black/50 leading-relaxed">Direct messaging via XMTP. Fully decentralized communication channels.</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
+                  <Wallet size={20} strokeWidth={1.5} />
+                </div>
+                <h3 className="font-bold text-[15px] text-black">Sovereign Asset Hub</h3>
+                <p className="text-[13px] text-black/50 leading-relaxed">Institutional-grade dashboard to track, stake, and secure digital assets.</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
+                  <CheckCircle2 size={20} strokeWidth={1.5} />
+                </div>
+                <h3 className="font-bold text-[15px] text-black">EIP-4361 Standard</h3>
+                <p className="text-[13px] text-black/50 leading-relaxed">Sign-In with Ethereum authentication. You are the sole custodian of your session.</p>
               </div>
             </div>
           </motion.div>
 
-          {/* Bottom bar */}
-          <div className="relative z-20 flex items-center justify-between opacity-40">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-black font-semibold">Sovereign Protocol</span>
-            <span className="text-[10px] font-mono uppercase tracking-widest text-black font-semibold">Timisoara R&amp;D Hub</span>
+          {/* Bottom links */}
+          <div className="relative z-20 flex items-center justify-between text-[11px] font-medium text-neutral-400">
+            <span>© 2026 Humanity Ledger Protocol</span>
+            <div className="flex items-center gap-6">
+              <Link href="/docs/whitepaper" className="hover:text-black transition-colors">Whitepaper</Link>
+              <Link href="/docs/terms" className="hover:text-black transition-colors">Terms</Link>
+              <Link href="/docs/privacy" className="hover:text-black transition-colors">Privacy</Link>
+            </div>
           </div>
         </div>
 
