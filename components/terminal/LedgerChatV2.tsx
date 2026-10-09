@@ -1181,11 +1181,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       }
     };
     window.addEventListener('ledger_offline_msg', handleOfflineMsg);
+      const handleForceMsg = (e: any) => {
+         setMessages(prev => {
+           if (prev.find(m => m.id === e.detail.id)) return prev;
+           return [...prev, e.detail].sort((a,b) => a.sentAtNs - b.sentAtNs);
+         });
+      };
+      window.addEventListener('ledger_force_msg_render', handleForceMsg);
 
     return () => {
       window.removeEventListener('quantum_wakeup_signal', handleWakeup);
       document.removeEventListener('visibilitychange', handleWakeup);
       window.removeEventListener('ledger_offline_msg', handleOfflineMsg);
+        window.removeEventListener('ledger_force_msg_render', handleForceMsg);
     };
   }, [client, address]);
 
