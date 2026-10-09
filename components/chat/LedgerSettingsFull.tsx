@@ -1646,58 +1646,94 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               )}
 
               {/* ── Custom RPC ── */}
-              {modal === 'custom_rpc' && (
-                <div className="px-6 pb-6">
-                  <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-5">Custom RPC URL</h3>
-                  <p className="text-[13px] text-[#8E8E93] mb-4 leading-relaxed">Use your own Ethereum RPC provider for transactions and contract interactions.</p>
-                  <input
-                    type="url"
-                    defaultValue={settings.custom_rpc_url || ''}
-                    placeholder="https://mainnet.infura.io/v3/your-key"
-                    className="w-full bg-[#F2F2F7] rounded-2xl px-4 py-4 text-[14px] font-mono text-[#1C1C1E] outline-none focus:ring-2 focus:ring-[#25D366] mb-4"
-                    onBlur={e => { if (e.target.value) updateSetting('custom_rpc_url', e.target.value); }}
-                  />
-                  <button type="button" onClick={() => { setModal(null); toast.success('RPC URL saved'); }}
-                    className="w-full py-4 bg-[#1C1C1E] rounded-2xl text-white font-bold text-[16px]">
-                    Save
-                  </button>
-                </div>
-              )}
-
-              {/* ── Nuke ── */}
-              {modal === 'nuke' && (
-                <div className="px-6 pb-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center">
-                      <AlertTriangle size={22} className="text-red-500" />
-                    </div>
-                    <div>
-                      <h3 className="text-[18px] font-bold text-[#1C1C1E]">Delete All Data</h3>
-                      <p className="text-[13px] text-red-500 font-semibold">This cannot be undone</p>
+              {modal === 'custom_rpc' && (() => {
+                const [rpcVal, setRpcVal] = React.useState(settings.custom_rpc_url || '');
+                const [rpcErr, setRpcErr] = React.useState<string | null>(null);
+                return (
+                  <div className="px-6 pb-6">
+                    <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-5">Custom RPC URL</h3>
+                    <p className="text-[13px] text-[#8E8E93] mb-4 leading-relaxed">Use your own Ethereum RPC provider for transactions and contract interactions.</p>
+                    <input
+                      type="url"
+                      value={rpcVal}
+                      onChange={e => { setRpcVal(e.target.value); setRpcErr(null); }}
+                      placeholder="https://mainnet.infura.io/v3/your-key"
+                      className={`w-full bg-[#F2F2F7] rounded-2xl px-4 py-4 text-[14px] font-mono text-[#1C1C1E] outline-none focus:ring-2 mb-1 ${rpcErr ? 'ring-2 ring-red-400 focus:ring-red-400' : 'focus:ring-[#25D366]'}`}
+                    />
+                    {rpcErr && <p className="text-[12px] text-red-500 mb-3 px-1">{rpcErr}</p>}
+                    <div className="flex gap-3 mt-4">
+                      <button type="button" onClick={() => { setRpcVal(''); updateSetting('custom_rpc_url', ''); setModal(null); toast.success('Restored default RPC'); }}
+                        className="flex-1 py-4 border border-[#E5E5EA] rounded-2xl text-[#8E8E93] font-bold text-[15px]">
+                        Reset to Default
+                      </button>
+                      <button type="button" onClick={() => {
+                        if (!rpcVal) { updateSetting('custom_rpc_url', ''); setModal(null); toast.success('Restored default RPC'); return; }
+                        try {
+                          const u = new URL(rpcVal);
+                          if (u.protocol !== 'https:' && u.protocol !== 'http:') { setRpcErr('Only https:// and http:// URLs are allowed.'); return; }
+                          if (!u.hostname.includes('.') || u.hostname === 'localhost') { setRpcErr('Local network URLs are not allowed.'); return; }
+                        } catch { setRpcErr('Please enter a valid URL.'); return; }
+                        updateSetting('custom_rpc_url', rpcVal.slice(0, 512)); setModal(null); toast.success('RPC URL saved');
+                      }}
+                        className="flex-1 py-4 bg-[#1C1C1E] rounded-2xl text-white font-bold text-[15px]">
+                        Save
+                      </button>
                     </div>
                   </div>
-                  <p className="text-[14px] text-[#8E8E93] mb-6 leading-relaxed">
-                    All local data including conversation history, contacts, and settings will be permanently deleted. Your on-chain identity and XMTP inbox remain intact.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      for (let i = localStorage.length - 1; i >= 0; i--) {
-                        const k = localStorage.key(i);
-                        if (k?.startsWith('ledger_')) localStorage.removeItem(k);
-                      }
-                      toast.success('All local data deleted');
-                      setTimeout(() => window.location.reload(), 1500);
-                    }}
-                    className="w-full py-4 bg-[#FF3B30] rounded-2xl text-white font-bold text-[16px]"
-                  >
-                    Confirm — Delete Everything
-                  </button>
-                  <button type="button" onClick={() => setModal(null)} className="w-full py-3 mt-2 text-[#8E8E93] font-semibold text-[16px]">
-                    Cancel
-                  </button>
-                </div>
-              )}
+                );
+              })()}
+
+
+              {/* ── Nuke ── */}
+              {modal === 'nuke' && (() => {
+                const [nukeConfirm, setNukeConfirm] = React.useState('');
+                const confirmed = nukeConfirm.trim().toUpperCase() === 'DELETE';
+                return (
+                  <div className="px-6 pb-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center">
+                        <AlertTriangle size={22} className="text-red-500" />
+                      </div>
+                      <div>
+                        <h3 className="text-[18px] font-bold text-[#1C1C1E]">Delete All Data</h3>
+                        <p className="text-[13px] text-red-500 font-semibold">This cannot be undone</p>
+                      </div>
+                    </div>
+                    <p className="text-[14px] text-[#8E8E93] mb-5 leading-relaxed">
+                      All local data including conversation history, contacts, and settings will be permanently deleted. Your on-chain identity and XMTP inbox remain intact.
+                    </p>
+                    <p className="text-[13px] text-[#3C3C43] mb-2 font-semibold">Type <span className="font-black text-red-600">DELETE</span> to confirm:</p>
+                    <input
+                      type="text"
+                      value={nukeConfirm}
+                      onChange={e => setNukeConfirm(e.target.value)}
+                      placeholder="DELETE"
+                      className="w-full bg-[#F2F2F7] rounded-2xl px-4 py-3 text-[15px] font-mono font-bold text-[#1C1C1E] outline-none focus:ring-2 focus:ring-red-400 mb-4"
+                      autoCapitalize="characters"
+                    />
+                    <button
+                      type="button"
+                      disabled={!confirmed}
+                      onClick={() => {
+                        for (let i = localStorage.length - 1; i >= 0; i--) {
+                          const k = localStorage.key(i);
+                          if (k?.startsWith('ledger_')) localStorage.removeItem(k);
+                        }
+                        sessionStorage.clear();
+                        toast.success('All local data deleted');
+                        setTimeout(() => window.location.reload(), 1500);
+                      }}
+                      className={`w-full py-4 rounded-2xl text-white font-bold text-[16px] transition-opacity ${confirmed ? 'bg-[#FF3B30]' : 'bg-[#FF3B30] opacity-30 cursor-not-allowed'}`}
+                    >
+                      Confirm — Delete Everything
+                    </button>
+                    <button type="button" onClick={() => setModal(null)} className="w-full py-3 mt-2 text-[#8E8E93] font-semibold text-[16px]">
+                      Cancel
+                    </button>
+                  </div>
+                );
+              })()}
+
 
               {/* ── Blocked Addresses ── */}
               {modal === 'blocked_list' && (() => {
