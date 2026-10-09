@@ -23,19 +23,19 @@ export function SystemFooter() {
           {/* Protocol */}
           <div className="flex flex-col gap-3">
             <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Protocol</h4>
-            <Link href="/protocol/ledger-chat" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Ledger Chat</Link>
-            <Link href="/protocol/zk-identity" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Sovereign Identity</Link>
+            <Link href="/chat" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Ledger Chat</Link>
+            <Link href="/protocol" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Sovereign Identity</Link>
             <Link href="/protocol/decentralized-relay" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Decentralized Relay</Link>
-            <Link href="/developers" className="text-[14px] font-medium text-[#2C6BED] hover:text-[#1A5AE3] transition-colors">Developer Hub &rarr;</Link>
+            <Link href="/developers" className="text-[14px] font-medium text-[#0A0A0A] hover:text-[#25D366] transition-colors">Developer Hub &rarr;</Link>
           </div>
 
           {/* Network */}
           <div className="flex flex-col gap-3">
             <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Network</h4>
-            <Link href="/network/explorer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Block Explorer</Link>
-            <Link href="/network/status" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Network Status</Link>
-            <Link href="/network/governance" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Governance</Link>
-            <Link href="/blog" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Blog</Link>
+            <Link href="#" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Block Explorer</Link>
+            <Link href="#" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Network Status</Link>
+            <Link href="/communities" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Governance</Link>
+            <Link href="#" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Blog</Link>
           </div>
 
           {/* Security & Cryptography */}
@@ -43,7 +43,7 @@ export function SystemFooter() {
             <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Cryptography</h4>
             <Link href="/docs/whitepaper" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Whitepaper</Link>
             <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Network Architecture</a>
-            <Link href="/docs/audits" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Security Audits</Link>
+            <Link href="#" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Security Audits</Link>
             <a href="https://github.com/humanityledger" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">GitHub</a>
           </div>
 
@@ -67,3 +67,5 @@ export function SystemFooter() {
     </footer>
   );
 }
+
+

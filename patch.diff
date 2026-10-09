@@ -1,0 +1,87 @@
+--- lib/xmtp/client.ts
++++ lib/xmtp/client.ts
+@@ -663,55 +663,55 @@
+     };
+ 
+     // [CRITICAL FIX v6] Try to find the DM in the local list FIRST.
+     // newDmWithIdentifier creates a new DM if one doesn't exist, which on XMTP v5.3.0
+     // can occasionally return a freshly-created (empty) conversation instead of the existing one.
+     // Using the existing DM object from listDms() gives us reliable message access.
+-    let dm: any = null;
++    const matchingDms: any[] = [];
+     const selfInboxId = (client as any).inboxId ?? '';
+     try {
+       const dms: any[] = await client.conversations.listDms();
+       for (const d of dms) {
+         const peerAddr = await extractPeerAddress(d, selfInboxId, (client as any).accountAddress).catch(() => null);
+         if (peerAddr && peerAddr.toLowerCase() === normalizedPeer.toLowerCase()) {
+-          dm = d;
+-          break;
++          matchingDms.push(d);
+         }
+       }
+     } catch (listErr) {
+       console.warn('[XMTP] listDms failed, falling back to newDmWithIdentifier', listErr);
+     }
+ 
+     // Fallback: create/get DM via identifier if not found in list
+-    if (!dm) {
++    if (matchingDms.length === 0) {
+       const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
+-      dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
++      try {
++        const fallbackDm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
++        if (fallbackDm) matchingDms.push(fallbackDm);
++      } catch {}
+     }
+ 
+-    if (!dm) return [];
++    if (matchingDms.length === 0) return [];
+ 
+     // 3. CRITICAL: Sync the specific DM from the network (not just local cache)
+-    // First sync - pulls network state
+-    try {
+-      await dm.sync();
+-    } catch (syncErr) {
+-      console.warn('[XMTP] dm.sync() first attempt failed:', syncErr);
+-    }
+-
+-    // 4. Fetch messages (now from properly synced state)
+-    const msgs = await dm.messages();
+-
+-    // 5. If we got 0 messages but this is an existing DM, do a second sync and retry
+-    // (XMTP MLS sometimes needs two syncs on first open or after key rotation)
+-    if ((!msgs || msgs.length === 0)) {
+-      try {
+-        await client.conversations.sync();
+-        await dm.sync();
+-        const retryMsgs = await dm.messages();
+-        return retryMsgs ?? [];
+-      } catch (retryErr) {
+-        console.warn('[XMTP] Retry sync/messages failed:', retryErr);
+-      }
+-    }
+-
+-    return msgs ?? [];
++    let allMsgs: any[] = [];
++    await Promise.allSettled(matchingDms.map(async (dm) => {
++      try { await dm.sync(); } catch {}
++      let msgs = await dm.messages();
++      if (!msgs || msgs.length === 0) {
++        try {
++          await client.conversations.sync();
++          await dm.sync();
++          msgs = await dm.messages();
++        } catch {}
++      }
++      if (msgs && msgs.length > 0) allMsgs.push(...msgs);
++    }));
++    const seenIds = new Set();
++    const dedupedMsgs = allMsgs.filter(m => {
++      if (seenIds.has(m.id)) return false;
++      seenIds.add(m.id);
++      return true;
++    });
++    return dedupedMsgs.sort((a, b) => Number(a.sentAtNs ?? a.sentAt ?? 0) - Number(b.sentAtNs ?? b.sentAt ?? 0));
+   } catch (e) {
+     console.warn('[XMTP] getMessages failed:', e);

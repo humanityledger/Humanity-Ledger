@@ -766,6 +766,18 @@ export async function discoverNewPeers(
  * and convert it into an async generator via a bounded queue so the rest of the app can
  * use `for await (const msg of streamMessages(...))` unchanged.
  */
+function _isXmtpSystemMsg(msg: any): boolean {
+  if (!msg) return true;
+  const c = msg.content;
+  if (c && typeof c === 'object') {
+    if ('initiatedByInboxId' in c || 'addedInboxes' in c || 'groupUpdated' in c) return true;
+  }
+  const s = typeof c === 'string' ? c : (c && typeof c === 'object' ? JSON.stringify(c) : '');
+  if (s.includes('initiatedByInboxId') || s.includes('addedInboxes') || s.includes('groupUpdated') || s.includes('group is inactive') || s === '{}' || s === '') return true;
+  if (msg.kind === 'membership_change' || msg.kind === 'group_updated') return true;
+  return false;
+}
+
 export async function* streamMessages(client: Client, signal?: AbortSignal) {
   // Sync first so we don't miss messages that arrived before the stream opens.
   try { await client.conversations.sync(); } catch {}
@@ -791,7 +803,7 @@ export async function* streamMessages(client: Client, signal?: AbortSignal) {
     try {
       for await (const message of streamResult) {
         if (signal?.aborted) break;
-        yield message;
+        if (_isXmtpSystemMsg(message)) continue; yield message;
       }
     } finally {
       if (signal && onAbort) signal.removeEventListener('abort', onAbort);
@@ -815,7 +827,7 @@ export async function* streamMessages(client: Client, signal?: AbortSignal) {
       waiting = null;
       resolve({ msg });
     } else {
-      queue.push(msg);
+      if (_isXmtpSystemMsg(msg)) return; queue.push(msg);
     }
   };
 
@@ -909,6 +921,8 @@ export async function syncOfflineQueue(client: Client, myEthAddress: string): Pr
     console.error('[XMTP] Failed to sync offline queue', e);
   }
 }
+
+
 
 
 

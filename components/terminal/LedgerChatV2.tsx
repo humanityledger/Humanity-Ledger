@@ -2831,6 +2831,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             try {
               // [AUDIT FIX] Dynamically fetch selfInboxId to avoid stale closure if client rotates
               const selfInboxId = (client as any).inboxId ?? '';
+              const _rawContentStr = typeof msg.content === 'string' ? msg.content : (msg.content ? JSON.stringify(msg.content) : '');
+              if (_rawContentStr.includes('initiatedByInboxId') || _rawContentStr.includes('addedInboxes') || _rawContentStr.includes('group is inactive') || _rawContentStr.includes('groupUpdated')) continue;
               const fromPeer = msg.senderInboxId !== selfInboxId;
               const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
               const sentAtNs = nsToDate(msg.sentAtNs ?? msg.sentAt).getTime();
@@ -3454,6 +3456,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         } catch (e) { console.warn('[Offline Queue] Failed to fetch pending messages:', e); }
         
         const rawMappedMsgs = raw
+          .filter((m: any) => { const _str = typeof m.content === 'string' ? m.content : (m.content ? JSON.stringify(m.content) : ''); return !(_str.includes('initiatedByInboxId') || _str.includes('addedInboxes') || _str.includes('groupUpdated') || _str.includes('group is inactive')); })
           .map((m: any) => {
             const content = typeof m.content === 'string' ? m.content : (m.content ? JSON.stringify(m.content) : m.fallback || 'Encrypted Data');
             return {
@@ -6538,6 +6541,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
+
+
 
 
 

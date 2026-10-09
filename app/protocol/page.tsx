@@ -13,7 +13,7 @@ export default function ProtocolPage() {
           paragraphs: [
             'Humanity Ledger is a next-generation decentralised communication and identity protocol built for a world where privacy, sovereignty, and mathematical truth supersede institutional trust. Unlike legacy centralised protocols, which relies on centralised biometric orbs and a corporation retaining iris scan hashes, Humanity Ledger anchors identity proofs entirely in the user\'s hardware Secure Enclave — a cryptographic module physically fused into the device silicon.',
             'The protocol is composed of three interconnected execution environments: the Aztec ZK-Rollup for private financial state settlement, the XMTP decentralised relay for ephemeral encrypted message routing, and the client-side Private Execution Environment (PXE) for local zero-knowledge proof generation. No private data ever leaves the device unencrypted.',
-            'The protocol serves as the foundational infrastructure for Ledger Chat, the sovereign peer-to-peer messaging terminal, and for the Quantum Dots (QD) economic system — a deflationary, privacy-preserving utility token used for protocol participation.',
+            'The protocol serves as the foundational infrastructure for Ledger Chat, the sovereign peer-to-peer messaging terminal, and for the Cryptocurrency (QD) economic system — a deflationary, privacy-preserving utility token used for protocol participation.',
           ],
           callout: {
             title: 'Core Design Principle',
@@ -69,7 +69,7 @@ export default function ProtocolPage() {
           ],
           bullets: [
             'Q4 2026 — Alpha Testnet: Ledger Chat live on XMTP production network. ZK Identity circuits deployed on Aztec Sepolia. Testnet Sequencer attestation complete.',
-            'Q1 2027 — Beta Mainnet: QDSToken smart contract deployed on Aztec Mainnet. Hardware-rooted ZK Identity onboarding live. First 10,000 verified sovereign identities registered.',
+            'Q1 2027 — Beta Mainnet: CryptoToken smart contract deployed on Aztec Mainnet. Hardware-rooted ZK Identity onboarding live. First 10,000 verified sovereign identities registered.',
             'Q2 2027 — Protocol Governance: Decentralised governance contract deployed. First community vote on protocol parameters via zk-Quadratic Voting.',
             'Q3 2027 — Ecosystem Expansion: Third-party developer SDK published. First external applications integrating Humanity Ledger ZK Identity as a Sybil resistance primitive.',
             'Q4 2027 — Global Scale: Target 1 million verified sovereign identities. Relay network expanded to 50+ independent nodes across 20+ jurisdictions.',
@@ -79,3 +79,4 @@ export default function ProtocolPage() {
     />
   );
 }
+
