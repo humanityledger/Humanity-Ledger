@@ -5,11 +5,11 @@ import { getSession } from '@/lib/session';
 export const dynamic = 'force-dynamic';
 
 async function resolveCaller(req: NextRequest) {
-  const verified = req.headers.get('x-verified-session-address');
-  if (verified) return verified.toLowerCase();
   const session = await getSession();
   if (session?.userId) return session.userId.toLowerCase();
-  return null; // Spoofing vector closed
+  const verified = req.headers.get('x-verified-session-address');
+  if (verified) return verified.toLowerCase();
+  return null;
 }
 
 /**
@@ -41,8 +41,7 @@ export async function GET(req: NextRequest) {
       );
     `).catch(() => {});
 
-    // 2. Calculate balance dynamically from the ledger
-    const callerSafe = caller.replace(/'/g, "''");
+    // 2. Calculate balance dynamically from the ledger — parameterized (no SQL injection)
     const result = await prisma.$queryRaw`SELECT COALESCE(SUM(CASE WHEN direction = 'IN' THEN delta ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN direction = 'OUT' THEN delta ELSE 0 END), 0) as available, COUNT(*) as version FROM "QDCreditLedger" WHERE "address" = ${caller}` as any[];
 
     // LC-258, LC-346: Exact contract shape
@@ -71,3 +70,4 @@ export async function GET(req: NextRequest) {
     });
   }
 }
+

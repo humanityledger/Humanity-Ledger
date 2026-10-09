@@ -195,9 +195,9 @@ async function resolveUser(userId: string): Promise<ResolvedUser | null> {
 // ── DB helpers ────────────────────────────────────────────────────────────────
 async function dbUpdate(dbId: string, table: 'user' | 'authUser', data: Record<string, any>) {
   if (table === 'user') {
-    await (prisma.user as any).update({ where: { id: dbId }, data });
+    return await (prisma.user as any).update({ where: { id: dbId }, data });
   } else {
-    await (prisma.authUser as any).update({ where: { id: dbId }, data });
+    return await (prisma.authUser as any).update({ where: { id: dbId }, data });
   }
 }
 
@@ -293,34 +293,30 @@ export async function POST(req: NextRequest) {
       const now = Date.now();
       const hasOtp = !!(user.enclaveOtpHash && user.enclaveOtpExpiresAt);
 
-      // [S11] Attempt guard — check BEFORE compare; increment BEFORE responding
-      if (!hasOtp || user.enclaveOtpAttempts >= MAX_VERIFY_ATTEMPTS) {
-        // Invalidate on lockout
-        if (hasOtp) {
-          await dbUpdate(user.dbId, user.table, {
-            enclaveOtpHash: null, enclaveOtpExpiresAt: null, enclaveOtpAttempts: 0,
-          });
-        }
-        // Constant-time delay so presence of OTP isn't distinguishable
+            // [S11] Pre-check
+      if (!hasOtp) {
         await new Promise(r => setTimeout(r, 200 + Math.random() * 100));
-        return NextResponse.json({
-          error: hasOtp
-            ? 'Too many incorrect attempts. Your code has been invalidated. Request a new one.'
-            : 'No reset code found. Please request a new one.',
-          invalidated: true,
-        }, { status: 429 });
+        return NextResponse.json({ error: 'No reset code found. Please request a new one.', invalidated: true }, { status: 429 });
       }
 
-      // [S12] Expiry check (server-enforced)
+      // [S12] Expiry check
       if (user.enclaveOtpExpiresAt && now > user.enclaveOtpExpiresAt.getTime()) {
-        await dbUpdate(user.dbId, user.table, {
-          enclaveOtpHash: null, enclaveOtpExpiresAt: null, enclaveOtpAttempts: 0,
-        });
+        await dbUpdate(user.dbId, user.table, { enclaveOtpHash: null, enclaveOtpExpiresAt: null, enclaveOtpAttempts: 0 });
         return NextResponse.json({ error: 'Reset code expired. Please request a new one.', expired: true }, { status: 400 });
       }
 
-      // [S13] Increment attempts ATOMICALLY before responding (prevents race)
-      await dbUpdate(user.dbId, user.table, { enclaveOtpAttempts: { increment: 1 } });
+      // [S13] ATOMIC INCREMENT (Prevents TOCTOU Race Condition)
+      const updatedUser = await dbUpdate(user.dbId, user.table, { enclaveOtpAttempts: { increment: 1 } });
+      const newAttempts = updatedUser.enclaveOtpAttempts;
+
+      if (newAttempts > MAX_VERIFY_ATTEMPTS) {
+        await dbUpdate(user.dbId, user.table, { enclaveOtpHash: null, enclaveOtpExpiresAt: null, enclaveOtpAttempts: 0 });
+        await new Promise(r => setTimeout(r, 200 + Math.random() * 100));
+        return NextResponse.json({
+          error: 'Too many incorrect attempts. Your code has been invalidated. Request a new one.',
+          invalidated: true,
+        }, { status: 429 });
+      }
 
       // [S14] Constant-time HMAC compare
       const submittedHash = hashOtp(userId, otp);
@@ -379,3 +375,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Service temporarily unavailable.' }, { status: 500 });
   }
 }
+

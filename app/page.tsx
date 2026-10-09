@@ -1,8 +1,12 @@
 
-import { redirect } from 'next/navigation';
+import { ClientRootRouter } from '@/components/landing/ClientRootRouter';
 
 export const dynamic = 'force-dynamic';
 
 export default function Home() {
-  redirect('/connect');
+  return (
+    <div className="w-full flex-1 flex flex-col">
+      <ClientRootRouter />
+    </div>
+  );
 }
