@@ -4,8 +4,10 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/user/search?q=<address_or_username>
+ * GET /api/user/search?q=<address_or_name>
  * Public endpoint — no auth required. Returns basic profile for address lookup in chat.
+ * Uses ONLY fields that exist in the User model (schema.prisma).
+ * Available profile fields: walletAddress, displayName, avatarUrl, bio, chatName, isZkVerified
  */
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')?.trim().toLowerCase();
@@ -14,22 +16,22 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Search by wallet address prefix or username
+    // Search by wallet address prefix or displayName
     const users = await prisma.user.findMany({
       where: {
         OR: [
           { walletAddress: { startsWith: q } },
-          { username: { contains: q, mode: 'insensitive' } },
           { displayName: { contains: q, mode: 'insensitive' } },
+          { chatName: { contains: q, mode: 'insensitive' } },
         ]
       },
       select: {
         walletAddress: true,
-        username: true,
         displayName: true,
+        chatName: true,
         avatarUrl: true,
         bio: true,
-        isVerified: true,
+        isZkVerified: true,
       },
       take: 20,
     });
@@ -37,11 +39,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       users: users.map(u => ({
         address: u.walletAddress,
-        username: u.username || null,
-        displayName: u.displayName || null,
+        displayName: u.displayName || u.chatName || null,
         avatarUrl: u.avatarUrl || null,
         bio: u.bio || null,
-        isVerified: u.isVerified || false,
+        isVerified: u.isZkVerified || false,
       }))
     });
   } catch (err) {
