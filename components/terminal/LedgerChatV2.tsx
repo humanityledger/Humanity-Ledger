@@ -2834,7 +2834,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
 
     syncGlobal();
-    const globalPoll = setInterval(syncGlobal, 6000);
+    const globalPoll = setInterval(syncGlobal, 2000);
 
     // ─── GLOBAL XMTP STREAM ────────────────────────────────────────────────────
     // DEDUPLICATION CONTRACT:
@@ -4929,7 +4929,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 // Filter messages for the current active conversation only
                 const convId = `dm-${activePeer!.toLowerCase()}`;
                 const filteredMsgs = messages.filter(m => {
-                  if (m.conversationId !== convId) return false;
+                  if (m.conversationId?.toLowerCase() !== convId.toLowerCase()) return false;
                   if (m.burnAtNs && m.burnAtNs <= Date.now()) return false;
                   const c = typeof m.content === 'string' ? m.content : '';
                   if (c.startsWith('__CALL_')) return false;
@@ -6567,6 +6567,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
 
 
 

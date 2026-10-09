@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 
     // 2. Calculate balance dynamically from the ledger
     const callerSafe = caller.replace(/'/g, "''");
-    const result = await prisma.$queryRaw`SELECT COALESCE(SUM(CASE WHEN direction = 'IN' THEN delta ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN direction = 'OUT' THEN delta ELSE 0 END), 0) as available, COUNT(*) as version FROM "QDCreditLedger" WHERE "address" = ` as any[];
+    const result = await prisma.$queryRaw`SELECT COALESCE(SUM(CASE WHEN direction = 'IN' THEN delta ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN direction = 'OUT' THEN delta ELSE 0 END), 0) as available, COUNT(*) as version FROM "QDCreditLedger" WHERE "address" = ${caller}` as any[];
 
     // LC-258, LC-346: Exact contract shape
     const available = result[0]?.available || 0;
