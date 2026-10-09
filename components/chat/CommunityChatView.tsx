@@ -6,8 +6,10 @@ import { MessageBubble } from './MessageBubble';
 import { NativeCryptoSendModal } from './NativeCryptoSendModal';
 import { LedgerChatVoiceNote } from '@/components/chat/LedgerChatVoiceNote';
 import { AnimatePresence, motion } from 'framer-motion';
+import { usePushNotifications } from '@/lib/push/usePushNotifications';
 
-export function CommunityChatView({ communityId, myAddress }: { communityId: string; myAddress: string }) {
+export function CommunityChatView({ communityId, channelId, myAddress }: { communityId: string; channelId?: string; myAddress: string }) {
+  const push = usePushNotifications(myAddress);
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -46,11 +48,15 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (myAddress) headers['x-web3-address'] = myAddress;
-      const res = await fetch(`/api/chat/communities/posts?communityId=${communityId}&limit=50`, { headers });
+      const url = `/api/chat/communities/posts?communityId=${communityId}${channelId ? `&channelId=${channelId}` : ''}&limit=50`;
+      const res = await fetch(url, { headers });
       if (!res.ok) return;
       const data = await res.json();
+      
       const chatMsgs = (data.posts || []).filter((p: any) => !p.title && !p.contentJson);
-      const ordered = [...chatMsgs].reverse();
+      const filtered = channelId ? chatMsgs.filter((m: any) => m.channelId === channelId || !m.channelId) : chatMsgs;
+      const ordered = [...filtered].reverse();
+      
       ordered.forEach((m: any) => {
         const addr = (m.authorAddress || '').toLowerCase();
         if (addr && !seenAddresses.current.has(addr)) {
@@ -60,7 +66,23 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
           }
         }
       });
-      setMessages(ordered);
+      
+      setMessages(prev => {
+        const prevIds = new Set(prev.map(m => m.id));
+        let hasNew = false;
+        ordered.forEach(m => {
+          if (!prevIds.has(m.id)) {
+            hasNew = true;
+            if (m.authorAddress && m.authorAddress.toLowerCase() !== myAddress.toLowerCase()) {
+              push.notifyIfHidden(m.authorAddress, m.content);
+            }
+          }
+        });
+        if (hasNew) {
+          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        }
+        return ordered;
+      });
     } catch (e) {
       console.error('[CommunityChatView] fetch error', e);
     }
@@ -71,7 +93,7 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
     fetchMessages();
     const int = setInterval(fetchMessages, 3000);
     return () => clearInterval(int);
-  }, [communityId]);
+  }, [communityId, channelId]);
 
   const executeSend = async (txt: string) => {
     if (!myAddress || myAddress.trim() === '') {
@@ -86,7 +108,7 @@ export function CommunityChatView({ communityId, myAddress }: { communityId: str
       const res = await fetch('/api/chat/communities/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
-        body: JSON.stringify({ communityId, authorAddress: myAddress.toLowerCase(), content: txt, plainText: txt }),
+        body: JSON.stringify({ communityId, channelId, authorAddress: myAddress.toLowerCase(), content: txt, plainText: txt }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));

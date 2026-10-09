@@ -379,9 +379,16 @@ export const MessageBubble = React.memo(({
   if (content.startsWith('__REPLY__')) {
     const p = content.split('__::');
     if (p.length >= 2) {
-      const replyToId = p[0].replace('__REPLY__', '');
+      const metadata = p[0].replace('__REPLY__', '');
+      let replyToId = metadata;
+      let replyText = 'Replied Message';
+      if (metadata.includes('__SNIPPET__')) {
+        const parts = metadata.split('__SNIPPET__');
+        replyToId = parts[0];
+        replyText = parts[1];
+      }
       content = p.slice(1).join('__::');
-      replyMsg = { id: replyToId, content: 'Replied Message' };
+      replyMsg = { id: replyToId, content: replyText };
     }
   }
 

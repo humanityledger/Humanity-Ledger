@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { communityId, title, content, contentHtml, plainText } = body;
+    const { communityId, channelId, title, content, contentHtml, plainText } = body;
 
     // authorAddress comes from body OR from the x-web3-address header
     const session = await require('@/lib/session').getSession();
@@ -40,16 +40,18 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const communityId = searchParams.get('communityId');
+  const channelId = searchParams.get('channelId');
 
   if (!communityId) {
     return NextResponse.json({ error: 'Missing communityId' }, { status: 400 });
   }
 
   const posts = await prisma.communityPost.findMany({
-    where: { communityId },
+    where: { communityId, ...(channelId ? { channelId } : {}) },
     orderBy: { createdAt: 'desc' },
     take: 100,
   });
 
   return NextResponse.json({ posts });
 }
+

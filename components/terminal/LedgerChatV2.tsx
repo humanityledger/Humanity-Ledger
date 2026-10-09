@@ -3820,7 +3820,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // Phase 2: Message Quoting
     let finalContent = content;
     if (replyingTo && !isSystemSignal) {
-      finalContent = `__REPLY__${replyingTo.id}__::${content}`;
+      const snippet = (replyingTo.content || '').replace(/__/g, '').slice(0, 80);
+      finalContent = `__REPLY__${replyingTo.id}__SNIPPET__${snippet}__::${content}`;
       setReplyingTo(null);
     }
     // Thread support
@@ -4102,7 +4103,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     rl.timestamps.push(now);
     let txt = inputText.trim();
     if (replyingTo) {
-      txt = `__REPLY__${replyingTo.id}__::${txt}`;
+      const snippet = (replyingTo.content || '').replace(/__/g, '').slice(0, 80);
+      txt = `__REPLY__${replyingTo.id}__SNIPPET__${snippet}__::${txt}`;
       setReplyingTo(null);
     }
     if (isSecretChat) {

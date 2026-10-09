@@ -21,6 +21,7 @@ interface CommunityViewProps {
 
 export function CommunityView({ communityId, myAddress, onBack }: CommunityViewProps) {
   const [activeTab, setActiveTab] = useState<'posts' | 'chat' | 'settings'>('posts');
+  const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [community, setCommunity] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
@@ -146,7 +147,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
           </div>
         )}
 
-        {activeTab === 'chat' && ( <CommunityChatView communityId={communityId} myAddress={myAddress} /> )}
+        {activeTab === 'chat' && ( <CommunityChatView communityId={communityId} channelId={activeChannelId || undefined} myAddress={myAddress} /> )}
 
         {activeTab === 'settings' && (
           <CommunitySettingsPanel community={community} myAddress={myAddress} />
@@ -281,8 +282,8 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
                 <p className="text-[14px] text-black/50 mb-6">Create exclusive zones. Users must pay crypto directly to your wallet to unlock them.</p>
                 
                 <div className="space-y-4">
-                  {paidChannels.map(c => (
-                    <div key={c.id} className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-[16px]">
+                  {paidChannels.map((c: any) => (
+                      <div key={c.id} onClick={() => { setActiveChannelId(c.id); setShowChannelsModal(false); setActiveTab('chat'); }} className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-[16px] cursor-pointer hover:bg-[#e5e5ea] transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[#25D366]/10 text-[#25D366] flex items-center justify-center"><Lock size={18} /></div>
                         <div>
@@ -304,8 +305,8 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
               <div className="bg-white rounded-[24px] border border-black/5 p-6 shadow-sm">
                 <h3 className="text-[17px] font-bold mb-4 flex items-center gap-2"><Globe size={18} className="text-[#25D366]"/> Public Channels</h3>
                 <div className="space-y-4">
-                  {freeChannels.map(c => (
-                    <div key={c.id} className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-[16px]">
+                  {freeChannels.map((c: any) => (
+                      <div key={c.id} onClick={() => { setActiveChannelId(c.id); setShowChannelsModal(false); setActiveTab('chat'); }} className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-[16px] cursor-pointer hover:bg-[#e5e5ea] transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-black/5 text-black flex items-center justify-center"><Hash size={18} /></div>
                         <div>
