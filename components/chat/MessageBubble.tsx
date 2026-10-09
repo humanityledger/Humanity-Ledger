@@ -321,6 +321,8 @@ const IMessageContextMenu = React.memo(({
 });
 IMessageContextMenu.displayName = 'IMessageContextMenu';
 
+const TAPBACKS = ['❤️', '👍', '👎', '😂', '‼️', '❓'];
+
 // â”€â”€â”€ Tapback Picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TapbackPicker = React.memo(({ isMe, onReact, onClose }: {
   isMe: boolean; onReact: (e: string) => void; onClose: () => void;
@@ -739,4 +741,5 @@ export const MessageBubble = React.memo(({
   );
 });
 MessageBubble.displayName = 'MessageBubble';
+
 
