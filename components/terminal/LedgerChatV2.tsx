@@ -2860,7 +2860,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             if (!resolvedPeerAddr) {
               try {
                 if (fromPeer) {
-                  const senderAddr = await resolveSenderAddress(msg.senderInboxId, client);
+                  let senderAddr = await resolveSenderAddress(msg.senderInboxId, client);
+                  if (!senderAddr && client) {
+                    try { await client.conversations.sync(); } catch {}
+                    senderAddr = await resolveSenderAddress(msg.senderInboxId, client);
+                  }
                   resolvedPeerAddr = senderAddr?.toLowerCase() || '';
                 } else if (msg.conversation) {
                   const dmPeer = await extractPeerAddress(msg.conversation, selfInboxId, address || "");
@@ -6541,6 +6545,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
 
 
 

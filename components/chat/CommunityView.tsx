@@ -103,7 +103,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                         <h2 className="text-[20px] font-bold leading-tight text-[#1C1C1E]">{post.title}</h2>
                       </div>
                     )}
-                    <div className="prose prose-sm max-w-none px-6 py-4 text-[#1C1C1E]/80" dangerouslySetInnerHTML={{ __html: typeof window !== 'undefined' ? DOMPurify.sanitize(post.content) : post.content }} />
+                    <div className="prose prose-sm max-w-none px-6 py-4 text-[#1C1C1E]/80" dangerouslySetInnerHTML={{ __html: typeof window !== 'undefined' ? DOMPurify.sanitize(post.contentHtml || post.content) : post.content }} />
                     <div className="bg-[#FAFAFA] px-6 py-3 border-t border-black/5 flex items-center justify-between">
                       <div 
                         className="flex items-center gap-2 cursor-pointer hover:bg-black/5 px-2 py-1 -ml-2 rounded-lg transition-colors"
@@ -189,19 +189,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
   const [showChannelsModal, setShowChannelsModal] = useState(false);
   
   // Real sync to DB
-  const savePermissions = async (newPerms: any) => {
-    setPermissions(newPerms);
-    try {
-      await fetch('/api/chat/communities', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
-        body: JSON.stringify({ communityId: community?.id, action: 'UPDATE_PERMISSIONS', permissions: newPerms }),
-      });
-      toast.success('Permissions updated');
-    } catch (e) {
-      toast.error('Failed to update permissions');
-    }
-  };
+  const savePermissions = async (newPerms: any) => { const { id, communityId, createdAt, updatedAt, ...cleanPerms } = newPerms; setPermissions(newPerms); try { const res = await fetch('/api/chat/communities', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress }, body: JSON.stringify({ communityId: community?.id, action: 'UPDATE_PERMISSIONS', permissions: cleanPerms }) }); if (!res.ok) throw new Error('Failed'); toast.success('Permissions updated'); } catch (e) { toast.error('Failed to update permissions'); } };
 
   const ChannelManagement = () => {
     const [isCreating, setIsCreating] = useState(false);
@@ -519,6 +507,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     </div>
   );
 }
+
 
 
 
