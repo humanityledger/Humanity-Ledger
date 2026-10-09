@@ -106,13 +106,13 @@ function Avatar({ address, isMe = false }: { address: string; isMe?: boolean }) 
   }, []);
 
   React.useEffect(() => {
-    if (!isMe && address && typeof window !== \'undefined\') {
-      const cached = localStorage.getItem(\'peer_avatar_\' + address);
+    if (!isMe && address && typeof window !== 'undefined') {
+      const cached = localStorage.getItem('peer_avatar_' + address);
       if (cached) { setSavedAvatar(cached); return; }
-      fetch(/api/user/search?q=).then(res => res.json()).then(data => {
+      fetch(`/api/user/search?q=${address}`).then(res => res.json()).then(data => {
         if (data.users && data.users.length > 0 && data.users[0].avatarUrl) {
           setSavedAvatar(data.users[0].avatarUrl);
-          localStorage.setItem(\'peer_avatar_\' + address, data.users[0].avatarUrl);
+          localStorage.setItem('peer_avatar_' + address, data.users[0].avatarUrl);
         }
       }).catch(e => console.error(e));
     }
