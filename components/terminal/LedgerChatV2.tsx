@@ -2764,7 +2764,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               if (rawMsgs && rawMsgs.length > 0 && !cancelled) {
                  setMessages(prev => {
                     const existingIds = new Set(prev.map(m => m.id));
-                    const newRaw = rawMsgs.filter(m => m.id && !existingIds.has(m.id));
+                    const newRaw = rawMsgs.filter(m => {
+                        if (!m.id || existingIds.has(m.id)) return false;
+                        const cStr = typeof m.content === 'string' ? m.content : (m.content ? JSON.stringify(m.content) : '');
+                        return !cStr.includes('initiatedByInboxId') && !cStr.includes('addedInboxes') && !cStr.includes('group is inactive');
+                      });
                     if (newRaw.length === 0) return prev;
                     
                     const selfId = (client as any).inboxId ?? "";

@@ -23,6 +23,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
   const [activeTab, setActiveTab] = useState<'posts' | 'chat' | 'settings'>('posts');
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
+  const [editingPost, setEditingPost] = useState<any>(null);
   const [community, setCommunity] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [localLikes, setLocalLikes] = useState<Record<string, number>>({});
@@ -106,6 +107,14 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                     )}
                     <div className="prose prose-sm max-w-none px-6 py-4 text-[#1C1C1E]/80" dangerouslySetInnerHTML={{ __html: typeof window !== 'undefined' ? DOMPurify.sanitize(post.contentHtml || post.content) : post.content }} />
                     <div className="bg-[#FAFAFA] px-6 py-3 border-t border-black/5 flex items-center justify-between">
+                        {post.authorAddress?.toLowerCase() === myAddress?.toLowerCase() && (
+                          <button 
+                            onClick={() => { setEditingPost(post); setShowEditor(true); }}
+                            className="text-[12px] font-bold text-black/50 hover:text-black flex items-center gap-1 bg-black/5 px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            <Edit size={14} /> Edit
+                          </button>
+                        )}
                       <div 
                         className="flex items-center gap-2 cursor-pointer hover:bg-black/5 px-2 py-1 -ml-2 rounded-lg transition-colors"
                         onClick={() => {
@@ -139,7 +148,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setShowEditor(true)}
+              onClick={() => { setEditingPost(null); setShowEditor(true); }}
               className="fixed bottom-6 right-6 w-14 h-14 bg-black text-white rounded-full flex items-center justify-center shadow-2xl z-20"
             >
               <Edit size={24} />
