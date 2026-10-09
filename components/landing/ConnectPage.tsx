@@ -342,8 +342,16 @@ export default function ConnectPage() {
     setPendingWalletLogo(logo);
     if (!rdns) { openAppKitSafe(); setPendingId(null); return; }
     const conn = connectors.find((c: any) => c.id === rdns) || connectors.find(c => c.name.toLowerCase().includes(walletId)) || connectors.find(c => c.id === "injected" || (c as any).type === "injected");
-    if (conn) connect({ connector: conn });
-    else { setPendingId(null); setPendingWalletName(null); if (installUrl) toast.error("Wallet not found", { action: { label: "Install", onClick: () => window.open(installUrl, "_blank") } }); }
+    
+    if (conn) {
+      connect({ connector: conn });
+    } else {
+      // If we're in the .exe or a browser without extensions, fallback to WalletConnect QR
+      setPendingId(null);
+      setPendingWalletName(null);
+      openAppKitSafe();
+      toast.info(`Please scan the QR code with your ${name} mobile app.`);
+    }
   }, [connect, connectors, openAppKitSafe]);
 
 

@@ -1843,3 +1843,12 @@ html.watermark-active body::after {
    The default AppKit QR size works perfectly on desktop.
    Any zoom/scale/min-width causes clipping inside the shadow DOM. */
 
+
+/* Make WalletConnect modal QR code slightly larger on Desktop for better scanning */
+@media (min-width: 768px) {
+  w3m-modal, appkit-modal {
+    transform: scale(1.15);
+    transform-origin: center center;
+  }
+}
+
