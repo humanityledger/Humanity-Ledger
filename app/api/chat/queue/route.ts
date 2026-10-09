@@ -6,8 +6,19 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await require('@/lib/session').getSession();
-    const address = session?.userId;
+    // Primary: JWT cookie session
+    let address: string | null = null;
+    try {
+      const session = await require('@/lib/session').getSession();
+      address = session?.userId ?? null;
+    } catch {}
+    // Secondary fallback: x-web3-address header (used by XMTP client background sync)
+    if (!address) {
+      const headerAddr = req.headers.get('x-web3-address');
+      if (headerAddr && /^0x[0-9a-fA-F]{40}$/.test(headerAddr)) {
+        address = headerAddr.toLowerCase();
+      }
+    }
     if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const normalized = address.toLowerCase();
     const messages = await prisma.pendingChatMessage.findMany({
@@ -29,8 +40,17 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await require('@/lib/session').getSession();
-    const address = session?.userId;
+    let address: string | null = null;
+    try {
+      const session = await require('@/lib/session').getSession();
+      address = session?.userId ?? null;
+    } catch {}
+    if (!address) {
+      const headerAddr = req.headers.get('x-web3-address');
+      if (headerAddr && /^0x[0-9a-fA-F]{40}$/.test(headerAddr)) {
+        address = headerAddr.toLowerCase();
+      }
+    }
     if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { recipient, content } = await req.json();
     if (!recipient || !content) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });

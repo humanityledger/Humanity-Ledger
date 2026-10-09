@@ -1750,3 +1750,16 @@ model PushSubscription {
   @@index([walletAddress])
 }
 
+
+model DirectMessage {
+  id          String   @id @default(uuid())
+  sender      String
+  recipient   String
+  content     String   @db.Text
+  delivered   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  deliveredAt DateTime?
+
+  @@index([recipient, delivered])
+  @@index([sender])
+}

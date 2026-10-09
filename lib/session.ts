@@ -141,7 +141,7 @@ export async function getSession(): Promise<SessionPayload | null> {
             const { verifyJWT } = await import('@/lib/jwt');
             const payload = await verifyJWT(siweToken) as any;
             // Normalize SIWE payload  SessionPayload shape
-            const siweUserId = payload.address || payload.sub;
+            const siweUserId = payload.walletAddress || payload.address || payload.sub;
             if (siweUserId) {
                 return {
                     userId: (siweUserId as string).toLowerCase(),
