@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 
 export async function updatePrivacySettings(
   userId: string,
@@ -10,6 +11,11 @@ export async function updatePrivacySettings(
   userAgent?: string
 ) {
   try {
+    const session = await getSession();
+    if (!session?.userId || session.userId.toLowerCase() !== userId.toLowerCase()) {
+      throw new Error("UNAUTHORIZED: Cryptographic signature mismatch");
+    }
+
     const profile = await (prisma as any).userPrivacyProfile.upsert({
       where: { userId },
       update: { [field]: value },
@@ -38,6 +44,11 @@ export async function updatePrivacySettings(
 
 export async function fetchPrivacySettings(userId: string) {
   try {
+    const session = await getSession();
+    if (!session?.userId || session.userId.toLowerCase() !== userId.toLowerCase()) {
+      throw new Error("UNAUTHORIZED");
+    }
+
     const profile = await (prisma as any).userPrivacyProfile.findUnique({
       where: { userId }
     });
