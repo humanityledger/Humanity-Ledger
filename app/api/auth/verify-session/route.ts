@@ -24,8 +24,9 @@ export async function GET(request: NextRequest) {
     try {
         const ledgerSession = request.cookies.get('ledger_session')?.value;
         const humanSession = request.cookies.get('human_session')?.value;
+        const humanitySession = request.cookies.get('humanity_session')?.value;
         const handshake    = request.cookies.get('system_handshake')?.value;
-        const primaryJwt   = ledgerSession || humanSession;
+        const primaryJwt   = ledgerSession || humanSession || humanitySession;
 
         const isProd      = process.env.NODE_ENV === 'production';
         const appUrl      = process.env.NEXT_PUBLIC_APP_URL || '';
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
             try {
                 const { verifyJWT } = await import('@/lib/jwt');
                 const payload = await verifyJWT(primaryJwt);
-                const address = (payload.sub || payload.address) as string;
+                const address = (payload.walletAddress || payload.address || payload.sub) as string;
 
                 if (address) {
                     // JWT is cryptographically valid → session is authentic.
@@ -51,8 +52,8 @@ export async function GET(request: NextRequest) {
                             const humanityPayload = await verifyJWT(humanityCookie) as any;
                             if (humanityPayload.sub && humanityPayload.sid) {
                                 humanityIdentity = {
-                                    address: (humanityPayload.sub as string).toLowerCase(),
-                                    sessionId: humanityPayload.sid as string,
+                                    address: ((humanityPayload.walletAddress || humanityPayload.address || humanityPayload.sub) as string).toLowerCase(),
+                                    sessionId: humanityPayload.sessionId || humanityPayload.sid || '',
                                 };
                             }
                         } catch {
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
             const res = NextResponse.json({ authenticated: false }, { status: 401 });
             const expiredDate = 'Thu, 01 Jan 1970 00:00:00 GMT';
             const secure = isProd ? '; Secure' : '';
-            for (const name of ['ledger_session', 'human_session']) {
+            for (const name of ['ledger_session', 'human_session', 'humanity_session', 'siwe_session']) {
                 res.headers.append('Set-Cookie', `${name}=; Path=/; Expires=${expiredDate}; HttpOnly${secure}; SameSite=Strict`);
                 res.headers.append('Set-Cookie', `${name}=; Path=/; Expires=${expiredDate}; HttpOnly${secure}; SameSite=Lax`);
             }
