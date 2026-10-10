@@ -2388,21 +2388,24 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }
 
         try {
-          const file = new File([blob], `voice-${Date.now()}.webm`, { type: mimeType });
-          const audioMsg = await EncryptedMediaEngine.processAndUpload(file);
-          
-          if (client && activePeer) {
-            const optimisticId = `optimistic-${Date.now()}`;
-            setMessages(prev => [...prev, {
-              id: optimisticId,
-              senderInboxId: client?.inboxId || '',
-              content: audioMsg,
-              sentAtNs: Date.now(),
-              conversationId: `dm-${activePeer.toLowerCase()}`
-            }]);
-            try { 
-                await sendMessage(client, activePeer, audioMsg, address); 
-                // Voice: P2P Audio transmission successful.
+          // Convert blob to base64 data URL — sent over already-encrypted XMTP channel
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            const dataUrl = reader.result as string; // data:audio/webm;base64,...
+            const audioMsg = `__AUDIO__${dataUrl}`;
+            
+            if (client && activePeer) {
+              const optimisticId = `optimistic-${Date.now()}`;
+              setMessages(prev => [...prev, {
+                id: optimisticId,
+                senderInboxId: client?.inboxId || '',
+                content: audioMsg,
+                sentAtNs: Date.now(),
+                conversationId: `dm-${activePeer.toLowerCase()}`
+              }]);
+              try { 
+                  await sendMessage(client, activePeer, audioMsg, address); 
+                  // Voice: P2P Audio transmission successful.
             } catch (sendErr: any) {
                 console.error('[Voice] P2P Send Failed:', sendErr?.message);
                 setMessages(prev => prev.filter(m => m.id !== optimisticId));
@@ -2411,9 +2414,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           } else {
             toast.error('Select a contact first to send the voice message.');
           }
+          };
+          reader.readAsDataURL(blob);
         } catch (error) {
-          console.error('[Voice] Encryption failed:', error);
-          toast.error('Failed to encrypt voice message.');
+          console.error('[Voice] Audio send failed:', error);
+          toast.error('Failed to send voice message.');
         }
 
         setRecordingSeconds(0);

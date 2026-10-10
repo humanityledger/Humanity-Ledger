@@ -139,11 +139,30 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isFav, setIsFav] = useState(false);
   const [disappearing, setDisappearing] = useState<'off' | '24h' | '7d' | '90d'>('off');
+  const [peerProfile, setPeerProfile] = useState<{ bio?: string; avatarUrl?: string; displayName?: string } | null>(null);
   
   const [toast, setToast] = useState<string | null>(null);
   const [modal, setModal] = useState<string | null>(null);
   
-  const displayName = peerName || shortAddr(peerAddress);
+  const displayName = peerProfile?.displayName || peerName || shortAddr(peerAddress);
+
+  // Fetch peer profile from backend
+  useEffect(() => {
+    if (!peerAddress) return;
+    fetch(`/api/user/profile?walletAddress=${encodeURIComponent(peerAddress)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.user || data.profile) {
+          const u = data.user || data.profile;
+          setPeerProfile({
+            bio: u.bio && !u.bio.includes('Sovereign') ? u.bio : 'Member of Ledger Chat.',
+            avatarUrl: u.avatarUrl || u.image,
+            displayName: u.name || u.displayName
+          });
+        }
+      })
+      .catch(() => {});
+  }, [peerAddress]);
 
   useEffect(() => {
     setSaveToPhotos(!!localStorage.getItem('ledger_save_photos_' + peerAddress));
@@ -161,8 +180,36 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
 
   const handleMute = (v: boolean) => {
     setIsMuted(v);
-    if (v) { localStorage.setItem('ledger_muted_' + peerAddress, '1'); showToast('Notifications muted'); }
-    else { localStorage.removeItem('ledger_muted_' + peerAddress); showToast('Notifications unmuted'); }
+    if (v) { 
+      localStorage.setItem('ledger_muted_' + peerAddress, '1');
+      // Sync to backend
+      fetch('/api/user/settings', { 
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+        body: JSON.stringify({ walletAddress: myAddress, muted_peer: peerAddress, action: 'mute' })
+      }).catch(() => {});
+      showToast('Notifications muted'); 
+    }
+    else { 
+      localStorage.removeItem('ledger_muted_' + peerAddress);
+      fetch('/api/user/settings', { 
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+        body: JSON.stringify({ walletAddress: myAddress, muted_peer: peerAddress, action: 'unmute' })
+      }).catch(() => {});
+      showToast('Notifications unmuted'); 
+    }
+  };
+
+  const handleBlock = () => {
+    // Backend block call
+    fetch('/api/chat/block', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+      body: JSON.stringify({ blocker: myAddress, blocked: peerAddress })
+    }).catch(() => {});
+    showToast('Contact blocked');
+    onBlock?.();
   };
 
   const toggleFav = () => {
@@ -205,14 +252,19 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           {/* Header Card */}
           <div className="bg-white py-8 px-4 flex flex-col items-center justify-center mb-6 shadow-sm">
             <div className="relative">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-white text-[42px] font-bold shadow-lg mb-4">
-                {initials(displayName, peerAddress)}
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-white text-[42px] font-bold shadow-lg mb-4 overflow-hidden">
+                {peerProfile?.avatarUrl ? (
+                  <img src={peerProfile.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                ) : (
+                  initials(displayName, peerAddress)
+                )}
               </div>
               {isFav && <div className="absolute bottom-4 right-0 w-8 h-8 bg-yellow-400 rounded-full border-4 border-white flex items-center justify-center text-white"><Star size={14} fill="currentColor" /></div>}
             </div>
             
             <h1 className="text-[24px] font-semibold text-[#111B21]">{displayName}</h1>
-            <p className="text-[14px] text-[#667781] font-mono mt-1 mb-6">{shortAddr(peerAddress)}</p>
+            <p className="text-[14px] text-[#667781] font-mono mt-1">{shortAddr(peerAddress)}</p>
+            {peerProfile?.bio && <p className="text-[13px] text-[#8E8E93] mt-2 mb-4 text-center max-w-[280px]">{peerProfile.bio}</p>}
 
             <div className="flex gap-4 w-full justify-center">
               <button onClick={onVoiceCall} className="flex flex-col items-center gap-2 text-[#25D366] hover:opacity-80 transition-opacity">
@@ -264,7 +316,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
             </Group>
 
             <Group>
-              <Row icon={<Ban />} label="Block Contact" danger onTap={onBlock} />
+              <Row icon={<Ban />} label="Block Contact" danger onTap={handleBlock} />
               <Row icon={<Flag />} label="Report Contact" danger onTap={() => showToast('Contact reported to local blocklist.')} />
             </Group>
           </div>
