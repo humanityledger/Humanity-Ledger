@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 
@@ -25,7 +25,7 @@ const DynamicUniversalScanModal = dynamic(
   { ssr: false }
 );
 
-// ─── App Store Badge (Official look — matches Apple's badge exactly) ──────────
+// âââ App Store Badge (Official look â matches Apple's badge exactly) ââââââââââ
 function AppStoreBadge() {
   return (
     <a
@@ -33,7 +33,7 @@ function AppStoreBadge() {
       className="inline-flex items-center gap-[10px] bg-black text-white px-[14px] py-[8px] rounded-[10px] border border-white/[0.12] hover:bg-[#111] active:scale-[0.97] transition-all select-none"
       style={{ height: '50px', minWidth: '148px' }}
     >
-      {/* Official Apple logo — correct viewBox so the leaf doesn't clip */}
+      {/* Official Apple logo â correct viewBox so the leaf doesn't clip */}
       <svg width="20" height="24" viewBox="0 0 170 209" fill="white" xmlns="http://www.w3.org/2000/svg">
         <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.2-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.75 3.35-4.94.21-9.84-1.96-14.72-6.52-3.13-2.73-7.05-7.41-11.76-14.03-5.04-7.08-9.19-15.29-12.43-24.65-3.47-10.11-5.21-19.9-5.21-29.38 0-10.86 2.35-20.23 7.06-28.1 3.7-6.31 8.63-11.3 14.82-14.99 6.19-3.69 12.87-5.57 20.07-5.69 3.94 0 9.1 1.22 15.53 3.61 6.41 2.4 10.52 3.62 12.32 3.62 1.35 0 5.92-1.43 13.68-4.27 7.33-2.65 13.52-3.75 18.6-3.32 13.75 1.11 24.08 6.52 30.95 16.26-12.29 7.45-18.37 17.87-18.25 31.22.11 10.41 3.88 19.07 11.3 25.95 3.36 3.19 7.11 5.65 11.27 7.4-.9 2.62-1.86 5.12-2.88 7.52zM113.22 3.48c0 8.16-2.98 15.78-8.92 22.84-7.17 8.38-15.84 13.23-25.23 12.47-.12-.98-.19-2-.19-3.07 0-7.83 3.41-16.21 9.46-23.07 3.02-3.48 6.86-6.37 11.52-8.69 4.65-2.29 9.05-3.55 13.18-3.77.12 1.1.18 2.2.18 3.29z"/>
       </svg>
@@ -45,7 +45,7 @@ function AppStoreBadge() {
   );
 }
 
-// ─── Google Play Badge (Official look — matches Google's badge exactly) ────────
+// âââ Google Play Badge (Official look â matches Google's badge exactly) ââââââââ
 function GooglePlayBadge() {
   return (
     <a
@@ -390,7 +390,7 @@ export default function ConnectPage() {
 
   return (
     <div className="w-full min-h-screen bg-[#F7F7F6] text-black overflow-x-hidden selection:bg-black selection:text-white">
-      {/* MOBILE HERO — clean white, world map bg, Ledger Chat icon */}
+      {/* MOBILE HERO â clean white, world map bg, Ledger Chat icon */}
       <div className="lg:hidden w-full relative flex flex-col items-center justify-center bg-[#FAFAFA] pt-14 pb-8 px-6 overflow-hidden border-b border-black/5">
         {/* Faint world map */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
@@ -408,13 +408,13 @@ export default function ConnectPage() {
         {/* Live status badge */}
         <div className="relative z-10 inline-flex items-center gap-3 pl-3 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-[#25D366]/20">
           <span className="w-2.5 h-2.5 rounded-full bg-[#25D366] animate-pulse block shrink-0" />
-          <span className="text-[12px] font-bold tracking-tight text-black">Live Now · Mobile Apps Coming</span>
+          <span className="text-[12px] font-bold tracking-tight text-black">Live Now — {userCountStr} users online</span>
         </div>
       </div>
 
       <div className="w-full flex flex-col lg:grid lg:grid-cols-[1fr_460px] xl:grid-cols-[1fr_500px] min-h-screen lg:h-screen lg:min-h-[600px] lg:max-h-screen">
 
-        {/* LEFT: Branding — desktop only, masterpiece clean white */}
+        {/* LEFT: Branding â desktop only, masterpiece clean white */}
         <div className="hidden lg:flex flex-col justify-between bg-[#FAFAFA] text-black p-14 relative overflow-hidden h-full">
 
           {/* Faint world map background - elegant sizing and mask */}
@@ -436,7 +436,7 @@ export default function ConnectPage() {
           >
             <div className="inline-flex items-center gap-3 pl-3 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/5 w-fit mb-8">
               <span className="w-2.5 h-2.5 rounded-full bg-[#25D366] animate-pulse block shrink-0" />
-              <span className="text-[12px] font-mono uppercase tracking-widest text-black/60 font-semibold">Live Now � Trusted by {userCountStr} Users</span>
+              <span className="text-[12px] font-mono uppercase tracking-widest text-black/60 font-semibold">Live Now — {userCountStr} users online</span>
             </div>
 
             <h1 className="text-[52px] xl:text-[64px] font-black tracking-[-0.04em] leading-[1.05] text-black mb-6">
@@ -481,7 +481,7 @@ export default function ConnectPage() {
 
           {/* Bottom links */}
           <div className="relative z-20 flex items-center justify-between text-[11px] font-medium text-neutral-400">
-            <span>© 2026 Humanity Ledger Protocol</span>
+            <span>Â© 2026 Humanity Ledger Protocol</span>
             <div className="flex items-center gap-6">
               <Link href="/docs/whitepaper" className="hover:text-black transition-colors">Whitepaper</Link>
               <Link href="/docs/terms" className="hover:text-black transition-colors">Terms</Link>
@@ -490,7 +490,7 @@ export default function ConnectPage() {
           </div>
         </div>
 
-        {/* RIGHT: Auth panel — full height on desktop, white bottom sheet on mobile */}
+        {/* RIGHT: Auth panel â full height on desktop, white bottom sheet on mobile */}
         <div
           className="flex flex-col items-center justify-start lg:justify-center overflow-y-auto bg-white relative border-l border-black/6 h-full w-full shrink-0 shadow-[-20px_0_40px_rgba(0,0,0,0.5)]"
           style={{
@@ -633,7 +633,7 @@ export default function ConnectPage() {
         </div>
       </div>
 
-      {/* ── WAITING FOR WALLET OVERLAY ─────────────────────────────────── */}
+      {/* ââ WAITING FOR WALLET OVERLAY âââââââââââââââââââââââââââââââââââ */}
       <AnimatePresence>
         {pendingWalletName && isPending && (
           <motion.div
