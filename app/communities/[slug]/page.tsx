@@ -1,19 +1,19 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Users, Hash, Lock, ChevronLeft, MessageSquare, Loader2 } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import { Users, Hash, Lock, Globe, MessageCircle, ArrowLeft, Shield, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import { SystemFooter } from '@/components/landing/SystemFooter';
+import { HLLogo } from '@/components/shared/HLLogo';
 
 export default function CommunityDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const [community, setCommunity] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [joining, setJoining] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/communities/${params.slug}`)
+    fetch(/api/communities/ + params.slug)
       .then(r => r.json())
       .then(d => {
         setCommunity(d.community);
@@ -21,110 +21,122 @@ export default function CommunityDetailPage() {
       });
   }, [params.slug]);
 
-  const handleJoin = async () => {
-    setJoining(true);
-    await fetch(`/api/communities/${params.slug}/join`, { method: 'POST' });
-    router.push('/chat'); // For now, joining just returns to chat
-  };
+  const AVATAR_COLORS = ['#25D366','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55', '#5856D6', '#007AFF'];
+  const avatarColor = community ? (AVATAR_COLORS[parseInt(community.id.charCodeAt(0).toString(), 10) % AVATAR_COLORS.length] || '#25D366') : '#25D366';
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
-        <Loader2 className="animate-spin text-black/20" size={32} />
+      <div className="min-h-screen bg-[#F6F7F9] flex flex-col items-center justify-center">
+        <span className="w-8 h-8 border-4 border-[#25D366]/20 border-t-[#25D366] rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!community) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center">
-        <h1 className="text-2xl font-black text-black mb-4">Community not found</h1>
-        <Link href="/communities" className="text-[#25D366] font-bold">← Back to explorer</Link>
+      <div className="min-h-screen bg-[#F6F7F9] flex flex-col items-center justify-center">
+        <h1 className="text-2xl font-bold mb-4">Community not found</h1>
+        <Link href="/communities" className="text-[#25D366] font-bold">? Back to Discover</Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-black font-sans flex flex-col md:flex-row">
-      
-      {/* Sidebar Channels */}
-      <div className="w-full md:w-80 bg-white border-r border-black/10 flex flex-col shrink-0 min-h-screen">
-        
-        {/* Header */}
-        <div className="p-6 border-b border-black/10">
-          <Link href="/communities" className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-widest text-black/40 hover:text-black transition-colors mb-6">
-            <ChevronLeft size={14} /> Back
+    <div className="min-h-screen bg-[#F6F7F9] text-[#1C1C1E] font-sans flex flex-col">
+      <nav className="w-full bg-white/80 backdrop-blur-xl border-b border-black/5 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <Link href="/communities" className="flex items-center gap-2 text-black/60 hover:text-black font-bold transition-colors">
+            <ArrowLeft size={20} /> Back to Discover
           </Link>
-          
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[#25D366]/10 flex items-center justify-center text-xl font-black text-[#25D366]">
-              {community.name.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <h1 className="text-lg font-black tracking-tight leading-tight">{community.name}</h1>
-              <span className="text-[11px] font-mono font-bold text-black/40 flex items-center gap-1 mt-1">
-                <Users size={12} /> {community._count?.members || 0} members
-              </span>
-            </div>
+          <div className="flex items-center gap-4">
+            <Link href="/chat" className="bg-[#1C1C1E] hover:bg-black text-white px-5 py-2.5 rounded-full text-[14px] font-bold shadow-md shadow-black/10 transition-all active:scale-95">
+              Launch Client
+            </Link>
           </div>
         </div>
+      </nav>
 
-        {/* Channels List */}
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
-          <div className="text-[10px] font-black uppercase tracking-widest text-black/30 mb-2 px-3">Channels</div>
-          
-          {community.channels?.map((channel: any) => {
-            const isLocked = channel.accessType !== 'free';
-            return (
-              <button 
-                key={channel.id}
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all group
-                  ${isLocked ? 'hover:bg-black/5 opacity-70' : 'hover:bg-black/5'}
-                `}
-              >
-                <div className="flex items-center gap-3">
-                  {isLocked ? (
-                    <Lock size={16} className="text-black/40" />
-                  ) : (
-                    <Hash size={16} className="text-black/40 group-hover:text-black transition-colors" />
-                  )}
-                  <span className={`text-[13px] font-bold ${isLocked ? 'text-black/60' : 'text-black'}`}>
-                    {channel.name}
-                  </span>
-                </div>
-                {isLocked && channel.priceUsd && (
-                  <span className="text-[10px] font-black bg-[#25D366]/10 text-[#25D366] px-2 py-0.5 rounded-md">
-                    ${channel.priceUsd}
-                  </span>
+      <main className="flex-1 max-w-4xl w-full mx-auto px-6 py-12 md:py-20">
+        <div className="bg-white rounded-[40px] p-8 md:p-12 shadow-xl border border-black/[0.04]">
+          <div className="flex flex-col md:flex-row gap-8 items-start mb-10">
+            <div 
+              className="w-32 h-32 md:w-40 md:h-40 rounded-[32px] flex items-center justify-center text-white font-black text-5xl md:text-6xl shrink-0 shadow-inner"
+              style={{ background: avatarColor }}
+            >
+              {community.name.slice(0,2).toUpperCase()}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl md:text-5xl font-black tracking-tight">{community.name}</h1>
+                {community.isPublic && (
+                  <div className="bg-[#25D366]/10 text-[#25D366] px-3 py-1 rounded-full text-[12px] font-bold flex items-center gap-1.5 uppercase tracking-widest mt-2 md:mt-0">
+                    <Globe size={14} /> Public
+                  </div>
                 )}
-              </button>
-            );
-          })}
-        </div>
-
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#F8F9FA]">
-        <div className="max-w-md w-full bg-white rounded-[32px] p-8 border border-black/5 shadow-xl shadow-black/5 text-center">
-          <div className="w-20 h-20 rounded-full bg-[#25D366]/10 flex items-center justify-center mx-auto mb-6">
-            <MessageSquare size={32} className="text-[#25D366]" />
+              </div>
+              <div className="flex flex-wrap items-center gap-3 mb-6">
+                <span className="bg-[#F6F7F9] px-4 py-1.5 rounded-xl text-[14px] font-bold text-black/60 flex items-center gap-2">
+                  <Users size={16} /> {community._count?.members || 0} Members
+                </span>
+                <span className="bg-[#F6F7F9] px-4 py-1.5 rounded-xl text-[14px] font-bold text-black/60 flex items-center gap-2">
+                  <Hash size={16} /> {community._count?.channels || 0} Channels
+                </span>
+                <span className="bg-[#F6F7F9] px-4 py-1.5 rounded-xl text-[14px] font-bold text-black/60 flex items-center gap-2">
+                  <Shield size={16} /> E2E Encrypted
+                </span>
+              </div>
+              <p className="text-[16px] md:text-[18px] text-[#1C1C1E]/70 font-medium leading-relaxed max-w-2xl">
+                {community.description || 'This community has no description.'}
+              </p>
+            </div>
           </div>
-          <h2 className="text-2xl font-black mb-3">Join {community.name}</h2>
-          <p className="text-[14px] text-black/60 font-mono leading-relaxed mb-8">
-            {community.description || 'Join this community to access channels, chat with members, and discover exclusive content.'}
-          </p>
-          
-          <button 
-            onClick={handleJoin}
-            disabled={joining}
-            className="w-full py-4 rounded-2xl bg-[#25D366] text-white text-[13px] font-black uppercase tracking-widest hover:bg-[#20bd5a] transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {joining ? <Loader2 className="animate-spin" size={18} /> : 'Join Community'}
-          </button>
-        </div>
-      </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-10 border-t border-black/[0.04]">
+            <div className="space-y-6">
+              <h3 className="text-[20px] font-bold tracking-tight">Public Channels</h3>
+              <div className="space-y-3">
+                {community.channels?.length > 0 ? (
+                  community.channels.map((ch: any) => (
+                    <div key={ch.id} className="bg-[#F6F7F9] p-4 rounded-2xl flex items-center gap-3">
+                      <Hash size={20} className="text-black/30" />
+                      <div>
+                        <p className="font-bold text-[15px]">{ch.name}</p>
+                        <p className="text-[13px] text-black/50">{ch.isPrivate ? 'Private' : 'Public'} Channel</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="bg-[#F6F7F9] p-4 rounded-2xl flex items-center gap-3">
+                    <Hash size={20} className="text-black/30" />
+                    <p className="font-bold text-[15px]"># general</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-[#F6F7F9] p-8 rounded-3xl flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm">
+                <MessageCircle size={32} className="text-[#25D366]" />
+              </div>
+              <h3 className="text-[24px] font-bold mb-3">Join {community.name}</h3>
+              <p className="text-[15px] text-[#1C1C1E]/60 font-medium mb-8 max-w-[250px]">
+                Connect your wallet to join this community and start chatting securely.
+              </p>
+              <Link 
+                href={/chat}
+                className="w-full py-4 bg-[#25D366] hover:bg-[#20bd59] text-white rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2 shadow-lg shadow-[#25D366]/20 transition-all active:scale-95"
+              >
+                Launch Client to Join
+              </Link>
+              <div className="flex items-center gap-2 mt-5 text-[12px] font-bold text-black/40">
+                <CheckCircle2 size={14} /> Free & Permissionless
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <SystemFooter />
     </div>
   );
 }

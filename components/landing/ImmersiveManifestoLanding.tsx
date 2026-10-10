@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { HLLogo } from "@/components/shared/HLLogo";
 import { SystemFooter } from "./SystemFooter";
+import { DownloadSection } from "./DownloadSection";
 import { RemoteLottie } from "@/components/ui/RemoteLottie";
 import {
   Lock, Shield, Check, CheckCircle2, MessageCircle,
@@ -861,6 +862,9 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
           </motion.div>
         </div>
       </section>
+
+      {/* ═══ DOWNLOAD & FAQ ══════════════════════════════════════════════════════ */}
+      <DownloadSection />
 
       {/* Footer */}
       <SystemFooter />

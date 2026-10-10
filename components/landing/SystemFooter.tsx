@@ -32,10 +32,10 @@ export function SystemFooter() {
           {/* Network */}
           <div className="flex flex-col gap-3">
             <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Network</h4>
-            <Link href="#" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Block Explorer</Link>
-            <Link href="#" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Network Status</Link>
-            <Link href="/communities" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Governance</Link>
-            <Link href="#" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Blog</Link>
+            <Link href="/network/explorer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Block Explorer</Link>
+            <Link href="/network/status" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Network Status</Link>
+            <Link href="/network/governance" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Governance</Link>
+            <Link href="/blog" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Blog</Link>
           </div>
 
           {/* Security & Cryptography */}
@@ -43,7 +43,7 @@ export function SystemFooter() {
             <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Cryptography</h4>
             <Link href="/docs/whitepaper" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Whitepaper</Link>
             <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Network Architecture</a>
-            <Link href="#" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Security Audits</Link>
+            <Link href="/security/audits" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Security Audits</Link>
             <a href="https://github.com/humanityledger" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">GitHub</a>
           </div>
 
