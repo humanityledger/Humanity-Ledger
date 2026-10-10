@@ -80,9 +80,10 @@ export const Footer = () => {
                         <div className="flex flex-col gap-8">
                             <h4 className="text-[11px] font-sans font-black uppercase tracking-[0.1em] text-black">LEGAL</h4>
                             <div className="flex flex-col gap-4">
-                                <FooterLink href="/legal/terms">Terms & Conditions</FooterLink>
+                                <FooterLink href="/legal/terms">Terms of Service</FooterLink>
                                 <FooterLink href="/legal/privacy">Privacy Policy</FooterLink>
-                                <FooterLink href="/legal/security">Security</FooterLink>
+                                <FooterLink href="/legal/cookies">Cookie Policy</FooterLink>
+                                <FooterLink href="/legal/retention">Data Retention Policy</FooterLink>
                                 <FooterLink href="https://github.com/humanityledger/Humanity-Ledger" external>GitHub</FooterLink>
                             </div>
                         </div>
