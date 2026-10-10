@@ -13,7 +13,7 @@ export default function CommunityDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(/api/communities/ + params.slug)
+    fetch('/api/communities/' + params.slug)
       .then(r => r.json())
       .then(d => {
         setCommunity(d.community);
@@ -123,7 +123,7 @@ export default function CommunityDetailPage() {
                 Connect your wallet to join this community and start chatting securely.
               </p>
               <Link 
-                href={/chat}
+                href="/chat"
                 className="w-full py-4 bg-[#25D366] hover:bg-[#20bd59] text-white rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2 shadow-lg shadow-[#25D366]/20 transition-all active:scale-95"
               >
                 Launch Client to Join
