@@ -29,7 +29,7 @@ export default function ProfilePreferencesPage() {
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={4}
-            className="w-full bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-3 text-sm font-medium text-black dark:text-white outline-none focus:border-blue-500 transition-colors mb-2 resize-none"
+            className="w-full bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-3 text-sm font-medium text-black dark:text-white outline-none focus:border-[#25D366] transition-colors mb-2 resize-none"
             placeholder="Tell us a little about yourself..."
           />
           <p className="text-xs text-black/50 dark:text-white/50">Describe yourself in a few words.</p>
@@ -42,7 +42,7 @@ export default function ProfilePreferencesPage() {
             type="text" 
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            className="w-full max-w-md bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-2 text-sm font-medium text-black dark:text-white outline-none focus:border-blue-500 transition-colors mb-1"
+            className="w-full max-w-md bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-2 text-sm font-medium text-black dark:text-white outline-none focus:border-[#25D366] transition-colors mb-1"
           />
           <p className="text-xs text-black/50 dark:text-white/50">Where are you based?</p>
         </section>
@@ -54,7 +54,7 @@ export default function ProfilePreferencesPage() {
             type="url" 
             value={website}
             onChange={(e) => setWebsite(e.target.value)}
-            className="w-full max-w-md bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-2 text-sm font-medium text-black dark:text-white outline-none focus:border-blue-500 transition-colors mb-1"
+            className="w-full max-w-md bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-2 text-sm font-medium text-black dark:text-white outline-none focus:border-[#25D366] transition-colors mb-1"
             placeholder="https://"
           />
         </section>
@@ -64,7 +64,7 @@ export default function ProfilePreferencesPage() {
           <button 
             onClick={handleSave}
             disabled={isSaving}
-            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
           >
             {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
@@ -74,3 +74,4 @@ export default function ProfilePreferencesPage() {
     </div>
   );
 }
+

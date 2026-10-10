@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json(
             {
                 status: "error",
-                error: error.message,
+                error: 'Internal Server Error',
                 timestamp: new Date().toISOString(),
             },
             { status: 500 }

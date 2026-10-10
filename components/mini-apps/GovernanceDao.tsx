@@ -20,7 +20,7 @@ export const GovernanceDao: React.FC = () => {
           <h2 className="text-xl font-semibold tracking-tight">Protocol Governance</h2>
           <p className="text-sm text-black/60">Shape the future of the Sovereign AppChain.</p>
         </div>
-        <div className="px-4 py-2 bg-blue-50 text-blue-700 rounded-xl">
+        <div className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl">
           <span className="text-xs font-semibold uppercase tracking-wider">Voting Power</span>
           <p className="font-bold">{votingPower.toLocaleString()} QDS</p>
         </div>
@@ -62,4 +62,5 @@ export const GovernanceDao: React.FC = () => {
     </div>
   );
 };
+
 

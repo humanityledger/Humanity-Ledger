@@ -91,7 +91,7 @@ export function WalletPreview() {
 
                 {/* Mock Accounts */}
                 {[
-                    { name: 'Main Vault', balance: '12.5 ETH', usd: '$22,450.00', color: 'bg-blue-500' },
+                    { name: 'Main Vault', balance: '12.5 ETH', usd: '$22,450.00', color: 'bg-[#25D366]' },
                     { name: 'Attesting Alpha', balance: '1.2 BTC', usd: '$42,100.00', color: 'bg-orange-500' },
                     { name: 'Yield Farm', balance: '5,000 USDC', usd: '$5,000.00', color: 'bg-green-500' }
                 ].map((acc, i) => (
@@ -115,5 +115,6 @@ export function WalletPreview() {
         </motion.div>
     );
 }
+
 
 

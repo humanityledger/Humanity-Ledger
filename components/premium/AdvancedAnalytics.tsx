@@ -246,19 +246,19 @@ export default function AdvancedAnalytics({ walletAddress, isPremium, hasTrialed
       {/* 2. WALLET SELECTION & TIMEFRAME */}
       <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-5 border border-white/10 flex flex-col md:flex-row gap-6 items-center justify-between">
            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-500/20">
+              <div className="w-12 h-12 bg-[#25D366]/10 rounded-2xl flex items-center justify-center text-emerald-400 border border-[#25D366]/20">
                   <Activity size={24} />
               </div>
               <div>
-                  <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Blockchain Monitor</div>
+                  <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Blockchain Monitor</div>
                   <div className="text-lg font-mono font-black text-white italic tracking-tighter flex items-center gap-2">
                       {portfolioData.entityInfo ? (
-                        <span className="text-blue-400">{portfolioData.entityInfo.name}</span>
+                        <span className="text-emerald-400">{portfolioData.entityInfo.name}</span>
                       ) : (
                         walletAddress ? `${walletAddress.slice(0, 10)}...${walletAddress.slice(-8)}` : "SELECT A TARGET"
                       )}
                       {portfolioData.identityTier === 'PROTOCOL' && (
-                        <span className="bg-blue-500/20 text-blue-400 text-[8px] px-2 py-0.5 rounded border border-blue-500/30 uppercase tracking-widest">System Entity</span>
+                        <span className="bg-[#25D366]/20 text-emerald-400 text-[8px] px-2 py-0.5 rounded border border-[#25D366]/30 uppercase tracking-widest">System Entity</span>
                       )}
                   </div>
                   {portfolioData.entityInfo && (
@@ -270,12 +270,12 @@ export default function AdvancedAnalytics({ walletAddress, isPremium, hasTrialed
                     <div className="flex items-center gap-2 mt-1">
                       <div className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${
                         portfolioData.smartMoneyMetrics.score >= 80 ? 'bg-indigo-500 text-white' : 
-                        portfolioData.smartMoneyMetrics.score >= 60 ? 'bg-blue-500 text-white' : 
+                        portfolioData.smartMoneyMetrics.score >= 60 ? 'bg-[#25D366] text-white' : 
                         'bg-white/10 text-gray-400'
                       }`}>
                         Signal for {portfolioData.smartMoneyMetrics.category}
                       </div>
-                      <div className="text-[9px] font-black text-blue-400 italic">
+                      <div className="text-[9px] font-black text-emerald-400 italic">
                         Score: {portfolioData.smartMoneyMetrics.score}/100
                       </div>
                     </div>
@@ -291,7 +291,7 @@ export default function AdvancedAnalytics({ walletAddress, isPremium, hasTrialed
                   key={tf}
                   onClick={() => setTimeframe(tf)}
                   className={`flex-1 py-1 px-3 rounded-xl text-[9px] font-black transition-all uppercase tracking-widest ${
-                    timeframe === tf ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'
+                    timeframe === tf ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'
                   }`}
                 >
                   {tf}
@@ -305,7 +305,7 @@ export default function AdvancedAnalytics({ walletAddress, isPremium, hasTrialed
               className={`p-3 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 text-white transition-all group ${portfolioData.loading ? 'opacity-50 cursor-wait' : ''}`}
               title="Full Sync"
             >
-              <Zap size={18} className={`group-hover:text-blue-400 transition-colors ${portfolioData.loading ? 'animate-spin' : ''}`} />
+              <Zap size={18} className={`group-hover:text-emerald-400 transition-colors ${portfolioData.loading ? 'animate-spin' : ''}`} />
             </button>
 
           </div>
@@ -363,15 +363,15 @@ export default function AdvancedAnalytics({ walletAddress, isPremium, hasTrialed
         
         {/* Elite Evidence Panel */}
         {portfolioData.ledgerEvidence && portfolioData.ledgerEvidence.length > 0 && (
-          <div className="lg:col-span-2 bg-blue-600/5 border border-blue-500/20 rounded-3xl p-6 backdrop-blur-md">
-            <h4 className="text-xs font-black text-blue-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+          <div className="lg:col-span-2 bg-emerald-600/5 border border-[#25D366]/20 rounded-3xl p-6 backdrop-blur-md">
+            <h4 className="text-xs font-black text-emerald-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
               <ShieldCheck size={16} />
               Elite Verification Evidence
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {portfolioData.ledgerEvidence.map((ev: string, i: number) => (
                 <div key={i} className="flex items-center gap-3 text-sm text-gray-300 font-medium bg-white/5 p-3 rounded-2xl border border-white/5">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                  <div className="w-2 h-2 bg-[#25D366] rounded-full" />
                   {ev}
                 </div>
               ))}
@@ -387,8 +387,8 @@ export default function AdvancedAnalytics({ walletAddress, isPremium, hasTrialed
                     .sort(([,a], [,b]) => (b as number) - (a as number))
                     .slice(0, 6)
                     .map(([sym, val]) => (
-                    <div key={sym} className="flex-shrink-0 min-w-[70px] bg-white/5 rounded-2xl p-3 text-center border border-white/5 group hover:border-blue-500/30 transition-all">
-                        <div className="text-[10px] font-black text-gray-500 group-hover:text-blue-400 transition-colors uppercase">{sym}</div>
+                    <div key={sym} className="flex-shrink-0 min-w-[70px] bg-white/5 rounded-2xl p-3 text-center border border-white/5 group hover:border-[#25D366]/30 transition-all">
+                        <div className="text-[10px] font-black text-gray-500 group-hover:text-emerald-400 transition-colors uppercase">{sym}</div>
                         <div className="text-lg font-black text-white italic tracking-tighter">
                             {((Number(val || 0) / (portfolioData.totalValue || 1)) * 100).toFixed(0)}%
                         </div>
@@ -404,7 +404,7 @@ export default function AdvancedAnalytics({ walletAddress, isPremium, hasTrialed
         {historyLoading && (
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-20 flex items-center justify-center rounded-[2.5rem]">
                 <div className="flex flex-col items-center gap-3">
-                    <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-10 h-10 border-4 border-[#25D366] border-t-transparent rounded-full animate-spin" />
                     <span className="text-[10px] font-black text-white uppercase tracking-widest">Scanning History...</span>
                 </div>
             </div>
@@ -528,14 +528,14 @@ export default function AdvancedAnalytics({ walletAddress, isPremium, hasTrialed
 function StatCard({ title, value, icon, trend, subtitle }: { title: string; value: string; icon: string; trend?: number, subtitle?: string }) {
   const getIcon = () => {
     switch (icon) {
-      case 'wallet': return <Activity className="text-blue-600" />;
+      case 'wallet': return <Activity className="text-emerald-600" />;
       case 'pnl': return <TrendingUp className="text-green-600" />;
       case 'activity': return <Zap className="text-purple-600" />;
       case 'risk': return <BarChart3 className="text-orange-600" />;
-      case 'rank': return <TrendingUp className="text-blue-500" />;
+      case 'rank': return <TrendingUp className="text-[#25D366]" />;
       case 'tx': return <Activity className="text-purple-500" />;
       case 'brain': return <Brain className="text-indigo-500" />;
-      default: return <Activity className="text-blue-600" />;
+      default: return <Activity className="text-emerald-600" />;
     }
   };
 
@@ -543,7 +543,7 @@ function StatCard({ title, value, icon, trend, subtitle }: { title: string; valu
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-5 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 hover:border-blue-500/50 transition-all group"
+      className="p-5 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 hover:border-[#25D366]/50 transition-all group"
     >
       <div className="flex items-center gap-2 mb-3 text-gray-400 group-hover:text-white transition-colors">
         {getIcon()}
@@ -560,11 +560,12 @@ function StatCard({ title, value, icon, trend, subtitle }: { title: string; valu
 
       )}
       {trend === undefined && (
-        <div className="text-[10px] font-bold text-blue-500/60 uppercase tracking-tighter">
+        <div className="text-[10px] font-bold text-[#25D366]/60 uppercase tracking-tighter">
           {subtitle || ' Real-Time Sync'}
         </div>
       )}
     </motion.div>
   );
 }
+
 

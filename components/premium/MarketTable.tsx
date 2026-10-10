@@ -211,7 +211,7 @@ export default function MarketTable() {
                                         onClick={() => goToPage(page)}
                                         className={`w-10 h-10 rounded-xl text-[11px] font-black transition-all ${
                                             currentPage === page
-                                                ? 'bg-blue-600 text-white shadow-lg'
+                                                ? 'bg-emerald-600 text-white shadow-lg'
                                                 : 'bg-white/5 text-white/60 hover:bg-white/10'
                                         }`}
                                     >
@@ -328,7 +328,7 @@ export default function MarketTable() {
                                         <a 
                                             href={`https://www.coingecko.com/es/monedas/${coin.id}`} 
                                             target="_blank" 
-                                            className="p-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all text-white/40 hover:text-blue-400"
+                                            className="p-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all text-white/40 hover:text-emerald-400"
                                             title="View on CoinGecko"
                                         >
                                             <ExternalLink size={14} />
@@ -385,4 +385,5 @@ function CoinIcon({ src, alt }: { src: string, alt: string }) {
         />
     );
 }
+
 

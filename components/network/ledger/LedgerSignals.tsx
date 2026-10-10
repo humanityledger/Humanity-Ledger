@@ -14,7 +14,7 @@ const SEVERITY_CONFIG = {
     critical: { border: 'border-white/10 bg-indigo-500/5', badge: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30', dot: 'bg-indigo-500', icon: Flame, iconColor: 'text-indigo-400' },
     high: { border: 'border-orange-500/30 bg-orange-500/5', badge: 'bg-orange-500/20 text-orange-300 border-orange-500/30', dot: 'bg-orange-500', icon: AlertTriangle, iconColor: 'text-orange-400' },
     medium: { border: 'border-yellow-500/20 bg-yellow-500/5', badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30', dot: 'bg-yellow-500', icon: TrendingUp, iconColor: 'text-yellow-400' },
-    low: { border: 'border-blue-500/20 bg-blue-500/5', badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30', dot: 'bg-blue-500', icon: Info, iconColor: 'text-blue-400' },
+    low: { border: 'border-[#25D366]/20 bg-[#25D366]/5', badge: 'bg-[#25D366]/20 text-emerald-300 border-[#25D366]/30', dot: 'bg-[#25D366]', icon: Info, iconColor: 'text-emerald-400' },
 };
 
 export function LedgerSignals({ signals, isFetching }: Props) {
@@ -95,4 +95,5 @@ export function LedgerSignals({ signals, isFetching }: Props) {
         </div>
     );
 }
+
 

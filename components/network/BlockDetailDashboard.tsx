@@ -26,7 +26,7 @@ export function BlockDetailDashboard({ hash }: BlockDetailDashboardProps) {
     if (isLoading || !block) {
         return (
             <div className="min-h-screen bg-[#0D0D12] pt-24 pb-12 px-6 flex justify-center">
-                 <Loader className="animate-spin text-blue-500" size={40} />
+                 <Loader className="animate-spin text-[#25D366]" size={40} />
             </div>
         );
     }
@@ -40,7 +40,7 @@ export function BlockDetailDashboard({ hash }: BlockDetailDashboardProps) {
                         <ArrowLeft size={20} />
                     </Link>
                     <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-sm text-blue-400 font-bold uppercase tracking-wider">
+                        <div className="flex items-center gap-2 text-sm text-emerald-400 font-bold uppercase tracking-wider">
                             Block
                         </div>
                         <h1 className="text-3xl font-bold text-white flex items-center gap-2">
@@ -113,4 +113,5 @@ export function BlockDetailDashboard({ hash }: BlockDetailDashboardProps) {
         </div>
     );
 }
+
 

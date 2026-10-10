@@ -64,12 +64,12 @@ export function AdvancedAnalytics() {
 
     return (
         <div className="w-full bg-[#0a0a0a] text-white p-6 rounded-3xl border border-white/5 shadow-2xl overflow-hidden relative">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-blue-500 to-[#00ff9d]" />
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-[#25D366] to-[#00ff9d]" />
             
             {/* Header / Ticker */}
             <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-6">
                 <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-emerald-600 rounded-lg flex items-center justify-center">
                         <Activity size={20} />
                     </div>
                     <div>
@@ -128,12 +128,12 @@ export function AdvancedAnalytics() {
                     <div className="bg-white/5 rounded-xl border border-white/5 p-4 flex-1">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-bold text-sm flex items-center gap-2">
-                                <Globe size={14} className="text-blue-400" />
+                                <Globe size={14} className="text-emerald-400" />
                                 Ledger Radar
                             </h3>
                         </div>
                         <div className="space-y-4 py-8 flex flex-col items-center justify-center">
-                            <Activity size={24} className="text-blue-500/20 animate-pulse" />
+                            <Activity size={24} className="text-[#25D366]/20 animate-pulse" />
                             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20">Establishing Ledger Upstream</p>
                         </div>
                     </div>
@@ -186,4 +186,5 @@ function LedgerRow({ amount, action, time }: { amount: string, action: string, t
         </div>
     )
 }
+
 

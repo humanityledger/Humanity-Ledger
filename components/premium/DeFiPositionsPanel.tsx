@@ -30,7 +30,7 @@ export default function DeFiPositionsPanel({ positions, totalValueUsd, protocolC
   if (!positions || positions.length === 0) {
     return (
       <div className="p-16 text-center border border-dashed border-white/10 rounded-3xl bg-white/5">
-        <Layers size={56} className="mx-auto mb-5 opacity-20 text-blue-400" />
+        <Layers size={56} className="mx-auto mb-5 opacity-20 text-emerald-400" />
         <h3 className="text-2xl font-black text-white mb-2">Sin Posiciones DeFi</h3>
         <p className="text-gray-500 text-sm max-w-md mx-auto">
           No se detectaron posiciones activas en protocolos DeFi compatibles (Aave, Uniswap, Compound, Curve, Lido).
@@ -73,11 +73,11 @@ export default function DeFiPositionsPanel({ positions, totalValueUsd, protocolC
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-6 bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-2xl relative overflow-hidden"
+          className="p-6 bg-gradient-to-br from-emerald-600/20 to-purple-600/20 border border-[#25D366]/30 rounded-2xl relative overflow-hidden"
         >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 blur-3xl" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#25D366]/20 blur-3xl" />
           <div className="relative z-10">
-            <p className="text-xs uppercase tracking-widest text-blue-400 font-bold mb-1">Total DeFi</p>
+            <p className="text-xs uppercase tracking-widest text-emerald-400 font-bold mb-1">Total DeFi</p>
             <p className="text-4xl font-black text-white">${safeToLocaleString(totalValueUsd)}</p>
             <p className="text-xs text-gray-400 mt-1">Valor Total Bloqueado</p>
           </div>
@@ -109,7 +109,7 @@ export default function DeFiPositionsPanel({ positions, totalValueUsd, protocolC
       {/* Posiciones por Protocolo */}
       <div className="space-y-4">
         <h3 className="text-xl font-black text-white mb-4 flex items-center gap-3">
-          <Layers size={24} className="text-blue-400" />
+          <Layers size={24} className="text-emerald-400" />
           Posiciones por Protocolo
         </h3>
 
@@ -128,8 +128,8 @@ export default function DeFiPositionsPanel({ positions, totalValueUsd, protocolC
               <div className="p-6 border-b border-white/10 bg-gradient-to-r from-white/5 to-transparent">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/20 flex items-center justify-center">
-                      <Layers size={28} className="text-blue-400" />
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#25D366]/20 to-purple-500/20 border border-white/20 flex items-center justify-center">
+                      <Layers size={28} className="text-emerald-400" />
                     </div>
                     <div>
                       <h4 className="text-2xl font-black text-white">{protocol}</h4>
@@ -195,4 +195,5 @@ export default function DeFiPositionsPanel({ positions, totalValueUsd, protocolC
     </div>
   );
 }
+
 

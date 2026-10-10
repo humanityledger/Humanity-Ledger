@@ -492,10 +492,10 @@ export function MobileImmersiveGate() {
             <div className="relative z-10 pb-4 flex flex-col items-center gap-3 px-5">
               <div className="bg-white border border-[#E8E8E8] rounded-2xl px-5 py-3 text-center">
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0A0A0A] mb-0.5">
-                  January 1, 2027
+                  Live Now · Mobile Coming
                 </div>
                 <p className="text-[9px] font-mono text-[#888] uppercase tracking-[0.1em]">
-                  Global release on App Store & Google Play
+                  Mobile apps for iOS & Android coming soon
                 </p>
               </div>
               <p className="text-[9px] font-mono text-[#0A0A0A]/20 uppercase tracking-[0.25em]">

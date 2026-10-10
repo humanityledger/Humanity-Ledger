@@ -469,10 +469,11 @@ export function ExecutionFlowDiagram() {
         <Arrow label="Posts Root" dir="right" color="text-slate-300 hidden lg:flex shrink-0" />
         
         <div className="flex-1 min-w-0 w-full lg:w-auto">
-          <Node label="Ethereum L1" sub="Final Verification" color="bg-blue-50 border-blue-200" textColor="text-blue-800" />
+          <Node label="Ethereum L1" sub="Final Verification" color="bg-emerald-50 border-emerald-200" textColor="text-emerald-800" />
         </div>
       </div>
 
     </DiagramCard>
   );
 }
+

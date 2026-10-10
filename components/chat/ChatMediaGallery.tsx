@@ -118,7 +118,7 @@ export function ChatMediaGallery({ messages, onClose, onOpenLightbox }: ChatMedi
               {docs.length === 0 && <p className="text-center text-black/40 font-mono text-sm py-10">No documents shared.</p>}
               {docs.map(item => (
                 <a key={item.id} href={item.url} download={item.name} className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-black/5 hover:border-black/20 transition-all active:scale-[0.98]">
-                  <div className="w-10 h-10 rounded-full bg-[#1c7aff]/10 flex items-center justify-center text-[#1c7aff]">
+                  <div className="w-10 h-10 rounded-full bg-[#25D366]/10 flex items-center justify-center text-[#25D366]">
                     {item.type.includes('audio') ? <Music size={20} /> : <File size={20} />}
                   </div>
                   <div className="flex-1 min-w-0">

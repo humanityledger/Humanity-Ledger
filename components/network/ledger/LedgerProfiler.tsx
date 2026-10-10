@@ -99,7 +99,7 @@ export function LedgerProfiler({ address, onClose }: Props) {
                 temporalDensity = 75;
             } else {
                 velocityLabel = "Deep Cold Storage";
-                velocityColor = "text-blue-400";
+                velocityColor = "text-emerald-400";
                 temporalDensity = 25;
             }
 
@@ -226,7 +226,7 @@ export function LedgerProfiler({ address, onClose }: Props) {
                                                     <motion.div variants={rowVariant} className="flex flex-wrap items-center gap-2">
                                                         <span className={`px-4 py-2 rounded-full text-[9px] font-black border tracking-widest uppercase ${
                                                             data.identity_tier === 'Cryptographic' ? 'bg-orange-50 text-orange-600 border-orange-100' :
-                                                            data.identity_tier === 'PROTOCOL' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                            data.identity_tier === 'PROTOCOL' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                                                             'bg-black/5 text-slate-600 border-slate-100'
                                                         }`}>
                                                             {data.identity_tier || 'GHOST ENTITY'}
@@ -354,4 +354,5 @@ const rowVariant = {
     hidden: { opacity: 0, x: -10 },
     visible: { opacity: 1, x: 0, transition: { duration: 0.3 } }
 };
+
 

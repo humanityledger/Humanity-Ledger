@@ -52,11 +52,12 @@ export default function LoginCard() {
             {/* Footer / Status */}
             <div className="mt-8 pt-6 border-t border-white/5 w-full flex justify-center">
                 <div className="flex items-center space-x-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse"></div>
                     <span className="text-xs text-white/40">Secure Connection Established</span>
                 </div>
             </div>
         </motion.div>
     );
 }
+
 

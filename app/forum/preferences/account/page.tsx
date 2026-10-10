@@ -52,7 +52,7 @@ export default function AccountPreferencesPage() {
           </div>
           <span className="inline-block px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-bold uppercase tracking-wider rounded-md mb-2">Primary</span>
           <p className="text-xs text-black/50 dark:text-white/50 mb-3">Never shown to the public.</p>
-          <button className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2">
+          <button className="text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-2">
             + Add Alternate Email
           </button>
         </section>
@@ -81,7 +81,7 @@ export default function AccountPreferencesPage() {
             type="text" 
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full max-w-md bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-2 text-sm font-medium text-black dark:text-white outline-none focus:border-blue-500 transition-colors mb-1"
+            className="w-full max-w-md bg-white dark:bg-black border border-black/20 dark:border-white/20 rounded-lg px-4 py-2 text-sm font-medium text-black dark:text-white outline-none focus:border-[#25D366] transition-colors mb-1"
           />
           <p className="text-xs text-black/50 dark:text-white/50">Your full name (optional)</p>
         </section>
@@ -101,7 +101,7 @@ export default function AccountPreferencesPage() {
           <button 
             onClick={handleSave}
             disabled={isSaving}
-            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
           >
             {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
@@ -111,3 +111,4 @@ export default function AccountPreferencesPage() {
     </div>
   );
 }
+

@@ -26,7 +26,7 @@ export default function ApiDocsPage() {
             Unlike Ethereum, where state is stored in a public Patricia Trie, Aztec state is stored in two primary data structures: the <strong>Note Hash Tree</strong> (append-only commitments) and the <strong>Nullifier Tree</strong> (spent note hashes). You interact with this state via the Private Execution Environment (PXE).
           </p>
           <div className="bg-[#0d1117] p-6 rounded-xl border border-slate-700 font-mono text-sm shadow-inner mb-6">
-            <span className="text-purple-400">const</span> <span className="text-blue-400">pxe</span> = <span className="text-pink-400">await</span> <span className="text-blue-400">createPXEClient</span>(PXE_URL);<br/>
+            <span className="text-purple-400">const</span> <span className="text-emerald-400">pxe</span> = <span className="text-pink-400">await</span> <span className="text-emerald-400">createPXEClient</span>(PXE_URL);<br/>
             <span className="text-slate-500">// The PXE handles note decryption, witness generation, and proving locally.</span>
           </div>
         </section>
@@ -54,7 +54,7 @@ export default function ApiDocsPage() {
   {'}'}
 
   <span className="text-slate-500">#[aztec(private)]</span>
-  <span className="text-pink-400">fn</span> <span className="text-blue-400">transfer</span>(
+  <span className="text-pink-400">fn</span> <span className="text-emerald-400">transfer</span>(
     to: AztecAddress,
     amount: <span className="text-teal-300">Field</span>
   ) {'{'}
@@ -107,25 +107,25 @@ export default function ApiDocsPage() {
 <span className="text-pink-400">import</span> {'{'} Contract, Wallet, AztecAddress {'}'} <span className="text-pink-400">from</span> <span className="text-green-300">'@aztec/aztec.js'</span>;
 <span className="text-pink-400">import</span> PrivateTokenArtifact <span className="text-pink-400">from</span> <span className="text-green-300">'./artifacts/PrivateToken.json'</span>;
 
-<span className="text-pink-400">export async function</span> <span className="text-blue-400">executeTransfer</span>(
+<span className="text-pink-400">export async function</span> <span className="text-emerald-400">executeTransfer</span>(
   wallet: Wallet, 
   contractAddress: AztecAddress, 
   recipient: AztecAddress, 
   amount: <span className="text-teal-300">bigint</span>
 ) {'{'}
   <span className="text-slate-500">// 1. Instantiate the contract instance</span>
-  <span className="text-pink-400">const</span> token = <span className="text-pink-400">await</span> Contract.<span className="text-blue-400">at</span>(contractAddress, PrivateTokenArtifact, wallet);
+  <span className="text-pink-400">const</span> token = <span className="text-pink-400">await</span> Contract.<span className="text-emerald-400">at</span>(contractAddress, PrivateTokenArtifact, wallet);
 
-  <span className="text-pink-400">console</span>.<span className="text-blue-400">log</span>(<span className="text-green-300">"Simulating transaction locally in PXE..."</span>);
+  <span className="text-pink-400">console</span>.<span className="text-emerald-400">log</span>(<span className="text-green-300">"Simulating transaction locally in PXE..."</span>);
   
   <span className="text-slate-500">// 2. Call the function. This triggers local witness generation and Barretenberg proving.</span>
   <span className="text-slate-500">// It takes 1-3 seconds depending on the device.</span>
-  <span className="text-pink-400">const</span> tx = token.<span className="text-blue-400">methods</span>.<span className="text-blue-400">transfer</span>(recipient, amount).<span className="text-blue-400">send</span>();
+  <span className="text-pink-400">const</span> tx = token.<span className="text-emerald-400">methods</span>.<span className="text-emerald-400">transfer</span>(recipient, amount).<span className="text-emerald-400">send</span>();
 
   <span className="text-slate-500">// 3. Wait for L2 block inclusion</span>
-  <span className="text-pink-400">const</span> receipt = <span className="text-pink-400">await</span> tx.<span className="text-blue-400">wait</span>();
+  <span className="text-pink-400">const</span> receipt = <span className="text-pink-400">await</span> tx.<span className="text-emerald-400">wait</span>();
   
-  <span className="text-pink-400">console</span>.<span className="text-blue-400">log</span>(<span className="text-green-300">{"`"}Transfer successful! Tx Hash: ${"{receipt.txHash}"}{"`"}</span>);
+  <span className="text-pink-400">console</span>.<span className="text-emerald-400">log</span>(<span className="text-green-300">{"`"}Transfer successful! Tx Hash: ${"{receipt.txHash}"}{"`"}</span>);
   <span className="text-pink-400">return</span> receipt;
 {'}'}
               </pre>
@@ -169,13 +169,13 @@ export default function ApiDocsPage() {
               <tbody className="text-sm text-slate-400">
                 <tr className="border-b border-slate-800 hover:bg-slate-800/50">
                   <td className="p-4 font-mono text-emerald-400">/api/registry/blocks</td>
-                  <td className="p-4"><span className="bg-blue-900/50 text-blue-400 px-2 py-1 rounded text-xs">GET</span></td>
+                  <td className="p-4"><span className="bg-emerald-900/50 text-emerald-400 px-2 py-1 rounded text-xs">GET</span></td>
                   <td className="p-4">Fetch the latest Aztec L2 block roots and state tree sizes.</td>
                   <td className="p-4 text-slate-500">None</td>
                 </tr>
                 <tr className="border-b border-slate-800 hover:bg-slate-800/50">
                   <td className="p-4 font-mono text-emerald-400">/api/auth/nonce</td>
-                  <td className="p-4"><span className="bg-blue-900/50 text-blue-400 px-2 py-1 rounded text-xs">GET</span></td>
+                  <td className="p-4"><span className="bg-emerald-900/50 text-emerald-400 px-2 py-1 rounded text-xs">GET</span></td>
                   <td className="p-4">Request a secure 256-bit nonce for SIWE login.</td>
                   <td className="p-4 text-slate-500">None</td>
                 </tr>
@@ -194,4 +194,5 @@ export default function ApiDocsPage() {
     </DocLayout>
   );
 }
+
 

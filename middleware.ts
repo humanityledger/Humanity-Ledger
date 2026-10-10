@@ -86,6 +86,9 @@ const PUBLIC_PREFIXES = [
   '/scan/',
   '/lottie/',
   '/sounds/',
+  '/api/user/register',  // Public: called during onboarding before SIWE session exists
+  '/api/user/profile',   // Public GET: profile lookup on re-login; PUT is auth-gated by own logic
+  '/api/settings',       // Public: settings load/save on first visit
 ];
 
 function isPublicPath(pathname: string): boolean {

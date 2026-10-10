@@ -1,33 +1,33 @@
-'use client';
+﻿'use client';
 
 /**
- * ╔══════════════════════════════════════════════════════════════════╗
- *  RichPostEditor — Ledger Chat Post Composer
+ * ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+ *  RichPostEditor ÔÇö Ledger Chat Post Composer
  *  Full-featured rich text editor for Communities & Group announcements
- *  Built on Tiptap v2 · Framer Motion · Tailwind CSS
+ *  Built on Tiptap v2 ┬À Framer Motion ┬À Tailwind CSS
  *
  *  Features:
- *  ─ Bold, Italic, Underline, Strikethrough
- *  ─ H1, H2, H3 headings
- *  ─ Bullet list, Ordered list, Task checklist
- *  ─ Blockquote, Code block, Inline code
- *  ─ Hyperlinks (auto-detect + manual)
- *  ─ Text highlight (8 colours)
- *  ─ Text colour (8 colours)
- *  ─ Align left / centre / right / justify
- *  ─ Subscript / Superscript
- *  ─ Horizontal divider
- *  ─ Image upload (base64 inline)
- *  ─ @Mention autocomplete
- *  ─ Character + word counter
- *  ─ Undo / Redo with keyboard shortcuts
- *  ─ Floating bubble menu on text selection
- *  ─ Slash (/) command menu
- *  ─ Full-screen mode
- *  ─ Preview mode (rendered HTML)
- *  ─ Spoiler/blur toggle
- *  ─ Send immediately or schedule
- * ╚══════════════════════════════════════════════════════════════════╝
+ *  ÔöÇ Bold, Italic, Underline, Strikethrough
+ *  ÔöÇ H1, H2, H3 headings
+ *  ÔöÇ Bullet list, Ordered list, Task checklist
+ *  ÔöÇ Blockquote, Code block, Inline code
+ *  ÔöÇ Hyperlinks (auto-detect + manual)
+ *  ÔöÇ Text highlight (8 colours)
+ *  ÔöÇ Text colour (8 colours)
+ *  ÔöÇ Align left / centre / right / justify
+ *  ÔöÇ Subscript / Superscript
+ *  ÔöÇ Horizontal divider
+ *  ÔöÇ Image upload (base64 inline)
+ *  ÔöÇ @Mention autocomplete
+ *  ÔöÇ Character + word counter
+ *  ÔöÇ Undo / Redo with keyboard shortcuts
+ *  ÔöÇ Floating bubble menu on text selection
+ *  ÔöÇ Slash (/) command menu
+ *  ÔöÇ Full-screen mode
+ *  ÔöÇ Preview mode (rendered HTML)
+ *  ÔöÇ Spoiler/blur toggle
+ *  ÔöÇ Send immediately or schedule
+ * ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
  */
 
 import React, {
@@ -45,7 +45,7 @@ import {
   ZapIcon, Hash, AtSign
 } from 'lucide-react';
 
-// ─── TYPE GUARDS: graceful when Tiptap is not yet installed ──────────────────
+// ÔöÇÔöÇÔöÇ TYPE GUARDS: graceful when Tiptap is not yet installed ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 // (These will be replaced by real imports after first Railway deploy)
 let useEditor: any = null;
 let EditorContent: any = null;
@@ -85,10 +85,10 @@ try {
   SubscriptExt = require('@tiptap/extension-subscript').default;
   SuperscriptExt = require('@tiptap/extension-superscript').default;
 } catch {
-  // Tiptap not installed yet – will be available after Railway deploy
+  // Tiptap not installed yet ÔÇô will be available after Railway deploy
 }
 
-// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇ CONSTANTS ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 const HIGHLIGHT_COLORS = [
   { label: 'Yellow', value: '#FEF08A' },
@@ -124,7 +124,7 @@ const SLASH_COMMANDS = [
   { label: 'Divider', icon: Minus, action: (editor: any) => editor.chain().focus().setHorizontalRule().run() },
 ];
 
-// ─── TOOLBAR BUTTON ──────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇ TOOLBAR BUTTON ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 function TB({
   icon: Icon, label, onClick, active = false, disabled = false, danger = false,
@@ -157,12 +157,12 @@ function TB({
   );
 }
 
-// ─── DIVIDER ─────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇ DIVIDER ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function TDiv() {
   return <div className="w-px h-5 bg-black/10 mx-0.5 shrink-0" />;
 }
 
-// ─── COLOUR PICKER POPUP ─────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇ COLOUR PICKER POPUP ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function ColorPicker({
   colors, onSelect, onClose, label,
 }: { colors: typeof HIGHLIGHT_COLORS; onSelect: (v: string) => void; onClose: () => void; label: string }) {
@@ -189,7 +189,7 @@ function ColorPicker({
   );
 }
 
-// ─── SLASH COMMAND MENU ───────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇ SLASH COMMAND MENU ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function SlashMenu({ editor, position, onClose }: { editor: any; position: { x: number; y: number }; onClose: () => void }) {
   const [filter, setFilter] = useState('');
   const filtered = SLASH_COMMANDS.filter(c => c.label.toLowerCase().includes(filter.toLowerCase()));
@@ -240,7 +240,7 @@ function SlashMenu({ editor, position, onClose }: { editor: any; position: { x: 
   );
 }
 
-// ─── MAIN EDITOR ─────────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇ MAIN EDITOR ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 export interface RichPostEditorProps {
   /** Called with { html, text, json } when user submits */
@@ -375,7 +375,7 @@ export function RichPostEditor({
   const words = editor?.storage?.characterCount?.words?.() ?? 0;
   const isOverLimit = chars > maxChars * 0.9;
 
-  // ── FALLBACK when Tiptap not yet installed ──────────────────────────────
+  // ÔöÇÔöÇ FALLBACK when Tiptap not yet installed ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   if (!tiptapAvailable) {
     return (
       <div className="flex flex-col h-full">
@@ -401,7 +401,7 @@ export function RichPostEditor({
         }
       `}
     >
-      {/* ── HEADER ── */}
+      {/* ÔöÇÔöÇ HEADER ÔöÇÔöÇ */}
       <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-black/8 bg-white/95 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <button
@@ -434,7 +434,7 @@ export function RichPostEditor({
         </div>
       </div>
 
-      {/* ── POST TITLE INPUT ── */}
+      {/* ÔöÇÔöÇ POST TITLE INPUT ÔöÇÔöÇ */}
       <div className="shrink-0 px-5 pt-4 pb-0">
         <input
           value={postTitle}
@@ -444,13 +444,13 @@ export function RichPostEditor({
         />
       </div>
 
-      {/* ── TOOLBAR ── */}
+      {/* ÔöÇÔöÇ TOOLBAR ÔöÇÔöÇ */}
       {!isPreview && (
         <div className="shrink-0 border-b border-black/6 bg-[#FAFAFA] px-2 py-2">
           {/* Row 1: History + Headings + Formatting */}
           <div className="flex items-center gap-0.5 flex-wrap">
-            <TB icon={Undo2} label="Undo (⌘Z)" onClick={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()} />
-            <TB icon={Redo2} label="Redo (⌘⇧Z)" onClick={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()} />
+            <TB icon={Undo2} label="Undo (ÔîÿZ)" onClick={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()} />
+            <TB icon={Redo2} label="Redo (ÔîÿÔçºZ)" onClick={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()} />
             <TDiv />
 
             <TB icon={Heading1} label="Heading 1" onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} />
@@ -458,9 +458,9 @@ export function RichPostEditor({
             <TB icon={Heading3} label="Heading 3" onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} active={editor?.isActive('heading', { level: 3 })} />
             <TDiv />
 
-            <TB icon={Bold} label="Bold (⌘B)" onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} />
-            <TB icon={Italic} label="Italic (⌘I)" onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} />
-            <TB icon={Underline} label="Underline (⌘U)" onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} />
+            <TB icon={Bold} label="Bold (ÔîÿB)" onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} />
+            <TB icon={Italic} label="Italic (ÔîÿI)" onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} />
+            <TB icon={Underline} label="Underline (ÔîÿU)" onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} />
             <TB icon={Strikethrough} label="Strikethrough" onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} />
             <TB icon={Code} label="Inline code" onClick={() => editor?.chain().focus().toggleCode().run()} active={editor?.isActive('code')} />
             <TDiv />
@@ -576,7 +576,7 @@ export function RichPostEditor({
         </div>
       )}
 
-      {/* ── BUBBLE MENU (selection popup) ── */}
+      {/* ÔöÇÔöÇ BUBBLE MENU (selection popup) ÔöÇÔöÇ */}
       {editor && BubbleMenu && !isPreview && (
         <BubbleMenu
           editor={editor}
@@ -605,7 +605,7 @@ export function RichPostEditor({
         </BubbleMenu>
       )}
 
-      {/* ── EDITOR CONTENT / PREVIEW ── */}
+      {/* ÔöÇÔöÇ EDITOR CONTENT / PREVIEW ÔöÇÔöÇ */}
       <div className="flex-1 overflow-y-auto relative" ref={editorWrapRef}>
         {isPreview ? (
           <div
@@ -630,7 +630,7 @@ export function RichPostEditor({
         </AnimatePresence>
       </div>
 
-      {/* ── FOOTER ── */}
+      {/* ÔöÇÔöÇ FOOTER ÔöÇÔöÇ */}
       <div className="shrink-0 flex items-center justify-between px-4 py-3 border-t border-black/8 bg-white/95 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <span className={`text-[11px] font-mono ${isOverLimit ? 'text-orange-500 font-bold' : 'text-black/30'}`}>
@@ -662,7 +662,7 @@ export function RichPostEditor({
         </div>
       </div>
 
-      {/* ── TIPTAP PROSE STYLES (scoped) ── */}
+      {/* ÔöÇÔöÇ TIPTAP PROSE STYLES (scoped) ÔöÇÔöÇ */}
       <style>{`
         .tiptap-editor-wrap .ProseMirror {
           outline: none;
@@ -700,9 +700,10 @@ export function RichPostEditor({
   );
 }
 
-// ─── MODAL WRAPPER ────────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇ MODAL WRAPPER ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 export function RichPostEditorModal({
+  postToEdit,
   open,
   onClose,
   communityName,
@@ -715,38 +716,43 @@ export function RichPostEditorModal({
   communityName?: string;
   communityId?: string; // <--- Added this
   myAddress: string;
-  onPublished?: (content: { html: string; text: string; json: any }) => void;
+  onPublished?: (post: any) => void;
 }) {
   const handlePublish = async (content: { html: string; text: string; json: any }) => {
     try {
       if (!communityId) {
-        console.error('Missing communityId');
+        toast.error('No community selected');
         return;
       }
       if (!myAddress || myAddress.trim() === '') {
-        toast.error('Wallet not connected — cannot publish post');
+        toast.error('Wallet not connected ÔÇö cannot publish post');
         return;
       }
-      
-      const res = await fetch('/api/chat/community-posts', {
+
+      // Use /api/chat/communities/posts (the correct unified endpoint)
+      const res = await fetch('/api/chat/communities/posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
-        body: JSON.stringify({ 
-          communityId, 
-          content: content.html, 
+        headers: {
+          'Content-Type': 'application/json',
+          'x-web3-address': myAddress,
+        },
+        body: JSON.stringify({
+          communityId,
+          authorAddress: myAddress.toLowerCase(), // also in body for reliability
+          content: content.html,
+          contentHtml: content.html,
           plainText: content.text,
-          contentJson: content.json
         }),
       });
-      
+
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         toast.error(errData.error || 'Failed to publish post');
         return;
       }
-      
+
       toast.success('Post published!');
-      onPublished?.(content);
+      onPublished?.(data.post || content);
       onClose();
     } catch (e) {
       console.error('[RichPostEditorModal] Publish failed:', e);
@@ -754,38 +760,35 @@ export function RichPostEditorModal({
     }
   };
 
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div key="editor-modal-wrapper">
-          {/* Backdrop */}
-          <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-[9990] bg-black/50 backdrop-blur-sm"
-          />
+  // ÔöÇÔöÇ CRITICAL FIX: use a flat portal-style render to avoid the React
+  // "removeChild" crash that occurs when AnimatePresence tries to unmount
+  // nested motion.divs that were moved in the DOM by the browser.
+  // We render backdrop + sheet as two siblings, NOT nested inside a wrapper.
+  if (!open) return null;
 
-          {/* Editor panel */}
-          <motion.div
-            key="editor"
-            initial={{ opacity: 0, y: '100%' }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: '100%' }}
-            transition={{ type: 'spring', stiffness: 380, damping: 40 }}
-            className="fixed bottom-0 left-0 right-0 z-[9991] w-full h-[90vh] rounded-t-[32px] overflow-hidden shadow-2xl"
-          >
-            <RichPostEditor
-              title={communityName ? `Post in ${communityName}` : 'New Post'}
-              communityName={communityName}
-              onPublish={handlePublish}
-              onClose={onClose}
-            />
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+  return (
+    <>
+      {/* Backdrop ÔÇö plain div, no animation, avoids reconciliation issues */}
+      <div
+        className="fixed inset-0 z-[9990] bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Editor panel ÔÇö single motion.div, no nesting */}
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 360, damping: 38 }}
+        className="fixed bottom-0 left-0 right-0 z-[9991] w-full h-[90vh] rounded-t-[32px] overflow-hidden shadow-2xl"
+      >
+        <RichPostEditor
+          title={communityName ? `Post in ${communityName}` : 'New Post'}
+          communityName={communityName}
+          onPublish={handlePublish}
+          onClose={onClose}
+        />
+      </motion.div>
+    </>
   );
 }

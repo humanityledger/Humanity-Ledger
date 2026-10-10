@@ -38,7 +38,7 @@ const APPS: {
     desc: 'Encrypted communication',
     href: '/chat',
     icon: MessageSquare,
-    bg: '#1C7AFF',
+    bg: '#25D366',
     fg: '#FFFFFF',
     colSpan: 'col-span-2 sm:col-span-2 lg:col-span-2',
     locked: false,
@@ -325,7 +325,7 @@ export function AppLauncherHub() {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="bg-white rounded-[24px] border border-black/[0.06] p-8 shadow-sm relative overflow-hidden"
         >
-          <div className="absolute right-0 top-0 w-1/3 h-full bg-gradient-to-l from-blue-50 to-transparent pointer-events-none" />
+          <div className="absolute right-0 top-0 w-1/3 h-full bg-gradient-to-l from-emerald-50 to-transparent pointer-events-none" />
           <div className="relative z-10 max-w-2xl">
             <h2 className="text-[28px] font-black tracking-tight text-black mb-3">
               Welcome to the Next Step in Humanity

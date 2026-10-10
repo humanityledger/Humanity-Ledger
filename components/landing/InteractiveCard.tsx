@@ -10,7 +10,7 @@ interface Props {
     color?: string;
 }
 
-export function InteractiveCard({ title, subtitle, image, children, color = "from-blue-500 to-cyan-500" }: Props) {
+export function InteractiveCard({ title, subtitle, image, children, color = "from-[#25D366] to-cyan-500" }: Props) {
     // Simple 3D Tilt logic
     const [rotation, setRotation] = useState({ x: 0, y: 0 });
 
@@ -72,4 +72,5 @@ export function InteractiveCard({ title, subtitle, image, children, color = "fro
         </div>
     );
 }
+
 

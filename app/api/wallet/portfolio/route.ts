@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
         tokens: [],
         chainBreakdown: {},
         address,
-        error: error.message ?? 'FETCH_FAILED',
+        error: 'Internal Server Error' ?? 'FETCH_FAILED',
       }),
       {
         status: 200, // Return 200 so the UI shows empty state, not a red error

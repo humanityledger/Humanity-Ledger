@@ -239,10 +239,10 @@ export default function NotificationSettings() {
       </div>
 
       {/* Alert Info */}
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl">
+      <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
         <div className="flex items-start gap-3">
-          <Sparkles className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
-          <div className="text-sm text-blue-900">
+          <Sparkles className="text-emerald-600 flex-shrink-0 mt-0.5" size={20} />
+          <div className="text-sm text-emerald-900">
             <strong>Unlocked Feature!</strong> Get instant notifications via Email, Telegram, or Discord when:
             <ul className="list-disc ml-5 mt-2 space-y-1">
               <li>Large ledger movements detected (customizable threshold)</li>
@@ -553,7 +553,7 @@ function ChannelCard({
             </div>
           ) : (
             <>
-              <div className="p-3 bg-blue-50 rounded-lg text-xs text-blue-900 whitespace-pre-line">
+              <div className="p-3 bg-emerald-50 rounded-lg text-xs text-emerald-900 whitespace-pre-line">
                 {getSetupInstructions()}
               </div>
 
@@ -630,5 +630,6 @@ function TriggerToggle({
     </div>
   );
 }
+
 
 

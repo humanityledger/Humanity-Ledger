@@ -224,7 +224,7 @@ export function InstitutionalPortfolioView() {
                         onRefresh={refreshBalance}
                         onSend={() => setView('SEND')}
                         onReceive={() => setMicaLockType('RECEIVE')}
-                        onCreate={() => toast.info('Feature coming soon.')}
+                        onCreate={() => setView('BUY')}
                         onBuy={() => setView('BUY')}
                         onSwap={() => setMicaLockType('SWAP')}
                         onBridge={() => setMicaLockType('BRIDGE')}
@@ -233,12 +233,12 @@ export function InstitutionalPortfolioView() {
                         onAccountsClick={() => setShowAccounts(true)}
                         onScan={() => setShowScan(true)}
                         scannerBase={scannerBase}
-                        onShield={() => toast.info('Aztec Privacy Shield — Coming soon.')}
-                        onSecurity={() => toast.info('Security Allowances — Coming soon.')}
-                        onSmartAccount={() => toast.info('Smart Account Terminal — Coming soon.')}
-                        onDeploy={() => toast.info('Contract Deployer — Coming soon.')}
-                        onOmnichain={() => toast.info('Omnichain Bridge — Coming soon.')}
-                        onMempool={() => toast.info('Mempool Manager — Coming soon.')}
+                        
+                        
+                        
+                        
+                        
+                        
                         onQds={handleQds}
                         assets={assets || []}
                         totalBalance={totalBalance}

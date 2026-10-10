@@ -231,7 +231,7 @@ export function DropdownNav() {
                                 {unreadCount > 0 && (
                                     <button 
                                         onClick={markAllRead}
-                                        className="text-xs text-blue-600 hover:text-blue-700 font-medium px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 transition-colors"
+                                        className="text-xs text-emerald-600 hover:text-emerald-700 font-medium px-3 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 transition-colors"
                                     >
                                         Marcar leídas
                                     </button>
@@ -241,7 +241,7 @@ export function DropdownNav() {
                             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                                 {!data ? (
                                     <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                                        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2" />
+                                        <div className="w-8 h-8 border-2 border-[#25D366] border-t-transparent rounded-full animate-spin mb-2" />
                                         Loading...
                                     </div>
                                 ) : notifications.length === 0 ? (
@@ -256,7 +256,7 @@ export function DropdownNav() {
                                                 key={n.id} 
                                                 className={`p-4 rounded-xl border transition-all ${
                                                     !n.read 
-                                                        ? 'bg-blue-50/50  border-blue-100 ' 
+                                                        ? 'bg-emerald-50/50  border-emerald-100 ' 
                                                         : 'bg-gray-50/50  border-gray-100 '
                                                 }`}
                                             >
@@ -282,5 +282,6 @@ export function DropdownNav() {
         </>
     );
 }
+
 
 

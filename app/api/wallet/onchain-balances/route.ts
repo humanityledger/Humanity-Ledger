@@ -198,7 +198,7 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error('[onchain-balances] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch onchain balances', details: error.message },
+      { error: 'Failed to fetch onchain balances', details: 'Error details redacted' },
       { status: 500 }
     );
   }

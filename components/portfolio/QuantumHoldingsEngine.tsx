@@ -200,9 +200,9 @@ export function QuantumHoldingsEngine({ address, activeNetwork, scannerBase, use
                                 <button onClick={() => setIsImportModalOpen(false)} className="text-black/30 hover:text-black transition-colors"><X size={18} /></button>
                             </div>
                             <div className="p-6 space-y-4">
-                                <div className="bg-blue-500/10 border border-blue-500/20 p-4 flex items-start gap-3 rounded-[12px]">
-                                    <span className="font-black text-[10px] text-blue-600 shrink-0 mt-0.5">[INFO]</span>
-                                    <p className="text-[10px] text-blue-700 font-bold uppercase tracking-widest leading-relaxed">
+                                <div className="bg-[#25D366]/10 border border-[#25D366]/20 p-4 flex items-start gap-3 rounded-[12px]">
+                                    <span className="font-black text-[10px] text-emerald-600 shrink-0 mt-0.5">[INFO]</span>
+                                    <p className="text-[10px] text-emerald-700 font-bold uppercase tracking-widest leading-relaxed">
                                         Anyone can create a token, including fake versions of existing tokens. Learn about scams and security risks.
                                     </p>
                                 </div>
@@ -365,7 +365,7 @@ export function QuantumHoldingsEngine({ address, activeNetwork, scannerBase, use
                                                 <ExternalLink size={10} />
                                             </a>
                                         ) : (
-                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-sm text-[9px] text-blue-400 uppercase tracking-[0.2em] font-black">
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-sm text-[9px] text-emerald-400 uppercase tracking-[0.2em] font-black">
                                                 Multi-Chain
                                             </span>
                                         )}
@@ -683,3 +683,4 @@ function TokenDetailPanel({ token, onClose, onAction, symbol = '$', uiConfig, hi
         </motion.div>
     );
 }
+

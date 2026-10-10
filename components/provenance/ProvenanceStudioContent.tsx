@@ -984,7 +984,7 @@ function RegistryTab({ isMobile: _isMobile, refreshKey, userTier = 'FREE', isOwn
                         href={`https://aztecscan.xyz`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-mono text-blue-600 hover:text-blue-800 font-bold transition-colors flex items-center gap-1.5 break-all"
+                        className="text-sm font-mono text-emerald-600 hover:text-emerald-800 font-bold transition-colors flex items-center gap-1.5 break-all"
                       >
                         {truncate(p.txHash, 32)}
                         <ExternalLink size={14} className="shrink-0" />
@@ -1693,4 +1693,5 @@ export function ProvenanceStudioContent({
     </TuringShieldGate>
   );
 }
+
 

@@ -21,10 +21,10 @@ export const MainVault = ({ onConnect }: MainVaultProps) => {
         const activeChainId = chain?.id || chainId;
 
         switch (activeChainId) {
-            case 10: return { name: 'OPTIMISM', color: 'bg-blue-500', targetChainId: 10 };
-            case 8453: return { name: 'BASE', color: 'bg-blue-500', targetChainId: 8453 };
-            case 11155420: return { name: 'OP SEPOLIA', color: 'bg-blue-500', targetChainId: 11155420 };
-            case 84532: return { name: 'BASE SEPOLIA', color: 'bg-blue-500', targetChainId: 84532 };
+            case 10: return { name: 'OPTIMISM', color: 'bg-[#25D366]', targetChainId: 10 };
+            case 8453: return { name: 'BASE', color: 'bg-[#25D366]', targetChainId: 8453 };
+            case 11155420: return { name: 'OP SEPOLIA', color: 'bg-[#25D366]', targetChainId: 11155420 };
+            case 84532: return { name: 'BASE SEPOLIA', color: 'bg-[#25D366]', targetChainId: 84532 };
             default: return { name: 'WRONG NETWORK', color: 'bg-red-500', isError: true };
         }
     };
@@ -42,7 +42,7 @@ export const MainVault = ({ onConnect }: MainVaultProps) => {
         <div className="bg-[#0a0a0a] text-white p-8 rounded-3xl border border-white/5 shadow-2xl relative overflow-hidden">
             {/* Background Glow for Connected State */}
             {isConnected && !network.isError && (
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-[100px] -z-0" />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#25D366]/10 blur-[100px] -z-0" />
             )}
 
             {/* Network Indicator (Dynamic & Interactive) */}
@@ -70,7 +70,7 @@ export const MainVault = ({ onConnect }: MainVaultProps) => {
                         <span className="text-lg align-top ml-1 text-gray-400">,00</span>
                     </h2>
                 </div>
-                <div className="bg-blue-500/10 text-blue-500 px-3 py-1 rounded-full text-xs font-bold h-fit">
+                <div className="bg-[#25D366]/10 text-[#25D366] px-3 py-1 rounded-full text-xs font-bold h-fit">
                      0%
                 </div>
             </div>
@@ -78,8 +78,8 @@ export const MainVault = ({ onConnect }: MainVaultProps) => {
             {/* Bottom Section: Status & Connect */}
             {isConnected && (
                 <div className="mt-6 pt-6 border-t border-white/5 relative z-10">
-                    <div className="flex items-center gap-2 text-blue-400 bg-blue-500/10 px-4 py-2 rounded-lg w-fit">
-                        <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                    <div className="flex items-center gap-2 text-emerald-400 bg-[#25D366]/10 px-4 py-2 rounded-lg w-fit">
+                        <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
                         <span className="text-sm font-bold">WALLET CONNECTED</span>
                     </div>
                 </div>
@@ -87,4 +87,5 @@ export const MainVault = ({ onConnect }: MainVaultProps) => {
         </div>
     )
 }
+
 

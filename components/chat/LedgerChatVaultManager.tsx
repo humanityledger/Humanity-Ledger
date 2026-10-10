@@ -27,7 +27,7 @@ function formatBytes(bytes: number, decimals = 2) {
 }
 
 function getFileIcon(type: string) {
-  if (type.startsWith('image/')) return <ImageIcon size={24} className="text-[#1c7aff]" />;
+  if (type.startsWith('image/')) return <ImageIcon size={24} className="text-[#25D366]" />;
   if (type.startsWith('audio/')) return <Music size={24} className="text-[#30d158]" />;
   if (type.includes('pdf') || type.includes('document')) return <FileText size={24} className="text-[#ff9500]" />;
   if (type.includes('zip') || type.includes('compressed')) return <FileArchive size={24} className="text-[#ff3b30]" />;
@@ -125,7 +125,7 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
         <div className="flex items-center justify-between p-6 border-b border-black/5 bg-[#f5f5f7]">
           <div>
             <h2 className="text-[20px] font-black text-black flex items-center gap-2">
-              <Lock size={20} className="text-[#1c7aff]" />
+              <Lock size={20} className="text-[#25D366]" />
               Secure Vault
             </h2>
             <p className="text-[13px] font-medium text-black/50 mt-1">
@@ -164,12 +164,12 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
                 exit={{ opacity: 0, x: 20 }}
                 className="flex items-center gap-2"
               >
-                <span className="text-[12px] font-bold text-[#1c7aff] mr-2">
+                <span className="text-[12px] font-bold text-[#25D366] mr-2">
                   {selectedFiles.size} selected
                 </span>
                 <button
                   onClick={handleDownloadSelected}
-                  className="w-8 h-8 rounded-full bg-[#1c7aff]/10 flex items-center justify-center text-[#1c7aff] hover:bg-[#1c7aff]/20 transition-colors"
+                  className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center text-[#25D366] hover:bg-[#25D366]/20 transition-colors"
                 >
                   <Download size={14} />
                 </button>
@@ -188,7 +188,7 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
         <div className="flex-1 overflow-y-auto p-4 bg-white min-h-[300px]">
           {loading ? (
             <div className="h-full flex flex-col items-center justify-center gap-3">
-              <div className="w-8 h-8 border-4 border-[#1c7aff]/30 border-t-[#1c7aff] rounded-full animate-spin" />
+              <div className="w-8 h-8 border-4 border-[#25D366]/30 border-t-[#25D366] rounded-full animate-spin" />
               <p className="text-[13px] font-mono text-black/40">Decrypting vault manifest...</p>
             </div>
           ) : filteredFiles.length === 0 ? (
@@ -205,7 +205,7 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
                     key={file.id}
                     onClick={() => toggleSelect(file.id)}
                     className={`flex items-center gap-4 p-3 rounded-2xl cursor-pointer transition-all border ${
-                      isSelected ? 'bg-[#1c7aff]/5 border-[#1c7aff]/30' : 'bg-white border-transparent hover:bg-black/5'
+                      isSelected ? 'bg-[#25D366]/5 border-[#25D366]/30' : 'bg-white border-transparent hover:bg-black/5'
                     }`}
                   >
                     <div className="w-12 h-12 rounded-xl bg-[#f5f5f7] flex items-center justify-center shrink-0">
@@ -229,7 +229,7 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
                     </div>
                     
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
-                      isSelected ? 'border-[#1c7aff] bg-[#1c7aff]' : 'border-black/20 bg-transparent'
+                      isSelected ? 'border-[#25D366] bg-[#25D366]' : 'border-black/20 bg-transparent'
                     }`}>
                       {isSelected && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-2.5 h-2.5 bg-white rounded-full" />}
                     </div>

@@ -39,11 +39,11 @@ export function NetworkStatusWidget() {
         >
             <Link href="/ledger">
                 <motion.div 
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full glass-premium border border-white/10 hover:border-blue-500/50 transition-all cursor-pointer group"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full glass-premium border border-white/10 hover:border-[#25D366]/50 transition-all cursor-pointer group"
                     whileHover={{ scale: 1.02 }}
                 >
                     <div className="relative">
-                        <Globe size={14} className="text-blue-400 group-hover:rotate-12 transition-transform" />
+                        <Globe size={14} className="text-emerald-400 group-hover:rotate-12 transition-transform" />
                         <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse border border-[#0D0D12]" />
                     </div>
                     
@@ -93,8 +93,8 @@ export function NetworkStatusWidget() {
                             </div>
 
                             <div className="pt-2 border-t border-white/5 flex items-center justify-between group/link">
-                                <span className="text-[10px] text-blue-400 font-bold uppercase tracking-tighter cursor-pointer">Explorer Full Access</span>
-                                <Globe size={12} className="text-blue-400 group-hover/link:translate-x-1 transition-transform" />
+                                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-tighter cursor-pointer">Explorer Full Access</span>
+                                <Globe size={12} className="text-emerald-400 group-hover/link:translate-x-1 transition-transform" />
                             </div>
                         </div>
                     </motion.div>
@@ -103,4 +103,5 @@ export function NetworkStatusWidget() {
         </div>
     );
 }
+
 

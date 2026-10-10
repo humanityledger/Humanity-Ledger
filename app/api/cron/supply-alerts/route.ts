@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY || 're_123456789');
+const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_build_time');
 
 const getSender = (name: string) => {
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';

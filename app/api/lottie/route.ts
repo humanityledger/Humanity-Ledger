@@ -3,41 +3,14 @@ import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 
 /**
- * Lottie file server  resolves files from multiple locations in priority order:
- *
- *  1. public/            files placed directly in /public (current user setup)
- *  2. public/lotties/    subfolder inside public
- *  3. lotties/           project-root subfolder
- *  4. C:\Users\admin\Desktop\lottifile\   original dev desktop path
- *  5. C:\Users\admin\Downloads\           common Windows download location
- *  6. C:\Users\admin\Documents\           common Windows documents
- *
- * IMPORTANT: Next.js serves every file inside /public as a static asset at the
- * root URL path. That means /public/Ball playing.json is available at
- * fetch('/Ball%20playing.json'). The OptimizedLocalLottie component already
- * tries this static path first; this API route is the fallback.
+ * Lottie file server resolves files from local project paths only.
+ * Hardcoded personal paths have been removed for security.
  */
 
-// Windows: must use 'C:\\' (not 'C:') so path.join produces absolute paths.
-// path.join('C:', 'Users')  'C:Users' (relative  WRONG)
-// path.join('C:\\', 'Users')  'C:\Users' (absolute  correct)
-const WIN_DRIVE = 'C:\\';
-
 const SEARCH_DIRS: string[] = [
-  // 1. public root  files dropped directly here
   join(process.cwd(), 'public'),
-  // 2. public/lotties subfolder
   join(process.cwd(), 'public', 'lotties'),
-  // 3. project root /lotties
   join(process.cwd(), 'lotties'),
-  // 4. Desktop root  user reported files are here
-  join(WIN_DRIVE, 'Users', 'admin', 'Desktop'),
-  // 5. Desktop/lottifile subfolder  original path
-  join(WIN_DRIVE, 'Users', 'admin', 'Desktop', 'lottifile'),
-  // 6. Downloads
-  join(WIN_DRIVE, 'Users', 'admin', 'Downloads'),
-  // 7. Documents
-  join(WIN_DRIVE, 'Users', 'admin', 'Documents'),
 ];
 
 function resolveLottiePath(safeFilename: string): string | null {
@@ -81,7 +54,6 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const filename = searchParams.get('file');
 
-    // Special endpoint: list all available lottie files for debugging
     if (filename === '__list__') {
       const files = listAllLottieFiles();
       return NextResponse.json({
@@ -91,37 +63,26 @@ export async function GET(req: Request) {
       });
     }
 
-    if (!filename) {
-      return NextResponse.json({ error: 'Filename is required' }, { status: 400 });
-    }
+    if (!filename) return NextResponse.json({ error: 'Filename is required' }, { status: 400 });
 
-    // Sanitize: strip any directory traversal, keep only the basename
     const safeFilename = filename.replace(/\\/g, '/').split('/').pop() || '';
-    if (!safeFilename.endsWith('.json')) {
-      return NextResponse.json({ error: 'Invalid file type' }, { status: 400 });
-    }
+    if (!safeFilename.endsWith('.json')) return NextResponse.json({ error: 'Invalid file type' }, { status: 400 });
 
     const filePath = resolveLottiePath(safeFilename);
 
     if (!filePath) {
-      console.error('[LOTTIE API] File not found:', safeFilename);
-      console.error('[LOTTIE API] Searched in:', SEARCH_DIRS.join(', '));
-      return NextResponse.json(
-        { error: 'File not found', file: safeFilename },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'File not found', file: safeFilename }, { status: 404 });
     }
 
     const data = readFileSync(filePath, 'utf-8');
-    const json = JSON.parse(data);
-
-    return NextResponse.json(json, {
+    return new NextResponse(data, {
+      status: 200,
       headers: {
-        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=3600',
       },
     });
   } catch (error) {
-    console.error('[LOTTIE API] Error:', error);
-    return NextResponse.json({ error: 'Failed to process Lottie file' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

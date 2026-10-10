@@ -25,11 +25,11 @@ export function NetworkSwitcher() {
     // But for sticker, we want a nice indicator
     const getNetworkColor = (id?: number | string) => {
         switch (Number(id)) {
-            case 1: return 'bg-blue-500'; // Ethereum
+            case 1: return 'bg-[#25D366]'; // Ethereum
             case 137: return 'bg-purple-500'; // Polygon
             case 10: return 'bg-red-500'; // Optimism
             case 42161: return 'bg-cyan-500'; // Arbitrum
-            case 8453: return 'bg-blue-600'; // Base
+            case 8453: return 'bg-emerald-600'; // Base
             default: return 'bg-gray-500';
         }
     };
@@ -57,4 +57,5 @@ export function NetworkSwitcher() {
         </motion.button>
     );
 }
+
 

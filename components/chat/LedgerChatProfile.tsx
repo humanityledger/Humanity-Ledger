@@ -73,10 +73,10 @@ export function LedgerChatProfile({
         {/* Action Row */}
         <div className="flex items-center justify-center gap-6 py-6 border-b border-black/5">
           <button className="flex flex-col items-center gap-2 group">
-            <div className="w-12 h-12 rounded-full bg-[#1c7aff]/10 flex items-center justify-center text-[#1c7aff] group-hover:bg-[#1c7aff]/20 transition-colors">
+            <div className="w-12 h-12 rounded-full bg-[#25D366]/10 flex items-center justify-center text-[#25D366] group-hover:bg-[#25D366]/20 transition-colors">
               <BellOff size={22} />
             </div>
-            <span className="text-[12px] font-bold text-black/60 group-hover:text-[#1c7aff]">Mute</span>
+            <span className="text-[12px] font-bold text-black/60 group-hover:text-[#25D366]">Mute</span>
           </button>
           <button className="flex flex-col items-center gap-2 group">
             <div className="w-12 h-12 rounded-full bg-[#30d158]/10 flex items-center justify-center text-[#30d158] group-hover:bg-[#30d158]/20 transition-colors">

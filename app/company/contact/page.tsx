@@ -11,7 +11,7 @@ export default function ContactPage() {
         >
             <div className="space-y-8">
                 {/* Hero */}
-                <section className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 p-8 rounded-xl border border-white/10 text-center">
+                <section className="bg-gradient-to-r from-emerald-600/20 to-purple-600/20 p-8 rounded-xl border border-white/10 text-center">
                     <h2 className="text-4xl font-bold mb-4">We're Here to Help</h2>
                     <p className="text-lg text-white/80">
                         Have questions? Need support? Want to partner with us? We'd love to hear from you.
@@ -26,13 +26,13 @@ export default function ContactPage() {
                         {/* General */}
                         <div className="bg-white/5 p-6 rounded-xl border border-white/10">
                             <div className="flex items-center gap-3 mb-4">
-                                <Mail className="text-blue-400" size={32} />
+                                <Mail className="text-emerald-400" size={32} />
                                 <h3 className="text-2xl font-bold">General Inquiries</h3>
                             </div>
                             <p className="mb-4 text-sm text-white/70">
                                 For general questions, feedback, or business inquiries.
                             </p>
-                            <a href="mailto:hello@Humanity Ledger" className="text-blue-400 hover:underline text-lg font-bold">
+                            <a href="mailto:hello@Humanity Ledger" className="text-emerald-400 hover:underline text-lg font-bold">
                                 hello@Humanity Ledger
                             </a>
                         </div>
@@ -79,7 +79,7 @@ export default function ContactPage() {
                                 security@Humanity Ledger
                             </a>
                             <p className="mt-3 text-xs text-white/60">
-                                <a href="/legal/security#bug-bounty" className="text-blue-400 hover:underline">View Bug Bounty Program </a>
+                                <a href="/legal/security#bug-bounty" className="text-emerald-400 hover:underline">View Bug Bounty Program </a>
                             </p>
                         </div>
 
@@ -124,8 +124,8 @@ export default function ContactPage() {
                             <p className="text-sm text-white/70">Chat with the community, get support, share ideas.</p>
                         </a>
 
-                        <a href="https://twitter.com/HumanityLedger" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-blue-600/20 to-cyan-600/20 p-6 rounded-xl border border-blue-500/30 hover:scale-105 transition-transform">
-                            <Twitter size={32} className="text-blue-400 mb-3" />
+                        <a href="https://twitter.com/HumanityLedger" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-emerald-600/20 to-cyan-600/20 p-6 rounded-xl border border-[#25D366]/30 hover:scale-105 transition-transform">
+                            <Twitter size={32} className="text-emerald-400 mb-3" />
                             <h3 className="font-bold mb-2">Twitter</h3>
                             <p className="text-sm text-white/70">Latest updates, announcements, and crypto insights.</p>
                         </a>
@@ -136,7 +136,7 @@ export default function ContactPage() {
                             <p className="text-sm text-white/70">Open source code, SDKs, and developer resources.</p>
                         </a>
 
-                        <a href="https://t.me/humanityledger" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-sky-600/20 to-blue-600/20 p-6 rounded-xl border border-sky-500/30 hover:scale-105 transition-transform">
+                        <a href="https://t.me/humanityledger" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-sky-600/20 to-emerald-600/20 p-6 rounded-xl border border-sky-500/30 hover:scale-105 transition-transform">
                             <MessageSquare size={32} className="text-sky-400 mb-3" />
                             <h3 className="font-bold mb-2">Telegram</h3>
                             <p className="text-sm text-white/70">Real-time chat with verifiers and community members.</p>
@@ -157,7 +157,7 @@ export default function ContactPage() {
                             <p>Spain</p>
                         </div>
 
-                        <div className="bg-blue-600/10 border border-blue-500/30 p-4 rounded-lg mt-6">
+                        <div className="bg-emerald-600/10 border border-[#25D366]/30 p-4 rounded-lg mt-6">
                             <p className="text-sm">
                                 <strong>Note:</strong> We operate as a remote-first team. For fastest response, please email rather than mailing physical correspondence.
                             </p>
@@ -192,7 +192,7 @@ export default function ContactPage() {
                                 Response time: {'<'} 1 hour average
                             </p>
                             <p className="text-xs text-white/60 mt-4">
-                                <a href="/product/pricing" className="text-blue-400 hover:underline">Upgrade to LEGEND </a>
+                                <a href="/product/pricing" className="text-emerald-400 hover:underline">Upgrade to LEGEND </a>
                             </p>
                         </div>
                     </div>
@@ -213,21 +213,21 @@ export default function ContactPage() {
                         <div className="bg-white/5 p-6 rounded-xl border border-white/10">
                             <h3 className="font-bold mb-2">Q: I need urgent help with a stuck transaction. What should I do?</h3>
                             <p className="text-sm text-white/70">
-                                Email <a href="mailto:support@Humanity Ledger" className="text-blue-400 hover:underline">support@Humanity Ledger</a> with "[URGENT]" in the subject line and include your transaction hash. For LEGEND users, use live chat for immediate assistance.
+                                Email <a href="mailto:support@Humanity Ledger" className="text-emerald-400 hover:underline">support@Humanity Ledger</a> with "[URGENT]" in the subject line and include your transaction hash. For LEGEND users, use live chat for immediate assistance.
                             </p>
                         </div>
 
                         <div className="bg-white/5 p-6 rounded-xl border border-white/10">
                             <h3 className="font-bold mb-2">Q: Can I visit your office in person?</h3>
                             <p className="text-sm text-white/70">
-                                We operate remote-first. For meetings, please email <a href="mailto:hello@Humanity Ledger" className="text-blue-400 hover:underline">hello@Humanity Ledger</a> to schedule a video call.
+                                We operate remote-first. For meetings, please email <a href="mailto:hello@Humanity Ledger" className="text-emerald-400 hover:underline">hello@Humanity Ledger</a> to schedule a video call.
                             </p>
                         </div>
 
                         <div className="bg-white/5 p-6 rounded-xl border border-white/10">
                             <h3 className="font-bold mb-2">Q: How do I report a bug or security vulnerability?</h3>
                             <p className="text-sm text-white/70">
-                                For bugs: <a href="mailto:support@Humanity Ledger" className="text-blue-400 hover:underline">support@Humanity Ledger</a><br />
+                                For bugs: <a href="mailto:support@Humanity Ledger" className="text-emerald-400 hover:underline">support@Humanity Ledger</a><br />
                                 For security issues: <a href="mailto:security@Humanity Ledger" className="text-red-400 hover:underline">security@Humanity Ledger</a> (eligible for bug bounty rewards)
                             </p>
                         </div>
@@ -235,7 +235,7 @@ export default function ContactPage() {
                 </section>
 
                 {/* CTA */}
-                <section className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 p-8 rounded-xl border border-white/10 text-center">
+                <section className="bg-gradient-to-r from-purple-600/20 to-emerald-600/20 p-8 rounded-xl border border-white/10 text-center">
                     <h2 className="text-3xl font-bold mb-4">Still Have Questions?</h2>
                     <p className="text-lg text-white/80 mb-6">
                         Check our comprehensive documentation or reach out directly.
@@ -244,7 +244,7 @@ export default function ContactPage() {
                         <a href="/support" className="px-8 py-3 bg-white/10 border border-white/20 rounded-lg font-bold hover:bg-white/20 transition-colors">
                             View Support Center
                         </a>
-                        <a href="mailto:support@Humanity Ledger" className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg font-bold hover:scale-105 transition-transform">
+                        <a href="mailto:support@Humanity Ledger" className="px-8 py-3 bg-gradient-to-r from-purple-600 to-emerald-600 rounded-lg font-bold hover:scale-105 transition-transform">
                             Email Support
                         </a>
                     </div>
@@ -253,4 +253,5 @@ export default function ContactPage() {
         </DocLayout>
     );
 }
+
 

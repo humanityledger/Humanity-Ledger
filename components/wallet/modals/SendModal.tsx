@@ -145,7 +145,7 @@ export default function SendModal({ isOpen, onClose, userAddress, chainId = 1, i
 
     const getModeConfig = () => {
         switch (initialMode) {
-            case 'bridge': return { title: 'Cross-Chain Bridge', desc: 'Transfer assets to another network', icon: <Globe className="text-blue-400" size={24} />, color: 'bg-blue-500/20' };
+            case 'bridge': return { title: 'Cross-Chain Bridge', desc: 'Transfer assets to another network', icon: <Globe className="text-emerald-400" size={24} />, color: 'bg-[#25D366]/20' };
             case 'private': return { title: 'Private Transfer', desc: 'Obfuscated transaction route', icon: <Shield className="text-emerald-400" size={24} />, color: 'bg-emerald-500/20' };
             case 'contact': return { title: 'Send to Contact', desc: 'Select from verified directory', icon: <User className="text-orange-400" size={24} />, color: 'bg-orange-500/20' };
             default: return { title: 'Send Asset', desc: 'Transfer Crypto securely', icon: <Send className="text-purple-400" size={24} />, color: 'bg-purple-500/20' };
@@ -268,7 +268,7 @@ export default function SendModal({ isOpen, onClose, userAddress, chainId = 1, i
                                     </div>
                                 )}
 
-                                <button onClick={handleSend} disabled={loading || !recipientAddress || !amount} className="w-full py-5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl font-black text-white text-lg transition-all shadow-lg hover:shadow-purple-500/25 flex items-center justify-center gap-3">
+                                <button onClick={handleSend} disabled={loading || !recipientAddress || !amount} className="w-full py-5 bg-gradient-to-r from-purple-600 to-emerald-600 hover:from-purple-500 hover:to-[#25D366] disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl font-black text-white text-lg transition-all shadow-lg hover:shadow-purple-500/25 flex items-center justify-center gap-3">
                                     {loading ? <><Loader2 className="animate-spin" size={24} /> Processing...</> : <><Send size={24} /> Send {selectedToken?.symbol || 'Asset'}</>}
                                 </button>
                             </>
@@ -279,4 +279,5 @@ export default function SendModal({ isOpen, onClose, userAddress, chainId = 1, i
         </AnimatePresence>
     );
 }
+
 

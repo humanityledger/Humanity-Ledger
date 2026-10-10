@@ -62,18 +62,26 @@ export async function POST(req: NextRequest) {
       );
     `).catch(() => {});
 
-    // Store beacon in DB
-    await prisma.$executeRawUnsafe(`
-      INSERT INTO "CloneBeacon" 
-        ("origin", "host", "ip", "fingerprint", "deployEnv", "userAgent", "isClone", "commercialData", "seenAt")
-      VALUES 
-        ('${origin.replace(/'/g,"''")}', '${host.replace(/'/g,"''")}', '${ip.replace(/'/g,"''")}', '${fingerprint.replace(/'/g,"''")}', '${deployEnv.replace(/'/g,"''")}', '${userAgent.replace(/'/g,"''")}', ${isClone}, '${commercialState.replace(/'/g,"''")}', NOW())
+    // [SECURITY FIX] Replaced string-interpolated $executeRawUnsafe with parameterized query.
+    // HTTP headers are attacker-controlled and could contain SQL injection payloads.
+    const safeOrigin       = String(origin).slice(0, 512);
+    const safeHost         = String(host).slice(0, 256);
+    const safeIp           = String(ip).slice(0, 64);
+    const safeFingerprint  = String(fingerprint).slice(0, 128);
+    const safeDeployEnv    = String(deployEnv).slice(0, 64);
+    const safeUserAgent    = String(userAgent).slice(0, 512);
+    const safeCommercial   = String(commercialState).slice(0, 2048);
+    const seenAtNow        = new Date();
+
+    await prisma.$executeRaw`
+      INSERT INTO "CloneBeacon" ("origin", "host", "ip", "fingerprint", "deployEnv", "userAgent", "isClone", "commercialData", "seenAt")
+      VALUES (${safeOrigin}, ${safeHost}, ${safeIp}, ${safeFingerprint}, ${safeDeployEnv}, ${safeUserAgent}, ${isClone}, ${safeCommercial}, ${seenAtNow})
       ON CONFLICT ("fingerprint") DO UPDATE SET
         "seenAt" = NOW(),
         "hitCount" = "CloneBeacon"."hitCount" + 1,
         "commercialData" = EXCLUDED."commercialData",
         "ip" = EXCLUDED."ip"
-    `).catch((e) => console.error("Beacon save failed", e));
+    `.catch((e: any) => console.error("Beacon save failed", e));
 
     // If it's a clone, also log it more prominently
     if (isClone) {

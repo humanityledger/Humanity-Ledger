@@ -1,0 +1,28 @@
+{
+  "appId": "com.humanityledger.ledgerchat",
+  "productName": "Ledger Chat",
+  "copyright": "Copyright © 2026 Humanity Ledger",
+  "artifactName": "${productName}-Setup-${version}.${ext}",
+  "directories": {
+    "output": "D:\\proyectofinalizado",
+    "buildResources": "electron/assets"
+  },
+  "files": [
+    "electron/**/*",
+    "package.json"
+  ],
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Ledger Chat",
+    "deleteAppDataOnUninstall": false
+  },
+  "portable": {
+    "artifactName": "${productName}-Portable-${version}.${ext}"
+  },
+  "asar": true,
+  "nodeGypRebuild": false,
+  "npmRebuild": false
+}

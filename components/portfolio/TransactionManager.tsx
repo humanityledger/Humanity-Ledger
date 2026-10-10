@@ -111,7 +111,7 @@ export function TransactionManagerView({ onBack }: { onBack: () => void }) {
                     </div>
                     <div className="border border-black/10 p-5 bg-[#FAFAFA]">
                         <div className="text-[9px] uppercase font-bold text-black/40 mb-1">Pending Mempool Nonce</div>
-                        <div className="text-3xl font-light text-blue-600">{nonceState?.pending ?? '-'}</div>
+                        <div className="text-3xl font-light text-emerald-600">{nonceState?.pending ?? '-'}</div>
                     </div>
                 </div>
 
@@ -122,7 +122,7 @@ export function TransactionManagerView({ onBack }: { onBack: () => void }) {
                             <div key={currentNonce} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border border-black/10 bg-white hover:border-black/30 transition-colors gap-4 shadow-sm">
                                 <div className="flex flex-col gap-1">
                                     <span className="text-[11px] font-bold uppercase tracking-widest text-black flex items-center gap-2">
-                                        <div className="w-2 h-2 bg-blue-500 animate-pulse" />
+                                        <div className="w-2 h-2 bg-[#25D366] animate-pulse" />
                                         PENDING TRANSACTION
                                     </span>
                                     <span className="text-[10px] font-bold text-black/50">Network Nonce: {currentNonce}</span>
@@ -139,7 +139,7 @@ export function TransactionManagerView({ onBack }: { onBack: () => void }) {
                                     <button 
                                         onClick={() => handleSpeedUp(currentNonce)}
                                         disabled={isExecuting !== null}
-                                        className="px-4 py-2 bg-[#FAFAFA] border border-black/10 hover:border-black text-[9px] font-black uppercase tracking-widest text-blue-600 hover:bg-black hover:text-white transition-all disabled:opacity-30 flex items-center gap-2"
+                                        className="px-4 py-2 bg-[#FAFAFA] border border-black/10 hover:border-black text-[9px] font-black uppercase tracking-widest text-emerald-600 hover:bg-black hover:text-white transition-all disabled:opacity-30 flex items-center gap-2"
                                     >
                                         {isExecuting?.type === 'speedup' && isExecuting?.nonce === currentNonce ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
                                         SPEED UP
@@ -160,3 +160,4 @@ export function TransactionManagerView({ onBack }: { onBack: () => void }) {
         </motion.div>
     );
 }
+

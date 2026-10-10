@@ -474,7 +474,7 @@ export function PortfolioAdvancedSettings({ isOpen, onClose, userAddress }: Port
                             {activeTab === 'experimental' && (
                                 <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     <div>
-                                        <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">Experimental</h3>
+                                        <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 bg-gradient-to-r from-purple-600 to-[#25D366] bg-clip-text text-transparent">Experimental</h3>
                                         <p className="text-xs font-mono" style={{ color: MUTED }}>Advanced protocol features under active development. Enable with caution in production environments.</p>
                                     </div>
 
@@ -579,3 +579,4 @@ function ContactRow({ name, address, onCopy, onRemove }: { name: string; address
         </div>
     );
 }
+

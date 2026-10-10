@@ -51,7 +51,7 @@ export default function SwapModal({ isOpen, onClose, userAddress = '', chainId =
                                  </div>
                              )}
                              {initialMode === 'dca' && (
-                                 <div className="flex items-center gap-2 mb-4 px-4 py-2 bg-blue-100 rounded-xl border border-blue-200 text-blue-700">
+                                 <div className="flex items-center gap-2 mb-4 px-4 py-2 bg-emerald-100 rounded-xl border border-emerald-200 text-emerald-700">
                                      <Repeat size={16} />
                                      <span className="text-xs font-black uppercase tracking-widest">DCA Strategy</span>
                                  </div>
@@ -79,5 +79,6 @@ export default function SwapModal({ isOpen, onClose, userAddress = '', chainId =
         </AnimatePresence>
     );
 }
+
 
 

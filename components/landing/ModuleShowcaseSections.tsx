@@ -165,7 +165,7 @@ function ForumShowcase() {
 function DevelopersShowcase() {
   return (
     <section id="module-developers" className="w-full bg-[#000000] border-t border-white/10 py-24 md:py-32 relative overflow-hidden">
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-900/10 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-emerald-900/10 blur-[150px] rounded-full pointer-events-none" />
       <div className="w-full max-w-[1200px] mx-auto px-6 relative z-10">
         <InViewSection>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
@@ -181,7 +181,7 @@ function DevelopersShowcase() {
                 <div><span className="text-purple-400">import</span> <span className="text-yellow-200">{'{ AztecTerminal }'}</span> <span className="text-purple-400">from</span> <span className="text-green-300">{'@ledger-network/aztec'}</span><span className="text-white/40">;</span></div>
                 <div className="mt-2"><span className="text-purple-400">const</span> <span className="text-white">terminal</span> <span className="text-purple-400">{'='}</span> <span className="text-purple-400">new</span> <span className="text-yellow-200">AztecTerminal()</span><span className="text-white/40">;</span></div>
                 <div className="mt-5 text-white/40">{"// Execute Noir circuit with maximum privacy"}</div>
-                <div><span className="text-purple-400">await</span> <span className="text-white">terminal.</span><span className="text-blue-300">executeShielded</span><span className="text-white/40">({'{'}</span></div>
+                <div><span className="text-purple-400">await</span> <span className="text-white">terminal.</span><span className="text-emerald-300">executeShielded</span><span className="text-white/40">({'{'}</span></div>
                 <div className="pl-4"><span className="text-white/80">privacy_mode:</span> <span className="text-green-300">"MAXIMUM"</span><span className="text-white/40">,</span></div>
                 <div className="pl-4"><span className="text-white/80">circuit:</span> <span className="text-green-300">"noir_identity_proof"</span><span className="text-white/40">,</span></div>
                 <div className="pl-4"><span className="text-white/80">pxe_target:</span> <span className="text-green-300">"localhost:8080"</span></div>
@@ -663,3 +663,4 @@ export function ModuleShowcaseSections() {
     </div>
   );
 }
+

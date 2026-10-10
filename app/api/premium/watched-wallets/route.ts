@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
     console.error('[POST-WATCH-ERROR]', error);
     return NextResponse.json({ 
         error: 'Grid Resilience Active', 
-        details: error.message || 'The blockchain data was discovered, but the database synchronization failed. Your view is live but changes may not persist.',
+        details: 'Error details redacted' || 'The blockchain data was discovered, but the database synchronization failed. Your view is live but changes may not persist.',
         syncStatus: 'FAILED'
     }, { status: 500 });
   }
@@ -314,7 +314,7 @@ export async function DELETE(req: NextRequest) {
     // Return detailed error for debugging
     return NextResponse.json({ 
       error: 'Failed to delete wallet',
-      details: error.message,
+      details: 'Error details redacted',
       code: error.code,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 });

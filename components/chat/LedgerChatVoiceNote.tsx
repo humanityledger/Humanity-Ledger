@@ -167,7 +167,7 @@ export function LedgerChatVoiceNote({ onSend, onCancel }: LedgerChatVoiceNotePro
         {waveform.map((h, i) => (
           <div
             key={i}
-            className="flex-1 rounded-full bg-[#1c7aff] transition-all duration-75"
+            className="flex-1 rounded-full bg-[#25D366] transition-all duration-75"
             style={{ height: `${h}px`, minWidth: 2 }}
           />
         ))}

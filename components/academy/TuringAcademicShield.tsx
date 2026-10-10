@@ -174,7 +174,7 @@ export function TuringAcademicShield() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-gray-200 pb-8 relative">
         <div className="space-y-3 max-w-2xl">
           <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900">
-            {t('heroTitle').replace('Academic', '')} <span className="text-blue-600">Academic</span>
+            {t('heroTitle').replace('Academic', '')} <span className="text-emerald-600">Academic</span>
           </h2>
           <h3 className="text-lg md:text-xl font-medium text-gray-600 tracking-wide">
             {t('heroSubtitle')}
@@ -202,7 +202,7 @@ export function TuringAcademicShield() {
                   key={l}
                   onClick={() => { setLang(l); setShowLangMenu(false); }}
                   className={`w-full text-left px-4 py-3 text-sm transition-colors hover:bg-gray-50
-                    ${lang === l ? 'font-bold text-blue-600 bg-blue-50/50' : 'font-medium text-gray-700'}`}
+                    ${lang === l ? 'font-bold text-emerald-600 bg-emerald-50/50' : 'font-medium text-gray-700'}`}
                 >
                   {l === 'en' && 'English'}
                   {l === 'es' && 'Español'}
@@ -240,18 +240,18 @@ export function TuringAcademicShield() {
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
                 className={`border-2 border-dashed rounded-2xl p-8 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center gap-4
-                  ${isDragging ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50/50'}`}
+                  ${isDragging ? 'border-[#25D366] bg-emerald-50 scale-[1.02]' : 'border-gray-200 hover:border-emerald-300 hover:bg-gray-50/50'}`}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors duration-300 ${isDragging ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                  <Upload size={24} className={isDragging ? 'text-blue-600' : 'text-gray-400'} />
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors duration-300 ${isDragging ? 'bg-emerald-100' : 'bg-gray-100'}`}>
+                  <Upload size={24} className={isDragging ? 'text-emerald-600' : 'text-gray-400'} />
                 </div>
                 <div className="text-center">
                   <p className="text-gray-900 font-bold text-base">{t('dropzoneTitle')}</p>
                   <p className="text-gray-500 text-xs mt-1.5">{t('dropzoneSub')}</p>
                 </div>
                 {fileName && (
-                  <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-4 py-1.5 text-blue-700 text-sm font-medium mt-2">
+                  <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-full px-4 py-1.5 text-emerald-700 text-sm font-medium mt-2">
                     <FileText size={14} />
                     {fileName}
                   </div>
@@ -272,7 +272,7 @@ export function TuringAcademicShield() {
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder={t('textareaPlaceholder')}
-                  className="w-full h-48 bg-white border border-gray-200 rounded-2xl p-5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 resize-none text-sm transition-all shadow-inner"
+                  className="w-full h-48 bg-white border border-gray-200 rounded-2xl p-5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#25D366]/10 focus:border-emerald-400 resize-none text-sm transition-all shadow-inner"
                 />
                 {text && (
                   <div className="absolute bottom-4 right-4 text-xs font-semibold text-gray-400 bg-white px-2 py-1 rounded-md border border-gray-100 shadow-sm">
@@ -297,9 +297,9 @@ export function TuringAcademicShield() {
           {isProcessing && (
             <div className="flex flex-col items-center gap-12 py-10 max-w-2xl mx-auto">
               <div className="relative">
-                <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-20 rounded-full animate-pulse" />
+                <div className="absolute inset-0 bg-[#25D366] blur-2xl opacity-20 rounded-full animate-pulse" />
                 <div className="w-24 h-24 bg-white border border-gray-100 shadow-xl rounded-2xl flex items-center justify-center relative z-10">
-                  <Loader2 size={40} className="text-blue-600 animate-spin" />
+                  <Loader2 size={40} className="text-emerald-600 animate-spin" />
                 </div>
               </div>
 
@@ -309,11 +309,11 @@ export function TuringAcademicShield() {
                   const isActive = phase === key;
                   return (
                     <div key={key} className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300
-                      ${isActive ? 'bg-blue-50/50 border border-blue-100 scale-[1.02]' : isDone ? 'opacity-50' : 'opacity-30'}`}>
+                      ${isActive ? 'bg-emerald-50/50 border border-emerald-100 scale-[1.02]' : isDone ? 'opacity-50' : 'opacity-30'}`}>
                       <div className="shrink-0 w-6 h-6 flex items-center justify-center">
-                        {isDone ? <Check size={18} className="text-emerald-500" /> : isActive ? <Loader2 size={16} className="text-blue-600 animate-spin" /> : <div className="w-2 h-2 rounded-full bg-gray-300" />}
+                        {isDone ? <Check size={18} className="text-emerald-500" /> : isActive ? <Loader2 size={16} className="text-emerald-600 animate-spin" /> : <div className="w-2 h-2 rounded-full bg-gray-300" />}
                       </div>
-                      <span className={`text-sm font-semibold tracking-wide ${isActive ? 'text-blue-900' : 'text-gray-600'}`}>
+                      <span className={`text-sm font-semibold tracking-wide ${isActive ? 'text-emerald-900' : 'text-gray-600'}`}>
                         {t(`phase_${key}` as keyof typeof turingTranslations['es'])}
                       </span>
                     </div>
@@ -328,7 +328,7 @@ export function TuringAcademicShield() {
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-blue-600 transition-all duration-500 ease-out"
+                    className="h-full bg-emerald-600 transition-all duration-500 ease-out"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -391,7 +391,7 @@ export function TuringAcademicShield() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {[
                   { label: t('metricIntegrity'), value: `${(result.documentIntegrityScore * 100).toFixed(1)}%`, color: 'text-gray-900', sub: t('metricIntegritySub') },
-                  { label: t('metricAIProb'), value: `${(result.aiProbability * 100).toFixed(1)}%`, color: result.aiProbability > 0.5 ? 'text-red-600' : 'text-blue-600', sub: t(`ai_${result.aiVerdict}` as keyof typeof turingTranslations['es']) },
+                  { label: t('metricAIProb'), value: `${(result.aiProbability * 100).toFixed(1)}%`, color: result.aiProbability > 0.5 ? 'text-red-600' : 'text-emerald-600', sub: t(`ai_${result.aiVerdict}` as keyof typeof turingTranslations['es']) },
                   { label: t('metricEntropy'), value: result.shannonEntropy, color: 'text-gray-800', sub: t('metricEntropySub') },
                   { label: t('metricBurstiness'), value: result.burstinessScore, color: 'text-gray-800', sub: t('metricBurstinessSub') },
                   { label: t('metricLexical'), value: result.stylometrics.ttr, color: 'text-gray-800', sub: t('metricLexicalSub') },
@@ -430,11 +430,11 @@ export function TuringAcademicShield() {
 
               {/* ZK Commitment - Minimalist Premium */}
               <div className="bg-gray-900 rounded-[20px] p-6 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#25D366]/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/3 pointer-events-none" />
                 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10 mb-4">
                   <div className="flex items-center gap-2">
-                    <Lock size={16} className="text-blue-400" />
+                    <Lock size={16} className="text-emerald-400" />
                     <span className="text-sm font-bold text-white tracking-wide">{t('zkTitle')}</span>
                   </div>
                   <button
@@ -446,7 +446,7 @@ export function TuringAcademicShield() {
                 </div>
                 
                 <div className="bg-black/50 border border-white/10 rounded-xl p-4 mb-3 relative z-10">
-                  <p className="text-sm text-blue-300 font-mono break-all leading-relaxed">{result.zkCommitment}</p>
+                  <p className="text-sm text-emerald-300 font-mono break-all leading-relaxed">{result.zkCommitment}</p>
                 </div>
                 
                 <div className="flex justify-between text-xs font-semibold text-gray-500 relative z-10 uppercase tracking-wider">
@@ -474,7 +474,7 @@ export function TuringAcademicShield() {
           { title: t('usp3Title'), desc: t('usp3Desc') },
         ].map((block, i) => (
           <div key={i} className="flex flex-col gap-3">
-            <h4 className="text-gray-900 font-black text-lg tracking-tight border-b-2 border-blue-600 inline-block w-max pb-1 mb-1">
+            <h4 className="text-gray-900 font-black text-lg tracking-tight border-b-2 border-emerald-600 inline-block w-max pb-1 mb-1">
               {block.title}
             </h4>
             <p className="text-gray-500 text-sm leading-relaxed font-medium">
@@ -487,3 +487,4 @@ export function TuringAcademicShield() {
     </div>
   );
 }
+

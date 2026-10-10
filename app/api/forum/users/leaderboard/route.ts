@@ -44,6 +44,6 @@ export async function GET() {
         return NextResponse.json({ success: true, users: rankedUsers });
     } catch (e: any) {
         console.warn("[Leaderboard GET Error]:", e.message);
-        return NextResponse.json({ success: false, users: [], error: e.message });
+        return NextResponse.json({ success: false, users: [], error: 'Internal Server Error' });
     }
 }

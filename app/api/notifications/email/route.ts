@@ -9,8 +9,8 @@ import { safeToFixed, safeToLocaleString } from '@/lib/utils/number-format';
 
 // Initialize Resend with a dummy key if missing to prevent build crash
 // In production, the key must be present for emails to work.
-const apiKey = process.env.RESEND_API_KEY || 're_123456789'; 
-const resend = new Resend(apiKey);
+const apiKey = process.env.RESEND_API_KEY as string; 
+const resend = new Resend(apiKey || 're_dummy_key_for_build_time');
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Failed to send email',
-        details: error.message,
+        details: 'Error details redacted',
       },
       { status: 500 }
     );

@@ -99,6 +99,6 @@ export async function POST(req: Request) {
         });
     } catch (e: any) {
         console.error("Deep Engine Failure:", e);
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

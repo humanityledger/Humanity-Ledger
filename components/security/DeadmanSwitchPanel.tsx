@@ -237,15 +237,15 @@ export function DeadmanSwitchPanel() {
 
             {/* Pending Backup Change Banner */}
             {status.pendingBackup && status.pendingBackup !== "0x0000000000000000000000000000000000000000" && (
-              <div className="bg-blue-950/30 border border-blue-700/40 rounded-2xl px-5 py-4 space-y-3">
-                <p className="text-blue-300 text-xs font-bold uppercase tracking-widest">Pending Backup Change</p>
-                <p className="text-blue-400 text-[11px] font-mono">{status.pendingBackup}</p>
-                <p className="text-blue-500 text-[10px]">Becomes effective: {unixToDate(status.pendingBackupTime)}</p>
+              <div className="bg-blue-950/30 border border-emerald-700/40 rounded-2xl px-5 py-4 space-y-3">
+                <p className="text-emerald-300 text-xs font-bold uppercase tracking-widest">Pending Backup Change</p>
+                <p className="text-emerald-400 text-[11px] font-mono">{status.pendingBackup}</p>
+                <p className="text-[#25D366] text-[10px]">Becomes effective: {unixToDate(status.pendingBackupTime)}</p>
                 {Number(status.pendingBackupTime) * 1000 < Date.now() && (
                   <button
                     disabled={!!txPending}
                     onClick={() => exec("Confirm Backup Wallet", confirmBackup)}
-                    className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors disabled:opacity-50"
                   >
                     {txPending === "Confirm Backup Wallet" ? <Loader2 size={14} className="animate-spin" /> : "Confirm Now"}
                   </button>
@@ -363,3 +363,4 @@ export function DeadmanSwitchPanel() {
     </div>
   );
 }
+

@@ -401,7 +401,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Already claimed.' }, { status: 409 });
     }
     return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
+      { error: 'Internal Server Error' },
       { status: 500 }
     );
   }

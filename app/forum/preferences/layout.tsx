@@ -57,7 +57,7 @@ export default function PreferencesLayout({ children }: { children: React.ReactN
                   href={t.href}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${
                     isActive 
-                      ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' 
+                      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' 
                       : 'text-black/60 hover:bg-black/5 hover:text-black dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white'
                   }`}
                 >
@@ -83,3 +83,4 @@ const Activity = ({ size }: { size: number }) => (
     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
   </svg>
 );
+

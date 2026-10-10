@@ -20,9 +20,7 @@ async function resolveCallerAddress(req: NextRequest): Promise<string | null> {
   if (verified) return verified.toLowerCase();
   const session = await getSession();
   if (session?.userId) return session.userId.toLowerCase();
-  const web3 = req.headers.get('x-web3-address');
-  if (web3) return web3.toLowerCase();
-  return null;
+  return null; // Spoofing vector closed
 }
 
 

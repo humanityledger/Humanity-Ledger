@@ -372,8 +372,16 @@ model ChatContactRequest {
   @@index([fromAddress, status])
 }
 
-// Removed: PendingChatMessage (Centralized Offline Queue)
+model PendingChatMessage {
+  id          String   @id @default(uuid())
+  sender      String
+  recipient   String
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
 
+  @@index([recipient])
+  @@index([sender])
+}
 model ExchangePosition {
   id            String   @id @default(uuid())
   userId        String
@@ -1611,6 +1619,8 @@ model Community {
   createdAt   DateTime @default(now())
   
   members     CommunityMember[]
+  channels    CommunityChannel[]
+  permissions CommunityPermission?
   // messages CommunityMessage[]
 
   @@index([joinCode])
@@ -1658,10 +1668,98 @@ model CommunityPost {
   communityId    String
   authorAddress  String
   content        String   // ENCRYPTED CIPHERTEXT (AES-256-GCM or MLS payload)
+  title          String?
   contentHtml    String?  // ENCRYPTED HTML CIPHERTEXT
   likes          Int      @default(0)
   createdAt      DateTime @default(now())
   
   @@index([communityId])
   @@index([authorAddress])
+}
+
+
+// Login Geo Events - GDPR compliant (no raw IP, only hashed + country)
+model LoginGeoEvent {
+  id            String   @id @default(uuid())
+  userId        String?
+  ipHash        String
+  countryCode   String   @default("XX")
+  countryName   String   @default("Unknown")
+  region        String?
+  city          String?
+  latitude      Float?
+  longitude     Float?
+  asn           String?
+  sessionType   String   @default("UNKNOWN")
+  authMethod    String   @default("UNKNOWN")
+  deviceType    String?
+  wasSuccessful Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([countryCode])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMMUNITIES (Feature #3 — Ledger Chat's core differentiator)
+
+
+model CommunityChannel {
+  id          String   @id @default(cuid())
+  communityId String
+  name        String
+  description String?
+  isPaid      Boolean  @default(false)
+  price       Float?
+  currency    String?  // 'ETH', 'USDC'
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@index([communityId])
+}
+
+model CommunityPermission {
+  id              String   @id @default(cuid())
+  communityId     String   @unique
+  sendMessages    Boolean  @default(true)
+  sendMedia       Boolean  @default(true)
+  sendStickers    Boolean  @default(true)
+  sendPolls       Boolean  @default(true)
+  embedLinks      Boolean  @default(true)
+  addUsers        Boolean  @default(false)
+  pinMessages     Boolean  @default(false)
+  changeInfo      Boolean  @default(false)
+  slowModeSeconds Int      @default(0)
+  antiSpam        Boolean  @default(false)
+
+  community       Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+}
+
+model PushSubscription {
+  id            String   @id @default(uuid())
+  walletAddress String   @unique
+  endpoint      String   @db.Text
+  p256dh        String
+  auth          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([walletAddress])
+}
+
+
+model DirectMessage {
+  id          String   @id @default(uuid())
+  sender      String
+  recipient   String
+  content     String   @db.Text
+  delivered   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  deliveredAt DateTime?
+
+  @@index([recipient, delivered])
+  @@index([sender])
 }

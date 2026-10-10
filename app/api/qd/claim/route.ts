@@ -1,29 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
 async function resolveCaller(req: NextRequest) {
-  const verified = req.headers.get('x-verified-session-address');
-  if (verified) return verified.toLowerCase();
+  // [SECURITY] Session cookie is the authoritative identity source.
+  // The x-verified-session-address header is injected by middleware from the JWT,
+  // which is itself derived from the session cookie, so it is also trustworthy
+  // in the context where middleware has run. We prefer the session cookie as primary.
   const session = await getSession();
   if (session?.userId) return session.userId.toLowerCase();
-  return req.headers.get('x-web3-address')?.toLowerCase();
+  // Middleware-verified header as fallback (still JWT-backed)
+  const verified = req.headers.get('x-verified-session-address');
+  if (verified) return verified.toLowerCase();
+  return null;
 }
 
 /**
  * POST /api/qd/claim
  * Allows a user to claim 100 QDs once per 24 hours. (Anti-sybil LC-267)
+ * [SECURITY FIX] Replaced $executeRawUnsafe + string interpolation (SQL Injection risk)
+ * with parameterized $queryRaw and $executeRaw template literals.
  */
 export async function POST(req: NextRequest) {
   try {
     const caller = await resolveCaller(req);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const callerSafe = caller.replace(/'/g, "''");
-
-    // Auto-heal table
+    // Auto-heal table (DDL is not injectable)
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "QDCreditLedger" (
         "id" TEXT NOT NULL,
@@ -40,12 +46,12 @@ export async function POST(req: NextRequest) {
       );
     `).catch(() => {});
 
-    // Check last claim
-    const lastClaims = await prisma.$queryRawUnsafe(`
-      SELECT "createdAt" FROM "QDCreditLedger" 
-      WHERE "address" = '${callerSafe}' AND "reason" = 'claim_daily'
+    // Check last claim — PARAMETERIZED
+    const lastClaims = await prisma.$queryRaw`
+      SELECT "createdAt" FROM "QDCreditLedger"
+      WHERE "address" = ${caller} AND "reason" = 'claim_daily'
       ORDER BY "createdAt" DESC LIMIT 1
-    `) as any[];
+    ` as any[];
 
     if (lastClaims.length > 0) {
       const lastClaimTime = new Date(lastClaims[0].createdAt).getTime();
@@ -56,17 +62,18 @@ export async function POST(req: NextRequest) {
     }
 
     const txRef = 'claim_' + Date.now();
-    const dateStr = new Date().toISOString();
+    const newId = crypto.randomUUID();
+    const now = new Date();
 
-    // Credit receiver
-    await prisma.$executeRawUnsafe(`
+    // Credit receiver — PARAMETERIZED
+    await prisma.$executeRaw`
       INSERT INTO "QDCreditLedger" ("id", "address", "delta", "direction", "reason", "counterparty", "txRef", "idempotencyKey", "createdAt")
-      VALUES ('${crypto.randomUUID()}', '${callerSafe}', 100, 'IN', 'claim_daily', 'system', '${txRef}', '${txRef}', '${dateStr}')
-    `);
+      VALUES (${newId}, ${caller}, ${100}::float8, 'IN', 'claim_daily', 'system', ${txRef}, ${txRef}, ${now})
+    `;
 
     return NextResponse.json({ success: true, amount: 100 });
   } catch (error: any) {
     console.error('[Claim API]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

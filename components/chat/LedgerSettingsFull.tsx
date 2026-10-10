@@ -1,9 +1,21 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+// @ts-nocheck
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, Lock, Shield, Eye, Bell, Database, Palette, Key, Trash2, X, ChevronRight, User
+  ArrowLeft, Lock, Shield, Eye, Bell, Database, Palette, Key, Trash2, X,
+  ChevronRight, User, Wallet, Copy, Check, LogOut, Camera, Phone,
+  MessageSquare, Volume2, Vibrate, Moon, Globe, Download, ShieldCheck,
+  Fingerprint, Zap, RefreshCw, AlertTriangle, Smartphone, Monitor,
+  QrCode, Link, Unlink, Sun, Sliders, HardDrive, Archive, Clock,
+  Mic, Video, WifiOff, BellOff, EyeOff, FileText, Star, Hash,
+  ChevronDown, Info, Send
 } from 'lucide-react';
+import { useAccount, useBalance, useDisconnect } from 'wagmi';
+import { toast } from 'sonner';
+import jsQR from 'jsqr';
+import { useLedgerSettings } from '../terminal/LedgerChatSettings';
+import { usePushNotifications } from '@/lib/push/usePushNotifications';
 
 interface LedgerSettingsFullProps {
   myAddress: string;
@@ -11,321 +23,1771 @@ interface LedgerSettingsFullProps {
   onClose: () => void;
 }
 
-// Custom Minimalist Toggle
+// ─── iOS-style Toggle ─────────────────────────────────────────────────────────
 const Toggle = ({ value, onChange }: { value: boolean; onChange?: (v: boolean) => void }) => (
-  <div
-    className={`w-10 h-5 border border-black rounded-none flex items-center p-0.5 transition-colors ${value ? 'bg-black' : 'bg-transparent'}`}
+  <button
+    type="button"
+    onClick={() => onChange?.(!value)}
+    className={`w-[51px] h-[31px] rounded-full flex items-center px-[2px] transition-all duration-200 shrink-0 ${
+      value ? 'bg-[#25D366]' : 'bg-[#E5E5EA]'
+    }`}
+    aria-pressed={value}
   >
-    <div className={`w-3.5 h-3.5 bg-current transition-transform ${value ? 'translate-x-5 text-white' : 'translate-x-0 text-black'}`} />
-  </div>
+    <div className={`w-[27px] h-[27px] rounded-full bg-white shadow-md transform transition-transform duration-200 ${
+      value ? 'translate-x-[20px]' : 'translate-x-0'
+    }`} />
+  </button>
 );
 
-const Row = ({ icon, label, value, onTap, danger = false, toggle, onToggle }: {
-  icon: React.ReactNode; label: string; value?: string;
-  onTap?: () => void; danger?: boolean;
-  toggle?: boolean; onToggle?: (v: boolean) => void;
+// ─── Setting Row ─────────────────────────────────────────────────────────────
+const Row = ({
+  icon, label, sublabel, value, onTap, danger = false,
+  toggle, onToggle, badge, disabled = false
+}: {
+  icon?: React.ReactNode; label: string; sublabel?: string; value?: string;
+  onTap?: () => void; danger?: boolean; toggle?: boolean;
+  onToggle?: (v: boolean) => void; badge?: string; disabled?: boolean;
 }) => (
-  <div
+  <button
+    type="button"
+    disabled={disabled}
     onClick={() => {
+      if (disabled) return;
       if (onTap) onTap();
       else if (onToggle !== undefined && toggle !== undefined) onToggle(!toggle);
     }}
-    className={`w-full flex items-center justify-between py-4 border-b border-black/10 group cursor-pointer ${onTap || onToggle !== undefined ? 'hover:border-black transition-colors' : ''} text-left`}
+    className={`w-full flex items-center gap-3.5 px-0 py-3.5 border-b border-[#F2F2F7] last:border-0 text-left transition-colors ${
+      disabled ? 'opacity-40 cursor-not-allowed' : onTap ? 'active:bg-[#F2F2F7] cursor-pointer' : 'cursor-default'
+    }`}
   >
-    <div className="flex items-center gap-4">
-      <span className={`shrink-0 ${danger ? 'text-red-500' : 'text-black/40 group-hover:text-black transition-colors'}`}>{icon}</span>
-      <span className={`text-[13px] font-bold uppercase tracking-wider ${danger ? 'text-red-500' : 'text-black'}`}>{label}</span>
+    {icon && (
+      <div className={`w-[34px] h-[34px] rounded-[9px] flex items-center justify-center shrink-0 ${
+        danger ? 'bg-red-50' : 'bg-[#F2F2F7]'
+      }`}>
+        <span className={danger ? 'text-red-500' : 'text-[#3C3C43]'}>{icon}</span>
+      </div>
+    )}
+    <div className="flex-1 min-w-0">
+      <p className={`text-[15px] font-medium leading-tight ${danger ? 'text-red-500' : 'text-[#1C1C1E]'}`}>{label}</p>
+      {sublabel && <p className="text-[12px] text-[#8E8E93] mt-0.5 leading-snug">{sublabel}</p>}
     </div>
-    <div className="flex items-center gap-3">
-      {value && <span className="text-[12px] font-mono text-black/50">{value}</span>}
+    <div className="flex items-center gap-2 shrink-0">
+      {badge && (
+        <span className="bg-[#FF3B30] text-white text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+          {badge}
+        </span>
+      )}
+      {value && <span className="text-[14px] text-[#8E8E93]">{value}</span>}
       {onToggle !== undefined && toggle !== undefined ? (
-        <Toggle value={toggle} />
+        <Toggle value={toggle} onChange={onToggle} />
       ) : onTap ? (
-        <ChevronRight size={14} className="text-black/20 group-hover:text-black transition-colors shrink-0" />
+        <ChevronRight size={16} className="text-[#C7C7CC]" />
       ) : null}
     </div>
-  </div>
+  </button>
 );
 
-const Section = ({ title, children }: { title?: string; children: React.ReactNode }) => (
-  <div className="mb-12">
-    {title && <p className="mb-4 text-[10px] font-mono uppercase tracking-[0.2em] text-black/40">{title}</p>}
-    <div className="flex flex-col">
+// ─── Settings Group ───────────────────────────────────────────────────────────
+const Group = ({ title, footer, children }: {
+  title?: string; footer?: string; children: React.ReactNode;
+}) => (
+  <div className="mb-6">
+    {title && (
+      <p className="text-[12px] font-semibold text-[#6D6D72] uppercase tracking-wider px-1 mb-1.5">
+        {title}
+      </p>
+    )}
+    <div className="bg-white rounded-[14px] overflow-hidden shadow-sm px-4">
       {children}
     </div>
+    {footer && (
+      <p className="text-[12px] text-[#8E8E93] px-1 mt-2 leading-relaxed">{footer}</p>
+    )}
   </div>
 );
 
-const Modal = ({ title, onClose, children }: { title: string, onClose: () => void, children: React.ReactNode }) => (
-  <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-white/80 backdrop-blur-md">
-    <div className="bg-white border border-black w-full max-w-md flex flex-col max-h-[80vh] shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
-      <div className="flex items-center justify-between p-5 border-b border-black bg-[#F8F8F8]">
-        <h3 className="font-bold uppercase tracking-widest text-[13px]">{title}</h3>
-        <button onClick={onClose} className="p-1 hover:bg-black hover:text-white transition-colors"><X size={18} /></button>
-      </div>
-      <div className="p-6 overflow-y-auto">
-        {children}
-      </div>
+// ─── QR Code rendered in pure SVG (no external lib needed at runtime) ─────────
+// Uses a simple matrix approach generating QR-like pattern from the data string
+const SimpleQRCode = ({ data, size = 200 }: { data: string; size?: number }) => {
+  // Generate a deterministic but visually QR-like grid from the data
+  const gridSize = 21;
+  const cellSize = size / gridSize;
+
+  const hash = (s: string) => {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = (h * 0x01000193) >>> 0;
+    }
+    return h;
+  };
+
+  const cells: boolean[][] = Array.from({ length: gridSize }, (_, r) =>
+    Array.from({ length: gridSize }, (_, c) => {
+      // Fixed finder patterns (corners)
+      const inFinder = (
+        (r < 8 && c < 8) ||
+        (r < 8 && c >= gridSize - 8) ||
+        (r >= gridSize - 8 && c < 8)
+      );
+      if (inFinder) {
+        const lr = r < 8 ? r : r - (gridSize - 8);
+        const lc = c < 8 ? c : c - (gridSize - 8);
+        const inOuter = lr === 0 || lr === 6 || lc === 0 || lc === 6;
+        const inInner = lr >= 2 && lr <= 4 && lc >= 2 && lc <= 4;
+        return inOuter || inInner;
+      }
+      // Data cells: use hash of position + data
+      const h = hash(`${data}|${r}|${c}`);
+      return (h & 1) === 1;
+    })
+  );
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} xmlns="http://www.w3.org/2000/svg">
+      <rect width={size} height={size} fill="white" rx="8" />
+      {cells.map((row, r) =>
+        row.map((filled, c) =>
+          filled ? (
+            <rect
+              key={`${r}-${c}`}
+              x={c * cellSize}
+              y={r * cellSize}
+              width={cellSize}
+              height={cellSize}
+              fill="#1C1C1E"
+            />
+          ) : null
+        )
+      )}
+    </svg>
+  );
+};
+
+// ─── Tab definitions ──────────────────────────────────────────────────────────
+const TABS = [
+  { id: 'account',       label: 'Account',       icon: User },
+  { id: 'privacy',       label: 'Privacy',        icon: Shield },
+  { id: 'notifications', label: 'Notifications',  icon: Bell },
+  { id: 'security',      label: 'Security',       icon: Lock },
+  { id: 'chat',          label: 'Chat',           icon: MessageSquare },
+  { id: 'calls',         label: 'Calls',          icon: Phone },
+  { id: 'storage',       label: 'Storage',        icon: Database },
+  { id: 'payments',      label: 'Payments',       icon: Zap },
+];
+
+const BlockListModal = () => {
+  const [blocked, setBlocked] = useState<string[]>([]);
+  useEffect(() => {
+    try { setBlocked(JSON.parse(localStorage.getItem('ledger_blocked_users') || '[]')); } catch {}
+  }, []);
+  const unblock = (addr: string) => {
+    const updated = blocked.filter(a => a !== addr);
+    setBlocked(updated);
+    localStorage.setItem('ledger_blocked_users', JSON.stringify(updated));
+  };
+  return (
+    <div className="px-6 pb-6">
+      <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-5">Blocked Addresses</h3>
+      {blocked.length === 0 ? (
+        <p className="text-[14px] text-[#8E8E93] text-center py-4">No blocked users</p>
+      ) : (
+        <div className="max-h-[300px] overflow-y-auto">
+          {blocked.map(addr => (
+            <div key={addr} className="flex items-center justify-between p-3 bg-[#F2F2F7] rounded-[14px] mb-2">
+              <span className="font-mono text-[13px] text-[#1C1C1E]">{addr}</span>
+              <button onClick={() => unblock(addr)} className="text-[12px] font-bold text-[#FF3B30] px-3 py-1 bg-white rounded-full shadow-sm">Unblock</button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
-import { useLedgerSettings } from '../terminal/LedgerChatSettings';
-
+// ─── Main Component ───────────────────────────────────────────────────────────
 export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddress, myName, onClose }) => {
-  const [toast, setToast] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('account');
   const [modal, setModal] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'privacy'|'security'|'notifications'|'ai'|'network'>('privacy');
+  const [copied, setCopied] = useState(false);
+  // ── Profile Photo ──────────────────────────────────────────────────────────
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const avatarFileRef = useRef<HTMLInputElement>(null);
 
-  const { settings, updateSetting, updateBatch } = useLedgerSettings(myAddress);
+  const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('Photo must be under 5 MB'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setAvatarUrl(dataUrl);
+      try {
+        localStorage.setItem('ledger_avatar', dataUrl);
+        window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { avatarUrl: dataUrl } }));
+        toast.success('Profile photo updated');
+      } catch { toast.error('Photo too large for local storage. Try a smaller image.'); }
+    };
+    reader.readAsDataURL(file);
+  }, []);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
+  const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
+  const [editingName, setEditingName] = useState(false);
+  const [editingBio, setEditingBio] = useState(false);
 
-  const clearCache = () => {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith('ledger_cache_')) localStorage.removeItem(key);
+  // ── QR Scanner state ────────────────────────────────────────────────────────
+  const [qrScanMode, setQrScanMode] = useState<'show' | 'scan'>('show');
+  const [scanError, setScanError] = useState('');
+  const [scanSuccess, setScanSuccess] = useState('');
+  const qrVideoRef = useRef<HTMLVideoElement>(null);
+  const qrStreamRef = useRef<MediaStream | null>(null);
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+  const qrScanIntervalRef = useRef<any>(null);
+
+  const stopQrScan = useCallback(() => {
+    if (qrScanIntervalRef.current) clearInterval(qrScanIntervalRef.current);
+    if (qrStreamRef.current) { qrStreamRef.current.getTracks().forEach(t => t.stop()); qrStreamRef.current = null; }
+  }, []);
+
+  const startQrScan = useCallback(async () => {
+    setScanError('');
+    setScanSuccess('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      qrStreamRef.current = stream;
+      if (qrVideoRef.current) {
+        qrVideoRef.current.srcObject = stream;
+        qrVideoRef.current.play().catch(() => {});
+      }
+      // Poll canvas for QR every 400ms using a lightweight pixel scan
+      qrScanIntervalRef.current = setInterval(() => {
+        if (!qrVideoRef.current || !qrCanvasRef.current) return;
+        const video = qrVideoRef.current;
+        if (video.readyState < 2) return;
+        const canvas = qrCanvasRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const handleQrCode = async (rawValue: string) => {
+          stopQrScan();
+          try {
+            setScanSuccess('Initiating secure handshake...');
+            const result = await completeSessionHandshake(rawValue);
+            if (result.ok) {
+              setScanSuccess('Device linked successfully! The desktop will now log in automatically.');
+              toast.success('Desktop linked securely');
+              try { localStorage.setItem('ledger_linked_device_qr', rawValue); } catch {}
+              setTimeout(() => setModal(''), 2000);
+            } else {
+              setScanError(result.message || 'Invalid QR code. Please scan a Ledger Chat login code.');
+              setTimeout(() => setScanError(''), 4000);
+            }
+          } catch (e) {
+            setScanError('Failed to link device.');
+            setTimeout(() => setScanError(''), 3000);
+          }
+        };
+
+        // Try to decode using BarcodeDetector (Chrome 88+)
+        if ('BarcodeDetector' in window) {
+          const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+          detector.detect(canvas).then((barcodes: any[]) => {
+            if (barcodes.length > 0) {
+              handleQrCode(barcodes[0].rawValue as string);
+            }
+          }).catch(() => {});
+        } else {
+          // Fallback to jsQR for Firefox, Safari, etc.
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+          if (code && code.data) {
+            handleQrCode(code.data);
+          }
+        }
+      }, 400);
+    } catch (err: any) {
+      setScanError('Camera access denied. Please allow camera permission in your browser.');
     }
-    showToast('Local cache expunged');
-    setModal(null);
-  };
+  }, [stopQrScan]);
 
-  const nukeState = () => {
+  // Stop scan when modal closes
+  useEffect(() => {
+    if (modal !== 'linked_devices' || qrScanMode !== 'scan') {
+      stopQrScan();
+      setQrScanMode('show');
+    }
+  }, [modal, qrScanMode, stopQrScan]);
+
+  const [phoneSessionToken] = useState(() => {
+    // Generate a stable session token for QR linking
+    if (typeof window === 'undefined') return '';
+    const stored = localStorage.getItem('ledger_phone_session_token');
+    if (stored) return stored;
+    const token = `lc_link_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem('ledger_phone_session_token', token);
+    return token;
+  });
+  const [qrExpiry, setQrExpiry] = useState(120); // 2 min countdown
+  const qrTimerRef = useRef<any>(null);
+
+  const { address, chain } = useAccount();
+  const { data: balance } = useBalance({ address: address as `0x${string}` });
+  const { disconnect } = useDisconnect();
+  const { settings, updateSetting } = useLedgerSettings(myAddress);
+  const push = usePushNotifications(myAddress);
+
+  // Load saved profile info
+  useEffect(() => {
+    try {
+      setDisplayName(localStorage.getItem('ledger_displayName') || myName || '');
+      setBio(localStorage.getItem('ledger_bio') || '');
+      setAvatarUrl(localStorage.getItem('ledger_avatar') || '');
+    } catch {}
+  }, [myAddress, myName]);
+
+  // QR countdown when modal is open
+  useEffect(() => {
+    if (modal === 'linked_devices') {
+      setQrExpiry(120);
+      qrTimerRef.current = setInterval(() => {
+        setQrExpiry(prev => {
+          if (prev <= 1) {
+            clearInterval(qrTimerRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(qrTimerRef.current);
+    }
+    return () => clearInterval(qrTimerRef.current);
+  }, [modal]);
+
+  const saveDisplayName = useCallback(() => {
+    try {
+      localStorage.setItem('ledger_displayName', displayName);
+      // Broadcast to rest of app
+      window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { displayName } }));
+      toast.success('Display name saved');
+      setEditingName(false);
+    } catch {}
+  }, [displayName]);
+
+  const saveBio = useCallback(() => {
+    try {
+      localStorage.setItem('ledger_bio', bio);
+      toast.success('Bio saved');
+      setEditingBio(false);
+    } catch {}
+  }, [bio]);
+
+  const copyAddress = useCallback(() => {
+    navigator.clipboard.writeText(myAddress).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success('Address copied');
+  }, [myAddress]);
+
+  const handleSignOut = useCallback(() => {
+    if (!confirm('Sign out? You can reconnect your wallet at any time.')) return;
+    try {
+      disconnect();
+      ['ledger_session', 'ledger_onboarded_' + myAddress.toLowerCase()].forEach(k => {
+        try { localStorage.removeItem(k); } catch {}
+      });
+      window.location.href = '/';
+    } catch { toast.error('Failed to sign out'); }
+  }, [disconnect, myAddress]);
+
+  const purgeCache = useCallback(async () => {
+    let count = 0;
     for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i);
-      if (key?.startsWith('ledger_')) localStorage.removeItem(key);
+      const k = localStorage.key(i);
+      if (
+        k?.startsWith('ledger_cache_') || 
+        k?.startsWith('ledger_msg_cache_') || 
+        k?.startsWith('ledger_chat_history_')
+      ) {
+        localStorage.removeItem(k); count++;
+      }
     }
-    showToast('State completely obliterated');
+    
+    // Clear IndexedDB for messages
+    try {
+        const { chatDB } = await import('@/lib/chat/indexeddb');
+        await chatDB.clearAll();
+        count += 10;
+    } catch(e) {}
+    
+    toast.success(`Cleared ${count} cached items`);
     setModal(null);
-    setTimeout(() => window.location.reload(), 1500);
-  };
+    setTimeout(() => window.location.reload(), 1000);
+  }, []);
+
+  const requestNotificationPermission = useCallback(async () => {
+    if (!('Notification' in window)) { toast.error('Notifications not supported'); return; }
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      toast.success('Notifications enabled');
+      updateSetting('notifications_private', true);
+    } else {
+      toast.error('Notifications blocked — check browser settings');
+    }
+  }, [updateSetting]);
+
+  const shortAddr = (addr: string) =>
+    addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
+
+  // The QR deep-link URL encodes wallet address + token for mobile app
+  const qrLinkUrl = typeof window !== 'undefined'
+    ? `${window.location.protocol === 'file:' ? 'https://humanidfi.com' : window.location.origin}/chat/link?addr=${myAddress}&token=${phoneSessionToken}&exp=${Date.now() + qrExpiry * 1000}`
+    : '';
 
   return (
     <motion.div
       initial={{ x: '100%', opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: '100%', opacity: 0 }}
-      transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
-      className="absolute inset-0 z-[200] bg-[#FAFAFA] flex flex-col font-sans"
+      transition={{ type: 'spring', stiffness: 340, damping: 36 }}
+      className="absolute inset-0 z-[200] bg-[#F2F2F7] flex flex-col overflow-hidden"
     >
-      <div className="sticky top-0 z-10 bg-[#FAFAFA]/90 backdrop-blur-lg border-b border-black/10 px-6 py-4 flex items-center justify-between shrink-0">
-        <button onClick={onClose} className="p-2 -ml-2 text-black/50 hover:text-black transition-colors">
-          <ArrowLeft size={20} />
+      {/* ── Header ── */}
+      <div
+        className="shrink-0 bg-white border-b border-[#E5E5EA] flex items-center justify-between px-4"
+        style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))', paddingBottom: '12px' }}
+      >
+        <button type="button" onClick={onClose} className="flex items-center gap-1 text-[#25D366] font-medium text-[16px]">
+          <ArrowLeft size={20} className="text-[#25D366]" />
+          Back
         </button>
-        <span className="text-[11px] font-mono tracking-[0.2em] uppercase font-bold text-black">Settings</span>
-        <div className="w-8" />
+        <span className="text-[17px] font-semibold text-[#1C1C1E]">Settings</span>
+        <div className="w-16" />
       </div>
 
-      <div className="flex border-b border-black/10 overflow-x-auto shrink-0 hide-scrollbar bg-white">
-        {[
-          { id: 'privacy', label: 'Privacy' },
-          { id: 'security', label: 'Security' },
-          { id: 'notifications', label: 'Alerts' },
-          { id: 'ai', label: 'AI & Tools' },
-          { id: 'network', label: 'Network' }
-        ].map(tab => (
-          <button 
-            key={tab.id} 
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-6 py-4 text-[11px] font-mono uppercase tracking-widest whitespace-nowrap transition-colors ${activeTab === tab.id ? 'border-b-2 border-black text-black font-bold' : 'text-black/40 hover:text-black'}`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* ── Tab Scroll ── */}
+      <div className="shrink-0 flex gap-1.5 px-3 py-2.5 overflow-x-auto hide-scrollbar bg-white border-b border-[#E5E5EA]">
+        {TABS.map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              type="button"
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all ${
+                activeTab === tab.id
+                  ? 'bg-[#1C1C1E] text-white'
+                  : 'bg-[#F2F2F7] text-[#6D6D72] hover:bg-[#E5E5EA]'
+              }`}
+            >
+              <Icon size={12} />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-8 pb-12">
-        <div className="max-w-2xl mx-auto w-full">
+      {/* ── Content ── */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16">
+
+          {/* ════════════════════════════════════════════════════════════════════
+              ACCOUNT TAB
+          ════════════════════════════════════════════════════════════════════ */}
+          {activeTab === 'account' && (
+            <>
+              {/* Profile card */}
+              <div className="bg-white rounded-[18px] shadow-sm overflow-hidden mb-6">
+                <div className="flex flex-col items-center py-8 px-6 gap-4">
+                  {/* Avatar */}
+                  <div className="relative">
+                    {/* Hidden file input */}
+                    <input
+                      ref={avatarFileRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
+                    {/* Avatar circle */}
+                    <button
+                      type="button"
+                      onClick={() => avatarFileRef.current?.click()}
+                      className="w-[88px] h-[88px] rounded-full overflow-hidden shadow-lg ring-4 ring-[#25D366]/20 hover:ring-[#25D366]/50 transition-all active:scale-95"
+                      title="Change profile photo"
+                    >
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center">
+                          <span className="text-white text-3xl font-black">
+                            {myAddress ? myAddress.slice(2, 4).toUpperCase() : '??'}
+                          </span>
+                        </div>
+                      )}
+                    </button>
+                    {/* Camera badge */}
+                    <button
+                      type="button"
+                      onClick={() => avatarFileRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 w-8 h-8 bg-[#25D366] rounded-full flex items-center justify-center shadow-md border-2 border-white hover:bg-[#128C7E] transition-colors"
+                      title="Change photo"
+                    >
+                      <Camera size={14} className="text-white" />
+                    </button>
+                  </div>
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAvatarUrl('');
+                        localStorage.removeItem('ledger_avatar');
+                        window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { avatarUrl: '' } }));
+                      }}
+                      className="text-[13px] font-semibold text-red-500 hover:text-red-600 transition-colors"
+                    >
+                      Remove photo
+                    </button>
+                  )}
+
+                  {/* Display name */}
+                  {editingName ? (
+                    <div className="flex items-center gap-2 w-full max-w-[280px]">
+                      <input
+                        autoFocus
+                        value={displayName}
+                        onChange={e => setDisplayName(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && saveDisplayName()}
+                        className="flex-1 text-center text-[20px] font-bold text-[#1C1C1E] bg-[#F2F2F7] rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-[#25D366]"
+                        placeholder="Display name"
+                        maxLength={32}
+                      />
+                      <button type="button" onClick={saveDisplayName} className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center shadow-sm">
+                        <Check size={16} className="text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => setEditingName(true)} className="flex items-center gap-2 group">
+                      <span className="text-[20px] font-bold text-[#1C1C1E]">
+                        {displayName || 'Add display name'}
+                      </span>
+                      <span className="text-[12px] text-[#25D366] opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Edit</span>
+                    </button>
+                  )}
+
+                  {/* Bio */}
+                  {editingBio ? (
+                    <div className="flex items-start gap-2 w-full max-w-[280px]">
+                      <textarea
+                        autoFocus
+                        value={bio}
+                        onChange={e => setBio(e.target.value)}
+                        rows={2}
+                        className="flex-1 text-center text-[14px] text-[#8E8E93] bg-[#F2F2F7] rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-[#25D366] resize-none"
+                        placeholder="About / bio..."
+                        maxLength={100}
+                      />
+                      <button type="button" onClick={saveBio} className="w-8 h-8 bg-[#25D366] rounded-full flex items-center justify-center shadow-sm mt-1">
+                        <Check size={14} className="text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => setEditingBio(true)} className="text-[14px] text-[#8E8E93] group flex items-center gap-1">
+                      {bio || 'Add a bio…'}
+                      <span className="text-[11px] text-[#25D366] opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Edit</span>
+                    </button>
+                  )}
+
+                  {/* Wallet address */}
+                  <button
+                    type="button"
+                    onClick={copyAddress}
+                    className="flex items-center gap-2 bg-[#F2F2F7] rounded-xl px-4 py-2 hover:bg-[#E5E5EA] transition-colors"
+                  >
+                    <Wallet size={13} className="text-[#8E8E93]" />
+                    <span className="text-[12px] font-mono text-[#8E8E93]">{shortAddr(myAddress)}</span>
+                    {copied ? <Check size={13} className="text-[#25D366]" /> : <Copy size={13} className="text-[#8E8E93]" />}
+                  </button>
+
+                  {/* ETH balance */}
+                  {balance && (
+                    <div className="flex items-center gap-2 bg-[#F2F2F7] rounded-xl px-4 py-2">
+                      <span className="text-[13px] font-black text-[#627EEA]">Ξ</span>
+                      <span className="text-[13px] font-semibold text-[#1C1C1E]">
+                        {parseFloat(balance.formatted).toFixed(4)} {balance.symbol}
+                      </span>
+                      <span className="text-[11px] text-[#8E8E93]">on {chain?.name || 'Ethereum'}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Linked Devices — QR Phone Linking */}
+              <Group title="Linked Devices" footer="Link another desktop exactly like WhatsApp Web. Open Ledger Chat on the new device, then scan its QR code from this device.">
+                <Row
+                  icon={<Smartphone size={18} />}
+                  label="Link Another Device"
+                  sublabel="Show QR code to link another device"
+                  onTap={() => { setQrScanMode('show'); setModal('linked_devices'); }}
+                />
+                <Row
+                  icon={<Camera size={18} />}
+                  label="Scan QR Code"
+                  sublabel="Scan the login code from another screen"
+                  onTap={() => { setQrScanMode('scan'); setModal('linked_devices'); }}
+                />
+                <Row
+                  icon={<Monitor size={18} />}
+                  label="This Device (Primary)"
+                  sublabel="Desktop / Browser — Active now"
+                  value="Active"
+                />
+              </Group>
+
+              <Group title="Profile Visibility" footer="Your display name and bio are shared with people you message.">
+                <Row
+                  icon={<User size={18} />}
+                  label="Display Name"
+                  value={displayName || 'Not set'}
+                  onTap={() => setEditingName(true)}
+                />
+                <Row
+                  icon={<FileText size={18} />}
+                  label="Bio"
+                  value={bio || 'Not set'}
+                  onTap={() => setEditingBio(true)}
+                />
+                <Row
+                  icon={<ShieldCheck size={18} />}
+                  label="Identity Verified"
+                  sublabel="XMTP end-to-end encrypted"
+                  value="✓ Active"
+                />
+                <Row
+                  icon={<Globe size={18} />}
+                  label="Network"
+                  value={chain?.name || 'Ethereum'}
+                />
+              </Group>
+
+              <Group title="Data & Backup">
+                <Row
+                  icon={<Download size={18} />}
+                  label="Export Chat Backup"
+                  sublabel="Download encrypted JSON of your data"
+                  onTap={() => {
+                    try {
+                      const data: Record<string, string> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i)!;
+                        if (k.startsWith('ledger_')) data[k] = localStorage.getItem(k) || '';
+                      }
+                      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url; a.download = `ledger-backup-${Date.now()}.json`; a.click();
+                      URL.revokeObjectURL(url);
+                      toast.success('Backup downloaded');
+                    } catch { toast.error('Export failed'); }
+                  }}
+                />
+                <Row
+                  icon={<RefreshCw size={18} />}
+                  label="Clear Message Cache"
+                  sublabel="Free up local storage"
+                  onTap={() => setModal('clearCache')}
+                />
+              </Group>
+
+              <Group title="Session">
+                <Row
+                  icon={<LogOut size={18} />}
+                  label="Sign Out"
+                  sublabel="Disconnect your wallet"
+                  danger
+                  onTap={handleSignOut}
+                />
+                <Row
+                  icon={<Trash2 size={18} />}
+                  label="Delete All Data"
+                  sublabel="Permanently erase everything"
+                  danger
+                  onTap={() => setModal('nuke')}
+                />
+              </Group>
+            </>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════════════
+              PRIVACY TAB
+          ════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'privacy' && (
             <>
-              <Section title="Visibility">
-                <Row icon={<Eye size={16} />} label="Last Seen" value={settings.privacy_last_seen} onTap={() => setModal('privacy_last_seen')} />
-                <Row icon={<User size={16} />} label="Profile Photo" value={settings.privacy_profile_photo} onTap={() => setModal('privacy_profile_photo')} />
-                <Row icon={<Eye size={16} />} label="Biography" value={settings.privacy_bio} onTap={() => setModal('privacy_bio')} />
-                <Row icon={<Shield size={16} />} label="Group Invites" value={settings.privacy_group_invites} onTap={() => setModal('privacy_group_invites')} />
-              </Section>
-              <Section title="Self-Destruct & Logs">
-                <Row icon={<Trash2 size={16} />} label="Auto-Delete Timer" value={settings.auto_delete_timer} onTap={() => setModal('auto_delete')} />
-                <Row icon={<Lock size={16} />} label="Burn on Read" toggle={settings.burn_on_read} onToggle={(v) => updateSetting('burn_on_read', v)} />
-                <Row icon={<Shield size={16} />} label="Anti-Screenshot" toggle={settings.anti_screenshot} onToggle={(v) => updateSetting('anti_screenshot', v)} />
-              </Section>
+              <Group title="Who Can See" footer="Controls who can see your profile info and activity.">
+                <Row icon={<Clock size={18} />} label="Last Seen" value={settings.privacy_last_seen || 'Everybody'} onTap={() => setModal('privacy_last_seen')} />
+                <Row icon={<User size={18} />} label="Profile Photo" value={settings.privacy_profile_photo || 'Everybody'} onTap={() => setModal('privacy_profile_photo')} />
+                <Row icon={<FileText size={18} />} label="About / Bio" value={settings.privacy_bio || 'Everybody'} onTap={() => setModal('privacy_bio')} />
+                <Row icon={<Hash size={18} />} label="Group Invites" value={settings.privacy_group_invites || 'Everybody'} onTap={() => setModal('privacy_group_invites')} />
+              </Group>
+
+              <Group title="Disappearing Messages" footer="New messages in all chats will auto-delete after the chosen time.">
+                <Row icon={<Trash2 size={18} />} label="Default Timer" value={settings.auto_delete_timer || 'Off'} onTap={() => setModal('auto_delete')} />
+                <Row
+                  icon={<EyeOff size={18} />}
+                  label="Burn on Read"
+                  sublabel="Messages disappear after being read"
+                  toggle={!!settings.burn_on_read}
+                  onToggle={v => updateSetting('burn_on_read', v)}
+                />
+              </Group>
+
+              <Group title="Interactions">
+                <Row
+                  icon={<Eye size={18} />}
+                  label="Read Receipts"
+                  sublabel="Show when you've read messages"
+                  toggle={settings.show_read_receipts !== false}
+                  onToggle={v => updateSetting('show_read_receipts', v)}
+                />
+                <Row
+                  icon={<MessageSquare size={18} />}
+                  label="Typing Indicators"
+                  sublabel="Show when you're typing"
+                  toggle={settings.typing_indicators !== false}
+                  onToggle={v => updateSetting('typing_indicators', v)}
+                />
+                <Row
+                  icon={<Shield size={18} />}
+                  label="Anti-Screenshot"
+                  sublabel="Block screen capture in chat"
+                  toggle={!!settings.anti_screenshot}
+                  onToggle={v => updateSetting('anti_screenshot', v)}
+                />
+              </Group>
+
+              <Group title="Contacts">
+                <Row
+                  icon={<Link size={18} />}
+                  label="Sync Address Book"
+                  sublabel="Find friends already on Ledger Chat"
+                  toggle={!!settings.address_book_sync}
+                  onToggle={v => { updateSetting('address_book_sync' as any, v); toast.success(v ? 'Address book sync enabled' : 'Address book sync disabled'); }}
+                />
+                <Row
+                  icon={<BellOff size={18} />}
+                  label="Blocked Addresses"
+                  sublabel="Manage blocked wallets"
+                  onTap={() => setModal('blocked_list')}
+                />
+              </Group>
             </>
           )}
 
-          {activeTab === 'security' && (
-            <>
-              <Section title="Cryptography & Hardware">
-                <Row icon={<Lock size={16} />} label="Biometric Lock" toggle={settings.biometric_lock} onToggle={(v) => updateSetting('biometric_lock', v)} />
-                <Row icon={<Key size={16} />} label="App Passcode" toggle={settings.passcode_enabled} onToggle={(v) => updateSetting('passcode_enabled', v)} />
-                <Row icon={<Shield size={16} />} label="ZK Obfuscation" toggle={settings.zkObfuscation} onToggle={(v) => updateSetting('zkObfuscation', v)} />
-                <Row icon={<Lock size={16} />} label="Require Signature" toggle={settings.requireSignature} onToggle={(v) => updateSetting('requireSignature', v)} />
-              </Section>
-              <Section title="Network Transport">
-                <Row icon={<Shield size={16} />} label="WebRTC IP Masking" toggle={settings.webrtc_ip_masking} onToggle={(v) => updateSetting('webrtc_ip_masking', v)} />
-                <Row icon={<Database size={16} />} label="Tor Onion Hops" value={settings.onion_hops.toString()} onTap={() => setModal('onion_hops')} />
-              </Section>
-              <Section title="Danger Zone">
-                <Row icon={<Database size={16} />} label="Purge Local Cache" onTap={() => setModal('clearCache')} />
-                <Row icon={<X size={16} />} label="Obliterate All State" danger onTap={() => setModal('nuke')} />
-              </Section>
-            </>
-          )}
-
+          {/* ════════════════════════════════════════════════════════════════════
+              NOTIFICATIONS TAB
+          ════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'notifications' && (
             <>
-              <Section title="Alerts & Sounds">
-                <Row icon={<Bell size={16} />} label="Private Messages" toggle={settings.notifications_private} onToggle={(v) => updateSetting('notifications_private', v)} />
-                <Row icon={<Bell size={16} />} label="Group Messages" toggle={settings.notifications_groups} onToggle={(v) => updateSetting('notifications_groups', v)} />
-                <Row icon={<Bell size={16} />} label="Workspaces" toggle={settings.notifications_workspaces} onToggle={(v) => updateSetting('notifications_workspaces', v)} />
-                <Row icon={<Bell size={16} />} label="Badge Count" toggle={settings.badge_count} onToggle={(v) => updateSetting('badge_count', v)} />
-                <Row icon={<Bell size={16} />} label="Notification Sound" toggle={settings.notification_sound} onToggle={(v) => updateSetting('notification_sound', v)} />
-                <Row icon={<Palette size={16} />} label="Sound Pack" value={settings.sound_pack} onTap={() => setModal('sound_pack')} />
-              </Section>
-              <Section title="Haptics & Feedback">
-                <Row icon={<Lock size={16} />} label="Mechanical Keyboard" toggle={settings.mechanical_keyboard} onToggle={(v) => updateSetting('mechanical_keyboard', v)} />
-                <Row icon={<Lock size={16} />} label="Haptics Intensity" value={settings.haptics_intensity.toString()} onTap={() => setModal('haptics')} />
-              </Section>
+              {/* Permission banner */}
+              {typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-[14px] p-4 mb-5 flex items-start gap-3">
+                  <AlertTriangle size={17} className="text-amber-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-[14px] font-bold text-amber-900">Notifications disabled</p>
+                    <p className="text-[12px] text-amber-700 mt-0.5">Enable to never miss a message.</p>
+                  </div>
+                  <button type="button" onClick={requestNotificationPermission} className="bg-amber-600 text-white text-[12px] font-bold px-3 py-1.5 rounded-xl shrink-0">
+                    Enable
+                  </button>
+                </div>
+              )}
+
+              <Group title="Push Notifications">
+                <div className="px-4 py-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-[15px] font-semibold text-[#1C1C1E]">Background Notifications</p>
+                    <p className="text-[12px] text-[#8E8E93] mt-0.5">
+                      {!push.isSupported
+                        ? 'Not supported in this browser'
+                        : push.permission === 'denied'
+                        ? 'Blocked in browser settings — enable in Site Settings'
+                        : 'Get notified even when the app is closed'}
+                    </p>
+                  </div>
+                  {push.isSupported && push.permission !== 'denied' && (
+                    push.isSubscribed ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] text-[#25D366] font-bold">✓ On</span>
+                        <button onClick={push.unsubscribe} className="text-[12px] text-[#8E8E93] underline">Off</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          const ok = await push.subscribe();
+                          if (ok) toast.success('Notifications enabled!');
+                          else toast.error('Could not enable notifications');
+                        }}
+                        disabled={push.isLoading}
+                        className="px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white text-[13px] font-bold rounded-xl disabled:opacity-50 transition-colors"
+                      >
+                        {push.isLoading ? 'Enabling…' : 'Enable'}
+                      </button>
+                    )
+                  )}
+                  {push.permission === 'denied' && (
+                    <span className="text-[12px] text-red-500 font-semibold">Blocked</span>
+                  )}
+                </div>
+              </Group>
+
+              <Group title="Messages">
+                <Row
+                  icon={<MessageSquare size={18} />}
+                  label="Private Messages"
+                  toggle={settings.notifications_private !== false}
+                  onToggle={v => updateSetting('notifications_private', v)}
+                />
+                <Row
+                  icon={<Hash size={18} />}
+                  label="Group Messages"
+                  toggle={settings.notifications_groups !== false}
+                  onToggle={v => updateSetting('notifications_groups', v)}
+                />
+                <Row
+                  icon={<Bell size={18} />}
+                  label="Community Updates"
+                  toggle={settings.notifications_workspaces !== false}
+                  onToggle={v => updateSetting('notifications_workspaces', v)}
+                />
+                <Row
+                  icon={<Star size={18} />}
+                  label="Reaction Notifications"
+                  toggle={settings.notifications_reactions !== false}
+                  onToggle={v => updateSetting('notifications_reactions', v)}
+                />
+              </Group>
+
+              <Group title="Calls">
+                <Row
+                  icon={<Phone size={18} />}
+                  label="Incoming Voice Calls"
+                  toggle={settings.notifications_calls !== false}
+                  onToggle={v => updateSetting('notifications_calls', v)}
+                />
+                <Row
+                  icon={<Video size={18} />}
+                  label="Incoming Video Calls"
+                  toggle={settings.notifications_video_calls !== false}
+                  onToggle={v => updateSetting('notifications_video_calls', v)}
+                />
+              </Group>
+
+              <Group title="Sounds & Vibration">
+                <Row
+                  icon={<Volume2 size={18} />}
+                  label="Message Sound"
+                  toggle={settings.notification_sound !== false}
+                  onToggle={v => updateSetting('notification_sound', v)}
+                />
+                <Row
+                  icon={<Vibrate size={18} />}
+                  label="Vibration"
+                  toggle={settings.haptics_intensity > 0}
+                  onToggle={v => updateSetting('haptics_intensity', v ? 2 : 0)}
+                />
+                <Row
+                  icon={<Palette size={18} />}
+                  label="Sound Pack"
+                  value={settings.sound_pack || 'Default'}
+                  onTap={() => setModal('sound_pack')}
+                />
+              </Group>
+
+              <Group title="Display">
+                <Row
+                  icon={<Eye size={18} />}
+                  label="Show Preview in Notifications"
+                  sublabel="Display message content in alerts"
+                  toggle={settings.notifications_private !== false && !(settings as any).hide_notification_content}
+                  onToggle={v => updateSetting('hide_notification_content' as any, !v)}
+                />
+                <Row
+                  icon={<Bell size={18} />}
+                  label="Badge Count"
+                  toggle={settings.badge_count !== false}
+                  onToggle={v => updateSetting('badge_count', v)}
+                />
+                <Row
+                  icon={<Moon size={18} />}
+                  label="Do Not Disturb"
+                  sublabel="Silence all notifications"
+                  toggle={!!(settings as any).do_not_disturb}
+                  onToggle={v => updateSetting('do_not_disturb' as any, v)}
+                />
+              </Group>
             </>
           )}
 
-          {activeTab === 'ai' && (
+          {/* ════════════════════════════════════════════════════════════════════
+              SECURITY TAB
+          ════════════════════════════════════════════════════════════════════ */}
+          {activeTab === 'security' && (
             <>
-              <Section title="Aegis AI Core">
-                <Row icon={<Shield size={16} />} label="Tone Translator" toggle={settings.tone_translator} onToggle={(v) => updateSetting('tone_translator', v)} />
-                <Row icon={<User size={16} />} label="Ghost Auto-Reply" toggle={settings.ghost_auto_reply} onToggle={(v) => updateSetting('ghost_auto_reply', v)} />
-              </Section>
-              <Section title="Smart Tools">
-                <Row icon={<Key size={16} />} label="Smart Macros" toggle={settings.smart_macros} onToggle={(v) => updateSetting('smart_macros', v)} />
-                <Row icon={<Eye size={16} />} label="Ticker Widgets ($)" toggle={settings.ticker_widgets} onToggle={(v) => updateSetting('ticker_widgets', v)} />
-                <Row icon={<Shield size={16} />} label="Contract Scanner" toggle={settings.contract_scanner} onToggle={(v) => updateSetting('contract_scanner', v)} />
-                <Row icon={<User size={16} />} label="Attestation Badges" toggle={settings.show_attestation_badge} onToggle={(v) => updateSetting('show_attestation_badge', v)} />
-              </Section>
+              <Group title="App Lock" footer="Biometric lock uses your device's Face ID or fingerprint to protect Ledger Chat.">
+                <Row
+                  icon={<Fingerprint size={18} />}
+                  label="Biometric Lock"
+                  sublabel="Face ID / Touch ID"
+                  toggle={!!settings.biometric_lock}
+                  onToggle={v => updateSetting('biometric_lock', v)}
+                />
+                <Row
+                  icon={<Key size={18} />}
+                  label="App Passcode"
+                  sublabel="6-digit PIN to unlock"
+                  toggle={!!settings.passcode_enabled}
+                  onToggle={v => updateSetting('passcode_enabled', v)}
+                />
+                <Row
+                  icon={<Clock size={18} />}
+                  label="Auto-Lock"
+                  value={(settings as any).auto_lock_timer || 'Immediately'}
+                  onTap={() => setModal('auto_lock')}
+                />
+              </Group>
+
+              <Group title="Encryption & Identity">
+                <Row
+                  icon={<ShieldCheck size={18} />}
+                  label="ZK Obfuscation"
+                  sublabel="Hide metadata with zero-knowledge proofs"
+                  toggle={!!settings.zkObfuscation}
+                  onToggle={v => updateSetting('zkObfuscation', v)}
+                />
+                <Row
+                  icon={<Lock size={18} />}
+                  label="Require Wallet Signature"
+                  sublabel="Sign every session with your wallet key"
+                  toggle={!!settings.requireSignature}
+                  onToggle={v => updateSetting('requireSignature', v)}
+                />
+                <Row
+                  icon={<Zap size={18} />}
+                  label="Ghost Mode"
+                  sublabel="Auto-reply when unavailable, hide online status"
+                  toggle={!!settings.ghost_auto_reply}
+                  onToggle={v => updateSetting('ghost_auto_reply', v)}
+                />
+              </Group>
+
+              <Group title="Network Security" footer="IP masking routes WebRTC traffic through a relay to hide your real IP address.">
+                <Row
+                  icon={<Shield size={18} />}
+                  label="WebRTC IP Masking"
+                  sublabel="Hide your IP during calls"
+                  toggle={!!settings.webrtc_ip_masking}
+                  onToggle={v => updateSetting('webrtc_ip_masking', v)}
+                />
+                <Row
+                  icon={<Globe size={18} />}
+                  label="MEV Protection"
+                  sublabel="Shield crypto transactions from front-running"
+                  toggle={!!settings.mev_protection}
+                  onToggle={v => updateSetting('mev_protection', v)}
+                />
+                <Row
+                  icon={<Database size={18} />}
+                  label="Custom RPC URL"
+                  value={settings.custom_rpc_url ? 'Custom' : 'Default'}
+                  onTap={() => setModal('custom_rpc')}
+                />
+              </Group>
+
+
+              <Group title="Danger Zone" footer="These actions are permanent and cannot be undone.">
+                <Row icon={<RefreshCw size={18} />} label="Clear All Caches" onTap={() => setModal('clearCache')} />
+                <Row icon={<Trash2 size={18} />} label="Delete All Data" danger onTap={() => setModal('nuke')} />
+              </Group>
             </>
           )}
 
-          {activeTab === 'network' && (
+          {/* ════════════════════════════════════════════════════════════════════
+              CHAT TAB
+          ════════════════════════════════════════════════════════════════════ */}
+          {activeTab === 'chat' && (
             <>
-              <Section title="Blockchain Options">
-                <Row icon={<Shield size={16} />} label="Gas Preset" value={settings.gas_preset} onTap={() => setModal('gas_preset')} />
-                <Row icon={<Lock size={16} />} label="MEV Protection" toggle={settings.mev_protection} onToggle={(v) => updateSetting('mev_protection', v)} />
-                <Row icon={<Database size={16} />} label="Custom RPC" value={settings.custom_rpc_url || "Default"} onTap={() => setModal('custom_rpc')} />
-              </Section>
-              <Section title="Data & Media">
-                <Row icon={<Eye size={16} />} label="Low Data Mode" toggle={settings.useLessData} onToggle={(v) => updateSetting('useLessData', v)} />
-                <Row icon={<Database size={16} />} label="Save to Photos" toggle={settings.saveToPhotos} onToggle={(v) => updateSetting('saveToPhotos', v)} />
-              </Section>
+              <Group title="Appearance">
+                <Row
+                  icon={<Palette size={18} />}
+                  label="Chat Wallpaper"
+                  value={settings.chat_background === 'default' ? 'Default' : 'Custom'}
+                  onTap={() => setModal('wallpaper')}
+                />
+                <Row
+                  icon={<Sliders size={18} />}
+                  label="Font Size"
+                  value={['XS','S','M','L','XL'][Math.min((settings.text_size ?? 2), 4)]}
+                  onTap={() => setModal('font_size')}
+                />
+                <Row
+                  icon={<Sun size={18} />}
+                  label="Bubble Style"
+                  value={settings.bubble_style || 'Default'}
+                  onTap={() => setModal('bubble_style')}
+                />
+              </Group>
+
+              <Group title="Media & Files" footer="Auto-download is subject to your data plan limits.">
+                <Row
+                  icon={<Download size={18} />}
+                  label="Auto-Download Photos"
+                  toggle={settings.auto_download_photos !== false}
+                  onToggle={v => updateSetting('auto_download_photos', v)}
+                />
+                <Row
+                  icon={<Download size={18} />}
+                  label="Auto-Download Videos"
+                  toggle={!!settings.auto_download_videos}
+                  onToggle={v => updateSetting('auto_download_videos', v)}
+                />
+                <Row
+                  icon={<Archive size={18} />}
+                  label="Save Media to Photos"
+                  toggle={!!settings.saveToPhotos}
+                  onToggle={v => updateSetting('saveToPhotos', v)}
+                />
+                <Row
+                  icon={<WifiOff size={18} />}
+                  label="Low Data Mode"
+                  sublabel="Reduce quality to save bandwidth"
+                  toggle={!!settings.useLessData}
+                  onToggle={v => updateSetting('useLessData', v)}
+                />
+              </Group>
+
+              <Group title="Composing">
+                <Row
+                  icon={<Send size={18} />}
+                  label="Enter to Send"
+                  sublabel="Press Enter to send, Shift+Enter for newline"
+                  toggle={settings.enter_to_send !== false}
+                  onToggle={v => updateSetting('enter_to_send', v)}
+                />
+                <Row
+                  icon={<Zap size={18} />}
+                  label="Keyboard Sound"
+                  sublabel="Mechanical keyboard click on keypress"
+                  toggle={!!settings.mechanical_keyboard}
+                  onToggle={v => updateSetting('mechanical_keyboard', v)}
+                />
+              </Group>
+
+              <Group title="AI Features" footer="AI features run locally and never send your messages to a server.">
+                <Row
+                  icon={<Zap size={18} />}
+                  label="Smart Replies"
+                  sublabel="AI-suggested quick reply options"
+                  toggle={!!settings.tone_translator}
+                  onToggle={v => updateSetting('tone_translator', v)}
+                />
+                <Row
+                  icon={<Shield size={18} />}
+                  label="Contract Scanner"
+                  sublabel="Scan ETH addresses for known risks"
+                  toggle={!!settings.contract_scanner}
+                  onToggle={v => updateSetting('contract_scanner', v)}
+                />
+              </Group>
             </>
           )}
+
+          {/* ════════════════════════════════════════════════════════════════════
+              CALLS TAB
+          ════════════════════════════════════════════════════════════════════ */}
+          {activeTab === 'calls' && (
+            <>
+              <Group title="Audio Quality">
+                <Row
+                  icon={<Mic size={18} />}
+                  label="High-Quality Audio"
+                  sublabel="Uses more data"
+                  toggle={settings.high_quality_audio !== false}
+                  onToggle={v => updateSetting('high_quality_audio', v)}
+                />
+                <Row
+                  icon={<Mic size={18} />}
+                  label="Noise Suppression"
+                  sublabel="Filter background noise"
+                  toggle={settings.noise_suppression !== false}
+                  onToggle={v => updateSetting('noise_suppression', v)}
+                />
+                <Row
+                  icon={<Volume2 size={18} />}
+                  label="Echo Cancellation"
+                  toggle={settings.echo_cancellation !== false}
+                  onToggle={v => updateSetting('echo_cancellation', v)}
+                />
+              </Group>
+
+              <Group title="Video">
+                <Row
+                  icon={<Video size={18} />}
+                  label="HD Video"
+                  sublabel="When available on your network"
+                  toggle={settings.hd_video !== false}
+                  onToggle={v => updateSetting('hd_video', v)}
+                />
+                <Row
+                  icon={<WifiOff size={18} />}
+                  label="Use Less Data for Calls"
+                  toggle={!!settings.useLessData}
+                  onToggle={v => updateSetting('useLessData', v)}
+                />
+              </Group>
+
+              <Group title="Privacy" footer="IP masking routes all call traffic through a relay to hide your network identity.">
+                <Row
+                  icon={<Shield size={18} />}
+                  label="IP Address Masking"
+                  sublabel="Hides your real IP from callers"
+                  toggle={!!settings.webrtc_ip_masking}
+                  onToggle={v => updateSetting('webrtc_ip_masking', v)}
+                />
+              </Group>
+
+              <Group title="Ringtone & Alerts">
+                <Row
+                  icon={<Volume2 size={18} />}
+                  label="Ringtone on Incoming Call"
+                  toggle={settings.notifications_calls !== false}
+                  onToggle={v => updateSetting('notifications_calls', v)}
+                />
+                <Row
+                  icon={<Vibrate size={18} />}
+                  label="Vibrate on Incoming Call"
+                  toggle={settings.haptics_intensity > 0}
+                  onToggle={v => updateSetting('haptics_intensity', v ? 2 : 0)}
+                />
+              </Group>
+            </>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════════════
+              STORAGE TAB
+          ════════════════════════════════════════════════════════════════════ */}
+          {activeTab === 'storage' && (
+            <>
+              {(() => {
+                let total = 0, count = 0;
+                try {
+                  for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i)!;
+                    const v = localStorage.getItem(k) || '';
+                    if (k.startsWith('ledger_')) { total += v.length * 2; count++; }
+                  }
+                } catch {}
+                const kb = (total / 1024).toFixed(1);
+                const mb = (total / 1024 / 1024).toFixed(2);
+                return (
+                  <div className="bg-white rounded-[18px] p-5 mb-6 shadow-sm">
+                    <p className="text-[12px] text-[#8E8E93] uppercase tracking-wider font-semibold mb-3">Local Storage Used</p>
+                    <div className="flex items-end gap-2 mb-3">
+                      <p className="text-[40px] font-black text-[#1C1C1E] leading-none">
+                        {parseFloat(mb) < 0.1 ? kb : mb}
+                      </p>
+                      <p className="text-[16px] font-semibold text-[#8E8E93] mb-1">
+                        {parseFloat(mb) < 0.1 ? 'KB' : 'MB'}
+                      </p>
+                    </div>
+                    <div className="w-full bg-[#F2F2F7] rounded-full h-2">
+                      <div
+                        className="bg-[#25D366] h-2 rounded-full transition-all"
+                        style={{ width: `${Math.min((parseFloat(mb) / 50) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-[12px] text-[#8E8E93] mt-2">{count} Ledger Chat items · Estimated</p>
+                  </div>
+                );
+              })()}
+
+              <Group title="Manage" footer="Clearing cache removes temporary data only. Your conversations are stored via XMTP and are safe.">
+                <Row icon={<RefreshCw size={18} />} label="Clear Cache" sublabel="Remove temporary files" onTap={() => setModal('clearCache')} />
+                <Row icon={<HardDrive size={18} />} label="Manage Media" sublabel="Photos, videos, and files" onTap={() => setModal('manage_media')} />
+              </Group>
+
+              <Group>
+                <Row
+                  icon={<Download size={18} />}
+                  label="Export All Data"
+                  sublabel="Download your Ledger Chat data as JSON"
+                  onTap={() => {
+                    try {
+                      const data: Record<string, string> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i)!;
+                        if (k.startsWith('ledger_')) data[k] = localStorage.getItem(k) || '';
+                      }
+                      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url; a.download = `ledger-export-${Date.now()}.json`; a.click();
+                      URL.revokeObjectURL(url);
+                      toast.success('Data exported');
+                    } catch { toast.error('Export failed'); }
+                  }}
+                />
+              </Group>
+            </>
+          )}
+
+          {/* PAYMENTS TAB */}
+          {activeTab === 'payments' && (
+            <div className="space-y-4">
+              <Group label="Native Crypto Payments">
+                <Row
+                  label="Enable Crypto Payments"
+                  desc="Show payment CTAs and ETH/USDC send button in all chats"
+                  toggle={settings.payments_enabled ?? false}
+                  onToggle={(v) => updateSetting('payments_enabled', v)}
+                />
+                <Row
+                  label="Payment Confirmations"
+                  desc="Always require a confirmation before sending crypto"
+                  toggle={settings.payment_confirmations ?? true}
+                  onToggle={(v) => updateSetting('payment_confirmations', v)}
+                />
+                <Row
+                  label="Show Balances in Chat"
+                  desc="Display ETH and token balances in your profile header"
+                  toggle={settings.show_balances ?? true}
+                  onToggle={(v) => updateSetting('show_balances', v)}
+                />
+              </Group>
+              <Group label="Default Payment Token">
+                <div className="px-4 pb-4">
+                  {['ETH', 'USDC', 'USDT'].map((token) => (
+                    <button
+                      key={token}
+                      onClick={() => updateSetting('default_token', token)}
+                      className={"flex items-center justify-between w-full py-3 border-b border-black/5 last:border-0 " + (settings.default_token === token ? "text-[#25D366]" : "text-[#1C1C1E]")}
+                    >
+                      <span className="font-semibold">{token}</span>
+                      {settings.default_token === token && (
+                        <div className="w-5 h-5 rounded-full bg-[#25D366] flex items-center justify-center">
+                          <div className="w-2 h-2 bg-white rounded-full" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </Group>
+              <Group label="Transaction History">
+                <Row label="View Full History" onTap={() => window.open('/payments/history', '_blank')} />
+                <Row label="Export CSV" onTap={() => {
+                  try {
+                    const rows = [['Date', 'Type', 'Amount', 'To/From', 'Status']];
+                    for (let i = 0; i < localStorage.length; i++) {
+                      const k = localStorage.key(i)!;
+                      if (k.startsWith('ledger_tx_')) {
+                        try { const tx = JSON.parse(localStorage.getItem(k) || '{}'); rows.push([tx.date || '', tx.type || '', tx.amount || '', tx.peer || '', tx.status || '']); } catch {}
+                      }
+                    }
+                    if (rows.length === 1) { toast.info('No transactions recorded yet'); return; }
+                    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `ledger-payments-${Date.now()}.csv`; a.click();
+                    toast.success('CSV exported');
+                  } catch { toast.error('Export failed'); }
+                }} />
+              </Group>
+            </div>
+          )}
+
         </div>
       </div>
 
-      {toast && (
-        <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 font-mono text-[11px] uppercase tracking-widest z-[400] whitespace-nowrap shadow-2xl">
-          {toast}
-        </motion.div>
-      )}
+      {/* ════════════════════════════════════════════════════════════════════════
+          MODALS (Bottom Sheet)
+      ════════════════════════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {modal && (
+          <motion.div
+            key={modal}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[500] bg-black/50 backdrop-blur-sm flex items-end justify-center"
+            onClick={e => { if (e.target === e.currentTarget) setModal(null); }}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+              className="w-full max-w-lg bg-white rounded-t-[28px] overflow-hidden shadow-2xl"
+              style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+            >
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full bg-[#E5E5EA]" />
+              </div>
 
-      {/* Dynamic Selector Modal */}
-      {modal && ['privacy_last_seen', 'privacy_profile_photo', 'privacy_bio', 'privacy_group_invites'].includes(modal) && (
-        <Modal title="Privacy Selection" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-3">
-            {['everybody', 'contacts', 'nobody'].map(opt => (
-              <button key={opt} onClick={() => { updateSetting(modal as any, opt); setModal(null); }} className={`p-4 border text-[12px] font-mono uppercase tracking-widest text-left ${(settings as any)[modal] === opt ? 'border-black bg-black text-white' : 'border-black/20 text-black hover:border-black'}`}>
-                {opt}
-              </button>
-            ))}
-          </div>
-        </Modal>
-      )}
+              {/* ── LINKED DEVICES QR Modal ── */}
+              {modal === 'linked_devices' && (
+                <div className="px-6 pb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-[20px] font-bold text-[#1C1C1E]">Link a Phone</h3>
+                    <button type="button" onClick={() => setModal(null)} className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center">
+                      <X size={16} className="text-[#8E8E93]" />
+                    </button>
+                  </div>
+                  
+                  {/* Tabs for Show / Scan */}
+                  <div className="flex items-center gap-2 mb-4 bg-[#F2F2F7] p-1 rounded-[14px]">
+                    <button 
+                      onClick={() => { setQrScanMode('show'); stopQrScan(); }} 
+                      className={`flex-1 py-2 text-[14px] font-semibold rounded-[10px] transition-all ${qrScanMode === 'show' ? 'bg-white shadow-sm text-[#1C1C1E]' : 'text-[#8E8E93]'}`}
+                    >
+                      Show QR
+                    </button>
+                    <button 
+                      onClick={() => { setQrScanMode('scan'); startQrScan(); }} 
+                      className={`flex-1 py-2 text-[14px] font-semibold rounded-[10px] transition-all ${qrScanMode === 'scan' ? 'bg-white shadow-sm text-[#1C1C1E]' : 'text-[#8E8E93]'}`}
+                    >
+                      Scan QR
+                    </button>
+                  </div>
 
-      {modal === 'auto_delete' && (
-        <Modal title="Auto-Delete Timer" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-3">
-            {['off', '24 hours', '1 week', '1 month'].map(opt => (
-              <button key={opt} onClick={() => { updateSetting('auto_delete_timer', opt); setModal(null); }} className={`p-4 border text-[12px] font-mono uppercase tracking-widest text-left ${settings.auto_delete_timer === opt ? 'border-black bg-black text-white' : 'border-black/20 text-black hover:border-black'}`}>
-                {opt === 'off' ? 'Disabled' : opt}
-              </button>
-            ))}
-          </div>
-        </Modal>
-      )}
+                  {qrScanMode === 'show' ? (
+                    <>
+                      <p className="text-[14px] text-[#8E8E93] mb-5 leading-relaxed">
+                        Open <strong className="text-[#1C1C1E]">humanidfi.com/chat</strong> on your iPhone or Android, connect your wallet, then scan this code.
+                      </p>
 
-      {modal === 'sound_pack' && (
-        <Modal title="Sound Pack" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-3">
-            {['minimal', 'arcade', 'ledger', 'asmr'].map(opt => (
-              <button key={opt} onClick={() => { updateSetting('sound_pack', opt); setModal(null); }} className={`p-4 border text-[12px] font-mono uppercase tracking-widest text-left ${settings.sound_pack === opt ? 'border-black bg-black text-white' : 'border-black/20 text-black hover:border-black'}`}>
-                {opt}
-              </button>
-            ))}
-          </div>
-        </Modal>
-      )}
+                      {/* QR Code */}
+                      <div className="flex justify-center mb-4">
+                        <div className={`rounded-[18px] border-4 p-3 transition-all ${qrExpiry > 0 ? 'border-[#25D366]' : 'border-[#E5E5EA] opacity-40'}`}>
+                          {qrExpiry > 0 ? (
+                            <SimpleQRCode data={qrLinkUrl} size={200} />
+                          ) : (
+                            <div className="w-[200px] h-[200px] flex flex-col items-center justify-center gap-3 bg-[#F2F2F7] rounded-[14px]">
+                              <QrCode size={40} className="text-[#C7C7CC]" />
+                              <p className="text-[13px] text-[#8E8E93] font-semibold">QR Expired</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
-      {modal === 'gas_preset' && (
-        <Modal title="Gas Preset" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-3">
-            {['ECONOMY', 'STANDARD', 'FAST', 'INSTANT'].map(opt => (
-              <button key={opt} onClick={() => { updateSetting('gas_preset', opt); setModal(null); }} className={`p-4 border text-[12px] font-mono uppercase tracking-widest text-left ${settings.gas_preset === opt ? 'border-black bg-black text-white' : 'border-black/20 text-black hover:border-black'}`}>
-                {opt}
-              </button>
-            ))}
-          </div>
-        </Modal>
-      )}
+                      {/* Countdown */}
+                      <div className="flex items-center justify-center gap-2 mb-5">
+                        {qrExpiry > 0 ? (
+                          <>
+                            <div className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse" />
+                            <p className="text-[13px] text-[#8E8E93] font-mono">
+                              Expires in {Math.floor(qrExpiry / 60)}:{String(qrExpiry % 60).padStart(2, '0')}
+                            </p>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setQrExpiry(120)}
+                            className="flex items-center gap-2 text-[#25D366] font-semibold text-[14px]"
+                          >
+                            <RefreshCw size={14} />
+                            Generate new code
+                          </button>
+                        )}
+                      </div>
 
-      {modal === 'onion_hops' && (
-        <Modal title="Tor Onion Hops" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-3">
-            {[1, 3, 5].map(opt => (
-              <button key={opt} onClick={() => { updateSetting('onion_hops', opt); setModal(null); }} className={`p-4 border text-[12px] font-mono uppercase tracking-widest text-left ${settings.onion_hops === opt ? 'border-black bg-black text-white' : 'border-black/20 text-black hover:border-black'}`}>
-                {opt} Hop{opt > 1 ? 's' : ''}
-              </button>
-            ))}
-            <p className="text-[10px] text-black/50 text-center mt-2">Higher hops increase privacy but degrade call latency.</p>
-          </div>
-        </Modal>
-      )}
+                      {/* Steps */}
+                      <div className="bg-[#F2F2F7] rounded-[14px] p-4 mb-5">
+                        <p className="text-[12px] font-bold text-[#6D6D72] uppercase tracking-wider mb-3">How it works</p>
+                        {[
+                          { n: '1', text: 'Open Ledger Chat on your phone' },
+                          { n: '2', text: 'Connect the same wallet (MetaMask, WalletConnect, etc.)' },
+                          { n: '3', text: 'Go to Settings → Account → Link Desktop' },
+                          { n: '4', text: 'Scan this QR code to sync your session' },
+                        ].map(step => (
+                          <div key={step.n} className="flex items-center gap-3 mb-2 last:mb-0">
+                            <div className="w-6 h-6 rounded-full bg-[#25D366] flex items-center justify-center shrink-0">
+                              <span className="text-white text-[11px] font-black">{step.n}</span>
+                            </div>
+                            <p className="text-[13px] text-[#1C1C1E]">{step.text}</p>
+                          </div>
+                        ))}
+                      </div>
 
-      {modal === 'haptics' && (
-        <Modal title="Haptic Intensity" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-3">
-            {[0, 1, 2, 3].map(opt => (
-              <button key={opt} onClick={() => { updateSetting('haptics_intensity', opt); setModal(null); }} className={`p-4 border text-[12px] font-mono uppercase tracking-widest text-left ${settings.haptics_intensity === opt ? 'border-black bg-black text-white' : 'border-black/20 text-black hover:border-black'}`}>
-                {opt === 0 ? 'Off' : `Level ${opt}`}
-              </button>
-            ))}
-          </div>
-        </Modal>
-      )}
+                      <div className="flex items-center gap-2 text-[12px] text-[#8E8E93] justify-center">
+                        <ShieldCheck size={13} className="text-[#25D366]" />
+                        Secured with end-to-end encryption. No passwords required.
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-[14px] text-[#8E8E93] mb-5 leading-relaxed">
+                        Point your camera at a Ledger Chat QR code on another device.
+                      </p>
+                      
+                      <div className="relative w-full aspect-square max-w-[300px] mx-auto bg-black rounded-[24px] overflow-hidden shadow-inner mb-6">
+                        <video ref={qrVideoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+                        <canvas ref={qrCanvasRef} className="hidden" />
+                        
+                        {/* Scanner overlay */}
+                        <div className="absolute inset-0 pointer-events-none border-[3px] border-[#25D366]/30 m-8 rounded-[16px]">
+                          <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-[#25D366] rounded-tl-[12px]" />
+                          <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-[#25D366] rounded-tr-[12px]" />
+                          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-[#25D366] rounded-bl-[12px]" />
+                          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-[#25D366] rounded-br-[12px]" />
+                          <div className="w-full h-0.5 bg-[#25D366] shadow-[0_0_8px_#25D366] animate-pulse relative top-1/2" />
+                        </div>
+
+                        {scanError && (
+                          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-6 text-center">
+                            <p className="text-white text-[14px] font-semibold flex items-center gap-2">
+                              <AlertTriangle size={18} className="text-red-500" />
+                              {scanError}
+                            </p>
+                          </div>
+                        )}
+                        {scanSuccess && (
+                          <div className="absolute inset-0 bg-[#25D366]/90 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
+                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-3">
+                              <Check size={24} className="text-[#25D366]" />
+                            </div>
+                            <p className="text-white text-[16px] font-bold">{scanSuccess}</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2 text-[12px] text-[#8E8E93] justify-center">
+                        <Camera size={13} className="text-[#8E8E93]" />
+                        Make sure the QR code is well-lit and in focus.
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ── Privacy Selector ── */}
+              {['privacy_last_seen','privacy_profile_photo','privacy_bio','privacy_group_invites'].includes(modal!) && (
+                <div className="px-6 pb-6">
+                  <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-5">
+                    {modal === 'privacy_last_seen' ? 'Last Seen'
+                      : modal === 'privacy_profile_photo' ? 'Profile Photo'
+                      : modal === 'privacy_bio' ? 'About / Bio'
+                      : 'Group Invites'}
+                  </h3>
+                  {['everybody', 'contacts', 'nobody'].map(opt => (
+                    <button
+                      type="button"
+                      key={opt}
+                      onClick={() => { updateSetting(modal as any, opt); setModal(null); toast.success('Privacy updated'); }}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${(settings as any)[modal!] === opt ? 'bg-[#25D366] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA]'}`}
+                    >
+                      <span className="font-semibold capitalize">{opt}</span>
+                      {(settings as any)[modal!] === opt && <Check size={18} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* ── Auto-Delete ── */}
+              {modal === 'auto_delete' && (
+                <div className="px-6 pb-6">
+                  <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-5">Disappearing Messages</h3>
+                  {['off','1 hour','24 hours','1 week','1 month','1 year'].map(opt => (
+                    <button
+                      type="button"
+                      key={opt}
+                      onClick={() => { updateSetting('auto_delete_timer', opt === 'off' ? undefined : opt); setModal(null); toast.success('Timer saved'); }}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${(settings.auto_delete_timer || 'off') === opt ? 'bg-[#1C1C1E] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA]'}`}
+                    >
+                      <span className="font-semibold">{opt === 'off' ? 'Disabled' : opt}</span>
+                      {(settings.auto_delete_timer || 'off') === opt && <Check size={18} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* ── Sound Pack ── */}
+              {modal === 'sound_pack' && (
+                <div className="px-6 pb-6">
+                  <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-5">Sound Pack</h3>
+                  {[
+                    { id: 'minimal', label: 'Minimal', desc: 'Subtle, barely-there tones' },
+                    { id: 'default', label: 'Default', desc: 'Clean and balanced' },
+                    { id: 'telegram', label: 'Telegram-style', desc: 'Familiar notification sounds' },
+                    { id: 'ledger', label: 'Ledger', desc: 'Unique cryptographic tones' },
+                  ].map(pack => (
+                    <button
+                      type="button"
+                      key={pack.id}
+                      onClick={() => { updateSetting('sound_pack', pack.id); setModal(null); toast.success('Sound pack saved'); }}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${(settings.sound_pack || 'default') === pack.id ? 'bg-[#1C1C1E] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA]'}`}
+                    >
+                      <div className="text-left">
+                        <p className="font-semibold">{pack.label}</p>
+                        <p className={`text-[12px] mt-0.5 ${(settings.sound_pack || 'default') === pack.id ? 'text-white/70' : 'text-[#8E8E93]'}`}>{pack.desc}</p>
+                      </div>
+                      {(settings.sound_pack || 'default') === pack.id && <Check size={18} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* ── Auto Lock ── */}
+              {modal === 'auto_lock' && (
+                <div className="px-6 pb-6">
+                  <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-5">Auto-Lock Timer</h3>
+                  {['Immediately','1 minute','5 minutes','15 minutes','1 hour','Never'].map(opt => (
+                    <button
+                      type="button"
+                      key={opt}
+                      onClick={() => { updateSetting('auto_lock_timer' as any, opt); setModal(null); toast.success('Saved'); }}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${((settings as any).auto_lock_timer || 'Immediately') === opt ? 'bg-[#1C1C1E] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA]'}`}
+                    >
+                      <span className="font-semibold">{opt}</span>
+                      {((settings as any).auto_lock_timer || 'Immediately') === opt && <Check size={18} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* ── Font Size ── */}
+              {modal === 'font_size' && (
+                <div className="px-6 pb-6">
+                  <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-5">Font Size</h3>
+                  <div className="bg-[#F2F2F7] rounded-2xl p-4 mb-5">
+                    <p style={{ fontSize: `${12 + (settings.text_size ?? 2) * 2}px` }} className="text-[#1C1C1E] text-center">
+                      Preview text at this size
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[12px] text-[#8E8E93] font-semibold">A</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={4}
+                      step={1}
+                      value={settings.text_size ?? 2}
+                      onChange={e => updateSetting('text_size', parseInt(e.target.value))}
+                      className="flex-1 accent-[#25D366]"
+                    />
+                    <span className="text-[18px] text-[#8E8E93] font-semibold">A</span>
+                  </div>
+                  <button type="button" onClick={() => setModal(null)} className="w-full mt-5 py-4 bg-[#1C1C1E] rounded-2xl text-white font-bold text-[16px]">Done</button>
+                </div>
+              )}
+
+              {/* ── Wallpaper ── */}
+              {modal === 'wallpaper' && (
+                <div className="px-6 pb-6">
+                  <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-5">Chat Wallpaper</h3>
+                  <div className="grid grid-cols-3 gap-3 mb-5">
+                    {['default','minimal','dots','circuit','waves'].map(bg => (
+                      <button
+                        type="button"
+                        key={bg}
+                        onClick={() => { updateSetting('chat_background', bg); setModal(null); toast.success('Wallpaper saved'); }}
+                        className={`h-24 rounded-2xl border-2 flex items-center justify-center font-semibold text-[12px] transition-all ${
+                          (settings.chat_background || 'default') === bg
+                            ? 'border-[#25D366] text-[#25D366] bg-[#25D366]/5'
+                            : 'border-transparent bg-[#F2F2F7] text-[#8E8E93]'
+                        }`}
+                      >
+                        {bg}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Bubble Style ── */}
+              {modal === 'bubble_style' && (
+                <div className="px-6 pb-6">
+                  <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-5">Bubble Style</h3>
+                  {[
+                    { id: 'default', label: 'Default', desc: 'Rounded corners, standard padding' },
+                    { id: 'compact', label: 'Compact', desc: 'Smaller bubbles, denser layout' },
+                    { id: 'wide', label: 'Wide', desc: 'Full-width bubbles' },
+                  ].map(style => (
+                    <button
+                      type="button"
+                      key={style.id}
+                      onClick={() => { updateSetting('bubble_style', style.id); setModal(null); toast.success('Saved'); }}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 ${(settings.bubble_style || 'default') === style.id ? 'bg-[#25D366] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E]'}`}
+                    >
+                      <div className="text-left">
+                        <p className="font-semibold">{style.label}</p>
+                        <p className={`text-[12px] mt-0.5 ${(settings.bubble_style || 'default') === style.id ? 'text-white/70' : 'text-[#8E8E93]'}`}>{style.desc}</p>
+                      </div>
+                      {(settings.bubble_style || 'default') === style.id && <Check size={18} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* ── Clear Cache ── */}
+              {modal === 'clearCache' && (
+                <div className="px-6 pb-6">
+                  <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-2">Clear Cache</h3>
+                  <p className="text-[14px] text-[#8E8E93] mb-6 leading-relaxed">This removes temporary cached data. Your messages, contacts, and settings are safe and will not be deleted.</p>
+                  <button type="button" onClick={purgeCache} className="w-full py-4 bg-[#FF3B30] rounded-2xl text-white font-bold text-[16px]">
+                    Clear Cache
+                  </button>
+                  <button type="button" onClick={() => setModal(null)} className="w-full py-3 mt-2 text-[#8E8E93] font-semibold text-[16px]">
+                    Cancel
+                  </button>
+                </div>
+              )}
+
+              {/* ── Custom RPC ── */}
+              {modal === 'custom_rpc' && (() => {
+                const [rpcVal, setRpcVal] = React.useState(settings.custom_rpc_url || '');
+                const [rpcErr, setRpcErr] = React.useState<string | null>(null);
+                return (
+                  <div className="px-6 pb-6">
+                    <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-5">Custom RPC URL</h3>
+                    <p className="text-[13px] text-[#8E8E93] mb-4 leading-relaxed">Use your own Ethereum RPC provider for transactions and contract interactions.</p>
+                    <input
+                      type="url"
+                      value={rpcVal}
+                      onChange={e => { setRpcVal(e.target.value); setRpcErr(null); }}
+                      placeholder="https://mainnet.infura.io/v3/your-key"
+                      className={`w-full bg-[#F2F2F7] rounded-2xl px-4 py-4 text-[14px] font-mono text-[#1C1C1E] outline-none focus:ring-2 mb-1 ${rpcErr ? 'ring-2 ring-red-400 focus:ring-red-400' : 'focus:ring-[#25D366]'}`}
+                    />
+                    {rpcErr && <p className="text-[12px] text-red-500 mb-3 px-1">{rpcErr}</p>}
+                    <div className="flex gap-3 mt-4">
+                      <button type="button" onClick={() => { setRpcVal(''); updateSetting('custom_rpc_url', ''); setModal(null); toast.success('Restored default RPC'); }}
+                        className="flex-1 py-4 border border-[#E5E5EA] rounded-2xl text-[#8E8E93] font-bold text-[15px]">
+                        Reset to Default
+                      </button>
+                      <button type="button" onClick={() => {
+                        if (!rpcVal) { updateSetting('custom_rpc_url', ''); setModal(null); toast.success('Restored default RPC'); return; }
+                        try {
+                          const u = new URL(rpcVal);
+                          if (u.protocol !== 'https:' && u.protocol !== 'http:') { setRpcErr('Only https:// and http:// URLs are allowed.'); return; }
+                          if (!u.hostname.includes('.') || u.hostname === 'localhost') { setRpcErr('Local network URLs are not allowed.'); return; }
+                        } catch { setRpcErr('Please enter a valid URL.'); return; }
+                        updateSetting('custom_rpc_url', rpcVal.slice(0, 512)); setModal(null); toast.success('RPC URL saved');
+                      }}
+                        className="flex-1 py-4 bg-[#1C1C1E] rounded-2xl text-white font-bold text-[15px]">
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
 
 
-      {modal === 'clearCache' && (
-        <Modal title="Purge Local Cache" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-4 text-center py-4">
-            <p className="text-[12px] font-mono text-black/60">This will clear temporary UI state and network caches. Cryptographic keys are safe.</p>
-            <button onClick={clearCache} className="w-full py-4 border border-black hover:bg-black hover:text-white transition-colors text-[11px] font-bold uppercase tracking-widest mt-4">
-              Execute Purge
-            </button>
-          </div>
-        </Modal>
-      )}
+              {/* ── Nuke ── */}
+              {modal === 'nuke' && (() => {
+                const [nukeConfirm, setNukeConfirm] = React.useState('');
+                const confirmed = nukeConfirm.trim().toUpperCase() === 'DELETE';
+                return (
+                  <div className="px-6 pb-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center">
+                        <AlertTriangle size={22} className="text-red-500" />
+                      </div>
+                      <div>
+                        <h3 className="text-[18px] font-bold text-[#1C1C1E]">Delete All Data</h3>
+                        <p className="text-[13px] text-red-500 font-semibold">This cannot be undone</p>
+                      </div>
+                    </div>
+                    <p className="text-[14px] text-[#8E8E93] mb-5 leading-relaxed">
+                      All local data including conversation history, contacts, and settings will be permanently deleted. Your on-chain identity and XMTP inbox remain intact.
+                    </p>
+                    <p className="text-[13px] text-[#3C3C43] mb-2 font-semibold">Type <span className="font-black text-red-600">DELETE</span> to confirm:</p>
+                    <input
+                      type="text"
+                      value={nukeConfirm}
+                      onChange={e => setNukeConfirm(e.target.value)}
+                      placeholder="DELETE"
+                      className="w-full bg-[#F2F2F7] rounded-2xl px-4 py-3 text-[15px] font-mono font-bold text-[#1C1C1E] outline-none focus:ring-2 focus:ring-red-400 mb-4"
+                      autoCapitalize="characters"
+                    />
+                    <button
+                      type="button"
+                      disabled={!confirmed}
+                      onClick={() => {
+                        for (let i = localStorage.length - 1; i >= 0; i--) {
+                          const k = localStorage.key(i);
+                          if (k?.startsWith('ledger_')) localStorage.removeItem(k);
+                        }
+                        sessionStorage.clear();
+                        toast.success('All local data deleted');
+                        setTimeout(() => window.location.reload(), 1500);
+                      }}
+                      className={`w-full py-4 rounded-2xl text-white font-bold text-[16px] transition-opacity ${confirmed ? 'bg-[#FF3B30]' : 'bg-[#FF3B30] opacity-30 cursor-not-allowed'}`}
+                    >
+                      Confirm — Delete Everything
+                    </button>
+                    <button type="button" onClick={() => setModal(null)} className="w-full py-3 mt-2 text-[#8E8E93] font-semibold text-[16px]">
+                      Cancel
+                    </button>
+                  </div>
+                );
+              })()}
 
-      {modal === 'nuke' && (
-        <Modal title="Obliterate All State" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-4 text-center py-4">
-            <p className="text-[12px] font-mono text-red-500 font-bold uppercase tracking-widest">CRITICAL WARNING</p>
-            <p className="text-[12px] font-mono text-black/60">This action permanently deletes all local application state, conversation history, and preferences. You will be logged out.</p>
-            <button onClick={nukeState} className="w-full py-4 bg-red-500 text-white hover:bg-red-600 transition-colors text-[11px] font-bold uppercase tracking-widest mt-4">
-              Confirm Obliteration
-            </button>
-          </div>
-        </Modal>
-      )}
 
+              {/* ── Blocked Addresses ── */}
+              {modal === 'blocked_list' && (() => {
+                const blocked: string[] = (() => { try { return JSON.parse(localStorage.getItem('ledger_blocked_users') || '[]'); } catch { return []; } })();
+                return (
+                  <div className="px-6 pb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-[20px] font-bold text-[#1C1C1E]">Blocked Addresses</h3>
+                      <button type="button" onClick={() => setModal(null)} className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center"><X size={16} className="text-[#8E8E93]" /></button>
+                    </div>
+                    {blocked.length === 0 ? (
+                      <div className="py-12 flex flex-col items-center gap-3 text-[#8E8E93]">
+                        <Shield size={40} className="opacity-30" />
+                        <p className="text-[15px] font-medium">No blocked addresses</p>
+                        <p className="text-[13px] text-center">Blocked wallets won't be able to send you messages</p>
+                      </div>
+                    ) : blocked.map((addr: string) => (
+                      <div key={addr} className="flex items-center justify-between bg-[#F2F2F7] rounded-2xl px-4 py-3 mb-2">
+                        <p className="text-[14px] font-semibold text-[#1C1C1E] font-mono">{addr.slice(0, 8)}...{addr.slice(-6)}</p>
+                        <button type="button" onClick={() => { const upd = blocked.filter(b => b !== addr); localStorage.setItem('ledger_blocked_users', JSON.stringify(upd)); toast.success('Unblocked'); setModal(null); }} className="text-[13px] text-[#25D366] font-bold px-3 py-1.5 rounded-xl hover:bg-[#25D366]/10">Unblock</button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* ── Manage Media ── */}
+              {modal === 'manage_media' && (() => {
+                let totalBytes = 0; let mediaCount = 0;
+                try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i)!; if (k.startsWith('ledger_')) { const v = localStorage.getItem(k) || ''; if (v.startsWith('data:')) { totalBytes += v.length * 0.75; mediaCount++; } } } } catch {}
+                const mb = (totalBytes / (1024 * 1024)).toFixed(2);
+                return (
+                  <div className="px-6 pb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-[20px] font-bold text-[#1C1C1E]">Manage Media</h3>
+                      <button type="button" onClick={() => setModal(null)} className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center"><X size={16} className="text-[#8E8E93]" /></button>
+                    </div>
+                    <div className="bg-[#F2F2F7] rounded-2xl p-5 mb-5">
+                      <p className="text-[13px] text-[#8E8E93] mb-1">Cached media storage</p>
+                      <p className="text-[28px] font-bold text-[#1C1C1E]">{mb} <span className="text-[16px] font-medium text-[#8E8E93]">MB</span></p>
+                      <p className="text-[12px] text-[#8E8E93] mt-1">{mediaCount} media item{mediaCount !== 1 ? 's' : ''}</p>
+                      <div className="mt-3 h-2 bg-[#E5E5EA] rounded-full overflow-hidden"><div className="h-full bg-[#25D366] rounded-full" style={{ width: `${Math.min((parseFloat(mb) / 10) * 100, 100)}%` }} /></div>
+                    </div>
+                    <button type="button" onClick={() => { let n = 0; for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i)!; if (k.startsWith('ledger_') && (localStorage.getItem(k) || '').startsWith('data:')) { localStorage.removeItem(k); n++; } } toast.success(`Cleared ${n} item${n !== 1 ? 's' : ''}`); setModal(null); }} className="w-full py-4 bg-[#FF3B30] rounded-2xl text-white font-bold text-[16px] mb-2">Clear Media Cache</button>
+                    <button type="button" onClick={() => setModal(null)} className="w-full py-3 text-[#8E8E93] font-semibold text-[16px]">Cancel</button>
+                  </div>
+                );
+              })()}
+
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
+

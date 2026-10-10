@@ -104,7 +104,7 @@ function LedgerRow({ ev }: { ev: LedgerEvent }) {
               <div className="flex items-center gap-2 mt-0.5">
                   <div className="text-[9px] font-mono text-white/20 truncate">{ev.wallet.slice(0, 10)}...{ev.wallet.slice(-6)}</div>
                   {ev.telemetryTag && (
-                      <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 whitespace-nowrap hidden sm:inline-block">
+                      <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#25D366]/10 text-emerald-400 border border-[#25D366]/20 whitespace-nowrap hidden sm:inline-block">
                           {ev.telemetryTag}
                       </span>
                   )}
@@ -302,4 +302,5 @@ function MetricBlock({ label, value, color }: { label: string; value: string; co
     </div>
   );
 }
+
 

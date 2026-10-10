@@ -58,7 +58,7 @@ export function EnterpriseFooter() {
     return (
         <footer className="relative w-full py-20 overflow-hidden">
             {/* Gradient Background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 opacity-95" />
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-emerald-600 to-indigo-700 opacity-95" />
             <div className="absolute inset-0 bg-[url('/patterns/grid.svg')] opacity-10" />
 
             <div className="relative z-10 max-w-[2560px] mx-auto px-6 text-left">
@@ -86,7 +86,7 @@ export function EnterpriseFooter() {
                         />
                         <DownloadButton
                             icon={<Apple className="w-6 h-6" />}
-                            title="iOS & Android"
+                            title="Mobile App — Coming Soon"
                             subtitle="Próximamente 2026"
                             onClick={() => handleDownloadClick('mobile')}
                             gradient="from-pink-500 to-purple-500"

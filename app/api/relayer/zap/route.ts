@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json(
-            { error: error.message || "Relayer execution failed" },
+            { error: 'Internal Server Error' || "Relayer execution failed" },
             { status: 500 }
         );
     }
@@ -249,7 +249,7 @@ export async function GET(req: NextRequest) {
     } catch (error: any) {
         console.error("[Relayer] Nonce fetch error:", error);
         return NextResponse.json(
-            { error: error.message || "Failed to fetch nonce" },
+            { error: 'Internal Server Error' || "Failed to fetch nonce" },
             { status: 500 }
         );
     }

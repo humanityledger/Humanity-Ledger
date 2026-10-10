@@ -32,7 +32,7 @@ export default function ProfitabilityTracker({ pnlData, isLoading }: Profitabili
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full mx-auto"
+          className="w-16 h-16 border-4 border-[#25D366]/30 border-t-[#25D366] rounded-full mx-auto"
         />
         <p className="text-gray-500 mt-4">Calculating P&L...</p>
       </div>
@@ -102,7 +102,7 @@ export default function ProfitabilityTracker({ pnlData, isLoading }: Profitabili
           className="p-8 bg-white/5 border border-white/10 rounded-3xl"
         >
           <div className="flex items-center gap-2 mb-2">
-            <ArrowUpRight size={20} className="text-blue-400" />
+            <ArrowUpRight size={20} className="text-emerald-400" />
             <p className="text-xs uppercase tracking-widest font-bold text-gray-400">Realizado</p>
           </div>
           <p className={`text-4xl font-black mb-2 ${realizedProfit >= 0 ? 'text-green-400' : 'text-indigo-400'}`}>
@@ -133,7 +133,7 @@ export default function ProfitabilityTracker({ pnlData, isLoading }: Profitabili
       {pnlData.result && pnlData.result.length > 0 && (
         <div className="bg-black/40 border border-white/10 rounded-3xl p-6">
           <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3">
-            <Coins size={24} className="text-blue-400" />
+            <Coins size={24} className="text-emerald-400" />
             P&L by Token
           </h3>
 
@@ -199,4 +199,5 @@ export default function ProfitabilityTracker({ pnlData, isLoading }: Profitabili
     </div>
   );
 }
+
 

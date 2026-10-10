@@ -204,7 +204,7 @@ function RainbowAccountSwitcher({ userAddress }: { userAddress: string | undefin
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-3 px-2 py-1.5 rounded-[20px] hover:bg-white/5 transition-colors border border-transparent hover:border-white/5"
       >
-         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 shadow-inner flex items-center justify-center border border-white/20">
+         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#25D366] to-purple-600 shadow-inner flex items-center justify-center border border-white/20">
             <span className="text-[14px] font-black tracking-tight text-white shadow-sm font-mono uppercase">
                 {userAddress ? userAddress.slice(2, 4) : '?'}
             </span>
@@ -235,7 +235,7 @@ function RainbowAccountSwitcher({ userAddress }: { userAddress: string | undefin
                      </div>
                      <button className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/10 text-left mb-1 hover:bg-white/10 transition-colors group">
                          <div className="flex items-center gap-4">
-                             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg"><Wallet size={16} className="text-white"/></div>
+                             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#25D366] to-purple-600 flex items-center justify-center shadow-lg"><Wallet size={16} className="text-white"/></div>
                              <div>
                                  <div className="text-sm font-black text-white tracking-tight">Main Wallet</div>
                                  <div className="text-[10px] text-white/40 font-mono tracking-widest">{userAddress?.slice(0,6)}...{userAddress?.slice(-4)}</div>
@@ -300,7 +300,7 @@ function RainbowOnboarding() {
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8 px-6 text-center">
       {/* Icon */}
       <div className="relative w-20 h-20">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20" />
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#25D366]/20 to-purple-500/20" />
         <div className="absolute inset-0 flex items-center justify-center">
           <Wallet size={36} className="text-white/80" />
         </div>
@@ -761,3 +761,4 @@ export default function PortfolioView({
     </div>
   );
 }
+

@@ -88,7 +88,7 @@ export default async function CloneRegistryPage({
       {!adminKey && (
         <div className="bg-white border border-black/10 p-6 rounded-2xl shadow-sm">
           <p className="text-[#1C1C1E] font-medium mb-4">
-            Access requires admin authentication. Add <code className="bg-black/5 text-[#007AFF] px-2 py-1 rounded">?key=humanity2026</code> to the URL.
+            Access requires admin authentication. Add <code className="bg-black/5 text-[#25D366] px-2 py-1 rounded">?key=humanity2026</code> to the URL.
           </p>
           <p className="text-[13px] text-[#8E8E93]">
             Fallback key "humanity2026" is active. Set <code>HL_ADMIN_KEY</code> in your environment variables for custom security.
@@ -247,7 +247,7 @@ export default async function CloneRegistryPage({
             <ol className="list-decimal list-inside space-y-3 text-[#6D6D72] text-[14px]">
               <li>
                 <strong className="text-[#1C1C1E]">GitHub DMCA:</strong> Go to{' '}
-                <a href="https://github.com/contact/dmca" className="text-[#007AFF] hover:underline" target="_blank" rel="noopener">
+                <a href="https://github.com/contact/dmca" className="text-[#25D366] hover:underline" target="_blank" rel="noopener">
                   github.com/contact/dmca
                 </a>
                 . Cite original repo: <code className="bg-[#F2F2F7] text-[#1C1C1E] px-1.5 py-0.5 rounded">github.com/humanityledger/Humanity-Ledger</code>
@@ -276,3 +276,4 @@ export default async function CloneRegistryPage({
     </main>
   );
 }
+

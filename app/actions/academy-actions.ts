@@ -2,9 +2,15 @@
 
 import prisma from "@/lib/prisma";
 import { ALL_MODULES, TOPIC_CATEGORIES } from "@/lib/data/academy-curriculum";
+import { getSession } from "@/lib/session";
+import { isAdmin } from "@/lib/admin";
 
 export async function syncAcademySyllabusToDB() {
     try {
+                const session = await getSession();
+        if (!session?.userId || !isAdmin(session.userId)) {
+            throw new Error("UNAUTHORIZED: System Admin Only");
+        }
         let syncedCount = 0;
         
         for (const category of TOPIC_CATEGORIES) {
@@ -124,3 +130,4 @@ export async function submitProofOfWork(walletAddress: string, lessonId: string,
 
     return { ok: true, submission };
 }
+

@@ -81,8 +81,8 @@ export default function SocialRecoveryModal({ isOpen, onClose }: SocialRecoveryM
                             </div>
                         </div>
 
-                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-6">
-                            <p className="text-blue-400 text-sm">
+                        <div className="bg-[#25D366]/10 border border-[#25D366]/20 rounded-xl p-4 mb-6">
+                            <p className="text-emerald-400 text-sm">
                                 <strong>How it works:</strong> Choose 3-5 friends as guardians. If you lose access, 
                                 {threshold} of them can approve a recovery request to restore your wallet. No seed phrase needed!
                             </p>
@@ -165,4 +165,5 @@ export default function SocialRecoveryModal({ isOpen, onClose }: SocialRecoveryM
         </AnimatePresence>
     );
 }
+
 

@@ -169,15 +169,15 @@ export function DynamicIsland() {
               className="w-full h-full flex items-center justify-between px-4"
             >
               <div className="flex items-center gap-3">
-                <Loader2 size={14} className="text-blue-400 animate-spin" />
+                <Loader2 size={14} className="text-emerald-400 animate-spin" />
                 {expanded && (
                   <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col">
-                    <span className="text-[11px] font-bold text-blue-400 uppercase tracking-widest">Network Sync</span>
+                    <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest">Network Sync</span>
                     <span className="text-[12px] font-medium text-white/70">Connecting to Aztec L2...</span>
                   </motion.div>
                 )}
               </div>
-              {!expanded && <span className="text-[11px] font-mono text-blue-400 font-bold tracking-widest">SYNC</span>}
+              {!expanded && <span className="text-[11px] font-mono text-emerald-400 font-bold tracking-widest">SYNC</span>}
             </motion.div>
           )}
 
@@ -215,13 +215,13 @@ export function DynamicIsland() {
               className="w-full h-full flex items-center justify-between px-4 w-full"
             >
               <div className="flex items-center gap-3 w-full">
-                <div className="w-8 h-8 rounded-full bg-blue-600 shrink-0 flex items-center justify-center overflow-hidden">
+                <div className="w-8 h-8 rounded-full bg-emerald-600 shrink-0 flex items-center justify-center overflow-hidden">
                    {payload?.icon ? <img src={payload.icon} className="w-full h-full object-cover" /> : <Bell size={14} className="text-white" />}
                 </div>
                 <div className="flex flex-col flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="text-[13px] font-bold text-white truncate">{payload?.title || 'New Message'}</span>
-                    {!expanded && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+                    {!expanded && <div className="w-2 h-2 rounded-full bg-[#25D366]" />}
                   </div>
                   {expanded && (
                     <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[13px] text-white/70 truncate mt-1">
@@ -248,16 +248,16 @@ export function DynamicIsland() {
             >
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-3">
-                  <Shield size={16} className="text-[#1c7aff]" />
+                  <Shield size={16} className="text-[#25D366]" />
                   <span className="text-[13px] font-bold text-white">{expanded ? 'Zero-Knowledge Proof' : 'Proving...'}</span>
                 </div>
-                <Loader2 size={14} className="text-[#1c7aff] animate-spin" />
+                <Loader2 size={14} className="text-[#25D366] animate-spin" />
               </div>
               {expanded && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 w-full">
                   <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
                     <motion.div 
-                      className="h-full bg-[#1c7aff]"
+                      className="h-full bg-[#25D366]"
                       animate={{ width: ['0%', '100%'] }}
                       transition={{ duration: 2, repeat: Infinity }}
                     />
@@ -291,3 +291,4 @@ export function DynamicIsland() {
     </div>
   );
 }
+

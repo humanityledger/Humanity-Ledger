@@ -52,7 +52,7 @@ export function LandingHero({ onStart }: LandingHeroProps) {
             {/* 1. PERMANENT BACKGROUND */}
             <div className="absolute inset-0 z-0 overflow-hidden">
                 <div className="absolute inset-0 opacity-40 bg-[radial-gradient(at_0%_0%,rgba(37,99,235,0.2)_0px,transparent_50%),radial-gradient(at_100%_0%,rgba(139,92,246,0.1)_0px,transparent_50%),radial-gradient(at_50%_100%,rgba(37,99,235,0.15)_0px,transparent_50%)]" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-black to-black" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-emerald-900/20 via-black to-black" />
                 <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" style={{ backgroundSize: '30px 30px' }} />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/90 pointer-events-none" />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.1)_0%,black_100%)] opacity-90 pointer-events-none" />
@@ -123,8 +123,8 @@ export function LandingHero({ onStart }: LandingHeroProps) {
                                 }`}>
                                     <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-10 shadow-2xl shadow-black/50 relative overflow-hidden flex flex-col items-center text-center">
                                         
-                                        <div className="w-16 h-16 rounded-full bg-blue-500/10 flex flex-col items-center justify-center mb-6 border border-blue-500/20">
-                                            <Lock className="w-6 h-6 text-blue-400" />
+                                        <div className="w-16 h-16 rounded-full bg-[#25D366]/10 flex flex-col items-center justify-center mb-6 border border-[#25D366]/20">
+                                            <Lock className="w-6 h-6 text-emerald-400" />
                                         </div>
                                         
                                         <h3 className="text-2xl font-black text-white mb-2 tracking-tight uppercase">Access Terminal</h3>
@@ -156,7 +156,7 @@ export function LandingHero({ onStart }: LandingHeroProps) {
                                 <div className="w-full flex justify-center pb-2">
                                      <button 
                                         onClick={() => router.push('/portfolio')}
-                                        className="w-full bg-blue-600 hover:bg-blue-500 text-white h-14 rounded-2xl font-black uppercase tracking-widest text-xs transition-colors"
+                                        className="w-full bg-emerald-600 hover:bg-[#25D366] text-white h-14 rounded-2xl font-black uppercase tracking-widest text-xs transition-colors"
                                     >
                                         Launch Application
                                     </button>
@@ -169,5 +169,6 @@ export function LandingHero({ onStart }: LandingHeroProps) {
         </div>
     );
 }
+
 
 

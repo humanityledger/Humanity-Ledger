@@ -21,7 +21,7 @@ interface FeatureCard {
 
 const ICON_MAP = [
     { icon: <Bell className="w-10 h-10" />, gradient: "from-orange-500 to-red-600" },
-    { icon: <Radar className="w-10 h-10" />, gradient: "from-blue-500 to-cyan-600" },
+    { icon: <Radar className="w-10 h-10" />, gradient: "from-[#25D366] to-cyan-600" },
     { icon: <Sparkles className="w-10 h-10" />, gradient: "from-purple-500 to-indigo-600" },
     { icon: <Globe className="w-10 h-10" />, gradient: "from-green-500 to-emerald-600" },
     { icon: <TrendingUp className="w-10 h-10" />, gradient: "from-yellow-500 to-orange-600" },
@@ -35,7 +35,7 @@ export function StackedFeatureCards() {
       id: idx + 1,
       ...item,
       icon: ICON_MAP[idx]?.icon || <Activity className="w-10 h-10" />,
-      gradient: ICON_MAP[idx]?.gradient || "from-blue-500 to-purple-600"
+      gradient: ICON_MAP[idx]?.gradient || "from-[#25D366] to-purple-600"
   }));
 
   const initialCards = getFeatureCards();
@@ -210,4 +210,5 @@ function Card({ data, index, isTop, offset, onSwipe }: {
         </motion.div>
     );
 }
+
 

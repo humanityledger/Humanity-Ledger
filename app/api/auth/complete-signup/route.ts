@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
     console.error('[Auth] Complete signup error:', error);
     console.error('[Auth] Error details:', {
       email: body?.email,
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorMessage: 'Internal Server Error',
       stack: error instanceof Error ? error.stack : undefined
     });
     return NextResponse.json(

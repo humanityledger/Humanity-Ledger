@@ -159,7 +159,7 @@ export default async function JoinCommunityPage({ params }: Props) {
         {/* This links to /chat?join=CODE — LedgerChatV2 reads this on mount and auto-joins */}
         <Link
           href={`/chat?join=${code}`}
-          className="flex items-center justify-center gap-2 w-full py-4 bg-[#007AFF] hover:bg-[#0062CC] text-white rounded-2xl font-black text-[16px] transition-all active:scale-[0.98] shadow-lg shadow-blue-500/25"
+          className="flex items-center justify-center gap-2 w-full py-4 bg-[#007AFF] hover:bg-[#0062CC] text-white rounded-2xl font-black text-[16px] transition-all active:scale-[0.98] shadow-lg shadow-emerald-500/25"
         >
           Join Community <ArrowRight size={18} />
         </Link>
@@ -176,7 +176,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#F2F2F7] flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Ambient background glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-blue-400/8 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-emerald-400/8 blur-[120px] rounded-full pointer-events-none" />
 
       <div className="max-w-md w-full bg-white/95 backdrop-blur-xl rounded-[36px] px-8 py-10 shadow-[0_32px_80px_rgba(0,0,0,0.08)] flex flex-col items-center text-center border border-white/80 relative z-10">
         {children}

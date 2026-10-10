@@ -97,7 +97,7 @@ const PRODUCTS = [
     id: "portfolio-terminal",
     label: "Portfolio Terminal",
     tag: "Shielded Analytics",
-    tagColor: "bg-blue-100 text-blue-700",
+    tagColor: "bg-emerald-100 text-emerald-700",
     href: "/terminal",
     cta: "Open Terminal",
     description:
@@ -107,8 +107,8 @@ const PRODUCTS = [
         label: "Connect",
         desc: "Link wallets locally via PXE",
         icon: "🔗",
-        color: "bg-blue-50 border-blue-100",
-        dot: "bg-blue-500",
+        color: "bg-emerald-50 border-emerald-100",
+        dot: "bg-[#25D366]",
       },
       {
         label: "Decrypt",
@@ -427,4 +427,5 @@ export function SeeInActionSection() {
     </section>
   );
 }
+
 

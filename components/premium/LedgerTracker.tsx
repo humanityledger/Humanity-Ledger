@@ -377,7 +377,7 @@ export default function LedgerTracker({
           onClick={() => setActiveTab('signals')}
           className={`px-8 py-4 rounded-full text-lg font-bold transition-all shadow-sm flex items-center gap-2 ${
             activeTab === 'signals' 
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' 
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' 
               : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
           }`}
         >
@@ -388,7 +388,7 @@ export default function LedgerTracker({
           onClick={() => setActiveTab('wallets')}
           className={`px-8 py-4 rounded-full text-lg font-bold transition-all shadow-sm flex items-center gap-2 ${
             activeTab === 'wallets' 
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' 
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' 
               : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
           }`}
         >
@@ -412,10 +412,10 @@ export default function LedgerTracker({
                 <div className="flex justify-between items-center px-4">
                     <div className="flex items-center gap-4">
                         <h3 className="text-2xl font-black text-white flex items-center gap-2">
-                            <Activity className="text-blue-500" />
+                            <Activity className="text-[#25D366]" />
                             Latest Movements
                         </h3>
-                         <span className="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-xs font-bold uppercase border border-blue-500/30">Telegram Bot Feed ($500M+)</span>
+                         <span className="bg-[#25D366]/20 text-emerald-300 px-3 py-1 rounded-full text-xs font-bold uppercase border border-[#25D366]/30">Telegram Bot Feed ($500M+)</span>
                     </div>
                     <span className="text-sm font-bold text-green-400 bg-green-900/20 border border-green-500/20 px-3 py-1 rounded-full animate-pulse flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-green-500"></span>
@@ -437,12 +437,12 @@ export default function LedgerTracker({
                                 ))}
                             </div>
                              {!isPremium && (
-                                <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-2xl border border-blue-500/30 text-center backdrop-blur-sm">
+                                <div className="mt-8 p-6 bg-gradient-to-r from-emerald-900/20 to-purple-900/20 rounded-2xl border border-[#25D366]/30 text-center backdrop-blur-sm">
                                     <p className="text-gray-300 font-medium mb-4">You are viewing the standard high-value ledger feed.</p>
                                     <button 
                                         onClick={onUpgrade} 
                                         data-upgrade-trigger="true"
-                                        className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform shadow-lg shadow-blue-900/50"
+                                        className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform shadow-lg shadow-emerald-900/50"
                                     >
                                         Unlock Custom Alerts & Portfolio Tracking
                                     </button>
@@ -466,18 +466,18 @@ export default function LedgerTracker({
                  <div className="bg-white/5 p-6 rounded-3xl shadow-sm border border-white/10 flex flex-wrap gap-4 items-center justify-between backdrop-blur-sm">
                     <div className="flex items-center gap-6">
                         <div className="flex gap-2">
-                            <button onClick={() => setFilter('all')} className={`px-4 py-2 rounded-xl font-bold transition-all ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>All</button>
-                            <button onClick={() => setFilter('ledgers')} className={`px-4 py-2 rounded-xl font-bold transition-all ${filter === 'ledgers' ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>Ledgers</button>
+                            <button onClick={() => setFilter('all')} className={`px-4 py-2 rounded-xl font-bold transition-all ${filter === 'all' ? 'bg-emerald-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>All</button>
+                            <button onClick={() => setFilter('ledgers')} className={`px-4 py-2 rounded-xl font-bold transition-all ${filter === 'ledgers' ? 'bg-emerald-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>Ledgers</button>
                         </div>
                         
                         {!authIsPremium && (
-                            <div className="flex items-center gap-3 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-2xl">
-                                <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Trial Access</div>
+                            <div className="flex items-center gap-3 px-4 py-2 bg-[#25D366]/10 border border-[#25D366]/20 rounded-2xl">
+                                <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Trial Access</div>
                                 <div className="flex gap-1">
                                     {[1, 2, 3].map((i) => (
                                         <div 
                                             key={i} 
-                                            className={`w-2 h-2 rounded-full ${i <= trialViews ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]' : 'bg-white/10'}`} 
+                                            className={`w-2 h-2 rounded-full ${i <= trialViews ? 'bg-[#25D366] shadow-[0_0_8px_rgba(59,130,246,0.6)]' : 'bg-white/10'}`} 
                                         />
                                     ))}
                                 </div>
@@ -498,8 +498,8 @@ export default function LedgerTracker({
                 <div className="grid grid-cols-1 gap-4">
                     {filteredWallets.length === 0 ? (
                         <div className="text-center py-20 bg-white/5 rounded-[2.5rem] border border-white/10 backdrop-blur-md">
-                            <div className="w-20 h-20 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-500/20">
-                                <Eye size={40} className="text-blue-500 opacity-50" />
+                            <div className="w-20 h-20 bg-emerald-600/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#25D366]/20">
+                                <Eye size={40} className="text-[#25D366] opacity-50" />
                             </div>
                             <h3 className="text-2xl font-black text-white mb-2">You are not watching any wallets</h3>
                             <p className="text-gray-400 max-w-xs mx-auto font-medium">
@@ -542,7 +542,7 @@ export default function LedgerTracker({
                     {!isPremium && filteredWallets.length >= 3 && (
                         <div className="text-center py-8">
                             <p className="text-gray-500 mb-2">You have reached the free limit of 3 wallets.</p>
-                            <button onClick={onUpgrade} data-upgrade-trigger="true" className="text-blue-400 font-bold underline hover:text-blue-300">Upgrade to Premium</button>
+                            <button onClick={onUpgrade} data-upgrade-trigger="true" className="text-emerald-400 font-bold underline hover:text-emerald-300">Upgrade to Premium</button>
                         </div>
                     )}
                     */}
@@ -591,14 +591,14 @@ function SignalCard({ activity, index }: { activity: LedgerActivity, index: numb
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 }}
             className={`p-6 rounded-3xl border-l-[4px] shadow-lg hover:shadow-xl transition-all bg-white/5 backdrop-blur-md mb-3 border-y border-r border-white/5 ${
-                isBuy ? 'border-l-green-500' : isSell ? 'border-l-indigo-500' : 'border-l-blue-500'
+                isBuy ? 'border-l-green-500' : isSell ? 'border-l-indigo-500' : 'border-l-[#25D366]'
             }`}
         >
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 
                 {/* 1. TYPE & TOKEN */}
                 <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className={`p-4 rounded-2xl ${isBuy ? 'bg-green-500/10 text-green-400' : isSell ? 'bg-indigo-500/10 text-indigo-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                    <div className={`p-4 rounded-2xl ${isBuy ? 'bg-green-500/10 text-green-400' : isSell ? 'bg-indigo-500/10 text-indigo-400' : 'bg-[#25D366]/10 text-emerald-400'}`}>
                         {isBuy ? <TrendingUp size={24} /> : isSell ? <TrendingDown size={24} /> : <ArrowRight size={24} />}
                     </div>
                     <div>
@@ -630,7 +630,7 @@ function SignalCard({ activity, index }: { activity: LedgerActivity, index: numb
                     {activity.chain === 'bitcoin' ? (
                        <div className="w-10 h-10 rounded-full bg-[#f7931a]/20 flex items-center justify-center text-[#f7931a] font-bold border border-[#f7931a]/30"></div> 
                     ) : activity.chain === 'base' ? (
-                       <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-600/30">B</div>
+                       <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-600/30">B</div>
                     ) : (
                        <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold border border-indigo-500/30">Ξ</div>
                     )}
@@ -684,11 +684,11 @@ function ElegantWalletCard({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
             className={`p-6 rounded-[2rem] border shadow-2xl flex flex-col gap-4 hover:bg-white/10 transition-all backdrop-blur-md group ${
-                isSelected ? 'bg-white/15 border-blue-500 shadow-blue-900/20' : 'bg-white/5 border-white/10'
+                isSelected ? 'bg-white/15 border-[#25D366] shadow-emerald-900/20' : 'bg-white/5 border-white/10'
             }`}
         >
             <div className="flex items-center gap-4 w-full md:w-auto">
-                <div className="w-12 h-12 bg-blue-600/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-500/30 relative flex-shrink-0">
+                <div className="w-12 h-12 bg-emerald-600/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-[#25D366]/30 relative flex-shrink-0">
                     {wallet.isLedger ? <Waves size={24} /> : <Eye size={24} />}
                     <div className="absolute -top-2 -right-2 flex gap-1">
                         {wallet.address.startsWith('0x') && (
@@ -710,9 +710,9 @@ function ElegantWalletCard({
                     <span className="text-sm font-mono text-gray-500">{wallet.address.slice(0,6)}...{wallet.address.slice(-4)}</span>
                 </div>
                 {wallet.isLedger && (
-                   <div className="ml-auto flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full">
-                       <ShieldCheck size={12} className="text-blue-400" />
-                       <span className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">Identity Verified</span>
+                   <div className="ml-auto flex items-center gap-1.5 px-3 py-1 bg-[#25D366]/10 border border-[#25D366]/20 rounded-full">
+                       <ShieldCheck size={12} className="text-emerald-400" />
+                       <span className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter">Identity Verified</span>
                    </div>
                 )}
             </div>
@@ -740,7 +740,7 @@ function ElegantWalletCard({
                 <div className="flex flex-wrap justify-center md:justify-end gap-2 w-full md:w-auto">
                     <button 
                         onClick={(e) => { e.stopPropagation(); onAnalyze(); }}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase hover:bg-blue-500 transition-colors shadow-lg shadow-blue-900/40"
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase hover:bg-[#25D366] transition-colors shadow-lg shadow-emerald-900/40"
                         title="View portfolio details and analysis"
                     >
                         View Portfolio
@@ -763,7 +763,7 @@ function ElegantWalletCard({
                     {wallet.isLedger && (
                        <button 
                            onClick={(e) => { e.stopPropagation(); onShowReport?.(); }}
-                           className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-400 text-white rounded-xl text-xs font-black uppercase hover:scale-105 transition-transform shadow-lg shadow-blue-900/40 flex items-center gap-2"
+                           className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-400 text-white rounded-xl text-xs font-black uppercase hover:scale-105 transition-transform shadow-lg shadow-emerald-900/40 flex items-center gap-2"
                            title="View Ledger Identity Certificate"
                        >
                            <Award size={12} />
@@ -793,7 +793,7 @@ function ElegantWalletCard({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl hover:bg-blue-500/20 transition-colors border border-blue-500/20"
+                        className="p-2.5 bg-[#25D366]/10 text-emerald-400 rounded-xl hover:bg-[#25D366]/20 transition-colors border border-[#25D366]/20"
                         title="View in Explorer (Real Verification)"
                     >
                         <Search size={16} />
@@ -803,7 +803,7 @@ function ElegantWalletCard({
                         disabled={isSyncing}
                         className={`p-2.5 rounded-xl transition-all border ${
                             isSyncing 
-                                ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' 
+                                ? 'bg-[#25D366]/20 text-emerald-400 border-[#25D366]/30' 
                                 : 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border-green-500/20'
                         }`}
                         title="Sincronizar datos on-chain (Force Refresh)"
@@ -913,7 +913,7 @@ function AddWalletModal({ isOpen, onClose, onAdd }: { isOpen: boolean, onClose: 
                                 isHexAddress ? 'border-green-500/60 focus:border-green-500' :
                                 ensPreview.state === 'ok' ? 'border-green-500/60 focus:border-green-500' :
                                 ensPreview.state === 'error' ? 'border-indigo-500/60 focus:border-indigo-500' :
-                                'border-white/10 focus:border-blue-500'
+                                'border-white/10 focus:border-[#25D366]'
                             }`}
                         />
                         {/* Instant visual feedback */}
@@ -925,8 +925,8 @@ function AddWalletModal({ isOpen, onClose, onAdd }: { isOpen: boolean, onClose: 
                                 </p>
                             )}
                             {isEnsInput && ensPreview.state === 'resolving' && (
-                                <p className="text-xs text-blue-400 font-bold flex items-center gap-2">
-                                    <span className="w-3 h-3 border-2 border-blue-400/40 border-t-blue-400 rounded-full animate-spin inline-block" />
+                                <p className="text-xs text-emerald-400 font-bold flex items-center gap-2">
+                                    <span className="w-3 h-3 border-2 border-emerald-400/40 border-t-emerald-400 rounded-full animate-spin inline-block" />
                                     Buscando en ENS...
                                 </p>
                             )}
@@ -949,7 +949,7 @@ function AddWalletModal({ isOpen, onClose, onAdd }: { isOpen: boolean, onClose: 
                             onChange={(e) => setLabel(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="Ej: BlackRock Ledger"
-                            className="w-full px-4 py-4 bg-black border border-white/10 rounded-2xl outline-none text-xl mt-2 transition-all focus:border-blue-500 text-white placeholder-gray-700"
+                            className="w-full px-4 py-4 bg-black border border-white/10 rounded-2xl outline-none text-xl mt-2 transition-all focus:border-[#25D366] text-white placeholder-gray-700"
                         />
                     </div>
 
@@ -958,9 +958,9 @@ function AddWalletModal({ isOpen, onClose, onAdd }: { isOpen: boolean, onClose: 
                         disabled={isAdding}
                         className={`w-full py-5 rounded-2xl font-black text-xl transition-all shadow-xl flex items-center justify-center gap-3 ${
                             isAdding
-                            ? 'bg-blue-800 cursor-wait text-white/70'
+                            ? 'bg-emerald-800 cursor-wait text-white/70'
                             : isHexAddress || ensPreview.state === 'ok'
-                            ? 'bg-blue-600 hover:bg-blue-500 text-white hover:scale-[1.02] shadow-blue-900/40'
+                            ? 'bg-emerald-600 hover:bg-[#25D366] text-white hover:scale-[1.02] shadow-emerald-900/40'
                             : 'bg-white/10 text-white/50 cursor-default'
                         }`}
                     >
@@ -976,4 +976,5 @@ function AddWalletModal({ isOpen, onClose, onAdd }: { isOpen: boolean, onClose: 
         </div>
     );
 }
+
 

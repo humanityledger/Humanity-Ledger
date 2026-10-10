@@ -15,7 +15,7 @@ const POOL_COLORS = [
   '#ea580c', // orange-600
   '#9333ea', // purple-600
   '#e11d48', // rose-600
-  '#2563eb', // blue-600
+  '#2563eb', // emerald-600
   '#d97706', // amber-600
   '#7c3aed', // violet-600
   '#0d9488', // teal-600

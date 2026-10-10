@@ -101,7 +101,7 @@ export function BlocksTreemapView() {
     if (isLoading) {
         return (
             <div className="min-h-screen bg-[#0D0D12] pt-24 pb-12 px-6 flex justify-center items-center">
-                <Loader className="animate-spin text-blue-500" size={40} />
+                <Loader className="animate-spin text-[#25D366]" size={40} />
             </div>
         );
     }
@@ -134,9 +134,9 @@ export function BlocksTreemapView() {
                 {/* Mining Status - Real-Time Feed Placeholder */}
                 <div className="bg-[#0B0E11] border border-white/5 rounded-2xl p-8 flex items-center justify-center mb-8">
                     <div className="flex flex-col items-center gap-4 text-center">
-                        <div className="w-12 h-12 rounded-full border-2 border-white/5 border-t-blue-500 animate-spin" />
+                        <div className="w-12 h-12 rounded-full border-2 border-white/5 border-t-[#25D366] animate-spin" />
                         <div className="space-y-1">
-                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-300">Synchronizing Global Mining Feed</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-300">Synchronizing Global Mining Feed</p>
                             <p className="text-[8px] font-mono text-white/50 uppercase tracking-[0.2em]">Hashrate Telemetry: AWAITING_HANDSHAKE</p>
                         </div>
                     </div>
@@ -208,7 +208,7 @@ export function BlocksTreemapView() {
                     >
                         {/* The Fill Animation */}
                         <motion.div 
-                            className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-blue-600 to-blue-400/50"
+                            className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-emerald-600 to-emerald-400/50"
                             animate={{ height: ['62%', '65%', '62%'] }}
                             transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
                         />
@@ -221,19 +221,19 @@ export function BlocksTreemapView() {
                                     initial={{ y: -20, opacity: 0, x: 40 + ((i * 37) % 100) }}
                                     animate={{ y: 200, opacity: [0, 1, 0] }}
                                     transition={{ repeat: Infinity, duration: 2, delay: i * 0.4 }}
-                                    className="absolute w-1 h-1 bg-blue-400 rounded-full"
+                                    className="absolute w-1 h-1 bg-emerald-400 rounded-full"
                                 />
                             ))}
                         </div>
 
                         <div className="z-10 text-center pb-8">
-                            <div className="bg-blue-600/20 p-3 rounded-xl mb-4 mx-auto w-fit border border-blue-500/20">
-                                <Box className="text-blue-500 animate-pulse" size={28} />
+                            <div className="bg-emerald-600/20 p-3 rounded-xl mb-4 mx-auto w-fit border border-[#25D366]/20">
+                                <Box className="text-[#25D366] animate-pulse" size={28} />
                             </div>
-                            <p className="text-[10px] font-black uppercase text-blue-400 tracking-[0.2em] mb-1">Building Block</p>
+                            <p className="text-[10px] font-black uppercase text-emerald-400 tracking-[0.2em] mb-1">Building Block</p>
                             <p className="text-2xl font-black text-white font-mono tracking-tighter">1.82 MB</p>
                             <div className="mt-4 flex items-center justify-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+                                <div className="w-2 h-2 rounded-full bg-[#25D366] animate-ping" />
                                 <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Active Flow</span>
                             </div>
                         </div>
@@ -298,6 +298,7 @@ export function BlocksTreemapView() {
         </div>
     );
 }
+
 
 
 

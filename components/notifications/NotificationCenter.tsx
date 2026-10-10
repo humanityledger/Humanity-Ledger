@@ -26,8 +26,8 @@ export default function NotificationCenter() {
         switch(type) {
             case 'security': return <ShieldAlert size={16} className="text-red-500" />;
             case 'transaction': return <BadgePercent size={16} className="text-green-500" />;
-            case 'social': return <MessageCircle size={16} className="text-blue-500" />;
-            case 'system': return <Info size={16} className="text-blue-500" />;
+            case 'social': return <MessageCircle size={16} className="text-[#25D366]" />;
+            case 'system': return <Info size={16} className="text-[#25D366]" />;
             default: return <Bell size={16} className="text-gray-500" />;
         }
     };
@@ -108,7 +108,7 @@ export default function NotificationCenter() {
                                     notifications.map((n: any) => (
                                         <div 
                                             key={n.id} 
-                                            className={`p-4 border-b border-[#1F1F1F]/5 hover:bg-[#FFFFFF] transition-colors relative group ${!n.read ? 'bg-blue-50/30' : ''}`}
+                                            className={`p-4 border-b border-[#1F1F1F]/5 hover:bg-[#FFFFFF] transition-colors relative group ${!n.read ? 'bg-emerald-50/30' : ''}`}
                                         >
                                             <div className="flex gap-3">
                                                 <div className={`mt-1 w-8 h-8 rounded-full bg-white border border-[#1F1F1F]/5 flex items-center justify-center shadow-sm shrink-0`}>
@@ -131,7 +131,7 @@ export default function NotificationCenter() {
                                             
                                             {/* Unread Dot */}
                                             {!n.read && (
-                                                <div className="absolute top-1/2 right-3 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full" />
+                                                <div className="absolute top-1/2 right-3 -translate-y-1/2 w-2 h-2 bg-[#25D366] rounded-full" />
                                             )}
                                         </div>
                                     ))
@@ -155,4 +155,5 @@ export default function NotificationCenter() {
         </div>
     );
 }
+
 

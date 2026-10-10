@@ -50,6 +50,13 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
 
   useEffect(() => {
     loadRequests();
+    
+    // Polling every 30s
+    const interval = setInterval(() => {
+      loadRequests();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, [loadRequests]);
 
   const handleAction = async (request: ContactRequest, action: 'accept' | 'reject') => {
@@ -110,7 +117,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
         {/* Header */}
         <div className="p-5 border-b border-black/5 bg-[#f9f9fb] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bell size={20} className="text-[#1c7aff]" />
+            <Bell size={20} className="text-[#25D366]" />
             <div>
               <h2 className="text-[17px] font-black text-black">Contact Requests</h2>
               {requests.length > 0 && (
@@ -130,7 +137,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
           <AnimatePresence mode="popLayout">
             {loading ? (
               <div className="flex items-center justify-center p-12">
-                <div className="w-7 h-7 border-4 border-[#1c7aff]/20 border-t-[#1c7aff] rounded-full animate-spin" />
+                <div className="w-7 h-7 border-4 border-[#25D366]/20 border-t-[#25D366] rounded-full animate-spin" />
               </div>
             ) : requests.length === 0 ? (
               <motion.div
@@ -181,7 +188,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
                       <button
                         onClick={() => handleAction(req, 'accept')}
                         disabled={isProcessing}
-                        className="w-9 h-9 bg-[#1c7aff] hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+                        className="w-9 h-9 bg-[#25D366] hover:bg-[#1fae52] text-white rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
                         title="Accept"
                       >
                         {isProcessing ? (
@@ -209,3 +216,4 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
     </motion.div>
   );
 }
+

@@ -67,14 +67,14 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
     success: <CheckCircle className="w-5 h-5 text-green-400" />,
     error: <XCircle className="w-5 h-5 text-red-400" />,
     warning: <AlertCircle className="w-5 h-5 text-yellow-400" />,
-    info: <Info className="w-5 h-5 text-blue-400" />,
+    info: <Info className="w-5 h-5 text-emerald-400" />,
   };
 
   const colors = {
     success: 'border-green-500/20 bg-green-500/5',
     error: 'border-red-500/20 bg-red-500/5',
     warning: 'border-yellow-500/20 bg-yellow-500/5',
-    info: 'border-blue-500/20 bg-blue-500/5',
+    info: 'border-[#25D366]/20 bg-[#25D366]/5',
   };
 
   return (
@@ -103,4 +103,5 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
     </motion.div>
   );
 }
+
 

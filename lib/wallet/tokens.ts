@@ -370,7 +370,7 @@ export async function searchTokens(
       `https://api.1inch.dev/token/v1.2/${chainId}/search?query=${encodeURIComponent(query)}&limit=${limit}`,
       {
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_1INCH_API_KEY}`,
+          'Authorization': `Bearer ${(process.env.ONEINCH_API_KEY || process.env.NEXT_PUBLIC_1INCH_API_KEY)}`,
         },
       }
     );
@@ -534,4 +534,5 @@ export function getSectorForSymbol(symbol: string): string {
 
     return 'Other';
 }
+
 

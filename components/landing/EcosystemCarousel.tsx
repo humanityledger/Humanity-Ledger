@@ -61,7 +61,7 @@ export function EcosystemCarousel() {
                             title={item.title}
                             subtitle={item.subtitle}
                             lottieSize="lg"
-                            className="h-full bg-zinc-900/50 border-white/10 hover:border-blue-500/50 transition-all hover:scale-[1.02]"
+                            className="h-full bg-zinc-900/50 border-white/10 hover:border-[#25D366]/50 transition-all hover:scale-[1.02]"
                         />
                         <div className="mt-3 flex justify-between items-center px-1">
                             <span className="text-xs font-black text-zinc-600 uppercase tracking-widest">
@@ -74,10 +74,11 @@ export function EcosystemCarousel() {
             </div>
 
             <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-4">
-                <div className="h-full bg-blue-500/50 w-1/3 rounded-full transition-all duration-300" /> 
+                <div className="h-full bg-[#25D366]/50 w-1/3 rounded-full transition-all duration-300" /> 
             </div>
 
         </div>
     );
 }
+
 

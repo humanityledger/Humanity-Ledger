@@ -239,7 +239,7 @@ export function SmartMoneyTracker() {
                         href={`https://etherscan.io/tx/${ev.hash}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[10px] text-blue-600/70 hover:text-blue-800 hover:underline transition-colors"
+                        className="text-[10px] text-emerald-600/70 hover:text-emerald-800 hover:underline transition-colors"
                       >
                         View transaction 
                       </a>
@@ -297,4 +297,5 @@ export function SmartMoneyTracker() {
     </div>
   );
 }
+
 

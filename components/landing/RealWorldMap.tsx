@@ -253,7 +253,7 @@ export const RealWorldMap = memo(function RealWorldMap({
                 style={{ borderTop: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.05)" }}
               >
                 {tooltip.count > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse block" />
+                  <span className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse block" />
                 )}
                 <span className="text-[11px] font-black font-mono" style={{ color: isDark ? "#fff" : "#000" }}>
                   {tooltip.count.toLocaleString()} wallet{tooltip.count !== 1 ? "s" : ""} connected
@@ -330,3 +330,4 @@ export const RealWorldMap = memo(function RealWorldMap({
     </div>
   );
 });
+

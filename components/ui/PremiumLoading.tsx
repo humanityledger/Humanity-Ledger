@@ -15,7 +15,7 @@ export function PremiumLoading({ message = "Loading...", fullScreen = true }: Pr
         {/* Animated background orbs */}
         <div className="absolute inset-0">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-blob" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-blob animation-delay-2000" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#25D366]/20 rounded-full blur-3xl animate-blob animation-delay-2000" />
         </div>
 
         {/* Loading content */}
@@ -37,10 +37,10 @@ export function PremiumLoading({ message = "Loading...", fullScreen = true }: Pr
             }}
             className="relative"
           >
-            <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-500 to-[#25D366] flex items-center justify-center">
               <Sparkles className="w-10 h-10 text-white" />
             </div>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 blur-xl opacity-50" />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 to-[#25D366] blur-xl opacity-50" />
           </motion.div>
 
           {/* Loading text */}
@@ -74,4 +74,5 @@ export function PremiumLoading({ message = "Loading...", fullScreen = true }: Pr
     </div>
   );
 }
+
 

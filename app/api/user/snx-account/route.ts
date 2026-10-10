@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         console.error('[SNX_ACCOUNT_SYNC_ERROR]', error);
         return NextResponse.json({ 
             error: 'Failed to synchronize account', 
-            details: error.message 
+            details: 'Error details redacted' 
         }, { status: 500 });
     }
 }

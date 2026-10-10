@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { NextResponse } from 'next/server';
 import { generateRegistrationOptions } from '@simplewebauthn/server';
 import { Redis } from '@upstash/redis';
@@ -42,6 +42,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ options, sessionId });
     } catch (error: any) {
         console.error('[WebAuthn] Generate Options Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

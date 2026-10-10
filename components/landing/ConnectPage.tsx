@@ -25,18 +25,45 @@ const DynamicUniversalScanModal = dynamic(
   { ssr: false }
 );
 
+// ─── App Store Badge (Official look — matches Apple's badge exactly) ──────────
 function AppStoreBadge() {
   return (
-    <a href="#" className="block transition-transform hover:scale-105 active:scale-95">
-      <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83&releaseDate=1276560000" alt="Download on the App Store" className="h-[40px] w-auto" />
+    <a
+      href="#"
+      className="inline-flex items-center gap-[10px] bg-black text-white px-[14px] py-[8px] rounded-[10px] border border-white/[0.12] hover:bg-[#111] active:scale-[0.97] transition-all select-none"
+      style={{ height: '50px', minWidth: '148px' }}
+    >
+      {/* Official Apple logo — correct viewBox so the leaf doesn't clip */}
+      <svg width="20" height="24" viewBox="0 0 170 209" fill="white" xmlns="http://www.w3.org/2000/svg">
+        <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.2-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.75 3.35-4.94.21-9.84-1.96-14.72-6.52-3.13-2.73-7.05-7.41-11.76-14.03-5.04-7.08-9.19-15.29-12.43-24.65-3.47-10.11-5.21-19.9-5.21-29.38 0-10.86 2.35-20.23 7.06-28.1 3.7-6.31 8.63-11.3 14.82-14.99 6.19-3.69 12.87-5.57 20.07-5.69 3.94 0 9.1 1.22 15.53 3.61 6.41 2.4 10.52 3.62 12.32 3.62 1.35 0 5.92-1.43 13.68-4.27 7.33-2.65 13.52-3.75 18.6-3.32 13.75 1.11 24.08 6.52 30.95 16.26-12.29 7.45-18.37 17.87-18.25 31.22.11 10.41 3.88 19.07 11.3 25.95 3.36 3.19 7.11 5.65 11.27 7.4-.9 2.62-1.86 5.12-2.88 7.52zM113.22 3.48c0 8.16-2.98 15.78-8.92 22.84-7.17 8.38-15.84 13.23-25.23 12.47-.12-.98-.19-2-.19-3.07 0-7.83 3.41-16.21 9.46-23.07 3.02-3.48 6.86-6.37 11.52-8.69 4.65-2.29 9.05-3.55 13.18-3.77.12 1.1.18 2.2.18 3.29z"/>
+      </svg>
+      <div className="flex flex-col text-left leading-none">
+        <span className="text-[10px] font-normal opacity-75 tracking-wide mb-[2px]">Download on the</span>
+        <span className="text-[19px] font-semibold tracking-[-0.3px]">App Store</span>
+      </div>
     </a>
   );
 }
 
+// ─── Google Play Badge (Official look — matches Google's badge exactly) ────────
 function GooglePlayBadge() {
   return (
-    <a href="#" className="block transition-transform hover:scale-105 active:scale-95">
-      <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" className="h-[58px] w-auto -m-[9px]" />
+    <a
+      href="#"
+      className="inline-flex items-center gap-[10px] bg-black text-white px-[14px] py-[8px] rounded-[10px] border border-white/[0.12] hover:bg-[#111] active:scale-[0.97] transition-all select-none"
+      style={{ height: '50px', minWidth: '162px' }}
+    >
+      {/* Official Google Play triangle logo */}
+      <svg width="24" height="27" viewBox="0 0 40 45" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M1.5 0.7L22.1 21.3L1.5 41.9C0.6 41.4 0 40.5 0 39.4V2.2C0 1.1 0.6 0.2 1.5 0.7Z" fill="#4CAF50"/>
+        <path d="M33.1 15L22.1 21.3L29.7 28.9L40.6 22.7C41.8 22 41.8 20.7 40.6 20L33.1 15Z" fill="#FFC107"/>
+        <path d="M1.5 41.9L22.1 21.3L29.7 28.9L4.2 43.6C2.9 44.4 1.5 43.4 1.5 41.9Z" fill="#F44336"/>
+        <path d="M1.5 0.7L22.1 21.3L29.7 13.7L4.2 -1C2.9 -1.8 1.5 -0.8 1.5 0.7Z" fill="#2196F3"/>
+      </svg>
+      <div className="flex flex-col text-left leading-none">
+        <span className="text-[10px] font-normal opacity-75 tracking-[0.08em] uppercase mb-[2px]">Get it on</span>
+        <span className="text-[19px] font-semibold tracking-[-0.3px]">Google Play</span>
+      </div>
     </a>
   );
 }
@@ -159,7 +186,14 @@ export default function ConnectPage() {
     try { if (sessionStorage.getItem("__disconnected__") === "1" || localStorage.getItem("__disconnected__") === "1") return; } catch {}
     const hasCookie = document.cookie.split("; ").some(r => r.startsWith("system_handshake="));
     const hasLocal = (() => { try { const r = localStorage.getItem("system_session_v2"); if (!r) return false; const p = JSON.parse(r); return p && p.exp && p.exp > Date.now(); } catch { return false; } })();
-    if (hasCookie || hasLocal) setLinked(true);
+    if (hasCookie || hasLocal) {
+      setLinked(true);
+      // Auto-redirect to /chat if already logged in (important for Electron .exe)
+      const rp = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+      const returnUrl = rp.get("redirect") || rp.get("returnUrl") || "/chat";
+      const safe = returnUrl.startsWith("/") && !returnUrl.startsWith("//") ? returnUrl : "/chat";
+      setTimeout(() => { window.location.replace(safe); }, 500);
+    }
   }, [setLinked]);
 
   const initEphemeral = useCallback(async () => {
@@ -268,7 +302,7 @@ export default function ConnectPage() {
             setLinked(true); redirectingRef.current = true;
             const rp = new URLSearchParams(window.location.search);
             const rv = rp.get("returnUrl") || rp.get("redirect_url");
-            const safe = (rv && rv !== "/portfolio" && !rv.startsWith("/terminal")) ? rv : "/hub";
+            const safe = (rv && rv !== '/portfolio' && !rv.startsWith('/terminal')) ? rv : '/chat';
             window.location.replace(safe); return;
           }
         }
@@ -295,7 +329,7 @@ export default function ConnectPage() {
           setLinked(true); redirectingRef.current = true;
           const rp = new URLSearchParams(window.location.search);
           const rv = rp.get("returnUrl") || rp.get("redirect_url");
-          window.location.replace((rv && !rv.startsWith("/terminal")) ? rv : "/hub");
+          window.location.replace((rv && !rv.startsWith('/terminal')) ? rv : '/chat');
         } else { setAuthStatus("failed"); signingRef.current = false; }
       } catch (e: any) {
         if (e?.message?.toLowerCase().includes("rejected") || e?.message?.toLowerCase().includes("cancelled")) toast.error("Signature declined");
@@ -317,8 +351,16 @@ export default function ConnectPage() {
     setPendingWalletLogo(logo);
     if (!rdns) { openAppKitSafe(); setPendingId(null); return; }
     const conn = connectors.find((c: any) => c.id === rdns) || connectors.find(c => c.name.toLowerCase().includes(walletId)) || connectors.find(c => c.id === "injected" || (c as any).type === "injected");
-    if (conn) connect({ connector: conn });
-    else { setPendingId(null); setPendingWalletName(null); if (installUrl) toast.error("Wallet not found", { action: { label: "Install", onClick: () => window.open(installUrl, "_blank") } }); }
+    
+    if (conn) {
+      connect({ connector: conn });
+    } else {
+      // If we're in the .exe or a browser without extensions, fallback to WalletConnect QR
+      setPendingId(null);
+      setPendingWalletName(null);
+      openAppKitSafe();
+      toast.info(`Please scan the QR code with your ${name} mobile app.`);
+    }
   }, [connect, connectors, openAppKitSafe]);
 
 
@@ -353,15 +395,10 @@ export default function ConnectPage() {
           The ultimate secure messenger. Perfectly comfortable for everyone, including older adults. No passwords needed.
         </p>
         
-        {/* Launch badge - sleek pill */}
-        <div className="relative z-10 inline-flex items-center gap-3 pl-2 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/[0.04]">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-inner" style={{ background: 'linear-gradient(135deg, #1c7aff, #ff2a85)' }}>
-            <span className="text-white font-bold text-xs tracking-widest">27</span>
-          </div>
-          <div className="flex flex-col text-left">
-            <span className="text-[8.5px] font-mono uppercase tracking-[0.2em] font-bold" style={{ color: '#ff2a85' }}>Global Launch</span>
-            <span className="text-[13px] font-bold tracking-tight text-black leading-tight">January 1, 2027</span>
-          </div>
+        {/* Live status badge */}
+        <div className="relative z-10 inline-flex items-center gap-3 pl-3 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-[#25D366]/20">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#25D366] animate-pulse block shrink-0" />
+          <span className="text-[12px] font-bold tracking-tight text-black">Live Now · Mobile Apps Coming</span>
         </div>
       </div>
 
@@ -385,43 +422,61 @@ export default function ConnectPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-20 flex flex-col items-center text-center gap-0 w-full max-w-[480px] mx-auto"
+            className="relative z-20 flex flex-col justify-center gap-0 w-full max-w-[560px] mx-auto mt-[-40px]"
           >
-            {/* Ledger Chat icon — hero */}
-            <div
-              className="w-[140px] h-[140px] rounded-[42px] overflow-hidden mb-10 transition-transform duration-700 hover:scale-[1.03] cursor-default bg-white"
-              style={{ boxShadow: '0 30px 60px -15px rgba(255,42,133,0.3), inset 0 1px 2px rgba(255,255,255,0.8), 0 0 0 1px rgba(0,0,0,0.03)' }}
-            >
-              <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" />
+            <div className="inline-flex items-center gap-3 pl-3 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/5 w-fit mb-8">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#25D366] animate-pulse block shrink-0" />
+              <span className="text-[12px] font-mono uppercase tracking-widest text-black/60 font-semibold">Protocol Active</span>
             </div>
 
-            <h1 className="text-[56px] xl:text-[64px] font-black tracking-[-0.04em] leading-none text-black mb-3">Ledger Chat</h1>
-            <p className="text-[18px] font-semibold text-neutral-400 tracking-tight mb-5">Launching January 2027</p>
+            <h1 className="text-[52px] xl:text-[64px] font-black tracking-[-0.04em] leading-[1.05] text-black mb-6">
+              Universal Communication Protocol
+            </h1>
 
-            <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-4 max-w-[420px]">
-              Ledger Chat is the world's most secure private messenger. But security means nothing if it is hard to use.
-            </p>
-            <p className="text-[17px] text-neutral-500 leading-[1.6] font-medium mb-10 max-w-[420px]">
-              No passwords to remember, no complex menus. Just open and connect. We designed it to be so intuitive that it is <strong>perfectly comfortable for older adults</strong> and absolutely seamless for everyone else.
+            <p className="text-[18px] text-neutral-500 leading-[1.6] font-medium mb-12 max-w-[480px]">
+              Connect to Humanity Ledger to access your private portfolio, verify your identity securely, and communicate with military-grade encryption.
             </p>
 
-            {/* Launch advertisement - ultra premium pill */}
-            <div className="relative inline-flex items-center gap-4 pl-3 pr-6 py-3 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.05)] border border-black/[0.04] transition-all hover:shadow-[0_12px_40px_rgba(255,42,133,0.1)] cursor-default">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#1c7aff]/[0.015] to-[#ff2a85]/[0.015] rounded-full pointer-events-none" />
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-inner" style={{ background: 'linear-gradient(135deg, #1c7aff, #ff2a85)' }}>
-                <span className="text-white font-bold text-sm tracking-widest">27</span>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-10 w-full">
+              <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
+                  <Shield size={20} strokeWidth={1.5} />
+                </div>
+                <h3 className="font-bold text-[15px] text-black">Private Verification</h3>
+                <p className="text-[13px] text-black/50 leading-relaxed">Cryptographic proofs via Aztec Network. Validate your identity locally without exposing personal data.</p>
               </div>
-              <div className="flex flex-col text-left">
-                <span className="text-[9.5px] font-mono uppercase tracking-[0.2em] font-bold" style={{ color: '#ff2a85' }}>Global Launch</span>
-                <span className="text-[14.5px] font-bold tracking-tight text-black leading-tight">January 1, 2027</span>
+              <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
+                  <Lock size={20} strokeWidth={1.5} />
+                </div>
+                <h3 className="font-bold text-[15px] text-black">End-to-End Encrypted</h3>
+                <p className="text-[13px] text-black/50 leading-relaxed">Direct messaging via XMTP. Fully decentralized communication channels.</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
+                  <Wallet size={20} strokeWidth={1.5} />
+                </div>
+                <h3 className="font-bold text-[15px] text-black">Institutional Asset Hub</h3>
+                <p className="text-[13px] text-black/50 leading-relaxed">Institutional-grade dashboard to track, stake, and secure digital assets.</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
+                  <CheckCircle2 size={20} strokeWidth={1.5} />
+                </div>
+                <h3 className="font-bold text-[15px] text-black">Wallet Authentication</h3>
+                <p className="text-[13px] text-black/50 leading-relaxed">Sign-In with Ethereum authentication. You are the sole custodian of your session.</p>
               </div>
             </div>
           </motion.div>
 
-          {/* Bottom bar */}
-          <div className="relative z-20 flex items-center justify-between opacity-40">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-black font-semibold">Sovereign Protocol</span>
-            <span className="text-[10px] font-mono uppercase tracking-widest text-black font-semibold">Timisoara R&amp;D Hub</span>
+          {/* Bottom links */}
+          <div className="relative z-20 flex items-center justify-between text-[11px] font-medium text-neutral-400">
+            <span>© 2026 Humanity Ledger Protocol</span>
+            <div className="flex items-center gap-6">
+              <Link href="/docs/whitepaper" className="hover:text-black transition-colors">Whitepaper</Link>
+              <Link href="/docs/terms" className="hover:text-black transition-colors">Terms</Link>
+              <Link href="/docs/privacy" className="hover:text-black transition-colors">Privacy</Link>
+            </div>
           </div>
         </div>
 
@@ -506,37 +561,7 @@ export default function ConnectPage() {
               ) : (
                 <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-2">
                   {!isMobile && (
-                    <div className="mb-4 p-4 rounded-2xl border border-black/8 bg-[#F7F7F6] flex flex-col items-center gap-3">
-                      <p className="text-[9px] font-mono uppercase tracking-[0.3em] text-black/30">Scan with mobile wallet</p>
-                      <div className="p-3 bg-white border border-black/8 rounded-xl">
-                        {syncStatus === "AWAITING" && qrData
-                          ? <QRCodeSVG value={qrData} size={156} fgColor="#000000" bgColor="#FFFFFF" level="L" includeMargin={false} />
-                          : syncStatus === "ERROR"
-                          ? <div className="w-[156px] h-[156px] flex flex-col items-center justify-center gap-3">
-                              <Shield size={18} className="text-black/20" />
-                              <button onClick={() => { setSyncStatus("IDLE"); setQrSession(null); setQrData(""); }} className="text-[9px] font-mono uppercase tracking-widest text-black border border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors rounded">Retry</button>
-                            </div>
-                          : <div className="w-[156px] h-[156px] flex items-center justify-center"><Loader2 size={18} className="animate-spin text-black/15" /></div>
-                        }
-                      </div>
-                      {pinCode && syncStatus === "AWAITING" && (
-                        <div className="flex flex-col items-center gap-1.5">
-                          <p className="text-[8px] font-mono uppercase tracking-[0.2em] text-black/25">Security PIN</p>
-                          <div className="flex gap-1.5">
-                            {pinCode.split("").map((d, i) => (
-                              <div key={i} className="w-8 h-9 border border-black/15 rounded-lg flex items-center justify-center bg-white">
-                                <span className="text-[14px] font-black text-black">{d}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {!isMobile && (
                     <>
-                      <Divider label="or connect browser wallet" />
                       <div className="flex flex-col gap-2">
                         {DESKTOP_WALLETS.map(w => (
                           <WalletRow key={w.id} logo={w.logo} name={w.name} badge={w.badge}

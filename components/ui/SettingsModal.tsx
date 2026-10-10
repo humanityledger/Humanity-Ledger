@@ -235,7 +235,7 @@ export function SettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
             case 'walletconnect':
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 text-center py-10">
-                        <Link className="w-16 h-16 text-blue-500 mx-auto mb-4 opacity-50" />
+                        <Link className="w-16 h-16 text-[#25D366] mx-auto mb-4 opacity-50" />
                         <h3 className="text-2xl font-bold text-white">WalletConnect V2</h3>
                         <p className="text-zinc-400">View and manage dApp connections securely.</p>
                         <div className="p-4 border border-white/5 bg-white/5 rounded-xl mx-auto max-w-sm mt-6">
@@ -419,4 +419,5 @@ function ToggleItem({ title, description, active, onClick }: { title: string, de
         </div>
     );
 }
+
 

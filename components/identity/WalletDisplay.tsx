@@ -16,7 +16,7 @@ export const WalletDisplay = () => {
                 {ensAvatar ? (
                     <img src={ensAvatar} alt="ENS" className="w-6 h-6 rounded-full" />
                 ) : (
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#00f2ea] to-blue-600" />
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#00f2ea] to-emerald-600" />
                 )}
                 <span className="absolute bottom-0 right-0 w-2 h-2 bg-[#00ff9d] border border-black rounded-full"></span>
             </div>

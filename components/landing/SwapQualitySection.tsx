@@ -59,7 +59,7 @@ export function SwapQualitySection() {
       {/* Ambient Background Effects */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-purple-600/10 blur-[150px] rounded-full" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-600/10 blur-[150px] rounded-full" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-emerald-600/10 blur-[150px] rounded-full" />
       </div>
 
       <div className="relative z-10 max-w-[2560px] mx-auto text-left">
@@ -103,7 +103,7 @@ export function SwapQualitySection() {
             className="space-y-8"
           >
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600/20 to-blue-600/20 backdrop-blur-xl border border-white/10 rounded-full px-4 py-2">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600/20 to-emerald-600/20 backdrop-blur-xl border border-white/10 rounded-full px-4 py-2">
               <CheckCircle2 size={16} className="text-green-400" />
               <span className="text-sm font-bold text-white/80 uppercase tracking-wider">
                 {t.landing.swap.badge}
@@ -113,7 +113,7 @@ export function SwapQualitySection() {
             {/* Heading */}
             <h2 className="text-5xl md:text-6xl font-black text-white leading-tight">
               {t.landing.swap.title}
-              <span className="block bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-purple-400 via-pink-400 to-emerald-400 bg-clip-text text-transparent">
                 {t.landing.swap.realtime}
               </span>
             </h2>
@@ -145,7 +145,7 @@ export function SwapQualitySection() {
             <div className="grid grid-cols-4 gap-4 pt-6 border-t border-white/10">
               {stats.map((stat, index) => (
                 <div key={index} className="text-center">
-                  <div className="text-2xl font-black bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+                  <div className="text-2xl font-black bg-gradient-to-r from-purple-400 to-emerald-400 bg-clip-text text-transparent">
                     {stat.value}
                   </div>
                   <div className="text-xs text-white/40 uppercase tracking-wider mt-1">
@@ -160,7 +160,7 @@ export function SwapQualitySection() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleProbarAhora}
-              className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold px-8 py-4 rounded-2xl shadow-2xl hover:shadow-purple-500/50 transition-all flex items-center gap-3 justify-center"
+              className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-emerald-600 text-white font-bold px-8 py-4 rounded-2xl shadow-2xl hover:shadow-purple-500/50 transition-all flex items-center gap-3 justify-center"
             >
               <Radar size={18} className="text-white/80" />
               {isSignedIn ? t.landing.swap.ctaPrimaryActive : t.landing.swap.ctaPrimary}
@@ -171,5 +171,6 @@ export function SwapQualitySection() {
     </section>
   );
 }
+
 
 

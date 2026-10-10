@@ -104,7 +104,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
     } catch {}
   };
 
-  const AVATAR_COLORS = ['#007AFF','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
+  const AVATAR_COLORS = ['#25D366','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
   const avatarColor = (id: string) => AVATAR_COLORS[parseInt(id.charCodeAt(0).toString(), 10) % AVATAR_COLORS.length];
 
   return (
@@ -113,13 +113,13 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
       <div className="bg-white mb-2 px-4 py-3 flex gap-3">
         <button
           onClick={() => setShowCreate(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#007AFF] rounded-2xl text-white font-semibold text-[14px]"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#25D366] rounded-2xl text-white font-semibold text-[14px]"
         >
           <Plus size={18} /> New Community
         </button>
         <button
           onClick={() => setShowJoin(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#007AFF]/10 rounded-2xl text-[#007AFF] font-semibold text-[14px]"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#25D366]/10 rounded-2xl text-[#25D366] font-semibold text-[14px]"
         >
           <Link size={18} /> Join via Link
         </button>
@@ -129,7 +129,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
       {communities.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 px-8 py-16">
           <div className="w-20 h-20 rounded-3xl bg-white shadow-sm border border-black/[0.06] flex items-center justify-center">
-            <Users size={32} className="text-[#007AFF]" />
+            <Users size={32} className="text-[#25D366]" />
           </div>
           <p className="text-[17px] font-bold text-[#1C1C1E] text-center">Communities</p>
           <p className="text-[14px] text-[#8E8E93] text-center leading-relaxed">
@@ -161,10 +161,10 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
 
                 <button
                   onClick={e => { e.stopPropagation(); copyLink(`https://humanidfi.com/join/${c.joinCode}`, c.id); }}
-                  className="w-8 h-8 rounded-full bg-[#007AFF]/10 flex items-center justify-center shrink-0"
+                  className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center shrink-0"
                   title="Copy invite link"
                 >
-                  {copiedId === c.id ? <Check size={15} className="text-[#34C759]" /> : <Copy size={15} className="text-[#007AFF]" />}
+                  {copiedId === c.id ? <Check size={15} className="text-[#34C759]" /> : <Copy size={15} className="text-[#25D366]" />}
                 </button>
               </button>
             </React.Fragment>
@@ -190,9 +190,9 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
               className="w-full bg-white rounded-t-3xl p-6 flex flex-col gap-4"
             >
               <div className="flex items-center justify-between">
-                <button onClick={() => setShowCreate(false)} className="text-[#007AFF]"><X size={20} /></button>
+                <button onClick={() => setShowCreate(false)} className="text-[#25D366]"><X size={20} /></button>
                 <h3 className="text-[17px] font-semibold">New Community</h3>
-                <button onClick={createCommunity} disabled={!newName.trim()} className="text-[#007AFF] font-semibold disabled:opacity-40">Create</button>
+                <button onClick={createCommunity} disabled={!newName.trim()} className="text-[#25D366] font-semibold disabled:opacity-40">Create</button>
               </div>
 
               <div className="flex flex-col gap-3">
@@ -212,14 +212,14 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
                 />
                 <button
                   onClick={() => setIsPrivate(v => !v)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${isPrivate ? 'border-[#007AFF] bg-[#007AFF]/5' : 'border-black/10'}`}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${isPrivate ? 'border-[#25D366] bg-[#25D366]/5' : 'border-black/10'}`}
                 >
-                  {isPrivate ? <Lock size={18} className="text-[#007AFF]" /> : <Globe size={18} className="text-[#8E8E93]" />}
+                  {isPrivate ? <Lock size={18} className="text-[#25D366]" /> : <Globe size={18} className="text-[#8E8E93]" />}
                   <div className="flex-1 text-left">
                     <p className="text-[15px] font-medium text-[#1C1C1E]">{isPrivate ? 'Private' : 'Public'}</p>
                     <p className="text-[12px] text-[#8E8E93]">{isPrivate ? 'Invite only' : 'Anyone with the link can join'}</p>
                   </div>
-                  {isPrivate && <Check size={16} className="text-[#007AFF]" />}
+                  {isPrivate && <Check size={16} className="text-[#25D366]" />}
                 </button>
               </div>
               <p className="text-[12px] text-[#8E8E93] text-center">End-to-end encrypted · Members can join via invite link</p>
@@ -246,9 +246,9 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
               className="w-full bg-white rounded-t-3xl p-6 flex flex-col gap-4"
             >
               <div className="flex items-center justify-between">
-                <button onClick={() => setShowJoin(false)} className="text-[#007AFF]"><X size={20} /></button>
+                <button onClick={() => setShowJoin(false)} className="text-[#25D366]"><X size={20} /></button>
                 <h3 className="text-[17px] font-semibold">Join via Link</h3>
-                <button onClick={joinCommunity} disabled={!joinLink.trim()} className="text-[#007AFF] font-semibold disabled:opacity-40">Join</button>
+                <button onClick={joinCommunity} disabled={!joinLink.trim()} className="text-[#25D366] font-semibold disabled:opacity-40">Join</button>
               </div>
               <input
                 value={joinLink}

@@ -25,7 +25,7 @@ interface ShieldedNode {
   valueParsed: string;
 }
 
-const ETHERSCAN_API = 'https://api.etherscan.io/api';
+
 
 function statusFromConfirmations(conf: string): ShieldedNode['status'] {
   const n = parseInt(conf);
@@ -52,8 +52,8 @@ export default function AztecPrivacyHub() {
 
     try {
       // Fetch last 5 txs for the connected wallet from Etherscan
-      const apiKey = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || '';
-      const url = `${ETHERSCAN_API}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=5&sort=desc&apikey=${apiKey}`;
+      
+      const url = `/api/internal/etherscan?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=5&sort=desc`;
       const res = await fetch(url);
       const json = await res.json();
 
@@ -68,7 +68,7 @@ export default function AztecPrivacyHub() {
         }));
         setNodes(mapped);
         // anonymity set = total txs in Etherscan for this address
-        const countRes = await fetch(`${ETHERSCAN_API}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&sort=desc&apikey=${apiKey}`);
+        const countRes = await fetch(`/api/internal/etherscan?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&sort=desc`);
         const countJson = await countRes.json();
         if (countJson.status === '1') {
           setAnonymitySet(parseInt(countJson.result?.[0]?.nonce || '0') + 1);
@@ -79,7 +79,7 @@ export default function AztecPrivacyHub() {
         setNodes([]);
       }
     } catch (e) {
-      setError('Etherscan API unavailable. Add NEXT_PUBLIC_ETHERSCAN_API_KEY to .env.');
+      setError('Etherscan API unavailable.');
     } finally {
       setIsLoading(false);
     }
@@ -128,7 +128,7 @@ export default function AztecPrivacyHub() {
           <button
             onClick={() => { fetchTxs(); handleRoutePrivacy(); }}
             disabled={isRouting || isLoading || !isConnected}
-            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:shadow-[0_0_20px_rgba(147,51,234,0.4)] transition-all disabled:opacity-50"
+            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-emerald-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:shadow-[0_0_20px_rgba(147,51,234,0.4)] transition-all disabled:opacity-50"
           >
             {isLoading ? <RefreshCw size={16} className="animate-spin" /> : <EyeOff size={16} />}
             <span>{isLoading ? 'Fetching...' : 'Refresh On-Chain'}</span>
@@ -161,12 +161,12 @@ export default function AztecPrivacyHub() {
           <div className="space-y-4 mt-12">
             <div className="glass-panel p-4 rounded-2xl flex items-center justify-between border border-white/5 bg-black/40">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                  <div className={`w-4 h-4 rounded-full bg-blue-500 ${isConnected ? 'animate-pulse' : ''}`} />
+                <div className="w-8 h-8 rounded-full bg-[#25D366]/20 flex items-center justify-center">
+                  <div className={`w-4 h-4 rounded-full bg-[#25D366] ${isConnected ? 'animate-pulse' : ''}`} />
                 </div>
                 <div>
                   <div className="text-xs font-bold text-white">Network State</div>
-                  <div className="text-[10px] text-blue-400 font-mono">{isConnected ? 'Ethereum Mainnet' : 'Disconnected'}</div>
+                  <div className="text-[10px] text-emerald-400 font-mono">{isConnected ? 'Ethereum Mainnet' : 'Disconnected'}</div>
                 </div>
               </div>
             </div>
@@ -229,7 +229,7 @@ export default function AztecPrivacyHub() {
                     <div className="flex flex-col items-center justify-center w-10 h-10 rounded-xl bg-white/5 border border-white/10">
                       {node.status === 'verified' ? <Shield size={16} className="text-green-400" />
                         : node.status === 'processing' ? <Layers size={16} className="text-purple-400" />
-                        : <Zap size={16} className="text-blue-400" />}
+                        : <Zap size={16} className="text-emerald-400" />}
                     </div>
                     <div>
                       <div className="text-sm font-mono text-white/80 group-hover:text-white transition-colors">{node.hash}</div>
@@ -237,7 +237,7 @@ export default function AztecPrivacyHub() {
                       <div className="text-[10px] uppercase tracking-widest mt-1 font-black">
                         {node.status === 'verified' && <span className="text-green-500">Confirmed</span>}
                         {node.status === 'processing' && <span className="text-purple-500">Pending</span>}
-                        {node.status === 'active' && <span className="text-blue-500">Confirming</span>}
+                        {node.status === 'active' && <span className="text-[#25D366]">Confirming</span>}
                       </div>
                     </div>
                   </div>
@@ -260,3 +260,4 @@ export default function AztecPrivacyHub() {
     </div>
   );
 }
+

@@ -43,7 +43,7 @@ export function LedgerDetectionVisual() {
             {/* Ambient Background Glow */}
             <div className="absolute inset-0 pointer-events-none">
                 <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-[160px] transition-all duration-1000 ${
-                    isDetecting ? 'bg-emerald-500/20' : 'bg-blue-600/5'
+                    isDetecting ? 'bg-emerald-500/20' : 'bg-emerald-600/5'
                 }`} />
             </div>
 
@@ -62,7 +62,7 @@ export function LedgerDetectionVisual() {
 
                     <h2 className="text-4xl md:text-6xl font-black text-white leading-tight">
                         {t.landing.visual.title} 
-                        <span className="block italic text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-500">
+                        <span className="block italic text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-[#25D366]">
                             {t.landing.visual.precision}
                         </span>
                     </h2>
@@ -165,5 +165,6 @@ function Feature({ icon: Icon, label, val }: any) {
         </div>
     );
 }
+
 
 

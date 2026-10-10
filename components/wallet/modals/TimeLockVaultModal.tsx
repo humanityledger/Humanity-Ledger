@@ -186,8 +186,8 @@ export default function TimeLockVaultModal({ isOpen, onClose }: TimeLockVaultMod
                             )}
                         </div>
 
-                        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-                            <p className="text-blue-400 text-xs flex items-center gap-2">
+                        <div className="mt-6 p-4 bg-[#25D366]/10 border border-[#25D366]/20 rounded-xl">
+                            <p className="text-emerald-400 text-xs flex items-center gap-2">
                                 <Shield size={14} />
                                 <span>
                                     <strong>Security:</strong> Funds are locked in a smart contract. Even you cannot access them before the unlock date.
@@ -200,4 +200,5 @@ export default function TimeLockVaultModal({ isOpen, onClose }: TimeLockVaultMod
         </AnimatePresence>
     );
 }
+
 

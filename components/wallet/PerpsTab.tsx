@@ -28,7 +28,7 @@ export default function PerpsTab({ perps, isLoading }: PerpsTabProps) {
                     <Zap size={24} />
                 </div>
                 <p className="font-medium">No active perp positions.</p>
-                <button className="mt-4 text-blue-600 hover:text-blue-700 font-bold hover:underline">Attest on GMX</button>
+                <button className="mt-4 text-emerald-600 hover:text-emerald-700 font-bold hover:underline">Attest on GMX</button>
             </div>
         );
     }
@@ -87,4 +87,5 @@ export default function PerpsTab({ perps, isLoading }: PerpsTabProps) {
         </div>
     );
 }
+
 

@@ -89,7 +89,7 @@ export default function SmartMoneyBreakdown({ address }: SmartMoneyBreakdownProp
   // Color based on score
   const getScoreColor = (s: number) => {
     if (s >= 80) return 'text-green-600';
-    if (s >= 60) return 'text-blue-600';
+    if (s >= 60) return 'text-emerald-600';
     if (s >= 40) return 'text-yellow-600';
     if (s >= 20) return 'text-orange-600';
     return 'text-red-600';
@@ -97,7 +97,7 @@ export default function SmartMoneyBreakdown({ address }: SmartMoneyBreakdownProp
 
   const getScoreGradient = (s: number) => {
     if (s >= 80) return 'from-green-500 to-emerald-500';
-    if (s >= 60) return 'from-blue-500 to-cyan-500';
+    if (s >= 60) return 'from-[#25D366] to-cyan-500';
     if (s >= 40) return 'from-yellow-500 to-amber-500';
     if (s >= 20) return 'from-orange-500 to-indigo-500';
     return 'from-indigo-500 to-pink-500';
@@ -237,7 +237,7 @@ export default function SmartMoneyBreakdown({ address }: SmartMoneyBreakdownProp
       </div>
 
       {/* Insights */}
-      <div className="p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl border border-blue-200 space-y-3">
+      <div className="p-6 bg-gradient-to-br from-emerald-50 to-purple-50 rounded-2xl border border-emerald-200 space-y-3">
         <h4 className="text-lg font-black text-[#1F1F1F] flex items-center gap-2">
           <Brain size={20} className="text-purple-600" />
           AI Insights
@@ -267,7 +267,7 @@ function MetricBar({ label, value, max, color }: {
   const percentage = (value / max) * 100;
   
   const colorMap: Record<string, string> = {
-    blue: 'bg-blue-600',
+    blue: 'bg-emerald-600',
     purple: 'bg-purple-600',
     green: 'bg-green-600',
     yellow: 'bg-yellow-600',
@@ -307,4 +307,5 @@ function StatPill({ icon, label, value }: {
     </div>
   );
 }
+
 

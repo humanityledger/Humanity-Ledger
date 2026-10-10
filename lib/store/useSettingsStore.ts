@@ -38,6 +38,11 @@ export interface SystemSettings {
     audioAlerts: boolean;
     ledgerAlertThreshold: number;
     email: string;
+    notif_msgs?: boolean;
+    notif_calls?: boolean;
+    notif_sound?: boolean;
+    dnd?: boolean;
+    notif_preview?: boolean;
 
     // ── 5. Privacy & Security ─────────────────────────────────────────────
     inactivityLockMinutes: number;
@@ -45,6 +50,8 @@ export interface SystemSettings {
     stealthMode: boolean;
     requireSignForExports: boolean;
     allowAnalytics: boolean;
+    payments_enabled?: boolean;
+    displayName?: string;
 
     // ── 6. Chat Identity ──────────────────────────────────────────────────
     chatName: string;
@@ -254,6 +261,11 @@ export const useSettingsStore = create<SettingsState>()(
             audioAlerts: true,
             ledgerAlertThreshold: 1000000,
             email: '',
+            notif_msgs: true,
+            notif_calls: true,
+            notif_sound: true,
+            dnd: false,
+            notif_preview: true,
 
             // ── Defaults: Privacy ─────────────────────────────────────────
             inactivityLockMinutes: 15,
@@ -261,6 +273,8 @@ export const useSettingsStore = create<SettingsState>()(
             stealthMode: false,
             requireSignForExports: false,
             allowAnalytics: false,
+            payments_enabled: true,
+            displayName: '',
 
             // ── Defaults: Chat Identity ───────────────────────────────────
             chatName: 'Ledger User',
@@ -407,12 +421,19 @@ export const useSettingsStore = create<SettingsState>()(
                 audioAlerts: state.audioAlerts,
                 ledgerAlertThreshold: state.ledgerAlertThreshold,
                 email: state.email,
+                notif_msgs: state.notif_msgs,
+                notif_calls: state.notif_calls,
+                notif_sound: state.notif_sound,
+                dnd: state.dnd,
+                notif_preview: state.notif_preview,
                 // Privacy
                 inactivityLockMinutes: state.inactivityLockMinutes,
                 autoDisconnectTimer: state.autoDisconnectTimer,
                 stealthMode: state.stealthMode,
                 requireSignForExports: state.requireSignForExports,
                 allowAnalytics: state.allowAnalytics,
+                payments_enabled: state.payments_enabled,
+                displayName: state.displayName,
                 // Identity
                 chatName: state.chatName,
                 chatBio: state.chatBio,

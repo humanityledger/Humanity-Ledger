@@ -87,10 +87,10 @@ export default function LegendaryNewsFeed({ isPremium, walletAddress }: Legendar
             animate={{ opacity: 1, x: 0 }}
             className="text-4xl font-black text-white flex items-center gap-4"
           >
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-                <BrainCircuit className="text-blue-400 w-8 h-8" />
+            <div className="p-2 bg-[#25D366]/20 rounded-lg">
+                <BrainCircuit className="text-emerald-400 w-8 h-8" />
             </div>
-            Humanity Ledger <span className="text-blue-500">OPERATIONS</span>
+            Humanity Ledger <span className="text-[#25D366]">OPERATIONS</span>
           </motion.h1>
           <p className="text-gray-400 mt-2 font-medium max-w-2xl">
             Accurate predictions in markets
@@ -101,7 +101,7 @@ export default function LegendaryNewsFeed({ isPremium, walletAddress }: Legendar
           <button
             onClick={handleSync}
             disabled={syncing || !isPremium}
-            className="group px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg shadow-blue-900/20 disabled:opacity-50"
+            className="group px-6 py-3 bg-emerald-600 hover:bg-[#25D366] text-white rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg shadow-emerald-900/20 disabled:opacity-50"
           >
             <RefreshCw size={18} className={syncing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'} />
             {syncing ? 'PROCESSING...' : 'UPDATE NODES'}
@@ -148,7 +148,7 @@ export default function LegendaryNewsFeed({ isPremium, walletAddress }: Legendar
 }
 
 function LegendaryNewsCard({ article, index }: { article: NewsArticle; index: number }) {
-  const veracityColor = article.isFake ? 'text-indigo-500' : 'text-blue-400';
+  const veracityColor = article.isFake ? 'text-indigo-500' : 'text-emerald-400';
   // If verifying or 0 score, show gray
   const score = article.veracityScore || 0;
   
@@ -158,7 +158,7 @@ function LegendaryNewsCard({ article, index }: { article: NewsArticle; index: nu
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
       whileHover={{ y: -5 }}
-      className="group relative flex flex-col bg-[#0a0a0a] rounded-[2rem] border border-white/5 overflow-hidden hover:border-blue-500/30 transition-all duration-500 shadow-2xl"
+      className="group relative flex flex-col bg-[#0a0a0a] rounded-[2rem] border border-white/5 overflow-hidden hover:border-[#25D366]/30 transition-all duration-500 shadow-2xl"
     >
       {/* 1. IMMERSIVE IMAGE */}
       <div className="relative h-64 w-full overflow-hidden">
@@ -174,7 +174,7 @@ function LegendaryNewsCard({ article, index }: { article: NewsArticle; index: nu
         
         {/* Source Badge (Top Left) */}
         <div className="absolute top-4 left-4 z-20 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-2">
-            {article.isFake ? <ShieldAlert size={14} className="text-indigo-500" /> : <ShieldCheck size={14} className="text-blue-400" />}
+            {article.isFake ? <ShieldAlert size={14} className="text-indigo-500" /> : <ShieldCheck size={14} className="text-emerald-400" />}
             <span className="text-[10px] font-black uppercase tracking-widest text-white/90">
                 {article.source}
             </span>
@@ -192,13 +192,13 @@ function LegendaryNewsCard({ article, index }: { article: NewsArticle; index: nu
       <div className="p-6 flex flex-col flex-grow -mt-6 relative z-20">
         
         {/* Headline */}
-        <h3 className="text-xl font-black text-white leading-tight mb-4 group-hover:text-blue-400 transition-colors">
+        <h3 className="text-xl font-black text-white leading-tight mb-4 group-hover:text-emerald-400 transition-colors">
           {article.title}
         </h3>
 
         {/* 3. SENIOR ANALYSIS BLOCK */}
         <div className="flex-grow">
-            <div className="pl-4 border-l-2 border-blue-500/30 py-1 mb-4">
+            <div className="pl-4 border-l-2 border-[#25D366]/30 py-1 mb-4">
                 <p className="text-sm text-gray-400 font-medium leading-relaxed">
                     {article.veracityAnalysis || article.summary}
                 </p>
@@ -217,7 +217,7 @@ function LegendaryNewsCard({ article, index }: { article: NewsArticle; index: nu
                     <motion.div 
                         initial={{ width: 0 }}
                         animate={{ width: `${score}%` }}
-                        className={`h-full ${article.isFake ? 'bg-indigo-500' : 'bg-blue-500'}`}
+                        className={`h-full ${article.isFake ? 'bg-indigo-500' : 'bg-[#25D366]'}`}
                     />
                 </div>
             </div>
@@ -240,4 +240,5 @@ function LegendaryNewsCard({ article, index }: { article: NewsArticle; index: nu
     </motion.div>
   );
 }
+
 

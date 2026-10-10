@@ -42,9 +42,31 @@ function saveMyStatus(address: string, status: LedgerStatus) {
   } catch {}
 }
 
-function AddressAvatar({ address, size = 40 }: { address: string; size?: number }) {
+function AddressAvatar({ address, size = 40, showSaved = false }: { address: string; size?: number; showSaved?: boolean }) {
+  const [savedAvatar, setSavedAvatar] = React.useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem('ledger_avatar') || '';
+  });
+  
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      if (e.detail?.avatarUrl) setSavedAvatar(e.detail.avatarUrl);
+    };
+    window.addEventListener('ledger_settings_update', handler);
+    return () => window.removeEventListener('ledger_settings_update', handler);
+  }, []);
+
   const initials = address.slice(2, 4).toUpperCase();
   const hue = parseInt(address.slice(2, 8), 16) % 360;
+
+  if (showSaved && savedAvatar) {
+    return (
+      <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
+        <img src={savedAvatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -148,11 +170,11 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
           >
             <div className="relative">
               <div
-                className={`w-[50px] h-[50px] rounded-full flex items-center justify-center border-2 ${myStatuses.length > 0 ? 'border-[#1c7aff]' : 'border-black/20 border-dashed'}`}
+                className={`w-[50px] h-[50px] rounded-full flex items-center justify-center border-2 ${myStatuses.length > 0 ? 'border-[#25D366]' : 'border-black/20 border-dashed'}`}
               >
-                <AddressAvatar address={address} size={42} />
+                <AddressAvatar address={address} size={42} showSaved={true} />
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[#1c7aff] rounded-full border-2 border-white flex items-center justify-center">
+              <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[#25D366] rounded-full border-2 border-white flex items-center justify-center">
                 <span className="text-white text-[10px] font-black leading-none">+</span>
               </div>
             </div>

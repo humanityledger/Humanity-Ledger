@@ -218,7 +218,7 @@ export default function TransactionHistory({ authUserId, transactions: propTrans
 
 function StatCard({ title, value, icon, color }: { title: string; value: string | number; icon: React.ReactNode; color: string }) {
     const colors: Record<string, string> = {
-        blue: 'bg-blue-500/10 text-blue-600',
+        blue: 'bg-[#25D366]/10 text-emerald-600',
         red: 'bg-red-500/10 text-red-600',
         green: 'bg-green-500/10 text-green-600',
         orange: 'bg-orange-500/10 text-orange-600',
@@ -249,7 +249,7 @@ const MemoizedTransactionCard = React.memo(
       case 'DEPOSIT':
         return <ArrowDownLeft size={18} className="text-green-500" />;
       case 'SWAP':
-        return <ArrowLeftRight size={18} className="text-blue-500" />;
+        return <ArrowLeftRight size={18} className="text-[#25D366]" />;
       case 'BRIDGE':
         return <Globe size={18} className="text-purple-500" />;
       default:
@@ -373,4 +373,5 @@ function TypeFilterButton({
     </button>
   );
 }
+
 

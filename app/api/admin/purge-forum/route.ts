@@ -43,6 +43,6 @@ export async function POST(req: Request) {
             message: `Forum purged. ${deletedTopics} topics and ${deletedPosts} posts removed. The forum is now empty and ready for your first post.`,
         });
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

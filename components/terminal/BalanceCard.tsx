@@ -33,7 +33,7 @@ export default function BalanceCard() {
             </div>
 
             <div className="mt-4 flex space-x-2">
-                <button className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm transition-colors">
+                <button className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-[#25D366] text-white font-medium text-sm transition-colors">
                     Deposit
                 </button>
                 <button className="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-sm transition-colors">
@@ -43,4 +43,5 @@ export default function BalanceCard() {
         </div>
     );
 }
+
 

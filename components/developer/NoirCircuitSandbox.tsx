@@ -478,11 +478,11 @@ contract ZKVerifier {
         </div>
         
         {/* Helper description for the selected architecture */}
-        <div className="bg-blue-50/50 border border-blue-100 p-3 rounded-lg flex items-start gap-3">
-          <div className="text-blue-500 mt-0.5"><Zap size={14} /></div>
+        <div className="bg-emerald-50/50 border border-emerald-100 p-3 rounded-lg flex items-start gap-3">
+          <div className="text-[#25D366] mt-0.5"><Zap size={14} /></div>
           <div>
-            <div className="text-[11px] font-bold text-blue-900">{CIRCUIT_EXAMPLES[selectedExample].label}</div>
-            <div className="text-[11px] text-blue-700 mt-0.5">{CIRCUIT_EXAMPLES[selectedExample].description}</div>
+            <div className="text-[11px] font-bold text-emerald-900">{CIRCUIT_EXAMPLES[selectedExample].label}</div>
+            <div className="text-[11px] text-emerald-700 mt-0.5">{CIRCUIT_EXAMPLES[selectedExample].description}</div>
           </div>
         </div>
       </div>
@@ -538,14 +538,14 @@ contract ZKVerifier {
 
           {/* ABI Panel - Real Compilation Results */}
           {compileResult && compileResult.abi.length > 0 && (
-            <div className="p-4 border-b border-slate-200 bg-blue-50">
-              <div className="text-blue-700 text-[10px] font-bold tracking-[0.1em] uppercase mb-3">
+            <div className="p-4 border-b border-slate-200 bg-emerald-50">
+              <div className="text-emerald-700 text-[10px] font-bold tracking-[0.1em] uppercase mb-3">
                 Circuit ABI Interface — {compileResult.abi.length} parameter{compileResult.abi.length !== 1 ? 's' : ''}
               </div>
               <div className="flex flex-col gap-2">
                 {compileResult.abi.map((p, i) => (
                   <div key={i} className="flex items-center gap-2 text-[11px]">
-                    <span className={p.visibility === 'public' ? 'px-1.5 py-0.5 rounded font-bold text-[9px] tracking-wider bg-blue-100 text-blue-700 border border-blue-200' : 'px-1.5 py-0.5 rounded font-bold text-[9px] tracking-wider bg-slate-100 text-slate-500 border border-slate-200'}>
+                    <span className={p.visibility === 'public' ? 'px-1.5 py-0.5 rounded font-bold text-[9px] tracking-wider bg-emerald-100 text-emerald-700 border border-emerald-200' : 'px-1.5 py-0.5 rounded font-bold text-[9px] tracking-wider bg-slate-100 text-slate-500 border border-slate-200'}>
                       {p.visibility === 'public' ? 'PUB' : 'PRIV'}
                     </span>
                     <span className="text-black font-bold">{p.name}</span>
@@ -575,5 +575,6 @@ contract ZKVerifier {
     </section>
   );
 }
+
 
 

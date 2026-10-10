@@ -54,20 +54,20 @@ export default function CoreWelcomeClaim({ signature, onSuccess }: { signature: 
     }
 
     return (
-        <div className="w-full bg-gradient-to-br from-blue-900/40 to-purple-900/40 border border-white/10 rounded-[24px] p-1 relative overflow-hidden">
+        <div className="w-full bg-gradient-to-br from-emerald-900/40 to-purple-900/40 border border-white/10 rounded-[24px] p-1 relative overflow-hidden">
             {/* Animated border effect */}
             <div className="absolute inset-0 bg-[conic-gradient(from_0deg,transparent_0_340deg,white_360deg)] animate-[spin_4s_linear_infinite] opacity-20" />
             
             <div className="bg-white rounded-[22px] p-6 relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
                 
                 <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
+                    <div className="w-14 h-14 bg-gradient-to-br from-[#25D366] to-purple-500 rounded-2xl flex items-center justify-center shadow-lg shadow-[#25D366]/20 shrink-0">
                         <Gift className="text-white" size={28} />
                     </div>
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <h3 className="text-xl font-black text-white tracking-tighter uppercase">Bono Fundador</h3>
-                            <span className="bg-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-blue-500/20">
+                            <span className="bg-[#25D366]/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-[#25D366]/20">
                                 EIP-712
                             </span>
                         </div>
@@ -92,3 +92,4 @@ export default function CoreWelcomeClaim({ signature, onSuccess }: { signature: 
         </div>
     );
 }
+

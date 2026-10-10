@@ -122,14 +122,14 @@ export function MetaMaskNetworkSelector({ activeNetworkId, onNetworkChange }: { 
                                 className={`flex-1 py-3 text-[13px] font-bold transition-colors relative ${tab === 'popular' ? 'text-black' : 'text-black/50 hover:text-black/80'}`}
                             >
                                 Popular
-                                {tab === 'popular' && <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-blue-600 rounded-t-md" />}
+                                {tab === 'popular' && <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-emerald-600 rounded-t-md" />}
                             </button>
                             <button 
                                 onClick={() => setTab('custom')}
                                 className={`flex-1 py-3 text-[13px] font-bold transition-colors relative ${tab === 'custom' ? 'text-black' : 'text-black/50 hover:text-black/80'}`}
                             >
                                 Custom
-                                {tab === 'custom' && <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-blue-600 rounded-t-md" />}
+                                {tab === 'custom' && <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-emerald-600 rounded-t-md" />}
                             </button>
                         </div>
 
@@ -162,7 +162,7 @@ export function MetaMaskNetworkSelector({ activeNetworkId, onNetworkChange }: { 
                                     </div>
                                     <span className="text-[14px] font-medium text-black flex-1 text-left">{net.name}</span>
                                     {currentId === net.id ? (
-                                        <Check size={16} className="text-blue-600" />
+                                        <Check size={16} className="text-emerald-600" />
                                     ) : (
                                         <div className="w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                             <div className="w-1 h-1 bg-black/40 rounded-full mx-[1px]" />
@@ -194,7 +194,7 @@ export function MetaMaskNetworkSelector({ activeNetworkId, onNetworkChange }: { 
                                             </div>
                                             <span className="text-[14px] font-medium text-black flex-1 text-left">{net.name}</span>
                                             {currentId === net.id ? (
-                                                <Check size={16} className="text-blue-600" />
+                                                <Check size={16} className="text-emerald-600" />
                                             ) : (
                                                 <span className="text-xl font-light text-black/30 group-hover:text-black/60">+</span>
                                             )}
@@ -210,3 +210,4 @@ export function MetaMaskNetworkSelector({ activeNetworkId, onNetworkChange }: { 
         </div>
     );
 }
+

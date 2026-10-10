@@ -67,7 +67,7 @@ function FeatureCard({ icon, title, description, delay }: {
             transition={{ duration: 0.6, delay }}
             className="bg-white/40 backdrop-blur-md border border-white/60 rounded-[2.5rem] p-8 lg:p-10 hover:bg-white/60 transition-all duration-500 group relative overflow-hidden"
         >
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-[#25D366]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
             <div className="relative z-10">
                 <div className="w-16 h-16 bg-[#1F1F1F] rounded-2xl flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform duration-300">
@@ -162,7 +162,7 @@ function NotificationItem({ type, title, subtitle, time }: {
 }) {
     const colors = {
         success: 'bg-green-100 border-green-300',
-        info: 'bg-blue-100 border-blue-300',
+        info: 'bg-emerald-100 border-emerald-300',
         warning: 'bg-orange-100 border-orange-300'
     };
 
@@ -205,6 +205,12 @@ export function DownloadCTASection() {
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
                         <DownloadButton
+                            icon={<Download className="w-6 h-6" />}
+                            text="App de Windows"
+                            subtext="Descargar .exe (64-bit)"
+                            onClick={() => window.open('/LedgerChat-Setup-1.0.0.exe', '_blank')}
+                        />
+                        <DownloadButton
                             icon={<Chrome className="w-6 h-6" />}
                             text="Extensión de Chrome"
                             subtext="Disponible ahora"
@@ -230,15 +236,18 @@ function DownloadButton({
     icon, 
     text, 
     subtext, 
-    disabled = false 
+    disabled = false,
+    onClick
 }: { 
     icon: React.ReactNode; 
     text: string; 
     subtext: string; 
     disabled?: boolean;
+    onClick?: () => void;
 }) {
     return (
         <button
+            onClick={onClick}
             disabled={disabled}
             className={`
                 group relative px-8 py-5 rounded-[2rem] font-bold text-lg
@@ -255,9 +264,10 @@ function DownloadButton({
                 <div className="text-xs opacity-70 font-normal">{subtext}</div>
             </div>
             {!disabled && (
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 rounded-[2rem] transition-opacity -z-10" />
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-emerald-600 opacity-0 group-hover:opacity-100 rounded-[2rem] transition-opacity -z-10" />
             )}
         </button>
     );
 }
+
 

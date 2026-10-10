@@ -3,7 +3,12 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
-/** GET /api/privacy/settings?userId=xxx */
+const ALLOWED_PRIVACY_FIELDS = new Set([
+  'logLevel', 'dataSharing', 'sessionAutoLogout', 'ipWhitelist', 
+  'twoFAEnabled', 'systemVisibility', 'exportEncryption'
+]);
+
+/** GET /api/privacy/settings */
 export async function GET(request: NextRequest) {
     const { getSession } = await import('@/lib/session');
     const session = await getSession();
@@ -20,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
 }
 
-/** POST /api/privacy/settings  body: { userId, field, value } */
+/** POST /api/privacy/settings  body: { field, value } */
 export async function POST(request: NextRequest) {
     try {
         const { getSession } = await import('@/lib/session');
@@ -31,8 +36,8 @@ export async function POST(request: NextRequest) {
         const userId = session.userId;
 
         const { field, value } = await request.json();
-        if (!field) {
-            return NextResponse.json({ success: false, error: 'field required' }, { status: 400 });
+        if (!field || typeof field !== 'string' || !ALLOWED_PRIVACY_FIELDS.has(field)) {
+            return NextResponse.json({ success: false, error: 'Invalid field' }, { status: 400 });
         }
 
         const profile = await (prisma as any).userPrivacyProfile.upsert({
@@ -60,6 +65,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, profile });
     } catch (error) {
         console.error('[Privacy API] POST failed:', error);
-        return NextResponse.json({ success: false, error: 'Settings update failed' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Internal error' }, { status: 500 });
     }
 }

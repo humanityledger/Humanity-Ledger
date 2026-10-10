@@ -28,10 +28,10 @@ export const TransactionHeatmap: React.FC<TransactionHeatmapProps> = ({ data }) 
 
     const getColor = (count: number) => {
         if (count === 0) return 'bg-white/5';
-        if (count < 5) return 'bg-blue-400/30';
-        if (count < 10) return 'bg-blue-400/50';
-        if (count < 20) return 'bg-blue-400/70';
-        return 'bg-blue-400';
+        if (count < 5) return 'bg-emerald-400/30';
+        if (count < 10) return 'bg-emerald-400/50';
+        if (count < 20) return 'bg-emerald-400/70';
+        return 'bg-emerald-400';
     };
 
     return (
@@ -64,14 +64,15 @@ export const TransactionHeatmap: React.FC<TransactionHeatmapProps> = ({ data }) 
                 <div className="flex gap-1 items-center">
                     <span>Less</span>
                     <div className="w-2 h-2 bg-white/5 rounded-sm" />
-                    <div className="w-2 h-2 bg-blue-400/30 rounded-sm" />
-                    <div className="w-2 h-2 bg-blue-400/50 rounded-sm" />
-                    <div className="w-2 h-2 bg-blue-400/70 rounded-sm" />
-                    <div className="w-2 h-2 bg-blue-400 rounded-sm" />
+                    <div className="w-2 h-2 bg-emerald-400/30 rounded-sm" />
+                    <div className="w-2 h-2 bg-emerald-400/50 rounded-sm" />
+                    <div className="w-2 h-2 bg-emerald-400/70 rounded-sm" />
+                    <div className="w-2 h-2 bg-emerald-400 rounded-sm" />
                     <span>More</span>
                 </div>
             </div>
         </div>
     );
 };
+
 

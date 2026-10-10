@@ -11,7 +11,7 @@ export default function ChangelogPage() {
         >
             <div className="space-y-8">
                 {/* Hero */}
-                <section className="bg-gradient-to-r from-green-600/20 to-blue-600/20 p-8 rounded-xl border border-white/10">
+                <section className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 p-8 rounded-xl border border-white/10">
                     <h2 className="text-4xl font-bold mb-4">Changelog</h2>
                     <p className="text-lg text-black/80">
                         Stay up-to-date with the latest features, improvements, and fixes across the Humanity Ledger platform.
@@ -44,7 +44,7 @@ export default function ChangelogPage() {
 
                             <div>
                                 <h4 className="font-bold mb-2 flex items-center gap-2">
-                                    <TrendingUp className="text-blue-400" size={20} />
+                                    <TrendingUp className="text-emerald-400" size={20} />
                                     Improvements
                                 </h4>
                                 <ul className="list-disc pl-6 space-y-1 text-sm text-black/70">
@@ -77,7 +77,7 @@ export default function ChangelogPage() {
 
                     <div className="space-y-8">
                         {/* v2.0.0 */}
-                        <div className="border-l-4 border-blue-500 pl-6">
+                        <div className="border-l-4 border-[#25D366] pl-6">
                             <h3 className="text-2xl font-bold mb-1">v2.0.0</h3>
                             <p className="text-black/60 mb-4">January 15, 2026</p>
 
@@ -97,7 +97,7 @@ export default function ChangelogPage() {
 
                                 <div>
                                     <h4 className="font-bold mb-2 flex items-center gap-2">
-                                        <TrendingUp className="text-blue-400" size={18} />
+                                        <TrendingUp className="text-emerald-400" size={18} />
                                         Improvements
                                     </h4>
                                     <ul className="list-disc pl-6 space-y-1 text-sm text-black/70">
@@ -185,7 +185,7 @@ export default function ChangelogPage() {
                             </ul>
                         </div>
 
-                        <div className="bg-blue-600/10 border border-blue-500/30 p-6 rounded-xl">
+                        <div className="bg-emerald-600/10 border border-[#25D366]/30 p-6 rounded-xl">
                             <h3 className="font-bold mb-2">v3.0.0 - Q3 2026 (Planned)</h3>
                             <ul className="list-disc pl-6 space-y-1 text-sm text-black/70">
                                 <li><strong>Mobile Apps:</strong> Native iOS and Android applications</li>
@@ -198,7 +198,7 @@ export default function ChangelogPage() {
                 </section>
 
                 {/* Feedback */}
-                <section className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 p-8 rounded-xl border border-white/10 text-center">
+                <section className="bg-gradient-to-r from-purple-600/20 to-emerald-600/20 p-8 rounded-xl border border-white/10 text-center">
                     <h2 className="text-3xl font-bold mb-4">Have Feedback?</h2>
                     <p className="text-lg text-black/80 mb-6">
                         We'd love to hear your ideas for new features or improvements.
@@ -207,7 +207,7 @@ export default function ChangelogPage() {
                         <a href="https://discord.gg/humanityledger" target="_blank" rel="noopener noreferrer" className="px-8 py-3 bg-white/10 border border-white/20 rounded-lg font-bold hover:bg-white/20 transition-colors">
                             Join Discord
                         </a>
-                        <a href="mailto:feedback@Humanity Ledger" className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg font-bold hover:scale-105 transition-transform">
+                        <a href="mailto:feedback@Humanity Ledger" className="px-8 py-3 bg-gradient-to-r from-purple-600 to-emerald-600 rounded-lg font-bold hover:scale-105 transition-transform">
                             Send Feedback
                         </a>
                     </div>
@@ -216,4 +216,5 @@ export default function ChangelogPage() {
         </DocLayout>
     );
 }
+
 

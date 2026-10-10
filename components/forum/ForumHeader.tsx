@@ -77,7 +77,7 @@ export function ForumHeader() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search (# filters by category or tag)"
-                    className="w-full bg-black/5  border border-transparent focus:border-blue-500 rounded-lg px-3 py-2 text-sm text-black  outline-none"
+                    className="w-full bg-black/5  border border-transparent focus:border-[#25D366] rounded-lg px-3 py-2 text-sm text-black  outline-none"
                   />
                 </motion.div>
               )}
@@ -93,7 +93,7 @@ export function ForumHeader() {
           <div className="relative">
             <button 
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="w-8 h-8 rounded-full bg-blue-100 text-blue-600   flex items-center justify-center font-bold overflow-hidden"
+              className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600   flex items-center justify-center font-bold overflow-hidden"
             >
               <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ledger" alt="Avatar" className="w-full h-full object-cover" />
             </button>
@@ -108,7 +108,7 @@ export function ForumHeader() {
                   {/* Left Column (Actions) */}
                   <div className="flex-1 border-r border-black/5  py-2">
                     <button className="w-full px-4 py-2 text-left text-sm font-semibold flex items-center gap-3 hover:bg-black/5  text-black ">
-                      <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
+                      <div className="w-2.5 h-2.5 bg-[#25D366] rounded-full" />
                       Online
                     </button>
                     <button className="w-full px-4 py-2 text-left text-sm font-semibold flex items-center gap-3 hover:bg-black/5  text-black/60 ">
@@ -146,3 +146,4 @@ export function ForumHeader() {
     </header>
   );
 }
+

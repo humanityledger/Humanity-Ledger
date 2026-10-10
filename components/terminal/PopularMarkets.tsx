@@ -26,7 +26,7 @@ export default function PopularMarkets() {
     return (
         <div className="space-y-4">
             <div className="flex items-center space-x-2 text-white/80 mb-4">
-                <TrendingUp className="w-5 h-5 text-blue-400" />
+                <TrendingUp className="w-5 h-5 text-emerald-400" />
                 <h2 className="text-lg font-bold">Trending Markets</h2>
             </div>
 
@@ -40,7 +40,7 @@ export default function PopularMarkets() {
                         className="group relative p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 hover:bg-white/[0.07] transition-all cursor-pointer flex items-center justify-between"
                     >
                         <div className="flex-1">
-                            <h3 className="font-medium text-white group-hover:text-blue-200 transition-colors">
+                            <h3 className="font-medium text-white group-hover:text-emerald-200 transition-colors">
                                 {market.question}
                             </h3>
                             <div className="mt-1 flex space-x-4 text-xs text-gray-400">
@@ -68,4 +68,5 @@ export default function PopularMarkets() {
         </div>
     );
 }
+
 

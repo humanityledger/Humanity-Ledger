@@ -6,10 +6,10 @@ export const CreateMarketForm = () => {
     return (
         <div className="w-full max-w-2xl px-4">
             <div className="text-center mb-8">
-                <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-blue-400 tracking-tighter mb-4">
+                <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-emerald-400 tracking-tighter mb-4">
                     HUMAN MARKETS
                 </h1>
-                <p className="text-blue-200/60 text-lg font-light tracking-wide">
+                <p className="text-emerald-200/60 text-lg font-light tracking-wide">
                     Analytics driven by system individuals, secured by World ID.
                 </p>
             </div>
@@ -23,4 +23,5 @@ export const CreateMarketForm = () => {
         </div>
     );
 };
+
 

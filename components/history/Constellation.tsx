@@ -140,7 +140,7 @@ export function Constellation() {
             <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-md p-3 rounded-lg border border-white/10 flex justify-between items-center text-xs">
                 <span className="font-mono text-zinc-400">CHRONOS_LIVE_NETWORK // v2.0</span>
                 <div className="flex gap-4">
-                    <span className="flex items-center gap-1 text-blue-400"><div className="w-2 h-2 rounded-full bg-blue-500"></div> Protocol</span>
+                    <span className="flex items-center gap-1 text-emerald-400"><div className="w-2 h-2 rounded-full bg-[#25D366]"></div> Protocol</span>
                     <span className="flex items-center gap-1 text-emerald-400"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> Peer</span>
                     <span className="flex items-center gap-1 text-white"><div className="w-2 h-2 rounded-full bg-white"></div> Me</span>
                 </div>
@@ -148,4 +148,5 @@ export function Constellation() {
         </div>
     );
 }
+
 

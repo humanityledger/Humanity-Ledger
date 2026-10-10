@@ -214,7 +214,7 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
             >
                 {/* Header */}
                 <div className="pt-10 pb-2 px-10 text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-600 rounded-xl mb-4 text-white shadow-blue-200 shadow-lg">
+                    <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-600 rounded-xl mb-4 text-white shadow-emerald-200 shadow-lg">
                         <Lock size={24} strokeWidth={2.5} />
                     </div>
                     <h2 className="text-2xl font-bold tracking-tight text-neutral-900">
@@ -249,11 +249,11 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
                                             required
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#25D366]/20 focus:border-[#25D366] transition-all font-medium"
                                             placeholder="name@example.com"
                                             autoFocus
                                         />
-                                        <Mail size={18} className="absolute right-4 top-4 text-neutral-400 group-focus-within:text-blue-500 transition-colors" />
+                                        <Mail size={18} className="absolute right-4 top-4 text-neutral-400 group-focus-within:text-[#25D366] transition-colors" />
                                     </div>
                                 </div>
 
@@ -291,9 +291,9 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
                                 onSubmit={handleVerifyCode}
                                 className="space-y-6"
                             >
-                                <div className="bg-blue-50 rounded-2xl p-6 text-center">
-                                    <Smartphone className="mx-auto text-blue-600 mb-2" size={32} />
-                                    <p className="text-sm text-blue-800 font-medium">
+                                <div className="bg-emerald-50 rounded-2xl p-6 text-center">
+                                    <Smartphone className="mx-auto text-emerald-600 mb-2" size={32} />
+                                    <p className="text-sm text-emerald-800 font-medium">
                                         Check your inbox for the <br/>
                                         <span className="font-bold">6-digit code</span>
                                     </p>
@@ -306,7 +306,7 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
                                         maxLength={6}
                                         value={code}
                                         onChange={(e) => setCode(e.target.value)}
-                                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-4 text-center text-2xl tracking-[0.5em] font-mono outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-neutral-900"
+                                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-4 text-center text-2xl tracking-[0.5em] font-mono outline-none focus:ring-2 focus:ring-[#25D366]/20 focus:border-[#25D366] transition-all text-neutral-900"
                                         placeholder="000000"
                                         autoFocus
                                     />
@@ -315,7 +315,7 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
                                 <button 
                                     type="submit" 
                                     disabled={isLoading || code.length < 6}
-                                    className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isLoading ? <Loader2 className="animate-spin" /> : "Verify"}
                                 </button>
@@ -350,10 +350,10 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
                                                     required
                                                     value={username}
                                                     onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
-                                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#25D366]/20 focus:border-[#25D366] transition-all font-medium"
                                                     placeholder="elite_verifier"
                                                 />
-                                                <User size={18} className="absolute right-4 top-3.5 text-neutral-400 group-focus-within:text-blue-500 transition-colors" />
+                                                <User size={18} className="absolute right-4 top-3.5 text-neutral-400 group-focus-within:text-[#25D366] transition-colors" />
                                             </div>
                                         </div>
                                     </>
@@ -367,11 +367,11 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
                                             required
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#25D366]/20 focus:border-[#25D366] transition-all font-medium"
                                             placeholder=""
                                             autoFocus={!isSignup}
                                         />
-                                        <Lock size={18} className="absolute right-4 top-3.5 text-neutral-400 group-focus-within:text-blue-500 transition-colors" />
+                                        <Lock size={18} className="absolute right-4 top-3.5 text-neutral-400 group-focus-within:text-[#25D366] transition-colors" />
                                     </div>
                                 </div>
 
@@ -385,10 +385,10 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
                                                     required
                                                     value={confirmPassword}
                                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#25D366]/20 focus:border-[#25D366] transition-all font-medium"
                                                     placeholder=""
                                                 />
-                                                <Lock size={18} className="absolute right-4 top-3.5 text-neutral-400 group-focus-within:text-blue-500 transition-colors" />
+                                                <Lock size={18} className="absolute right-4 top-3.5 text-neutral-400 group-focus-within:text-[#25D366] transition-colors" />
                                             </div>
                                         </div>
                                         <div className="px-1 py-1">
@@ -422,4 +422,5 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
         </div>
     );
 }
+
 

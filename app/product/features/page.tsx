@@ -11,7 +11,7 @@ export default function FeaturesPage() {
         >
             <div className="space-y-8">
                 {/* Hero */}
-                <section className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 p-8 rounded-xl border border-white/10">
+                <section className="bg-gradient-to-r from-emerald-600/20 to-purple-600/20 p-8 rounded-xl border border-white/10">
                     <h2 className="text-4xl font-bold mb-4">The Future of DeFi Identity & Attesting</h2>
                     <p className="text-lg text-white/80">
                         Humanity Ledger combines cutting-edge zero knowledge technology with professional-grade attesting tools to deliver an unparalleled DeFi experience.
@@ -56,9 +56,9 @@ export default function FeaturesPage() {
                         </div>
 
                         {/* Multi-Chain Wallet */}
-                        <div className="bg-gradient-to-br from-blue-600/10 to-cyan-600/10 p-6 rounded-xl border border-blue-500/30">
+                        <div className="bg-gradient-to-br from-emerald-600/10 to-cyan-600/10 p-6 rounded-xl border border-[#25D366]/30">
                             <div className="flex items-center gap-3 mb-4">
-                                <Wallet className="text-blue-400" size={32} />
+                                <Wallet className="text-emerald-400" size={32} />
                                 <h3 className="text-2xl font-bold">Multi-Chain Wallet</h3>
                             </div>
                             <p className="mb-4 text-white/70">
@@ -66,19 +66,19 @@ export default function FeaturesPage() {
                             </p>
                             <ul className="space-y-2 text-sm">
                                 <li className="flex items-start gap-2">
-                                    <span className="text-blue-400"></span>
+                                    <span className="text-emerald-400"></span>
                                     <span><strong>Supported Chains:</strong> Ethereum, Base, Polygon, Arbitrum, Optimism</span>
                                 </li>
                                 <li className="flex items-start gap-2">
-                                    <span className="text-blue-400"></span>
+                                    <span className="text-emerald-400"></span>
                                     <span><strong>Self-Custody:</strong> Private keys never leave your device</span>
                                 </li>
                                 <li className="flex items-start gap-2">
-                                    <span className="text-blue-400"></span>
+                                    <span className="text-emerald-400"></span>
                                     <span><strong>WalletConnect:</strong> Compatible with all major dApps</span>
                                 </li>
                                 <li className="flex items-start gap-2">
-                                    <span className="text-blue-400"></span>
+                                    <span className="text-emerald-400"></span>
                                     <span><strong>Hardware Wallet Support:</strong> Ledger, Trezor integration</span>
                                 </li>
                             </ul>
@@ -151,7 +151,7 @@ export default function FeaturesPage() {
                     {/* Wallet Features */}
                     <div className="mb-8">
                         <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                            <Wallet className="text-blue-400" />
+                            <Wallet className="text-emerald-400" />
                             Wallet Capabilities
                         </h3>
 
@@ -375,10 +375,10 @@ export default function FeaturesPage() {
                             <p className="text-xs text-green-400 mt-2">Q3 2026</p>
                         </div>
 
-                        <div className="bg-gradient-to-br from-blue-600/10 to-cyan-600/10 p-4 rounded-lg border border-blue-500/30">
+                        <div className="bg-gradient-to-br from-emerald-600/10 to-cyan-600/10 p-4 rounded-lg border border-[#25D366]/30">
                             <h4 className="font-bold mb-2"> DeFi Yield Aggregator</h4>
                             <p className="text-sm text-white/70">Auto-compound yields across protocols with one click.</p>
-                            <p className="text-xs text-blue-400 mt-2">Q4 2026</p>
+                            <p className="text-xs text-emerald-400 mt-2">Q4 2026</p>
                         </div>
 
                         <div className="bg-gradient-to-br from-purple-600/10 to-pink-600/10 p-4 rounded-lg border border-purple-500/30">
@@ -393,7 +393,7 @@ export default function FeaturesPage() {
                             <p className="text-xs text-red-400 mt-2">Q2 2027</p>
                         </div>
 
-                        <div className="bg-gradient-to-br from-indigo-600/10 to-blue-600/10 p-4 rounded-lg border border-indigo-500/30">
+                        <div className="bg-gradient-to-br from-indigo-600/10 to-emerald-600/10 p-4 rounded-lg border border-indigo-500/30">
                             <h4 className="font-bold mb-2"> Social Attesting</h4>
                             <p className="text-sm text-white/70">Copy attestations from top performers, share strategies, earn commissions.</p>
                             <p className="text-xs text-indigo-400 mt-2">Q3 2027</p>
@@ -402,13 +402,13 @@ export default function FeaturesPage() {
                 </section>
 
                 {/* CTA */}
-                <section className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 p-8 rounded-xl border border-white/10 text-center">
+                <section className="bg-gradient-to-r from-purple-600/20 to-emerald-600/20 p-8 rounded-xl border border-white/10 text-center">
                     <h2 className="text-3xl font-bold mb-4">Ready to Experience the Future?</h2>
                     <p className="text-lg text-white/80 mb-6">
                         Join Humanity Ledger today and unlock the full power of DeFi with privacy, security, and professional-grade tools.
                     </p>
                     <div className="flex flex-wrap justify-center gap-4">
-                        <a href="/signup" className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg font-bold hover:scale-105 transition-transform">
+                        <a href="/signup" className="px-8 py-3 bg-gradient-to-r from-purple-600 to-emerald-600 rounded-lg font-bold hover:scale-105 transition-transform">
                             Get Started Free
                         </a>
                         <a href="/demo" className="px-8 py-3 bg-white/10 border border-white/20 rounded-lg font-bold hover:bg-white/20 transition-colors">
@@ -420,4 +420,5 @@ export default function FeaturesPage() {
         </DocLayout>
     );
 }
+
 

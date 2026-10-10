@@ -101,3 +101,48 @@ scripts/archive/
 scripts/*.sh
 scripts/wsl*.sh
 scripts/deploy*.sh
+
+# =================================================================
+# CLEANUP: archivos que nunca deben estar en el repo publico
+# =================================================================
+
+# Documentos personales/corporativos
+CV_*.docx
+Documento_*.txt
+Documento_*.md
+Masterclass_*.md
+*.docx
+raw_pdf_*.txt
+extracted_pdf.txt
+
+# Scripts temporales de debug
+find_*.py
+fix_*.py
+fix_*.js
+patch_*.py
+patch*.py
+patch*.js
+verify_*.py
+verify_*.js
+scratch_tsc*.txt
+tsc*.txt
+tsc*.log
+ts_errors.log
+build-err.log
+build-out.log
+claim-output.log
+
+# Accidentes de redireccion de shell
+9.1.0
+markets
+node-allocation
+
+# Config interno
+gtm_container_export.json
+snapshot-config.json
+set_railway_vars.bat
+powershell.bat
+
+# Directorios temporales
+scratch/
+tmp_*/

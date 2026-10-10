@@ -195,6 +195,6 @@ export async function POST(req: NextRequest) {
 
     } catch (e: any) {
         console.warn('[Graph] Cypher execution failed:', e.message);
-        return NextResponse.json({ ok: false, data: [], error: e.message, code: 'NEO4J_OFFLINE' }, { status: 200 });
+        return NextResponse.json({ ok: false, data: [], error: 'Internal Server Error', code: 'NEO4J_OFFLINE' }, { status: 200 });
     }
 }

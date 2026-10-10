@@ -98,7 +98,7 @@ export function LedgerPinLockScreen({ onVerify, lockError, isSetupMode = false, 
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[99999] bg-[#FAFAFA] flex flex-col items-center justify-center p-8 select-none">
       <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="mb-10 flex flex-col items-center gap-4 text-center max-w-sm">
         <div className="w-24 h-24 rounded-full bg-black/5 flex items-center justify-center shadow-inner border border-black/10 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-emerald-500/20 mix-blend-overlay" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-[#25D366]/20 to-emerald-500/20 mix-blend-overlay" />
           <svg className="text-black/80" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             {isIOS ? (
               <path d="M5 3v4M3 5h4M6 17v4m-2-2h4m11-16v4m-2-2h4m-2 12v4m-2-2h4M9 9a3 3 0 1 0 6 0a3 3 0 0 0-6 0Z"/>
@@ -129,3 +129,4 @@ export function LedgerPinLockScreen({ onVerify, lockError, isSetupMode = false, 
     </motion.div>
   );
 }
+

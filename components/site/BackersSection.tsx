@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 const backers = [
-    { name: 'Coinglass', color: 'text-blue-400', glow: 'shadow-blue-500/20' },
+    { name: 'Coinglass', color: 'text-emerald-400', glow: 'shadow-[#25D366]/20' },
     { name: 'CoinGecko', color: 'text-emerald-400', glow: 'shadow-emerald-500/20' },
     { name: 'Kernel Ventures', color: 'text-purple-400', glow: 'shadow-purple-500/20' },
     { name: 'Good News Ventures', color: 'text-orange-400', glow: 'shadow-orange-500/20' },
@@ -25,7 +25,7 @@ export function BackersSection() {
         <section className="relative py-24 overflow-hidden bg-black border-y border-white/[0.02]">
             {/* Background Atmosphere */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[300px] bg-blue-600/5 blur-[120px] rounded-full" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[300px] bg-emerald-600/5 blur-[120px] rounded-full" />
             </div>
 
             <div className="relative z-10 max-w-[2560px] mx-auto px-6 text-left">
@@ -35,7 +35,7 @@ export function BackersSection() {
                     viewport={{ once: true }}
                     className="flex flex-col items-center mb-16"
                 >
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-500 mb-3">{t.backers.badge}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#25D366] mb-3">{t.backers.badge}</span>
                     <h2 className="text-3xl font-black text-white tracking-widest uppercase">{t.backers.title}</h2>
                 </motion.div>
 
@@ -80,8 +80,9 @@ export function BackersSection() {
             </div>
 
             {/* Bottom Glow Sweep */}
-            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#25D366]/20 to-transparent" />
         </section>
     );
 }
+
 

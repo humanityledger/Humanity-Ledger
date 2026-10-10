@@ -250,10 +250,10 @@ export function GalacticDashboard() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
               <div className="flex items-center gap-3">
-                <Shield size={14} className="text-blue-400" />
+                <Shield size={14} className="text-emerald-400" />
                 <span className="text-xs font-bold">Aztec Shield</span>
               </div>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-blue-400 bg-blue-400/10 px-2 py-1 rounded">Active</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded">Active</span>
             </div>
             <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
               <div className="flex items-center gap-3">
@@ -418,7 +418,7 @@ export function GalacticDashboard() {
                     <div key={ev.id} className="flex items-center justify-between p-5 rounded-2xl bg-white/[0.02] border border-white/5">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
-                          {ev.type === 'approval' ? <Shield size={16} className="text-blue-400"/> : <Blocks size={16} className="text-purple-400"/>}
+                          {ev.type === 'approval' ? <Shield size={16} className="text-emerald-400"/> : <Blocks size={16} className="text-purple-400"/>}
                         </div>
                         <div>
                           <div className="font-bold text-sm uppercase tracking-wider">{ev.type}</div>
@@ -427,7 +427,7 @@ export function GalacticDashboard() {
                       </div>
                       <div className="text-right">
                         <div className="font-bold text-sm">{ev.amount}</div>
-                        <a href={`https://polygonscan.com/tx/${ev.hash}`} target="_blank" rel="noreferrer" className="text-[10px] font-mono text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-widest mt-1 block">View TX</a>
+                        <a href={`https://polygonscan.com/tx/${ev.hash}`} target="_blank" rel="noreferrer" className="text-[10px] font-mono text-emerald-400 hover:text-emerald-300 transition-colors uppercase tracking-widest mt-1 block">View TX</a>
                       </div>
                     </div>
                   ))}
@@ -500,3 +500,4 @@ export function GalacticDashboard() {
     </div>
   );
 }
+

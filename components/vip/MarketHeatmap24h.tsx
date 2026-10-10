@@ -67,7 +67,7 @@ function getColor(value: number, metric: MetricKey, maxVal: number): { bg: strin
   const ratio = value / maxVal;
   if (ratio > 0.7) return { bg: "from-violet-500 to-purple-700", glow: "rgba(139,92,246,0.4)" };
   if (ratio > 0.4) return { bg: "from-indigo-500 to-indigo-700", glow: "rgba(99,102,241,0.35)" };
-  if (ratio > 0.2) return { bg: "from-blue-600 to-blue-800", glow: "rgba(59,130,246,0.3)" };
+  if (ratio > 0.2) return { bg: "from-emerald-600 to-emerald-800", glow: "rgba(59,130,246,0.3)" };
   if (ratio > 0.1) return { bg: "from-slate-600 to-slate-700", glow: "rgba(148,163,184,0.15)" };
   return { bg: "from-slate-700 to-slate-800", glow: "rgba(100,116,139,0.15)" };
 }
@@ -547,7 +547,7 @@ export function MarketHeatmap24h() {
           <div className="flex items-center gap-3">
             {[
               { color: "bg-slate-700", label: "Low" },
-              { color: "bg-blue-700", label: "Mid" },
+              { color: "bg-emerald-700", label: "Mid" },
               { color: "bg-indigo-600", label: "High" },
               { color: "bg-violet-500", label: "Elite" },
             ].map(l => (
@@ -562,3 +562,4 @@ export function MarketHeatmap24h() {
     </div>
   );
 }
+

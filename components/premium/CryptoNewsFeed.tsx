@@ -85,9 +85,9 @@ export default function CryptoNewsFeed({ isPremium, walletAddress, tokens = [] }
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black text-white flex items-center gap-3">
-            <Newspaper className="text-blue-500" />
+            <Newspaper className="text-[#25D366]" />
             AI Crypto News
-            <span className="px-3 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs rounded-full">PRO</span>
+            <span className="px-3 py-1 bg-gradient-to-r from-[#25D366] to-cyan-500 text-white text-xs rounded-full">PRO</span>
           </h1>
           <p className="text-sm text-gray-400 mt-1">
             Real-time curated news with AI sentiment analysis
@@ -142,7 +142,7 @@ export default function CryptoNewsFeed({ isPremium, walletAddress, tokens = [] }
             onClick={() => setFilter(f as any)}
             className={`px-4 py-2 rounded-xl font-bold transition-all capitalize ${
               filter === f
-                ? 'bg-blue-600 text-white shadow-lg'
+                ? 'bg-emerald-600 text-white shadow-lg'
                 : 'bg-white/5 text-gray-400 hover:bg-white/10'
             }`}
           >
@@ -159,7 +159,7 @@ export default function CryptoNewsFeed({ isPremium, walletAddress, tokens = [] }
       {/* News Grid */}
       {loading && articles.length === 0 ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent" />
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-600 border-t-transparent" />
         </div>
       ) : (
         <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${!isPremium ? 'opacity-30 pointer-events-none select-none filter blur-sm' : ''}`}>
@@ -202,10 +202,10 @@ function NewsCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ delay: index * 0.05 }}
-      className="group block p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:bg-white/10 hover:border-blue-500/30 transition-all cursor-pointer"
+      className="group block p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:bg-white/10 hover:border-[#25D366]/30 transition-all cursor-pointer"
     >
       {/* Image with Premium Polish */}
-      <div className="relative w-full h-44 mb-4 rounded-xl overflow-hidden bg-black/20 ring-1 ring-white/10 group-hover:ring-blue-500/50 transition-all">
+      <div className="relative w-full h-44 mb-4 rounded-xl overflow-hidden bg-black/20 ring-1 ring-white/10 group-hover:ring-[#25D366]/50 transition-all">
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
         <img 
           src={article.imageUrl ? `/api/proxy-image?url=${encodeURIComponent(article.imageUrl)}` : `/api/proxy-image?seed=${index}`}
@@ -230,7 +230,7 @@ function NewsCard({
       </div>
 
       {/* Title */}
-      <h3 className="font-black text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
+      <h3 className="font-black text-white mb-2 line-clamp-2 group-hover:text-emerald-400 transition-colors">
         {article.title}
       </h3>
 
@@ -249,7 +249,7 @@ function NewsCard({
           ))}
         </div>
 
-        <div className="flex items-center gap-1 text-xs font-bold text-blue-400 group-hover:gap-2 transition-all">
+        <div className="flex items-center gap-1 text-xs font-bold text-emerald-400 group-hover:gap-2 transition-all">
           Read More
           <ExternalLink size={12} />
         </div>
@@ -271,4 +271,5 @@ function getTimeAgo(timestamp: number): string {
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
   return `${Math.floor(seconds / 86400)}d ago`;
 }
+
 
