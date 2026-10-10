@@ -406,9 +406,6 @@ export async function getDmId(client: Client, peerAddress: string): Promise<stri
  * Sending to the wrong casing on XMTP v5.3.0 creates a ghost DM.
  */
 export async function getRegisteredAddress(address: string): Promise<string> {
-  // Always return a valid address - XMTP v5 uses lowercase internally for storage
-  // but accepts any casing for lookup. The key insight is we should use 
-  // the CHECKSUMMED address (EIP-55) which XMTP normalizes internally.
   try {
     const identifier = { identifier: address, identifierKind: 'Ethereum' };
     const result = await Client.canMessage([identifier as any], XMTP_ENV);
@@ -416,12 +413,16 @@ export async function getRegisteredAddress(address: string): Promise<string> {
     if (result instanceof Map) {
       const lower = address.toLowerCase();
       for (const [key, val] of result.entries()) {
-        if (key.toLowerCase() === lower) return key; // Return the EXACT key whether true or false
+        if (key.toLowerCase() === lower && val === true) {
+          return key; // Return EXACT registered casing
+        }
       }
     } else if (result && typeof result === 'object') {
       const lower = address.toLowerCase();
       for (const key of Object.keys(result)) {
-        if (key.toLowerCase() === lower) return key;
+        if (key.toLowerCase() === lower && (result as any)[key] === true) {
+          return key;
+        }
       }
     }
   } catch (e) {
@@ -463,26 +464,10 @@ export async function sendMessage(
 
     for (let i = 0; i < 3; i++) {
       try {
-        // [CRITICAL FIX v6] Find existing DM first to prevent MLS split-brain
-        // When sending, calling newDmWithIdentifier without checking listDms
-        // can create a ghost conversation that the recipient's client ignores.
-        let dm: any = null;
-        const selfInboxId = (client as any).inboxId ?? '';
-        try {
-          const dms = await client.conversations.listDms();
-          for (const d of dms) {
-            const peerAddr = await extractPeerAddress(d, selfInboxId, (client as any).accountAddress, client).catch(() => null);
-            if (peerAddr && peerAddr.toLowerCase() === finalTo.toLowerCase()) {
-              dm = d;
-              break;
-            }
-          }
-        } catch (listErr) {}
-
-        if (!dm) {
-          const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
-          dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
-        }
+        // [CRITICAL FIX v6] newDmWithIdentifier is idempotent. It creates OR finds
+        // the existing DM without needing a manual listDms scan.
+        const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
+        const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
         
         // [CRITICAL FIX] Must sync the DM before sending, or messages get lost 
         // in local MLS state desync on XMTP v3+

@@ -500,12 +500,12 @@ export const MessageBubble = React.memo(({
     }
   }, [isMe]);
 
-  let bubbleStyle = 'default';
-  if (typeof window !== 'undefined') bubbleStyle = (window as any).__ledger_bubble_style || 'default';
+  
+  const activeBubbleStyle = (window as any).__ledger_bubble_style || 'default';
   let bubbleClasses = isMe ? 'msg-bubble-sent rounded-[20px] rounded-br-[5px]' : 'msg-bubble-recv rounded-[20px] rounded-bl-[5px]';
-  if (bubbleStyle === 'brutalist') bubbleClasses = 'rounded-none border-2 border-black/80';
-  else if (bubbleStyle === 'minimal') bubbleClasses = 'rounded-none border-l-4 border-[#007AFF] bg-transparent';
-  else if (bubbleStyle === 'glass') bubbleClasses = 'backdrop-blur-md bg-white/40 border border-white/30 shadow-lg rounded-[20px]';
+  if (activeBubbleStyle === 'brutalist') bubbleClasses = 'rounded-none border-2 border-black/80';
+  else if (activeBubbleStyle === 'minimal') bubbleClasses = 'rounded-none border-l-4 border-[#007AFF] bg-transparent';
+  else if (activeBubbleStyle === 'glass') bubbleClasses = 'backdrop-blur-md bg-white/40 border border-white/30 shadow-lg rounded-[20px]';
 
   return (
     <React.Fragment>
@@ -689,16 +689,16 @@ export const MessageBubble = React.memo(({
                 )}
                 <div
                   className={`relative shadow-sm border ${
-                    bubbleStyle === 'compact' ? 'px-3 py-1.5' :
-                    bubbleStyle === 'wide' ? 'px-5 py-3 w-full' : 'px-4 py-2.5'
+                    activeBubbleStyle === 'compact' ? 'px-3 py-1.5' :
+                    activeBubbleStyle === 'wide' ? 'px-5 py-3 w-full' : 'px-4 py-2.5'
                   } ${
-                    bubbleStyle === 'wide'
+                    activeBubbleStyle === 'wide'
                       ? (isMe ? 'rounded-[16px] bg-[#25D366] border-[#25D366]' : 'rounded-[16px] bg-white border-black/5')
-                      : bubbleStyle === 'brutalist'
+                      : activeBubbleStyle === 'brutalist'
                       ? (isMe ? 'rounded-none border-2 border-black/80 bg-[#25D366]' : 'rounded-none border-2 border-black/80 bg-white')
-                      : bubbleStyle === 'minimal'
+                      : activeBubbleStyle === 'minimal'
                       ? (isMe ? 'rounded-none border-l-4 border-[#007AFF] bg-transparent' : 'rounded-none border-l-4 border-black/30 bg-transparent')
-                      : bubbleStyle === 'glass'
+                      : activeBubbleStyle === 'glass'
                       ? (isMe ? 'backdrop-blur-md bg-[#25D366]/40 border border-[#25D366]/30 shadow-lg' : 'backdrop-blur-md bg-white/40 border border-white/30 shadow-lg')
                       : (isMe ? 'msg-bubble-sent rounded-[20px] rounded-br-[5px] bg-[#25D366] border-[#25D366]' : 'msg-bubble-recv rounded-[20px] rounded-bl-[5px] bg-white border-black/5')
                   }`}

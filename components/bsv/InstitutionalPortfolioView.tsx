@@ -380,7 +380,14 @@ function HomeView({ address, balance, balanceFiat, totalBalance, activeNetwork, 
                 </div>
 
                 <div className="hidden md:flex flex-col items-center">
-                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-900/20">Humanity Ledger</span>\n                    {uiConfig?.showGasTracker !== false && feeData?.formatted?.gasPrice && (\n                        <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase tracking-widest text-zinc-900/40">\n                            <Zap size={10} className="text-zinc-900/30" />\n                            <span>Gas: {Number(feeData.formatted.gasPrice).toFixed(1)} gwei</span>\n                        </div>\n                    )}\n                </div>
+                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-900/20">Humanity Ledger</span>
+                    {uiConfig?.showGasTracker !== false && feeData?.formatted?.gasPrice && (
+                        <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase tracking-widest text-zinc-900/40">
+                            <Zap size={10} className="text-zinc-900/30" />
+                            <span>Gas: {Number(feeData.formatted.gasPrice).toFixed(1)} gwei</span>
+                        </div>
+                    )}
+                </div>
 
                 {address && (
                     <div className="flex flex-wrap gap-2 items-center justify-end mt-3 md:mt-0">

@@ -510,6 +510,55 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
             checked={permissions.antiSpam} 
             onChange={(v: boolean) => savePermissions({...permissions, antiSpam: v})} 
           />
+          <Toggle 
+            label="Require Join Approval" 
+            desc="Admins must approve new members" 
+            checked={permissions.requireApproval || false} 
+            onChange={(v: boolean) => savePermissions({...permissions, requireApproval: v})} 
+          />
+          <Toggle 
+            label="Member Posts Need Approval" 
+            desc="Admins review posts before publishing" 
+            checked={permissions.postApproval || false} 
+            onChange={(v: boolean) => savePermissions({...permissions, postApproval: v})} 
+          />
+          <Toggle 
+            label="New Member Alerts" 
+            desc="Get notified when someone joins" 
+            checked={permissions.notifyNewMember !== false} 
+            onChange={(v: boolean) => savePermissions({...permissions, notifyNewMember: v})} 
+          />
+        </div>
+      </div>
+
+      {/* DANGER ZONE */}
+      <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-red-500/20 overflow-hidden mt-6">
+        <div className="px-6 py-4 border-b border-red-500/10 bg-red-50/50">
+          <p className="text-[12px] font-black uppercase tracking-[0.15em] text-red-500">Danger Zone</p>
+        </div>
+        <div className="p-6">
+          <p className="text-[13px] text-black/60 mb-4">Deleting this community is permanent. All channels, messages, and member data will be irrevocably destroyed.</p>
+          <button
+            onClick={async () => {
+              if (!confirm('Are you absolutely sure you want to delete this community? This action cannot be undone.')) return;
+              try {
+                const res = await fetch(`/api/chat/communities/${community?.id}`, {
+                  method: 'DELETE',
+                  headers: { 'x-web3-address': myAddress }
+                });
+                if (res.ok) {
+                  window.location.reload();
+                } else {
+                  alert('Only the owner can delete this community.');
+                }
+              } catch (e) {
+                alert('Network error');
+              }
+            }}
+            className="w-full py-3 bg-red-500 text-white font-bold rounded-[16px] hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+          >
+            Delete Community
+          </button>
         </div>
       </div>
 
