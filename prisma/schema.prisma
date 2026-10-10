@@ -1666,6 +1666,7 @@ model QDCreditLedger {
 model CommunityPost {
   id             String   @id @default(cuid())
   communityId    String
+  channelId      String?
   authorAddress  String
   content        String   // ENCRYPTED CIPHERTEXT (AES-256-GCM or MLS payload)
   title          String?
@@ -1779,4 +1780,6 @@ model Story {
   @@index([authorAddress])
   @@index([expiresAt])
 }
+
+
 

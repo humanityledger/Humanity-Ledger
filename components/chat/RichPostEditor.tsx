@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
@@ -735,6 +735,7 @@ export function RichPostEditorModal({
         headers: {
           'Content-Type': 'application/json',
           'x-web3-address': myAddress,
+          'x-verified-session-address': myAddress,
         },
         body: JSON.stringify({
           communityId,
@@ -751,8 +752,9 @@ export function RichPostEditorModal({
         return;
       }
 
+      const data = await res.json().catch(() => ({}));
       toast.success('Post published!');
-      onPublished?.(data.post || content);
+      onPublished?.(data.post || null);
       onClose();
     } catch (e) {
       console.error('[RichPostEditorModal] Publish failed:', e);

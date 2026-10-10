@@ -27,153 +27,221 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
   const [community, setCommunity] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [localLikes, setLocalLikes] = useState<Record<string, number>>({});
+  const [loadingPosts, setLoadingPosts] = useState(true);
 
-  useEffect(() => {
-    // Fetch community details
-    fetch('/api/chat/communities')
-      .then(r => r.json())
-      .then(d => {
+  const fetchCommunity = async () => {
+    try {
+      // Try fetching by ID directly first
+      const res = await fetch(`/api/chat/communities/${communityId}`, {
+        headers: { 'x-web3-address': myAddress, 'x-verified-session-address': myAddress }
+      });
+      if (res.ok) {
+        const d = await res.json();
+        if (d.community) { setCommunity(d.community); return; }
+      }
+    } catch {}
+    // Fallback: list communities and find by id
+    try {
+      const res = await fetch('/api/chat/communities', {
+        headers: { 'x-web3-address': myAddress, 'x-verified-session-address': myAddress }
+      });
+      if (res.ok) {
+        const d = await res.json();
         const found = d.communities?.find((c: any) => c.id === communityId);
         if (found) setCommunity(found);
-      });
-      
-    // Fetch posts
-    fetchPosts();
-  }, [communityId]);
-
-  const fetchPosts = () => {
-    fetch(`/api/chat/communities/$communityId/posts`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.posts) setPosts(d.posts);
-      });
+      }
+    } catch {}
   };
 
+  const fetchPosts = async () => {
+    try {
+      const res = await fetch(`/api/chat/communities/${communityId}/posts`, {
+        headers: { 'x-web3-address': myAddress }
+      });
+      if (res.ok) {
+        const d = await res.json();
+        // Posts tab shows items WITH a title or rich HTML content (not raw chat messages)
+        const richPosts = (d.posts || []).filter((p: any) => p.title || (p.contentHtml && p.contentHtml.includes('<')));
+        // If no rich posts, show all posts
+        setPosts(richPosts.length > 0 ? richPosts : (d.posts || []));
+      }
+    } catch {}
+    setLoadingPosts(false);
+  };
+
+  useEffect(() => {
+    if (!communityId) return;
+    fetchCommunity();
+    fetchPosts();
+    const interval = setInterval(fetchPosts, 10000);
+    return () => clearInterval(interval);
+  }, [communityId]);
+
   const AVATAR_COLORS = ['#25D366','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
-  const avatarColor = communityId ? AVATAR_COLORS[parseInt(communityId.charCodeAt(0).toString(), 10) % AVATAR_COLORS.length] : '#000';
+  const avatarColor = communityId ? AVATAR_COLORS[(communityId.charCodeAt(0) || 0) % AVATAR_COLORS.length] : '#000';
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#F2F2F7] relative">
       {/* ── HEADER ── */}
-      <div className="h-[68px] px-4 border-b border-black/[0.08] flex items-center justify-between bg-white/95 backdrop-blur-md shrink-0 z-10 shadow-sm">
+      <div className="h-[64px] px-4 border-b border-black/[0.08] flex items-center justify-between bg-white/95 backdrop-blur-md shrink-0 z-10 shadow-sm">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="md:hidden p-1.5 rounded-lg hover:bg-black/5 text-black/40">
-            <ChevronLeft size={24} />
+          <button onClick={onBack} className="p-1.5 rounded-xl hover:bg-black/5 text-black/40 transition-colors md:hidden">
+            <ChevronLeft size={22} />
           </button>
-          
-          <div 
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-inner"
-            style={{ background: avatarColor }}
-          >
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-sm" style={{ background: avatarColor }}>
             {community?.name?.slice(0, 2).toUpperCase() || 'C'}
           </div>
-          
-          <div className="flex flex-col">
-            <p className="text-[16px] font-bold text-[#1C1C1E] leading-tight flex items-center gap-1.5">
+          <div>
+            <p className="text-[15px] font-bold text-[#1C1C1E] leading-tight flex items-center gap-1.5">
               {community?.name || 'Loading...'}
-              {community?.isPrivate ? <Lock size={12} className="text-black/30" /> : <Globe size={12} className="text-black/30" />}
+              {community?.isPrivate ? <Lock size={11} className="text-black/30" /> : <Globe size={11} className="text-black/30" />}
             </p>
-            <p className="text-[12px] font-medium text-black/40">
-              {community?.members || 1} members
+            <p className="text-[11px] font-medium text-black/40">
+              {community?.membersCount || community?.members?.length || 1} members
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1">
-          <button onClick={() => setActiveTab('posts')} className={`px-4 py-2 rounded-xl text-[13px] font-bold transition-colors ${activeTab === 'posts' ? 'bg-black text-white' : 'text-black/50 hover:bg-black/5'}`}>Posts</button>
-          <button onClick={() => setActiveTab('chat')} className={`px-4 py-2 rounded-xl text-[13px] font-bold transition-colors ${activeTab === 'chat' ? 'bg-black text-white' : 'text-black/50 hover:bg-black/5'}`}>Chat</button>
-          <button onClick={() => setActiveTab('settings')} className={`p-2 rounded-xl transition-colors ${activeTab === 'settings' ? 'bg-black text-white' : 'text-black/50 hover:bg-black/5'}`}><Settings size={18} /></button>
+          {(['posts', 'chat', 'settings'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-3 py-1.5 rounded-xl text-[12px] font-bold transition-all ${activeTab === tab ? 'bg-[#1C1C1E] text-white shadow-sm' : 'text-black/40 hover:bg-black/5'}`}
+            >
+              {tab === 'settings' ? <Settings size={15} /> : tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* ── CONTENT BODY ── */}
-      <div className="flex-1 overflow-y-auto relative">
+      <div className="flex-1 overflow-hidden relative flex flex-col">
+        {/* POSTS TAB */}
         {activeTab === 'posts' && (
-          <div className="max-w-3xl mx-auto p-4 md:p-6 pb-32">
-            {posts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 opacity-50">
-                <Hash size={48} className="mb-4" />
-                <p className="text-[16px] font-bold">No announcements yet</p>
-                <p className="text-[14px]">Be the first to post something.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-6">
-                {posts.map(post => (
-                  <div key={post.id} className="bg-white rounded-2xl shadow-sm border border-black/5 overflow-hidden">
-                    {post.title && (
-                      <div className="px-6 pt-5 pb-2">
-                        <h2 className="text-[20px] font-bold leading-tight text-[#1C1C1E]">{post.title}</h2>
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-3xl mx-auto p-4 md:p-6 pb-28">
+              {loadingPosts ? (
+                <div className="flex items-center justify-center py-16 opacity-40">
+                  <div className="w-8 h-8 border-3 border-[#25D366] border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : posts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+                  <Hash size={44} className="mb-3 text-[#25D366]" />
+                  <p className="text-[16px] font-bold">No posts yet</p>
+                  <p className="text-[13px] mt-1">Tap the compose button to write the first post</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-5">
+                  {posts.map(post => (
+                    <motion.div
+                      key={post.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white rounded-3xl shadow-sm border border-black/[0.05] overflow-hidden"
+                    >
+                      {post.title && (
+                        <div className="px-6 pt-5 pb-1">
+                          <h2 className="text-[19px] font-black leading-tight text-[#1C1C1E]">{post.title}</h2>
+                        </div>
+                      )}
+                      <div
+                        className="prose prose-sm max-w-none px-6 py-4 text-[#1C1C1E]/80 text-[14px] leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: typeof window !== 'undefined' ? DOMPurify.sanitize(post.contentHtml || post.content || '') : (post.content || '') }}
+                      />
+                      <div className="bg-[#FAFAFA] px-6 py-3 border-t border-black/5 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-[#25D366]/15 flex items-center justify-center text-[9px] font-black text-[#25D366]">
+                            {(post.authorAddress || '0x').slice(2, 4).toUpperCase()}
+                          </div>
+                          <span className="text-[12px] font-medium text-black/50">
+                            {post.authorAddress?.slice(0, 6)}...{post.authorAddress?.slice(-4)}
+                          </span>
+                          <span className="text-black/20">·</span>
+                          <span className="text-[11px] text-black/40">
+                            {new Date(post.createdAt).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setLocalLikes(prev => ({ ...prev, [post.id]: (prev[post.id] ?? (post.likes || 0)) + 1 }))}
+                          className={`flex items-center gap-1.5 transition-colors ${localLikes[post.id] !== undefined ? 'text-red-500' : 'text-black/30 hover:text-red-500'}`}
+                        >
+                          <Heart size={14} fill={localLikes[post.id] !== undefined ? 'currentColor' : 'none'} />
+                          <span className="text-[12px] font-bold">{localLikes[post.id] ?? (post.likes || 0)}</span>
+                        </button>
                       </div>
-                    )}
-                    <div className="prose prose-sm max-w-none px-6 py-4 text-[#1C1C1E]/80" dangerouslySetInnerHTML={{ __html: typeof window !== 'undefined' ? DOMPurify.sanitize(post.contentHtml || post.content) : post.content }} />
-                    <div className="bg-[#FAFAFA] px-6 py-3 border-t border-black/5 flex items-center justify-between">
-                        {post.authorAddress?.toLowerCase() === myAddress?.toLowerCase() && (
-                          <button 
-                            onClick={() => { setEditingPost(post); setShowEditor(true); }}
-                            className="text-[12px] font-bold text-black/50 hover:text-black flex items-center gap-1 bg-black/5 px-3 py-1.5 rounded-lg transition-colors"
-                          >
-                            <Edit size={14} /> Edit
-                          </button>
-                        )}
-                      <div 
-                        className="flex items-center gap-2 cursor-pointer hover:bg-black/5 px-2 py-1 -ml-2 rounded-lg transition-colors"
-                        onClick={() => {
-                          // Quick hack to open peer chat in LedgerChatV2
-                          window.history.pushState({}, '', `/chat?to=${post.authorAddress}`);
-                          window.dispatchEvent(new Event('popstate'));
-                          // Or reload to force the ?to param handler we wrote earlier
-                          window.location.href = `/chat?to=${post.authorAddress}`;
-                        }}
-                        title="Click to message this user"
-                      >
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-#25D366 to-purple-500" />
-                        <span className="text-[12px] font-medium text-black/60 hover:text-black">{post.authorAddress.slice(0,6)}...{post.authorAddress.slice(-4)}</span>
-                        <span className="text-[12px] text-black/20">•</span>
-                        <span className="text-[12px] font-medium text-black/40">{new Date(post.createdAt).toLocaleDateString()}</span>
-                      </div>
-                      <button 
-                        onClick={() => setLocalLikes(prev => ({ ...prev, [post.id]: (prev[post.id] ?? (post.likes || 0)) + 1 }))}
-                        className={`flex items-center gap-1.5 transition-colors ${localLikes[post.id] !== undefined ? 'text-red-500' : 'text-black/40 hover:text-red-500'}`}
-                      >
-                        <Heart size={14} fill={localLikes[post.id] !== undefined ? 'currentColor' : 'none'} />
-                        <span className="text-[12px] font-bold">{localLikes[post.id] ?? (post.likes || 0)}</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-            {/* Floating FAB to post */}
+            {/* FAB to compose */}
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
               onClick={() => { setEditingPost(null); setShowEditor(true); }}
-              className="fixed bottom-6 right-6 w-14 h-14 bg-black text-white rounded-full flex items-center justify-center shadow-2xl z-20"
+              className="fixed bottom-6 right-6 w-14 h-14 bg-[#1C1C1E] text-white rounded-full flex items-center justify-center shadow-2xl shadow-black/30 z-20 hover:bg-black"
             >
-              <Edit size={24} />
+              <Edit size={22} />
             </motion.button>
           </div>
         )}
 
-        {activeTab === 'chat' && ( <CommunityChatView communityId={communityId} channelId={activeChannelId || undefined} myAddress={myAddress} /> )}
+        {/* CHAT TAB */}
+        {activeTab === 'chat' && (
+          <div className="flex flex-1 overflow-hidden">
+            {/* Channel sidebar */}
+            {community?.channels && community.channels.length > 0 && (
+              <div className="w-[180px] shrink-0 bg-white border-r border-black/5 flex flex-col py-3 overflow-y-auto">
+                <p className="text-[10px] font-black uppercase tracking-widest text-black/30 px-4 mb-2">Channels</p>
+                {community.channels.map((ch: any) => (
+                  <button
+                    key={ch.id}
+                    onClick={() => setActiveChannelId(ch.id)}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-left transition-all ${activeChannelId === ch.id ? 'bg-[#25D366]/10 text-[#25D366]' : 'text-black/50 hover:bg-black/5 hover:text-black/70'}`}
+                  >
+                    {ch.isPaid ? <Lock size={13} /> : <Hash size={13} />}
+                    <span className="text-[13px] font-medium truncate">{ch.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex-1 overflow-hidden">
+              <CommunityChatView
+                communityId={communityId}
+                channelId={activeChannelId}
+                myAddress={myAddress}
+                communityName={community?.name}
+              />
+            </div>
+          </div>
+        )}
 
+        {/* SETTINGS TAB */}
         {activeTab === 'settings' && (
-          <CommunitySettingsPanel community={community} myAddress={myAddress} />
+          <div className="flex-1 overflow-y-auto">
+            <CommunitySettingsPanel
+              community={community}
+              myAddress={myAddress}
+              onChannelSelect={(id) => { setActiveChannelId(id); setActiveTab('chat'); }}
+              onCommunityUpdate={() => fetchCommunity()}
+            />
+          </div>
         )}
       </div>
 
-      <RichPostEditorModal 
-        open={showEditor} 
-        onClose={() => setShowEditor(false)} 
+      <RichPostEditorModal
+        open={showEditor}
+        onClose={() => setShowEditor(false)}
         myAddress={myAddress}
         communityName={community?.name}
         communityId={communityId}
         onPublished={(newPost) => {
           if (newPost && newPost.id) {
-             setPosts(prev => [newPost, ...prev]);
+            setPosts(prev => [newPost, ...prev]);
           } else {
-             fetchPosts();
+            // Refresh posts list
+            fetchPosts();
           }
         }}
       />
@@ -183,7 +251,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
 
 // ─── SETTINGS PANEL (Telegram Style - Ultimate Edition) ────────────────────────
 
-function CommunitySettingsPanel({ community, myAddress }: { community: any; myAddress: string }) {
+function CommunitySettingsPanel({ community, myAddress, onChannelSelect, onCommunityUpdate }: { community: any; myAddress: string; onChannelSelect?: (id: string) => void; onCommunityUpdate?: () => void }) {
   // Merge initial permissions from API or default
   const defaultPerms = community?.permissions || {
     sendMessages: true, sendMedia: true, sendStickers: true, sendPolls: true,
@@ -199,7 +267,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
   const [showChannelsModal, setShowChannelsModal] = useState(false);
   
   // Real sync to DB
-  const savePermissions = async (newPerms: any) => { const { id, communityId, createdAt, updatedAt, ...cleanPerms } = newPerms; setPermissions(newPerms); try { const res = await fetch('/api/chat/communities', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress }, body: JSON.stringify({ communityId: community?.id, action: 'UPDATE_PERMISSIONS', permissions: cleanPerms }) }); if (!res.ok) throw new Error('Failed'); toast.success('Permissions updated'); } catch (e) { toast.error('Failed to update permissions'); } };
+  const savePermissions = async (newPerms: any) => { const { id, communityId, createdAt, updatedAt, ...cleanPerms } = newPerms; setPermissions(newPerms); try { const res = await fetch('/api/chat/communities', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress, 'x-verified-session-address': myAddress }, body: JSON.stringify({ communityId: community?.id, action: 'UPDATE_PERMISSIONS', permissions: cleanPerms }) }); if (!res.ok) throw new Error('Failed'); toast.success('Permissions updated'); } catch (e) { toast.error('Failed to update permissions'); } };
 
   const ChannelManagement = () => {
     const [isCreating, setIsCreating] = useState(false);
@@ -210,7 +278,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
       try {
         const res = await fetch('/api/chat/communities', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+          headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress, 'x-verified-session-address': myAddress },
           body: JSON.stringify({
             communityId: community?.id,
             action: 'CREATE_CHANNEL',
@@ -237,7 +305,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
       try {
         await fetch('/api/chat/communities', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+          headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress, 'x-verified-session-address': myAddress },
           body: JSON.stringify({ communityId: community?.id, action: 'DELETE_CHANNEL', channelId: id }),
         });
         setChannels(channels.filter(c => c.id !== id));
@@ -292,7 +360,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
                 
                 <div className="space-y-4">
                   {paidChannels.map((c: any) => (
-                      <div key={c.id} onClick={() => { setActiveChannelId(c.id); setShowChannelsModal(false); setActiveTab('chat'); }} className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-[16px] cursor-pointer hover:bg-[#e5e5ea] transition-colors">
+                      <div key={c.id} onClick={() => { onChannelSelect?.(c.id); setShowChannelsModal(false); }} className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-[16px] cursor-pointer hover:bg-[#e5e5ea] transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[#25D366]/10 text-[#25D366] flex items-center justify-center"><Lock size={18} /></div>
                         <div>
@@ -315,7 +383,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
                 <h3 className="text-[17px] font-bold mb-4 flex items-center gap-2"><Globe size={18} className="text-[#25D366]"/> Public Channels</h3>
                 <div className="space-y-4">
                   {freeChannels.map((c: any) => (
-                      <div key={c.id} onClick={() => { setActiveChannelId(c.id); setShowChannelsModal(false); setActiveTab('chat'); }} className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-[16px] cursor-pointer hover:bg-[#e5e5ea] transition-colors">
+                      <div key={c.id} onClick={() => { onChannelSelect?.(c.id); setShowChannelsModal(false); }} className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-[16px] cursor-pointer hover:bg-[#e5e5ea] transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-black/5 text-black flex items-center justify-center"><Hash size={18} /></div>
                         <div>
@@ -344,7 +412,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     try {
       const res = await fetch('/api/chat/communities', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress, 'x-verified-session-address': myAddress },
         body: JSON.stringify({ communityId: community?.id, action: 'UPDATE_PRIVACY', isPrivate: newVal }),
       });
       if (res.ok) {
@@ -418,7 +486,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
               try {
                 const res = await fetch('/api/chat/communities', {
                   method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+                  headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress, 'x-verified-session-address': myAddress },
                   body: JSON.stringify({ communityId: community?.id, action: 'REVOKE_LINK' })
                 });
                 if (res.ok) window.location.reload();
@@ -544,7 +612,7 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
               try {
                 const res = await fetch(`/api/chat/communities/${community?.id}`, {
                   method: 'DELETE',
-                  headers: { 'x-web3-address': myAddress }
+                  headers: { 'x-web3-address': myAddress, 'x-verified-session-address': myAddress }
                 });
                 if (res.ok) {
                   window.location.reload();
@@ -566,6 +634,8 @@ function CommunitySettingsPanel({ community, myAddress }: { community: any; myAd
     </div>
   );
 }
+
+
 
 
 

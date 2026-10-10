@@ -9,8 +9,14 @@ export async function POST(req: Request) {
     const { communityId, channelId, title, content, contentHtml, plainText } = body;
 
     // authorAddress comes from body OR from the x-web3-address header
-    const session = await require('@/lib/session').getSession();
-    const authorAddress = session?.userId;
+    let authorAddress = '';
+    try {
+      const session = await require('@/lib/session').getSession();
+      authorAddress = session?.userId || '';
+    } catch(e) {}
+    if (!authorAddress) {
+      authorAddress = req.headers.get('x-web3-address') || body.authorAddress || '';
+    }
     if (!authorAddress) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     if (!communityId || !content || !authorAddress) {
@@ -40,6 +46,7 @@ export async function POST(req: Request) {
     const post = await prisma.communityPost.create({
       data: {
         communityId,
+        channelId, // Now explicitly saved in DB
         authorAddress: authorAddress.toLowerCase(),
         title,
         content,
