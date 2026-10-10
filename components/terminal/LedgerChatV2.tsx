@@ -1,6 +1,6 @@
 // @ts-nocheck
 "use client";
-import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users } from 'lucide-react';
+import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { shortAddr } from '@/lib/utils';
@@ -5804,30 +5804,36 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   </div>
                 )
               ) : (
-                /* ── AUDIO CALL ── */
-                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#f8f9fa] to-[#e9ecef]">
-                  <div className="relative z-10 flex flex-col items-center gap-10">
+                /* ── AUDIO CALL - Dark cinematic background ── */
+                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#1A1A2E] via-[#16213E] to-[#0F3460]">
+                  {/* Subtle animated background pulse */}
+                  <div className="absolute inset-0 overflow-hidden">
+                    <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#25D366]/5 blur-3xl animate-pulse" style={{ animationDuration: '3s' }} />
+                  </div>
+
+                  <div className="relative z-10 flex flex-col items-center gap-8">
                     {/* Audio Visualizer Rings */}
                     <div className="relative flex items-center justify-center">
                       {remoteStream && (
                         <>
-                          <div className="absolute rounded-full border border-black/10 transition-all duration-75" style={{ width: 140 + audioLevel * 1.5, height: 140 + audioLevel * 1.5, opacity: Math.min(1, audioLevel / 50 + 0.1) }} />
-                          <div className="absolute rounded-full bg-black/5 transition-all duration-75" style={{ width: 120 + audioLevel, height: 120 + audioLevel, opacity: Math.min(1, audioLevel / 100 + 0.2) }} />
+                          <div className="absolute rounded-full border border-white/10 transition-all duration-75" style={{ width: 160 + audioLevel * 1.5, height: 160 + audioLevel * 1.5, opacity: Math.min(0.6, audioLevel / 50 + 0.1) }} />
+                          <div className="absolute rounded-full bg-white/5 transition-all duration-75" style={{ width: 130 + audioLevel, height: 130 + audioLevel, opacity: Math.min(0.4, audioLevel / 100 + 0.1) }} />
                         </>
                       )}
-                      <div className="w-36 h-36 rounded-full flex items-center justify-center shadow-xl relative z-10 bg-white border border-black/5 overflow-hidden">
-                        <span className="text-black/80 text-5xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '🐳'}</span>
+                      <div className="w-[120px] h-[120px] rounded-full flex items-center justify-center shadow-2xl relative z-10 bg-gradient-to-br from-[#25D366] to-[#20bd59] border-4 border-white/10 overflow-hidden">
+                        <span className="text-white text-5xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '??'}</span>
                       </div>
                     </div>
+
                     <div className="text-center">
-                      <p className="text-black text-[32px] font-bold tracking-tight mb-2">{activePeer ? getDisplayName(activePeer) : 'Unknown Peer'}</p>
+                      <p className="text-white text-[28px] font-bold tracking-tight mb-2 drop-shadow-lg">{activePeer ? getDisplayName(activePeer) : 'Unknown Peer'}</p>
                       {remoteStream ? (
-                        <span className={`text-[14px] font-medium flex items-center gap-2 justify-center ${networkQuality === 'poor' ? 'text-yellow-600' : 'text-black/60'}`}>
-                          <span className={`w-2 h-2 rounded-full animate-pulse ${networkQuality === 'poor' ? 'bg-yellow-500' : 'bg-[#25D366]'}`} />
+                        <span className={`text-[15px] font-medium flex items-center gap-2 justify-center ${networkQuality === 'poor' ? 'text-yellow-400' : 'text-white/70'}`}>
+                          <span className={`w-2 h-2 rounded-full animate-pulse ${networkQuality === 'poor' ? 'bg-yellow-400' : 'bg-[#25D366]'}`} />
                           {networkQuality === 'poor' ? 'Weak Connection' : formatDuration(callDurationSeconds)}
                         </span>
                       ) : (
-                        <span className="text-black/50 text-[14px] font-medium tracking-wide animate-pulse">Calling...</span>
+                        <span className="text-white/50 text-[15px] font-medium tracking-wide animate-pulse">Calling...</span>
                       )}
                     </div>
                   </div>
@@ -5858,99 +5864,118 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </motion.div>
             )}
 
-            {/* ── Top Bar ── */}
-            <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-5 pointer-events-none" style={{ paddingTop: 'max(16px, env(safe-area-inset-top, 16px))' }}>
-              <div className="flex items-center gap-3 bg-white/90 backdrop-blur-xl rounded-2xl px-4 py-2.5 border border-black/10 shadow-sm pointer-events-auto">
-                <div className="w-8 h-8 rounded-full bg-[#f5f5f7] border border-black/10 flex items-center justify-center">
-                  <span className="text-black text-xs font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '??'}</span>
+            {/* ── Top Gradient for Readability ── */}
+            <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none z-20" />
+
+            {/* ── Top Bar (Sleek & Professional) ── */}
+            <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-4 sm:px-6" style={{ paddingTop: 'max(16px, env(safe-area-inset-top, 16px))' }}>
+              <button 
+                onClick={() => setIsCallMinimized(true)}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md transition-all text-white active:scale-95 border border-white/10 shadow-sm"
+              >
+                <div className="w-3 h-3 border-b-2 border-l-2 border-white transform -rotate-45 mb-1" />
+              </button>
+
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-1.5 bg-black/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-sm mb-1">
+                  <Lock size={12} className="text-[#25D366]" />
+                  <span className="text-white text-[11px] font-bold tracking-widest uppercase opacity-90">End-to-End Encrypted</span>
                 </div>
-                <div>
-                  <p className="text-black text-[13px] font-bold leading-none">{activePeer ? getDisplayName(activePeer) : 'Peer'}</p>
-                  <p className="text-black/50 text-[10px] font-mono mt-0.5">{callType === 'video' ? '📹 Video' : '🎙️ Audio'}</p>
-                </div>
+                <h3 className="text-white text-[17px] font-bold tracking-tight shadow-black/50 drop-shadow-md">
+                  {activePeer ? getDisplayName(activePeer) : 'Unknown Peer'}
+                </h3>
+                <p className="text-white/80 text-[13px] font-mono font-medium drop-shadow-md tracking-wide">
+                  {formatDuration(callDurationSeconds)}
+                </p>
               </div>
-              
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setShowCallSettings(true)}
-                  className="bg-white/90 hover:bg-white active:scale-95 transition-all backdrop-blur-xl rounded-full w-10 h-10 flex items-center justify-center border border-black/10 shadow-sm pointer-events-auto text-black"
-                >
-                  <Settings size={20} />
-                </button>
-                <button 
-                  onClick={() => setIsCallMinimized(true)}
-                  className="bg-white/90 hover:bg-white active:scale-95 transition-all backdrop-blur-xl rounded-full w-10 h-10 flex items-center justify-center border border-black/10 shadow-sm pointer-events-auto"
-                >
-                  <div className="w-3 h-3 border-b-2 border-l-2 border-black transform -rotate-45" />
-                </button>
-              </div>
+
+              <button 
+                onClick={() => setShowCallSettings(true)}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md transition-all text-white active:scale-95 border border-white/10 shadow-sm"
+              >
+                <Settings size={20} />
+              </button>
             </div>
 
             {/* ── Network Alert ── */}
-            {networkQuality === 'poor' && (
-              <div className="absolute top-[100px] left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur text-white text-[11px] font-mono font-bold px-4 py-1.5 rounded-full z-20 flex items-center gap-2">
-                 ⚠️ Weak Connection
-              </div>
-            )}
+            <AnimatePresence>
+              {networkQuality === 'poor' && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+                  className="absolute top-[110px] left-1/2 -translate-x-1/2 bg-yellow-500/90 backdrop-blur-md text-black text-[12px] font-bold px-4 py-2 rounded-full z-20 flex items-center gap-2 shadow-lg"
+                >
+                  <AlertTriangle size={14} /> Weak Connection
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* ── Expanded Controls ── */}
+            {/* ── Bottom Gradient for Readability ── */}
+            <div className="absolute bottom-0 inset-x-0 h-48 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none z-20" />
+
+            {/* ── Bottom Controls (Ultra-Mature Frosted Pill) ── */}
             <div
-              className="absolute bottom-0 inset-x-0 z-30 flex flex-col gap-4 pb-8"
+              className="absolute bottom-0 inset-x-0 z-30 flex flex-col items-center pb-8"
               style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom, 32px))' }}
             >
-              {/* Secondary Controls Row (Camera Flip, Screen Share) */}
-              <div className="flex items-center justify-center gap-6 opacity-90 mb-2">
-                 {callType === 'video' && (
-                   <>
-                     <button onClick={switchCamera} className="w-12 h-12 rounded-full bg-white/90 backdrop-blur flex items-center justify-center text-black hover:bg-white transition-all border border-black/10 shadow-sm">
-                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.29 7 12 12 20.71 7"></polyline><line x1="12" y1="22" x2="12" y2="12"></line></svg>
-                     </button>
-                     <button onClick={toggleScreenShare} className={`w-12 h-12 rounded-full flex items-center justify-center transition-all border border-black/10 shadow-sm ${isScreenSharing ? 'bg-black text-white' : 'bg-white/90 backdrop-blur text-black hover:bg-white'}`}>
-                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-                     </button>
-                   </>
-                 )}
-                 {callType === 'audio' && (
-                   <button className="w-12 h-12 rounded-full bg-white/90 backdrop-blur flex items-center justify-center text-black border border-black/10 cursor-not-allowed opacity-50 shadow-sm">
-                     <Volume2 size={20} />
-                   </button>
-                 )}
-              </div>
+              <div className="flex items-center gap-3 sm:gap-5 bg-black/40 backdrop-blur-2xl px-6 py-4 rounded-[2rem] border border-white/10 shadow-2xl">
+                
+                {/* Secondary Controls (Switch Cam, Screen Share) */}
+                {callType === 'video' && (
+                  <>
+                    <button 
+                      onClick={switchCamera} 
+                      className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all active:scale-90"
+                      title="Switch Camera"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.29 7 12 12 20.71 7"></polyline><line x1="12" y1="22" x2="12" y2="12"></line></svg>
+                    </button>
+                    
+                    <button 
+                      onClick={toggleScreenShare} 
+                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 ${isScreenSharing ? 'bg-[#25D366] text-white shadow-[0_0_15px_rgba(37,211,102,0.4)]' : 'bg-white/10 hover:bg-white/20 text-white'}`}
+                      title="Screen Share"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    </button>
 
-              {/* Primary Controls Row */}
-              <div className="flex items-center justify-center gap-8 mx-auto bg-white/90 backdrop-blur-2xl px-8 py-4 rounded-[2.5rem] border border-black/10 shadow-xl">
-                <button
-                  onClick={toggleMic}
-                  className={`w-[60px] h-[60px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm ${
-                    isMicMuted
-                      ? 'bg-black text-white'
-                      : 'bg-[#f5f5f7] text-black hover:bg-[#e5e5ea]'
-                  }`}
-                >
-                  {isMicMuted ? <MicOff size={24} /> : <Mic size={24} />}
-                </button>
+                    <div className="w-px h-8 bg-white/10 mx-1" />
+                  </>
+                )}
 
-                <button
-                  onClick={endCall}
-                  className="w-[72px] h-[72px] bg-white rounded-[28px] flex items-center justify-center text-white hover:opacity-80 active:scale-90 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
-                >
-                  <PhoneOff size={32} />
-                </button>
-
+                {/* Video Toggle */}
                 {callType === 'video' ? (
                   <button
                     onClick={toggleCamera}
-                    className={`w-[60px] h-[60px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm ${
+                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg ${
                       isCamOff
-                        ? 'bg-black text-white'
-                        : 'bg-[#f5f5f7] text-black hover:bg-[#e5e5ea]'
+                        ? 'bg-white text-black hover:bg-gray-200'
+                        : 'bg-white/10 text-white hover:bg-white/20 border border-white/5'
                     }`}
                   >
-                    {isCamOff ? <VideoOff size={24} /> : <Video size={24} />}
+                    {isCamOff ? <VideoOff size={24} /> : <Video size={26} />}
                   </button>
-                ) : (
-                  <div className="w-[60px] h-[60px]" />
-                )}
+                ) : null}
+
+                {/* Mic Toggle */}
+                <button
+                  onClick={toggleMic}
+                  className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg ${
+                    isMicMuted
+                      ? 'bg-white text-black hover:bg-gray-200'
+                      : 'bg-white/10 text-white hover:bg-white/20 border border-white/5'
+                  }`}
+                >
+                  {isMicMuted ? <MicOff size={24} /> : <Mic size={26} />}
+                </button>
+
+                {/* End Call */}
+                <button
+                  onClick={endCall}
+                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-[22px] sm:rounded-3xl bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-all active:scale-90 shadow-[0_8px_32px_rgba(239,68,68,0.4)] ml-2"
+                  title="End Call"
+                >
+                  <PhoneOff size={28} />
+                </button>
               </div>
             </div>
 
@@ -5963,60 +5988,146 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       {(showCallSettings && isMounted && typeof document !== 'undefined')
         ? createPortal(
-        <div className="fixed inset-0 z-[300000] bg-black/30 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in duration-200" onClick={() => setShowCallSettings(false)}>
-           <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
-               <div className="flex justify-between items-center mb-8">
-                   <h3 className="text-[13px] font-black uppercase tracking-[0.25em] text-[#050505]">Call Settings</h3>
-                   <button onClick={() => setShowCallSettings(false)} className="w-10 h-10 flex items-center justify-center hover:bg-black/5 rounded-full transition-colors text-[#050505]">
-                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <div className="fixed inset-0 z-[300000] bg-black/50 backdrop-blur-md flex flex-col items-center justify-center p-4" onClick={() => setShowCallSettings(false)}>
+           <div className="w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+               {/* Header */}
+               <div className="flex justify-between items-center px-6 py-5 border-b border-black/[0.06]">
+                   <div>
+                     <h3 className="text-[17px] font-black text-[#1C1C1E]">Call Settings</h3>
+                     <p className="text-[12px] text-black/40 font-medium mt-0.5">{callType === 'video' ? 'Video Call' : 'Voice Call'} in progress</p>
+                   </div>
+                   <button onClick={() => setShowCallSettings(false)} className="w-9 h-9 flex items-center justify-center hover:bg-black/5 rounded-full transition-colors text-black">
+                     <X size={20} />
                    </button>
                </div>
-               
-               <div className="space-y-4">
-                 {/* Voice Isolation */}
-                 <div className="flex items-center justify-between p-4 bg-[#f5f5f7] rounded-2xl">
-                   <div>
-                     <h4 className="text-[13px] font-bold text-black">Voice Isolation</h4>
-                     <p className="text-[11px] font-mono text-black/50 mt-1">Filters out background noise</p>
+
+               <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+                 {/* AUDIO SECTION */}
+                 <p className="text-[11px] font-black uppercase tracking-widest text-[#25D366] ml-2 mb-1">Audio</p>
+
+                 {/* Voice Isolation / Noise Suppression */}
+                 <div className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-2xl">
+                   <div className="flex items-center gap-3">
+                     <div className="w-9 h-9 rounded-xl bg-[#25D366]/10 flex items-center justify-center">
+                       <Mic size={18} className="text-[#25D366]" />
+                     </div>
+                     <div>
+                       <h4 className="text-[14px] font-bold text-[#1C1C1E]">Noise Suppression</h4>
+                       <p className="text-[11px] text-black/40 mt-0.5">Filters background noise</p>
+                     </div>
                    </div>
-                   <button 
+                   <button
                      onClick={toggleVoiceIsolation}
-                     className={`w-12 h-6 rounded-full transition-colors relative ${voiceIsolation ? 'bg-white' : 'bg-black/20'}`}
+                     className={`relative w-[48px] h-[28px] rounded-full transition-colors duration-300 ${voiceIsolation ? 'bg-[#25D366]' : 'bg-black/15'}`}
                    >
-                     <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${voiceIsolation ? 'left-6' : 'left-0.5'}`} />
+                     <div className={`absolute top-[2px] left-[2px] w-[24px] h-[24px] bg-white rounded-full shadow-md transition-transform duration-300 ${voiceIsolation ? 'translate-x-[20px]' : 'translate-x-0'}`} />
                    </button>
                  </div>
 
-                 {/* Data Saver Mode */}
-                 <div className="flex items-center justify-between p-4 bg-[#f5f5f7] rounded-2xl">
-                   <div>
-                     <h4 className="text-[13px] font-bold text-black">Data Saver</h4>
-                     <p className="text-[11px] font-mono text-black/50 mt-1">Reduces video quality (480p)</p>
+                 {/* Echo Cancellation */}
+                 <div className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-2xl">
+                   <div className="flex items-center gap-3">
+                     <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center">
+                       <Volume2 size={18} className="text-indigo-500" />
+                     </div>
+                     <div>
+                       <h4 className="text-[14px] font-bold text-[#1C1C1E]">Echo Cancellation</h4>
+                       <p className="text-[11px] text-black/40 mt-0.5">Removes audio echo</p>
+                     </div>
                    </div>
-                   <button 
-                     onClick={toggleDataSaver}
-                     className={`w-12 h-6 rounded-full transition-colors relative ${dataSaver ? 'bg-white' : 'bg-black/20'}`}
-                   >
-                     <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${dataSaver ? 'left-6' : 'left-0.5'}`} />
-                   </button>
+                   <div className={`relative w-[48px] h-[28px] rounded-full bg-[#25D366]`}>
+                     <div className="absolute top-[2px] right-[2px] w-[24px] h-[24px] bg-white rounded-full shadow-md" />
+                   </div>
                  </div>
 
-                 {/* End-to-End Encryption Verification */}
-                 <button 
+                 {/* VIDEO SECTION */}
+                 {callType === 'video' && (
+                   <>
+                     <p className="text-[11px] font-black uppercase tracking-widest text-[#25D366] ml-2 mb-1 pt-2">Video</p>
+
+                     {/* Data Saver / Quality */}
+                     <div className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-2xl">
+                       <div className="flex items-center gap-3">
+                         <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center">
+                           <Zap size={18} className="text-orange-500" />
+                         </div>
+                         <div>
+                           <h4 className="text-[14px] font-bold text-[#1C1C1E]">Data Saver</h4>
+                           <p className="text-[11px] text-black/40 mt-0.5">{dataSaver ? 'Quality reduced to 480p' : 'Full HD quality (1080p)'}</p>
+                         </div>
+                       </div>
+                       <button
+                         onClick={toggleDataSaver}
+                         className={`relative w-[48px] h-[28px] rounded-full transition-colors duration-300 ${dataSaver ? 'bg-orange-400' : 'bg-black/15'}`}
+                       >
+                         <div className={`absolute top-[2px] left-[2px] w-[24px] h-[24px] bg-white rounded-full shadow-md transition-transform duration-300 ${dataSaver ? 'translate-x-[20px]' : 'translate-x-0'}`} />
+                       </button>
+                     </div>
+
+                     {/* Mirror Video */}
+                     <div className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-2xl">
+                       <div className="flex items-center gap-3">
+                         <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center">
+                           <Video size={18} className="text-purple-500" />
+                         </div>
+                         <div>
+                           <h4 className="text-[14px] font-bold text-[#1C1C1E]">Mirror My Video</h4>
+                           <p className="text-[11px] text-black/40 mt-0.5">Flip local preview horizontally</p>
+                         </div>
+                       </div>
+                       <div className={`relative w-[48px] h-[28px] rounded-full bg-[#25D366]`}>
+                         <div className="absolute top-[2px] right-[2px] w-[24px] h-[24px] bg-white rounded-full shadow-md" />
+                       </div>
+                     </div>
+                   </>
+                 )}
+
+                 {/* SECURITY SECTION */}
+                 <p className="text-[11px] font-black uppercase tracking-widest text-[#25D366] ml-2 mb-1 pt-2">Security</p>
+
+                 {/* E2EE Verification */}
+                 <button
                    onClick={() => { setShowCallSettings(false); setShowE2EE(true); }}
-                   className="w-full p-4 bg-black/5 hover:bg-black/10 transition-colors rounded-2xl flex items-center justify-between"
+                   className="w-full p-4 bg-[#F2F2F7] hover:bg-[#E5E5EA] transition-colors rounded-2xl flex items-center gap-3"
                  >
-                   <div>
-                     <h4 className="text-[13px] font-bold text-black text-left">E2EE Verification</h4>
-                     <p className="text-[11px] font-mono text-black/50 mt-1">Verify connection security</p>
+                   <div className="w-9 h-9 rounded-xl bg-[#25D366]/10 flex items-center justify-center shrink-0">
+                     <Lock size={18} className="text-[#25D366]" />
                    </div>
-                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                   <div className="flex-1 text-left">
+                     <h4 className="text-[14px] font-bold text-[#1C1C1E]">Verify Encryption</h4>
+                     <p className="text-[11px] text-black/40 mt-0.5">Confirm this call is fully encrypted</p>
+                   </div>
+                   <ChevronRight size={16} className="text-black/30" />
+                 </button>
+
+                 {/* Network Status */}
+                 <div className="p-4 bg-[#F2F2F7] rounded-2xl">
+                   <div className="flex items-center gap-3">
+                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${networkQuality === 'poor' ? 'bg-yellow-100' : 'bg-[#25D366]/10'}`}>
+                       <Wifi size={18} className={networkQuality === 'poor' ? 'text-yellow-500' : 'text-[#25D366]'} />
+                     </div>
+                     <div>
+                       <h4 className="text-[14px] font-bold text-[#1C1C1E]">Network Status</h4>
+                       <p className={`text-[11px] font-medium mt-0.5 ${networkQuality === 'poor' ? 'text-yellow-500' : 'text-[#25D366]'}`}>
+                         {networkQuality === 'poor' ? 'Weak — reconnecting...' : 'Excellent connection'}
+                       </p>
+                     </div>
+                   </div>
+                 </div>
+
+                 {/* End Call - Bottom button */}
+                 <button
+                   onClick={() => { setShowCallSettings(false); endCall(); }}
+                   className="w-full py-3.5 mt-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-red-500/20"
+                 >
+                   <PhoneOff size={18} /> End Call
                  </button>
                </div>
            </div>
         </div>,
         document.body
       ) : null}
+
 
       {(showE2EE && isMounted && typeof document !== 'undefined')
         ? createPortal(
