@@ -69,7 +69,7 @@ const PUBLIC_PREFIXES = [
   '/api/status',
   '/api/registry/',
   '/api/humanidfi/',
-  '/api/chat/',          // All chat API endpoints (contacts, messages, etc.)
+  // '/api/chat/', (Removed from public routes for security)
   '/api/call/',          // Group call room API
   '/api/provenance/',    // Provenance log API called on XMTP connect
   '/api/notifications/', // Notification inbox

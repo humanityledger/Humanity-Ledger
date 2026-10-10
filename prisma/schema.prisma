@@ -1734,6 +1734,9 @@ model CommunityPermission {
   changeInfo      Boolean  @default(false)
   slowModeSeconds Int      @default(0)
   antiSpam        Boolean  @default(false)
+  requireApproval Boolean  @default(false)
+  postApproval    Boolean  @default(false)
+  notifyNewMember Boolean  @default(true)
 
   community       Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
 }

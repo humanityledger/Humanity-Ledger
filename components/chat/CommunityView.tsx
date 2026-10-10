@@ -42,7 +42,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
   }, [communityId]);
 
   const fetchPosts = () => {
-    fetch(`/api/chat/communities/posts?communityId=${communityId}`)
+    fetch(`/api/chat/communities/$communityId/posts`)
       .then(r => r.json())
       .then(d => {
         if (d.posts) setPosts(d.posts);
