@@ -562,6 +562,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   const [isUploading, setIsUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
   // Telegram-style features
   const [showProfile, setShowProfile] = useState(false);
@@ -3316,13 +3318,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       !!(ledgerSettings as any)?.hide_notification_content
                     );
                   }
-
-                  if (ledgerSettings?.ghost_auto_reply && ledgerSettings?.ghost_auto_reply_text) {
-                    const replyText = ledgerSettings.ghost_auto_reply_text;
-                    setTimeout(() => {
-                       sendMessage(client, msgConvPeer, replyText, address).catch(e => console.warn('Ghost auto-reply failed', e));
-                    }, 1500);
-                  }
                 }
                 if (prev.some(m => m.id === mappedMsg.id)) return prev;
                 return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
@@ -5294,6 +5289,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 </div>
               )}
                 <input type="file" ref={fileRef} className="hidden" onChange={handleFileUpload} />
+                {/* Camera capture — opens native camera on iOS/Android */}
+                <input type="file" ref={cameraRef} className="hidden" accept="image/*,video/*" capture="environment" onChange={handleFileUpload} />
+                {/* Gallery picker — opens photo library on iOS/Android */}
+                <input type="file" ref={galleryRef} className="hidden" accept="image/*,video/*" onChange={handleFileUpload} />
                 <form onSubmit={handleSend} className="flex flex-col w-full relative">
                   {/* ── App Drawer (WhatsApp-style icon grid) ── */}
                   <AnimatePresence>
@@ -5305,18 +5304,36 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                         transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                        className="absolute bottom-[64px] left-1 w-[230px] bg-white border border-black/[0.08] shadow-[0_8px_30px_rgba(0,0,0,0.14)] rounded-2xl z-50 py-1.5 overflow-hidden"
+                        className="absolute bottom-[64px] left-1 w-[270px] bg-white border border-black/[0.08] shadow-[0_8px_30px_rgba(0,0,0,0.14)] rounded-2xl z-50 py-1.5 overflow-hidden max-h-[70vh] overflow-y-auto"
                       >
                         <div className="w-10 h-1.5 bg-black/10 rounded-full mx-auto mb-5" />
                         <div className="flex flex-col py-2">
                           {[
-                            { id: 'attach',    icon: <Paperclip size={18} strokeWidth={2} />,  label: 'Document',      onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
-                            { id: 'gif',       icon: <ImageIcon size={18} strokeWidth={2} />,  label: 'Media',         onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
-                            { id: 'sticker',   icon: <Smile size={18} strokeWidth={2} />,      label: 'Stickers',      onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
-                            { id: 'poll',      icon: <BarChart2 size={18} strokeWidth={2} />,  label: 'Poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
-                            { id: 'qd',        icon: <Wallet size={18} strokeWidth={2} />,     label: 'Payment',       onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
-                            { id: 'burn',      icon: <Flame size={18} strokeWidth={2} />,      label: 'Burn',          onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
-                            { id: 'schedule',  icon: <Clock size={18} strokeWidth={2} />,      label: 'Schedule',      onClick: () => {
+                            // ── Media ──────────────────────────────────────────────
+                            { id: 'camera',    color: '#FF3B30', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>,  label: 'Camera',        sublabel: 'Take a photo or video', onClick: () => { cameraRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'gallery',   color: '#5856D6', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,   label: 'Photos & Video', sublabel: 'Choose from library',   onClick: () => { galleryRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'attach',    color: '#34C759', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>,  label: 'Document',       sublabel: 'Any file up to 1 MB',    onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'audio',     color: '#FF9500', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>,     label: 'Audio Note',     sublabel: 'Record a voice message', onClick: () => { setShowAppDrawer(false); startRecording(); } },
+                            // ── Interactive ──────────────────────────────────────────
+                            { id: 'gif',       color: '#AF52DE', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><text x="5" y="16" fontSize="9" fontWeight="bold" fill="currentColor" stroke="none">GIF</text></svg>,   label: 'GIF',            sublabel: 'Search animated GIFs',   onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
+                            { id: 'sticker',   color: '#FFCC00', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>,      label: 'Stickers',       sublabel: 'Send a sticker',         onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
+                            { id: 'poll',      color: '#007AFF', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
+                            // ── Crypto ───────────────────────────────────────────────
+                            { id: 'payment',   color: '#25D366', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>,     label: 'Payment',        sublabel: 'Send crypto',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
+                            // ── Utilities ────────────────────────────────────────────
+                            { id: 'location',  color: '#32D74B', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,    label: 'Location',       sublabel: 'Share your location',    onClick: () => { 
+                              setShowAppDrawer(false);
+                              if (navigator.geolocation) {
+                                navigator.geolocation.getCurrentPosition(
+                                  (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
+                                  () => toast.error('Location access denied — enable it in browser settings')
+                                );
+                              } else {
+                                toast.error('Geolocation not supported on this device');
+                              }
+                            } },
+                            { id: 'live-loc',  color: '#FF3B30', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>,   label: isLiveLocationActive ? 'Stop Live Location' : 'Live Location', sublabel: isLiveLocationActive ? 'Tap to stop sharing' : 'Share real-time position', onClick: () => { startLiveLocation(); setShowAppDrawer(false); } },
+                            { id: 'schedule',  color: '#636366', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,      label: 'Schedule',       sublabel: 'Send at a specific time', onClick: () => {
                                 setShowAppDrawer(false);
                                 const inp = document.createElement('input');
                                 inp.type = 'datetime-local';
@@ -5334,27 +5351,24 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                                 };
                                 inp.click();
                               } },
-                            { id: 'location',  icon: <MapPin size={18} strokeWidth={2} />,    label: 'Location',      onClick: () => { 
-                              if (navigator.geolocation) {
-                                navigator.geolocation.getCurrentPosition(
-                                  (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
-                                  () => toast.error('Location denied')
-                                );
-                              }
-                              setShowAppDrawer(false); 
-                            } },
-                            { id: 'live-loc',  icon: <MapIcon size={18} strokeWidth={2} />,   label: isLiveLocationActive ? '🔴 Stop Live Location' : 'Live Location', onClick: () => { startLiveLocation(); setShowAppDrawer(false); } },
+                            { id: 'burn',      color: '#FF6B00', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>,      label: burnTimer ? `Burn: ${burnTimer}s` : 'Burn After Read', sublabel: burnTimer ? 'Tap to disable' : 'Messages vanish after reading', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
                           ].map((app) => (
                             <button 
                               key={app.id} 
                               type="button" 
                               onClick={app.onClick} 
-                              className="flex items-center gap-4 py-3 px-4 w-full hover:bg-black/5 active:bg-black/10 rounded-xl transition-colors select-none text-left"
+                              className="flex items-center gap-3 py-2.5 px-4 w-full hover:bg-black/5 active:bg-black/10 rounded-xl transition-colors select-none text-left"
                             >
-                              <div className="text-black/50 flex-shrink-0">
-                                {app.icon}
+                              <div 
+                                className="w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0 text-white shadow-sm"
+                                style={{ background: (app as any).color || '#8E8E93' }}
+                              >
+                                {(app as any).iconPath || (app as any).icon}
                               </div>
-                              <span className="text-[16px] font-medium text-black leading-tight flex-1">{app.label}</span>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-[15px] font-medium text-black leading-tight">{app.label}</span>
+                                {(app as any).sublabel && <span className="text-[11px] text-black/40 font-normal truncate">{(app as any).sublabel}</span>}
+                              </div>
                             </button>
                           ))}
                         </div>

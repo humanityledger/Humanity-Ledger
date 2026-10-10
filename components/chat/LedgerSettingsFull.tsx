@@ -627,18 +627,12 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               </div>
 
               {/* Linked Devices — QR Phone Linking */}
-              <Group title="Linked Devices" footer="Link another desktop exactly like WhatsApp Web. Open Ledger Chat on the new device, then scan its QR code from this device.">
+              <Group title="Linked Devices" footer="Open Ledger Chat on your phone or another device, connect your wallet, then tap here to link it via QR.">
                 <Row
                   icon={<Smartphone size={18} />}
-                  label="Link Another Device"
-                  sublabel="Show QR code to link another device"
+                  label="Link a New Device"
+                  sublabel="Show or scan a QR code to link another device"
                   onTap={() => { setQrScanMode('show'); setModal('linked_devices'); }}
-                />
-                <Row
-                  icon={<Camera size={18} />}
-                  label="Scan QR Code"
-                  sublabel="Scan the login code from another screen"
-                  onTap={() => { setQrScanMode('scan'); setModal('linked_devices'); }}
                 />
                 <Row
                   icon={<Monitor size={18} />}
@@ -974,13 +968,6 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   sublabel="Sign every session with your wallet key"
                   toggle={!!settings.requireSignature}
                   onToggle={v => updateSetting('requireSignature', v)}
-                />
-                <Row
-                  icon={<Zap size={18} />}
-                  label="Ghost Mode"
-                  sublabel="Auto-reply when unavailable, hide online status"
-                  toggle={!!settings.ghost_auto_reply}
-                  onToggle={v => updateSetting('ghost_auto_reply', v)}
                 />
               </Group>
 
