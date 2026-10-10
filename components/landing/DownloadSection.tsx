@@ -109,6 +109,20 @@ function FAQItem({ q, a }: { q: string; a: string }) {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div className="pb-5 pt-1 text-[15px] text-[#1C1C1E]/60 leading-relaxed pr-8">
+              {a}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export function DownloadSection() {
+  return (
+    <>
       {/* --- DOWNLOAD SECTION -------------------------------------------------------- */}
       <section id="download" className="bg-[#F6F7F9] py-20 md:py-32 relative overflow-hidden">
         
@@ -243,14 +257,6 @@ function FAQItem({ q, a }: { q: string; a: string }) {
               { icon: <Zap size={15} />, text: "No subscription fees" },
               { icon: <CheckCircle2 size={15} />, text: "Always free" },
             ].map((b) => (
-              <div key={b.text} className="flex items-center gap-1.5 text-[12px] font-semibold text-black/40">
-                {b.icon}
-                {b.text}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
               <div key={b.text} className="flex items-center gap-1.5 text-[12px] font-semibold text-black/40">
                 {b.icon}
                 {b.text}
