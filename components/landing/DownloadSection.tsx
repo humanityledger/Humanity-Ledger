@@ -6,12 +6,13 @@ import {
   Download, Monitor, Apple, Globe, Wallet, CheckCircle2,
   ChevronDown, Shield, Zap, Lock, Smartphone, MessageCircle, Users
 } from "lucide-react";
+import { toast } from "sonner";
 
 // ─── Download Links ────────────────────────────────────────────────────────────
 // Update these URLs when new releases are published to GitHub Releases
 const RELEASES = {
-  windows: "https://github.com/humanityledger/Humanity-Ledger/releases/latest/download/Ledger-Chat-Setup.exe",
-  mac: "https://github.com/humanityledger/Humanity-Ledger/releases/latest/download/Ledger-Chat-macOS.dmg",
+  windows: "#", // Replaced with toast notification until uploaded
+  mac: "#",     // Replaced with toast notification until uploaded
   web: "/chat",
 };
 
@@ -144,10 +145,8 @@ export function DownloadSection() {
 
           {/* Download Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-            {/* Windows */}
-            <motion.a
-              href={RELEASES.windows}
-              download
+            <motion.button
+              onClick={() => toast.info('The Windows desktop app is currently compiling. Please use the Web App for now.', { duration: 4000 })}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -164,12 +163,10 @@ export function DownloadSection() {
                 Download .exe
               </div>
               <p className="text-[11px] text-black/30 mt-3">Free installer · ~120 MB</p>
-            </motion.a>
+            </motion.button>
 
-            {/* macOS */}
-            <motion.a
-              href={RELEASES.mac}
-              download
+            <motion.button
+              onClick={() => toast.info('The macOS desktop app is currently compiling. Please use the Web App for now.', { duration: 4000 })}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -186,7 +183,7 @@ export function DownloadSection() {
                 Download .dmg
               </div>
               <p className="text-[11px] text-black/30 mt-3">Free installer · ~130 MB</p>
-            </motion.a>
+            </motion.button>
 
             {/* Web App */}
             <motion.a
