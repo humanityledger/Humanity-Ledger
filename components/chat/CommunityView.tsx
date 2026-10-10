@@ -1,643 +1,563 @@
 'use client';
-import DOMPurify from 'dompurify';
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ChevronLeft, Users, Settings, Bell, X,
-  MessageSquare, Hash, Link as LinkIcon, Edit, Shield,
-  Globe, Lock, Image as ImageIcon, Search,
-  Eye, EyeOff, Pin, Heart, Plus, AlertTriangle, Trash2
+import {
+  ChevronLeft, Lock, Globe, Settings, Hash, Edit, Heart, Users,
+  Pin, Search, X, Bell, BellOff, Share2, MoreVertical, RefreshCw,
+  MessageSquare, FileText, BarChart2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { RichPostEditorModal } from './RichPostEditor';
+import DOMPurify from 'dompurify';
+
 import { CommunityChatView } from './CommunityChatView';
+import { RichPostEditorModal } from './RichPostEditor';
+import { CommunitySettingsPanel } from './CommunitySettingsPanel';
+import { CommunityMemberPanel } from './CommunityMemberPanel';
+import { PinnedMessagesPanel, MessageSearchPanel } from './CommunityMessageReactions';
+
+// ─── TYPES ────────────────────────────────────────────────────────────────────
 
 interface CommunityViewProps {
   communityId: string;
   myAddress: string;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+const AVATAR_COLORS = ['#25D366','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55','#5856D6'];
+const getAvatarColor = (id: string) => AVATAR_COLORS[(id?.charCodeAt(0) || 0) % AVATAR_COLORS.length];
+
+function safeHtml(raw: string): string {
+  if (typeof window === 'undefined' || !raw) return raw || '';
+  return DOMPurify.sanitize(raw, {
+    ALLOWED_TAGS: ['b','i','u','s','em','strong','a','p','br','ul','ol','li','blockquote','code','pre','h1','h2','h3','img','mark','span'],
+    ALLOWED_ATTR: ['href','src','alt','class','style'],
+  });
+}
+
+function truncateAddr(addr: string): string {
+  if (!addr) return '...';
+  return `${addr.slice(0,6)}...${addr.slice(-4)}`;
+}
+
+// ─── POST CARD COMPONENT ─────────────────────────────────────────────────────
+
+interface PostCardProps {
+  post: any;
+  myAddress: string;
+  onEdit?: (post: any) => void;
+  onLike?: (postId: string) => void;
+  localLikes: Record<string, number>;
+}
+
+function PostCard({ post, myAddress, onEdit, onLike, localLikes }: PostCardProps) {
+  const isOwn = post.authorAddress?.toLowerCase() === myAddress?.toLowerCase();
+  const likeCount = localLikes[post.id] ?? (post.likes || 0);
+  const liked = localLikes[post.id] !== undefined;
+
+  const previewText = (post.contentHtml || post.content || '')
+    .replace(/<[^>]+>/g, '')
+    .trim()
+    .slice(0, 240);
+
+  return (
+    <motion.article
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-3xl shadow-sm border border-black/[0.05] overflow-hidden group"
+    >
+      {/* Header */}
+      <div className="px-6 pt-5 pb-3">
+        {post.title && (
+          <h2 className="text-[20px] font-black leading-snug text-[#1C1C1E] mb-3">{post.title}</h2>
+        )}
+        <div
+          className="prose prose-sm max-w-none text-[14px] leading-relaxed text-[#1C1C1E]/80 line-clamp-6"
+          dangerouslySetInnerHTML={{ __html: safeHtml(post.contentHtml || post.content || '') }}
+        />
+      </div>
+
+      {/* Footer */}
+      <div className="px-6 py-3 bg-[#FAFAFA] border-t border-black/[0.04] flex items-center gap-3">
+        {/* Author avatar */}
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-black shrink-0"
+          style={{ backgroundColor: getAvatarColor(post.authorAddress || '0x') }}
+        >
+          {(post.authorAddress || '0x??').slice(2,4).toUpperCase()}
+        </div>
+        <span className="text-[12px] font-mono font-bold text-black/40 truncate">{truncateAddr(post.authorAddress)}</span>
+        <span className="text-black/20 text-[10px]">·</span>
+        <span className="text-[11px] text-black/30">
+          {new Date(post.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </span>
+
+        <div className="ml-auto flex items-center gap-2">
+          {isOwn && onEdit && (
+            <button
+              onClick={() => onEdit(post)}
+              className="p-1.5 rounded-lg bg-black/5 hover:bg-black/10 text-black/30 hover:text-black transition-colors opacity-0 group-hover:opacity-100"
+            >
+              <Edit size={14} />
+            </button>
+          )}
+          <button
+            onClick={() => onLike?.(post.id)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all active:scale-90 ${
+              liked ? 'bg-red-50 text-red-500' : 'text-black/30 hover:text-red-400 hover:bg-red-50'
+            }`}
+          >
+            <Heart size={14} fill={liked ? 'currentColor' : 'none'} />
+            <span className="text-[12px] font-bold">{likeCount}</span>
+          </button>
+        </div>
+      </div>
+    </motion.article>
+  );
+}
+
+// ─── MAIN COMMUNITY VIEW ─────────────────────────────────────────────────────
+
 export function CommunityView({ communityId, myAddress, onBack }: CommunityViewProps) {
+  // Tab state
   const [activeTab, setActiveTab] = useState<'posts' | 'chat' | 'settings'>('posts');
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
+
+  // Community data
+  const [community, setCommunity] = useState<any>(null);
+  const [loadingCommunity, setLoadingCommunity] = useState(true);
+
+  // Posts state
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [localLikes, setLocalLikes] = useState<Record<string, number>>({});
+
+  // Panels
   const [showEditor, setShowEditor] = useState(false);
   const [editingPost, setEditingPost] = useState<any>(null);
-  const [community, setCommunity] = useState<any>(null);
-  const [posts, setPosts] = useState<any[]>([]);
-  const [localLikes, setLocalLikes] = useState<Record<string, number>>({});
-  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [showMembersPanel, setShowMembersPanel] = useState(false);
+  const [showPinnedPanel, setShowPinnedPanel] = useState(false);
+  const [showSearchPanel, setShowSearchPanel] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [muted, setMuted] = useState(false);
 
-  const fetchCommunity = async () => {
+  // Post refresh interval
+  const refreshRef = useRef<ReturnType<typeof setInterval>>();
+
+  // ── Fetch Community ─────────────────────────────────────────────────────────
+  const fetchCommunity = useCallback(async () => {
+    if (!communityId) return;
     try {
-      // Try fetching by ID directly first
+      // Try direct community endpoint first
       const res = await fetch(`/api/chat/communities/${communityId}`, {
-        headers: { 'x-web3-address': myAddress, 'x-verified-session-address': myAddress }
+        headers: { 'x-web3-address': myAddress, 'x-verified-session-address': myAddress },
       });
       if (res.ok) {
         const d = await res.json();
-        if (d.community) { setCommunity(d.community); return; }
+        if (d.community) { setCommunity(d.community); setLoadingCommunity(false); return; }
       }
     } catch {}
-    // Fallback: list communities and find by id
+
+    // Fallback: list all communities and find by id
     try {
       const res = await fetch('/api/chat/communities', {
-        headers: { 'x-web3-address': myAddress, 'x-verified-session-address': myAddress }
+        headers: { 'x-web3-address': myAddress, 'x-verified-session-address': myAddress },
       });
       if (res.ok) {
         const d = await res.json();
-        const found = d.communities?.find((c: any) => c.id === communityId);
+        const found = (d.communities || []).find((c: any) => c.id === communityId);
         if (found) setCommunity(found);
       }
     } catch {}
-  };
+    setLoadingCommunity(false);
+  }, [communityId, myAddress]);
 
-  const fetchPosts = async () => {
+  // ── Fetch Posts ─────────────────────────────────────────────────────────────
+  const fetchPosts = useCallback(async () => {
+    if (!communityId) return;
     try {
       const res = await fetch(`/api/chat/communities/${communityId}/posts`, {
-        headers: { 'x-web3-address': myAddress }
+        headers: { 'x-web3-address': myAddress, 'x-verified-session-address': myAddress },
       });
       if (res.ok) {
         const d = await res.json();
-        // Posts tab shows items WITH a title or rich HTML content (not raw chat messages)
-        const richPosts = (d.posts || []).filter((p: any) => p.title || (p.contentHtml && p.contentHtml.includes('<')));
-        // If no rich posts, show all posts
-        setPosts(richPosts.length > 0 ? richPosts : (d.posts || []));
+        const allPosts: any[] = d.posts || [];
+        // Posts tab = items that have a title or are rich HTML (not raw chat messages)
+        const richPosts = allPosts.filter(p => p.title || (p.contentHtml && p.contentHtml.includes('<')));
+        setPosts(richPosts.length > 0 ? richPosts : allPosts);
       }
     } catch {}
     setLoadingPosts(false);
-  };
+  }, [communityId, myAddress]);
 
   useEffect(() => {
-    if (!communityId) return;
     fetchCommunity();
     fetchPosts();
-    const interval = setInterval(fetchPosts, 10000);
-    return () => clearInterval(interval);
-  }, [communityId]);
+    refreshRef.current = setInterval(fetchPosts, 12000);
+    return () => clearInterval(refreshRef.current);
+  }, [fetchCommunity, fetchPosts]);
 
-  const AVATAR_COLORS = ['#25D366','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
-  const avatarColor = communityId ? AVATAR_COLORS[(communityId.charCodeAt(0) || 0) % AVATAR_COLORS.length] : '#000';
+  // ── Like handler ────────────────────────────────────────────────────────────
+  const handleLike = (postId: string) => {
+    setLocalLikes(prev => {
+      if (prev[postId] !== undefined) return prev; // already liked
+      return { ...prev, [postId]: (posts.find(p => p.id === postId)?.likes || 0) + 1 };
+    });
+    // Optimistic — no API yet for likes
+  };
+
+  // ── Jump to message ─────────────────────────────────────────────────────────
+  const jumpToMessage = (msgId: string) => {
+    setActiveTab('chat');
+    setTimeout(() => {
+      const el = document.getElementById(`msg-${msgId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('bg-[#25D366]/10');
+        setTimeout(() => el.classList.remove('bg-[#25D366]/10'), 2500);
+      }
+    }, 400);
+  };
+
+  const avatarColor = community?.id ? getAvatarColor(community.id) : '#25D366';
+  const isAdmin = community?.ownerAddress?.toLowerCase() === myAddress?.toLowerCase()
+    || community?.members?.some((m: any) => m.walletAddress?.toLowerCase() === myAddress?.toLowerCase() && (m.role === 'ADMIN' || m.role === 'MODERATOR'));
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#F2F2F7] relative">
-      {/* ── HEADER ── */}
-      <div className="h-[64px] px-4 border-b border-black/[0.08] flex items-center justify-between bg-white/95 backdrop-blur-md shrink-0 z-10 shadow-sm">
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-1.5 rounded-xl hover:bg-black/5 text-black/40 transition-colors md:hidden">
+    <div className="flex-1 flex flex-col h-full bg-[#F2F2F7] overflow-hidden">
+
+      {/* ── HEADER ─────────────────────────────────────────────────────────── */}
+      <div className="h-[64px] px-3 md:px-5 border-b border-black/[0.07] flex items-center justify-between bg-white/95 backdrop-blur-md shrink-0 z-10 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
+        {/* Left: back + identity */}
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={onBack}
+            className="p-2 rounded-xl hover:bg-black/5 text-black/40 transition-colors md:hidden"
+          >
             <ChevronLeft size={22} />
           </button>
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-sm" style={{ background: avatarColor }}>
-            {community?.name?.slice(0, 2).toUpperCase() || 'C'}
+
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0"
+            style={{ backgroundColor: avatarColor }}
+          >
+            {community?.name?.slice(0,2).toUpperCase() || 'C'}
           </div>
-          <div>
-            <p className="text-[15px] font-bold text-[#1C1C1E] leading-tight flex items-center gap-1.5">
-              {community?.name || 'Loading...'}
-              {community?.isPrivate ? <Lock size={11} className="text-black/30" /> : <Globe size={11} className="text-black/30" />}
-            </p>
-            <p className="text-[11px] font-medium text-black/40">
+
+          <div className="min-w-0">
+            {loadingCommunity ? (
+              <div className="h-4 w-28 bg-black/8 rounded-lg animate-pulse mb-1" />
+            ) : (
+              <p className="text-[15px] font-bold text-[#1C1C1E] leading-tight flex items-center gap-1.5 truncate max-w-[180px]">
+                {community?.name || 'Community'}
+                {community?.isPrivate
+                  ? <Lock size={11} className="text-black/25 shrink-0" />
+                  : <Globe size={11} className="text-black/25 shrink-0" />
+                }
+              </p>
+            )}
+            <p className="text-[11px] text-black/35 font-medium">
               {community?.membersCount || community?.members?.length || 1} members
             </p>
           </div>
         </div>
 
+        {/* Right: tabs + actions */}
         <div className="flex items-center gap-1">
-          {(['posts', 'chat', 'settings'] as const).map(tab => (
+          {/* Tab pills */}
+          <div className="hidden sm:flex items-center gap-0.5 bg-[#F2F2F7] rounded-xl p-0.5 mr-1">
+            {(['posts','chat','settings'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${
+                  activeTab === tab
+                    ? 'bg-white text-[#1C1C1E] shadow-sm'
+                    : 'text-black/40 hover:text-black/60'
+                }`}
+              >
+                {tab === 'posts' ? 'Posts' : tab === 'chat' ? 'Chat' : <Settings size={13} />}
+              </button>
+            ))}
+          </div>
+
+          {/* Action icons */}
+          <button
+            onClick={() => setShowSearchPanel(true)}
+            className="p-2 rounded-xl hover:bg-black/5 text-black/30 hover:text-black transition-colors"
+            title="Search messages"
+          >
+            <Search size={17} />
+          </button>
+
+          <button
+            onClick={() => setShowPinnedPanel(true)}
+            className="p-2 rounded-xl hover:bg-black/5 text-black/30 hover:text-black transition-colors"
+            title="Pinned messages"
+          >
+            <Pin size={17} />
+          </button>
+
+          <button
+            onClick={() => setShowMembersPanel(true)}
+            className="p-2 rounded-xl hover:bg-black/5 text-black/30 hover:text-black transition-colors"
+            title="Members"
+          >
+            <Users size={17} />
+          </button>
+
+          {/* More menu */}
+          <div className="relative">
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 rounded-xl text-[12px] font-bold transition-all ${activeTab === tab ? 'bg-[#1C1C1E] text-white shadow-sm' : 'text-black/40 hover:bg-black/5'}`}
+              onClick={() => setShowMoreMenu(p => !p)}
+              className="p-2 rounded-xl hover:bg-black/5 text-black/30 hover:text-black transition-colors"
             >
-              {tab === 'settings' ? <Settings size={15} /> : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              <MoreVertical size={17} />
             </button>
-          ))}
+            <AnimatePresence>
+              {showMoreMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowMoreMenu(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="absolute right-0 top-full mt-1 w-48 bg-white rounded-2xl shadow-2xl border border-black/5 py-1.5 z-50"
+                  >
+                    {[
+                      { icon: muted ? Bell : BellOff, label: muted ? 'Unmute' : 'Mute', fn: () => { setMuted(m=>!m); toast.success(muted ? 'Unmuted' : 'Muted'); setShowMoreMenu(false); } },
+                      { icon: Share2, label: 'Share Invite', fn: () => { navigator.clipboard.writeText(`https://humanidfi.com/join/${community?.joinCode}`); toast.success('Invite link copied!'); setShowMoreMenu(false); } },
+                      { icon: RefreshCw, label: 'Refresh', fn: () => { fetchPosts(); fetchCommunity(); setShowMoreMenu(false); toast.success('Refreshed'); } },
+                    ].map(({ icon: Icon, label, fn }) => (
+                      <button key={label} onClick={fn} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#F2F2F7] transition-colors text-left">
+                        <Icon size={15} className="text-black/40" />
+                        <span className="text-[13px] font-medium text-[#1C1C1E]">{label}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
-      {/* ── CONTENT BODY ── */}
-      <div className="flex-1 overflow-hidden relative flex flex-col">
+      {/* ── MOBILE TAB BAR ─────────────────────────────────────────────────── */}
+      <div className="sm:hidden flex items-center border-b border-black/5 bg-white shrink-0">
+        {([
+          { id: 'posts', icon: FileText, label: 'Posts' },
+          { id: 'chat', icon: MessageSquare, label: 'Chat' },
+          { id: 'settings', icon: Settings, label: 'Settings' },
+        ] as const).map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors ${
+              activeTab === tab.id ? 'text-[#25D366]' : 'text-black/30'
+            }`}
+          >
+            <tab.icon size={18} />
+            <span className="text-[10px] font-bold">{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── MAIN CONTENT ───────────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+
         {/* POSTS TAB */}
-        {activeTab === 'posts' && (
-          <div className="flex-1 overflow-y-auto">
-            <div className="max-w-3xl mx-auto p-4 md:p-6 pb-28">
-              {loadingPosts ? (
-                <div className="flex items-center justify-center py-16 opacity-40">
-                  <div className="w-8 h-8 border-3 border-[#25D366] border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : posts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
-                  <Hash size={44} className="mb-3 text-[#25D366]" />
-                  <p className="text-[16px] font-bold">No posts yet</p>
-                  <p className="text-[13px] mt-1">Tap the compose button to write the first post</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-5">
-                  {posts.map(post => (
-                    <motion.div
-                      key={post.id}
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-white rounded-3xl shadow-sm border border-black/[0.05] overflow-hidden"
-                    >
-                      {post.title && (
-                        <div className="px-6 pt-5 pb-1">
-                          <h2 className="text-[19px] font-black leading-tight text-[#1C1C1E]">{post.title}</h2>
-                        </div>
-                      )}
-                      <div
-                        className="prose prose-sm max-w-none px-6 py-4 text-[#1C1C1E]/80 text-[14px] leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: typeof window !== 'undefined' ? DOMPurify.sanitize(post.contentHtml || post.content || '') : (post.content || '') }}
-                      />
-                      <div className="bg-[#FAFAFA] px-6 py-3 border-t border-black/5 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-[#25D366]/15 flex items-center justify-center text-[9px] font-black text-[#25D366]">
-                            {(post.authorAddress || '0x').slice(2, 4).toUpperCase()}
-                          </div>
-                          <span className="text-[12px] font-medium text-black/50">
-                            {post.authorAddress?.slice(0, 6)}...{post.authorAddress?.slice(-4)}
-                          </span>
-                          <span className="text-black/20">·</span>
-                          <span className="text-[11px] text-black/40">
-                            {new Date(post.createdAt).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => setLocalLikes(prev => ({ ...prev, [post.id]: (prev[post.id] ?? (post.likes || 0)) + 1 }))}
-                          className={`flex items-center gap-1.5 transition-colors ${localLikes[post.id] !== undefined ? 'text-red-500' : 'text-black/30 hover:text-red-500'}`}
-                        >
-                          <Heart size={14} fill={localLikes[post.id] !== undefined ? 'currentColor' : 'none'} />
-                          <span className="text-[12px] font-bold">{localLikes[post.id] ?? (post.likes || 0)}</span>
-                        </button>
+        <AnimatePresence mode="wait">
+          {activeTab === 'posts' && (
+            <motion.div
+              key="posts"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 overflow-y-auto"
+            >
+              <div className="max-w-3xl mx-auto px-4 py-5 pb-28">
+                {loadingPosts ? (
+                  // Skeleton loaders
+                  <div className="space-y-5">
+                    {[1,2,3].map(i => (
+                      <div key={i} className="bg-white rounded-3xl p-6 border border-black/5 animate-pulse">
+                        <div className="h-5 bg-black/5 rounded-xl w-3/4 mb-3" />
+                        <div className="h-3 bg-black/5 rounded-xl w-full mb-2" />
+                        <div className="h-3 bg-black/5 rounded-xl w-5/6 mb-2" />
+                        <div className="h-3 bg-black/5 rounded-xl w-2/3" />
                       </div>
-                    </motion.div>
+                    ))}
+                  </div>
+                ) : posts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-24 text-center">
+                    <div className="w-20 h-20 rounded-3xl bg-[#25D366]/10 flex items-center justify-center mb-5">
+                      <FileText size={36} className="text-[#25D366]" />
+                    </div>
+                    <h3 className="text-[20px] font-black text-[#1C1C1E] mb-2">No posts yet</h3>
+                    <p className="text-[14px] text-black/40 max-w-xs">
+                      Be the first to write a post in this community.
+                    </p>
+                    <button
+                      onClick={() => { setEditingPost(null); setShowEditor(true); }}
+                      className="mt-6 px-6 py-3 bg-[#1C1C1E] text-white font-bold rounded-2xl hover:bg-black transition-colors"
+                    >
+                      Write the first post
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {posts.map(post => (
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        myAddress={myAddress}
+                        onEdit={p => { setEditingPost(p); setShowEditor(true); }}
+                        onLike={handleLike}
+                        localLikes={localLikes}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* FAB */}
+              <motion.button
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
+                onClick={() => { setEditingPost(null); setShowEditor(true); }}
+                className="fixed bottom-6 right-6 w-14 h-14 bg-[#1C1C1E] text-white rounded-full flex items-center justify-center shadow-2xl shadow-black/30 z-20 hover:bg-black"
+              >
+                <Edit size={22} />
+              </motion.button>
+            </motion.div>
+          )}
+
+          {/* CHAT TAB */}
+          {activeTab === 'chat' && (
+            <motion.div
+              key="chat"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-1 overflow-hidden"
+            >
+              {/* Channel sidebar — only show if community has multiple channels */}
+              {community?.channels && community.channels.length > 1 && (
+                <div className="w-[180px] md:w-[200px] shrink-0 bg-white border-r border-black/5 flex flex-col py-3 overflow-y-auto">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-black/25 px-4 mb-2">Channels</p>
+                  {community.channels.map((ch: any) => (
+                    <button
+                      key={ch.id}
+                      onClick={() => setActiveChannelId(ch.id)}
+                      className={`flex items-center gap-2.5 px-4 py-2.5 text-left transition-all group ${
+                        activeChannelId === ch.id
+                          ? 'bg-[#25D366]/10 text-[#25D366]'
+                          : 'text-black/40 hover:bg-black/[0.03] hover:text-black/70'
+                      }`}
+                    >
+                      {ch.isPaid ? <Lock size={13} className="shrink-0" /> : <Hash size={13} className="shrink-0" />}
+                      <span className="text-[13px] font-semibold truncate">{ch.name}</span>
+                      {ch.isPaid && (
+                        <span className="ml-auto text-[9px] font-black bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-md uppercase">Paid</span>
+                      )}
+                    </button>
                   ))}
                 </div>
               )}
-            </div>
 
-            {/* FAB to compose */}
-            <motion.button
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-              onClick={() => { setEditingPost(null); setShowEditor(true); }}
-              className="fixed bottom-6 right-6 w-14 h-14 bg-[#1C1C1E] text-white rounded-full flex items-center justify-center shadow-2xl shadow-black/30 z-20 hover:bg-black"
-            >
-              <Edit size={22} />
-            </motion.button>
-          </div>
-        )}
-
-        {/* CHAT TAB */}
-        {activeTab === 'chat' && (
-          <div className="flex flex-1 overflow-hidden">
-            {/* Channel sidebar */}
-            {community?.channels && community.channels.length > 0 && (
-              <div className="w-[180px] shrink-0 bg-white border-r border-black/5 flex flex-col py-3 overflow-y-auto">
-                <p className="text-[10px] font-black uppercase tracking-widest text-black/30 px-4 mb-2">Channels</p>
-                {community.channels.map((ch: any) => (
-                  <button
-                    key={ch.id}
-                    onClick={() => setActiveChannelId(ch.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-left transition-all ${activeChannelId === ch.id ? 'bg-[#25D366]/10 text-[#25D366]' : 'text-black/50 hover:bg-black/5 hover:text-black/70'}`}
-                  >
-                    {ch.isPaid ? <Lock size={13} /> : <Hash size={13} />}
-                    <span className="text-[13px] font-medium truncate">{ch.name}</span>
-                  </button>
-                ))}
+              <div className="flex-1 overflow-hidden min-h-0">
+                <CommunityChatView
+                  communityId={communityId}
+                  channelId={activeChannelId}
+                  myAddress={myAddress}
+                  communityName={community?.name}
+                />
               </div>
-            )}
-            <div className="flex-1 overflow-hidden">
-              <CommunityChatView
-                communityId={communityId}
-                channelId={activeChannelId}
-                myAddress={myAddress}
-                communityName={community?.name}
-              />
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
 
-        {/* SETTINGS TAB */}
-        {activeTab === 'settings' && (
-          <div className="flex-1 overflow-y-auto">
-            <CommunitySettingsPanel
-              community={community}
-              myAddress={myAddress}
-              onChannelSelect={(id) => { setActiveChannelId(id); setActiveTab('chat'); }}
-              onCommunityUpdate={() => fetchCommunity()}
-            />
-          </div>
-        )}
+          {/* SETTINGS TAB */}
+          {activeTab === 'settings' && (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 overflow-y-auto"
+            >
+              {community ? (
+                <CommunitySettingsPanel
+                  community={community}
+                  myAddress={myAddress}
+                  onChannelSelect={id => { setActiveChannelId(id); setActiveTab('chat'); }}
+                  onCommunityUpdate={fetchCommunity}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-40">
+                  <div className="w-8 h-8 border-2 border-[#25D366] border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
+      {/* ── RICH POST EDITOR MODAL ───────────────────────────────────────── */}
       <RichPostEditorModal
         open={showEditor}
-        onClose={() => setShowEditor(false)}
+        onClose={() => { setShowEditor(false); setEditingPost(null); }}
         myAddress={myAddress}
         communityName={community?.name}
         communityId={communityId}
-        onPublished={(newPost) => {
-          if (newPost && newPost.id) {
-            setPosts(prev => [newPost, ...prev]);
+        initialPost={editingPost}
+        onPublished={newPost => {
+          if (newPost?.id) {
+            setPosts(prev => [newPost, ...prev.filter(p => p.id !== newPost.id)]);
           } else {
-            // Refresh posts list
             fetchPosts();
           }
         }}
       />
+
+      {/* ── MEMBER PANEL ────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showMembersPanel && community && (
+          <CommunityMemberPanel
+            community={community}
+            myAddress={myAddress}
+            onClose={() => setShowMembersPanel(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── PINNED MESSAGES PANEL ────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showPinnedPanel && (
+          <PinnedMessagesPanel
+            communityId={communityId}
+            myAddress={myAddress}
+            isAdmin={isAdmin}
+            onClose={() => setShowPinnedPanel(false)}
+            onJumpTo={jumpToMessage}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── MESSAGE SEARCH PANEL ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showSearchPanel && (
+          <MessageSearchPanel
+            communityId={communityId}
+            myAddress={myAddress}
+            onClose={() => setShowSearchPanel(false)}
+            onSelect={msg => {
+              setShowSearchPanel(false);
+              jumpToMessage(msg.id);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
-
-// ─── SETTINGS PANEL (Telegram Style - Ultimate Edition) ────────────────────────
-
-function CommunitySettingsPanel({ community, myAddress, onChannelSelect, onCommunityUpdate }: { community: any; myAddress: string; onChannelSelect?: (id: string) => void; onCommunityUpdate?: () => void }) {
-  // Merge initial permissions from API or default
-  const defaultPerms = community?.permissions || {
-    sendMessages: true, sendMedia: true, sendStickers: true, sendPolls: true,
-    embedLinks: true, addUsers: false, pinMessages: false, changeInfo: false,
-    slowModeSeconds: 0, antiSpam: false
-  };
-
-  const [permissions, setPermissions] = useState(defaultPerms);
-  const [channels, setChannels] = useState<any[]>(community?.channels || []);
-  const [savingPrivacy, setSavingPrivacy] = useState(false);
-  const [isPrivate, setIsPrivate] = useState<boolean>(community?.isPrivate ?? false);
-
-  const [showChannelsModal, setShowChannelsModal] = useState(false);
-  
-  // Real sync to DB
-  const savePermissions = async (newPerms: any) => { const { id, communityId, createdAt, updatedAt, ...cleanPerms } = newPerms; setPermissions(newPerms); try { const res = await fetch('/api/chat/communities', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress, 'x-verified-session-address': myAddress }, body: JSON.stringify({ communityId: community?.id, action: 'UPDATE_PERMISSIONS', permissions: cleanPerms }) }); if (!res.ok) throw new Error('Failed'); toast.success('Permissions updated'); } catch (e) { toast.error('Failed to update permissions'); } };
-
-  const ChannelManagement = () => {
-    const [isCreating, setIsCreating] = useState(false);
-    const [newChannel, setNewChannel] = useState({ name: '', isPaid: false, price: '', currency: 'USDC' });
-
-    const createChannel = async () => {
-      if (!newChannel.name) return toast.error('Name is required');
-      try {
-        const res = await fetch('/api/chat/communities', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress, 'x-verified-session-address': myAddress },
-          body: JSON.stringify({
-            communityId: community?.id,
-            action: 'CREATE_CHANNEL',
-            name: newChannel.name,
-            isPaid: newChannel.isPaid,
-            price: newChannel.price,
-            currency: newChannel.currency
-          }),
-        });
-        if (res.ok) {
-          const { channel } = await res.json();
-          setChannels([...channels, channel]);
-          setIsCreating(false);
-          setNewChannel({ name: '', isPaid: false, price: '', currency: 'USDC' });
-          toast.success('Channel created');
-        } else {
-          toast.error('Error creating channel');
-        }
-      } catch (e) { toast.error('Error creating channel'); }
-    };
-
-    const deleteChannel = async (id: string) => {
-      if (!confirm('Delete this channel?')) return;
-      try {
-        await fetch('/api/chat/communities', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress, 'x-verified-session-address': myAddress },
-          body: JSON.stringify({ communityId: community?.id, action: 'DELETE_CHANNEL', channelId: id }),
-        });
-        setChannels(channels.filter(c => c.id !== id));
-        toast.success('Channel deleted');
-      } catch (e) {}
-    };
-
-    const paidChannels = channels.filter(c => c.isPaid);
-    const freeChannels = channels.filter(c => !c.isPaid);
-
-    return (
-      <div className="fixed inset-0 z-[9999] bg-[#FAFAFA] flex flex-col">
-        <div className="flex items-center gap-4 px-6 py-4 border-b border-black/5 bg-white">
-          <button onClick={() => setShowChannelsModal(false)} className="p-2 bg-[#F2F2F7] rounded-full text-[#25D366]">
-            <ChevronLeft size={20} />
-          </button>
-          <h2 className="text-[20px] font-bold">Channels & Monetization</h2>
-        </div>
-        
-        <div className="p-6 overflow-y-auto max-w-2xl mx-auto w-full flex-1">
-          {isCreating ? (
-            <div className="bg-white rounded-[24px] border border-black/5 p-6 shadow-sm mb-6">
-              <h3 className="text-[17px] font-bold mb-4 flex items-center gap-2">Create Channel</h3>
-              <input 
-                type="text" placeholder="Channel name (e.g. general)"
-                className="w-full p-3 bg-[#F2F2F7] rounded-xl outline-none mb-4"
-                value={newChannel.name} onChange={e => setNewChannel({...newChannel, name: e.target.value.toLowerCase().replace(/\\s+/g, '-')})}
-              />
-              <label className="flex items-center gap-2 mb-4 cursor-pointer">
-                <input type="checkbox" checked={newChannel.isPaid} onChange={e => setNewChannel({...newChannel, isPaid: e.target.checked})} />
-                <span className="font-bold">Paid Channel</span>
-              </label>
-              {newChannel.isPaid && (
-                <div className="flex gap-2 mb-4">
-                  <input type="number" placeholder="Price" className="w-1/2 p-3 bg-[#F2F2F7] rounded-xl outline-none" value={newChannel.price} onChange={e => setNewChannel({...newChannel, price: e.target.value})} />
-                  <select className="w-1/2 p-3 bg-[#F2F2F7] rounded-xl outline-none" value={newChannel.currency} onChange={e => setNewChannel({...newChannel, currency: e.target.value})}>
-                    <option value="USDC">USDC</option>
-                    <option value="ETH">ETH</option>
-                  </select>
-                </div>
-              )}
-              <div className="flex gap-2 mt-4">
-                <button onClick={() => setIsCreating(false)} className="flex-1 py-3 bg-black/5 rounded-xl font-bold">Cancel</button>
-                <button onClick={createChannel} className="flex-1 py-3 bg-[#25D366] text-white rounded-xl font-bold">Create</button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="bg-white rounded-[24px] border border-black/5 p-6 mb-6 shadow-sm">
-                <h3 className="text-[17px] font-bold mb-4 flex items-center gap-2"><Lock size={18} className="text-[#25D366]"/> Paid Entry Channels</h3>
-                <p className="text-[14px] text-black/50 mb-6">Create exclusive zones. Users must pay crypto directly to your wallet to unlock them.</p>
-                
-                <div className="space-y-4">
-                  {paidChannels.map((c: any) => (
-                      <div key={c.id} onClick={() => { onChannelSelect?.(c.id); setShowChannelsModal(false); }} className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-[16px] cursor-pointer hover:bg-[#e5e5ea] transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#25D366]/10 text-[#25D366] flex items-center justify-center"><Lock size={18} /></div>
-                        <div>
-                          <p className="font-bold text-[15px]"># {c.name}</p>
-                          <p className="text-[12px] text-black/40">Price: {c.price} {c.currency}</p>
-                        </div>
-                      </div>
-                      <button onClick={() => deleteChannel(c.id)} className="p-2 text-red-500 bg-red-100 rounded-full hover:bg-red-200"><Trash2 size={16}/></button>
-                    </div>
-                  ))}
-                  {paidChannels.length === 0 && <p className="text-[13px] text-black/40 text-center py-4">No paid channels yet</p>}
-                </div>
-                
-                <button onClick={() => { setIsCreating(true); setNewChannel({...newChannel, isPaid: true}); }} className="w-full mt-6 py-4 bg-[#25D366]/10 text-[#25D366] font-bold rounded-[16px] flex items-center justify-center gap-2 hover:bg-[#25D366]/20 transition-colors">
-                  <Plus size={18} /> Create Paid Channel
-                </button>
-              </div>
-
-              <div className="bg-white rounded-[24px] border border-black/5 p-6 shadow-sm">
-                <h3 className="text-[17px] font-bold mb-4 flex items-center gap-2"><Globe size={18} className="text-[#25D366]"/> Public Channels</h3>
-                <div className="space-y-4">
-                  {freeChannels.map((c: any) => (
-                      <div key={c.id} onClick={() => { onChannelSelect?.(c.id); setShowChannelsModal(false); }} className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-[16px] cursor-pointer hover:bg-[#e5e5ea] transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-black/5 text-black flex items-center justify-center"><Hash size={18} /></div>
-                        <div>
-                          <p className="font-bold text-[15px]"># {c.name}</p>
-                          <p className="text-[12px] text-black/40">Free</p>
-                        </div>
-                      </div>
-                      <button onClick={() => deleteChannel(c.id)} className="p-2 text-red-500 bg-red-100 rounded-full hover:bg-red-200"><Trash2 size={16}/></button>
-                    </div>
-                  ))}
-                  {freeChannels.length === 0 && <p className="text-[13px] text-black/40 text-center py-4">No public channels</p>}
-                </div>
-                <button onClick={() => { setIsCreating(true); setNewChannel({...newChannel, isPaid: false}); }} className="w-full mt-6 py-4 bg-black/5 text-black font-bold rounded-[16px] flex items-center justify-center gap-2 hover:bg-black/10 transition-colors">
-                  <Plus size={18} /> Create Free Channel
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const togglePrivacy = async (newVal: boolean) => {
-    setSavingPrivacy(true);
-    try {
-      const res = await fetch('/api/chat/communities', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress, 'x-verified-session-address': myAddress },
-        body: JSON.stringify({ communityId: community?.id, action: 'UPDATE_PRIVACY', isPrivate: newVal }),
-      });
-      if (res.ok) {
-        setIsPrivate(newVal);
-      }
-    } catch (e) {}
-    setSavingPrivacy(false);
-  };
-
-  const Toggle = ({ label, desc, checked, onChange, danger = false }: any) => (
-    <div className="flex items-center justify-between py-3 cursor-pointer group" onClick={() => onChange(!checked)}>
-      <div className="pr-4">
-        <p className={`text-[15px] font-bold ${danger ? 'text-red-500' : 'text-[#1C1C1E]'}`}>{label}</p>
-        {desc && <p className="text-[13px] text-black/50 leading-snug mt-0.5">{desc}</p>}
-      </div>
-      <div className={`relative w-[48px] h-[28px] rounded-full transition-colors duration-300 shrink-0 shadow-inner ${checked ? (danger ? 'bg-red-500' : 'bg-[#25D366]') : 'bg-black/10'}`}>
-        <div className={`absolute top-[2px] left-[2px] w-[24px] h-[24px] bg-white rounded-full shadow-[0_2px_5px_rgba(0,0,0,0.2)] transition-transform duration-300 ${checked ? 'translate-x-[20px]' : 'translate-x-0'}`} />
-      </div>
-    </div>
-  );
-
-  const SubMenuAction = ({ icon: Icon, label, value, color = 'text-[#25D366]', onClick }: any) => (
-    <div onClick={onClick} className="w-full">
-      <div className="flex items-center justify-between py-3.5 cursor-pointer hover:bg-black/5 transition-colors px-5 -mx-5">
-        <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-xl bg-black/5 flex items-center justify-center ${color}`}>
-            <Icon size={16} strokeWidth={2.5} />
-          </div>
-          <p className="text-[15px] font-bold text-[#1C1C1E]">{label}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {value && <span className="text-[14px] font-medium text-black/40">{value}</span>}
-          <ChevronLeft size={18} className="text-black/20 rotate-180" />
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-6 pb-32">
-      {/* Profile Header */}
-      <div className="bg-white rounded-3xl p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] flex items-center gap-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-#25D366/10 to-transparent rounded-bl-[100px] pointer-events-none" />
-        <div className="w-[88px] h-[88px] rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-4xl font-black shadow-[0_8px_16px_rgba(79,70,229,0.25)] shrink-0">
-          {(community?.name || 'C').slice(0, 2).toUpperCase()}
-        </div>
-        <div className="flex-1 min-w-0 z-10">
-          <h2 className="text-[24px] font-black text-[#1C1C1E] tracking-tight truncate">{community?.name}</h2>
-          <p className="text-[14px] text-black/50 mt-1 line-clamp-2">{community?.description || 'No description provided for this community.'}</p>
-          <div className="flex flex-wrap items-center gap-2 mt-3">
-            <span className="text-[12px] font-bold text-[#25D366] bg-[#25D366]/10 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Users size={14}/> {community?.members?.length || 1} Members</span>
-            <button
-              onClick={() => togglePrivacy(!isPrivate)}
-              disabled={savingPrivacy}
-              className={`text-[12px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all border ${isPrivate ? 'bg-red-50 text-red-500 border-red-100 hover:bg-red-100' : 'bg-green-50 text-green-600 border-green-100 hover:bg-green-100'} disabled:opacity-50`}
-            >
-              {savingPrivacy ? <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /> : isPrivate ? <Lock size={12}/> : <Globe size={12}/>}
-              {isPrivate ? 'Private — Click to Open' : 'Public — Click to Close'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Invite Link */}
-      <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] overflow-hidden">
-        <div className="px-6 py-4 border-b border-black/[0.04] bg-[#FAFAFA]/50 flex items-center justify-between">
-          <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#25D366]">Invitation Link</p>
-          <button 
-            onClick={async () => {
-              if (!confirm('Are you sure you want to revoke this link? The old link will stop working instantly.')) return;
-              try {
-                const res = await fetch('/api/chat/communities', {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress, 'x-verified-session-address': myAddress },
-                  body: JSON.stringify({ communityId: community?.id, action: 'REVOKE_LINK' })
-                });
-                if (res.ok) window.location.reload();
-              } catch (e) {}
-            }}
-            className="text-[11px] font-bold text-red-500 hover:text-red-600 transition-colors uppercase tracking-wider"
-          >
-            Revoke Link
-          </button>
-        </div>
-        <div className="p-6 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center text-[#25D366] shrink-0">
-            <LinkIcon size={20} strokeWidth={2.5} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[15px] font-mono text-[#1C1C1E] truncate">
-              {community?.joinCode ? `https://humanidfi.com/join/${community.joinCode}` : 'Loading...'}
-            </p>
-            <p className="text-[12px] text-black/40 mt-0.5">
-              {community?.isPrivate ? 'Only people with this exact secure link can join' : 'Anyone with this link can join'}
-            </p>
-          </div>
-          <button 
-            onClick={() => { if (community?.joinCode) navigator.clipboard.writeText(`https://humanidfi.com/join/${community.joinCode}`); toast.success('Copied!'); }}
-            className="px-5 py-2.5 bg-[#1C1C1E] text-white text-[13px] font-bold rounded-xl hover:bg-black/80 transition-transform active:scale-95 shrink-0 shadow-lg shadow-black/10"
-          >
-            Copy Link
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Management */}
-        <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] overflow-hidden">
-          <div className="px-6 py-4 border-b border-black/[0.04] bg-[#FAFAFA]/50">
-            <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#25D366]">Management</p>
-          </div>
-          <div className="px-6 py-2">
-            <SubMenuAction icon={Hash} label="Channels & Monetization" value={channels.length.toString()} color="text-[#25D366]" onClick={() => setShowChannelsModal(true)} />
-            <SubMenuAction icon={Shield} label="Administrators" value="1" color="text-indigo-500" />
-            <SubMenuAction icon={Users} label="Members" value={community?.members?.length?.toString() || "1"} color="text-black" />
-          </div>
-        </div>
-
-        {/* Global Permissions */}
-        <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] overflow-hidden">
-          <div className="px-6 py-4 border-b border-black/[0.04] bg-[#FAFAFA]/50">
-            <p className="text-[12px] font-black uppercase tracking-[0.15em] text-[#25D366]">Global Permissions</p>
-          </div>
-          <div className="px-6 py-2 flex flex-col divide-y divide-black/5">
-            <Toggle label="Send Messages" checked={permissions.sendMessages} onChange={(v: boolean) => savePermissions({...permissions, sendMessages: v})} />
-            <Toggle label="Send Media" desc="Photos, videos, files" checked={permissions.sendMedia} onChange={(v: boolean) => savePermissions({...permissions, sendMedia: v})} />
-            <Toggle label="Embed Links" checked={permissions.embedLinks} onChange={(v: boolean) => savePermissions({...permissions, embedLinks: v})} />
-          </div>
-        </div>
-      </div>
-
-      {/* Security & Anti-Spam */}
-      <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-black/[0.04] overflow-hidden">
-        <div className="px-6 py-4 border-b border-black/[0.04] bg-[#FAFAFA]/50">
-          <p className="text-[12px] font-black uppercase tracking-[0.15em] text-orange-500">Security & Anti-Spam</p>
-        </div>
-        <div className="p-6 flex flex-col divide-y divide-black/5">
-          <div className="py-4 first:pt-0">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-[15px] font-bold text-[#1C1C1E]">Slow Mode</p>
-                <p className="text-[13px] text-black/50 mt-0.5">Members must wait before sending another message</p>
-              </div>
-              <span className="text-[14px] font-bold text-[#25D366]">
-                {permissions.slowModeSeconds === 0 ? 'Off' : permissions.slowModeSeconds < 60 ? `${permissions.slowModeSeconds}s` : permissions.slowModeSeconds === 60 ? '1m' : permissions.slowModeSeconds === 300 ? '5m' : permissions.slowModeSeconds === 900 ? '15m' : '1h'}
-              </span>
-            </div>
-            <input 
-              type="range" 
-              min="0" max="6" step="1" 
-              value={[0, 10, 30, 60, 300, 900, 3600].indexOf(permissions.slowModeSeconds)}
-              onChange={(e) => savePermissions({...permissions, slowModeSeconds: [0, 10, 30, 60, 300, 900, 3600][parseInt(e.target.value)]})}
-              className="w-full accent-[#25D366] h-1.5 bg-black/10 rounded-lg appearance-none cursor-pointer" 
-            />
-            <div className="flex justify-between text-[10px] font-bold text-black/30 mt-2 px-1">
-              <span>OFF</span><span>10s</span><span>30s</span><span>1m</span><span>5m</span><span>15m</span><span>1h</span>
-            </div>
-          </div>
-          
-          <Toggle 
-            label="Aggressive Anti-Spam" 
-            desc="Automated AI filtering for explicit content and scams" 
-            checked={permissions.antiSpam} 
-            onChange={(v: boolean) => savePermissions({...permissions, antiSpam: v})} 
-          />
-          <Toggle 
-            label="Require Join Approval" 
-            desc="Admins must approve new members" 
-            checked={permissions.requireApproval || false} 
-            onChange={(v: boolean) => savePermissions({...permissions, requireApproval: v})} 
-          />
-          <Toggle 
-            label="Member Posts Need Approval" 
-            desc="Admins review posts before publishing" 
-            checked={permissions.postApproval || false} 
-            onChange={(v: boolean) => savePermissions({...permissions, postApproval: v})} 
-          />
-          <Toggle 
-            label="New Member Alerts" 
-            desc="Get notified when someone joins" 
-            checked={permissions.notifyNewMember !== false} 
-            onChange={(v: boolean) => savePermissions({...permissions, notifyNewMember: v})} 
-          />
-        </div>
-      </div>
-
-      {/* DANGER ZONE */}
-      <div className="bg-white rounded-3xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-red-500/20 overflow-hidden mt-6">
-        <div className="px-6 py-4 border-b border-red-500/10 bg-red-50/50">
-          <p className="text-[12px] font-black uppercase tracking-[0.15em] text-red-500">Danger Zone</p>
-        </div>
-        <div className="p-6">
-          <p className="text-[13px] text-black/60 mb-4">Deleting this community is permanent. All channels, messages, and member data will be irrevocably destroyed.</p>
-          <button
-            onClick={async () => {
-              if (!confirm('Are you absolutely sure you want to delete this community? This action cannot be undone.')) return;
-              try {
-                const res = await fetch(`/api/chat/communities/${community?.id}`, {
-                  method: 'DELETE',
-                  headers: { 'x-web3-address': myAddress, 'x-verified-session-address': myAddress }
-                });
-                if (res.ok) {
-                  window.location.reload();
-                } else {
-                  alert('Only the owner can delete this community.');
-                }
-              } catch (e) {
-                alert('Network error');
-              }
-            }}
-            className="w-full py-3 bg-red-500 text-white font-bold rounded-[16px] hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
-          >
-            Delete Community
-          </button>
-        </div>
-      </div>
-
-      {showChannelsModal && <ChannelManagement />}
-    </div>
-  );
-}
-
-
-
-
-
-
-

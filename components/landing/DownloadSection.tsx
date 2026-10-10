@@ -109,101 +109,129 @@ function FAQItem({ q, a }: { q: string; a: string }) {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden"
-          >
-            <p className="text-[14px] md:text-[15px] text-[#1C1C1E]/60 leading-relaxed pb-5 pr-8">{a}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+      {/* --- DOWNLOAD SECTION -------------------------------------------------------- */}
+      <section id="download" className="bg-[#F6F7F9] py-20 md:py-32 relative overflow-hidden">
+        
+        {/* Background ambient glows */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-[#25D366]/10 blur-[120px] rounded-full pointer-events-none" />
 
-// ─── Main Section ─────────────────────────────────────────────────────────────
-export function DownloadSection() {
-  return (
-    <>
-      {/* ═══ DOWNLOAD SECTION ════════════════════════════════════════════════════ */}
-      <section id="download" className="bg-[#F6F7F9] py-20 md:py-28">
-        <div className="max-w-7xl mx-auto px-5 md:px-10">
+        <div className="max-w-7xl mx-auto px-5 md:px-10 relative z-10">
           {/* Heading */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="text-center mb-14"
+            className="text-center mb-16"
           >
-            <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#25D366] mb-3">Desktop App</p>
-            <h2 className="text-[36px] md:text-[52px] font-bold tracking-tight text-[#1C1C1E] leading-tight mb-4">
-              Download Ledger Chat
+            <p className="text-[13px] font-black uppercase tracking-[0.2em] text-[#25D366] mb-3">Native Experience</p>
+            <h2 className="text-[40px] md:text-[56px] font-bold tracking-tight text-[#1C1C1E] leading-tight mb-5">
+              Download Humanity Ledger
             </h2>
-            <p className="text-[17px] text-[#1C1C1E]/50 font-medium max-w-xl mx-auto leading-relaxed">
-              The native desktop experience. Faster, richer, and always on. Free and open-source.
+            <p className="text-[18px] text-[#1C1C1E]/50 font-medium max-w-2xl mx-auto leading-relaxed">
+              Experience the absolute pinnacle of decentralised communication. Crystal clear UI, offline crypto sharing, and sub-millisecond responsiveness.
             </p>
           </motion.div>
 
-          {/* Download Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-            <motion.button
-              onClick={() => toast.info('The Windows desktop app is currently compiling. Please use the Web App for now.', { duration: 4000 })}
+          {/* Download Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            
+            {/* WINDOWS */}
+            <motion.a
+              href="/releases/Ledger-Chat-Setup-Windows.exe"
+              download
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0 }}
-              className="bg-white rounded-3xl p-8 flex flex-col items-center text-center border border-black/[0.05] hover:border-[#25D366]/40 hover:shadow-xl transition-all group cursor-pointer"
+              className="bg-white rounded-[32px] p-8 flex flex-col items-center text-center border border-black/[0.04] hover:border-[#0078D4]/40 hover:shadow-2xl hover:shadow-[#0078D4]/10 transition-all duration-300 group cursor-pointer relative overflow-hidden"
             >
-              <div className="w-16 h-16 rounded-2xl bg-[#0078D4]/10 flex items-center justify-center mb-5 group-hover:bg-[#0078D4]/20 transition-colors">
-                <Monitor size={32} className="text-[#0078D4]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[#0078D4]/0 via-[#0078D4]/0 to-[#0078D4]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="w-20 h-20 rounded-3xl bg-[#0078D4]/5 flex items-center justify-center mb-6 group-hover:bg-[#0078D4]/10 transition-colors group-hover:scale-110 duration-500">
+                <svg width="36" height="36" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M0 12.4019L37.1994 7.20239V41.6026H0V12.4019ZM41.6026 6.40213L88 0V41.6026H41.6026V6.40213ZM0 46.4029H37.1994V80.8034L0 75.6039V46.4029ZM41.6026 46.4029H88V88L41.6026 81.603V46.4029Z" fill="#0078D4"/>
+                </svg>
               </div>
-              <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-1">Windows</h3>
-              <p className="text-[13px] text-black/40 font-medium mb-6">Windows 10 / 11 — 64-bit</p>
-              <div className="w-full mt-auto flex items-center justify-center gap-2 bg-[#1C1C1E] group-hover:bg-black text-white font-bold text-[14px] py-3.5 rounded-2xl transition-all">
-                <Download size={16} />
+              <h3 className="text-[22px] font-black text-[#1C1C1E] mb-1">Windows</h3>
+              <p className="text-[13px] text-black/40 font-semibold mb-8">Windows 10 & 11</p>
+              <div className="w-full mt-auto flex items-center justify-center gap-2.5 bg-[#F2F2F7] group-hover:bg-[#0078D4] text-[#1C1C1E] group-hover:text-white font-bold text-[15px] py-4 rounded-2xl transition-all duration-300">
+                <Download size={18} className="group-hover:animate-bounce" />
                 Download .exe
               </div>
-              <p className="text-[11px] text-black/30 mt-3">Free installer · ~120 MB</p>
-            </motion.button>
+              <p className="text-[11px] font-medium text-black/30 mt-4">v1.0.0 (64-bit)</p>
+            </motion.a>
 
-            <motion.button
-              onClick={() => toast.info('The macOS desktop app is currently compiling. Please use the Web App for now.', { duration: 4000 })}
+            {/* macOS */}
+            <motion.a
+              href="/releases/Ledger-Chat-Setup-macOS.dmg"
+              download
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.07 }}
-              className="bg-white rounded-3xl p-8 flex flex-col items-center text-center border border-black/[0.05] hover:border-[#25D366]/40 hover:shadow-xl transition-all group cursor-pointer"
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+              className="bg-white rounded-[32px] p-8 flex flex-col items-center text-center border border-black/[0.04] hover:border-black/20 hover:shadow-2xl hover:shadow-black/10 transition-all duration-300 group cursor-pointer relative overflow-hidden"
             >
-              <div className="w-16 h-16 rounded-2xl bg-[#1C1C1E]/8 flex items-center justify-center mb-5 group-hover:bg-[#1C1C1E]/15 transition-colors">
-                <Apple size={32} className="text-[#1C1C1E]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-black/0 via-black/0 to-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="w-20 h-20 rounded-3xl bg-black/5 flex items-center justify-center mb-6 group-hover:bg-black/10 transition-colors group-hover:scale-110 duration-500">
+                <svg width="36" height="36" viewBox="0 0 170 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M117.848 78.4735C117.702 54.896 137.151 43.149 138.07 42.5482C126.96 26.2413 109.117 23.7538 102.735 23.5134C88.0838 21.9995 73.9142 32.1812 66.4172 32.1812C58.826 32.1812 47.1643 23.8436 34.9818 24.1205C19.0435 24.3644 4.39864 33.3985 0 54.918C-4.48419 76.626 5.37894 116.891 22.8256 142.146C31.2584 154.341 41.1398 168.17 54.4988 167.653C67.4334 167.142 72.3685 159.278 88.0803 159.278C103.682 159.278 108.195 167.653 121.724 167.412C135.59 167.142 143.993 154.949 152.327 142.753C161.942 128.665 165.94 115.011 166.088 114.348C165.751 114.172 142.062 105.101 141.879 78.4873L117.848 78.4735Z" fill="#1C1C1E"/>
+                  <path d="M113.882 15.656C121.056 6.94291 125.756 -4.84646 124.437 -17C113.626 -16.5779 100.916 -9.83955 93.4475 -1.03714C86.7645 6.77259 81.1895 18.7774 82.8091 30.2974C94.8872 31.229 106.702 24.3807 113.882 15.656Z" fill="#1C1C1E"/>
+                </svg>
               </div>
-              <h3 className="text-[20px] font-bold text-[#1C1C1E] mb-1">macOS</h3>
-              <p className="text-[13px] text-black/40 font-medium mb-6">macOS 12 Monterey or later</p>
-              <div className="w-full mt-auto flex items-center justify-center gap-2 bg-[#1C1C1E] group-hover:bg-black text-white font-bold text-[14px] py-3.5 rounded-2xl transition-all">
-                <Download size={16} />
+              <h3 className="text-[22px] font-black text-[#1C1C1E] mb-1">macOS</h3>
+              <p className="text-[13px] text-black/40 font-semibold mb-8">Apple Silicon & Intel</p>
+              <div className="w-full mt-auto flex items-center justify-center gap-2.5 bg-[#F2F2F7] group-hover:bg-black text-[#1C1C1E] group-hover:text-white font-bold text-[15px] py-4 rounded-2xl transition-all duration-300">
+                <Download size={18} className="group-hover:animate-bounce" />
                 Download .dmg
               </div>
-              <p className="text-[11px] text-black/30 mt-3">Free installer · ~130 MB</p>
-            </motion.button>
+              <p className="text-[11px] font-medium text-black/30 mt-4">v1.0.0 (Universal)</p>
+            </motion.a>
 
-            {/* Web App */}
+            {/* LINUX */}
             <motion.a
-              href={RELEASES.web}
+              href="/releases/Ledger-Chat-Setup-Linux.AppImage"
+              download
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.14 }}
-              className="bg-gradient-to-br from-[#25D366] to-[#20bd59] rounded-3xl p-8 flex flex-col items-center text-center hover:shadow-xl hover:shadow-[#25D366]/20 transition-all group cursor-pointer"
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+              className="bg-white rounded-[32px] p-8 flex flex-col items-center text-center border border-black/[0.04] hover:border-[#E95420]/40 hover:shadow-2xl hover:shadow-[#E95420]/10 transition-all duration-300 group cursor-pointer relative overflow-hidden"
             >
-              <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mb-5 group-hover:bg-white/30 transition-colors">
-                <Globe size={32} className="text-white" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[#E95420]/0 via-[#E95420]/0 to-[#E95420]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="w-20 h-20 rounded-3xl bg-[#E95420]/5 flex items-center justify-center mb-6 group-hover:bg-[#E95420]/10 transition-colors group-hover:scale-110 duration-500">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#E95420" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/><path d="m14 4-4 16"/>
+                </svg>
               </div>
-              <h3 className="text-[20px] font-bold text-white mb-1">Web App</h3>
-              <p className="text-[13px] text-white/70 font-medium mb-6">Any browser. No install needed.</p>
-              <div className="w-full mt-auto flex items-center justify-center gap-2 bg-white text-[#1C1C1E] font-bold text-[14px] py-3.5 rounded-2xl transition-all group-hover:bg-white/90">
-                <MessageCircle size={16} />
-                Open in Browser
+              <h3 className="text-[22px] font-black text-[#1C1C1E] mb-1">Linux</h3>
+              <p className="text-[13px] text-black/40 font-semibold mb-8">Ubuntu, Debian, Fedora</p>
+              <div className="w-full mt-auto flex items-center justify-center gap-2.5 bg-[#F2F2F7] group-hover:bg-[#E95420] text-[#1C1C1E] group-hover:text-white font-bold text-[15px] py-4 rounded-2xl transition-all duration-300">
+                <Download size={18} className="group-hover:animate-bounce" />
+                Get AppImage
               </div>
-              <p className="text-[11px] text-white/50 mt-3">Works on mobile too</p>
+              <p className="text-[11px] font-medium text-black/30 mt-4">v1.0.0 (x86_64)</p>
+            </motion.a>
+
+            {/* WEB APP */}
+            <motion.a
+              href="/chat"
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
+              className="bg-gradient-to-br from-[#25D366] to-[#20bd59] rounded-[32px] p-8 flex flex-col items-center text-center hover:shadow-2xl hover:shadow-[#25D366]/30 transition-all duration-300 group cursor-pointer relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-300" />
+              <div className="w-20 h-20 rounded-3xl bg-white/20 flex items-center justify-center mb-6 group-hover:bg-white/30 transition-colors group-hover:scale-110 duration-500">
+                <Globe size={36} className="text-white" />
+              </div>
+              <h3 className="text-[22px] font-black text-white mb-1">Web App</h3>
+              <p className="text-[13px] text-white/80 font-medium mb-8">No installation required</p>
+              <div className="w-full mt-auto flex items-center justify-center gap-2.5 bg-white text-[#1C1C1E] font-bold text-[15px] py-4 rounded-2xl transition-all duration-300 group-hover:bg-white/90">
+                <MessageCircle size={18} />
+                Open Browser
+              </div>
+              <p className="text-[11px] font-medium text-white/50 mt-4">Works on any device</p>
             </motion.a>
           </div>
 
@@ -215,6 +243,14 @@ export function DownloadSection() {
               { icon: <Zap size={15} />, text: "No subscription fees" },
               { icon: <CheckCircle2 size={15} />, text: "Always free" },
             ].map((b) => (
+              <div key={b.text} className="flex items-center gap-1.5 text-[12px] font-semibold text-black/40">
+                {b.icon}
+                {b.text}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
               <div key={b.text} className="flex items-center gap-1.5 text-[12px] font-semibold text-black/40">
                 {b.icon}
                 {b.text}
