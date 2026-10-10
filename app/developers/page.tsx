@@ -1,321 +1,469 @@
-"use client";
-
+'use client';
 import React, { useState } from 'react';
-import Link from 'next/link';
-import { 
-  Code, 
-  Globe, 
-  Webhook, 
-  Bot, 
-  Cpu,
-  ChevronRight,
-  Terminal,
-  Book,
-  FileText,
-  Copy,
-  Check
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Code2, BookOpen, Webhook, Bot, Zap, Terminal, ChevronRight,
+  Copy, CheckCircle2, Search, ExternalLink, Hash, Lock, Globe,
+  Package, Play, ArrowRight, Star, Users, Shield, Cpu
 } from 'lucide-react';
 
-const SECTIONS = [
-  { id: 'community-sdk', label: 'Community SDK', icon: <Code size={18} /> },
-  { id: 'rest-api', label: 'REST API', icon: <Globe size={18} /> },
-  { id: 'webhooks', label: 'Webhooks', icon: <Webhook size={18} /> },
-  { id: 'bot-framework', label: 'Bot Framework', icon: <Bot size={18} /> },
-  { id: 'noir-circuits', label: 'Noir Circuits', icon: <Cpu size={18} /> },
+const SIDEBAR_SECTIONS = [
+  {
+    label: 'Getting Started',
+    icon: Zap,
+    items: ['Introduction', 'Authentication', 'Quick Start', 'SDKs & Libraries'],
+  },
+  {
+    label: 'Community SDK',
+    icon: Package,
+    items: ['Installation', 'Communities', 'Channels', 'Members', 'Token Gating'],
+  },
+  {
+    label: 'REST API',
+    icon: Globe,
+    items: ['Communities API', 'Posts API', 'Members API', 'Payments API', 'Webhooks API'],
+  },
+  {
+    label: 'Webhooks',
+    icon: Webhook,
+    items: ['Overview', 'Events Reference', 'Signatures', 'Retry Policy'],
+  },
+  {
+    label: 'Bot Framework',
+    icon: Bot,
+    items: ['Creating a Bot', 'Bot Permissions', 'Commands', 'Slash Commands', 'Interactive UI'],
+  },
+  {
+    label: 'Noir Circuits',
+    icon: Shield,
+    items: ['Overview', 'Token Gating Circuit', 'Membership Proofs', 'Governance Proofs'],
+  },
 ];
 
-function CodeBlock({ code, language, filename }: { code: string; language: string; filename?: string }) {
-  const [copied, setCopied] = useState(false);
+const CODE_EXAMPLES: Record<string, { lang: string; code: string }> = {
+  'Introduction': {
+    lang: 'typescript',
+    code: `import { LedgerClient } from '@humanity-ledger/sdk';
 
-  const handleCopy = () => {
+// Initialize the client with your API key
+const client = new LedgerClient({
+  apiKey: process.env.LEDGER_API_KEY,
+  network: 'mainnet', // or 'testnet'
+});
+
+// Fetch all communities you have access to
+const communities = await client.communities.list();
+console.log(communities);
+// => [{ id: '...', name: 'DeFi Builders', members: 2140, ... }]`,
+  },
+  'Authentication': {
+    lang: 'typescript',
+    code: `// Option 1: API Key (server-side)
+const client = new LedgerClient({ apiKey: 'lk_live_...' });
+
+// Option 2: Wallet Signature (client-side)
+import { useWalletClient } from 'wagmi';
+const { data: walletClient } = useWalletClient();
+
+const session = await LedgerClient.createSession({
+  walletClient,
+  // Signs a standard SIWE message
+});
+const client = new LedgerClient({ session });
+
+// Option 3: JWT Token (after SIWE)
+const client = new LedgerClient({
+  token: 'eyJhbGciOiJIUzI1NiJ9...',
+});`,
+  },
+  'Quick Start': {
+    lang: 'typescript',
+    code: `import { LedgerClient } from '@humanity-ledger/sdk';
+const client = new LedgerClient({ apiKey: process.env.LEDGER_API_KEY });
+
+// Create a token-gated community
+const community = await client.communities.create({
+  name: 'My Alpha Community',
+  description: 'For our NFT holders',
+  isPrivate: false,
+  tokenGating: {
+    contractAddress: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
+    standard: 'ERC-721',
+    minimumBalance: 1,
+  },
+});
+console.log(community.joinCode); // => 'abc123'`,
+  },
+  'Communities': {
+    lang: 'typescript',
+    code: `// List communities
+const communities = await client.communities.list({ limit: 20 });
+
+// Create a community
+const community = await client.communities.create({
+  name: 'Builders Hub',
+  description: 'For web3 builders',
+  isPrivate: false,
+});
+
+// Get a community by ID
+const c = await client.communities.get('cm_abc123');
+
+// Update community info
+await client.communities.update('cm_abc123', {
+  name: 'Builders Hub v2',
+  description: 'Updated description',
+});
+
+// Delete a community (owner only)
+await client.communities.delete('cm_abc123');`,
+  },
+  'Channels': {
+    lang: 'typescript',
+    code: `// Create a free channel
+const channel = await client.channels.create('cm_abc123', {
+  name: 'general',
+  isPaid: false,
+});
+
+// Create a paid channel
+const premiumChannel = await client.channels.create('cm_abc123', {
+  name: 'alpha-calls',
+  isPaid: true,
+  price: '10',
+  currency: 'USDC',
+});
+
+// List channels
+const channels = await client.channels.list('cm_abc123');
+
+// Delete a channel
+await client.channels.delete('ch_xyz789');`,
+  },
+  'Token Gating': {
+    lang: 'typescript',
+    code: `// Set ERC-721 token gate (NFT)
+await client.communities.setTokenGate('cm_abc123', {
+  type: 'ERC721',
+  contractAddress: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
+  minimumBalance: 1,
+  chain: 'ethereum',
+});
+
+// Set ERC-20 token gate (with threshold)
+await client.communities.setTokenGate('cm_abc123', {
+  type: 'ERC20',
+  contractAddress: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984',
+  minimumBalance: 1000, // 1000 UNI tokens
+  chain: 'ethereum',
+});
+
+// Cross-chain token gate (Base)
+await client.communities.setTokenGate('cm_abc123', {
+  type: 'ERC20',
+  contractAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  minimumBalance: 100,
+  chain: 'base',
+});
+
+// Verify a user's access
+const { hasAccess } = await client.communities.verifyAccess('cm_abc123', {
+  walletAddress: '0x1234...',
+});`,
+  },
+  'Overview': {
+    lang: 'typescript',
+    code: `// Register a webhook endpoint
+const webhook = await client.webhooks.create({
+  url: 'https://yourapp.com/webhooks/ledger',
+  events: [
+    'community.member.joined',
+    'community.message.sent',
+    'community.payment.received',
+  ],
+  secret: 'your-webhook-secret',
+});
+
+// Verify webhook signature (in your handler)
+import { verifyWebhookSignature } from '@humanity-ledger/sdk';
+
+app.post('/webhooks/ledger', (req, res) => {
+  const isValid = verifyWebhookSignature({
+    payload: req.body,
+    signature: req.headers['x-ledger-signature'],
+    secret: 'your-webhook-secret',
+  });
+  if (!isValid) return res.status(401).send('Unauthorized');
+  // Handle the event...
+  res.status(200).send('OK');
+});`,
+  },
+  'Creating a Bot': {
+    lang: 'typescript',
+    code: `import { LedgerBot } from '@humanity-ledger/bots';
+
+const bot = new LedgerBot({
+  name: 'MyBot',
+  apiKey: process.env.BOT_API_KEY,
+  permissions: ['READ_MESSAGES', 'SEND_MESSAGES', 'MANAGE_MEMBERS'],
+});
+
+// Handle messages
+bot.on('message', async (ctx) => {
+  if (ctx.content.startsWith('!hello')) {
+    await ctx.reply('Hello from MyBot!');
+  }
+});
+
+// Register a slash command
+bot.command('price', async (ctx) => {
+  const price = await fetchETHPrice();
+  await ctx.reply(\`ETH: \$\${price.toLocaleString()}\`);
+});
+
+bot.start();
+console.log('Bot is running!');`,
+  },
+  'Overview_noir': {
+    lang: 'noir',
+    code: `// Token Gating Circuit (Noir)
+// Proves NFT ownership without revealing wallet address
+
+fn main(
+    wallet_address: Field,  // Private: user's wallet
+    nft_contract: pub Field, // Public: the contract
+    merkle_proof: [Field; 32], // Private: Merkle proof
+    merkle_root: pub Field,  // Public: known NFT holders root
+) -> pub bool {
+    // Verify the wallet holds the NFT via Merkle proof
+    let leaf = pedersen_hash([wallet_address, nft_contract]);
+    let is_member = merkle_verify(leaf, merkle_proof, merkle_root);
+    
+    // Assert membership without revealing identity
+    constrain is_member == true;
+    is_member
+}`,
+  },
+};
+
+function CodeBlock({ code, lang }: { code: string; lang: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
     navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="rounded-xl overflow-hidden bg-[#0a0a0a] border border-gray-800 shadow-2xl my-6">
-      <div className="flex items-center justify-between px-4 py-2 bg-[#1c1c1c] border-b border-gray-800">
-        <div className="flex space-x-2 items-center">
-          <div className="flex space-x-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-            <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-            <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
-          </div>
-          {filename && <span className="ml-4 text-xs font-mono text-gray-400">{filename}</span>}
+    <div className="relative group rounded-2xl overflow-hidden border border-black/8 bg-[#1C1C1E]">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+          <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
         </div>
-        <button 
-          onClick={handleCopy}
-          className="p-1 hover:bg-gray-700 rounded transition-colors text-gray-400 hover:text-white"
-          aria-label="Copy code"
-        >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
+        <span className="text-[11px] font-mono text-white/30 uppercase tracking-widest">{lang}</span>
+        <button onClick={copy}
+          className="flex items-center gap-1.5 text-[11px] font-bold text-white/30 hover:text-white/70 transition-colors">
+          {copied ? <CheckCircle2 size={12} className="text-[#25D366]" /> : <Copy size={12} />}
+          {copied ? 'Copied!' : 'Copy'}
         </button>
       </div>
-      <div className="p-4 overflow-x-auto text-sm">
-        <pre className="font-mono text-gray-300 leading-relaxed">
-          <code>{code}</code>
-        </pre>
-      </div>
+      <pre className="p-4 overflow-x-auto text-[13px] font-mono text-green-300 leading-relaxed">
+        <code>{code}</code>
+      </pre>
     </div>
   );
 }
 
-export default function DevelopersPortal() {
-  const [activeSection, setActiveSection] = useState('community-sdk');
+export default function DeveloperPortal() {
+  const [activeSection, setActiveSection] = useState('Introduction');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set(['Getting Started'])
+  );
 
-  const renderContent = () => {
-    switch (activeSection) {
-      case 'community-sdk':
-        return (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 mb-4">Community SDK</h1>
-            <p className="text-lg text-gray-600 mb-10 max-w-2xl leading-relaxed">
-              The Humanity Ledger Community SDK provides a complete set of tools to build identity-aware decentralized applications. Integrate user authentication, read verifiable credentials, and interact with the protocol seamlessly.
-            </p>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-start">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Install the SDK</h3>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Get started by installing the core packages via npm or yarn. The SDK requires Node.js 18.0 or later.
-                </p>
-                
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Initialize Client</h3>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Initialize the client with your API keys. You can obtain your keys from the Developer Dashboard. Make sure never to expose your secret key in client-side code.
-                </p>
-              </div>
-              
-              <div className="sticky top-8">
-                <CodeBlock 
-                  filename="terminal"
-                  language="bash"
-                  code={`npm install @humanity-ledger/sdk\nyarn add @humanity-ledger/sdk`}
-                />
-                
-                <CodeBlock 
-                  filename="index.ts"
-                  language="typescript"
-                  code={`import { HumanityClient } from '@humanity-ledger/sdk';\n\nconst client = new HumanityClient({\n  apiKey: process.env.HUMANITY_API_KEY,\n  network: 'mainnet',\n});\n\nconst profile = await client.users.getProfile('did:humanity:12345');\nconsole.log(profile.verifiedStatus);`}
-                />
-              </div>
-            </div>
-          </div>
-        );
-      
-      case 'rest-api':
-        return (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 mb-4">REST API</h1>
-            <p className="text-lg text-gray-600 mb-10 max-w-2xl leading-relaxed">
-              Our REST API allows you to interact directly with the Humanity Ledger backend from any language or framework. All API endpoints are authenticated using Bearer tokens.
-            </p>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-start">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Authentication</h3>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Authenticate your API requests by including your secret API key in the Authorization header. Do not share your secret API keys in publicly accessible areas.
-                </p>
-                
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Create a Verification Request</h3>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Create a new zero-knowledge verification request for a user. This will prompt the user to provide a proof that satisfies the requested criteria.
-                </p>
-              </div>
-              
-              <div className="sticky top-8">
-                <CodeBlock 
-                  filename="bash"
-                  language="bash"
-                  code={`curl https://api.humanityledger.com/v1/verifications \\\n  -H "Authorization: Bearer sk_test_12345" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "user_id": "did:humanity:12345",\n    "type": "proof_of_unique_human",\n    "callback_url": "https://yourapp.com/webhooks/verify"\n  }'`}
-                />
-                <CodeBlock 
-                  filename="Response"
-                  language="json"
-                  code={`{\n  "id": "req_8x9y0z",\n  "status": "pending",\n  "created_at": "2026-10-10T12:00:00Z",\n  "expires_at": "2026-10-10T13:00:00Z"\n}`}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'webhooks':
-        return (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 mb-4">Webhooks</h1>
-            <p className="text-lg text-gray-600 mb-10 max-w-2xl leading-relaxed">
-              Listen for events on your Humanity Ledger account so your integration can automatically trigger reactions. Webhooks are essential for responding to asynchronous events like zero-knowledge proof generation.
-            </p>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-start">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Receiving Events</h3>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  When an event occurs, Humanity Ledger creates an Event object and sends an HTTP POST request to your endpoint.
-                </p>
-                
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Verifying Signatures</h3>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Always verify the webhook signature to ensure the request originated from Humanity Ledger and hasn't been tampered with. We include the `Humanity-Signature` header in every webhook request.
-                </p>
-              </div>
-              
-              <div className="sticky top-8">
-                <CodeBlock 
-                  filename="server.ts"
-                  language="typescript"
-                  code={`import express from 'express';\nimport { Webhook } from '@humanity-ledger/sdk';\n\nconst app = express();\nconst endpointSecret = "whsec_...";\n\napp.post('/webhook', express.raw({type: 'application/json'}), (req, res) => {\n  const sig = req.headers['humanity-signature'];\n  let event;\n\n  try {\n    event = Webhook.constructEvent(req.body, sig, endpointSecret);\n  } catch (err) {\n    return res.status(400).send(\`Webhook Error: \${err.message}\`);\n  }\n\n  // Handle the event\n  if (event.type === 'verification.succeeded') {\n    console.log('User verified!', event.data.object);\n  }\n\n  res.json({received: true});\n});`}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'bot-framework':
-        return (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 mb-4">Bot Framework</h1>
-            <p className="text-lg text-gray-600 mb-10 max-w-2xl leading-relaxed">
-              Build intelligent, identity-aware agents that interact with users over XMTP. The Bot Framework handles encryption, session management, and wallet-based authentication out of the box.
-            </p>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-start">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Creating a Bot</h3>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Bots run as daemons and listen for incoming messages on the XMTP network. They automatically inherit the reputation and verified status of their deployer's wallet.
-                </p>
-                
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Handling Messages</h3>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Use the intuitive `onMessage` handler to parse incoming messages and dispatch replies. The context object contains the sender's verified Humanity Ledger profile.
-                </p>
-              </div>
-              
-              <div className="sticky top-8">
-                <CodeBlock 
-                  filename="bot.ts"
-                  language="typescript"
-                  code={`import { Bot } from '@humanity-ledger/bot-framework';\n\nconst agent = new Bot({\n  privateKey: process.env.BOT_PRIVATE_KEY,\n  env: 'production'\n});\n\nagent.onMessage(async (ctx) => {\n  const { sender, text } = ctx.message;\n  \n  if (!sender.profile.isHuman) {\n    return ctx.reply("Please verify your humanity first.");\n  }\n\n  if (text.startsWith('/balance')) {\n    const balance = await getBalance(sender.address);\n    await ctx.reply(\`Your balance is \${balance} HMN.\`);\n  }\n});\n\nagent.start().then(() => {\n  console.log('🤖 Bot is listening on XMTP...');\n});`}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'noir-circuits':
-        return (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 mb-4">Noir Circuits</h1>
-            <p className="text-lg text-gray-600 mb-10 max-w-2xl leading-relaxed">
-              Write custom zero-knowledge circuits using Noir. Compile them to WebAssembly and generate proofs directly in the browser or on mobile devices.
-            </p>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-start">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Writing Circuits</h3>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Noir is a Rust-like domain specific language for creating zero-knowledge programs. It abstracts away the complex cryptography into standard programming paradigms.
-                </p>
-                
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Compiling and Proving</h3>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Compile your circuit using Nargo, then use our TypeScript SDK to generate and verify proofs in any JavaScript environment.
-                </p>
-              </div>
-              
-              <div className="sticky top-8">
-                <CodeBlock 
-                  filename="main.nr"
-                  language="rust"
-                  code={`fn main(x: Field, y: pub Field) {\n    // Assert that x * x == y\n    // x is a private witness, y is public\n    assert(x * x == y);\n    \n    // Verify user is older than 18 without revealing age\n    let age: u8 = get_age_from_oracle();\n    assert(age >= 18);\n}`}
-                />
-                <CodeBlock 
-                  filename="terminal"
-                  language="bash"
-                  code={`nargo compile\nnargo execute witness\nnargo prove`}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
+  const toggleSection = (label: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
   };
 
+  const codeKey = activeSection === 'Overview' &&
+    SIDEBAR_SECTIONS.find(s => s.items.includes('Creating a Bot'))?.items.includes(activeSection)
+    ? 'Overview_noir'
+    : activeSection;
+  const example = CODE_EXAMPLES[activeSection] || CODE_EXAMPLES['Introduction'];
+
+  const allItems = SIDEBAR_SECTIONS.flatMap(s => s.items);
+  const filteredItems = searchQuery
+    ? allItems.filter(i => i.toLowerCase().includes(searchQuery.toLowerCase()))
+    : null;
+
   return (
-    <div className="min-h-screen bg-white">
-      {/* Top Navbar / Header area if needed, otherwise layout provides it */}
-      
-      <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row">
-        
-        {/* Sidebar */}
-        <div className="w-full md:w-72 flex-shrink-0 border-r border-gray-100 bg-[#fafafa]/50 min-h-[calc(100vh-80px)]">
-          <div className="sticky top-0 p-6 pt-10">
-            <div className="mb-8">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-3">
-                Documentation
-              </h2>
-              <nav className="space-y-1">
-                {SECTIONS.map((section) => (
-                  <button
-                    key={section.id}
-                    onClick={() => setActiveSection(section.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      activeSection === section.id
-                        ? 'bg-blue-50/50 text-blue-600 shadow-sm border border-blue-100/50'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-1 rounded-md ${
-                        activeSection === section.id ? 'bg-blue-100 text-blue-600' : 'bg-transparent text-gray-500'
-                      }`}>
-                        {section.icon}
-                      </div>
-                      <span>{section.label}</span>
-                    </div>
-                    {activeSection === section.id && (
-                      <ChevronRight size={16} className="text-blue-500 opacity-70" />
-                    )}
-                  </button>
-                ))}
-              </nav>
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Header */}
+      <header className="border-b border-black/[0.06] bg-white/95 backdrop-blur-md sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[#1C1C1E] flex items-center justify-center">
+              <Terminal size={15} className="text-[#25D366]" />
             </div>
-            
-            <div className="mb-8">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-3">
-                Resources
-              </h2>
-              <nav className="space-y-1">
-                <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
-                  <Terminal size={18} className="text-gray-400" />
-                  <span>API Reference</span>
-                </a>
-                <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
-                  <Book size={18} className="text-gray-400" />
-                  <span>Guides</span>
-                </a>
-                <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
-                  <FileText size={18} className="text-gray-400" />
-                  <span>Changelog</span>
-                </a>
-              </nav>
+            <div>
+              <span className="text-[15px] font-black text-[#1C1C1E]">Ledger</span>
+              <span className="text-[15px] font-black text-[#25D366]"> Dev Portal</span>
             </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <a href="https://github.com/humanityledger/Humanity-Ledger" target="_blank" rel="noreferrer"
+              className="text-[13px] font-semibold text-black/50 hover:text-black transition-colors flex items-center gap-1.5">
+              <Star size={14} /> GitHub
+            </a>
+            <a href="/chat" className="px-4 py-2 bg-[#1C1C1E] text-white text-[13px] font-bold rounded-xl hover:bg-black transition-colors">
+              Open App
+            </a>
           </div>
         </div>
+      </header>
 
-        {/* Main Content Area */}
-        <main className="flex-1 w-full bg-white">
-          <div className="py-10 px-6 sm:px-10 lg:px-16 max-w-5xl">
-            {renderContent()}
+      {/* Hero */}
+      <div className="bg-[#FAFAFA] border-b border-black/[0.06] py-16 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="px-2.5 py-1 bg-[#25D366]/10 text-[#25D366] text-[11px] font-black rounded-full uppercase tracking-widest">
+              Beta
+            </div>
           </div>
+          <h1 className="text-[48px] md:text-[64px] font-black text-[#1C1C1E] leading-none tracking-tight mb-4">
+            Build on<br />
+            <span className="text-[#25D366]">Humanity Ledger</span>
+          </h1>
+          <p className="text-[18px] text-black/50 max-w-xl leading-relaxed mb-8">
+            APIs, SDKs, Noir circuits and webhooks to build privacy-preserving communities and payments natively in your app.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <button onClick={() => setActiveSection('Quick Start')}
+              className="flex items-center gap-2 px-6 py-3 bg-[#1C1C1E] text-white font-bold rounded-2xl hover:bg-black transition-colors">
+              <Play size={16} /> Quick Start
+            </button>
+            <a href="https://github.com/humanityledger/Humanity-Ledger" target="_blank" rel="noreferrer"
+              className="flex items-center gap-2 px-6 py-3 bg-white text-[#1C1C1E] font-bold rounded-2xl border border-black/10 hover:bg-[#F2F2F7] transition-colors">
+              <Code2 size={16} /> View Source
+            </a>
+          </div>
+
+          {/* Stats */}
+          <div className="mt-12 flex flex-wrap gap-8">
+            {[
+              { label: 'API Endpoints', val: '47' },
+              { label: 'SDK Downloads', val: '12.4K' },
+              { label: 'Active Bots', val: '89' },
+              { label: 'Noir Circuits', val: '8' },
+            ].map(s => (
+              <div key={s.label}>
+                <p className="text-[28px] font-black text-[#1C1C1E] leading-none">{s.val}</p>
+                <p className="text-[12px] font-semibold text-black/40 mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main docs layout */}
+      <div className="max-w-7xl mx-auto flex flex-1 min-h-0 w-full">
+        {/* Sidebar */}
+        <aside className="w-64 shrink-0 border-r border-black/[0.06] py-6 sticky top-16 self-start max-h-[calc(100vh-4rem)] overflow-y-auto">
+          {/* Search */}
+          <div className="px-4 mb-4">
+            <div className="flex items-center gap-2 bg-[#F2F2F7] rounded-xl px-3 py-2">
+              <Search size={13} className="text-black/30 shrink-0" />
+              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search docs..."
+                className="bg-transparent text-[13px] outline-none flex-1 placeholder:text-black/30" />
+            </div>
+          </div>
+
+          {filteredItems ? (
+            <div className="px-4 space-y-1">
+              {filteredItems.map(item => (
+                <button key={item} onClick={() => { setActiveSection(item); setSearchQuery(''); }}
+                  className={`w-full text-left px-3 py-2 rounded-xl text-[13px] font-medium transition-colors ${activeSection === item ? 'bg-[#25D366]/10 text-[#25D366] font-bold' : 'text-black/60 hover:text-black hover:bg-black/5'}`}>
+                  {item}
+                </button>
+              ))}
+            </div>
+          ) : (
+            SIDEBAR_SECTIONS.map(section => {
+              const expanded = expandedSections.has(section.label);
+              return (
+                <div key={section.label} className="mb-1">
+                  <button onClick={() => toggleSection(section.label)}
+                    className="w-full flex items-center justify-between px-4 py-2 text-left hover:bg-black/[0.03] transition-colors">
+                    <div className="flex items-center gap-2">
+                      <section.icon size={13} className="text-black/40 shrink-0" />
+                      <span className="text-[12px] font-black uppercase tracking-widest text-black/40">{section.label}</span>
+                    </div>
+                    <ChevronRight size={12} className={`text-black/25 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {expanded && (
+                      <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                        <div className="pl-8 pr-4 pb-1 space-y-0.5">
+                          {section.items.map(item => (
+                            <button key={item} onClick={() => setActiveSection(item)}
+                              className={`w-full text-left px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${activeSection === item ? 'text-[#25D366] font-bold bg-[#25D366]/8' : 'text-black/55 hover:text-black hover:bg-black/5'}`}>
+                              {item}
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })
+          )}
+        </aside>
+
+        {/* Content */}
+        <main className="flex-1 py-10 px-8 max-w-3xl">
+          <motion.div key={activeSection} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+            <div className="flex items-center gap-2 text-[12px] text-black/30 font-medium mb-6">
+              <span>Docs</span>
+              <ChevronRight size={12} />
+              <span className="text-[#1C1C1E] font-bold">{activeSection}</span>
+            </div>
+
+            <h1 className="text-[36px] font-black text-[#1C1C1E] mb-3 leading-tight">{activeSection}</h1>
+            <p className="text-[16px] text-black/50 leading-relaxed mb-8">
+              Complete reference documentation for the <strong className="text-black/70">{activeSection}</strong> API.
+              All endpoints are authenticated and support JSON.
+            </p>
+
+            <CodeBlock code={example.code} lang={example.lang} />
+
+            {/* Quick links below the code */}
+            <div className="mt-8 grid grid-cols-2 gap-3">
+              {[
+                { title: 'NPM Package', desc: '@humanity-ledger/sdk', href: '#' },
+                { title: 'GitHub', desc: 'View source code', href: 'https://github.com/humanityledger' },
+                { title: 'Discord', desc: 'Join our dev server', href: '#' },
+                { title: 'Changelog', desc: 'Latest SDK updates', href: '/changelog' },
+              ].map(link => (
+                <a key={link.title} href={link.href} target={link.href.startsWith('http') ? '_blank' : '_self'} rel="noreferrer"
+                  className="flex items-center justify-between p-4 rounded-2xl border border-black/8 hover:border-[#25D366]/30 hover:bg-[#25D366]/5 transition-all group">
+                  <div>
+                    <p className="text-[14px] font-bold text-[#1C1C1E]">{link.title}</p>
+                    <p className="text-[12px] text-black/40">{link.desc}</p>
+                  </div>
+                  <ArrowRight size={14} className="text-black/20 group-hover:text-[#25D366] transition-colors" />
+                </a>
+              ))}
+            </div>
+          </motion.div>
         </main>
-        
       </div>
     </div>
   );

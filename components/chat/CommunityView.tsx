@@ -14,6 +14,7 @@ import { RichPostEditorModal } from './RichPostEditor';
 import { CommunitySettingsPanel } from './CommunitySettingsPanel';
 import { CommunityMemberPanel } from './CommunityMemberPanel';
 import { PinnedMessagesPanel, MessageSearchPanel } from './CommunityMessageReactions';
+import CommunityAnalytics from './CommunityAnalytics';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -121,7 +122,7 @@ function PostCard({ post, myAddress, onEdit, onLike, localLikes }: PostCardProps
 
 export function CommunityView({ communityId, myAddress, onBack }: CommunityViewProps) {
   // Tab state
-  const [activeTab, setActiveTab] = useState<'posts' | 'chat' | 'settings'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'chat' | 'analytics' | 'settings'>('posts');
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
 
   // Community data
@@ -267,7 +268,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
         <div className="flex items-center gap-1">
           {/* Tab pills */}
           <div className="hidden sm:flex items-center gap-0.5 bg-[#F2F2F7] rounded-xl p-0.5 mr-1">
-            {(['posts','chat','settings'] as const).map(tab => (
+            {(['posts','chat','analytics','settings'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -277,7 +278,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                     : 'text-black/40 hover:text-black/60'
                 }`}
               >
-                {tab === 'posts' ? 'Posts' : tab === 'chat' ? 'Chat' : <Settings size={13} />}
+                {tab === 'posts' ? 'Posts' : tab === 'chat' ? 'Chat' : tab === 'analytics' ? <BarChart2 size={13} /> : <Settings size={13} />}
               </button>
             ))}
           </div>
@@ -348,6 +349,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
         {([
           { id: 'posts', icon: FileText, label: 'Posts' },
           { id: 'chat', icon: MessageSquare, label: 'Chat' },
+          { id: 'analytics', icon: BarChart2, label: 'Stats' },
           { id: 'settings', icon: Settings, label: 'Settings' },
         ] as const).map(tab => (
           <button
@@ -474,6 +476,19 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                   communityName={community?.name}
                 />
               </div>
+            </motion.div>
+          )}
+
+          {/* ANALYTICS TAB */}
+          {activeTab === 'analytics' && (
+            <motion.div
+              key="analytics"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 overflow-y-auto"
+            >
+              <CommunityAnalytics />
             </motion.div>
           )}
 
