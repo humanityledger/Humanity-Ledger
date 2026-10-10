@@ -440,7 +440,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-1 overflow-hidden"
+              className="flex flex-1 overflow-hidden min-h-0"
             >
               {/* Channel sidebar — only show if community has multiple channels */}
               {community?.channels && community.channels.length > 1 && (
