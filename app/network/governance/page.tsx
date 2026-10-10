@@ -3,33 +3,53 @@ import { AztecDocPage } from '@/components/landing/AztecDocPage';
 export default function GovernancePage() {
   return (
     <AztecDocPage
-      eyebrow="Network · Governance"
-      title="Decentralized Protocol Governance"
-      subtitle="Humanity Ledger is governed by its community of verified, biologically unique participants. We employ a privacy-preserving quadratic voting system built on Zero-Knowledge proofs to ensure that protocol evolution is directed by the collective will of humanity, rather than capital concentration."
+      eyebrow="Network — Governance"
+      title="How Humanity Ledger Evolves"
+      subtitle="We are building a product that serves its users. This page explains how decisions are made today, how we plan to open that process to the community over time, and what you can do to have a voice."
       sections={[
         {
-          id: 'one-human-one-vote',
-          title: 'Sybil-Resistant Democratic Participation',
+          id: 'current',
+          title: 'How Decisions Are Made Today',
           paragraphs: [
-            'Traditional blockchain governance is plutocratic: 1 token equals 1 vote. This inevitably leads to protocol capture by whales, venture capital firms, and early adopters. Humanity Ledger introduces a radical paradigm shift: 1 verified human equals 1 foundational vote.',
-            'Because every participant in the Humanity Ledger network must undergo the ZK Identity hardware-rooted authentication process, we possess absolute cryptographic certainty that each wallet represents a unique biological entity. We leverage this Sybil resistance to implement a fair, democratic governance model.',
+            'Humanity Ledger is currently in the early stages of development, targeting a public launch on January 1, 2027. At this stage, product and protocol decisions are made by the founding team based on user feedback, technical requirements, and legal compliance obligations.',
+            'This is an honest acknowledgment. We are not a fully community-governed organization yet. We are a small team building a product and working toward a future where the community has meaningful input into how the platform evolves.',
+          ],
+          callout: {
+            title: 'Transparent by Design',
+            body: 'We believe that being honest about how decisions are made now is more important than making grand claims about governance models that do not yet exist. Our roadmap toward community participation is published below.',
+          },
+        },
+        {
+          id: 'feedback',
+          title: 'How to Have a Voice Right Now',
+          paragraphs: [
+            'While formal governance mechanisms are in development, there are real ways to influence the direction of the platform today.',
+          ],
+          bullets: [
+            'Community Forum — Post suggestions, report issues, and discuss the future of the platform publicly in the Ledger Chat community forum.',
+            'Bug Reports — Security vulnerabilities and bugs can be reported confidentially to security@humanityledger.com. We review and prioritize every report.',
+            'Feature Requests — Open a public discussion in the forum. Features with strong community support move up the roadmap.',
+            'Direct Feedback — For sensitive matters, contact the team at humanityledger@icloud.com.',
           ],
         },
         {
-          id: 'quadratic-voting',
-          title: 'Zero-Knowledge Quadratic Voting',
+          id: 'communities',
+          title: 'Community Governance Inside the Platform',
           paragraphs: [
-            'While the foundational vote ensures equality, we also recognize the need to gauge the intensity of preference on complex protocol upgrades. Humanity Ledger implements a Zero-Knowledge Quadratic Voting (zk-QV) system.',
-            'Users can allocate Quantum Dots (QDs) to express stronger preferences, but the cost of additional votes scales quadratically (e.g., 1 vote costs 1 QD, 2 votes cost 4 QDs, 3 votes cost 9 QDs). Crucially, because all voting is conducted within the Aztec L2 shielded pool, the votes are tallied homomorphically.',
-            'The network can compute the final tally of a proposal without ever revealing which individual voted for what, or how many QDs they spent. This prevents voter intimidation, bribery, and the bandwagon effect, ensuring pristine democratic signaling.',
+            'Community administrators on Ledger Chat have full governance authority over their own spaces. They can create and delete channels, set member permissions, adjust privacy settings, invite or remove members, and control who can join.',
+            'This means that a DAO or project using Ledger Chat as its communication layer can self-govern completely. The platform does not interfere in community-level decisions.',
           ],
         },
         {
-          id: 'upgradeability',
-          title: 'Protocol Upgradeability',
+          id: 'roadmap',
+          title: 'Governance Roadmap',
           paragraphs: [
-            'The governance system has direct cryptographic authority over the protocol parameters and smart contract upgrades. When a proposal reaches the required quorum and threshold, a time-lock is initiated.',
-            'Upon expiration of the time-lock, the decentralized execution contract autonomously implements the changes (e.g., updating the verification keys for a new Noir circuit, modifying the QD issuance rate, or altering relay fee structures). Human intervention is cryptographically impossible once the vote is finalized.',
+            'We intend to progressively open platform governance to the community as the product matures.',
+          ],
+          bullets: [
+            '2027 — Public changelog and RFC process: All major product decisions will be documented and published before implementation. Community members can comment on proposed changes.',
+            '2027 — Community Advisory Council: A group of active users nominated by the community to participate in product planning discussions before decisions are finalized.',
+            '2028 — Formal governance model: A defined process for community proposals and binding input on platform features and policies. Details will be designed collaboratively with early users.',
           ],
         },
       ]}

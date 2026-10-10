@@ -1,31 +1,52 @@
 import { AztecDocPage } from '@/components/landing/AztecDocPage';
 
-export default function StatusPage() {
+export default function NetworkStatusPage() {
   return (
     <AztecDocPage
-      eyebrow="Network · System Status"
-      title="Protocol Operational Metrics"
-      subtitle="Real-time cryptographic telemetry and infrastructure health metrics for the Humanity Ledger protocol, the Aztec L2 rollup, and the decentralized relay networks."
+      eyebrow="Network — System Status"
+      title="Platform Health"
+      subtitle="Live status of the Ledger Chat infrastructure. We commit to maximum transparency about uptime, incidents, and service degradations."
       sections={[
         {
-          id: 'infrastructure-health',
-          title: 'Decentralized Infrastructure Health',
+          id: 'components',
+          title: 'Platform Components',
           paragraphs: [
-            'The Humanity Ledger protocol relies on a complex synthesis of decentralized networks and client-side cryptographic proving systems. This page aggregates the operational status of all critical infrastructure components.',
+            'The Ledger Chat platform is composed of several independent services. Each is monitored continuously. This page describes what each component does and what a failure would mean for users.',
           ],
           bullets: [
-            'Aztec Sequencer Network: The nodes responsible for batching L2 transactions and submitting them to Ethereum L1. Monitored for uptime, block production latency, and L1 finality lag.',
-            'Barretenberg Prover Network: The distributed computation layer that generates the recursive zk-SNARKs required to settle the Aztec rollup state on Ethereum. Monitored for proving latency and queue depth.',
-            'XMTP Decentralized Relay: The Waku v2-based gossip network used for Ledger Chat message propagation and WebRTC signaling. Monitored for message propagation latency and store node availability.',
-            'Client-Side PXE (Private Execution Environment): The local WASM module running in user browsers that generates transaction proofs. Monitored via aggregated, anonymized telemetry for compilation success rates and memory usage.',
+            'Message Relay — The XMTP-based service that routes encrypted messages between users. Degradation here means messages are delayed or undelivered.',
+            'API Server — The backend that powers authentication, communities, permissions, and account management. Degradation here means you may not be able to log in or load your community list.',
+            'WebRTC Signaling — The coordination service that helps two devices establish a direct voice or video call. Degradation here means calls may fail to connect.',
+            'Database — The PostgreSQL database storing community metadata, member lists, and channel structure. Note: message content is not stored here.',
+            'Push Notifications — The service that sends alerts to mobile and desktop clients when you receive a new message.',
           ],
         },
         {
-          id: 'incident-response',
-          title: 'Cryptographic Incident Response',
+          id: 'incidents',
+          title: 'Incident Response',
           paragraphs: [
-            'In the event of an infrastructure degradation or a cryptographic anomaly (such as a detected flaw in a Noir circuit or a vulnerability in the Barretenberg prover), updates will be broadcast through this portal in real-time.',
-            'The protocol incorporates a decentralized "circuit breaker" mechanism. If a critical vulnerability is detected, the governance protocol can trigger a temporary suspension of state transitions to prevent malicious exploitation, while preserving the integrity of all existing private state.',
+            'When any component of the platform experiences a failure or significant performance degradation, we will publish an incident update on this page within fifteen minutes of detection.',
+            'We will continue updating the status page at regular intervals until the incident is resolved. After resolution, we will publish a post-incident summary explaining what happened, why it happened, and what we have done to prevent it from recurring.',
+          ],
+        },
+        {
+          id: 'commitments',
+          title: 'Uptime Commitments',
+          paragraphs: [
+            'We target 99.9% uptime for all platform components. This allows for approximately 8.7 hours of scheduled maintenance per year.',
+            'Planned maintenance windows will be announced at least 48 hours in advance and will be scheduled during low-traffic periods to minimize disruption.',
+          ],
+          callout: {
+            title: 'Your Data During Downtime',
+            body: 'Because messages are stored locally on your device, a platform outage does not cause message loss. Any messages sent during an outage will be queued and delivered once the relay service is restored.',
+          },
+        },
+        {
+          id: 'payments-resilience',
+          title: 'Crypto Payment Resilience',
+          paragraphs: [
+            'Crypto payments are settled directly on the Ethereum blockchain and do not depend on Humanity Ledger infrastructure. If our platform is entirely offline, a transaction that has already been submitted to the blockchain will still confirm and settle normally.',
+            'The payment receipt in the chat window may not update until the platform recovers, but the funds will have moved regardless.',
           ],
         },
       ]}

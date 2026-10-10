@@ -1,38 +1,62 @@
 import { AztecDocPage } from '@/components/landing/AztecDocPage';
 
-export default function ExplorerPage() {
+export default function NetworkExplorerPage() {
   return (
     <AztecDocPage
-      eyebrow="Network · Block Explorer"
-      title="The Omniscient Shield Explorer"
-      subtitle="Unlike traditional block explorers that expose the entire financial history and social graph of a network, the Humanity Ledger Block Explorer is a cryptographic verification tool. It provides deterministic proof of inclusion and system integrity without violating the zero-knowledge guarantees of the protocol."
+      eyebrow="Network — Block Explorer"
+      title="Transaction Verification"
+      subtitle="When a crypto payment is made inside Ledger Chat, it settles on the public blockchain. Anyone can verify the transaction independently using standard block explorers. This page explains what that means and how to do it."
       sections={[
         {
-          id: 'paradigm-shift',
-          title: 'The Privacy Paradox in Block Exploration',
+          id: 'how-payments-settle',
+          title: 'How Crypto Payments Settle',
           paragraphs: [
-            'Traditional networks (Ethereum, Solana, Bitcoin) utilize transparent ledgers where every transaction, balance, and interaction is publicly broadcast. This allows block explorers like Etherscan to provide rich, human-readable data. However, this architecture is fundamentally incompatible with the right to financial privacy.',
-            'Humanity Ledger is built on the Aztec Network, a privacy-first zk-Rollup. Our ledger state is composed of encrypted UTXOs (Unspent Transaction Outputs) and nullifier hashes. Consequently, the Block Explorer cannot display sender addresses, receiver addresses, asset types, or transfer amounts.',
+            'Crypto payments made inside Ledger Chat are standard on-chain transactions. When you send ETH or USDC to another user, the transaction is signed by your wallet and broadcast directly to the Ethereum network. Humanity Ledger is not involved in the settlement.',
+            'Because the payment settles on a public blockchain, it can be independently verified by anyone with the transaction hash. This hash appears in the payment receipt inside the chat window immediately after the transaction is confirmed.',
+          ],
+        },
+        {
+          id: 'verification',
+          title: 'How to Verify a Transaction',
+          paragraphs: [
+            'To verify that a payment actually went through and landed in the correct wallet, follow these steps.',
+          ],
+          bullets: [
+            'Locate the payment receipt in the chat. It shows the amount, the token, and a link to the transaction.',
+            'Click the link or copy the transaction hash and open etherscan.io.',
+            'The transaction page on Etherscan will show the sender address, the recipient address, the amount transferred, the timestamp, and the confirmation count.',
+            'If the status shows as Success and the recipient address matches the person you intended to pay, the transaction is complete and irreversible.',
           ],
         },
         {
           id: 'what-is-visible',
-          title: 'What the Explorer Reveals',
+          title: 'What is Publicly Visible',
           paragraphs: [
-            'The Explorer serves as a vital tool for network health monitoring, sequencer auditing, and cryptographic verification. The following data points are publicly verifiable by any observer:',
-            '1. L2 Block Headers: Cryptographic commitments to the state of the rollup, including the global state tree root, the nullifier tree root, and the contract tree root.',
-            '2. Encrypted Commitments: Raw ciphertext blobs representing new UTXOs added to the state tree. These are mathematically impossible to decrypt without the corresponding viewing key.',
-            '3. Nullifiers: Deterministic hashes representing consumed UTXOs. They prove that an asset was spent without revealing which asset it was or who spent it.',
-            '4. Zero-Knowledge Proofs: The succinct cryptographic proofs submitted by users to validate their state transitions. The explorer verifies the mathematical soundness of these proofs against the protocol\'s verification keys.',
-            '5. Sequencer Metrics: Data regarding block finality times, throughput (TPS), and L1 settlement costs.',
+            'Ethereum is a public blockchain. The following information is visible to anyone when a transaction is made.',
           ],
+          bullets: [
+            'Sender wallet address: The address that signed and sent the transaction.',
+            'Recipient wallet address: The address that received the funds.',
+            'Amount: The exact value transferred.',
+            'Timestamp: The block number and time the transaction was included.',
+            'Gas fee: The network fee paid by the sender to the Ethereum validators.',
+          ],
+          callout: {
+            title: 'Your Privacy on the Blockchain',
+            body: 'Because Ethereum is public, wallet addresses and transaction amounts are visible on-chain. Your name and personal data are not linked to your wallet address by Humanity Ledger. However, if you have connected your wallet to other services that have identified it, that information may exist elsewhere.',
+          },
         },
         {
-          id: 'viewing-keys',
-          title: 'Authenticated Decryption (Viewing Keys)',
+          id: 'supported',
+          title: 'Supported Networks and Tokens',
           paragraphs: [
-            'Users can interact with the Explorer using their cryptographic viewing keys. By providing a viewing key to the local client interface, the user\'s browser can scan the encrypted commitments and decrypt only the UTXOs that belong to them.',
-            'This decryption happens entirely client-side. The viewing key is never transmitted to the Explorer\'s backend servers. This allows users to view their own transaction history, export compliance reports, and audit their state while maintaining absolute privacy from the network and the protocol operators.',
+            'Ledger Chat currently supports payments on the Ethereum mainnet. The following tokens are available inside the payment modal.',
+          ],
+          bullets: [
+            'ETH — Native Ethereum, usable immediately from any Ethereum wallet.',
+            'USDC — USD Coin, a regulated stablecoin issued by Circle, pegged to the US dollar.',
+            'USDT — Tether, a widely used stablecoin.',
+            'Additional EVM-compatible networks and tokens are planned for 2027.',
           ],
         },
       ]}

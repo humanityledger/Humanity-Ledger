@@ -24,8 +24,8 @@ export function SystemFooter() {
           <div className="flex flex-col gap-3">
             <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Protocol</h4>
             <Link href="/chat" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Ledger Chat</Link>
-            <Link href="/protocol" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Sovereign Identity</Link>
-            <Link href="/protocol/decentralized-relay" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Decentralized Relay</Link>
+            <Link href="/protocol" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Wallet Identity</Link>
+            <Link href="/protocol/decentralized-relay" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Message Relay</Link>
             <Link href="/developers" className="text-[14px] font-medium text-[#0A0A0A] hover:text-[#25D366] transition-colors">Developer Hub &rarr;</Link>
           </div>
 
@@ -47,7 +47,7 @@ export function SystemFooter() {
             <a href="https://github.com/humanityledger" target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">GitHub</a>
           </div>
 
-          {/* Sovereign Agreements */}
+          {/* Compliance */}
           <div className="flex flex-col gap-3">
             <h4 className="text-[13px] font-black uppercase tracking-widest text-black/40 mb-1">Compliance</h4>
             <Link href="/privacy" className="text-[14px] font-medium text-black/70 hover:text-black transition-colors">Privacy Posture</Link>
