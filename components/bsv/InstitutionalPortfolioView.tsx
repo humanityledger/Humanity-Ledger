@@ -329,7 +329,7 @@ export function InstitutionalPortfolioView() {
 }
 
 function HomeView({ address, balance, balanceFiat, totalBalance, activeNetwork, loading, onRefresh, onSend, onReceive, onScan, onCreate, onBuy, onSwap, onBridge, onNetworkClick, onSettingsClick, onAccountsClick, scannerBase, onShield, onSecurity, onSmartAccount, onDeploy, onOmnichain, onMempool, onQds, assets, displayCurrency, setDisplayCurrency, rate, symbol, isEmailAuth }: any) {
-    const { hideBalances, toggleHideBalances } = useSettings();
+    const { hideBalances, toggleHideBalances, uiConfig } = useSettings();
     const [copied, setCopied] = useState(false);
     const [isDisconnecting, setIsDisconnecting] = useState(false);
     const [activeTab, setActiveTab] = useState<'TOKENS'|'ACTIVITY'|'AZTEC'>('TOKENS');
@@ -380,8 +380,7 @@ function HomeView({ address, balance, balanceFiat, totalBalance, activeNetwork, 
                 </div>
 
                 <div className="hidden md:flex flex-col items-center">
-                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-900/20">Humanity Ledger</span>
-                </div>
+                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-900/20">Humanity Ledger</span>\n                    {uiConfig?.showGasTracker !== false && feeData?.formatted?.gasPrice && (\n                        <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase tracking-widest text-zinc-900/40">\n                            <Zap size={10} className="text-zinc-900/30" />\n                            <span>Gas: {Number(feeData.formatted.gasPrice).toFixed(1)} gwei</span>\n                        </div>\n                    )}\n                </div>
 
                 {address && (
                     <div className="flex flex-wrap gap-2 items-center justify-end mt-3 md:mt-0">
@@ -666,4 +665,5 @@ function NetworkView({ onBack }: any) {
         </ModalView>
     );
 }
+
 

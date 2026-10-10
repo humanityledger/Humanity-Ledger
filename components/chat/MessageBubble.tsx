@@ -404,6 +404,22 @@ export const MessageBubble = React.memo(({
     }
   }, [mediaObj, mediaUrl]);
 
+  const [isBurned, setIsBurned] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).__ledger_burn_on_read && !isMe) {
+      const seconds = (window as any).__ledger_burn_on_read_seconds || 10;
+      const t = setTimeout(() => setIsBurned(true), seconds * 1000);
+      return () => clearTimeout(t);
+    }
+  }, [isMe]);
+
+  let bubbleStyle = 'default';
+  if (typeof window !== 'undefined') bubbleStyle = (window as any).__ledger_bubble_style || 'default';
+  let bubbleClasses = isMe ? 'msg-bubble-sent rounded-[20px] rounded-br-[5px]' : 'msg-bubble-recv rounded-[20px] rounded-bl-[5px]';
+  if (bubbleStyle === 'brutalist') bubbleClasses = 'rounded-none border-2 border-black/80';
+  else if (bubbleStyle === 'minimal') bubbleClasses = 'rounded-none border-l-4 border-[#007AFF] bg-transparent';
+  else if (bubbleStyle === 'glass') bubbleClasses = 'backdrop-blur-md bg-white/40 border border-white/30 shadow-lg rounded-[20px]';
+
   return (
     <React.Fragment>
       {showDate && (
@@ -574,14 +590,12 @@ export const MessageBubble = React.memo(({
                   </button>
                 )}
                 <div
-                  className={`relative px-4 py-2.5 shadow-sm ${
-                    isMe ? 'msg-bubble-sent rounded-[20px] rounded-br-[5px]' : 'msg-bubble-recv rounded-[20px] rounded-bl-[5px]'
-                  }`}
-                  style={{
+                  className={`relative px-4 py-2.5 shadow-sm ${bubbleClasses}`}
+                  style={bubbleStyle === 'default' ? {
                     background: isMe
                       ? 'linear-gradient(145deg, #1c7aff 0%, #0a65e8 100%)'
                       : '#e9e9eb',
-                  }}
+                  } : {}}
                 >
                   <p
                     className={`whitespace-pre-wrap break-words leading-relaxed select-text ${
@@ -589,8 +603,8 @@ export const MessageBubble = React.memo(({
                     }`}
                     style={{ fontSize: `${fontSizePx}px`, fontFamily, WebkitUserSelect: 'text', userSelect: 'text' } as React.CSSProperties}
                   >
-                    {content}
-                    {msg.edited && (
+                    {isBurned ? <span className="text-[11px] italic text-black/30">Message deleted</span> : content}
+                    {msg.edited && !isBurned && (
                       <span className={`text-[9px] ml-1.5 italic ${isMe ? 'text-white/40' : 'text-black/30'}`}>edited</span>
                     )}
                   </p>

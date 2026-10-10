@@ -246,6 +246,15 @@ export default function ConnectPage() {
   useEffect(() => {
     if (!mounted || accountStatus !== "connected" || !address) return;
     if (redirectingRef.current || signingRef.current || authStatus === "failed") return;
+    // Skip signature if already linked via local storage or cookie
+    if (isLinked) {
+      redirectingRef.current = true;
+      const rp = new URLSearchParams(window.location.search);
+      const rv = rp.get("returnUrl") || rp.get("redirect_url");
+      const safe = (rv && rv !== "/portfolio" && !rv.startsWith("/terminal")) ? rv : "/hub";
+      window.location.replace(safe);
+      return;
+    }
     try { if (sessionStorage.getItem("__disconnected__") === "1" || localStorage.getItem("__disconnected__") === "1") return; } catch {}
     signingRef.current = true;
     (async () => {

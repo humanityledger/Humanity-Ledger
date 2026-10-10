@@ -3804,6 +3804,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         return;
       }
     }
+    if ((window as any).__ledger_tone_translator) {
+      const TONE_MAP: Record<string, string> = { 'hate': 'strongly dislike', 'stupid': 'not optimal', 'idiot': 'mistaken', 'kill': 'stop' };
+      let softened = txt;
+      Object.entries(TONE_MAP).forEach(([w, r]) => softened = softened.replace(new RegExp(`\\b${w}\\b`, 'gi'), r));
+      if (softened !== txt) { txt = softened; toast('Tone softened by AI', { icon: '🤝' }); }
+    }
     await executeSend(txt);
   };
   

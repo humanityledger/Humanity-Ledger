@@ -28,6 +28,37 @@ export function useSettingsEffect(
 
   useEffect(() => {
     if (!settings) return;
+    const s = settings as any;
+    (window as any).__ledger_burn_on_read = s.burn_on_read;
+    (window as any).__ledger_burn_on_read_seconds = s.burn_on_read_seconds || 10;
+    (window as any).__ledger_bubble_style = s.bubble_style || 'default';
+    (window as any).__ledger_notification_sound = s.notification_sound;
+    (window as any).__ledger_tone_translator = s.tone_translator;
+    (window as any).__ledger_ghost_reply = s.ghost_auto_reply;
+    (window as any).__ledger_ghost_reply_text = s.ghost_auto_reply_text || 'I am unavailable right now.';
+    (window as any).__ledger_mechanical_keyboard = s.mechanical_keyboard;
+  }, [settings]);
+
+  useEffect(() => {
+    if (!settings?.mechanical_keyboard) return;
+    const handleKeyDown = () => {
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'square'; osc.frequency.setValueAtTime(800, ctx.currentTime);
+        gain.gain.setValueAtTime(0.04, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.03);
+      } catch {}
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [settings?.mechanical_keyboard]);
+
+  useEffect(() => {
+    if (!settings) return;
     const prev = prevSettings.current;
 
     // ─────────────────────────────────────────────────────────────
