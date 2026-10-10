@@ -191,14 +191,6 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ ok: true, isPrivate: updated.isPrivate });
     }
 
-    if (action === 'UPDATE_PERMISSIONS') {
-      const { permissions } = body;
-      const updated = await (prisma as any).community.update({
-        where: { id: communityId },
-        data: { permissions: permissions || {} }
-      });
-      return NextResponse.json({ ok: true, community: updated });
-    }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error: any) {

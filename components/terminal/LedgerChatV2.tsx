@@ -639,42 +639,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     callStateRef.current = s;
     _setCallState(s);
   }, []);
-  useEffect(() => {
-    const autoLockSetting = (ledgerSettings as any)?.auto_lock_timer;
-    // Parse the setting: 'Never', 'Immediately', '1 min', '5 min', '30 min', '1 hour'
-    const getLockMs = () => {
-      if (!autoLockSetting || autoLockSetting === 'Never') return null;
-      if (autoLockSetting === 'Immediately') return 5000;
-      if (autoLockSetting === '1 minute') return 60000;
-      if (autoLockSetting === '5 minutes') return 300000;
-      if (autoLockSetting === '15 minutes') return 900000;
-      if (autoLockSetting === '1 hour') return 3600000;
-      return 60000; // default 1 min
-    };
-    const lockMs = getLockMs();
-    if (!lockMs) return; // 'Never' — no lock timer
 
-    let timeoutId: NodeJS.Timeout;
-    const resetTimer = () => {
-      clearTimeout(timeoutId);
-      if (!isLocked) {
-        timeoutId = setTimeout(() => setIsLocked(true), lockMs);
-      }
-    };
-    
-    window.addEventListener('mousemove', resetTimer);
-    window.addEventListener('keydown', resetTimer);
-    window.addEventListener('touchstart', resetTimer);
-    
-    resetTimer(); // Start initially
-    
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('mousemove', resetTimer);
-      window.removeEventListener('keydown', resetTimer);
-      window.removeEventListener('touchstart', resetTimer);
-    };
-  }, [isLocked, ledgerSettings]);
 
 
   useEffect(() => {
