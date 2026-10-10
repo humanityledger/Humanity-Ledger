@@ -132,6 +132,9 @@ export default function ConnectPage() {
   const { isLinked, setLinked } = useUIStore();
   const { nuclearDisconnect } = useSystemSignOut();
 
+  const [userCount, setUserCount] = useState<number>(0);
+  const userCountStr = new Intl.NumberFormat('en-US').format(userCount || 12450);
+
   const [mounted,           setMounted]           = useState(false);
   const [qrSession,         setQrSession]         = useState<string | null>(null);
   const [syncStatus,        setSyncStatus]        = useState<"IDLE" | "AWAITING" | "SYNCED" | "ERROR">("IDLE");
@@ -154,6 +157,13 @@ export default function ConnectPage() {
       isGuarded = sessionStorage.getItem("__disconnected__") === "1" || localStorage.getItem("__disconnected__") === "1";
   } catch {}
   const effectiveIsConnected = mounted && isConnected && !isGuarded;
+
+  useEffect(() => {
+    fetch('/api/metrics/users')
+      .then(res => res.json())
+      .then(data => { if (data.total) setUserCount(data.total); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!isError || !error) return;
@@ -392,7 +402,7 @@ export default function ConnectPage() {
         </div>
         <h2 className="relative z-10 text-[32px] font-black tracking-[-0.03em] text-black mb-2">Ledger Chat</h2>
         <p className="relative z-10 text-[14px] text-neutral-500 font-medium mb-6 text-center max-w-[280px] leading-relaxed">
-          The ultimate secure messenger. Perfectly comfortable for everyone, including older adults. No passwords needed.
+          The ultimate secure messenger. Pure peer-to-peer decentralization. No central servers.
         </p>
         
         {/* Live status badge */}
@@ -426,15 +436,15 @@ export default function ConnectPage() {
           >
             <div className="inline-flex items-center gap-3 pl-3 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/5 w-fit mb-8">
               <span className="w-2.5 h-2.5 rounded-full bg-[#25D366] animate-pulse block shrink-0" />
-              <span className="text-[12px] font-mono uppercase tracking-widest text-black/60 font-semibold">Protocol Active</span>
+              <span className="text-[12px] font-mono uppercase tracking-widest text-black/60 font-semibold">Live Now — Trusted by {userCountStr} Users</span>
             </div>
 
             <h1 className="text-[52px] xl:text-[64px] font-black tracking-[-0.04em] leading-[1.05] text-black mb-6">
-              Universal Communication Protocol
+              Ledger Chat
             </h1>
 
             <p className="text-[18px] text-neutral-500 leading-[1.6] font-medium mb-12 max-w-[480px]">
-              Connect to Humanity Ledger to access your private portfolio, verify your identity securely, and communicate with military-grade encryption.
+              The ultimate secure messenger. Pure peer-to-peer decentralization. No central servers.
             </p>
 
             <div className="grid grid-cols-2 gap-x-8 gap-y-10 w-full">

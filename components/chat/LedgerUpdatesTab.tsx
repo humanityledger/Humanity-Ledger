@@ -43,11 +43,11 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
   const fetchUpdates = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/chat/updates', { headers: { 'x-web3-address': myAddress }});
+      const res = await fetch('/api/chat/stories', { headers: { 'x-web3-address': myAddress }});
       if (res.ok) {
-        const { updates } = await res.json();
-        const mine = updates.filter((u: any) => u.ownerAddress.toLowerCase() === myAddress.toLowerCase());
-        const others = updates.filter((u: any) => u.ownerAddress.toLowerCase() !== myAddress.toLowerCase());
+        const { stories } = await res.json();
+        const mine = stories.filter((u: any) => u.authorAddress?.toLowerCase() === myAddress.toLowerCase());
+        const others = stories.filter((u: any) => u.authorAddress?.toLowerCase() !== myAddress.toLowerCase());
         setMyStatus(mine);
         setContactStatuses(others);
       }
@@ -57,23 +57,40 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
     setIsLoading(false);
   };
 
-  const postStatus = async () => {
-    if (!draftText.trim()) return;
+  const postStatus = async (contentUrl?: string, mediaType?: string) => {
+    if (!contentUrl && !draftText.trim()) return;
     try {
-      const res = await fetch('/api/chat/updates', {
+      const res = await fetch('/api/chat/stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
-        body: JSON.stringify({ text: draftText.trim(), privacy: draftPrivacy })
+        body: JSON.stringify({
+          contentUrl: contentUrl || draftText.trim(),
+          mediaType: mediaType || 'text',
+          privacy: draftPrivacy
+        })
       });
       if (res.ok) {
-        const { update } = await res.json();
-        setMyStatus(prev => [update, ...prev]);
+        const { story } = await res.json();
+        setMyStatus(prev => [story, ...prev]);
         setDraftText('');
         setShowComposer(false);
       }
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const isVideo = file.type.startsWith('video/');
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target?.result as string;
+      await postStatus(dataUrl, isVideo ? 'video' : 'image');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const formatTime = (tsStr: string | number) => {
@@ -102,10 +119,14 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
           {/* Avatar with + button */}
           <div className="relative shrink-0">
             <div
-              className="w-[54px] h-[54px] rounded-full flex items-center justify-center text-white font-bold text-xl"
+              className="w-[54px] h-[54px] rounded-full flex items-center justify-center text-white font-bold text-xl overflow-hidden"
               style={{ background: avatarColor(myAddress) }}
             >
-              {initials(myName, myAddress)}
+              {myStatus.length > 0 && myStatus[0].avatarUrl ? (
+                <img src={myStatus[0].avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                initials(myName, myAddress)
+              )}
             </div>
             {myStatus.length === 0 ? (
               <button
@@ -164,15 +185,19 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
         ) : contactStatuses.map((cs: any) => (
           <button
             key={cs.id}
-            onClick={() => onOpenChat(cs.ownerAddress)}
+            onClick={() => onOpenChat(cs.authorAddress)}
             className="w-full flex items-center gap-3 px-4 py-3 border-b border-black/[0.06] hover:bg-[#F2F2F7] text-left"
           >
-            <div className="w-[54px] h-[54px] rounded-full ring-2 ring-[#25D366] ring-offset-2 flex items-center justify-center text-white font-bold" style={{ background: avatarColor(cs.ownerAddress) }}>
-              {initials('', cs.ownerAddress)}
+            <div className="w-[54px] h-[54px] rounded-full ring-2 ring-[#25D366] ring-offset-2 flex items-center justify-center text-white font-bold overflow-hidden" style={{ background: avatarColor(cs.authorAddress) }}>
+              {cs.avatarUrl ? (
+                <img src={cs.avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                initials('', cs.authorAddress)
+              )}
             </div>
             <div className="flex-1">
-              <p className="text-[16px] font-semibold text-[#1C1C1E]">{shortAddr(cs.ownerAddress)}</p>
-              <p className="text-[13px] text-[#8E8E93] truncate">{cs.text}</p>
+              <p className="text-[16px] font-semibold text-[#1C1C1E]">{shortAddr(cs.authorAddress)}</p>
+              <p className="text-[13px] text-[#8E8E93] truncate">{cs.mediaType === 'image' || cs.mediaType === 'video' ? '📷 Media' : cs.contentUrl}</p>
             </div>
             <span className="text-[12px] text-[#8E8E93]">{formatTime(cs.createdAt)}</span>
           </button>
@@ -199,7 +224,7 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
               <div className="flex items-center justify-between">
                 <button onClick={() => setShowComposer(false)} className="text-[#25D366] text-[16px]">Cancel</button>
                 <h3 className="text-[17px] font-semibold">New Status</h3>
-                <button onClick={postStatus} disabled={!draftText.trim()} className="text-[#25D366] text-[16px] font-semibold disabled:opacity-40">Post</button>
+                <button onClick={() => postStatus()} disabled={!draftText.trim()} className="text-[#25D366] text-[16px] font-semibold disabled:opacity-40">Post</button>
               </div>
 
               <textarea
@@ -210,16 +235,25 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
                 maxLength={700}
                 className="w-full min-h-[120px] text-[16px] text-[#1C1C1E] placeholder:text-[#8E8E93] resize-none outline-none border border-black/10 rounded-xl p-3 focus:ring-2 focus:ring-[#25D366]/20"
               />
-
-              <button
-
-                onClick={() => setShowPrivacyMenu(m => !m)}
-                className="flex items-center gap-2 text-[#25D366]"
-              >
-                {draftPrivacy === 'everyone' ? <Globe size={16} /> : draftPrivacy === 'contacts' ? <Users size={16} /> : <Lock size={16} />}
-                <span className="text-[15px]">{privacyLabel[draftPrivacy]}</span>
-                <ChevronRight size={14} />
-              </button>
+              
+              <div className="flex items-center justify-between mt-2">
+                <div className="relative">
+                  <input type="file" accept="image/*,video/*" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                  <button className="flex items-center gap-2 text-[#25D366] bg-[#25D366]/10 px-4 py-2 rounded-xl">
+                    <Camera size={18} />
+                    <span className="text-[14px] font-semibold">Photo/Video</span>
+                  </button>
+                </div>
+                
+                <button
+                  onClick={() => setShowPrivacyMenu(m => !m)}
+                  className="flex items-center gap-2 text-[#25D366] bg-[#25D366]/10 px-4 py-2 rounded-xl"
+                >
+                  {draftPrivacy === 'everyone' ? <Globe size={16} /> : draftPrivacy === 'contacts' ? <Users size={16} /> : <Lock size={16} />}
+                  <span className="text-[14px] font-semibold">{privacyLabel[draftPrivacy]}</span>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
 
               {showPrivacyMenu && (
                 <div className="flex flex-col gap-1 bg-[#F2F2F7] rounded-xl p-2">

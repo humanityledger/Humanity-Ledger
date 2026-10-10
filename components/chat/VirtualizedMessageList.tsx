@@ -1,19 +1,16 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-// Requires: npm install react-virtuoso
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 
 interface VirtualizedMessageListProps {
   messages: any[];
   activePeer: string;
   myAddress: string;
-  /** The XMTP inboxId of the current user (a hash string, NOT an ETH address) */
   clientInboxId?: string;
   renderMessage: (msg: any, isMe: boolean) => React.ReactNode;
   onLoadMore: () => void;
   isLoadingMore: boolean;
 }
 
-// Memoized individual row component to prevent reconciliation lag on 50k messages
 const MemoizedMessageRow = React.memo(({ 
   msg, 
   myAddressLower,
@@ -25,15 +22,9 @@ const MemoizedMessageRow = React.memo(({
   clientInboxIdLower: string;
   renderMessage: (msg: any, isMe: boolean) => React.ReactNode;
 }) => {
-  // [CRITICAL FIX] senderInboxId is an XMTP hash, NOT an ETH address.
-  // We MUST compare senderInboxId against the XMTP clientInboxId (also a hash).
-  // The ETH address comparison is a fallback for optimistic messages only,
-  // which have senderInboxId set to the ETH address.
   const senderLower = (msg.senderInboxId ?? '').toLowerCase();
   const isMe =
-    // Primary: XMTP inboxId match (real messages from network)
     (clientInboxIdLower && senderLower === clientInboxIdLower) ||
-    // Fallback: ETH address match (optimistic messages we created locally)
     senderLower === myAddressLower ||
     msg.senderAddress?.toLowerCase() === myAddressLower;
   
@@ -47,6 +38,7 @@ const MemoizedMessageRow = React.memo(({
   prev.msg.status === next.msg.status &&
   prev.msg.reactions === next.msg.reactions
 );
+MemoizedMessageRow.displayName = 'MemoizedMessageRow';
 
 export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
   messages,
@@ -59,27 +51,37 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
 }) => {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   
-  // Cache the lowercase strings to avoid recomputing on every render
   const myAddressLower = useMemo(() => myAddress.toLowerCase(), [myAddress]);
   const clientInboxIdLower = useMemo(() => (clientInboxId ?? '').toLowerCase(), [clientInboxId]);
 
-  // Handle infinite scroll up
   const startReached = useCallback(() => {
-    if (!isLoadingMore) {
-      onLoadMore();
-    }
+    if (!isLoadingMore) onLoadMore();
   }, [isLoadingMore, onLoadMore]);
 
+  // Scroll to bottom when new messages arrive or peer changes
+  useEffect(() => {
+    if (messages.length > 0) {
+      // Small delay to let DOM settle before scrolling
+      const t = setTimeout(() => {
+        virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, behavior: 'smooth' });
+      }, 80);
+      return () => clearTimeout(t);
+    }
+  }, [messages.length, activePeer]);
+
   return (
-    <div className="flex-1 w-full h-full">
+    // CRITICAL: parent must have explicit height so Virtuoso can scroll.
+    // Using `style={{ height: '100%', overflow: 'hidden' }}` so flex parent drives the height.
+    <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <Virtuoso
         ref={virtuosoRef}
         data={messages}
         initialTopMostItemIndex={messages.length > 0 ? messages.length - 1 : 0}
         startReached={startReached}
         alignToBottom={true}
-        followOutput={"smooth"}
-        itemContent={(index, msg) => (
+        followOutput="smooth"
+        style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+        itemContent={(_index, msg) => (
           <MemoizedMessageRow 
             key={msg.id}
             msg={msg} 

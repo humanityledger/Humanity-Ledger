@@ -54,6 +54,7 @@ const PUBLIC_PATHS = new Set([
 const PUBLIC_PREFIXES = [
   '/api/auth/',
   '/api/metrics/',
+  '/api/chat/stories', // stories need to be public for viewing
   '/api/aztec/airdrop',
   '/api/aztec/balance',
   '/api/aztec/transactions',

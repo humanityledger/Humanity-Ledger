@@ -501,7 +501,7 @@ export const MessageBubble = React.memo(({
   }, [isMe]);
 
   
-  const activeBubbleStyle = (window as any).__ledger_bubble_style || 'default';
+  const activeBubbleStyle = typeof window !== 'undefined' ? ((window as any).__ledger_bubble_style || 'default') : (bubbleStyle || 'default');
   let bubbleClasses = isMe ? 'msg-bubble-sent rounded-[20px] rounded-br-[5px]' : 'msg-bubble-recv rounded-[20px] rounded-bl-[5px]';
   if (activeBubbleStyle === 'brutalist') bubbleClasses = 'rounded-none border-2 border-black/80';
   else if (activeBubbleStyle === 'minimal') bubbleClasses = 'rounded-none border-l-4 border-[#007AFF] bg-transparent';

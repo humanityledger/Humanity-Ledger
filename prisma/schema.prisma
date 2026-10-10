@@ -1766,3 +1766,17 @@ model DirectMessage {
   @@index([recipient, delivered])
   @@index([sender])
 }
+
+
+model Story {
+  id            String   @id @default(cuid())
+  authorAddress String
+  contentUrl    String   @db.Text
+  mediaType     String
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([authorAddress])
+  @@index([expiresAt])
+}
+
