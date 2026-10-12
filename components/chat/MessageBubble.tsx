@@ -142,6 +142,52 @@ const PaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: bo
 });
 PaymentBubble.displayName = 'PaymentBubble';
 
+// ─── Tip Bubble ─────────────────────────────────────────────────────────────
+const TipBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
+  const raw = content.replace('__TIP__::', '');
+  let amount = '?', recipient = '', token = 'USDC', txHash = '';
+  try {
+    const parsed = JSON.parse(raw);
+    amount = parsed.amount ?? parsed;
+    token = parsed.token || 'USDC';
+    txHash = parsed.txHash || '';
+    recipient = parsed.to ? `${String(parsed.to).slice(0, 6)}...${String(parsed.to).slice(-4)}` : '';
+  } catch {
+    amount = raw;
+  }
+  return (
+    <div className={`rounded-[20px] min-w-[200px] overflow-hidden shadow-sm border ${isMe ? 'bg-[#25D366] text-white border-transparent' : 'bg-white text-[#1C1C1E] border-black/10'}`}>
+      <div className="px-4 py-3 flex flex-col gap-1.5">
+        <div className="flex items-center gap-2">
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${isMe ? 'bg-white/20' : 'bg-[#25D366]/10'}`}>
+            <Heart size={14} fill="currentColor" className={isMe ? 'text-white' : 'text-[#25D366]'} />
+          </div>
+          <span className={`text-[11px] font-bold uppercase tracking-widest ${isMe ? 'text-white/80' : 'text-[#25D366]'}`}>Creator Tip</span>
+        </div>
+        <p className={`text-[22px] font-black tracking-tight ${isMe ? 'text-white' : 'text-[#1C1C1E]'}`}>
+          +{amount} <span className="text-[14px] font-semibold opacity-80">{token}</span>
+        </p>
+        {recipient && (
+          <p className={`text-[11px] font-mono ${isMe ? 'text-white/70' : 'text-black/40'}`}>
+            To {recipient}
+          </p>
+        )}
+        {txHash && (
+          <a
+            href={`https://etherscan.io/tx/${txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`text-[10px] font-mono underline mt-1 ${isMe ? 'text-white/80' : 'text-[#25D366]'}`}
+          >
+            Verify on-chain
+          </a>
+        )}
+      </div>
+    </div>
+  );
+});
+TipBubble.displayName = 'TipBubble';
+
 // ─── Location Bubble ─────────────────────────────────────────────────────────
 const LocationBubble = React.memo(({ coords, isMe, isLive }: { coords: string; isMe: boolean; isLive: boolean }) => {
   const [lat, lon] = coords.split(',').map(Number);
@@ -408,6 +454,7 @@ export const MessageBubble = React.memo(({
   const isMissedCall = content.startsWith('__CALL_MISSED__:') || content === '__CALL_DECLINE__';
   const isPoll       = content.startsWith('__POLL__');
   const isPayment    = content.startsWith('__PAYMENT__');
+  const isTip        = content.startsWith('__TIP__');
   const isPremium    = content.startsWith('[PREMIUM:') || content.startsWith('__STICKER__[PREMIUM:');
   const isSticker    = content.startsWith('__STICKER__') && !isPremium;
   const isAudio      = content.startsWith('__AUDIO__');
@@ -586,6 +633,8 @@ export const MessageBubble = React.memo(({
               <PollBubble content={content} msg={msg} isMe={isMe} onVotePoll={onVotePoll} clientInboxId={clientInboxId} />
             ) : isPayment ? (
               <PaymentBubble content={content} isMe={isMe} />
+            ) : isTip ? (
+              <TipBubble content={content} isMe={isMe} />
             ) : isCallOffer ? (
               <CallOfferBubble content={content} isMe={isMe} />
             ) : isGroupCall ? (

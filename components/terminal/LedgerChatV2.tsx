@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { shortAddr } from '@/lib/utils';
 import { formatQd } from '@/lib/qd';
-import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Smile, Paperclip, BarChart2, Wallet, Flame, Image as ImageIcon, Map as MapIcon, Bot } from 'lucide-react';
+import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Smile, Paperclip, BarChart2, Wallet, Flame, Heart, Image as ImageIcon, Map as MapIcon, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import type Peer from 'peerjs';
@@ -56,6 +56,7 @@ import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import { LedgerUpdatesTab } from '@/components/chat/LedgerUpdatesTab';
 import { BurnTimerSheet } from '@/components/chat/BurnTimerSheet';
 import { NativeCryptoSendModal } from '@/components/chat/NativeCryptoSendModal';
+import { SendTipModal } from '@/components/chat/SendTipModal';
 import { ScheduleMessageSheet } from '@/components/chat/ScheduleMessageSheet';
 import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
 import { isBotCommand, executeBotCommand } from '@/lib/bots/botInterceptor';
@@ -593,6 +594,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showBurnSheet, setShowBurnSheet] = useState(false);
   const [showScheduleSheet, setShowScheduleSheet] = useState(false);
   const [showWalletTransfer, setShowWalletTransfer] = useState(false);
+  const [showTipModal, setShowTipModal] = useState(false);
   // Phase 5: Poll creator form state (hoisted to satisfy React rules of hooks)
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
@@ -5283,8 +5285,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             { id: 'gif',       color: '#AF52DE', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><text x="5" y="16" fontSize="9" fontWeight="bold" fill="currentColor" stroke="none">GIF</text></svg>,   label: 'GIF',            sublabel: 'Search animated GIFs',   onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
                             { id: 'sticker',   color: '#FFCC00', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>,      label: 'Stickers',       sublabel: 'Send a sticker',         onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
                             { id: 'poll',      color: '#007AFF', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
-                            // ── Crypto ───────────────────────────────────────────────
+                            // ── Crypto & Creator Tipping ──────────────────────────────
                             { id: 'payment',   color: '#25D366', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>,     label: 'Payment',        sublabel: 'Send crypto',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
+                            { id: 'tip',       color: '#25D366', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, label: 'Creator Tip',  sublabel: 'Support peer with ETH/USDC', onClick: () => { setShowTipModal(true); setShowAppDrawer(false); } },
                             // ── Utilities ────────────────────────────────────────────
                             { id: 'location',  color: '#32D74B', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,    label: 'Location',       sublabel: 'Share your location',    onClick: () => { 
                               setShowAppDrawer(false);
@@ -6566,6 +6569,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       </div>
 
       {/* Fase 13: WebRTC Pre-Prompt — shown before getUserMedia is called */}
+       {/* ── Creator Tip Modal (Phase 3 Monetization #129-130) ── */}
+       {showTipModal && activePeer && (
+         <SendTipModal
+           open={showTipModal}
+           recipientAddress={activePeer}
+           onClose={() => setShowTipModal(false)}
+           onTipSent={({ amount, token, txHash, to }) => {
+             const payload = JSON.stringify({ amount, token, txHash, to });
+             executeSend(`__TIP__::${payload}`);
+             setShowTipModal(false);
+           }}
+         />
+       )}
+
       {pendingCallType && isMounted && typeof document !== 'undefined'
         ? createPortal(
             <MediaPermissionsPrePrompt
