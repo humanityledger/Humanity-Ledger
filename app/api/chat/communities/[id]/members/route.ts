@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 
 export const dynamic = 'force-dynamic';
-
-async function getCaller(req: NextRequest): Promise<string | null> {
-  return req.headers.get('x-web3-address')?.toLowerCase() || null;
-}
 
 async function isAdminOrOwner(communityId: string, caller: string): Promise<boolean> {
   const community = await (prisma as any).community.findUnique({ where: { id: communityId } });
@@ -32,7 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 // Change member role (admin can promote/demote)
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const caller = await getCaller(req);
+    const caller = await resolveVerifiedCaller(req);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     if (!(await isAdminOrOwner(params.id, caller)))
@@ -54,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 // Kick member (admin) or leave (self)
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const caller = await getCaller(req);
+    const caller = await resolveVerifiedCaller(req);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));

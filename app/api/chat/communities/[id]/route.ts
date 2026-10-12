@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 
 export const dynamic = 'force-dynamic';
-
-async function getCaller(req: NextRequest): Promise<string | null> {
-  return req.headers.get('x-web3-address')?.toLowerCase() ||
-    req.headers.get('x-verified-session-address')?.toLowerCase() || null;
-}
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -32,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const caller = await getCaller(req);
+    const caller = await resolveVerifiedCaller(req);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const community = await (prisma as any).community.findUnique({ where: { id: params.id } });
@@ -63,7 +59,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const caller = await getCaller(req);
+    const caller = await resolveVerifiedCaller(req);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const community = await (prisma as any).community.findUnique({ where: { id: params.id } });

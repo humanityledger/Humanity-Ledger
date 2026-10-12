@@ -199,8 +199,14 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     if (rateLimitRes) return rateLimitRes;
   }
 
-  // 2. Allow all public paths through immediately
+  // 2. Allow all public paths through immediately (strip any client-injected verification headers)
   if (isPublicPath(pathname)) {
+    if (req.headers.has('x-verified-session-address') || req.headers.has('x-session-ts')) {
+      const sanitizedHeaders = new Headers(req.headers);
+      sanitizedHeaders.delete('x-verified-session-address');
+      sanitizedHeaders.delete('x-session-ts');
+      return NextResponse.next({ request: { headers: sanitizedHeaders } });
+    }
     return NextResponse.next();
   }
 
@@ -279,8 +285,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-verified-session-address', sessionAddress);
   requestHeaders.set('x-session-ts', String(Date.now()));
-  const requestId = crypto.randomUUID?.() ?? 
-eq__;
+  const requestId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
   requestHeaders.set('x-request-id', requestId);
 
   const response = NextResponse.next({

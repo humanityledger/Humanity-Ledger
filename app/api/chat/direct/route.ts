@@ -1,23 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export const dynamic = 'force-dynamic';
+import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 
-/** Resolve address from session cookie or x-web3-address header */
-async function resolveAddress(req: NextRequest): Promise<string | null> {
-  // Primary: JWT cookie session
-  try {
-    const { getSession } = await import('@/lib/session');
-    const session = await getSession();
-    if (session?.userId) return session.userId.toLowerCase();
-  } catch {}
-  // Fallback: x-web3-address header (used by XMTP client sync calls)
-  const headerAddr = req.headers.get('x-web3-address');
-  if (headerAddr && /^0x[0-9a-fA-F]{40}$/i.test(headerAddr)) {
-    return headerAddr.toLowerCase();
-  }
-  return null;
-}
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/chat/direct?since=<timestamp_ms>
@@ -26,7 +12,7 @@ async function resolveAddress(req: NextRequest): Promise<string | null> {
  */
 export async function GET(req: NextRequest) {
   try {
-    const address = await resolveAddress(req);
+    const address = await resolveVerifiedCaller(req);
     if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const sinceParam = req.nextUrl.searchParams.get('since');
@@ -74,7 +60,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const address = await resolveAddress(req);
+    const address = await resolveVerifiedCaller(req);
     if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
