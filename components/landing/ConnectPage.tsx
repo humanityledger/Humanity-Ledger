@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 
@@ -200,8 +200,8 @@ export default function ConnectPage() {
       setLinked(true);
       // Auto-redirect to /chat if already logged in (important for Electron .exe)
       const rp = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-      const returnUrl = rp.get("redirect") || rp.get("returnUrl") || "/chat";
-      const safe = returnUrl.startsWith("/") && !returnUrl.startsWith("//") ? returnUrl : "/chat";
+      const returnUrl = rp.get("returnUrl") || rp.get("redirect_url") || rp.get("redirect") || "/chat";
+      const safe = (returnUrl.startsWith("/") && !returnUrl.startsWith("//") && !returnUrl.startsWith("/terminal")) ? returnUrl : "/chat";
       setTimeout(() => { window.location.replace(safe); }, 500);
     }
   }, [setLinked]);
@@ -278,8 +278,8 @@ export default function ConnectPage() {
           }
           await new Promise(r => setTimeout(r, 800));
           const rp = new URLSearchParams(window.location.search);
-          const raw = rp.get("returnUrl") || rp.get("redirect_url") || "";
-          const safe = (raw.startsWith("/") && !raw.startsWith("//") && raw !== "/hub" && !raw.startsWith("/terminal")) ? raw : "/chat";
+          const raw = rp.get("returnUrl") || rp.get("redirect_url") || rp.get("redirect") || "";
+          const safe = (raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/terminal")) ? raw : "/chat";
           window.location.replace(safe);
         } else { setSyncStatus("ERROR"); }
       } catch {}
@@ -294,8 +294,8 @@ export default function ConnectPage() {
     if (isLinked) {
       redirectingRef.current = true;
       const rp = new URLSearchParams(window.location.search);
-      const rv = rp.get("returnUrl") || rp.get("redirect_url");
-      const safe = (rv && rv !== "/portfolio" && !rv.startsWith("/terminal")) ? rv : "/hub";
+      const rv = rp.get("returnUrl") || rp.get("redirect_url") || rp.get("redirect");
+      const safe = (rv && !rv.startsWith("/terminal") && rv !== "/portfolio") ? rv : "/chat";
       window.location.replace(safe);
       return;
     }
@@ -311,8 +311,8 @@ export default function ConnectPage() {
           if (d.authenticated && d.user?.address?.toLowerCase() === address?.toLowerCase()) {
             setLinked(true); redirectingRef.current = true;
             const rp = new URLSearchParams(window.location.search);
-            const rv = rp.get("returnUrl") || rp.get("redirect_url");
-            const safe = (rv && rv !== '/portfolio' && !rv.startsWith('/terminal')) ? rv : '/chat';
+            const rv = rp.get("returnUrl") || rp.get("redirect_url") || rp.get("redirect");
+            const safe = (rv && !rv.startsWith('/terminal') && rv !== '/portfolio') ? rv : '/chat';
             window.location.replace(safe); return;
           }
         }
@@ -338,8 +338,8 @@ export default function ConnectPage() {
         if (vr.ok) {
           setLinked(true); redirectingRef.current = true;
           const rp = new URLSearchParams(window.location.search);
-          const rv = rp.get("returnUrl") || rp.get("redirect_url");
-          window.location.replace((rv && !rv.startsWith('/terminal')) ? rv : '/chat');
+          const rv = rp.get("returnUrl") || rp.get("redirect_url") || rp.get("redirect");
+          window.location.replace((rv && !rv.startsWith('/terminal') && rv !== '/portfolio') ? rv : '/chat');
         } else { setAuthStatus("failed"); signingRef.current = false; }
       } catch (e: any) {
         if (e?.message?.toLowerCase().includes("rejected") || e?.message?.toLowerCase().includes("cancelled")) toast.error("Signature declined");
