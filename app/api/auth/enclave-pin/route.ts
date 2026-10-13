@@ -170,7 +170,8 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
     if (!session?.userId) {
-      return NextResponse.json({ hasPin: false });
+      // Return 401 with noSession flag so client can redirect to /connect
+      return NextResponse.json({ hasPin: false, noSession: true }, { status: 401 });
     }
     const userId = session.userId;
     let storedPinHash: string | null = null;

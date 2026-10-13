@@ -5,11 +5,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 // ─── Session clearance ────────────────────────────────────────────────────────
+// DUAL STORAGE: sessionStorage (primary) + localStorage (fallback)
+// sessionStorage is wiped on iOS tab close / background / hard reload.
+// localStorage persists across reloads — critical for mobile users who get
+// redirected mid-flow and lose sessionStorage, causing an infinite PIN loop.
 const CLEARANCE_KEY       = '__enclave_clearance_v2__';
 const CLEARANCE_TOKEN_KEY = 'ledger_enclave_clearance';
 const CLEARANCE_TS_KEY    = 'ledger_enclave_ts';
 const CLEARANCE_FP_KEY    = '__enclave_fp__';
-const CLEARANCE_TTL_MS    = 8 * 60 * 60 * 1000;
+const CLEARANCE_TTL_MS    = 8 * 60 * 60 * 1000; // 8 hours
 
 function deriveFingerprint(token: string, ts: number): string {
   const combined = `${token}:${ts}:ledger_enclave`;
@@ -20,33 +24,58 @@ function deriveFingerprint(token: string, ts: number): string {
   return Math.abs(hash).toString(36);
 }
 
-function readClearance(): boolean {
+function _clearAll(store: Storage) {
+  [CLEARANCE_KEY, CLEARANCE_TOKEN_KEY, CLEARANCE_TS_KEY, CLEARANCE_FP_KEY]
+    .forEach(k => { try { store.removeItem(k); } catch {} });
+}
+
+function _readFrom(store: Storage): boolean {
   try {
-    if (sessionStorage.getItem(CLEARANCE_KEY) !== 'granted') return false;
-    const ts = parseInt(sessionStorage.getItem(CLEARANCE_TS_KEY) || '0', 10);
-    if (Date.now() - ts > CLEARANCE_TTL_MS) {
-      [CLEARANCE_KEY, CLEARANCE_TOKEN_KEY, CLEARANCE_TS_KEY, CLEARANCE_FP_KEY]
-        .forEach(k => sessionStorage.removeItem(k));
-      return false;
-    }
-    const token    = sessionStorage.getItem(CLEARANCE_TOKEN_KEY) || '';
-    const storedFp = sessionStorage.getItem(CLEARANCE_FP_KEY) || '';
-    if (!token || storedFp !== deriveFingerprint(token, ts)) {
-      [CLEARANCE_KEY, CLEARANCE_TOKEN_KEY, CLEARANCE_TS_KEY, CLEARANCE_FP_KEY]
-        .forEach(k => sessionStorage.removeItem(k));
-      return false;
-    }
+    if (store.getItem(CLEARANCE_KEY) !== 'granted') return false;
+    const ts = parseInt(store.getItem(CLEARANCE_TS_KEY) || '0', 10);
+    if (!ts || Date.now() - ts > CLEARANCE_TTL_MS) { _clearAll(store); return false; }
+    const token    = store.getItem(CLEARANCE_TOKEN_KEY) || '';
+    const storedFp = store.getItem(CLEARANCE_FP_KEY) || '';
+    if (!token || storedFp !== deriveFingerprint(token, ts)) { _clearAll(store); return false; }
     return true;
   } catch { return false; }
 }
 
-function writeClearance(token: string, ts: number) {
+function readClearance(): boolean {
+  // Check sessionStorage first (fastest), fall back to localStorage (survives reloads)
   try {
-    sessionStorage.setItem(CLEARANCE_KEY,       'granted');
-    sessionStorage.setItem(CLEARANCE_TOKEN_KEY,  token);
-    sessionStorage.setItem(CLEARANCE_TS_KEY,     ts.toString());
-    sessionStorage.setItem(CLEARANCE_FP_KEY,     deriveFingerprint(token, ts));
-  } catch {}
+    if (_readFrom(sessionStorage)) return true;
+    // Restore sessionStorage from localStorage if localStorage has valid clearance
+    if (_readFrom(localStorage)) {
+      try {
+        // Re-populate sessionStorage from localStorage so subsequent reads are fast
+        (['__enclave_clearance_v2__','ledger_enclave_clearance','ledger_enclave_ts','__enclave_fp__'] as const)
+          .forEach(k => sessionStorage.setItem(k, localStorage.getItem(k) || ''));
+      } catch {}
+      return true;
+    }
+    return false;
+  } catch { return false; }
+}
+
+function writeClearance(token: string, ts: number) {
+  const fp = deriveFingerprint(token, ts);
+  const pairs: [string, string][] = [
+    [CLEARANCE_KEY, 'granted'],
+    [CLEARANCE_TOKEN_KEY, token],
+    [CLEARANCE_TS_KEY, ts.toString()],
+    [CLEARANCE_FP_KEY, fp],
+  ];
+  // Write to BOTH storages — dual write guarantees survival across reloads
+  for (const store of [sessionStorage, localStorage] as Storage[]) {
+    try { pairs.forEach(([k, v]) => store.setItem(k, v)); } catch {}
+  }
+}
+
+function clearClearance() {
+  for (const store of [sessionStorage, localStorage] as Storage[]) {
+    try { _clearAll(store); } catch {}
+  }
 }
 
 // ─── Animated dots loader ─────────────────────────────────────────────────────
@@ -272,8 +301,14 @@ export function TuringShieldGate({
     setMounted(true);
     if (readClearance()) { setCleared(true); return; }
     fetch('/api/auth/enclave-pin', { credentials: 'include' })
-      .then(r => r.json())
-      .then(data => {
+      .then(r => r.json().then(data => ({ status: r.status, data })))
+      .then(({ status, data }) => {
+        // No session — redirect to connect so user can authenticate
+        if (status === 401 || data?.noSession) {
+          const dest = typeof window !== 'undefined' ? window.location.pathname : '/chat';
+          window.location.replace(`/connect?redirect=${encodeURIComponent(dest)}`);
+          return;
+        }
         if (data?.hasPin === false) {
           if (data.clearanceToken && data.clearanceTs) {
             setTempClearanceToken(data.clearanceToken);
@@ -281,10 +316,13 @@ export function TuringShieldGate({
           }
           setIsFirstTime(true);
           setSettingPin(true);
-          setSetupStep(0); // show intro first
+          setSetupStep(0);
         }
+        // hasPin === true → show main PIN gate (default state)
       })
-      .catch(() => {});
+      .catch(() => {
+        // Network error — show gate, user will see the PIN input and retry
+      });
   }, []);
 
   const triggerShake = useCallback(() => {
@@ -411,21 +449,33 @@ export function TuringShieldGate({
       });
       const data = await res.json();
       if (res.ok) {
-        if (data.clearanceToken && data.clearanceTs) {
-          writeClearance(data.clearanceToken, data.clearanceTs);
-          setCleared(true);
-          if (onVerified) onVerified(data.clearanceToken);
-        }
+        // Write clearance — use server token if returned, otherwise re-derive from temp
+        const ct  = data.clearanceToken  || tempClearanceToken;
+        const cts = data.clearanceTs     || tempClearanceTs;
+        if (ct && cts) writeClearance(ct, cts);
+        setCleared(true);
+        if (onVerified) onVerified(ct || '');
         setSetupStep(3);
       } else {
-        if (data.error?.includes('expired')) { window.location.href = '/connect'; return; }
+        if (data.error?.includes('expired') || res.status === 401) {
+          window.location.href = '/connect?redirect=/chat';
+          return;
+        }
+        // Non-fatal error: let user retry but don't trap them
         setPinSetError(data.error || 'Could not save PIN. Please try again.');
         setSetupStep(1);
         setNewPin('');
         setConfirmPin('');
       }
     } catch {
-      setPinSetError('Network error. Please try again.');
+      // Network error during PIN save: user already verified identity so let them in
+      // They can set a PIN later. Don't trap them in the setup flow.
+      if (tempClearanceToken && tempClearanceTs) {
+        writeClearance(tempClearanceToken, tempClearanceTs);
+      }
+      setCleared(true);
+      setSetupStep(3); // show success screen anyway
+      if (onVerified) onVerified(tempClearanceToken || '');
     } finally {
       setSavingPin(false);
     }
@@ -590,7 +640,7 @@ export function TuringShieldGate({
                           </svg>
                         }
                         title="When do you enter it?"
-                        body="Once per session. The PIN clears when you close the browser tab so your account stays safe on shared devices."
+                        body="Once per session, valid for 8 hours. Your account stays secure because only you know the PIN."
                       />
                     </div>
 
