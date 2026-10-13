@@ -850,6 +850,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
   }, [callState]);
 
+  // ─── Safety: stop ringtone whenever callState leaves 'ringing' ───────────────
+  // Belt-and-suspenders. stopRingtone is also called in answerCall() and performEndCall(),
+  // but this effect guarantees the ring cannot persist past the 'ringing' phase
+  // regardless of which code path transitions the state.
+  useEffect(() => {
+    if (callState !== 'ringing') {
+      stopRingtone();
+    }
+  }, [callState, stopRingtone]);
+
   const formatDuration = (totalSeconds: number) => {
     const m = Math.floor(totalSeconds / 60);
     const s = totalSeconds % 60;
@@ -1293,16 +1303,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   // ─── Ringtone Generator ──────────────────────────────────────────────────────
   const ringtoneCtxRef = useRef<AudioContext | null>(null);
-  
+  // Shared stopped flag — accessible by both startRingtone and stopRingtone.
+  // Previously was a closure-local variable, making it unreachable from stopRingtone.
+  const ringtoneStopped = useRef(true);
+
   const startRingtone = useCallback(() => {
+    ringtoneStopped.current = false;
     let ctx: AudioContext | null = null;
     try {
       ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       ringtoneCtxRef.current = ctx;
-    } catch { return () => {}; }
-    let stopped = false;
+    } catch { return; }
     const playRing = () => {
-      if (stopped || !ctx) return;
+      // Check the shared ref — stopRingtone sets this to true immediately
+      if (ringtoneStopped.current || !ctx) return;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
@@ -1316,10 +1330,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     playRing();
     const id = setInterval(playRing, 2000);
     ringtoneRef.current = id;
-    return () => { stopped = true; clearInterval(id); ctx?.close(); };
   }, []);
 
   const stopRingtone = useCallback(() => {
+    // Mark stopped FIRST so any in-flight playRing() that is about to execute returns early
+    ringtoneStopped.current = true;
     if (ringtoneRef.current) {
       clearInterval(ringtoneRef.current);
       ringtoneRef.current = null;
@@ -1329,6 +1344,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       ringtoneCtxRef.current = null;
     }
   }, []);
+
 
   // ─── PeerJS Initialisation ───────────────────────────────────────────────────
   // [WEBRTC RE-INIT FIX] This effect now depends on BOTH address AND peerInitKey.

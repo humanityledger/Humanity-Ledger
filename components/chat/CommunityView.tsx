@@ -184,14 +184,14 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
       });
       if (res.ok) {
         const d = await res.json();
-        const allPosts: any[] = d.posts || [];
-        // Posts tab = items that have a title or are rich HTML (not raw chat messages)
-        const richPosts = allPosts.filter(p => p.title || (p.contentHtml && p.contentHtml.includes('<')));
-        setPosts(richPosts.length > 0 ? richPosts : allPosts);
+        // The API already filters to title != null (rich posts only).
+        // No fallback — chat messages live in CommunityChatView, not here.
+        setPosts(d.posts || []);
       }
     } catch {}
     setLoadingPosts(false);
   }, [communityId, myAddress]);
+
 
   useEffect(() => {
     fetchCommunity();

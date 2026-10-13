@@ -6,10 +6,15 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // Posts tab = only entries with a title (rich posts from editor).
+    // Chat messages have no title and are served by /api/chat/communities/posts.
     const posts = await (prisma as any).communityPost.findMany({
-      where: { communityId: params.id },
+      where: {
+        communityId: params.id,
+        title: { not: null },
+      },
       orderBy: { createdAt: 'desc' },
-      take: 50
+      take: 50,
     });
     return NextResponse.json({ posts });
   } catch (e: any) {

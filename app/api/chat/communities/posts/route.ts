@@ -64,10 +64,16 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Missing communityId' }, { status: 400 });
   }
 
+  // Chat messages = entries WITHOUT a title.
+  // Entries WITH a title are rich posts served by /api/chat/communities/[id]/posts.
   const posts = await prisma.communityPost.findMany({
-    where: { communityId, ...(channelId ? { channelId } : {}) },
-    orderBy: { createdAt: 'desc' },
-    take: 100,
+    where: {
+      communityId,
+      title: null,
+      ...(channelId ? { channelId } : {}),
+    },
+    orderBy: { createdAt: 'asc' },
+    take: 200,
   });
 
   return NextResponse.json({ posts });

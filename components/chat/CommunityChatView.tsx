@@ -292,24 +292,17 @@ export function CommunityChatView({
     if (!communityId) return;
     try {
       const url = `/api/chat/communities/posts?communityId=${communityId}${channelId ? `&channelId=${channelId}` : ''}`;
-      const res = await fetch(url, {
-        headers: { 'x-web3-address': myAddress, 'x-verified-session-address': myAddress },
-      });
+      const res = await fetch(url, { credentials: 'same-origin' });
       if (!res.ok) return;
       const data = await res.json();
-      const raw: Msg[] = (data.posts || []);
-      const chatMsgs = raw.filter(p => !p.title);
-      const filtered = channelId
-        ? chatMsgs.filter(m => m.channelId === channelId || !m.channelId)
-        : chatMsgs;
-      const ordered = [...filtered].reverse();
+      // API already filters: title=null (chat messages only), ordered asc
+      const ordered: Msg[] = data.posts || [];
 
       setMessages(prev => {
         const confirmedIds = new Set(ordered.map(m => m.id));
         const kept = prev.filter(m => m.isOptimistic && !confirmedIds.has(m.id));
         const merged = [...ordered, ...kept];
 
-        // Check if new messages arrived
         const realCount = ordered.length;
         if (realCount > prevCount.current) {
           if (!isAtBottom) {
@@ -322,13 +315,13 @@ export function CommunityChatView({
         return merged;
       });
 
-      // Update pinned
       const pinned = ordered.filter(m => m.isPinned);
       if (pinned.length > 0) setPinnedMsgs(pinned);
     } catch (e) {
       console.error('[CommunityChatView] fetchMessages error', e);
     }
   }, [communityId, channelId, myAddress, isAtBottom, scrollToBottom]);
+
 
   useEffect(() => {
     fetchMessages(false);
@@ -361,15 +354,12 @@ export function CommunityChatView({
     try {
       const res = await fetch('/api/chat/communities/posts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-web3-address': myAddress,
-          'x-verified-session-address': myAddress,
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({
           communityId,
           channelId: channelId || undefined,
-          authorAddress: myAddress.toLowerCase(),
+          // NO title field — keeps this record as a chat message (title=null)
           content: text,
           contentHtml: text,
           plainText: text,
@@ -381,7 +371,6 @@ export function CommunityChatView({
         setMessages(prev => prev.filter(m => m.id !== optId));
         optimisticIds.current.delete(optId);
       } else {
-        // Immediately refresh to replace optimistic with real
         await fetchMessages(true);
         setMessages(prev => prev.filter(m => m.id !== optId));
         optimisticIds.current.delete(optId);
@@ -393,6 +382,7 @@ export function CommunityChatView({
     } finally {
       setSending(false);
     }
+
   }, [communityId, channelId, myAddress, fetchMessages, scrollToBottom]);
 
   const handleSend = async (e: React.FormEvent) => {
