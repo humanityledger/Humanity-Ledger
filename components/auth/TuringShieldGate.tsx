@@ -347,11 +347,16 @@ export function TuringShieldGate({
 
       if (res.status === 429) {
         setVerifyProgress(100);
+        // Parse actual lockout duration from server error if available,
+        // otherwise fall back to our known 5-minute window
+        const minutesMatch = data.error?.match(/(\d+)\s*minute/);
+        const lockoutMs = minutesMatch ? parseInt(minutesMatch[1]) * 60 * 1000 : 5 * 60 * 1000;
+        const lockoutSecs = Math.floor(lockoutMs / 1000);
         setTimeout(() => {
           setLocked(true);
-          setLockoutExpiresAt(Date.now() + 15 * 60 * 1000);
-          setLockoutCountdown(15 * 60);
-          setPinError(data.error || 'Too many attempts. Please wait 15 minutes.');
+          setLockoutExpiresAt(Date.now() + lockoutMs);
+          setLockoutCountdown(lockoutSecs);
+          setPinError(data.error || 'Too many attempts. Please wait 5 minutes.');
           setPin('');
           triggerShake();
           setVerifying(false);
@@ -365,11 +370,11 @@ export function TuringShieldGate({
         setAttemptsRemaining(remaining);
         if (remaining === 0) {
           setLocked(true);
-          setLockoutExpiresAt(Date.now() + 15 * 60 * 1000);
-          setLockoutCountdown(15 * 60);
-          setPinError('Too many failed attempts. Access temporarily suspended.');
-        } else if (data.error?.includes('expired')) {
-          window.location.href = '/connect';
+          setLockoutExpiresAt(Date.now() + 5 * 60 * 1000);
+          setLockoutCountdown(5 * 60);
+          setPinError('Too many failed attempts. Please wait 5 minutes.');
+        } else if (data.error?.includes('expired') || res.status === 401) {
+          window.location.href = '/connect?redirect=/chat';
           return;
         } else {
           setPinError(
