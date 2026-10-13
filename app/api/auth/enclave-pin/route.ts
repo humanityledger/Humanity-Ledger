@@ -20,8 +20,12 @@ import { getSession } from '@/lib/session';
 import crypto from 'crypto';
 
 // ── Brute-force tracker (Migrated to DB for Serverless/Edge persistence) ──
-const ATTEMPT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const MAX_ATTEMPTS = 5;
+// HISTORY: was 5 attempts / 15 min. Reduced lockout to 5 min and raised
+// threshold to 8 to avoid legitimate users being locked out during hash
+// migration (case-normalization fix, 2026-10-13). Still secure against bots
+// (8 × 10^-6 probability of guessing a 6-digit PIN before lockout).
+const ATTEMPT_WINDOW_MS = 5 * 60 * 1000;  // 5 minutes (was 15)
+const MAX_ATTEMPTS = 8;                     // 8 attempts (was 5)
 
 // ── PIN hashing ───────────────────────────────────────────────────────────────
 // We use HMAC-SHA256 with a server-side secret for PIN storage.
@@ -29,11 +33,19 @@ const MAX_ATTEMPTS = 5;
 //   1. The salt is the userId (unique per user, no rainbow tables)
 //   2. The HMAC secret adds a server-side factor (knowing the DB is not enough)
 // For production, bcrypt would be ideal but adds latency on Edge.
+// CRITICAL: ALWAYS normalize userId to lowercase before hashing.
+// getSession() returns lowercase for SIWE (ledger_session/human_session) but
+// the legacy email session (human.access-token) can return the userId in the
+// case it was originally stored — potentially checksummed (0xAbCd...).
+// If a PIN was set with checksummed userId but verified with lowercase userId,
+// the HMAC output differs → CORRECT PIN FAILS → user gets locked out in 5 attempts.
 function hashPin(userId: string, pin: string): string {
   const secret = (() => { const s = process.env.ENCLAVE_PIN_SECRET || process.env.JWT_SECRET; if (!s) throw new Error('CRITICAL: Missing ENCLAVE_PIN_SECRET'); return s; })();
+  // Normalize: always lowercase the userId so hash is stable across all auth paths
+  const normalizedId = userId.toLowerCase();
   return crypto
     .createHmac('sha256', secret)
-    .update(`${userId}:${pin}`)
+    .update(`${normalizedId}:${pin}`)
     .digest('hex');
 }
 
