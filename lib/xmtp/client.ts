@@ -462,69 +462,46 @@ export async function sendMessage(
       identifierKind: 'Ethereum',
     };
 
-    for (let i = 0; i < 3; i++) {
+    let sentViaXmtp = false;
+    for (let i = 0; i < 2; i++) {
       try {
         // [CRITICAL FIX v6] newDmWithIdentifier is idempotent. It creates OR finds
         // the existing DM without needing a manual listDms scan.
-        const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
+        const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 8000));
         const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
         
-        // [CRITICAL FIX] Must sync the DM before sending, or messages get lost 
-        // in local MLS state desync on XMTP v3+
+        // Sync the DM before sending to prevent local MLS state desync
         try {
-          const syncTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('sync timeout')), 5000));
+          const syncTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('sync timeout')), 4000));
           await Promise.race([dm.sync(), syncTimeout]);
         } catch {}
         
-        // [4G/5G FIX] Wrap send in 15s timeout to prevent hanging on poor connections
-        const sendTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('send timeout')), 15000));
+        // Wrap send in 10s timeout to prevent hanging
+        const sendTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('send timeout')), 10000));
         await Promise.race([dm.send(content), sendTimeout]);
-        // Sync after send to confirm delivery — ignore sync errors, message is already sent
         try { await dm.sync(); } catch {}
-        return; // SUCCESS — do not fall through to offline queue
+        sentViaXmtp = true;
+        return; // SUCCESS — delivered directly via XMTP
       } catch (sendErr: any) {
-        const errMsg = (sendErr?.message || '').toLowerCase();
-
-        // These are fatal errors meaning the recipient definitely cannot receive on XMTP
-        // Fall through to offline queue
-        const isRecipientOffline =
-          errMsg.includes('not on xmtp') ||
-          errMsg.includes('no inbox') ||
-          errMsg.includes('identity not found') ||
-          errMsg.includes('recipient not found');
-
-        if (isRecipientOffline) {
-          console.warn('[XMTP] Recipient confirmed offline, queuing:', toAddress);
-          break; // Stop retries, fall through to offline queue
-        }
-
-        // Non-fatal send error (network blip, timeout, relay issue)
-        // Store the error and retry with backoff
         lastErr = sendErr;
-
-        if (i < 2) {
-          await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i))); // 1s, 2s backoff
-        }
+        console.warn(`[XMTP] Attempt ${i + 1} to reach ${toAddress} via XMTP did not complete:`, sendErr?.message || sendErr);
+        if (i === 0) await new Promise(r => setTimeout(r, 600));
       }
-    }
-
-    // If we exhausted retries on a non-fatal error, re-throw so the caller
-    // can show the user a retry option instead of silently queuing.
-    if (lastErr) {
-      throw lastErr;
     }
   } else {
     console.log('[XMTP] Aztec address detected. Bypassing native XMTP and using Offline Queue.');
   }
 
   // === OFFLINE QUEUE FALLBACK ===
-  // Only reached if recipient is definitively NOT on XMTP.
-  // Use the explicitly passed Ethereum address (never the inboxId).
+  // When recipient cannot be reached directly via XMTP (recipient is offline, has not yet initialized XMTP inbox,
+  // or network timed out), safely store the message in the backend offline queue so it is guaranteed
+  // to be delivered as soon as the recipient opens Ledger Chat.
   const senderAddr: string = senderEthAddress ?? 'unknown';
 
   try {
     const res = await fetch('/api/chat/queue', {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'x-web3-address': senderAddr,
@@ -539,9 +516,10 @@ export async function sendMessage(
       const errBody = await res.json().catch(() => ({}));
       throw new Error(errBody.error || `Offline queue failed with status ${res.status}`);
     }
+    console.log(`[XMTP] Message safely queued in offline store for ${toAddress}`);
   } catch (queueErr) {
-    console.warn('[XMTP Offline Queue] Error queuing:', queueErr);
-    // Re-throw so the UI marks it as failed and allows retry
+    console.warn('[XMTP Offline Queue] Error queuing message:', queueErr);
+    // If both XMTP and offline queue failed, throw so the sender can see retry
     throw queueErr;
   }
 }
@@ -882,33 +860,57 @@ export async function resolveSenderAddress(senderInboxId: string, client?: Clien
 
 
 
-
 export async function getXmtpGroup(client: Client, groupId: string) { await client.conversations.sync(); const groups = await (client.conversations as any).listGroups(); return groups.find((g: any) => g.id === groupId); }
 export async function createXmtpGroup(client: Client, peerAddresses: string[]) { await client.conversations.sync(); return await (client.conversations as any).newGroup(peerAddresses); }
 
+// Tracks IDs we've already dispatched in this session to prevent duplicates across rapid polls
+const _dispatchedOfflineIds = new Set<string>();
+
 // === OFFLINE QUEUE SYNC ===
+// Fetches pending messages from the server-side DB queue and dispatches them as
+// 'ledger_offline_msg' CustomEvents so the LedgerChat UI can inject them into the
+// active conversation. After dispatching, sends a DELETE ack to the server so
+// messages are removed from the queue (safe delivery guarantee).
 export async function syncOfflineQueue(client: Client, myEthAddress: string): Promise<void> {
   try {
-    const res = await fetch('/api/chat/queue', {
+    const res = await fetch(`/api/chat/queue?address=${encodeURIComponent(myEthAddress)}`, {
+      credentials: 'include',
       headers: { 'x-web3-address': myEthAddress }
     });
     if (!res.ok) return;
     const { messages } = await res.json();
-    if (messages && messages.length > 0) {
-      console.log('[XMTP] Syncing offline queue, found:', messages.length);
-      for (const msg of messages) {
-        if (typeof window !== 'undefined') {
-           window.dispatchEvent(new CustomEvent('ledger_offline_msg', { detail: msg }));
-        }
+    if (!messages || messages.length === 0) return;
+
+    const newMessages = messages.filter((msg: any) => !_dispatchedOfflineIds.has(msg.id));
+    if (newMessages.length === 0) return;
+
+    console.log('[XMTP] Syncing offline queue, found:', newMessages.length, 'new messages');
+
+    // Dispatch all new messages to the UI
+    for (const msg of newMessages) {
+      _dispatchedOfflineIds.add(msg.id);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ledger_offline_msg', { detail: msg }));
       }
     }
+
+    // Acknowledge delivery to the server — DELETE only the IDs we just processed.
+    // If this request fails, messages remain in DB and will be re-dispatched next poll
+    // (harmless: dedup via _dispatchedOfflineIds prevents duplicate UI insertion).
+    const idsToAck = newMessages.map((msg: any) => msg.id);
+    fetch('/api/chat/queue', {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-web3-address': myEthAddress,
+      },
+      body: JSON.stringify({ ids: idsToAck }),
+    }).catch(e => console.warn('[XMTP] Queue ack failed (messages safe, will retry):', e));
+
   } catch (e) {
     console.error('[XMTP] Failed to sync offline queue', e);
   }
 }
-
-
-
-
 
 

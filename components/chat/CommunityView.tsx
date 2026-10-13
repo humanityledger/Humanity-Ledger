@@ -528,7 +528,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               exit={{ opacity: 0 }}
               className="flex-1 overflow-y-auto"
             >
-              <CommunityAnalytics />
+              <CommunityAnalytics communityId={communityId} community={community} />
             </motion.div>
           )}
 

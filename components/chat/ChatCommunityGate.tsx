@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 interface ChatCommunityGateProps {
     onAccept: () => void;
@@ -11,7 +11,7 @@ export function ChatCommunityGate({ onAccept, onDecline }: ChatCommunityGateProp
         <div className="fixed inset-0 z-[500] bg-white flex flex-col items-center justify-center p-6 text-black">
             <div className="max-w-md w-full bg-[#f9f8f6] p-8 rounded-3xl border border-[#ebebeb] shadow-xl">
                 <div className="flex items-center gap-3 mb-4">
-                    <ShieldAlert className="text-red-500" size={28} />
+                    <AlertCircle className="text-red-500" size={28} />
                     <h2 className="text-2xl font-black">Community Guidelines</h2>
                 </div>
                 <div className="h-48 overflow-y-auto text-sm text-gray-600 space-y-4 pr-2 mb-6 border border-gray-200 p-4 rounded-xl">

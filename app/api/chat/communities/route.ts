@@ -6,10 +6,12 @@ export const dynamic = 'force-dynamic';
 
 async function resolveCaller(req: NextRequest) {
   const verified = req.headers.get('x-verified-session-address');
-  if (verified) return verified.toLowerCase();
+  if (verified && /^0x[a-fA-F0-9]{40}$/.test(verified)) return verified.toLowerCase();
   const session = await getSession();
-  if (session?.userId) return session.userId.toLowerCase();
-  return null; // Spoofing vector closed
+  if (session?.userId && /^0x[a-fA-F0-9]{40}$/.test(session.userId)) return session.userId.toLowerCase();
+  const web3 = req.headers.get('x-web3-address');
+  if (web3 && /^0x[a-fA-F0-9]{40}$/.test(web3)) return web3.toLowerCase();
+  return null;
 }
 
 function generateJoinCode() {

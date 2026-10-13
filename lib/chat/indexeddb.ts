@@ -53,6 +53,18 @@ export class ChatDatabase {
     });
   }
 
+  async saveMessage(myAddress: string, peerAddress: string, msg: any): Promise<void> {
+    const peerLower = (peerAddress || '').toLowerCase();
+    const formatted = {
+      ...msg,
+      id: msg.id || `msg-${Date.now()}-${Math.random()}`,
+      conversationId: `dm-${peerLower}`,
+      sentAtNs: msg.sentAtNs || (msg.sent ? new Date(msg.sent).getTime() * 1_000_000 : Date.now() * 1_000_000),
+      sentAt: msg.sent || new Date(),
+    };
+    return this.saveMessages([formatted]);
+  }
+
   async getMessagesForConversation(conversationId: string, limit: number = 50, offset: number = 0): Promise<any[]> {
     if (!this.db) await this.init();
     return new Promise((resolve, reject) => {

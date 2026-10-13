@@ -195,7 +195,7 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     const question = parts[1] || '';
     const options = (parts[2] || '').split('|').filter(Boolean);
     const [voted, setVoted] = useState<number|null>(null);
-    const [votes, setVotes] = useState(() => options.map(() => Math.floor(Math.random()*5)));
+    const [votes, setVotes] = useState(() => options.map(() => 0));
     const total = votes.reduce((a,b)=>a+b, 0);
     return (
       <div className="min-w-[200px] max-w-[280px]">

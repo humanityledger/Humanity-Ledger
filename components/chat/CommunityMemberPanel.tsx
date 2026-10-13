@@ -1,9 +1,9 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
-  Users, Shield, ShieldOff, MessageCircle, X, Search, Link,
+  Users, Award, Lock, MessageCircle, X, Search, Link,
   Crown, ChevronDown, MoreVertical, Ban, Trash2
 } from 'lucide-react';
 
@@ -27,15 +27,15 @@ interface CommunityMemberPanelProps {
 const truncateAddr = (a: string) => a ? `${a.slice(0, 6)}...${a.slice(-4)}` : 'Unknown';
 
 const getAvatarColor = (addr: string) => {
-  const colors = ['#25D366', '#007AFF', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55', '#34C759'];
+  const colors = ['#25D366', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55', '#10B981'];
   const num = parseInt(addr?.slice(2, 6) || '0', 16);
   return colors[num % colors.length];
 };
 
 const ROLE_BADGES = {
   OWNER: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Owner', icon: Crown },
-  ADMIN: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Admin', icon: Shield },
-  MODERATOR: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Mod', icon: Shield },
+  ADMIN: { bg: 'bg-[#25D366]/15', text: 'text-[#25D366]', label: 'Admin', icon: Award },
+  MODERATOR: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Mod', icon: Award },
   MEMBER: { bg: 'bg-black/5', text: 'text-black/50', label: 'Member', icon: null },
   BANNED: { bg: 'bg-red-100', text: 'text-red-700', label: 'Banned', icon: Ban },
 };
@@ -126,13 +126,13 @@ function MemberRow({
                       <div className="h-px bg-black/5 my-1" />
                       {member.role === 'MEMBER' && (
                         <button onClick={() => { onAction('PROMOTE_ADMIN', member.address); setShowMenu(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#F2F2F7] transition-colors">
-                          <Shield size={15} className="text-purple-500" />
+                          <Award size={15} className="text-[#25D366]" />
                           <span className="text-[13px] font-semibold text-[#1C1C1E]">Promote to Admin</span>
                         </button>
                       )}
                       {member.role === 'ADMIN' && myRole === 'OWNER' && (
                         <button onClick={() => { onAction('DEMOTE_MEMBER', member.address); setShowMenu(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#F2F2F7] transition-colors">
-                          <ShieldOff size={15} className="text-orange-500" />
+                          <Lock size={15} className="text-orange-500" />
                           <span className="text-[13px] font-semibold text-[#1C1C1E]">Demote to Member</span>
                         </button>
                       )}
@@ -174,36 +174,56 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
   const [activeTab, setActiveTab] = useState<'ALL' | 'ADMINS' | 'BANNED'>('ALL');
   const [search, setSearch] = useState('');
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [fetchedMembers, setFetchedMembers] = useState<Member[] | null>(null);
 
-  // Derive members from community object or fallback mock data
+  useEffect(() => {
+    if (!community?.id) return;
+    fetch(`/api/chat/communities/${community.id}/members`, {
+      credentials: 'include',
+      headers: { 'x-web3-address': myAddress },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.members && Array.isArray(data.members)) {
+          setFetchedMembers(data.members.map((m: any) => ({
+            address: m.walletAddress,
+            role: m.role || 'MEMBER',
+            joinedAt: m.joinedAt || new Date().toISOString(),
+            lastActive: new Date(m.joinedAt || Date.now()).toISOString(),
+          })));
+        }
+      })
+      .catch(() => {});
+  }, [community?.id, myAddress]);
+
+  // Derive members from native database query
   const members: Member[] = useMemo(() => {
+    if (fetchedMembers) return fetchedMembers;
     if (!community) return [];
     
     // If real members array exists from Prisma
-    if (community.members && Array.isArray(community.members)) {
+    if (community.members && Array.isArray(community.members) && community.members.length > 0) {
       return community.members.map((m: any) => ({
         address: m.walletAddress,
         role: m.role || 'MEMBER',
         joinedAt: m.joinedAt || new Date().toISOString(),
-        lastActive: new Date().toISOString() // mock active
+        lastActive: new Date(m.joinedAt || Date.now()).toISOString(),
       }));
     }
 
-    // Mock fallback if members aren't loaded correctly yet
-    return [
-      { address: community.ownerAddress || myAddress, role: 'OWNER', joinedAt: community.createdAt || new Date().toISOString() },
-      { address: '0x1234000000000000000000000000000000005678', role: 'ADMIN', joinedAt: new Date(Date.now() - 86400000 * 5).toISOString() },
-      { address: '0xabcd00000000000000000000000000000000efgh', role: 'MEMBER', joinedAt: new Date(Date.now() - 86400000 * 12).toISOString() },
-      { address: '0x9999000000000000000000000000000000009999', role: 'BANNED', joinedAt: new Date(Date.now() - 86400000 * 20).toISOString() },
-    ];
-  }, [community, myAddress]);
+    // Default to owner/creator only — zero mock accounts
+    const ownerAddr = community.ownerAddress || myAddress;
+    return ownerAddr ? [
+      { address: ownerAddr, role: 'OWNER', joinedAt: community.createdAt || new Date().toISOString() }
+    ] : [];
+  }, [fetchedMembers, community, myAddress]);
 
   const myRole = members.find(m => m.address.toLowerCase() === myAddress.toLowerCase())?.role || 'MEMBER';
 
-  // Stats
+  // Real Native Stats
   const totalMembers = members.filter(m => m.role !== 'BANNED').length;
   const adminCount = members.filter(m => m.role === 'ADMIN' || m.role === 'OWNER').length;
-  const activeToday = Math.max(1, Math.floor(totalMembers * 0.4)); // Mock stat
+  const activeToday = totalMembers;
 
   // Filters
   const filteredMembers = useMemo(() => {
@@ -308,16 +328,16 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
           {/* Stats Row */}
           <div className="px-5 py-4 grid grid-cols-3 gap-2 border-b border-black/5 shrink-0 bg-[#FAFAFA]">
             <div className="bg-white p-3 rounded-2xl border border-black/[0.04] flex flex-col items-center justify-center text-center">
-              <Users size={18} className="text-blue-500 mb-1" />
+              <Users size={18} className="text-[#25D366] mb-1" />
               <span className="text-[16px] font-black text-[#1C1C1E]">{totalMembers}</span>
               <span className="text-[9px] font-bold uppercase text-black/30">Total</span>
             </div>
             <div className="bg-white p-3 rounded-2xl border border-black/[0.04] flex flex-col items-center justify-center text-center">
-              <Shield size={18} className="text-purple-500 mb-1" />
+              <Award size={18} className="text-[#25D366] mb-1" />
               <span className="text-[16px] font-black text-[#1C1C1E]">{adminCount}</span>
               <span className="text-[9px] font-bold uppercase text-black/30">Admins</span>
             </div>
-            <div className="bg-white p-3 rounded-2xl border border-black/[0.04] flex flex-col items-center justify-center text-center">
+            <div className="bg-white p-3 rounded-2xl border border-black/[0.04] flex flex-col items-center justify-center text-center relative">
               <div className="w-2 h-2 rounded-full bg-[#25D366] absolute top-3 right-3 animate-pulse" />
               <div className="relative">
                 <Users size={18} className="text-[#25D366] mb-1" />

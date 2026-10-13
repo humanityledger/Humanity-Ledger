@@ -2,10 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Settings, Users, Shield, Lock, Trash2, Edit, Save, Share, Image as ImgIcon,
-  MessageCircle, BarChart, Clock, Zap, UserPlus, Hash, CreditCard, ChevronRight, Check
+  Settings, Users, Award, Lock, Trash2, Edit, Save, Share, Image as ImgIcon,
+  MessageCircle, BarChart, Clock, Zap, UserPlus, Hash, CreditCard, ChevronRight, Check, MessageSquare, Globe
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { QRCodeSVG } from 'qrcode.react';
 
 // ─── TYPES ──────────────────────────────────────────────────────────────────
 interface CommunitySettingsPanelProps {
@@ -242,13 +243,13 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
         </div>
       </div>
 
-      {/* ── ANALYTICS (Mocked UI) ── */}
+      {/* ── REAL NATIVE STATS ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { icon: MessageCircle, label: 'Messages Today', val: Math.floor(Math.random()*150)+50, color: 'text-blue-500', bg: 'bg-blue-50' },
-          { icon: UserPlus, label: 'New Members', val: Math.floor(Math.random()*20)+2, color: 'text-green-500', bg: 'bg-green-50' },
-          { icon: Zap, label: 'Active Now', val: '24%', color: 'text-amber-500', bg: 'bg-amber-50' },
-          { icon: BarChart, label: 'Engagement', val: 'High', color: 'text-purple-500', bg: 'bg-purple-50' },
+          { icon: Users, label: 'Members', val: community?.membersCount ?? community?.members?.length ?? 1, color: 'text-[#25D366]', bg: 'bg-[#25D366]/10' },
+          { icon: Hash, label: 'Channels', val: community?.channels?.length ?? 1, color: 'text-[#25D366]', bg: 'bg-[#25D366]/10' },
+          { icon: MessageSquare, label: 'Posts', val: community?.postsCount ?? 0, color: 'text-[#25D366]', bg: 'bg-[#25D366]/10' },
+          { icon: Award, label: 'Access', val: community?.isPrivate ? 'Private' : 'Public', color: 'text-[#25D366]', bg: 'bg-[#25D366]/10' },
         ].map((s,i) => (
           <div key={i} className="bg-white rounded-3xl p-5 shadow-sm border border-black/5 flex flex-col items-center text-center">
             <div className={`w-10 h-10 rounded-2xl ${s.bg} flex items-center justify-center mb-3 ${s.color}`}>
@@ -264,11 +265,8 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-black/5">
         <h3 className="text-[13px] font-black uppercase tracking-widest text-[#25D366] mb-4">Invite Link</h3>
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="w-24 h-24 rounded-2xl bg-black/5 border border-black/10 flex items-center justify-center shrink-0 overflow-hidden relative group cursor-pointer" onClick={copyInvite}>
-            {/* Fake QR pattern */}
-            <div className="absolute inset-2 grid grid-cols-5 grid-rows-5 gap-0.5 opacity-30">
-              {Array.from({length:25}).map((_,i)=><div key={i} className={`bg-black ${Math.random()>0.4?'rounded-sm':''}`} style={{opacity: Math.random()}} />)}
-            </div>
+          <div className="w-24 h-24 rounded-2xl bg-white border border-black/10 flex items-center justify-center shrink-0 overflow-hidden relative group cursor-pointer p-2 shadow-sm" onClick={copyInvite}>
+            <QRCodeSVG value={`https://humanidfi.com/join/${community?.joinCode || ''}`} size={80} level="M" />
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
               <Share size={20} className="text-white" />
             </div>
@@ -336,7 +334,11 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
           <h3 className="text-[13px] font-black uppercase tracking-widest text-[#25D366] mb-4">Privacy & Security</h3>
           <div className="bg-[#FAFAFA] rounded-2xl p-4 border border-black/5 mb-4">
             <div className="flex items-start gap-3">
-              <Shield className={community.isPrivate ? "text-purple-500" : "text-green-500"} size={20} />
+              {community.isPrivate ? (
+                <Lock className="text-[#25D366]" size={20} />
+              ) : (
+                <Globe className="text-[#25D366]" size={20} />
+              )}
               <div>
                 <p className="text-[15px] font-bold text-[#1C1C1E]">{community.isPrivate ? 'Private Community' : 'Public Community'}</p>
                 <p className="text-[13px] text-black/50 mt-1">

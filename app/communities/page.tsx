@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Users, Hash, Plus, Search, Globe, ChevronRight, Compass, Shield } from 'lucide-react';
+import { Users, Hash, Plus, Search, Globe, ChevronRight, Compass } from 'lucide-react';
 import { SystemFooter } from '@/components/landing/SystemFooter';
 import { HLLogo } from '@/components/shared/HLLogo';
 
@@ -19,7 +19,7 @@ export default function CommunitiesPage() {
       });
   }, []);
 
-  const AVATAR_COLORS = ['#25D366','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55', '#5856D6', '#007AFF'];
+  const AVATAR_COLORS = ['#25D366','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55', '#5856D6', '#10B981'];
   const avatarColor = (id: string) => AVATAR_COLORS[parseInt(id.charCodeAt(0).toString(), 10) % AVATAR_COLORS.length] || '#25D366';
 
   return (

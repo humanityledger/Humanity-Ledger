@@ -1154,25 +1154,46 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     
     // Offline Queue listener
     const handleOfflineMsg = async (e: any) => {
-      const { sender, content, id, createdAt } = e.detail;
+      const { sender, content, id, createdAt } = e.detail || {};
+      if (!sender || !content) return;
+      const senderLower = sender.toLowerCase();
+      const dmId = `dm-${senderLower}`;
+      const ts = createdAt ? new Date(createdAt).getTime() : Date.now();
       const msgData = {
-         id,
-         senderAddress: sender,
-         content,
-         sent: new Date(createdAt),
-         status: 'delivered' as const,
-         isMe: false,
+        id: id || `offline-${Date.now()}-${Math.random()}`,
+        senderInboxId: '',
+        senderAddress: senderLower,
+        content,
+        sentAtNs: ts * 1_000_000,
+        conversationId: dmId,
+        status: 'delivered' as const,
+        fromPeer: true,
       };
-      if (typeof window !== 'undefined' && (window as any)._active_ledger_client) {
-         import('@/lib/chat/indexeddb').then(async ({ chatDB }) => {
-             const myAddress = (window as any)._active_ledger_client.address || address;
-             if (myAddress) {
-                 await chatDB.saveMessage(myAddress, sender, msgData).catch(() => {});
-                 // Force UI to update with new messages
-                 loadConversations();
-             }
-         });
+
+      try {
+        const { chatDB } = await import('@/lib/chat/indexeddb');
+        const myAddr = address || (typeof window !== 'undefined' && (window as any)._active_ledger_client?.address) || '';
+        if (myAddr) {
+          await chatDB.saveMessage(myAddr, senderLower, msgData).catch(() => {});
+          await chatDB.saveConversation({
+            peerAddress: senderLower,
+            lastAt: ts,
+            lastMessage: content,
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.warn('[Offline Queue] Error saving to chatDB:', err);
       }
+
+      // If this conversation is currently open, inject into active messages immediately
+      if (activePeerRef.current?.toLowerCase() === senderLower) {
+        setMessages(prev => {
+          if (prev.some(m => m.id === msgData.id)) return prev;
+          return [...prev, msgData].sort((a, b) => a.sentAtNs - b.sentAtNs);
+        });
+      }
+
+      loadConversations();
     };
     window.addEventListener('ledger_offline_msg', handleOfflineMsg);
       const handleForceMsg = (e: any) => {
@@ -2491,15 +2512,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           // [BUG FIX] Route is /api/chat/queue (not /api/chat/pending).
           // Auth via x-web3-address header. Response shape: { messages: [...] } not { pending: [...] }.
           // Timestamp field is createdAt (PendingChatMessage schema), not timestamp.
-          const pRes = await fetch('/api/chat/queue', { headers: authHeader, cache: 'no-store' });
+          const pRes = await fetch(`/api/chat/queue?address=${encodeURIComponent(address)}`, { 
+            headers: authHeader, 
+            credentials: 'include',
+            cache: 'no-store' 
+          });
           if (pRes.ok) {
              const pData = await pRes.json();
-             if (pData.messages && Array.isArray(pData.messages)) {
-                 pData.messages.forEach((p: any) => {
-                     const peer = p.sender?.toLowerCase() === address.toLowerCase() ? p.recipient : p.sender;
-                     if (!peer) return;
-                     const existing = merged.find(c => c.peerAddress.toLowerCase() === peer.toLowerCase());
-                     const ts = p.createdAt ?? p.timestamp ?? Date.now();
+             if (pData.messages && Array.isArray(pData.messages) && pData.messages.length > 0) {
+                 const { chatDB } = await import('@/lib/chat/indexeddb');
+                 for (const p of pData.messages) {
+                     const peer = (p.sender?.toLowerCase() === address.toLowerCase() ? p.recipient : p.sender)?.toLowerCase();
+                     if (!peer) continue;
+                     const ts = p.createdAt ? new Date(p.createdAt).getTime() : Date.now();
+                     const existing = merged.find(c => c.peerAddress.toLowerCase() === peer);
                      if (!existing) {
                          merged.push({ peerAddress: peer, lastMessage: p.content.slice(0, 30), lastAt: new Date(ts) });
                      } else {
@@ -2508,7 +2534,33 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                              existing.lastAt = new Date(ts);
                          }
                      }
-                 });
+
+                     const offlineMsg = {
+                       id: p.id || `offline-${Date.now()}-${Math.random()}`,
+                       senderInboxId: '',
+                       senderAddress: p.sender.toLowerCase(),
+                       content: p.content,
+                       sentAtNs: ts * 1_000_000,
+                       conversationId: `dm-${peer}`,
+                       status: 'delivered' as const,
+                       fromPeer: p.sender.toLowerCase() !== address.toLowerCase(),
+                     };
+
+                     await chatDB.saveMessage(address, peer, offlineMsg).catch(() => {});
+                     await chatDB.saveConversation({
+                       peerAddress: peer,
+                       lastAt: ts,
+                       lastMessage: p.content,
+                     }).catch(() => {});
+
+                     // If active chat is currently open with this peer, inject immediately
+                     if (activePeerRef.current?.toLowerCase() === peer) {
+                       setMessages(prev => {
+                         if (prev.some(m => m.id === offlineMsg.id)) return prev;
+                         return [...prev, offlineMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
+                       });
+                     }
+                 }
              }
           }
 
@@ -2880,7 +2932,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
 
     syncGlobal();
-    const globalPoll = setInterval(syncGlobal, 15000);
+    const globalPoll = setInterval(syncGlobal, 4000);
 
     // ─── GLOBAL XMTP STREAM ────────────────────────────────────────────────────
     // DEDUPLICATION CONTRACT:
@@ -3987,19 +4039,33 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (!isSystemSignal && !isReaction) if (ledgerSettings?.notification_sound !== false) { playSendSound(); };
       triggerHaptic(ledgerSettings?.haptics_intensity ?? 0);
 
-      // Always attempt to send directly via XMTP.
-      // sendMessage() handles canReceive checks, retries with backoff,
-      // and graceful offline queue internally — no need to pre-check here.
+      // If device is offline, also save to localStorage outbox as backup
       if (isOffline) {
         const outboxKey = `ledger_outbox_${address.toLowerCase()}`;
         const existing = JSON.parse(localStorage.getItem(outboxKey) || '[]');
         existing.push({ peer: activePeer, content: finalContent });
         localStorage.setItem(outboxKey, JSON.stringify(existing));
         toast.info("You are offline. Message queued to outbox.");
-      } else {
-        try {
-          await sendMessage(client, activePeer, finalContent, address);
-        } catch (err) { console.error('[Ledger Chat] Message send failed:', err); throw err; }
+      }
+
+      // ALWAYS send via XMTP / offline queue — works both online AND offline.
+      // sendMessage() handles: XMTP retries, fallback to DB offline queue, and
+      // guarantees delivery when the recipient opens Ledger Chat.
+      await sendMessage(client, activePeer, finalContent, address);
+
+      // Persist sent message to IndexedDB so it survives reloads immediately
+      if (!isReaction) {
+        import('@/lib/chat/indexeddb').then(({ chatDB }) => {
+          chatDB.saveMessages([{
+            id: optimisticId,
+            senderInboxId: (client as any)?.inboxId || '',
+            senderAddress: address.toLowerCase(),
+            content: displayContent,
+            sentAtNs: Date.now() * 1_000_000,
+            conversationId: `dm-${activePeer.toLowerCase()}`,
+            status: 'sent',
+          }]).catch(() => {});
+        }).catch(() => {});
       }
 
       if (!isReaction) {
