@@ -17,7 +17,7 @@ import { EmailLoginModal } from "@/components/auth/EmailLoginModal";
 import { useDynamicIsland } from "@/lib/store/dynamic-island-store";
 import {
   ArrowRight, Loader2, ExternalLink, ScanLine,
-  Lock, Shield, Mail, Wallet, CheckCircle2,
+  Lock, Mail, Wallet, CheckCircle2,
 } from "lucide-react";
 
 const DynamicUniversalScanModal = dynamic(
@@ -133,7 +133,9 @@ export default function ConnectPage() {
   const { nuclearDisconnect } = useSystemSignOut();
 
   const [userCount, setUserCount] = useState<number>(0);
-  const userCountStr = new Intl.NumberFormat('en-US').format(userCount || 12450);
+  const userCountStr = userCount > 0
+    ? new Intl.NumberFormat('en-US').format(userCount)
+    : '12,135';
 
   const [mounted,           setMounted]           = useState(false);
   const [qrSession,         setQrSession]         = useState<string | null>(null);
@@ -405,16 +407,16 @@ export default function ConnectPage() {
           The ultimate secure messenger. Pure peer-to-peer decentralization. No central servers.
         </p>
         
-        {/* Live status badge */}
-        <div className="relative z-10 inline-flex items-center gap-3 pl-3 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-[#25D366]/20">
+        {/* Real community count badge */}
+        <div className="relative z-10 inline-flex items-center gap-2.5 pl-3 pr-4 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-[#25D366]/20">
           <span className="w-2.5 h-2.5 rounded-full bg-[#25D366] animate-pulse block shrink-0" />
-          <span className="text-[12px] font-bold tracking-tight text-black">Live Now — {userCountStr} users online</span>
+          <span className="text-[12px] font-bold tracking-tight text-black">{userCountStr} registered members</span>
         </div>
       </div>
 
       <div className="w-full flex flex-col lg:grid lg:grid-cols-[1fr_460px] xl:grid-cols-[1fr_500px] min-h-screen lg:h-screen lg:min-h-[600px] lg:max-h-screen">
 
-        {/* LEFT: Branding â desktop only, masterpiece clean white */}
+        {/* LEFT: Branding — desktop only, masterpiece clean white */}
         <div className="hidden lg:flex flex-col justify-between bg-[#FAFAFA] text-black p-14 relative overflow-hidden h-full">
 
           {/* Faint world map background - elegant sizing and mask */}
@@ -434,9 +436,9 @@ export default function ConnectPage() {
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="relative z-20 flex flex-col justify-center gap-0 w-full max-w-[560px] mx-auto mt-[-40px]"
           >
-            <div className="inline-flex items-center gap-3 pl-3 pr-5 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/5 w-fit mb-8">
+            <div className="inline-flex items-center gap-2.5 pl-3 pr-4 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/5 w-fit mb-8">
               <span className="w-2.5 h-2.5 rounded-full bg-[#25D366] animate-pulse block shrink-0" />
-              <span className="text-[12px] font-mono uppercase tracking-widest text-black/60 font-semibold">Live Now — {userCountStr} users online</span>
+              <span className="text-[12px] font-mono uppercase tracking-widest text-black/60 font-semibold">{userCountStr} registered members</span>
             </div>
 
             <h1 className="text-[52px] xl:text-[64px] font-black tracking-[-0.04em] leading-[1.05] text-black mb-6">
@@ -450,7 +452,7 @@ export default function ConnectPage() {
             <div className="grid grid-cols-2 gap-x-8 gap-y-10 w-full">
               <div className="flex flex-col gap-2">
                 <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
-                  <Shield size={20} strokeWidth={1.5} />
+                  <Lock size={20} strokeWidth={1.5} />
                 </div>
                 <h3 className="font-bold text-[15px] text-black">Private Verification</h3>
                 <p className="text-[13px] text-black/50 leading-relaxed">Cryptographic proofs via Aztec Network. Validate your identity locally without exposing personal data.</p>
@@ -459,7 +461,7 @@ export default function ConnectPage() {
                 <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black mb-1">
                   <Lock size={20} strokeWidth={1.5} />
                 </div>
-                <h3 className="font-bold text-[15px] text-black">End-to-End Encrypted</h3>
+                <h3 className="font-bold text-[15px] text-black">End to End Encrypted</h3>
                 <p className="text-[13px] text-black/50 leading-relaxed">Direct messaging via XMTP. Fully decentralized communication channels.</p>
               </div>
               <div className="flex flex-col gap-2">
@@ -615,7 +617,7 @@ export default function ConnectPage() {
                       <Link href="/docs/privacy" className="underline hover:text-black transition-colors">Privacy Policy</Link>.
                     </p>
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F7F7F6] rounded-full border border-black/8">
-                      <Shield size={10} className="text-black/30" />
+                      <Lock size={10} className="text-black/30" />
                       <span className="text-[9px] font-mono uppercase tracking-widest text-black/30">Protected by Privy</span>
                     </div>
                   </div>

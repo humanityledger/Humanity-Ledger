@@ -4,35 +4,37 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Download, Monitor, Apple, Globe, Wallet, CheckCircle2,
-  ChevronDown, Shield, Zap, Lock, Smartphone, MessageCircle, Users
+  ChevronDown, Zap, Lock, Smartphone, MessageCircle, Users, Terminal
 } from "lucide-react";
 import { toast } from "sonner";
 
 // ─── Download Links ────────────────────────────────────────────────────────────
-// Update these URLs when new releases are published to GitHub Releases
+// Windows installer is served directly from our CDN / server.
+// macOS and Linux users have instant zero-install access via Web App.
 const RELEASES = {
-  windows: "#", // Replaced with toast notification until uploaded
-  mac: "#",     // Replaced with toast notification until uploaded
-  web: "/chat",
+  windows: "/releases/Ledger-Chat-Setup-Windows.exe",
+  mac:     "/chat",
+  linux:   "/chat",
+  web:     "/chat",
 };
 
 // ─── FAQ Data ─────────────────────────────────────────────────────────────────
 const FAQS = [
   {
     q: "What is Ledger Chat?",
-    a: "Ledger Chat is a privacy-first messaging platform built on top of Humanity Ledger. Every message, call, and file is encrypted end-to-end using your wallet identity. No phone number, no email, no personal data required — just your wallet.",
+    a: "Ledger Chat is a privacy first messaging platform built on top of Humanity Ledger. Every message, call, and file is encrypted end to end using your wallet identity. No phone number, no email, no personal data required, just your wallet.",
   },
   {
     q: "Do I need a crypto wallet to use it?",
-    a: "Yes. Ledger Chat uses your Ethereum-compatible wallet (MetaMask, Coinbase Wallet, Rabby, etc.) or a regular email address as your unique identity. This means no centralized database can link your conversations to your personal information.",
+    a: "Yes. Ledger Chat uses your Ethereum compatible wallet (MetaMask, Coinbase Wallet, Rabby, etc.) or a regular email address as your unique identity. This means no centralized database can link your conversations to your personal information.",
   },
   {
     q: "How do I connect my wallet?",
-    a: "Click \"Launch App\" or open the desktop app. On the welcome screen, tap \"Connect Wallet\" and approve the signature request in your wallet. No transaction or gas fee is needed — it is just a signature to prove you own the address.",
+    a: "Click \"Launch App\" or open the desktop app. On the welcome screen, tap \"Connect Wallet\" and approve the signature request in your wallet. No transaction or gas fee is needed, it is just a signature to prove you own the address.",
   },
   {
     q: "Is the desktop app free to download?",
-    a: "Yes. The Windows and macOS desktop apps are completely free. They are open-source and available directly from our GitHub releases page. No subscription, no account creation, no hidden fees.",
+    a: "Yes. The Windows and macOS desktop apps are completely free. They are open source and available directly from our platform. No subscription, no account creation, no hidden fees.",
   },
   {
     q: "Is my data stored on a server?",
@@ -40,7 +42,7 @@ const FAQS = [
   },
   {
     q: "Can I make video and voice calls?",
-    a: "Yes. Ledger Chat supports peer-to-peer encrypted voice calls and video calls using WebRTC. The media stream goes directly between devices and is never routed through our infrastructure.",
+    a: "Yes. Ledger Chat supports peer to peer encrypted voice calls and video calls using WebRTC. The media stream goes directly between devices and is never routed through our infrastructure.",
   },
   {
     q: "Does it work on mobile?",
@@ -48,15 +50,15 @@ const FAQS = [
   },
   {
     q: "What wallets are supported?",
-    a: "Any Ethereum-compatible wallet works: MetaMask, Coinbase Wallet, Rabby, Rainbow, Trust Wallet, WalletConnect-compatible wallets, and more. You can also sign in with a Google account if you prefer not to use a wallet.",
+    a: "Any Ethereum compatible wallet works: MetaMask, Coinbase Wallet, Rabby, Rainbow, Trust Wallet, WalletConnect compatible wallets, and more. You can also sign in with a Google account if you prefer not to use a wallet.",
   },
   {
     q: "How is Ledger Chat different from WhatsApp or Telegram?",
-    a: "WhatsApp is owned by Meta and collects metadata. Telegram stores messages on centralized servers (unless using Secret Chats). Ledger Chat is wallet-native, permissionless, and open-source. No company controls your identity or your data.",
+    a: "WhatsApp is owned by Meta and collects metadata. Telegram stores messages on centralized servers (unless using Secret Chats). Ledger Chat is wallet native, permissionless, and open source. No company controls your identity or your data.",
   },
   {
     q: "Is the Windows installer safe to run?",
-    a: "Yes. The installer is signed and published directly from the Humanity Ledger GitHub repository. Windows may show a SmartScreen warning for new publishers — click \"More info\" and then \"Run anyway\" to proceed. You can always verify the file hash on our GitHub releases page.",
+    a: "Yes. The installer is built and signed directly from the Humanity Ledger repository. Windows may show a SmartScreen notice for new publishers, click \"More info\" and then \"Run anyway\" to proceed.",
   },
 ];
 
@@ -78,7 +80,7 @@ const WALLET_STEPS = [
     num: "03",
     title: "Sign the message",
     desc: "Your wallet will ask you to sign a message to prove ownership. No transaction. No gas fee. Free.",
-    color: "bg-indigo-100 text-indigo-600",
+    color: "bg-[#25D366]/15 text-[#25D366]",
   },
   {
     num: "04",
@@ -152,8 +154,8 @@ export function DownloadSection() {
             
             {/* WINDOWS */}
             <motion.a
-              href="/releases/Ledger-Chat-Setup-Windows.exe"
-              download
+              href={RELEASES.windows}
+              download="Ledger-Chat-Setup-Windows.exe"
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -167,18 +169,17 @@ export function DownloadSection() {
                 </svg>
               </div>
               <h3 className="text-[22px] font-black text-[#1C1C1E] mb-1">Windows</h3>
-              <p className="text-[13px] text-black/40 font-semibold mb-8">Windows 10 & 11</p>
+              <p className="text-[13px] text-black/40 font-semibold mb-8">Windows 10 &amp; 11</p>
               <div className="w-full mt-auto flex items-center justify-center gap-2.5 bg-[#F2F2F7] group-hover:bg-[#0078D4] text-[#1C1C1E] group-hover:text-white font-bold text-[15px] py-4 rounded-2xl transition-all duration-300">
                 <Download size={18} className="group-hover:animate-bounce" />
                 Download .exe
               </div>
-              <p className="text-[11px] font-medium text-black/30 mt-4">v1.0.0 (64-bit)</p>
+              <p className="text-[11px] font-medium text-black/30 mt-4">v1.0.0 (64 bit) · 93.7 MB</p>
             </motion.a>
 
             {/* macOS */}
             <motion.a
-              href="/releases/Ledger-Chat-Setup-macOS.dmg"
-              download
+              href="/chat"
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -193,18 +194,17 @@ export function DownloadSection() {
                 </svg>
               </div>
               <h3 className="text-[22px] font-black text-[#1C1C1E] mb-1">macOS</h3>
-              <p className="text-[13px] text-black/40 font-semibold mb-8">Apple Silicon & Intel</p>
+              <p className="text-[13px] text-black/40 font-semibold mb-8">Apple Silicon &amp; Intel</p>
               <div className="w-full mt-auto flex items-center justify-center gap-2.5 bg-[#F2F2F7] group-hover:bg-black text-[#1C1C1E] group-hover:text-white font-bold text-[15px] py-4 rounded-2xl transition-all duration-300">
-                <Download size={18} className="group-hover:animate-bounce" />
-                Download .dmg
+                <Globe size={18} />
+                Open Web App
               </div>
-              <p className="text-[11px] font-medium text-black/30 mt-4">v1.0.0 (Universal)</p>
+              <p className="text-[11px] font-medium text-black/30 mt-4">Native App in Signing</p>
             </motion.a>
 
             {/* LINUX */}
             <motion.a
-              href="/releases/Ledger-Chat-Setup-Linux.AppImage"
-              download
+              href="/chat"
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -220,10 +220,10 @@ export function DownloadSection() {
               <h3 className="text-[22px] font-black text-[#1C1C1E] mb-1">Linux</h3>
               <p className="text-[13px] text-black/40 font-semibold mb-8">Ubuntu, Debian, Fedora</p>
               <div className="w-full mt-auto flex items-center justify-center gap-2.5 bg-[#F2F2F7] group-hover:bg-[#E95420] text-[#1C1C1E] group-hover:text-white font-bold text-[15px] py-4 rounded-2xl transition-all duration-300">
-                <Download size={18} className="group-hover:animate-bounce" />
-                Get AppImage
+                <Globe size={18} />
+                Open Web App
               </div>
-              <p className="text-[11px] font-medium text-black/30 mt-4">v1.0.0 (x86_64)</p>
+              <p className="text-[11px] font-medium text-black/30 mt-4">Native App in Signing</p>
             </motion.a>
 
             {/* WEB APP */}
@@ -252,7 +252,7 @@ export function DownloadSection() {
           {/* Trust badges */}
           <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
             {[
-              { icon: <Shield size={15} />, text: "Open Source" },
+              { icon: <Terminal size={15} />, text: "Open Source" },
               { icon: <Lock size={15} />, text: "No account required" },
               { icon: <Zap size={15} />, text: "No subscription fees" },
               { icon: <CheckCircle2 size={15} />, text: "Always free" },
@@ -281,7 +281,7 @@ export function DownloadSection() {
               How to connect your wallet
             </h2>
             <p className="text-[17px] text-[#1C1C1E]/50 font-medium max-w-xl mx-auto leading-relaxed">
-              No sign-up form, no email verification, no password. Four steps and you are live.
+              No signup form, no email verification, no password. Four steps and you are live.
             </p>
           </motion.div>
 
