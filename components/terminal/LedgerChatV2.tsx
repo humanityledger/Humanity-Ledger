@@ -722,8 +722,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
   }, []);
 
-  // Ringtone state
+  // Ringtone refs — all three must be declared here (before the safety useEffect at ~L860)
+  // to avoid Temporal Dead Zone (TDZ) crashes.
   const ringtoneRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const ringtoneCtxRef = useRef<AudioContext | null>(null);
+  const ringtoneStopped = useRef(true);
   // ─── Backward compat shims so existing JSX works unchanged ──────────────────
   const callActive = callState === 'active' || callState === 'calling' || callState === 'connecting';
   const incomingCall = callState === 'ringing';
@@ -851,14 +854,23 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, [callState]);
 
   // ─── Safety: stop ringtone whenever callState leaves 'ringing' ───────────────
-  // Belt-and-suspenders. stopRingtone is also called in answerCall() and performEndCall(),
-  // but this effect guarantees the ring cannot persist past the 'ringing' phase
-  // regardless of which code path transitions the state.
+  // IMPORTANT: Cannot call stopRingtone() here — it's declared below with useCallback (TDZ).
+  // Instead, directly set the shared ref flag + clear the interval ref.
+  // This is safe because refs are initialized synchronously before any effects run.
   useEffect(() => {
     if (callState !== 'ringing') {
-      stopRingtone();
+      // Set flag first so any in-flight playRing() that fires before clearInterval returns early
+      ringtoneStopped.current = true;
+      if (ringtoneRef.current) {
+        clearInterval(ringtoneRef.current);
+        ringtoneRef.current = null;
+      }
+      if (ringtoneCtxRef.current) {
+        ringtoneCtxRef.current.close().catch(() => {});
+        ringtoneCtxRef.current = null;
+      }
     }
-  }, [callState, stopRingtone]);
+  }, [callState]);
 
   const formatDuration = (totalSeconds: number) => {
     const m = Math.floor(totalSeconds / 60);
@@ -1300,12 +1312,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     } catch {}
   };
 
-
   // ─── Ringtone Generator ──────────────────────────────────────────────────────
-  const ringtoneCtxRef = useRef<AudioContext | null>(null);
-  // Shared stopped flag — accessible by both startRingtone and stopRingtone.
-  // Previously was a closure-local variable, making it unreachable from stopRingtone.
-  const ringtoneStopped = useRef(true);
+  // Note: ringtoneCtxRef and ringtoneStopped are declared above (hoisted)
+  // to avoid TDZ with the safety useEffect. Do NOT re-declare them here.
 
   const startRingtone = useCallback(() => {
     ringtoneStopped.current = false;

@@ -536,19 +536,20 @@ export function TuringShieldGate({
                     transition={{ duration: 0.3 }}
                     className="flex flex-col items-center"
                   >
-                    {/* Icon */}
+                    {/* Icon: clean lock mark, no shield */}
                     <div className="relative w-20 h-20 mb-6">
                       <div className="absolute inset-0 bg-[#25D366]/10 rounded-full" />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="11" width="18" height="11" rx="2"/>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                          <circle cx="12" cy="16" r="1" fill="#25D366" stroke="none"/>
                         </svg>
                       </div>
-                      {/* Animated ring */}
                       <motion.div
-                        className="absolute inset-0 rounded-full border-2 border-[#25D366]/30"
-                        animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0, 0.6] }}
-                        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute inset-0 rounded-full border-2 border-[#25D366]/25"
+                        animate={{ scale: [1, 1.14, 1], opacity: [0.5, 0, 0.5] }}
+                        transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
                       />
                     </div>
 
@@ -556,12 +557,11 @@ export function TuringShieldGate({
                       Welcome to Ledger Chat
                     </h2>
                     <p className="text-[13px] text-black/50 text-center leading-relaxed mb-7 px-2">
-                      Before you start, you need to set up your{' '}
-                      <span className="font-bold text-[#1C1C1E]">access PIN</span> — a 6-digit code
+                      Before you start, set up your{' '}
+                      <span className="font-bold text-[#1C1C1E]">access PIN</span>. A 6 digit code
                       that protects your account every time you open the app.
                     </p>
 
-                    {/* What is the PIN */}
                     <div className="w-full bg-[#F9F9F9] rounded-2xl p-5 space-y-4 mb-6">
                       <InfoCard
                         icon={
@@ -570,7 +570,7 @@ export function TuringShieldGate({
                           </svg>
                         }
                         title="What is the PIN?"
-                        body="It's your personal access code for Ledger Chat. Without it, no one can open your account — not even us."
+                        body="Your personal access code for Ledger Chat. Without it no one can open your account, not even us."
                       />
                       <div className="h-px bg-black/[0.05]" />
                       <InfoCard
@@ -580,7 +580,7 @@ export function TuringShieldGate({
                           </svg>
                         }
                         title="Forgot your PIN?"
-                        body="You can reset it anytime using a 6-digit code sent to your email address. You'll never be permanently locked out."
+                        body="Reset it anytime with a 6 digit code sent to your email. You will never be permanently locked out."
                       />
                       <div className="h-px bg-black/[0.05]" />
                       <InfoCard
@@ -590,7 +590,7 @@ export function TuringShieldGate({
                           </svg>
                         }
                         title="When do you enter it?"
-                        body="Once per session. The PIN clears when you close the browser tab, so your account stays safe even on shared devices."
+                        body="Once per session. The PIN clears when you close the browser tab so your account stays safe on shared devices."
                       />
                     </div>
 
@@ -630,7 +630,7 @@ export function TuringShieldGate({
                       Choose your PIN
                     </h2>
                     <p className="text-[13px] text-black/45 text-center leading-relaxed mb-7">
-                      Pick a 6-digit code you'll remember. Avoid obvious sequences like 123456.
+                      Pick a 6 digit code you will remember. Avoid obvious sequences like 123456.
                     </p>
 
                     {pinSetError && (
@@ -679,14 +679,14 @@ export function TuringShieldGate({
                   >
                     <div className="w-14 h-14 rounded-full bg-[#25D366]/10 flex items-center justify-center mb-5">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 12l2 2 4-4"/><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <polyline points="20 6 9 17 4 12"/>
                       </svg>
                     </div>
                     <h2 className="text-[21px] font-black text-[#1C1C1E] tracking-tight mb-2 text-center">
                       Confirm your PIN
                     </h2>
                     <p className="text-[13px] text-black/45 text-center leading-relaxed mb-7">
-                      Enter the same 6-digit code again to confirm.
+                      Enter the same 6 digit code again to confirm.
                     </p>
 
                     {pinSetError && (
@@ -755,15 +755,15 @@ export function TuringShieldGate({
                       PIN saved
                     </h2>
                     <p className="text-[13px] text-black/50 text-center leading-relaxed mb-3 px-2">
-                      Your access PIN has been set. You'll enter it at the start of each session.
+                      Your access PIN has been saved. You will enter it at the start of each session.
                     </p>
 
                     {/* Recovery reminder */}
                     <div className="w-full bg-[#FFF9E6] border border-[#F5C518]/30 rounded-2xl p-4 mb-7 text-left">
                       <p className="text-[12px] font-bold text-[#7A5C00] mb-1">Remember your PIN</p>
                       <p className="text-[11px] text-[#7A5C00]/80 leading-relaxed">
-                        If you ever forget it, use the <span className="font-bold">"Forgot your PIN?"</span> link on the
-                        login screen. A reset code will be sent to your email.
+                        If you ever forget it, tap <span className="font-bold">"Forgot your PIN?"</span> on the
+                        sign in screen. A reset code will be sent to your email.
                       </p>
                     </div>
 
@@ -958,8 +958,8 @@ export function TuringShieldGate({
                             <p className="text-[12px] font-bold text-[#1C1C1E]">How to recover access</p>
                             <p className="text-[11px] text-black/50 leading-relaxed">
                               Tap <span className="font-bold text-[#1C1C1E]">"Forgot PIN?"</span> above.
-                              We'll send a 6-digit code to your registered email. Enter it to reset your PIN immediately.
-                              No waiting, no support ticket needed.
+                              We will send a 6 digit code to your registered email. Enter it to reset your PIN immediately.
+                              No waiting, no support needed.
                             </p>
                           </div>
                         </motion.div>
@@ -1129,7 +1129,7 @@ export function TuringShieldGate({
 
           {/* Footer */}
           <p className="text-center text-[11px] text-black/25 mt-5 font-medium">
-            Humanity Ledger · End-to-end encrypted
+            Humanity Ledger · Fully encrypted
           </p>
         </motion.div>
       </AnimatePresence>
