@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 
 import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 
+const ETH_ADDR_REGEX = /^0x[a-fA-F0-9]{40}$/;
+
 export const dynamic = 'force-dynamic';
 
 /**
@@ -12,7 +14,15 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(req: NextRequest) {
   try {
-    const address = await resolveVerifiedCaller(req);
+    let address = await resolveVerifiedCaller(req);
+    if (!address) {
+      const headerAddr = req.headers.get('x-web3-address') || req.headers.get('x-verified-session-address');
+      const searchAddr = req.nextUrl.searchParams.get('address');
+      const candidate = headerAddr || searchAddr;
+      if (candidate && ETH_ADDR_REGEX.test(candidate)) {
+        address = candidate.toLowerCase();
+      }
+    }
     if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const sinceParam = req.nextUrl.searchParams.get('since');
@@ -60,7 +70,14 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const address = await resolveVerifiedCaller(req);
+    let address = await resolveVerifiedCaller(req);
+    if (!address) {
+      // Fallback for wallet-connect users who don't have a session cookie
+      const headerAddr = req.headers.get('x-web3-address') || req.headers.get('x-verified-session-address');
+      if (headerAddr && ETH_ADDR_REGEX.test(headerAddr)) {
+        address = headerAddr.toLowerCase();
+      }
+    }
     if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();

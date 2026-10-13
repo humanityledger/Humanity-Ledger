@@ -26,7 +26,7 @@ function safeHtml(raw: string): string {
 const addr = (a: string) => `${(a||'0x??').slice(0,6)}...${(a||'').slice(-4)}`;
 const fmt2 = (s: number) =>
   `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
-const AVATAR_COLORS = ['#25D366','#007AFF','#FF9500','#FF3B30','#AF52DE','#FF2D55','#34C759','#5AC8FA'];
+const AVATAR_COLORS = ['#25D366','#128C7E','#FF9500','#FF3B30','#AF52DE','#FF2D55','#34C759','#5856D6'];
 const avatarColor = (a: string) => AVATAR_COLORS[(parseInt((a||'0x0').slice(2,4),16)||0) % AVATAR_COLORS.length];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -267,7 +267,7 @@ export function CommunityChatView({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval>>();
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const optimisticIds = useRef<Set<string>>(new Set());
   const prevCount = useRef(0);
 
@@ -760,7 +760,7 @@ export function CommunityChatView({
               <div className="grid grid-cols-5 gap-3 px-1 py-3">
                 {[
                   { icon: ImgIcon, label: 'Photo', color: 'bg-[#FF9500]', fn: () => fileInputRef.current?.click() },
-                  { icon: CircleDollarSign, label: 'Crypto', color: 'bg-[#007AFF]', fn: () => { setCryptoRecipient(''); setShowRecipientSheet(true); } },
+                  { icon: CircleDollarSign, label: 'Crypto', color: 'bg-[#128C7E]', fn: () => { setCryptoRecipient(''); setShowRecipientSheet(true); } },
                   { icon: MapPin, label: 'Location', color: 'bg-[#25D366]', fn: sendLocation },
                   { icon: BarChart2, label: 'Poll', color: 'bg-purple-500', fn: () => setShowPollCreator(true) },
                   { icon: Smile, label: 'Sticker', color: 'bg-orange-500', fn: () => executeSend('[STICKER]:fire') },

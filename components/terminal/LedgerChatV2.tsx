@@ -2799,9 +2799,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         if (address) await syncOfflineQueue(client, address);
         
         try {
+          const directHeaders: Record<string, string> = {};
+          if (address) directHeaders['x-web3-address'] = address;
           const directRes = await fetch(`/api/chat/direct?since=${directMsgSinceRef.current}`, {
             credentials: 'include',
-            headers: { 'x-web3-address': address || '' }
+            headers: directHeaders
           });
           if (directRes.ok) {
             const { messages: directMsgs } = await directRes.json();
@@ -3546,13 +3548,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }
         
         // FETCH PENDING MESSAGES (OFFLINE ROUTING)
-        // [BUG FIX] The route is /api/chat/queue NOT /api/chat/pending.
-        // The response shape is { messages: [...] } NOT { pending: [...] }.
-        // The timestamp field from PendingChatMessage is createdAt, NOT timestamp.
         let pendingServer: any[] = [];
         try {
-          const pRes = await fetch(`/api/chat/queue`, { 
+          const pRes = await fetch(`/api/chat/queue?address=${encodeURIComponent(address)}`, { 
             cache: 'no-store',
+            credentials: 'include',
             headers: { 'x-web3-address': address || '' } });
           if (pRes.ok) {
             const pData = await pRes.json();
@@ -3574,6 +3574,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               
               if (pendingServer.length > 0) {
                 console.log(`[Offline Queue] Delivering ${pendingServer.length} queued messages from ${activePeer}`);
+                // Ack delivered messages so they are cleanly removed from server queue
+                const idsToAck = fromActivePeer.map((p: any) => p.id).filter(Boolean);
+                if (idsToAck.length > 0) {
+                  fetch('/api/chat/queue', {
+                    method: 'DELETE',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json', 'x-web3-address': address || '' },
+                    body: JSON.stringify({ ids: idsToAck }),
+                  }).catch(() => {});
+                }
               }
             }
           }

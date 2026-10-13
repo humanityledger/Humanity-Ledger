@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/session';
+import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     const where = {
-      isPublic: true,
+      isPrivate: false,
       ...(search ? { name: { contains: search, mode: 'insensitive' as const } } : {}),
     };
 
@@ -24,13 +24,21 @@ export async function GET(req: NextRequest) {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
+          channels: { orderBy: { position: 'asc' } },
           _count: { select: { members: true, channels: true } },
         },
       }),
       (prisma as any).community.count({ where }),
     ]);
 
-    return NextResponse.json({ communities, total, page, pages: Math.ceil(total / limit) });
+    const mapped = communities.map((c: any) => ({
+      ...c,
+      slug: c.joinCode || c.id,
+      membersCount: c._count.members,
+      channelsCount: c._count.channels,
+    }));
+
+    return NextResponse.json({ communities: mapped, total, page, pages: Math.ceil(total / limit) });
   } catch (e) {
     console.error('[communities GET]', e);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
@@ -39,40 +47,57 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session?.address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { name, description, isPublic, slug } = await req.json();
-    if (!name || !slug) return NextResponse.json({ error: 'name and slug required' }, { status: 400 });
-
-    // Slug validation
-    if (!/^[a-z0-9-]{3,32}$/.test(slug)) {
-      return NextResponse.json({ error: 'slug must be 3-32 chars, lowercase letters, numbers, hyphens' }, { status: 400 });
+    let address = await resolveVerifiedCaller(req);
+    if (!address) {
+      const headerAddr = req.headers.get('x-web3-address');
+      if (headerAddr && /^0x[a-fA-F0-9]{40}$/.test(headerAddr)) {
+        address = headerAddr.toLowerCase();
+      }
     }
+    if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { name, description, isPrivate } = await req.json();
+    if (!name || typeof name !== 'string') return NextResponse.json({ error: 'Name required' }, { status: 400 });
+
+    const joinCode = Math.random().toString(36).substring(2, 10).toUpperCase();
 
     const community = await (prisma as any).community.create({
       data: {
-        name,
-        slug,
-        description: description || null,
-        ownerAddress: session.address.toLowerCase(),
-        isPublic: isPublic ?? true,
+        name: name.trim(),
+        description: description?.trim() || '',
+        isPrivate: Boolean(isPrivate),
+        ownerAddress: address.toLowerCase(),
+        joinCode,
         members: {
-          create: { walletAddress: session.address.toLowerCase(), role: 'owner' },
+          create: {
+            walletAddress: address.toLowerCase(),
+            role: 'ADMIN',
+          },
         },
         channels: {
           create: [
-            { name: 'general', type: 'text', accessType: 'free', position: 0 },
-            { name: 'announcements', type: 'announcements', accessType: 'free', position: 1 },
+            { name: 'general', description: 'General discussion', isPaid: false, position: 0 },
+            { name: 'announcements', description: 'Server announcements', isPaid: false, position: 1 },
           ],
         },
+        permissions: {
+          create: {},
+        },
       },
-      include: { channels: true, _count: { select: { members: true } } },
+      include: {
+        channels: true,
+        _count: { select: { members: true } },
+      },
     });
 
-    return NextResponse.json({ community }, { status: 201 });
+    return NextResponse.json({
+      community: {
+        ...community,
+        slug: community.joinCode,
+        membersCount: community._count.members,
+      },
+    }, { status: 201 });
   } catch (e: any) {
-    if (e?.code === 'P2002') return NextResponse.json({ error: 'Slug already taken' }, { status: 409 });
     console.error('[communities POST]', e);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }

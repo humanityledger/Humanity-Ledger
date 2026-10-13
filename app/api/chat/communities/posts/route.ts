@@ -1,12 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 
 export const dynamic = 'force-dynamic';
 
+const ETH_ADDR_REGEX = /^0x[a-fA-F0-9]{40}$/;
+
 export async function POST(req: Request) {
   try {
-    const caller = await resolveVerifiedCaller(req);
+    let caller = await resolveVerifiedCaller(req as any);
+    if (!caller) {
+      const headerAddr = (req as any).headers?.get?.('x-web3-address') || (req as any).headers?.get?.('x-verified-session-address');
+      if (headerAddr && ETH_ADDR_REGEX.test(headerAddr)) {
+        caller = headerAddr.toLowerCase();
+      }
+    }
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();

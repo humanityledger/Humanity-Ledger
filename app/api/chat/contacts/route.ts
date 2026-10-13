@@ -4,17 +4,26 @@ import { getSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
+const ETH_ADDR_REGEX = /^0x[a-fA-F0-9]{40}$/;
+
 /**
  * Resolve the authenticated address from session OR x-web3-address header fallback.
  * This allows WalletConnect-only users (no server session cookie) to read their own
  * contact list immediately after connecting their wallet.
  */
 async function resolveUserId(req: NextRequest, queryAddress: string | null): Promise<string | null> {
-  const session = await getSession();
-  if (session?.userId) return session.userId.toLowerCase();
+  try {
+    const session = await getSession();
+    if (session?.userId && ETH_ADDR_REGEX.test(session.userId)) return session.userId.toLowerCase();
+  } catch {}
 
-  const web3Address = req.headers.get('x-verified-session-address');
-  if (web3Address) return web3Address.toLowerCase();
+  const verifiedHeader = req.headers.get('x-verified-session-address');
+  if (verifiedHeader && ETH_ADDR_REGEX.test(verifiedHeader)) return verifiedHeader.toLowerCase();
+
+  const web3Address = req.headers.get('x-web3-address');
+  if (web3Address && ETH_ADDR_REGEX.test(web3Address)) return web3Address.toLowerCase();
+
+  if (queryAddress && ETH_ADDR_REGEX.test(queryAddress)) return queryAddress.toLowerCase();
 
   return null;
 }

@@ -123,7 +123,7 @@ export async function resolveInboxIdToAddress(inboxId: string, client?: Client):
     try {
       const dms = await client.conversations.listDms();
       for (const dm of dms) {
-        const members = typeof dm.members === 'function' ? await dm.members() : (dm.members ?? []);
+        const members: any[] = typeof dm.members === 'function' ? await dm.members() : (dm.members ?? []);
         const targetMember = members.find((m: any) => m.inboxId?.toLowerCase() === inboxId.toLowerCase());
         if (targetMember) {
           const addrs = targetMember.accountAddresses || targetMember.addresses || [];
@@ -433,95 +433,124 @@ export async function getRegisteredAddress(address: string): Promise<string> {
   return await checksumAddress(address);
 }
 
+const ETH_ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
+
 export async function sendMessage(
-  client: Client,
+  client: Client | null | undefined,
   toAddress: string,
   content: string,
   senderEthAddress?: string,
 ): Promise<void> {
-  // CRITICAL: normalize to EIP-55 checksum format before any XMTP call
-  // Only attempt XMTP checksum and routing if it's an Ethereum address (42 chars).
-  // Aztec Schnorr addresses (66 chars) are not natively routable via XMTP.
   const isAztecAddress = toAddress.length === 66 && toAddress.startsWith('0x');
-  
-  let lastErr: any;
+  // Only use the sender address if it is a valid Ethereum address.
+  // Never pass 'unknown' as the x-web3-address header — it will fail the auth check.
+  const senderAddr: string | null = (senderEthAddress && ETH_ADDR_RE.test(senderEthAddress))
+    ? senderEthAddress.toLowerCase()
+    : null;
 
-  if (!isAztecAddress) {
-    const normalizedTo = await getRegisteredAddress(toAddress);
+  // Normalize recipient to lowercase for consistent DB lookups
+  const recipientNorm = toAddress.toLowerCase();
 
-    // Validate address format - must be a valid Ethereum address
-    if (!normalizedTo || normalizedTo.length !== 42 || !normalizedTo.startsWith('0x')) {
-      // Last resort: use the original address from user input
-      console.warn(`[XMTP] Address normalization returned invalid result, using original: ${toAddress}`);
-    }
-    // Always use original toAddress as fallback if normalization fails
-    const finalTo = (normalizedTo && normalizedTo.length === 42) ? normalizedTo : toAddress;
-
-    const identifier: XmtpIdentifier = {
-      identifier: finalTo,
-      identifierKind: 'Ethereum',
-    };
-
-    let sentViaXmtp = false;
-    for (let i = 0; i < 2; i++) {
-      try {
-        // [CRITICAL FIX v6] newDmWithIdentifier is idempotent. It creates OR finds
-        // the existing DM without needing a manual listDms scan.
-        const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 8000));
-        const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
-        
-        // Sync the DM before sending to prevent local MLS state desync
-        try {
-          const syncTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('sync timeout')), 4000));
-          await Promise.race([dm.sync(), syncTimeout]);
-        } catch {}
-        
-        // Wrap send in 10s timeout to prevent hanging
-        const sendTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('send timeout')), 10000));
-        await Promise.race([dm.send(content), sendTimeout]);
-        try { await dm.sync(); } catch {}
-        sentViaXmtp = true;
-        return; // SUCCESS — delivered directly via XMTP
-      } catch (sendErr: any) {
-        lastErr = sendErr;
-        console.warn(`[XMTP] Attempt ${i + 1} to reach ${toAddress} via XMTP did not complete:`, sendErr?.message || sendErr);
-        if (i === 0) await new Promise(r => setTimeout(r, 600));
-      }
-    }
-  } else {
-    console.log('[XMTP] Aztec address detected. Bypassing native XMTP and using Offline Queue.');
-  }
-
-  // === OFFLINE QUEUE FALLBACK ===
-  // When recipient cannot be reached directly via XMTP (recipient is offline, has not yet initialized XMTP inbox,
-  // or network timed out), safely store the message in the backend offline queue so it is guaranteed
-  // to be delivered as soon as the recipient opens Ledger Chat.
-  const senderAddr: string = senderEthAddress ?? 'unknown';
-
+  // 1. ALWAYS store in the offline queue (PostgreSQL / PendingChatMessage) FIRST.
+  // This guarantees delivery: even if XMTP is uninitialized, recipient is offline,
+  // network times out, or installation limit is hit, the message will be delivered
+  // the moment the recipient logs in or opens Ledger Chat.
+  let queueSuccess = false;
   try {
+    const queueHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (senderAddr) queueHeaders['x-web3-address'] = senderAddr;
+
     const res = await fetch('/api/chat/queue', {
       method: 'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-web3-address': senderAddr,
-      },
+      headers: queueHeaders,
       body: JSON.stringify({
-        sender: senderAddr,
-        recipient: toAddress,
+        sender: senderAddr || toAddress, // fallback so server can see something
+        recipient: recipientNorm,
         content,
       }),
     });
-    if (!res.ok) {
+    if (res.ok) {
+      queueSuccess = true;
+      console.log(`[Queue] Message guaranteed in offline store for ${recipientNorm}`);
+    } else {
       const errBody = await res.json().catch(() => ({}));
-      throw new Error(errBody.error || `Offline queue failed with status ${res.status}`);
+      console.warn(`[Queue] Offline queue responded with status ${res.status}:`, errBody);
     }
-    console.log(`[XMTP] Message safely queued in offline store for ${toAddress}`);
   } catch (queueErr) {
-    console.warn('[XMTP Offline Queue] Error queuing message:', queueErr);
-    // If both XMTP and offline queue failed, throw so the sender can see retry
-    throw queueErr;
+    console.warn('[Queue] Offline store network warning:', queueErr);
   }
+
+  // 1b. DUAL-WRITE: Also persist to DirectMessage table for fallback polling.
+  // The syncGlobal poll in LedgerChatV2 queries /api/chat/direct periodically.
+  // Having the message in both tables guarantees the recipient sees it on next poll
+  // even if the queue DELETE ack failed or the message was already cleaned up.
+  if (senderAddr && ETH_ADDR_RE.test(recipientNorm)) {
+    try {
+      await fetch('/api/chat/direct', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-web3-address': senderAddr,
+        },
+        body: JSON.stringify({
+          recipient: recipientNorm,
+          content,
+        }),
+      });
+    } catch (directErr) {
+      // Non-fatal: primary delivery is via offline queue + XMTP
+      console.warn('[Direct] Dual-write to DirectMessage table failed:', directErr);
+    }
+  }
+
+  // 2. If XMTP client is available and recipient is an Ethereum address, ALSO attempt
+  // realtime peer-to-peer delivery via the XMTP network.
+  if (client && !isAztecAddress) {
+    try {
+      const normalizedTo = await getRegisteredAddress(toAddress);
+      const finalTo = (normalizedTo && normalizedTo.length === 42) ? normalizedTo : toAddress;
+
+      const identifier: XmtpIdentifier = {
+        identifier: finalTo,
+        identifierKind: 'Ethereum',
+      };
+
+      for (let i = 0; i < 2; i++) {
+        try {
+          const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 6000));
+          const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
+          
+          try {
+            const syncTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('sync timeout')), 3000));
+            await Promise.race([dm.sync(), syncTimeout]);
+          } catch {}
+          
+          const sendTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('send timeout')), 8000));
+          await Promise.race([dm.send(content), sendTimeout]);
+          try { await dm.sync(); } catch {}
+          console.log(`[XMTP] Realtime delivery succeeded for ${toAddress}`);
+          return; // Sent via queue, direct table, and realtime XMTP
+        } catch (sendErr: any) {
+          console.warn(`[XMTP] Attempt ${i + 1} for ${toAddress} did not complete:`, sendErr?.message || sendErr);
+          if (i === 0) await new Promise(r => setTimeout(r, 400));
+        }
+      }
+    } catch (err) {
+      console.warn('[XMTP] Realtime attempt error:', err);
+    }
+  }
+
+  // If XMTP was unavailable or didn't deliver in realtime, but the offline queue succeeded:
+  // we count this as SUCCESS because the message is safely stored in PostgreSQL and
+  // will be delivered to the recipient when they open Ledger Chat.
+  if (queueSuccess) {
+    return;
+  }
+
+  // If neither XMTP nor the offline queue succeeded, throw so the UI can show retry
+  throw new Error('Message could not be delivered to network or offline queue');
 }
 
 /**

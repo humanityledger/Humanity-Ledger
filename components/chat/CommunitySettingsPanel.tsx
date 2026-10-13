@@ -182,7 +182,7 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
     toast.success('Invite link copied!');
   };
 
-  const AVATAR_COLORS = ['#25D366','#007AFF','#FF9500','#FF3B30','#AF52DE','#5856D6'];
+  const AVATAR_COLORS = ['#25D366','#34C759','#FF9500','#FF3B30','#AF52DE','#5856D6'];
   const avatarColor = community?.id ? AVATAR_COLORS[(community.id.charCodeAt(0) || 0) % AVATAR_COLORS.length] : '#000';
 
   if (!community) return <div className="p-8 text-center text-black/40">Loading settings...</div>;

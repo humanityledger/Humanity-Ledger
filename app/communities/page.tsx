@@ -80,7 +80,7 @@ export default function CommunitiesPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {communities.map(c => (
-              <Link href={`/communities/${c.slug}`} key={c.id}>
+              <Link href={`/chat?join=${c.joinCode || c.slug || c.id}`} key={c.id}>
                 <div className="bg-white rounded-3xl p-6 border border-black/[0.04] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group h-full flex flex-col cursor-pointer">
                   <div className="flex items-center gap-4 mb-4">
                     <div 
