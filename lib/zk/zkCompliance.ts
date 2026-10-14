@@ -118,7 +118,10 @@ export async function generateProofOfSolvency(
   const balances = getShieldedBalances(userAddress);
   const tokenKey = token.toLowerCase() as 'dai' | 'usdc' | 'eth';
   const current = parseFloat((balances[tokenKey] || '0').replace(/,/g, ''));
-  const threshold = parseFloat(thresholdAmount);
+  const threshold = parseFloat(String(thresholdAmount).replace(/,/g, ''));
+  if (!Number.isFinite(threshold) || threshold <= 0) {
+    throw new Error('Monto límite para prueba de solvencia inválido: debe ser un número positivo.');
+  }
 
   // Simulate UltraPlonk Solvency Range Circuit
   await new Promise(r => setTimeout(r, 650));

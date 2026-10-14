@@ -11,7 +11,7 @@ import {
   Mic, Video, WifiOff, BellOff, EyeOff, FileText, Star, Hash,
   ChevronDown, Info, Send
 } from 'lucide-react';
-import { useAccount, useBalance, useDisconnect } from 'wagmi';
+import { useAccount, useBalance, useDisconnect, useSignMessage } from 'wagmi';
 import { toast } from 'sonner';
 import jsQR from 'jsqr';
 import { QRCodeSVG } from 'qrcode.react';
@@ -180,6 +180,8 @@ const BlockListModal = () => {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddress, myName, onClose }) => {
+  const { connector } = useAccount();
+  const { signMessageAsync } = useSignMessage();
   const [activeTab, setActiveTab] = useState<string>('account');
   const [modal, setModal] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -280,7 +282,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               } catch {}
             }
 
-            const result = await completeSessionHandshake(rawValue, () => myAddress);
+            const result = await completeSessionHandshake(rawValue, () => myAddress, signMessageAsync, connector);
             if (result.ok) {
               setScanSuccess('Device linked successfully! The desktop will now log in automatically.');
               toast.success('Desktop linked securely');

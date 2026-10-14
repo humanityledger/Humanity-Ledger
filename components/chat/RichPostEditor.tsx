@@ -45,6 +45,7 @@ import {
   ZapIcon, Hash, AtSign
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { safeHTML } from '@/hooks/useSanitizer';
 
 // ÔöÇÔöÇÔöÇ TYPE GUARDS: graceful when Tiptap is not yet installed ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 // (These will be replaced by real imports after first Railway deploy)
@@ -611,7 +612,7 @@ export function RichPostEditor({
         {isPreview ? (
           <div
             className="prose prose-sm max-w-none px-5 py-4 text-[15px]"
-            dangerouslySetInnerHTML={{ __html: editor?.getHTML() ?? '' }}
+            dangerouslySetInnerHTML={safeHTML(editor?.getHTML() ?? '')}
           />
         ) : (
           <div className="tiptap-editor-wrap">

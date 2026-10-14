@@ -287,7 +287,10 @@ export async function completeSessionHandshake(
       return;
     }
     try {
-      const sRes = await fetch(`/api/auth/qr-sync-seed?uuid=${uuid}`);
+      const sRes = await fetch(`/api/auth/qr-sync-seed?uuid=${uuid}`, {
+        credentials: 'include',
+        cache: 'no-store',
+      });
       if (sRes.ok) {
         const sData = await sRes.json();
         if (sData.encryptedSeed && sData.iv) {

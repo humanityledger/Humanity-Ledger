@@ -14,8 +14,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const address = searchParams.get('address');
 
-  if (!address) {
-    return NextResponse.json({ error: 'address query parameter is required' }, { status: 400 });
+  if (!address || !/^0x[0-9a-fA-F]{40}$/.test(address)) {
+    return NextResponse.json({ error: 'Valid 0x Ethereum address query parameter is required' }, { status: 400 });
   }
 
   const addr = address.toLowerCase();

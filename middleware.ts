@@ -307,7 +307,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(self), geolocation=(self)');
+  response.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self)');
 
   return response;
 }

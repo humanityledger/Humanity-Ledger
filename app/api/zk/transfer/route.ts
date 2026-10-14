@@ -54,8 +54,8 @@ export async function POST(req: NextRequest) {
   }
 
   const parsedAmount = parseFloat(String(amount).replace(/,/g, ''));
-  if (isNaN(parsedAmount) || parsedAmount <= 0) {
-    return NextResponse.json({ error: 'amount must be a positive number' }, { status: 400 });
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0 || parsedAmount > 1_000_000_000) {
+    return NextResponse.json({ error: 'amount must be a positive finite number (max 1,000,000,000)' }, { status: 400 });
   }
 
   // Simulate Aztec sequencer relay
@@ -118,8 +118,8 @@ export async function GET(req: NextRequest) {
   const limit   = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
   const page    = parseInt(searchParams.get('page') || '0');
 
-  if (!address) {
-    return NextResponse.json({ error: 'address parameter required' }, { status: 400 });
+  if (!address || !/^0x[0-9a-fA-F]{40}$/.test(address)) {
+    return NextResponse.json({ error: 'Valid 0x Ethereum address parameter required' }, { status: 400 });
   }
 
   let results = txLog.filter(tx =>

@@ -76,14 +76,20 @@ export function createPayrollBatch(params: {
   token: SupportedToken;
   recipients: Array<{ recipientTag: string; amount: string; memo?: string; recipientAddress?: string }>;
 }): PayrollBatch {
-  const recipientsWithIds: PayrollRecipient[] = params.recipients.map((r, i) => ({
-    id: `rec_${Date.now()}_${i}`,
-    recipientTag: formatZkTag(r.recipientTag),
-    recipientAddress: r.recipientAddress,
-    amount: r.amount,
-    memo: r.memo || 'Confidential Payroll Disbursement',
-    status: 'pending',
-  }));
+  const recipientsWithIds: PayrollRecipient[] = params.recipients.map((r, i) => {
+    const amt = parseFloat(String(r.amount).replace(/,/g, ''));
+    if (!Number.isFinite(amt) || amt <= 0 || amt > 1_000_000_000) {
+      throw new Error(`Invalid amount for recipient ${r.recipientTag || i}: must be a positive finite number`);
+    }
+    return {
+      id: `rec_${Date.now()}_${i}`,
+      recipientTag: formatZkTag(r.recipientTag),
+      recipientAddress: r.recipientAddress,
+      amount: amt.toFixed(2),
+      memo: r.memo || 'Confidential Payroll Disbursement',
+      status: 'pending' as const,
+    };
+  });
 
   const totalAmount = recipientsWithIds
     .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0)
@@ -124,6 +130,12 @@ export async function executePayrollBatch(
   const tokenKey = batch.token.toLowerCase() as 'dai' | 'usdc' | 'eth';
   const available = parseFloat((balances[tokenKey] || '0').replace(/,/g, ''));
   const needed = parseFloat(batch.totalAmount);
+
+  if (!Number.isFinite(needed) || needed <= 0) {
+    batch.status = 'failed';
+    savePayrollBatches(batches);
+    throw new Error('Monto total de lote inválido: debe ser un número positivo.');
+  }
 
   if (available < needed) {
     batch.status = 'failed';

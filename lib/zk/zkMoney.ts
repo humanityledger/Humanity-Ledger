@@ -200,7 +200,12 @@ function randomHex(bytes: number): string {
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     crypto.getRandomValues(arr);
   } else {
-    for (let i = 0; i < bytes; i++) arr[i] = Math.floor(Math.random() * 256);
+    try {
+      const nodeCrypto = require('crypto');
+      return nodeCrypto.randomBytes(bytes).toString('hex');
+    } catch {
+      for (let i = 0; i < bytes; i++) arr[i] = Math.floor(Math.random() * 256);
+    }
   }
   return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
 }
@@ -467,17 +472,40 @@ function saveToHistory(address: string, record: ZkTransactionRecord): void {
  * Credits their balance, adds note to UTXO store, creates transaction record, and dispatches notification.
  */
 export function recordIncomingShieldedPayment(recipientAddress: string, payment: ZkPaymentResult): void {
-  if (!recipientAddress || !payment?.amount || !payment?.token) return;
+  if (!recipientAddress || !payment?.amount || !payment?.token || !payment?.txHash) return;
 
-  // Guard against duplicate processing of the same txHash
-  const processedKey = `ledger_zk_processed_tx_${payment.txHash}`;
-  if (typeof window !== 'undefined' && localStorage.getItem(processedKey)) return;
-  if (typeof window !== 'undefined') localStorage.setItem(processedKey, '1');
+  // Validate Ethereum recipient address
+  const normRecipient = recipientAddress.toLowerCase();
+  if (!/^0x[0-9a-fA-F]{40}$/.test(recipientAddress)) return;
 
-  const delta = parseFloat(payment.amount) || 0;
-  if (delta > 0) {
-    updateShieldedBalance(recipientAddress, delta, payment.token);
+  // Validate txHash format (hex 0x... min 16 chars)
+  if (!/^0x[0-9a-fA-F]{16,66}$/.test(payment.txHash)) return;
+
+  // Validate token
+  const tokenUpper = payment.token.toUpperCase();
+  if (!['DAI', 'USDC', 'ETH'].includes(tokenUpper)) return;
+  const token = tokenUpper as SupportedToken;
+
+  // Validate recipient match if explicitly embedded in payment payload
+  if (payment.recipientTag && payment.recipientTag.startsWith('0x') && payment.recipientTag.toLowerCase() !== normRecipient) {
+    return;
   }
+
+  // Validate finite positive amount (bounds check: > 0 and <= 1,000,000,000)
+  const delta = parseFloat(String(payment.amount).replace(/,/g, ''));
+  if (!Number.isFinite(delta) || delta <= 0 || delta > 1_000_000_000) return;
+
+  // Guard against duplicate processing of the same txHash using capped bounded store
+  const PROCESSED_TXS_KEY = 'ledger_zk_processed_tx_hashes';
+  const processedHashes = lsGet<string[]>(PROCESSED_TXS_KEY, []);
+  if (processedHashes.includes(payment.txHash)) return;
+
+  // Add to bounded set (capped at 1000 items to avoid localStorage bloat)
+  processedHashes.unshift(payment.txHash);
+  if (processedHashes.length > 1000) processedHashes.length = 1000;
+  lsSet(PROCESSED_TXS_KEY, processedHashes);
+
+  updateShieldedBalance(normRecipient, delta, token);
 
   // Create UTXO note
   const note: ZkNote = {
