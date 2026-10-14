@@ -23,6 +23,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
+# Aztec Network Node & Sequencer Configuration (October 2026 Upgrade Suite)
+# Testnet node moves to v6.0.0-rc.3 (azteclabs/aztec:6.0.0-rc.3)
+# Mainnet sequencer on v5.2.0 (Rollup deploy block: 25428902 with Nethermind 2.0.0)
+# V6 Governance Signalling proposer payload: 0x68396cde7891ADCC65F11e8A5Cec1898AF6AD970
+ENV AZTEC_TESTNET_IMAGE="azteclabs/aztec:6.0.0-rc.3" \
+    AZTEC_TESTNET_VERSION="v6.0.0-rc.3" \
+    AZTEC_MAINNET_VERSION="v5.2.0" \
+    GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS="0x68396cde7891ADCC65F11e8A5Cec1898AF6AD970" \
+    AZTEC_ROLLUP_DEPLOY_BLOCK="25428902" \
+    AZTEC_NETHERMIND_VERSION="2.0.0"
+
 # Install Aztec CLI (provides `aztec start --pxe` for testnet connectivity)
 # Version pinned to match our @aztec/aztec.js package version (4.3.1)
 RUN curl -s https://install.aztec.network | bash -s -- --version 0.87.9 --no-sandbox 2>/dev/null || \

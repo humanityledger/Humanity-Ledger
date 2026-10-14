@@ -17,6 +17,7 @@ import jsQR from 'jsqr';
 import { QRCodeSVG } from 'qrcode.react';
 import { useLedgerSettings } from '../terminal/LedgerChatSettings';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
+import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { getShieldedBalances, resolveZkTag, registerZkTag, validateZkHandle, syncBalanceFromAztec, getZkTransactionHistory, clearZkTransactionHistory, ZkShieldedBalance, AZTEC_MAINNET_RPC } from '@/lib/zk/zkMoney';
 import { ZkPrivacyScore } from '@/components/zk/ZkPrivacyScore';
 import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
@@ -2067,6 +2068,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
       {/* ── ZkShieldModal for Settings ── */}
       <AnimatePresence>
         {showZkShieldModal && (

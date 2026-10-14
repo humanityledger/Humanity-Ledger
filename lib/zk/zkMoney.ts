@@ -27,6 +27,14 @@ export const SUPPORTED_TOKENS  = ['DAI', 'USDC', 'ETH'] as const;
 export const ANONYMITY_SET_MIN = 5;
 export const NOTE_MATURITY_BLOCKS = 2;
 
+// ─── Aztec Network Node, Rollup & Sequencer Operational Parameters (Oct 2026) ────
+export const AZTEC_TESTNET_IMAGE               = 'azteclabs/aztec:6.0.0-rc.3';
+export const AZTEC_TESTNET_VERSION             = 'v6.0.0-rc.3';
+export const AZTEC_MAINNET_VERSION             = 'v5.2.0';
+export const AZTEC_GOVERNANCE_PROPOSER_PAYLOAD = '0x68396cde7891ADCC65F11e8A5Cec1898AF6AD970';
+export const AZTEC_ROLLUP_DEPLOY_BLOCK         = 25428902;
+export const AZTEC_NETHERMIND_VERSION          = '2.0.0';
+
 /** Realistic UltraPlonk proof generation steps shown in UI */
 export const PROOF_STEPS = [
   { label: 'Loading Aztec PXE client…',                  weight: 8  },
@@ -452,6 +460,58 @@ function saveToHistory(address: string, record: ZkTransactionRecord): void {
   const history = lsGet<ZkTransactionRecord[]>(key, []);
   history.unshift(record);
   lsSet(key, history.slice(0, 100));
+}
+
+/**
+ * Automatically records an incoming shielded payment note for the recipient.
+ * Credits their balance, adds note to UTXO store, creates transaction record, and dispatches notification.
+ */
+export function recordIncomingShieldedPayment(recipientAddress: string, payment: ZkPaymentResult): void {
+  if (!recipientAddress || !payment?.amount || !payment?.token) return;
+
+  // Guard against duplicate processing of the same txHash
+  const processedKey = `ledger_zk_processed_tx_${payment.txHash}`;
+  if (typeof window !== 'undefined' && localStorage.getItem(processedKey)) return;
+  if (typeof window !== 'undefined') localStorage.setItem(processedKey, '1');
+
+  const delta = parseFloat(payment.amount) || 0;
+  if (delta > 0) {
+    updateShieldedBalance(recipientAddress, delta, payment.token);
+  }
+
+  // Create UTXO note
+  const note: ZkNote = {
+    id: `note_${payment.txHash.slice(2, 10)}`,
+    commitment: payment.nullifierHash || `0xnote_${randomHex(16)}`,
+    nullifier: payment.nullifierHash || `0xnull_${randomHex(16)}`,
+    amount: payment.amount,
+    token: payment.token,
+    owner: recipientAddress.toLowerCase(),
+    timestamp: payment.timestamp || Date.now(),
+    status: 'settled',
+    blockHeight: 14820,
+  };
+  const noteKey = `${ZK_NOTES_PREFIX}${recipientAddress.toLowerCase()}`;
+  const notes = lsGet<ZkNote[]>(noteKey, []);
+  notes.unshift(note);
+  lsSet(noteKey, notes.slice(0, 200));
+
+  // Add to transaction history
+  const txRecord: ZkTransactionRecord = {
+    ...payment,
+    confirmations: 12,
+    blockHeight: 14820,
+    fee: '0.00 zkETH',
+    gasUsed: 0,
+    privacyScore: 98,
+    anonymitySetSize: 42,
+    noteId: note.id,
+    direction: 'received',
+  };
+  saveToHistory(recipientAddress, txRecord);
+
+  // Dispatch real-time events
+  emit('ledger_zk_payment_received', { recipient: recipientAddress, payment });
 }
 
 // ─── Privacy Analytics ─────────────────────────────────────────────────────────

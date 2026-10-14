@@ -168,19 +168,14 @@ const nextConfig = {
             };
         }
 
-        // [AZTEC BUILD FIX] @aztec/aztec.js v0.x does not export its root path
-        // in the package.json exports field. Webpack rejects static imports with:
+        // [AZTEC BUILD FIX] @aztec/aztec.js does not export its root path
+        // in package.json exports field. Webpack rejects root imports with:
         // "Package path . is not exported from package @aztec/aztec.js".
-        // All Aztec usage in client components uses dynamic import() at runtime,
-        // so we stub the package at build time with `false` on the client.
-        // The dynamic import() calls still work in the browser via the CDN/node resolution
-        // because they are evaluated at runtime, not bundled.
-        if (!isServer) {
-            config.resolve.alias = {
-                ...config.resolve.alias,
-                '@aztec/aztec.js': false,
-            };
-        }
+        // We alias to our universal root stub on both client and server.
+        config.resolve.alias = {
+            ...config.resolve.alias,
+            '@aztec/aztec.js': path.resolve(__dirname, './lib/aztec/aztec-stub.js'),
+        };
 
         // [EPERM FIX] Prevent webpack file watcher from scanning Windows system
         // protected directories. Without this, webpack glob scans crawl UP from

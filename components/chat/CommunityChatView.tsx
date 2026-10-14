@@ -7,7 +7,7 @@ import {
   Image as ImgIcon, Mic, Hash, CheckCircle, X, Reply,
   Play, Pause, Pin, Search, Users, ChevronDown, Film,
   MoreVertical, Copy, Trash2, ThumbsUp, Heart, Laugh,
-  AlertCircle, Lock, Volume2, Globe, Shield, ExternalLink
+  AlertCircle, Lock, Volume2, Globe, Shield, ExternalLink, Zap, FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { NativeCryptoSendModal } from './NativeCryptoSendModal';
@@ -15,11 +15,15 @@ import { ZkMoneyModal } from './ZkMoneyModal';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { AnimatePresence, motion } from 'framer-motion';
 import DOMPurify from 'dompurify';
-import { parseZkPaymentPayload, parseEscrowPayload } from '@/lib/zk/zkMoney';
+import { parseZkPaymentPayload, parseEscrowPayload, recordIncomingShieldedPayment } from '@/lib/zk/zkMoney';
 import { parseTipPayload, parseBountyPayload } from '@/lib/zk/zkCommunityPayments';
+import { parseStreamPayload, encodeStreamPayload, ZkPaymentStream } from '@/lib/zk/zkStreaming';
+import { parseInvoicePayload, encodeInvoicePayload, ZkInvoice } from '@/lib/zk/zkInvoice';
 import { ZkWalletPanel } from '@/components/zk/ZkWalletPanel';
 import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
 import { ZkEscrowCard } from '@/components/zk/ZkEscrowCard';
+import { ZkStreamManager } from '@/components/zk/ZkStreamManager';
+import { ZkInvoiceModal } from '@/components/zk/ZkInvoiceModal';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function safeHtml(raw: string): string {
@@ -532,6 +536,65 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     }
   }
 
+  if (content.startsWith('__ZK_STREAM__:')) {
+    const stream = parseStreamPayload(content);
+    if (stream) {
+      return (
+        <div className="bg-[#1C1C1E] text-white rounded-2xl p-4 shadow-lg border border-black/10 min-w-[240px] max-w-[320px]">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <Zap size={14} />
+              </div>
+              <div>
+                <span className="text-[12px] font-bold text-white">Private Stream</span>
+                <span className="ml-1.5 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">Aztec</span>
+              </div>
+            </div>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          </div>
+          <div className="py-2 border-y border-white/10 my-2">
+            <p className="text-[20px] font-black text-white font-mono">{stream.totalAmount} <span className="text-[12px] text-emerald-400">zk{stream.token}</span></p>
+            <p className="text-[11px] text-white/50">{stream.flowRate} {stream.token}/sec</p>
+          </div>
+          <div className="text-[10px] font-mono text-white/60 flex justify-between">
+            <span>To: {stream.recipientTag}</span>
+            <span className="text-emerald-400">Live</span>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  if (content.startsWith('__ZK_INVOICE__:')) {
+    const invoice = parseInvoicePayload(content);
+    if (invoice) {
+      return (
+        <div className="bg-[#1C1C1E] text-white rounded-2xl p-4 shadow-lg border border-black/10 min-w-[240px] max-w-[320px]">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                <FileText size={14} />
+              </div>
+              <span className="text-[12px] font-bold text-white">Shielded Invoice</span>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full">
+              {invoice.status}
+            </span>
+          </div>
+          <h4 className="font-bold text-white text-[13px]">{invoice.title || 'Private Invoice'}</h4>
+          <p className="text-[11px] text-white/60 mb-2">{invoice.description}</p>
+          <div className="flex items-center justify-between pt-2 border-t border-white/10">
+            <span className="text-[18px] font-black text-emerald-400">{invoice.amount} <span className="text-[11px]">zk{invoice.token}</span></span>
+            <span className="px-2.5 py-1 rounded-xl bg-white/10 text-white text-[11px] font-mono">
+              zk.money
+            </span>
+          </div>
+        </div>
+      );
+    }
+  }
+
   if (content.startsWith('[STICKER]:')) {
     const name = content.replace('[STICKER]:', '');
     const stickers: Record<string,string> = { fire:'🔥', heart:'❤️', clap:'👏', '100':'💯', rocket:'🚀', wave:'👋', thumbsup:'👍', cool:'😎' };
@@ -580,9 +643,11 @@ export function CommunityChatView({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   // ZK Wallet Panel
-  const [showZkWallet,   setShowZkWallet]   = useState(false);
-  const [showZkShield,   setShowZkShield]   = useState(false);
-  const [zkShieldMode,   setZkShieldMode]   = useState<'shield'|'unshield'>('shield');
+  const [showZkWallet,       setShowZkWallet]       = useState(false);
+  const [showZkShield,       setShowZkShield]       = useState(false);
+  const [zkShieldMode,       setZkShieldMode]       = useState<'shield'|'unshield'>('shield');
+  const [showZkStreamModal,  setShowZkStreamModal]  = useState(false);
+  const [showZkInvoiceModal, setShowZkInvoiceModal] = useState(false);
 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1098,9 +1163,11 @@ export function CommunityChatView({
         <AnimatePresence>
           {showAppDrawer && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-2">
-              <div className="grid grid-cols-6 gap-2 p-3 bg-white rounded-2xl shadow-md border border-black/[0.04]">
+              <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 p-3 bg-white rounded-2xl shadow-md border border-black/[0.04]">
                 {[
                   { icon: Shield, label: 'zk.money', color: 'bg-gradient-to-tr from-[#8B5CF6] to-[#10B981]', fn: () => setShowZkModal(true) },
+                  { icon: Zap, label: 'ZK Stream', color: 'bg-emerald-600', fn: () => setShowZkStreamModal(true) },
+                  { icon: FileText, label: 'ZK Factura', color: 'bg-blue-600', fn: () => setShowZkInvoiceModal(true) },
                   { icon: ImgIcon, label: 'Foto/Video', color: 'bg-[#FF9500]', fn: () => fileInputRef.current?.click() },
                   { icon: CircleDollarSign, label: 'Crypto Send', color: 'bg-[#128C7E]', fn: () => { setCryptoRecipient(''); setShowRecipientSheet(true); } },
                   { icon: MapPin, label: 'Ubicación', color: 'bg-[#25D366]', fn: sendLocation },
@@ -1329,6 +1396,36 @@ export function CommunityChatView({
           />
         )}
       </AnimatePresence>
+
+      {/* ── Aztec zk.money Payment Stream Modal ── */}
+      {showZkStreamModal && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setShowZkStreamModal(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl border border-black/10 w-full max-w-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <ZkStreamManager
+              userAddress={myAddress}
+              onClose={() => setShowZkStreamModal(false)}
+              onStreamCreated={(stream) => {
+                executeSend(encodeStreamPayload(stream));
+                setShowZkStreamModal(false);
+                toast.success('Flujo privado lanzado en Aztec!');
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Aztec zk.money Invoice Modal ── */}
+      {showZkInvoiceModal && (
+        <ZkInvoiceModal
+          userAddress={myAddress}
+          onClose={() => setShowZkInvoiceModal(false)}
+          onInvoiceCreated={(invoice) => {
+            executeSend(encodeInvoicePayload(invoice));
+            setShowZkInvoiceModal(false);
+            toast.success('Factura confidencial publicada!');
+          }}
+        />
+      )}
     </div>
   );
 }

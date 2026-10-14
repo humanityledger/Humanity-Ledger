@@ -59,6 +59,29 @@ export async function GET(req: NextRequest) {
     currentBlock,
     currentEpoch,
     batches: batchHistory.slice(0, limit),
+    v6GovernanceSignalling: {
+      status: 'signalling_open',
+      proposerPayloadAddress: '0x68396cde7891ADCC65F11e8A5Cec1898AF6AD970',
+      forumProposalUrl: 'https://forum.aztec.network/t/proposal-v6-payload/8671',
+      announcementUrl: 'https://announce.aztec.network/a/2026-10-governance-v6-upgrade-proposal-is-ready',
+      description: 'AZUP v6 deployment proposal for Aztec Network sequencers and validators.',
+    },
+    nodeConfigurations: {
+      testnet: {
+        version: 'v6.0.0-rc.3',
+        image: 'azteclabs/aztec:6.0.0-rc.3',
+        status: 'recommended_upgrade',
+        effectiveDate: '2026-10-12T10:00:00Z',
+        slashingProtectionActive: true,
+      },
+      mainnet: {
+        version: 'v5.2.0',
+        rollupDeployBlock: 25428902,
+        nethermindClientVersion: '2.0.0',
+        path: 'Path 1 (keep existing database, no resync required)',
+        status: 'active',
+      },
+    },
     sequencerMetrics: {
       avgTxPerBatch: batchHistory.length > 0
         ? (batchHistory.reduce((s, b) => s + b.transactions, 0) / batchHistory.length).toFixed(1)
