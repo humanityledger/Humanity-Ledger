@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Shield, ArrowDownLeft, ArrowUpRight, AlertTriangle, CheckCircle, ExternalLink } from 'lucide-react';
+import { X, Lock, ArrowDownLeft, ArrowUpRight, AlertTriangle, CheckCircle, ExternalLink } from 'lucide-react';
 import {
   getShieldedBalances,
   estimateShieldFee,
@@ -91,12 +91,22 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
       fetch(`/api/wallet/onchain-balances?address=${address}`)
         .then(r => r.ok ? r.json() : null)
         .then(data => {
-          if (mounted && data?.balances) {
-            setL1Balances({
-              DAI: data.balances.DAI ? parseFloat(data.balances.DAI).toFixed(2) : '0.00',
-              USDC: data.balances.USDC ? parseFloat(data.balances.USDC).toFixed(2) : '0.00',
-              ETH: data.balances.ETH ? parseFloat(data.balances.ETH).toFixed(4) : '0.000',
-            });
+          if (mounted && data) {
+            let eth = '0.000';
+            let usdc = '0.00';
+            let dai = '0.00';
+            if (data.balances) {
+              dai = data.balances.DAI ? parseFloat(data.balances.DAI).toFixed(2) : '0.00';
+              usdc = data.balances.USDC ? parseFloat(data.balances.USDC).toFixed(2) : '0.00';
+              eth = data.balances.ETH ? parseFloat(data.balances.ETH).toFixed(4) : '0.000';
+            } else if (Array.isArray(data.tokens)) {
+              for (const t of data.tokens) {
+                if (t.symbol === 'ETH') eth = parseFloat(t.balanceNumeric || 0).toFixed(4);
+                if (t.symbol === 'USDC') usdc = parseFloat(t.balanceNumeric || 0).toFixed(2);
+                if (t.symbol === 'DAI') dai = parseFloat(t.balanceNumeric || 0).toFixed(2);
+              }
+            }
+            setL1Balances({ DAI: dai, USDC: usdc, ETH: eth });
           }
         })
         .catch(() => {});
@@ -317,7 +327,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
                   animate={{ rotate: 360 }}
                   transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                 >
-                  <Shield size={24} className="text-white" />
+                  <Lock size={24} className="text-white" />
                 </motion.div>
                 <p className="text-[13px] font-medium text-gray-600">{progressLabel}</p>
               </div>
