@@ -182,11 +182,18 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
     setLoadingCommunity(false);
   }, [communityId, myAddress]);
 
+  // Inline Quick Post Composer state
+  const [inlineTitle, setInlineTitle] = useState('');
+  const [inlineBody, setInlineBody] = useState('');
+  const [isPostingInline, setIsPostingInline] = useState(false);
+  const [showInlineForm, setShowInlineForm] = useState(false);
+
   // ── Fetch Posts ─────────────────────────────────────────────────────────────
   const fetchPosts = useCallback(async () => {
     if (!communityId) return;
     try {
-      const res = await fetch(`/api/chat/communities/${communityId}/posts`, {
+      const res = await fetch(`/api/chat/communities/${communityId}/posts?_t=${Date.now()}`, {
+        cache: 'no-store',
         headers: { 'x-web3-address': myAddress, 'x-verified-session-address': myAddress },
       });
       if (res.ok) {
@@ -203,6 +210,67 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
     } catch {}
     setLoadingPosts(false);
   }, [communityId, myAddress]);
+
+  // ── Handle Inline Quick Post ───────────────────────────────────────────────
+  const handlePublishInline = async () => {
+    if (!inlineBody.trim()) {
+      toast.error('Escribe algo para publicar');
+      return;
+    }
+    setIsPostingInline(true);
+    const postTitle = inlineTitle.trim() || 'Community Post';
+    const postBody = inlineBody.trim();
+
+    // Optimistic post insertion
+    const optPost = {
+      id: `opt-${Date.now()}`,
+      communityId,
+      authorAddress: myAddress.toLowerCase(),
+      title: postTitle,
+      content: postBody,
+      contentHtml: postBody,
+      likes: 0,
+      createdAt: new Date().toISOString(),
+    };
+    setPosts(prev => [optPost, ...prev]);
+    setInlineTitle('');
+    setInlineBody('');
+    setShowInlineForm(false);
+
+    try {
+      const res = await fetch(`/api/chat/communities/${communityId}/posts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-web3-address': myAddress.toLowerCase(),
+          'x-verified-session-address': myAddress.toLowerCase(),
+        },
+        body: JSON.stringify({
+          communityId,
+          authorAddress: myAddress.toLowerCase(),
+          title: postTitle,
+          content: postBody,
+          contentHtml: postBody,
+        }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        toast.success('¡Publicado con éxito!');
+        if (d.post) {
+          setPosts(prev => [d.post, ...prev.filter(p => p.id !== optPost.id)]);
+        }
+      } else {
+        toast.error('Error al publicar');
+        setPosts(prev => prev.filter(p => p.id !== optPost.id));
+      }
+    } catch {
+      toast.error('Error de conexión');
+      setPosts(prev => prev.filter(p => p.id !== optPost.id));
+    } finally {
+      setIsPostingInline(false);
+      fetchPosts();
+    }
+  };
 
 
 
@@ -415,29 +483,84 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               <div className="max-w-3xl mx-auto px-4 py-5 pb-28">
                 {/* ── QUICK POST CREATOR CARD ── */}
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-black/[0.06] mb-5">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm"
-                      style={{ backgroundColor: myAddress ? getAvatarColor(myAddress) : '#25D366' }}
-                    >
-                      {(myAddress || '0x??').slice(2, 4).toUpperCase()}
+                  {!showInlineForm ? (
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm"
+                        style={{ backgroundColor: myAddress ? getAvatarColor(myAddress) : '#25D366' }}
+                      >
+                        {(myAddress || '0x??').slice(2, 4).toUpperCase()}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowInlineForm(true)}
+                        className="flex-1 bg-[#f0f2f5] hover:bg-[#e9edef] text-left px-4 py-2.5 rounded-full text-[14px] text-[#54656f] transition-all border border-black/[0.04]"
+                      >
+                        ¿Qué quieres compartir con la comunidad?
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowInlineForm(true)}
+                        className="px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full text-[13px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
+                      >
+                        <Edit size={14} />
+                        <span className="hidden sm:inline">Publicar</span>
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => { setEditingPost(null); setShowEditor(true); }}
-                      className="flex-1 bg-[#f0f2f5] hover:bg-[#e9edef] text-left px-4 py-2.5 rounded-full text-[14px] text-[#54656f] transition-all border border-black/[0.04]"
-                    >
-                      ¿Qué quieres compartir con la comunidad?
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setEditingPost(null); setShowEditor(true); }}
-                      className="px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full text-[13px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
-                    >
-                      <Edit size={14} />
-                      <span className="hidden sm:inline">Publicar</span>
-                    </button>
-                  </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between border-b border-black/[0.05] pb-2">
+                        <span className="text-[13px] font-bold text-[#1C1C1E]">Nuevo Post</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => { setShowInlineForm(false); setShowEditor(true); }}
+                            className="text-[11px] font-semibold text-[#128C7E] hover:underline"
+                          >
+                            Editor completo →
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowInlineForm(false)}
+                            className="text-black/30 hover:text-black"
+                          >
+                            <X size={15} />
+                          </button>
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Título del post (opcional)..."
+                        value={inlineTitle}
+                        onChange={e => setInlineTitle(e.target.value)}
+                        className="w-full bg-[#f0f2f5] rounded-xl px-3.5 py-2 text-[14px] font-semibold text-[#1C1C1E] outline-none placeholder:text-[#8E8E93]"
+                      />
+                      <textarea
+                        rows={3}
+                        placeholder="Escribe tu mensaje o anuncio aquí..."
+                        value={inlineBody}
+                        onChange={e => setInlineBody(e.target.value)}
+                        className="w-full bg-[#f0f2f5] rounded-xl px-3.5 py-2.5 text-[14px] text-[#1C1C1E] outline-none resize-none placeholder:text-[#8E8E93]"
+                      />
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowInlineForm(false)}
+                          className="px-4 py-2 rounded-xl text-[13px] font-medium text-black/40 hover:bg-black/5"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isPostingInline || !inlineBody.trim()}
+                          onClick={handlePublishInline}
+                          className="px-5 py-2 bg-[#25D366] hover:bg-[#128C7E] disabled:opacity-50 text-white rounded-xl text-[13px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
+                        >
+                          {isPostingInline ? 'Publicando…' : 'Publicar Ahora'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {loadingPosts ? (

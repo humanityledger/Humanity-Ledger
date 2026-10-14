@@ -5,7 +5,19 @@ export const dynamic = 'force-dynamic';
 
 // In-memory store for pending device links (expires in 5 minutes)
 // In production, use Redis
-const pendingLinks = new Map<string, { bundle: string; expiresAt: number }>();
+const pendingLinks = new Map<string, { bundle: string; expiresAt: number; claimed: boolean }>();
+
+export async function GET(req: NextRequest) {
+  const token = req.nextUrl.searchParams.get('token');
+  if (!token) return NextResponse.json({ error: 'Token required' }, { status: 400 });
+  const pending = pendingLinks.get(token);
+  if (!pending) return NextResponse.json({ exists: false, claimed: false, expired: true });
+  if (Date.now() > pending.expiresAt) {
+    pendingLinks.delete(token);
+    return NextResponse.json({ exists: false, claimed: false, expired: true });
+  }
+  return NextResponse.json({ exists: true, claimed: pending.claimed, expired: false });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +28,8 @@ export async function POST(req: NextRequest) {
       const linkToken = crypto.randomBytes(16).toString('hex');
       pendingLinks.set(linkToken, {
         bundle: bundle || '',
-        expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+        expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+        claimed: false
       });
       // Clean expired tokens
       for (const [t, data] of pendingLinks.entries()) {
@@ -31,8 +44,8 @@ export async function POST(req: NextRequest) {
       if (!pending || Date.now() > pending.expiresAt) {
         return NextResponse.json({ error: 'Token expired or invalid' }, { status: 404 });
       }
-      pendingLinks.delete(token); // One-time use
-      return NextResponse.json({ bundle: pending.bundle });
+      pending.claimed = true; // Mark claimed so device A knows
+      return NextResponse.json({ bundle: pending.bundle, success: true });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -41,3 +54,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
+

@@ -60,6 +60,11 @@ import { SendTipModal } from '@/components/chat/SendTipModal';
 import { ScheduleMessageSheet } from '@/components/chat/ScheduleMessageSheet';
 import { ZkMoneyModal } from '@/components/chat/ZkMoneyModal';
 import { ZkWalletPanel } from '@/components/zk/ZkWalletPanel';
+import { ZkNotificationBell } from '@/components/zk/ZkNotificationBell';
+import { ZkStreamManager } from '@/components/zk/ZkStreamManager';
+import { ZkInvoiceModal } from '@/components/zk/ZkInvoiceModal';
+import { encodeStreamPayload } from '@/lib/zk/zkStreaming';
+import { encodeInvoicePayload } from '@/lib/zk/zkInvoice';
 import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
 import { isBotCommand, executeBotCommand } from '@/lib/bots/botInterceptor';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
@@ -599,6 +604,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showTipModal, setShowTipModal] = useState(false);
   const [showZkModal, setShowZkModal] = useState(false);
   const [showZkWallet, setShowZkWallet] = useState(false);
+  const [showZkStreamModal, setShowZkStreamModal] = useState(false);
+  const [showZkInvoiceModal, setShowZkInvoiceModal] = useState(false);
   // Phase 5: Poll creator form state (hoisted to satisfy React rules of hooks)
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
@@ -4622,6 +4629,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </div>
             </div>
             <div className="flex items-center gap-1">
+              <ZkNotificationBell />
+              <button onClick={() => setShowZkWallet(true)} className="relative w-9 h-9 rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] flex items-center justify-center text-[#25D366] transition-colors" title="Shielded Aztec Wallet">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </button>
               <button onClick={() => setShowContactRequests(true)} className="relative w-9 h-9 rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] transition-colors" title="Contact Requests">
                 <Bell size={18} />
                 {pendingRequestCount > 0 && (
@@ -4658,10 +4669,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         <CrystalNavBar
           activeTab={(['chats','calls','contacts'].includes(sidebarTab) ? sidebarTab === 'chats' || sidebarTab === 'contacts' ? 'chats' : 'calls' : sidebarTab) as NavTab}
           onTabChange={(tab: NavTab) => {
-            if (tab === 'calls') setSidebarTab('calls');
-            else if (tab === 'updates') setSidebarTab('updates');
-            else if (tab === 'communities') setSidebarTab('communities');
-            else setSidebarTab('chats');
+            if (tab === 'calls') { setSidebarTab('calls'); setActiveCommunity(null); }
+            else if (tab === 'updates') { setSidebarTab('updates'); setActiveCommunity(null); }
+            else if (tab === 'communities') { setSidebarTab('communities'); setActivePeer(null); }
+            else { setSidebarTab('chats'); setActiveCommunity(null); }
           }}
           unreadCounts={{
             chats: conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
@@ -4860,15 +4871,27 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       {/*  Chat Area  */}
       <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'flex' : 'hidden md:flex') : (!showList ? 'flex' : 'hidden md:flex')} relative flex-1 flex-col w-full h-full min-w-0 min-h-0 overflow-hidden`}>
-        {activeCommunity ? (
-          <CommunityView 
-            communityId={activeCommunity} 
-            myAddress={address || ''} 
-            onBack={() => {
-              setActiveCommunity(null);
-              setShowList(true);
-            }} 
-          />
+        {sidebarTab === 'communities' ? (
+          activeCommunity ? (
+            <CommunityView 
+              communityId={activeCommunity} 
+              myAddress={address || ''} 
+              onBack={() => {
+                setActiveCommunity(null);
+                setShowList(true);
+              }} 
+            />
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center bg-[#F2F2F7] p-8 text-center">
+              <div className="w-20 h-20 rounded-3xl bg-[#25D366]/10 flex items-center justify-center text-[#25D366] mb-4">
+                <Users size={36} />
+              </div>
+              <h3 className="text-[20px] font-bold text-[#1C1C1E]">Select a Community</h3>
+              <p className="text-[14px] text-black/40 max-w-sm mt-1">
+                Explore channels, member discussions, and the community Aztec shielded treasury.
+              </p>
+            </div>
+          )
         ) : activePeer ? (
           <>
             <div className="h-[68px] px-4 border-b border-black/[0.05] flex items-center justify-between bg-white/80 backdrop-blur-xl shrink-0 z-10 shadow-[0_4px_30px_rgba(0,0,0,0.03)]">
@@ -4937,6 +4960,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 </button>
+                {/* Aztec Shielded Wallet Quick Button */}
+                <button
+                  onClick={() => setShowZkWallet(s => !s)}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${showZkWallet ? 'bg-[#25D366] text-white shadow-sm' : 'bg-[#f5f5f7] hover:bg-[#e5e5ea] text-[#25D366]'}`}
+                  title="Aztec Shielded Wallet"
+                >
+                  <Shield size={16} />
+                </button>
+                <ZkNotificationBell />
+
                 {/* v2: Save Contact Button */}
                 <button
                   onClick={() => { setSaveContactName(getDisplayName(activePeer!)); setShowSaveContactModal(true); }}
@@ -5396,6 +5429,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             { id: 'poll',      color: '#10B981', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
                             // ── Crypto & Aztec Private Payments ──────────────────────────
                             { id: 'zkmoney',   color: '#10B981', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, label: 'zk.money', sublabel: 'Private Aztec Transfer', onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
+                            { id: 'zkstream',  color: '#3B82F6', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>, label: 'Money Stream', sublabel: 'Continuous Aztec money stream', onClick: () => { setShowZkStreamModal(true); setShowAppDrawer(false); } },
+                            { id: 'zkinvoice', color: '#8B5CF6', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, label: 'Private Invoice', sublabel: 'Request shielded payment', onClick: () => { setShowZkInvoiceModal(true); setShowAppDrawer(false); } },
                             { id: 'payment',   color: '#25D366', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>,     label: 'Payment',        sublabel: 'Send crypto',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
                             { id: 'tip',       color: '#25D366', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, label: 'Creator Tip',  sublabel: 'Support peer with ETH/USDC', onClick: () => { setShowTipModal(true); setShowAppDrawer(false); } },
                             // ── Utilities ────────────────────────────────────────────
@@ -5517,12 +5552,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     </AnimatePresence>
 
                     {/* WhatsApp-style gray pill container */}
-                    <div className="flex-1 bg-white rounded-[24px] flex items-end relative shadow-sm border border-black/[0.08] overflow-hidden min-h-[44px] transition-all">
+                    <div className="flex-1 bg-white rounded-[24px] flex items-center relative shadow-[0_1px_1px_rgba(11,20,26,0.1)] border border-black/[0.08] focus-within:border-[#25D366]/40 min-h-[44px] max-h-[120px] transition-colors">
                       {/* Emoji button inside pill on the left */}
                       <button
                         type="button"
                         onClick={() => { setShowEmojiPicker(d => !d); setShowAppDrawer(false); }}
-                        className={`w-10 h-10 shrink-0 self-end mb-[2px] ml-1 flex items-center justify-center transition-all ${showEmojiPicker ? 'text-[#25D366]' : 'text-[#8696A0]'} hover:text-[#25D366]`}
+                        className={`w-10 h-10 shrink-0 self-center ml-1 flex items-center justify-center transition-all ${showEmojiPicker ? 'text-[#25D366]' : 'text-[#8696A0]'} hover:text-[#25D366]`}
                       >
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                       </button>
@@ -5557,12 +5592,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           ref={inputRef as any}
                           value={inputText}
                           onChange={e => {
-                            setInputText(e.target.value);
-                            setShowBotSuggestions(e.target.value.startsWith('/') && e.target.value.length < 10);
-                            e.target.style.height = 'auto';
-                            e.target.style.height = `${Math.min(Math.max(e.target.scrollHeight, 44), 120)}px`;
+                            const val = e.target.value;
+                            setInputText(val);
+                            setShowBotSuggestions(val.startsWith('/') && val.length < 10);
+                            if (!val) {
+                              e.target.style.height = '44px';
+                            } else {
+                              e.target.style.height = 'auto';
+                              e.target.style.height = `${Math.min(Math.max(e.target.scrollHeight, 44), 120)}px`;
+                            }
                             const now = Date.now();
-                            if (now - lastTypingTimeRef.current > 3000 && e.target.value.trim().length > 0) {
+                            if (now - lastTypingTimeRef.current > 3000 && val.trim().length > 0) {
                               lastTypingTimeRef.current = now;
                               if (client && activePeer) {
                                 sendMessage(client, activePeer, '__TYPING__').catch(() => {});
@@ -6725,6 +6765,38 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
            </motion.div>
          )}
        </AnimatePresence>
+
+       {/* ── Aztec zk.money Payment Stream Modal ── */}
+       {showZkStreamModal && activePeer && (
+         <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setShowZkStreamModal(false)}>
+           <div className="bg-white rounded-3xl shadow-2xl border border-black/10 w-full max-w-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+             <ZkStreamManager
+               userAddress={address || ''}
+               defaultRecipient={activePeer}
+               onClose={() => setShowZkStreamModal(false)}
+               onStreamCreated={(stream) => {
+                 executeSend(encodeStreamPayload(stream));
+                 setShowZkStreamModal(false);
+                 toast.success('Private payment stream launched on Aztec!');
+               }}
+             />
+           </div>
+         </div>
+       )}
+
+       {/* ── Aztec zk.money Invoice Modal ── */}
+       {showZkInvoiceModal && activePeer && (
+         <ZkInvoiceModal
+           userAddress={address || ''}
+           defaultClientAddress={activePeer}
+           onClose={() => setShowZkInvoiceModal(false)}
+           onInvoiceCreated={(invoice) => {
+             executeSend(encodeInvoicePayload(invoice));
+             setShowZkInvoiceModal(false);
+             toast.success('Shielded invoice sent to chat!');
+           }}
+         />
+       )}
 
       {pendingCallType && isMounted && typeof document !== 'undefined'
         ? createPortal(

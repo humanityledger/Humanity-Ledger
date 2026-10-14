@@ -20,6 +20,7 @@ import { usePushNotifications } from '@/lib/push/usePushNotifications';
 import { getShieldedBalances, resolveZkTag, registerZkTag, validateZkHandle, syncBalanceFromAztec, getZkTransactionHistory, clearZkTransactionHistory, ZkShieldedBalance, AZTEC_MAINNET_RPC } from '@/lib/zk/zkMoney';
 import { ZkPrivacyScore } from '@/components/zk/ZkPrivacyScore';
 import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
+import { ZkSettingsPanel } from '@/components/zk/ZkSettingsPanel';
 
 interface LedgerSettingsFullProps {
   myAddress: string;
@@ -27,7 +28,7 @@ interface LedgerSettingsFullProps {
   onClose: () => void;
 }
 
-// ─── Executive Spring Toggle (Apple / Linear Silky-Smooth Spring) ────────────
+// ─── Executive Swiss Precision Toggle (Serious, Elegant, No Tacky Wobble) ────────────
 const Toggle = ({ value, onChange, disabled = false }: { value: boolean; onChange?: (v: boolean) => void; disabled?: boolean }) => (
   <button
     type="button"
@@ -38,29 +39,32 @@ const Toggle = ({ value, onChange, disabled = false }: { value: boolean; onChang
       e.stopPropagation();
       onChange?.(!value);
     }}
-    className={`relative inline-flex h-[28px] w-[50px] shrink-0 cursor-pointer items-center rounded-full p-[2px] transition-colors duration-250 ease-out focus:outline-none ${
+    className={`relative inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer items-center rounded-full p-[2px] transition-colors duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] focus:outline-none border border-black/[0.08] ${
       disabled ? 'opacity-40 cursor-not-allowed' : ''
-    } ${value ? 'bg-[#25D366]' : 'bg-[#E5E5EA]'}`}
+    } ${value ? 'bg-[#128C7E] shadow-[inset_0_1px_2px_rgba(0,0,0,0.18)]' : 'bg-[#E4E4E7] shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]'}`}
   >
     <motion.span
       layout
       transition={{
         type: 'spring',
-        stiffness: 520,
-        damping: 32,
-        mass: 0.8
+        stiffness: 700,
+        damping: 42,
+        mass: 0.5
       }}
       animate={{
-        x: value ? 22 : 0,
+        x: value ? 20 : 0,
       }}
-      className="pointer-events-none inline-block h-[24px] w-[24px] rounded-full bg-white shadow-[0_2px_5px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.06)]"
-    />
+      className="pointer-events-none relative inline-flex items-center justify-center h-[18px] w-[18px] rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.2),0_1px_1px_rgba(0,0,0,0.1)]"
+    >
+      {/* Precision Micro-Indicator Dot */}
+      <span className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${value ? 'bg-[#128C7E]' : 'bg-[#D4D4D8]'}`} />
+    </motion.span>
   </button>
 );
 
-// ─── Setting Row (Clean Minimalist Typography — No Cluttered Icon Boxes) ────────
+// ─── Setting Row (Clean Minimalist Typography — No Cluttered Logos/Icons) ────────
 const Row = ({
-  icon, label, sublabel, value, onTap, danger = false,
+  label, sublabel, value, onTap, danger = false,
   toggle, onToggle, badge, disabled = false
 }: {
   icon?: React.ReactNode; label: string; sublabel?: string; value?: string;
@@ -76,7 +80,7 @@ const Row = ({
       else if (onToggle !== undefined && toggle !== undefined) onToggle(!toggle);
     }}
     className={`w-full flex items-center justify-between gap-3.5 px-0 py-3.5 border-b border-[#F2F2F7] last:border-0 text-left transition-colors ${
-      disabled ? 'opacity-40 cursor-not-allowed' : onTap ? 'active:bg-[#F2F2F7] cursor-pointer' : 'cursor-default'
+      disabled ? 'opacity-40 cursor-not-allowed' : onTap ? 'hover:bg-[#F2F2F7]/50 active:bg-[#F2F2F7] cursor-pointer' : 'cursor-default'
     }`}
   >
     <div className="flex-1 min-w-0 pr-2">
@@ -98,6 +102,7 @@ const Row = ({
     </div>
   </button>
 );
+
 
 // ─── Settings Group ───────────────────────────────────────────────────────────
 const Group = ({ title, footer, children }: {
@@ -320,17 +325,79 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
     }
   }, [modal, qrScanMode, stopQrScan]);
 
-  const [phoneSessionToken] = useState(() => {
-    // Generate a stable session token for QR linking
-    if (typeof window === 'undefined') return '';
-    const stored = localStorage.getItem('ledger_phone_session_token');
-    if (stored) return stored;
-    const token = `lc_link_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-    localStorage.setItem('ledger_phone_session_token', token);
-    return token;
-  });
-  const [qrExpiry, setQrExpiry] = useState(120); // 2 min countdown
+  const [serverLinkToken, setServerLinkToken] = useState<string>('');
+  const [deviceLinkedSuccess, setDeviceLinkedSuccess] = useState<boolean>(false);
+  const [isGeneratingQr, setIsGeneratingQr] = useState<boolean>(false);
+  const [showZkSettingsPanel, setShowZkSettingsPanel] = useState<boolean>(false);
+  const [qrExpiry, setQrExpiry] = useState(300); // 5 min countdown
   const qrTimerRef = useRef<any>(null);
+
+  const generateDeviceLinkQr = useCallback(async () => {
+    setIsGeneratingQr(true);
+    setDeviceLinkedSuccess(false);
+    try {
+      const bundle = {
+        address: myAddress,
+        settings,
+        timestamp: Date.now()
+      };
+      const res = await fetch('/api/device/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', bundle: btoa(JSON.stringify(bundle)) })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setServerLinkToken(data.token);
+        setQrExpiry(data.expiresIn || 300);
+      }
+    } catch (e) {
+      console.error('[LinkDevice] QR generation failed:', e);
+    } finally {
+      setIsGeneratingQr(false);
+    }
+  }, [myAddress, settings]);
+
+  useEffect(() => {
+    if (modal === 'linked_devices' && qrScanMode === 'show') {
+      generateDeviceLinkQr();
+    }
+  }, [modal, qrScanMode, generateDeviceLinkQr]);
+
+  // Expiry countdown timer
+  useEffect(() => {
+    if (modal === 'linked_devices' && qrScanMode === 'show' && qrExpiry > 0) {
+      const timer = setInterval(() => {
+        setQrExpiry(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [modal, qrScanMode, qrExpiry]);
+
+  // Poll device link status
+  useEffect(() => {
+    if (modal !== 'linked_devices' || !serverLinkToken || deviceLinkedSuccess) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/device/link?token=${serverLinkToken}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.claimed) {
+            setDeviceLinkedSuccess(true);
+            toast.success('Dispositivo vinculado exitosamente! 🎉');
+            clearInterval(interval);
+          }
+        }
+      } catch {}
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [modal, serverLinkToken, deviceLinkedSuccess]);
 
   const [zkBalances, setZkBalances] = useState<ZkShieldedBalance>(() => getShieldedBalances(myAddress));
   const [currentZkTag, setCurrentZkTag] = useState(() => resolveZkTag(myAddress));
@@ -485,8 +552,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
     addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
 
   // The QR deep-link URL encodes the server link token so scanning links seamlessly
-  const qrLinkUrl = typeof window !== 'undefined'
-    ? `${window.location.protocol === 'file:' ? 'https://humanidfi.com' : window.location.origin}/chat/link?action=device&token=${serverLinkToken || phoneSessionToken}`
+  const qrLinkUrl = typeof window !== 'undefined' && serverLinkToken
+    ? `${window.location.protocol === 'file:' ? 'https://humanidfi.com' : window.location.origin}/chat/link?action=device&token=${serverLinkToken}`
     : '';
 
   return (
@@ -1334,6 +1401,26 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 onShieldMore={() => { setZkShieldMode('shield'); setShowZkShieldModal(true); }}
               />
 
+              {/* Advanced zk.money Architecture Console Button */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#1C1C1E] to-[#2C2C2E] text-white flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#25D366]/20 text-[#25D366] flex items-center justify-center font-bold">
+                    <Shield size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-[14px] font-bold">Advanced zk.money Console</h4>
+                    <p className="text-[11px] text-white/60">Aztec PXE Keys, Streams, Bridge & Devtools</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowZkSettingsPanel(true)}
+                  className="px-3.5 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white text-[12px] font-bold shadow-sm transition-colors"
+                >
+                  Open Console →
+                </button>
+              </div>
+
               <Group title="zk.money Sovereign Identity & Handle">
                 <Row
                   label="Registered zk Handle"
@@ -1549,35 +1636,50 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
                       {/* QR Code */}
                       <div className="flex justify-center mb-4">
-                        <div className={`rounded-[20px] border-4 p-2 transition-all ${qrExpiry > 0 ? 'border-[#25D366] shadow-md' : 'border-[#E5E5EA] opacity-40'}`}>
-                          {qrExpiry > 0 ? (
-                            <DeviceQRCode data={qrLinkUrl} size={200} />
-                          ) : (
-                            <div className="w-[200px] h-[200px] flex flex-col items-center justify-center gap-3 bg-[#F2F2F7] rounded-[14px]">
-                              <QrCode size={40} className="text-[#C7C7CC]" />
-                              <p className="text-[13px] text-[#8E8E93] font-semibold">QR Expired</p>
+                        {deviceLinkedSuccess ? (
+                          <div className="w-[220px] p-6 bg-[#25D366]/10 rounded-[24px] border border-[#25D366]/30 flex flex-col items-center justify-center text-center shadow-sm">
+                            <div className="w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center text-white text-2xl shadow-md mb-2">
+                              ✓
                             </div>
-                          )}
-                        </div>
+                            <h4 className="text-[16px] font-bold text-[#1C1C1E]">¡Dispositivo Vinculado!</h4>
+                            <p className="text-[12px] text-[#25D366] font-semibold mt-1">Sesión sincronizada</p>
+                          </div>
+                        ) : isGeneratingQr ? (
+                          <div className="w-[200px] h-[200px] flex flex-col items-center justify-center gap-2 bg-[#F2F2F7] rounded-[20px]">
+                            <div className="w-7 h-7 border-2 border-[#25D366] border-t-transparent rounded-full animate-spin" />
+                            <p className="text-[12px] text-[#8E8E93] font-medium">Generando código seguro…</p>
+                          </div>
+                        ) : (
+                          <div className={`rounded-[20px] border-4 p-2 transition-all ${qrExpiry > 0 ? 'border-[#25D366] shadow-md' : 'border-[#E5E5EA] opacity-40'}`}>
+                            {qrExpiry > 0 && qrLinkUrl ? (
+                              <DeviceQRCode data={qrLinkUrl} size={200} />
+                            ) : (
+                              <div className="w-[200px] h-[200px] flex flex-col items-center justify-center gap-3 bg-[#F2F2F7] rounded-[14px]">
+                                <QrCode size={40} className="text-[#C7C7CC]" />
+                                <p className="text-[13px] text-[#8E8E93] font-semibold">QR Expirado</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Countdown */}
                       <div className="flex items-center justify-center gap-2 mb-5">
-                        {qrExpiry > 0 ? (
+                        {deviceLinkedSuccess ? null : qrExpiry > 0 ? (
                           <>
                             <div className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse" />
                             <p className="text-[13px] text-[#8E8E93] font-mono">
-                              Expires in {Math.floor(qrExpiry / 60)}:{String(qrExpiry % 60).padStart(2, '0')}
+                              Expira en {Math.floor(qrExpiry / 60)}:{String(qrExpiry % 60).padStart(2, '0')}
                             </p>
                           </>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setQrExpiry(120)}
+                            onClick={generateDeviceLinkQr}
                             className="flex items-center gap-2 text-[#25D366] font-semibold text-[14px]"
                           >
                             <RefreshCw size={14} />
-                            Generate new code
+                            Generar nuevo código
                           </button>
                         )}
                       </div>
@@ -1976,6 +2078,16 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               setShowZkShieldModal(false);
               setZkBalances(getShieldedBalances(myAddress));
             }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Advanced zk.money Architecture Panel ── */}
+      <AnimatePresence>
+        {showZkSettingsPanel && (
+          <ZkSettingsPanel
+            userAddress={myAddress}
+            onClose={() => setShowZkSettingsPanel(false)}
           />
         )}
       </AnimatePresence>

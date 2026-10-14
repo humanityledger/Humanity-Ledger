@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { getCommunityStats, ZkCommunityStats } from '@/lib/zk/zkCommunityPayments';
 import { getCommunityTreasury, ZkCommunityTreasury } from '@/lib/zk/zkMoney';
+import { ZkCommunityAnalytics } from '@/components/zk/ZkCommunityAnalytics';
 
 interface MemberItem {
   address: string;
@@ -53,7 +54,7 @@ const Card = ({ children, className = '' }: { children: React.ReactNode; classNa
 );
 
 export default function CommunityAnalytics({ communityId, community: initialCommunity }: CommunityAnalyticsProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'members'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'zk_treasury'>('overview');
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
@@ -137,7 +138,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
             >
               <RefreshCcw className="w-4 h-4" />
             </button>
-            <div className="flex items-center p-1 bg-[#F2F2F7] rounded-xl">
+            <div className="flex items-center p-1 bg-[#F2F2F7] rounded-xl gap-1">
               <button
                 onClick={() => setActiveTab('overview')}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'overview' ? 'bg-white text-black shadow-sm' : 'text-black/50'}`}
@@ -149,6 +150,12 @@ export default function CommunityAnalytics({ communityId, community: initialComm
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'members' ? 'bg-white text-black shadow-sm' : 'text-black/50'}`}
               >
                 Members ({members.length || totalMembers})
+              </button>
+              <button
+                onClick={() => setActiveTab('zk_treasury')}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 'zk_treasury' ? 'bg-[#1C1C1E] text-white shadow-sm' : 'text-black/50 hover:text-black'}`}
+              >
+                <Shield className="w-3.5 h-3.5 text-[#25D366]" /> Aztec Shielded Analytics
               </button>
             </div>
           </div>
@@ -379,6 +386,9 @@ export default function CommunityAnalytics({ communityId, community: initialComm
           </Card>
         )}
 
+        {activeTab === 'zk_treasury' && targetId && (
+          <ZkCommunityAnalytics communityId={targetId} communityName={communityName} />
+        )}
       </div>
     </div>
   );
