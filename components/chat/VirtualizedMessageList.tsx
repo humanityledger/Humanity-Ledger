@@ -24,9 +24,14 @@ const MemoizedMessageRow = React.memo(({
 }) => {
   const senderLower = (msg.senderInboxId ?? '').toLowerCase();
   const isMe =
-    (clientInboxIdLower && senderLower === clientInboxIdLower) ||
-    senderLower === myAddressLower ||
-    msg.senderAddress?.toLowerCase() === myAddressLower;
+    // Explicit flags set by DirectMessage polling and offline queue handlers
+    (typeof msg.isMe === 'boolean' ? msg.isMe : false) ||
+    (typeof msg.fromPeer === 'boolean' ? !msg.fromPeer : false) ||
+    // XMTP inboxId match
+    (clientInboxIdLower && !!senderLower && senderLower === clientInboxIdLower) ||
+    // Ethereum address match (covers WalletConnect users)
+    (!!senderLower && senderLower === myAddressLower) ||
+    (!!msg.senderAddress && msg.senderAddress.toLowerCase() === myAddressLower);
   
   return (
     <div className="w-full pb-1">

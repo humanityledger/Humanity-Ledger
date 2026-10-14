@@ -23,6 +23,30 @@ export async function GET(req: NextRequest) {
     const caller = await resolveCaller(req);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const isDiscover = req.nextUrl.searchParams.get('discover') === 'true';
+
+    if (isDiscover) {
+      // Fetch all public communities natively
+      const publicCommunities = await (prisma as any).community.findMany({
+        where: { isPrivate: false },
+        include: {
+          _count: { select: { members: true, channels: true } },
+          channels: { orderBy: { position: 'asc' } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      });
+
+      const communities = publicCommunities.map((c: any) => ({
+        ...c,
+        membersCount: c._count?.members || 1,
+        channelsCount: c._count?.channels || 1,
+        isMember: false,
+      }));
+
+      return NextResponse.json({ communities });
+    }
+
     // Fetch communities the user is a member of
     const memberships = await (prisma as any).communityMember.findMany({
       where: { walletAddress: caller },

@@ -28,23 +28,42 @@ export async function GET(req: NextRequest) {
     const sinceParam = req.nextUrl.searchParams.get('since');
     const since = sinceParam ? new Date(parseInt(sinceParam, 10)) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    // Fetch both undelivered AND recent delivered (last 7 days) for reconnect sync
-    const messages = await prisma.directMessage.findMany({
+    // Fetch undelivered messages for me — no time filter so nothing is missed
+    const undeliveredMessages = await prisma.directMessage.findMany({
       where: {
         recipient: address,
-        createdAt: { gte: since },
+        delivered: false,
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 200,
+    });
+
+    // Also fetch recent messages (both delivered and not) in the time window for reconnect sync
+    const recentMessages = await prisma.directMessage.findMany({
+      where: {
+        OR: [
+          { recipient: address, createdAt: { gte: since } },
+          // Also return messages I sent (so sender sees their own messages in history)
+          { sender: address, createdAt: { gte: since } },
+        ],
       },
       orderBy: { createdAt: 'asc' },
       take: 100,
     });
 
-    // Mark undelivered ones as delivered
-    const undeliveredIds = messages.filter(m => !m.delivered && m.recipient === address).map(m => m.id);
-    if (undeliveredIds.length > 0) {
+    // Merge: undelivered + recent, deduplicated by ID
+    const allById = new Map<string, typeof undeliveredMessages[0]>();
+    for (const m of undeliveredMessages) allById.set(m.id, m);
+    for (const m of recentMessages) allById.set(m.id, m);
+    const messages = Array.from(allById.values()).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+    // Mark undelivered ones as delivered now that we're returning them
+    const toMarkDelivered = undeliveredMessages.map(m => m.id);
+    if (toMarkDelivered.length > 0) {
       await prisma.directMessage.updateMany({
-        where: { id: { in: undeliveredIds } },
+        where: { id: { in: toMarkDelivered } },
         data: { delivered: true, deliveredAt: new Date() },
-      });
+      }).catch(() => {});
     }
 
     return NextResponse.json({
@@ -92,8 +111,8 @@ export async function POST(req: NextRequest) {
     if (typeof content !== 'string' || content.trim().length === 0) {
       return NextResponse.json({ error: 'Content cannot be empty' }, { status: 400 });
     }
-    if (content.length > 65536) {
-      return NextResponse.json({ error: 'Content too long (max 64KB)' }, { status: 400 });
+    if (content.length > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Content too long (max 10MB)' }, { status: 400 });
     }
 
     const msg = await prisma.directMessage.create({

@@ -44,6 +44,7 @@ import {
   Eye, EyeOff, Send, X, ChevronDown,
   ZapIcon, Hash, AtSign
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 // ÔöÇÔöÇÔöÇ TYPE GUARDS: graceful when Tiptap is not yet installed ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 // (These will be replaced by real imports after first Railway deploy)
@@ -243,8 +244,8 @@ function SlashMenu({ editor, position, onClose }: { editor: any; position: { x: 
 // ÔöÇÔöÇÔöÇ MAIN EDITOR ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 export interface RichPostEditorProps {
-  /** Called with { html, text, json } when user submits */
-  onPublish: (content: { html: string; text: string; json: any }) => void | Promise<void>;
+  /** Called with { html, text, json, title } when user submits */
+  onPublish: (content: { html: string; text: string; json: any; title?: string }) => void | Promise<void>;
   /** Optional title for the modal */
   title?: string;
   /** Optional initial content (HTML) */
@@ -365,7 +366,7 @@ export function RichPostEditor({
     if (!text.trim() && !postTitle.trim()) return;
     setPublishing(true);
     try {
-      await onPublish({ html, text, json: editor.getJSON() });
+      await onPublish({ html, text, json: editor.getJSON(), title: postTitle.trim() || 'Community Post' });
     } finally {
       setPublishing(false);
     }
@@ -714,33 +715,37 @@ export function RichPostEditorModal({
   open: boolean;
   onClose: () => void;
   communityName?: string;
-  communityId?: string; // <--- Added this
+  communityId?: string;
   myAddress: string;
+  postToEdit?: any;
   onPublished?: (post: any) => void;
 }) {
-  const handlePublish = async (content: { html: string; text: string; json: any }) => {
+  const handlePublish = async (content: { html: string; text: string; json: any; title?: string }) => {
     try {
       if (!communityId) {
         toast.error('No community selected');
         return;
       }
       if (!myAddress || myAddress.trim() === '') {
-        toast.error('Wallet not connected ÔÇö cannot publish post');
+        toast.error('Wallet not connected — cannot publish post');
         return;
       }
 
-      // Use /api/chat/communities/posts (the correct unified endpoint)
-      const res = await fetch('/api/chat/communities/posts', {
+      const postTitle = (content.title || '').trim() || 'Community Post';
+
+      // Use /api/chat/communities/[id]/posts (or unified posts endpoint)
+      const res = await fetch(`/api/chat/communities/${communityId}/posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-web3-address': myAddress,
-          'x-verified-session-address': myAddress,
+          'x-web3-address': myAddress.toLowerCase(),
+          'x-verified-session-address': myAddress.toLowerCase(),
         },
         body: JSON.stringify({
           communityId,
-          authorAddress: myAddress.toLowerCase(), // also in body for reliability
-          content: content.html,
+          authorAddress: myAddress.toLowerCase(),
+          title: postTitle,
+          content: content.html || content.text,
           contentHtml: content.html,
           plainText: content.text,
         }),
@@ -761,6 +766,7 @@ export function RichPostEditorModal({
       toast.error('Network error. Please try again.');
     }
   };
+
 
   // ÔöÇÔöÇ CRITICAL FIX: use a flat portal-style render to avoid the React
   // "removeChild" crash that occurs when AnimatePresence tries to unmount

@@ -84,72 +84,69 @@ export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean })
   };
 
   return (
-      <div className="flex flex-col gap-2 w-full">
-        <div className={`flex items-center gap-2 min-w-[200px] max-w-[280px] p-2 rounded-2xl transition-all ${isMe ? 'bg-white' : 'bg-gray-100/50'}`}>
-          <audio ref={audioRef} src={src} preload="auto" playsInline x-webkit-airplay="allow" />
-          
-          <button 
-            onClick={togglePlay}
-            className={`w-9 h-9 flex items-center justify-center shrink-0 rounded-full transition-colors ${
-              isMe ? 'bg-white text-black hover:bg-white/90' : 'bg-white text-white hover:bg-black/90'
-            }`}
-          >
-            {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-1" />}
-          </button>
+    <div className="flex flex-col gap-1 w-full select-none">
+      <div className="flex items-center gap-2.5 min-w-[220px] max-w-[290px] py-1">
+        <audio ref={audioRef} src={src} preload="auto" playsInline x-webkit-airplay="allow" />
+        
+        {/* WhatsApp Green Play/Pause Round Button */}
+        <button 
+          type="button"
+          onClick={togglePlay}
+          className="w-9 h-9 rounded-full bg-[#25D366] hover:bg-[#128C7E] text-white flex items-center justify-center shrink-0 shadow-sm transition-all active:scale-90"
+        >
+          {isPlaying ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
+        </button>
 
-          <div className="flex-1 flex flex-col gap-1 mx-1 justify-center">
-            {/* Synthetic Waveform aesthetic */}
-            <div className="relative w-full h-8 flex items-center gap-[2px]">
-              <input
-                type="range"
-                min={0}
-                max={duration || 1}
-                value={progress}
-                onChange={handleSeek}
-                className="absolute z-20 w-full opacity-0 cursor-pointer h-full"
-              />
-              {/* Generate 30 bars for the waveform */}
-              {Array.from({ length: 30 }).map((_, i) => {
-                const isActive = duration > 0 && (i / 30) <= (progress / duration);
-                // Deterministic pseudo-random height based on index
-                const height = 20 + ((i * 17) % 60); 
-                return (
-                  <div 
-                    key={i} 
-                    className={`flex-1 rounded-full transition-colors duration-150 ${
-                      isActive 
-                        ? (isMe ? 'bg-white' : 'bg-[#25D366]') 
-                        : (isMe ? 'bg-white/30' : 'bg-black/15')
-                    }`}
-                    style={{ height: `${height}%` }}
-                  />
-                );
-              })}
-            </div>
-            
-            <div className={`flex items-center justify-between px-1 ${isMe ? 'text-white/60' : 'text-black/50'}`}>
-              <span className="text-[9px] font-mono font-medium tracking-wider">
-                {isPlaying ? formatTime(progress) : formatTime(duration)}
-              </span>
-            </div>
+        <div className="flex-1 flex flex-col gap-1 mx-1 justify-center">
+          {/* Waveform track with seekable slider */}
+          <div className="relative w-full h-7 flex items-center gap-[2px] cursor-pointer">
+            <input
+              type="range"
+              min={0}
+              max={duration || 1}
+              step="0.05"
+              value={progress}
+              onChange={handleSeek}
+              className="absolute z-20 w-full opacity-0 cursor-pointer h-full inset-0"
+            />
+            {/* Generate 30 bars for the waveform */}
+            {Array.from({ length: 28 }).map((_, i) => {
+              const isActive = duration > 0 && (i / 28) <= (progress / duration);
+              const height = 24 + ((i * 19) % 56); 
+              return (
+                <div 
+                  key={i} 
+                  className={`flex-1 rounded-full transition-colors duration-100 ${
+                    isActive ? 'bg-[#25D366]' : 'bg-black/20'
+                  }`}
+                  style={{ height: `${height}%` }}
+                />
+              );
+            })}
           </div>
-
-          <button 
-            onClick={togglePlaybackRate}
-            className={`w-8 h-8 flex items-center justify-center rounded-full text-[10px] font-bold font-mono transition-colors shrink-0 ${
-              isMe ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-black/5 hover:bg-black/10 text-black'
-            }`}
-          >
-            {playbackRate}x
-          </button>
+          
+          <div className="flex items-center justify-between text-[11px] font-mono text-[#667781] leading-none px-0.5">
+            <span>{isPlaying ? formatTime(progress) : formatTime(duration)}</span>
+            {duration > 0 && <span>{formatTime(duration)}</span>}
+          </div>
         </div>
 
-        {showTranscript && (
-          <div className={`px-3 py-2 rounded-xl text-[13px] italic ${isMe ? 'bg-white/10 text-white/90' : 'bg-black/5 text-black/80'}`}>
-            "This is a simulated AI voice transcription. In production, this runs via whisper.cpp on the Edge node."
-          </div>
-        )}
+        {/* Speed toggle pill */}
+        <button 
+          type="button"
+          onClick={togglePlaybackRate}
+          className="px-1.5 py-0.5 rounded-md text-[11px] font-bold bg-black/5 hover:bg-black/10 text-[#54656f] transition-colors shrink-0 font-mono"
+        >
+          {playbackRate}x
+        </button>
       </div>
+
+      {showTranscript && (
+        <div className="px-3 py-1.5 rounded-xl text-[12px] italic bg-black/5 text-[#54656f]">
+          Transcribing audio note...
+        </div>
+      )}
+    </div>
   );
 };
 

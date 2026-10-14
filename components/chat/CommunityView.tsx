@@ -190,19 +190,20 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
       });
       if (res.ok) {
         const d = await res.json();
-        // The API already filters to title != null (rich posts only).
-        // No fallback — chat messages live in CommunityChatView, not here.
-        setPosts(d.posts || []);
+        const incoming: any[] = d.posts || [];
+        // Simply replace with server data — the server already returns newest-first
+        setPosts(incoming);
       }
     } catch {}
     setLoadingPosts(false);
   }, [communityId, myAddress]);
 
 
+
   useEffect(() => {
     fetchCommunity();
     fetchPosts();
-    refreshRef.current = setInterval(fetchPosts, 12000);
+    refreshRef.current = setInterval(fetchPosts, 6000);
     return () => clearInterval(refreshRef.current);
   }, [fetchCommunity, fetchPosts]);
 
@@ -465,7 +466,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-1 overflow-hidden min-h-0"
+              className="flex flex-1 h-full w-full overflow-hidden min-h-0"
             >
               {/* Channel sidebar — only show if community has multiple channels */}
               {community?.channels && community.channels.length > 1 && (
@@ -491,7 +492,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                 </div>
               )}
 
-              <div className="flex-1 overflow-hidden min-h-0">
+              <div className="flex-1 h-full w-full overflow-hidden min-h-0 flex flex-col">
                 <CommunityChatView
                   communityId={communityId}
                   channelId={activeChannelId}
@@ -565,15 +566,18 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
         myAddress={myAddress}
         communityName={community?.name}
         communityId={communityId}
-        initialPost={editingPost}
         onPublished={newPost => {
+          // Immediately show the new post at the top of the list
           if (newPost?.id) {
             setPosts(prev => [newPost, ...prev.filter(p => p.id !== newPost.id)]);
-          } else {
-            fetchPosts();
           }
+          // Switch to posts tab immediately so user sees their post
+          setActiveTab('posts');
+          // Refresh from server in background to confirm persistence
+          setTimeout(() => fetchPosts(), 1200);
         }}
       />
+
 
       {/* ── MEMBER PANEL ────────────────────────────────────────────────── */}
       <AnimatePresence>

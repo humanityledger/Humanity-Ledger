@@ -32,9 +32,12 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
   const [isLoading, setIsLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [discoverCommunities, setDiscoverCommunities] = useState<Community[]>([]);
+  const [discoverSearch, setDiscoverSearch] = useState('');
 
   React.useEffect(() => {
     fetchCommunities();
+    fetchDiscoverCommunities();
   }, [myAddress]);
 
   const fetchCommunities = async () => {
@@ -52,6 +55,21 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
       console.error(e);
     }
     setIsLoading(false);
+  };
+
+  const fetchDiscoverCommunities = async () => {
+    try {
+      const res = await fetch('/api/chat/communities?discover=true', {
+        credentials: 'include',
+        headers: { 'x-web3-address': myAddress },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDiscoverCommunities(data.communities || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const createCommunity = async () => {
@@ -163,6 +181,8 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40" />
             <input
               type="text"
+              value={discoverSearch}
+              onChange={e => setDiscoverSearch(e.target.value)}
               placeholder="Search public groups..."
               className="w-full bg-[#F2F2F7] rounded-xl py-2.5 pl-10 pr-4 text-[14px] font-medium outline-none placeholder:text-black/40 focus:ring-2 focus:ring-[#25D366]/50"
             />
@@ -246,26 +266,71 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
           )}
         </div>
       ) : (
-        /* DISCOVER TAB */
-        <div className="flex-1 flex flex-col p-4 gap-6">
-          <div className="bg-[#1C1C1E] rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-            <div className="absolute -right-6 -bottom-6 w-40 h-40 bg-[#25D366]/10 rounded-full blur-2xl" />
-            <Compass size={30} className="mb-4 text-[#25D366]" />
-            <h2 className="text-[20px] font-black leading-tight mb-2">Explore Public Groups</h2>
+        /* DISCOVER TAB (Real Native Public Groups) */
+        <div className="flex-1 flex flex-col p-4 gap-4">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
+            <div className="absolute -right-6 -bottom-6 w-36 h-36 bg-[#25D366]/15 rounded-full blur-2xl" />
+            <div className="flex items-center gap-2 mb-2">
+              <Compass size={22} className="text-[#25D366]" />
+              <h2 className="text-[18px] font-black leading-tight">Explore Public Communities</h2>
+            </div>
             <p className="text-[13px] text-white/60 font-medium leading-relaxed">
-              Join public communities, DAOs, and alpha groups.
+              Discover native groups and spaces verified on-chain.
             </p>
           </div>
 
           <div>
-            <h3 className="text-[14px] font-bold text-black/60 mb-3 flex items-center gap-2">
-              <TrendingUp size={15} className="text-[#25D366]" /> Trending
+            <h3 className="text-[13px] font-bold text-black/50 mb-3 flex items-center gap-1.5 uppercase tracking-wider">
+              <TrendingUp size={14} className="text-[#25D366]" /> Public Spaces ({discoverCommunities.length})
             </h3>
-            <div className="bg-white rounded-2xl shadow-sm border border-black/5 p-8 flex flex-col items-center justify-center text-center">
-              <Star size={28} className="text-[#FFCC00] mb-3" />
-              <p className="font-bold text-[15px] mb-1">Coming soon</p>
-              <p className="text-[13px] text-black/40">Public group discovery launches in the next update.</p>
-            </div>
+
+            {discoverCommunities.length === 0 ? (
+              <div className="bg-white rounded-2xl shadow-sm border border-black/5 p-8 flex flex-col items-center justify-center text-center">
+                <Globe size={32} className="text-[#25D366] mb-3" />
+                <p className="font-bold text-[15px] mb-1">No public spaces yet</p>
+                <p className="text-[13px] text-black/40 max-w-xs">Be the first to create a public space and grow your community.</p>
+                <button
+                  onClick={() => { setIsPrivate(false); setShowCreate(true); }}
+                  className="mt-4 px-4 py-2 bg-[#25D366] text-white font-bold rounded-xl text-xs hover:bg-[#20bd59] transition-colors"
+                >
+                  Create Public Space
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {discoverCommunities
+                  .filter(c => !discoverSearch.trim() || c.name.toLowerCase().includes(discoverSearch.toLowerCase()) || c.description?.toLowerCase().includes(discoverSearch.toLowerCase()))
+                  .map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => onOpenCommunity(c.id)}
+                      className="w-full bg-white p-3.5 rounded-2xl shadow-sm border border-black/[0.04] flex items-center gap-3.5 hover:shadow-md transition-all text-left group"
+                    >
+                      <div
+                        className="w-12 h-12 rounded-[14px] flex items-center justify-center text-white font-black text-[16px] shrink-0"
+                        style={{ background: avatarColor(c.id) }}
+                      >
+                        {c.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <p className="text-[15px] font-bold text-[#1C1C1E] truncate">{c.name}</p>
+                          <ChevronRight size={14} className="text-black/20 group-hover:text-[#25D366] transition-colors shrink-0" />
+                        </div>
+                        <p className="text-[12px] text-[#8E8E93] truncate mb-1.5">{c.description || 'Public Sovereign Space'}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-black/50 bg-black/5 px-2 py-0.5 rounded-md">
+                            <Users size={10} /> {c.membersCount || 1} members
+                          </span>
+                          <span className="text-[10px] font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-md">
+                            Public
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            )}
           </div>
         </div>
       )}

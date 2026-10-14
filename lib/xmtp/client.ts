@@ -67,10 +67,15 @@ function hexToBytes(hex: string): Uint8Array {
   return bytes;
 }
 
-//  BigInt nanoseconds → Date 
-export function nsToDate(ns: bigint | undefined | null): Date {
+//  BigInt nanoseconds or Number milliseconds → Date 
+export function nsToDate(ns: bigint | number | string | undefined | null): Date {
   if (ns == null) return new Date();
   try {
+    const rawNum = Number(ns);
+    // If timestamp is already in milliseconds range (< 1e14), do not divide by 1,000,000!
+    if (!isNaN(rawNum) && rawNum > 0 && rawNum < 1e14) {
+      return new Date(rawNum);
+    }
     return new Date(Number(BigInt(String(ns)) / 1_000_000n));
   } catch {
     return new Date();
@@ -123,7 +128,8 @@ export async function resolveInboxIdToAddress(inboxId: string, client?: Client):
     try {
       const dms = await client.conversations.listDms();
       for (const dm of dms) {
-        const members: any[] = typeof dm.members === 'function' ? await dm.members() : (dm.members ?? []);
+        const dmAny = dm as any;
+        const members: any[] = typeof dmAny.members === 'function' ? await dmAny.members() : (dmAny.members ?? []);
         const targetMember = members.find((m: any) => m.inboxId?.toLowerCase() === inboxId.toLowerCase());
         if (targetMember) {
           const addrs = targetMember.accountAddresses || targetMember.addresses || [];

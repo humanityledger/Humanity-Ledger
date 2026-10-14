@@ -63,8 +63,8 @@ export async function POST(req: NextRequest) {
     if (!ETH_ADDR_REGEX.test(recipient)) {
       return NextResponse.json({ error: 'Invalid recipient address' }, { status: 400 });
     }
-    if (typeof content !== 'string' || content.trim().length === 0 || content.length > 65536) {
-      return NextResponse.json({ error: 'Invalid content (max 64KB)' }, { status: 400 });
+    if (typeof content !== 'string' || content.trim().length === 0 || content.length > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Invalid content (max 10MB)' }, { status: 400 });
     }
 
     const msg = await prisma.pendingChatMessage.create({

@@ -29,17 +29,35 @@ export async function POST(req: Request) {
     }
 
     // Enforce Membership and Permissions
-    const membership = await (prisma as any).communityMember.findFirst({
+    const community = await (prisma as any).community.findUnique({
+      where: { id: communityId },
+      include: { permissions: true }
+    });
+    if (!community) {
+      return NextResponse.json({ error: 'Community not found' }, { status: 404 });
+    }
+
+    const isOwner = community.ownerAddress?.toLowerCase() === authorAddress;
+    let membership = await (prisma as any).communityMember.findFirst({
       where: { communityId, walletAddress: authorAddress },
-      include: { community: { include: { permissions: true } } }
     });
 
-    if (!membership) {
+    if (!membership && isOwner) {
+      membership = await (prisma as any).communityMember.create({
+        data: { communityId, walletAddress: authorAddress, role: 'ADMIN' }
+      }).catch(() => null);
+    } else if (!membership && !community.isPrivate) {
+      membership = await (prisma as any).communityMember.create({
+        data: { communityId, walletAddress: authorAddress, role: 'MEMBER' }
+      }).catch(() => null);
+    }
+
+    if (!membership && !isOwner) {
       return NextResponse.json({ error: 'Not a member of this community' }, { status: 403 });
     }
 
-    if (membership && membership.role !== 'ADMIN') {
-      const perms = membership.community.permissions;
+    if (membership && membership.role !== 'ADMIN' && !isOwner) {
+      const perms = community.permissions;
       if (perms && perms.sendMessages === false) {
         return NextResponse.json({ error: 'This community is currently locked for members' }, { status: 403 });
       }

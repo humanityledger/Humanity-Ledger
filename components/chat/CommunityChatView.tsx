@@ -73,46 +73,168 @@ function ReactionPicker({ onPick, onClose }: { onPick:(e:string)=>void; onClose:
 }
 
 // ─── VOICE RECORDER ──────────────────────────────────────────────────────────
-function VoiceRecorder({ onSend, onCancel }: { onSend:(b64:string)=>void; onCancel:()=>void }) {
+function VoiceRecorder({ onSend, onCancel }: { onSend: (b64: string) => void; onCancel: () => void }) {
   const [secs, setSecs] = useState(0);
+  const [audioLevel, setAudioLevel] = useState(0);
   const chunksRef = useRef<Blob[]>([]);
-  const mrRef = useRef<MediaRecorder|null>(null);
+  const mrRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+  const isCancelledRef = useRef(false);
 
   useEffect(() => {
-    let stream: MediaStream;
+    let active = true;
     (async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mr = new MediaRecorder(stream);
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
+        if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
+        streamRef.current = stream;
+
+        // Audio Level Analyser for Live Waveform
+        try {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContextClass) {
+            const ctx = new AudioContextClass();
+            audioCtxRef.current = ctx;
+            const source = ctx.createMediaStreamSource(stream);
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 64;
+            source.connect(analyser);
+            const dataArr = new Uint8Array(analyser.frequencyBinCount);
+            const checkLevel = () => {
+              if (!active) return;
+              analyser.getByteFrequencyData(dataArr);
+              let sum = 0;
+              for (let i = 0; i < dataArr.length; i++) sum += dataArr[i];
+              setAudioLevel(Math.min(100, Math.round((sum / dataArr.length) * 1.5)));
+              animFrameRef.current = requestAnimationFrame(checkLevel);
+            };
+            checkLevel();
+          }
+        } catch {}
+
+        const mimeType = typeof MediaRecorder !== 'undefined'
+          ? MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+            ? 'audio/webm;codecs=opus'
+            : MediaRecorder.isTypeSupported('audio/webm')
+            ? 'audio/webm'
+            : MediaRecorder.isTypeSupported('audio/mp4')
+            ? 'audio/mp4'
+            : ''
+          : '';
+
+        const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
         mrRef.current = mr;
-        mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-        mr.start(200);
-      } catch { toast.error('Microphone access denied'); onCancel(); }
+        chunksRef.current = [];
+
+        mr.ondataavailable = e => {
+          if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+        };
+
+        mr.onstop = () => {
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+          }
+          if (audioCtxRef.current) {
+            try { audioCtxRef.current.close(); } catch {}
+          }
+          if (isCancelledRef.current) return;
+          if (chunksRef.current.length === 0) {
+            onCancel();
+            return;
+          }
+          const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
+          if (blob.size < 400) {
+            toast.error('Voice note too short');
+            onCancel();
+            return;
+          }
+          const r = new FileReader();
+          r.onloadend = () => {
+            if (r.result) onSend(`__AUDIO__${r.result}`);
+          };
+          r.readAsDataURL(blob);
+        };
+
+        mr.start(100);
+      } catch (err) {
+        console.error('[VoiceRecorder] Mic error:', err);
+        toast.error('Microphone access denied or unavailable');
+        onCancel();
+      }
     })();
+
     const t = setInterval(() => setSecs(s => s + 1), 1000);
-    return () => { clearInterval(t); mrRef.current?.stop(); stream?.getTracks().forEach(t => t.stop()); };
+    return () => {
+      active = false;
+      clearInterval(t);
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (mrRef.current && mrRef.current.state !== 'inactive') {
+        try { mrRef.current.stop(); } catch {}
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (audioCtxRef.current) {
+        try { audioCtxRef.current.close(); } catch {}
+      }
+    };
   }, []);
 
-  const finish = () => {
-    mrRef.current?.stop();
-    setTimeout(() => {
-      const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-      const r = new FileReader();
-      r.onload = () => onSend(`__AUDIO__${r.result}`);
-      r.readAsDataURL(blob);
-    }, 300);
+  const handleCancel = () => {
+    isCancelledRef.current = true;
+    if (mrRef.current && mrRef.current.state !== 'inactive') {
+      try { mrRef.current.stop(); } catch {}
+    }
+    onCancel();
+  };
+
+  const handleFinish = () => {
+    isCancelledRef.current = false;
+    if (mrRef.current && mrRef.current.state !== 'inactive') {
+      try { mrRef.current.stop(); } catch {}
+    }
   };
 
   return (
-    <div className="flex-1 flex items-center gap-3 px-2 py-1">
-      <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0" />
-      <span className="text-[13px] font-mono font-bold text-[#1C1C1E] shrink-0">{fmt2(secs)}</span>
-      <div className="flex-1 h-1.5 bg-red-100 rounded-full overflow-hidden">
-        <div className="h-full bg-red-400 rounded-full transition-all" style={{ width: `${Math.min(100, secs*2)}%` }} />
+    <div className="flex-1 flex items-center justify-between gap-3 px-3 py-1 bg-white rounded-lg border border-black/[0.04] shadow-sm min-h-[42px]">
+      <div className="flex items-center gap-2.5">
+        <button
+          type="button"
+          onClick={handleCancel}
+          className="p-1.5 rounded-full text-[#ea4335] hover:bg-red-50 transition-colors"
+          title="Cancel recording"
+        >
+          <Trash2 size={18} />
+        </button>
+        <div className="w-2.5 h-2.5 rounded-full bg-[#ea4335] animate-pulse" />
+        <span className="text-[14px] font-mono font-bold text-[#111b21]">{fmt2(secs)}</span>
       </div>
-      <button onClick={onCancel} className="p-2 rounded-full hover:bg-black/5 text-black/40 shrink-0"><X size={16}/></button>
-      <button onClick={finish} className="w-9 h-9 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow hover:bg-[#128C7E] shrink-0">
-        <Send size={14} className="-ml-0.5" />
+
+      {/* Dynamic Sound Waveform */}
+      <div className="flex-1 flex items-center justify-center gap-1 max-w-[200px] h-6 px-2">
+        {[20, 45, 75, 35, 90, 60, 30, 80, 50, 25, 65, 40].map((baseH, idx) => {
+          const mod = Math.min(100, Math.max(15, (baseH * (audioLevel + 30)) / 80));
+          return (
+            <div
+              key={idx}
+              className="w-1 bg-[#25D366] rounded-full transition-all duration-75"
+              style={{ height: `${mod}%` }}
+            />
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={handleFinish}
+        className="w-9 h-9 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow hover:bg-[#128C7E] active:scale-95 transition-all shrink-0"
+        title="Send voice note"
+      >
+        <Send size={15} className="-ml-0.5" />
       </button>
     </div>
   );
@@ -123,25 +245,135 @@ function AudioPlayer({ src, mine }: { src: string; mine: boolean }) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [dur, setDur] = useState(0);
+  const [currTime, setCurrTime] = useState(0);
+  const [speed, setSpeed] = useState<1 | 1.5 | 2>(1);
   const ref = useRef<HTMLAudioElement>(null);
+
   const toggle = () => {
     if (!ref.current) return;
-    playing ? ref.current.pause() : ref.current.play();
-    setPlaying(p => !p);
+    if (playing) {
+      ref.current.pause();
+      setPlaying(false);
+    } else {
+      ref.current.play().catch(e => console.warn('Audio play failed', e));
+      setPlaying(true);
+    }
   };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    if (ref.current && dur > 0) {
+      const nextTime = (val / 100) * dur;
+      ref.current.currentTime = nextTime;
+      setProgress(val);
+      setCurrTime(nextTime);
+    }
+  };
+
+  const cycleSpeed = () => {
+    const nextSpeed = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1;
+    setSpeed(nextSpeed);
+    if (ref.current) ref.current.playbackRate = nextSpeed;
+  };
+
   return (
-    <div className="flex items-center gap-2.5 min-w-[200px] max-w-[260px]">
-      <audio ref={ref} src={src} onTimeUpdate={e => setProgress((e.currentTarget.currentTime/e.currentTarget.duration)*100||0)}
-        onLoadedMetadata={e => setDur(e.currentTarget.duration)} onEnded={() => setPlaying(false)} className="hidden" />
-      <button onClick={toggle} className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${mine ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-[#25D366]/15 text-[#25D366] hover:bg-[#25D366]/25'}`}>
-        {playing ? <Pause size={15}/> : <Play size={15} className="ml-0.5"/>}
+    <div className="flex items-center gap-3 min-w-[230px] max-w-[290px] py-1 select-none">
+      <audio
+        ref={ref}
+        src={src}
+        onTimeUpdate={e => {
+          const c = e.currentTarget.currentTime;
+          const d = e.currentTarget.duration || dur;
+          setCurrTime(c);
+          if (d > 0) setProgress((c / d) * 100);
+        }}
+        onLoadedMetadata={e => {
+          const d = e.currentTarget.duration;
+          if (!isNaN(d) && isFinite(d)) setDur(d);
+        }}
+        onEnded={() => {
+          setPlaying(false);
+          setProgress(0);
+          setCurrTime(0);
+        }}
+        className="hidden"
+      />
+      
+      {/* Play/Pause round button */}
+      <button
+        type="button"
+        onClick={toggle}
+        className="w-9 h-9 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 transition-transform active:scale-90 shadow-sm hover:bg-[#128C7E]"
+      >
+        {playing ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
       </button>
-      <div className="flex-1">
-        <div className={`h-1 rounded-full overflow-hidden ${mine ? 'bg-white/30' : 'bg-black/10'}`}>
-          <div className={`h-full rounded-full transition-all ${mine ? 'bg-white' : 'bg-[#25D366]'}`} style={{ width: `${progress}%` }} />
+
+      {/* Waveform track with seekable slider */}
+      <div className="flex-1 flex flex-col justify-center gap-1">
+        <div className="relative flex items-center h-4 w-full group cursor-pointer">
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="0.1"
+            value={progress}
+            onChange={handleSeek}
+            className="w-full h-1.5 rounded-full appearance-none bg-black/15 accent-[#25D366] cursor-pointer"
+          />
         </div>
-        <p className={`text-[10px] mt-0.5 font-mono ${mine ? 'text-white/60' : 'text-black/40'}`}>{fmt2((progress/100)*dur)} / {fmt2(dur)}</p>
+        <div className="flex items-center justify-between text-[11px] font-mono text-[#667781] leading-none">
+          <span>{fmt2(currTime)}</span>
+          <span>{dur > 0 ? fmt2(dur) : '--:--'}</span>
+        </div>
       </div>
+
+      {/* Speed toggle pill */}
+      <button
+        type="button"
+        onClick={cycleSpeed}
+        className="px-1.5 py-0.5 text-[11px] font-bold rounded-md bg-black/5 text-[#54656f] hover:bg-black/10 transition-colors shrink-0"
+        title="Playback speed"
+      >
+        {speed}x
+      </button>
+    </div>
+  );
+}
+
+// ─── POLL BUBBLE (separate component so hooks are unconditional) ──────────────
+function PollBubble({ content, mine }: { content: string; mine: boolean }) {
+  const parts = content.split('__::');
+  const question = parts[1] || '';
+  const options = (parts[2] || '').split('|').filter(Boolean);
+  const [voted, setVoted] = useState<number|null>(null);
+  const [votes, setVotes] = useState(() => options.map(() => 0));
+  const total = votes.reduce((a, b) => a + b, 0);
+  return (
+    <div className="min-w-[200px] max-w-[280px]">
+      <p className={`text-[14px] font-bold mb-2.5 ${mine ? 'text-[#111b21]' : 'text-[#1C1C1E]'}`}>{question}</p>
+      <div className="space-y-1.5">
+        {options.map((o, i) => {
+          const pct = total > 0 ? Math.round((votes[i] / total) * 100) : 0;
+          const isVoted = voted === i;
+          return (
+            <button
+              key={i}
+              onClick={() => { setVoted(i); setVotes(prev => prev.map((v, j) => j === i ? v + 1 : v)); }}
+              className={`relative w-full text-left text-[12px] font-semibold px-3 py-2 rounded-xl overflow-hidden transition-all ${isVoted ? 'text-[#25D366]' : 'text-[#1C1C1E]/70'}`}
+            >
+              <div
+                className={`absolute inset-y-0 left-0 rounded-xl transition-all ${isVoted ? 'bg-[#25D366]/15' : 'bg-black/5'}`}
+                style={{ width: `${voted !== null ? pct : 0}%` }}
+              />
+              <div className="relative flex justify-between">
+                <span>{o}</span>
+                {voted !== null && <span>{pct}%</span>}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[10px] mt-2 text-black/30">{total} vote{total !== 1 ? 's' : ''}</p>
     </div>
   );
 }
@@ -191,34 +423,7 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
   }
 
   if (content.startsWith('__POLL__')) {
-    const parts = content.split('__::');
-    const question = parts[1] || '';
-    const options = (parts[2] || '').split('|').filter(Boolean);
-    const [voted, setVoted] = useState<number|null>(null);
-    const [votes, setVotes] = useState(() => options.map(() => 0));
-    const total = votes.reduce((a,b)=>a+b, 0);
-    return (
-      <div className="min-w-[200px] max-w-[280px]">
-        <p className={`text-[14px] font-bold mb-2.5 ${mine ? 'text-white' : 'text-[#1C1C1E]'}`}>{question}</p>
-        <div className="space-y-1.5">
-          {options.map((o, i) => {
-            const pct = total > 0 ? Math.round((votes[i]/total)*100) : 0;
-            const isVoted = voted === i;
-            return (
-              <button key={i} onClick={() => { setVoted(i); setVotes(prev => prev.map((v,j)=>j===i?v+1:v)); }}
-                className={`relative w-full text-left text-[12px] font-semibold px-3 py-2 rounded-xl overflow-hidden transition-all ${isVoted ? (mine ? 'text-white' : 'text-[#25D366]') : mine ? 'text-white/80' : 'text-[#1C1C1E]/70'}`}>
-                <div className={`absolute inset-0 rounded-xl transition-all ${isVoted ? (mine?'bg-white/20':'bg-[#25D366]/15') : 'bg-black/5'}`} style={{width:`${voted !== null ? pct : 0}%`}} />
-                <div className="relative flex justify-between">
-                  <span>{o}</span>
-                  {voted !== null && <span>{pct}%</span>}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        <p className={`text-[10px] mt-2 ${mine ? 'text-white/40' : 'text-black/30'}`}>{total} votes</p>
-      </div>
-    );
+    return <PollBubble content={content} mine={mine} />;
   }
 
   if (content.startsWith('[STICKER]:')) {
@@ -234,6 +439,7 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
 
   return <span className="text-[14px] leading-[1.45] whitespace-pre-wrap break-words">{content}</span>;
 }
+
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function CommunityChatView({
@@ -354,7 +560,11 @@ export function CommunityChatView({
     try {
       const res = await fetch('/api/chat/communities/posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-web3-address': myAddress.toLowerCase(),
+          'x-verified-session-address': myAddress.toLowerCase(),
+        },
         credentials: 'same-origin',
         body: JSON.stringify({
           communityId,
@@ -390,6 +600,7 @@ export function CommunityChatView({
     const txt = input.trim();
     if (!txt || sending) return;
     setInput('');
+    // Reset height to auto — lets CSS min-height take over, no jitter
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -404,11 +615,18 @@ export function CommunityChatView({
   };
 
   const autoGrow = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
+    const val = e.target.value;
+    setInput(val);
     const el = e.target;
+    if (!el) return;
+    // Always reset to auto first so shrink works correctly
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+    if (val) {
+      const nextH = Math.min(el.scrollHeight, 100);
+      el.style.height = `${nextH}px`;
+    }
   };
+
 
   // ─── FILE UPLOAD ────────────────────────────────────────────────────────────
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -470,7 +688,8 @@ export function CommunityChatView({
 
   return (
     // The key to stable layout: explicit flex-col with overflow-hidden on container
-    <div className="flex flex-col bg-[#F2F2F7] overflow-hidden" style={{ height: '100%', minHeight: 0 }}>
+    <div className="relative flex flex-col bg-[#efeae2] overflow-hidden" style={{ height: '100%', minHeight: 0 }}>
+
 
       {/* ── CHANNEL HEADER ── */}
       <div className="px-4 py-2 bg-white/95 backdrop-blur-md border-b border-black/[0.06] flex items-center gap-2 shrink-0 z-10">
@@ -527,7 +746,7 @@ export function CommunityChatView({
         )}
       </AnimatePresence>
 
-      {/* ── MESSAGE LIST — flex-1 + overflow-y-auto is the critical layout fix ── */}
+      {/* ── MESSAGE LIST — WhatsApp Ivory Wallpaper Parity ── */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
@@ -539,14 +758,14 @@ export function CommunityChatView({
           {/* Empty state */}
           {displayMessages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="w-16 h-16 rounded-full bg-[#25D366]/10 flex items-center justify-center mb-4">
-                <Send size={22} className="text-[#25D366]" />
+              <div className="w-16 h-16 rounded-full bg-[#25D366]/15 flex items-center justify-center mb-4 shadow-sm">
+                <Send size={24} className="text-[#25D366]" />
               </div>
-              <p className="text-[15px] font-bold text-[#1C1C1E]">
-                {searchQuery ? 'No messages found' : 'Start the conversation'}
+              <p className="text-[16px] font-bold text-[#111b21]">
+                {searchQuery ? 'No messages found' : 'Comienza la conversación'}
               </p>
-              <p className="text-[13px] text-black/40 mt-1">
-                {searchQuery ? 'Try a different search term' : 'Be the first to send a message'}
+              <p className="text-[13px] text-[#667781] mt-1">
+                {searchQuery ? 'Prueba con otro término de búsqueda' : 'Sé el primero en enviar un mensaje en este canal'}
               </p>
             </div>
           )}
@@ -561,7 +780,7 @@ export function CommunityChatView({
                 {/* Author label (only once per group) */}
                 {!me && (
                   <div className="flex items-center gap-1.5 mb-0.5 ml-9">
-                    <span className="text-[10px] font-mono font-semibold text-black/40">
+                    <span className="text-[11px] font-mono font-semibold text-[#54656f]">
                       {addr(firstMsg.authorAddress)}
                     </span>
                   </div>
@@ -571,7 +790,7 @@ export function CommunityChatView({
                   const isSystem = msg.content.startsWith('__SYSTEM__');
                   if (isSystem) return (
                     <div key={msg.id} className="w-full flex justify-center py-1">
-                      <span className="text-[11px] text-black/40 bg-black/[0.05] rounded-full px-3 py-1">
+                      <span className="text-[11px] text-[#54656f] bg-white/80 backdrop-blur-sm shadow-sm rounded-lg px-3 py-1 border border-black/[0.04]">
                         {msg.content.replace('__SYSTEM__', '')}
                       </span>
                     </div>
@@ -589,7 +808,7 @@ export function CommunityChatView({
                       {/* Avatar — only show for first message in group */}
                       <div className={`w-7 shrink-0 ${me ? 'hidden' : ''}`}>
                         {isFirst ? (
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-black"
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-black shadow-sm"
                             style={{ background: avatarColor(msg.authorAddress || '0x00') }}>
                             {(msg.authorAddress || '??').slice(2,4).toUpperCase()}
                           </div>
@@ -600,8 +819,9 @@ export function CommunityChatView({
                       <div className={`flex flex-col ${me ? 'items-end' : 'items-start'}`}>
                         {/* Reply preview */}
                         {replyTo?.id === msg.id && (
-                          <div className={`text-[10px] opacity-60 mb-1 border-l-2 pl-2 ${me ? 'border-white/50 text-white' : 'border-[#25D366] text-[#1C1C1E]'}`}>
-                            {addr(replyTo.authorAddress)}: {replyTo.content.slice(0,40)}
+                          <div className={`text-[10px] mb-1 border-l-2 pl-2 rounded-r bg-black/[0.03] py-0.5 pr-2 ${me ? 'border-[#25D366] text-[#111b21]' : 'border-[#25D366] text-[#111b21]'}`}>
+                            <span className="font-bold text-[#25D366]">{addr(replyTo.authorAddress)}: </span>
+                            <span className="text-[#667781]">{replyTo.content.slice(0,40)}</span>
                           </div>
                         )}
 
@@ -616,11 +836,11 @@ export function CommunityChatView({
                             )}
                           </AnimatePresence>
 
-                          {/* Bubble */}
-                          <div className={`relative px-3.5 py-2 shadow-sm select-text
+                          {/* Bubble (WhatsApp Desktop Parity) */}
+                          <div className={`relative px-3.5 py-2 select-text shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] border border-black/[0.03]
                             ${me
-                              ? `bg-[#25D366] text-white ${msg.isOptimistic ? 'opacity-60' : ''}`
-                              : 'bg-white text-[#1C1C1E] border border-black/[0.06]'
+                              ? `bg-[#d9fdd3] text-[#111b21] ${msg.isOptimistic ? 'opacity-70' : ''}`
+                              : 'bg-white text-[#111b21]'
                             }
                             ${isFirst && isLast ? 'rounded-2xl' :
                               isFirst ? me ? 'rounded-2xl rounded-br-md' : 'rounded-2xl rounded-bl-md' :
@@ -629,16 +849,16 @@ export function CommunityChatView({
                             }`}>
                             <MessageContent content={msg.content} mine={me} />
 
-                            {/* Time + status */}
+                            {/* Time + WhatsApp status checks */}
                             <div className={`flex items-center gap-1 mt-1 ${me ? 'justify-end' : 'justify-start'}`}>
-                              <span className={`text-[10px] ${me ? 'text-white/55' : 'text-black/30'}`}>
+                              <span className="text-[11px] text-[#667781] leading-none">
                                 {new Date(msg.createdAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}
                               </span>
                               {me && msg.isOptimistic && (
-                                <div className="w-2.5 h-2.5 border-[1.5px] border-white/40 border-t-white rounded-full animate-spin" />
+                                <div className="w-2.5 h-2.5 border-[1.5px] border-black/30 border-t-[#25D366] rounded-full animate-spin" />
                               )}
                               {me && !msg.isOptimistic && (
-                                <CheckCircle size={11} className="text-white/55" />
+                                <span className="text-[#53bdeb] text-[12px] font-bold leading-none select-none">✓✓</span>
                               )}
                             </div>
                           </div>
@@ -750,27 +970,27 @@ export function CommunityChatView({
         )}
       </AnimatePresence>
 
-      {/* ── INPUT AREA — shrink-0 keeps it pinned at the bottom ── */}
-      <div className="bg-white border-t border-black/[0.06] shrink-0 px-3 pt-2 pb-3">
+      {/* ── WHATSAPP DESKTOP INPUT AREA (EXE Parity) ── */}
+      <div className="bg-[#f0f2f5] border-t border-[#e9edef] shrink-0 px-4 py-2.5 z-10">
 
         {/* App Drawer */}
         <AnimatePresence>
           {showAppDrawer && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <div className="grid grid-cols-5 gap-3 px-1 py-3">
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-2">
+              <div className="grid grid-cols-5 gap-3 p-3 bg-white rounded-2xl shadow-md border border-black/[0.04]">
                 {[
-                  { icon: ImgIcon, label: 'Photo', color: 'bg-[#FF9500]', fn: () => fileInputRef.current?.click() },
-                  { icon: CircleDollarSign, label: 'Crypto', color: 'bg-[#128C7E]', fn: () => { setCryptoRecipient(''); setShowRecipientSheet(true); } },
-                  { icon: MapPin, label: 'Location', color: 'bg-[#25D366]', fn: sendLocation },
-                  { icon: BarChart2, label: 'Poll', color: 'bg-purple-500', fn: () => setShowPollCreator(true) },
+                  { icon: ImgIcon, label: 'Foto/Video', color: 'bg-[#FF9500]', fn: () => fileInputRef.current?.click() },
+                  { icon: CircleDollarSign, label: 'Crypto Send', color: 'bg-[#128C7E]', fn: () => { setCryptoRecipient(''); setShowRecipientSheet(true); } },
+                  { icon: MapPin, label: 'Ubicación', color: 'bg-[#25D366]', fn: sendLocation },
+                  { icon: BarChart2, label: 'Encuesta', color: 'bg-purple-500', fn: () => setShowPollCreator(true) },
                   { icon: Smile, label: 'Sticker', color: 'bg-orange-500', fn: () => executeSend('[STICKER]:fire') },
                 ].map(({ icon: Icon, label, color, fn }) => (
                   <button key={label} onClick={() => { fn(); setShowAppDrawer(false); }}
                     className="flex flex-col items-center gap-1.5 group">
-                    <div className={`w-12 h-12 ${color} text-white rounded-[18px] flex items-center justify-center shadow-sm group-active:scale-90 transition-transform`}>
-                      <Icon size={22}/>
+                    <div className={`w-11 h-11 ${color} text-white rounded-2xl flex items-center justify-center shadow-sm group-active:scale-90 transition-transform`}>
+                      <Icon size={20}/>
                     </div>
-                    <span className="text-[10px] font-semibold text-[#1C1C1E]/60">{label}</span>
+                    <span className="text-[11px] font-semibold text-[#111b21]/70">{label}</span>
                   </button>
                 ))}
               </div>
@@ -781,50 +1001,72 @@ export function CommunityChatView({
         <form onSubmit={handleSend} className="flex items-end gap-2">
           <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*,video/*" />
 
-          {/* Plus / Close drawer button */}
-          <button type="button" onClick={() => setShowAppDrawer(v => !v)}
-            className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 ${showAppDrawer ? 'bg-[#25D366] text-white rotate-45' : 'bg-[#F2F2F7] text-[#1C1C1E]/50 hover:bg-[#E5E5EA]'}`}>
-            <Plus size={20}/>
-          </button>
-
-          {/* Main input area or voice recorder */}
           {recordingVoice ? (
-            <div className="flex-1 flex items-center bg-[#F2F2F7] rounded-3xl min-h-[44px] px-3">
-              <VoiceRecorder
-                onSend={async b64 => { setRecordingVoice(false); await executeSend(b64); }}
-                onCancel={() => setRecordingVoice(false)}
-              />
-            </div>
+            <VoiceRecorder
+              onSend={async b64 => { setRecordingVoice(false); await executeSend(b64); }}
+              onCancel={() => setRecordingVoice(false)}
+            />
           ) : (
-            <div className="flex-1 flex items-end bg-[#F2F2F7] rounded-3xl px-3.5 py-2.5 gap-2 min-h-[44px]">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={autoGrow}
-                onKeyDown={handleKeyDown}
-                placeholder="Message..."
-                disabled={sending}
-                rows={1}
-                className="flex-1 bg-transparent outline-none text-[14px] text-[#1C1C1E] placeholder:text-black/30 resize-none leading-relaxed max-h-[140px] overflow-y-auto disabled:opacity-50 self-end"
-                style={{ height: 'auto' }}
-              />
-              <div className="flex items-end gap-1.5 shrink-0 pb-0.5">
-                {!input.trim() ? (
-                  <button type="button" onClick={() => setRecordingVoice(true)}
-                    className="text-black/30 hover:text-[#25D366] transition-colors active:scale-90">
-                    <Mic size={20}/>
-                  </button>
-                ) : (
-                  <button type="submit" disabled={sending}
-                    className="w-8 h-8 bg-[#25D366] text-white rounded-full flex items-center justify-center disabled:opacity-40 hover:bg-[#128C7E] transition-all active:scale-90 shadow">
-                    {sending
-                      ? <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"/>
-                      : <Send size={14} className="-ml-0.5"/>
-                    }
-                  </button>
-                )}
+            <>
+              {/* Plus (+) Attachment Button */}
+              <button
+                type="button"
+                onClick={() => setShowAppDrawer(v => !v)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-[#54656f] hover:bg-black/5 hover:text-[#111b21] transition-all active:scale-95 mb-0.5 ${showAppDrawer ? 'rotate-45 text-[#25D366]' : ''}`}
+                title="Adjuntar"
+              >
+                <Plus size={22} />
+              </button>
+
+              {/* Emoji (😊) Button */}
+              <button
+                type="button"
+                onClick={() => setEmojiPickerFor(prev => prev ? null : 'input')}
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-[#54656f] hover:bg-black/5 hover:text-[#111b21] transition-all active:scale-95 mb-0.5"
+                title="Emojis"
+              >
+                <Smile size={22} />
+              </button>
+
+              {/* Rounded White Text Box (WhatsApp Desktop EXE Parity) */}
+              <div className="flex-1 bg-white rounded-[8px] shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] border border-black/[0.04] min-h-[42px] max-h-[120px] flex items-center px-3.5 overflow-hidden">
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={autoGrow}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Escribe un mensaje"
+                  disabled={sending}
+                  rows={1}
+                  className="w-full bg-transparent outline-none text-[15px] text-[#111b21] placeholder-[#8696a0] resize-none leading-[22px] max-h-[100px] overflow-y-auto disabled:opacity-50 py-[10px]"
+                />
               </div>
-            </div>
+
+              {/* Right Action: Mic when empty, Green Send when text present */}
+              {!input.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => setRecordingVoice(true)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-[#54656f] hover:bg-black/5 hover:text-[#111b21] active:scale-95 transition-all shrink-0 mb-0.5"
+                  title="Grabar mensaje de voz"
+                >
+                  <Mic size={22} />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={sending}
+                  className="w-10 h-10 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-sm hover:bg-[#128c7e] active:scale-95 transition-all shrink-0 disabled:opacity-40 mb-0.5"
+                  title="Enviar"
+                >
+                  {sending ? (
+                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Send size={18} className="-ml-0.5" />
+                  )}
+                </button>
+              )}
+            </>
           )}
         </form>
       </div>

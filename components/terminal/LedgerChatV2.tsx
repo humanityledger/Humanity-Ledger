@@ -2364,15 +2364,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         console.warn('[Voice] Initial getUserMedia failed, trying fallback...', initialErr);
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       }
-      // [iOS FIX] Safari does NOT support audio/webm or audio/webm;codecs=opus.
-      // It only supports audio/mp4 (AAC). We must check in correct priority order.
-      const mimeType = MediaRecorder.isTypeSupported('audio/mp4')
-        ? 'audio/mp4'
-        : MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      // Proper mimeType detection: Opus/WebM for desktop browsers, AAC/MP4 for Safari/iOS
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+        ? 'audio/mp4'
+        : '';
 
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       audioChunksRef.current = [];
 
       recorder.ondataavailable = (e) => {
@@ -2395,8 +2396,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
         if (audioChunksRef.current.length === 0) return;
 
-        const blob = new Blob(audioChunksRef.current, { type: mimeType });
-        if (blob.size < 1000) {
+        const blob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
+        if (blob.size < 400) {
             console.warn('[Voice] Recording too short, ignoring.');
             setRecordingSeconds(0);
             return;
@@ -3567,9 +3568,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                  .map((p: any) => ({
                    id: p.id ?? `queue-${Date.now()}-${Math.random()}`,
                    senderInboxId: activePeer.toLowerCase(),
+                   senderAddress: activePeer.toLowerCase(),
                    content: p.content,
                    sentAtNs: new Date(p.createdAt ?? p.timestamp ?? Date.now()).getTime(),
-                   conversationId: `dm-${activePeer.toLowerCase()}`
+                   conversationId: `dm-${activePeer.toLowerCase()}`,
+                   isMe: false,
+                   fromPeer: true,
                 }));
               
               if (pendingServer.length > 0) {
@@ -5550,8 +5554,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           onChange={e => {
                             setInputText(e.target.value);
                             setShowBotSuggestions(e.target.value.startsWith('/') && e.target.value.length < 10);
-                            e.target.style.height = '44px';
-                            e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                            e.target.style.height = 'auto';
+                            e.target.style.height = `${Math.min(Math.max(e.target.scrollHeight, 44), 120)}px`;
                             const now = Date.now();
                             if (now - lastTypingTimeRef.current > 3000 && e.target.value.trim().length > 0) {
                               lastTypingTimeRef.current = now;

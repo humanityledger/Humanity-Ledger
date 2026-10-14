@@ -651,7 +651,7 @@ export const MessageBubble = React.memo(({
             ) : isPremium ? (
               <RenderPremiumSticker code={content.replace('__STICKER__', '')} size="96px" />
             ) : isAudio && audioSrc ? (
-              <div className={`px-3 py-2 rounded-[18px] shadow border ${isMe ? 'bg-[#25D366] border-transparent rounded-br-[4px]' : 'bg-white border-black/8 rounded-bl-[4px]'}`}>
+              <div className={`px-3 py-2 rounded-[18px] shadow-sm border ${isMe ? 'bg-[#d9fdd3] text-[#111b21] border-black/[0.04] rounded-br-[4px]' : 'bg-white text-[#111b21] border-black/[0.04] rounded-bl-[4px]'}`}>
                 <CustomAudioPlayer src={audioSrc} isMe={isMe} />
               </div>
             ) : isLocation && locationCoords ? (

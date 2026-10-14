@@ -10,7 +10,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       where: { id: params.id },
       include: {
         members: true,
-        _count: { select: { members: true, posts: true } }
+        channels: { orderBy: { position: 'asc' } },
+        permissions: true,
+        _count: { select: { members: true, posts: true, channels: true } }
       }
     });
     if (!community) return NextResponse.json({ error: 'Not found' }, { status: 404 });
