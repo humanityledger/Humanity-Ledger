@@ -58,6 +58,8 @@ import { BurnTimerSheet } from '@/components/chat/BurnTimerSheet';
 import { NativeCryptoSendModal } from '@/components/chat/NativeCryptoSendModal';
 import { SendTipModal } from '@/components/chat/SendTipModal';
 import { ScheduleMessageSheet } from '@/components/chat/ScheduleMessageSheet';
+import { ZkMoneyModal } from '@/components/chat/ZkMoneyModal';
+import { ZkWalletPanel } from '@/components/zk/ZkWalletPanel';
 import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
 import { isBotCommand, executeBotCommand } from '@/lib/bots/botInterceptor';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
@@ -595,6 +597,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showScheduleSheet, setShowScheduleSheet] = useState(false);
   const [showWalletTransfer, setShowWalletTransfer] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
+  const [showZkModal, setShowZkModal] = useState(false);
+  const [showZkWallet, setShowZkWallet] = useState(false);
   // Phase 5: Poll creator form state (hoisted to satisfy React rules of hooks)
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
@@ -5389,8 +5393,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             // ── Interactive ──────────────────────────────────────────
                             { id: 'gif',       color: '#AF52DE', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><text x="5" y="16" fontSize="9" fontWeight="bold" fill="currentColor" stroke="none">GIF</text></svg>,   label: 'GIF',            sublabel: 'Search animated GIFs',   onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
                             { id: 'sticker',   color: '#FFCC00', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>,      label: 'Stickers',       sublabel: 'Send a sticker',         onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
-                            { id: 'poll',      color: '#007AFF', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
-                            // ── Crypto & Creator Tipping ──────────────────────────────
+                            { id: 'poll',      color: '#10B981', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
+                            // ── Crypto & Aztec Private Payments ──────────────────────────
+                            { id: 'zkmoney',   color: '#10B981', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, label: 'zk.money', sublabel: 'Private Aztec Transfer', onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
                             { id: 'payment',   color: '#25D366', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>,     label: 'Payment',        sublabel: 'Send crypto',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
                             { id: 'tip',       color: '#25D366', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, label: 'Creator Tip',  sublabel: 'Support peer with ETH/USDC', onClick: () => { setShowTipModal(true); setShowAppDrawer(false); } },
                             // ── Utilities ────────────────────────────────────────────
@@ -6687,6 +6692,39 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
            }}
          />
        )}
+
+       {/* ── Aztec zk.money Private Payment Modal ── */}
+       {showZkModal && activePeer && (
+         <ZkMoneyModal
+           isOpen={showZkModal}
+           onClose={() => setShowZkModal(false)}
+           myAddress={address || ''}
+           recipientAddress={activePeer}
+           onSuccess={(paymentPayload, _result) => {
+             executeSend(paymentPayload);
+             setShowZkModal(false);
+           }}
+         />
+       )}
+
+       {/* ── Aztec zk.money Shielded Wallet Panel ── */}
+       <AnimatePresence>
+         {showZkWallet && (
+           <motion.div
+             initial={{ opacity: 0, x: '100%' }}
+             animate={{ opacity: 1, x: 0 }}
+             exit={{ opacity: 0, x: '100%' }}
+             transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+             className="fixed inset-y-0 right-0 w-84 z-[500] shadow-2xl"
+           >
+             <ZkWalletPanel
+               address={address || ''}
+               onClose={() => setShowZkWallet(false)}
+               onSend={() => { setShowZkWallet(false); setShowZkModal(true); }}
+             />
+           </motion.div>
+         )}
+       </AnimatePresence>
 
       {pendingCallType && isMounted && typeof document !== 'undefined'
         ? createPortal(

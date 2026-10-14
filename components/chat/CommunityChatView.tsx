@@ -15,7 +15,11 @@ import { ZkMoneyModal } from './ZkMoneyModal';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { AnimatePresence, motion } from 'framer-motion';
 import DOMPurify from 'dompurify';
-import { parseZkPaymentPayload } from '@/lib/zk/zkMoney';
+import { parseZkPaymentPayload, parseEscrowPayload } from '@/lib/zk/zkMoney';
+import { parseTipPayload, parseBountyPayload } from '@/lib/zk/zkCommunityPayments';
+import { ZkWalletPanel } from '@/components/zk/ZkWalletPanel';
+import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
+import { ZkEscrowCard } from '@/components/zk/ZkEscrowCard';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function safeHtml(raw: string): string {
@@ -476,6 +480,58 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     }
   }
 
+  if (content.startsWith('__ZK_ESCROW__:')) {
+    const escrow = parseEscrowPayload(content);
+    if (escrow) {
+      return (
+        <div className="min-w-[260px] max-w-[320px] my-1">
+          <ZkEscrowCard escrow={escrow} currentUserTag={escrow.senderTag} />
+        </div>
+      );
+    }
+  }
+
+  if (content.startsWith('__ZK_TIP__:')) {
+    const tip = parseTipPayload(content);
+    if (tip) {
+      return (
+        <div className="min-w-[220px] max-w-[280px] p-3 rounded-2xl bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] text-white shadow-md border border-[#25D366]/30 my-1 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#25D366]">Shielded Tip</span>
+            <span className="text-[9px] font-mono text-white/50 bg-white/10 px-1.5 py-0.5 rounded-full">Aztec</span>
+          </div>
+          <div className="text-[20px] font-black text-white">
+            +{tip.amount} <span className="text-[13px] text-[#25D366]">zk{tip.token}</span>
+          </div>
+          <div className="text-[11px] text-white/70 font-mono">{tip.senderTag} → {tip.recipientTag}</div>
+          {tip.message && <div className="text-[11px] italic text-white/80 bg-white/5 p-2 rounded-xl">"{tip.message}"</div>}
+        </div>
+      );
+    }
+  }
+
+  if (content.startsWith('__ZK_BOUNTY__:')) {
+    const bounty = parseBountyPayload(content);
+    if (bounty) {
+      return (
+        <div className="min-w-[240px] max-w-[300px] p-3.5 rounded-2xl bg-white border border-black/10 shadow-sm my-1 space-y-2">
+          <div className="flex justify-between items-start">
+            <div>
+              <span className="text-[9px] font-bold uppercase tracking-wider bg-[#25D366]/15 text-[#25D366] px-2 py-0.5 rounded-full">
+                Shielded Bounty
+              </span>
+              <h4 className="font-bold text-gray-900 text-[13px] mt-1">{bounty.title}</h4>
+            </div>
+            <div className="text-right font-black text-[#25D366] text-[15px]">
+              {bounty.reward} <span className="text-[10px] text-gray-400">zk{bounty.token}</span>
+            </div>
+          </div>
+          <p className="text-[11px] text-gray-600 line-clamp-2">{bounty.description}</p>
+        </div>
+      );
+    }
+  }
+
   if (content.startsWith('[STICKER]:')) {
     const name = content.replace('[STICKER]:', '');
     const stickers: Record<string,string> = { fire:'🔥', heart:'❤️', clap:'👏', '100':'💯', rocket:'🚀', wave:'👋', thumbsup:'👍', cool:'😎' };
@@ -523,6 +579,11 @@ export function CommunityChatView({
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  // ZK Wallet Panel
+  const [showZkWallet,   setShowZkWallet]   = useState(false);
+  const [showZkShield,   setShowZkShield]   = useState(false);
+  const [zkShieldMode,   setZkShieldMode]   = useState<'shield'|'unshield'>('shield');
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -753,6 +814,11 @@ export function CommunityChatView({
           {communityName || 'Channel'}
         </span>
         <div className="flex items-center gap-1">
+          <button onClick={() => setShowZkWallet(v => !v)}
+            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${showZkWallet ? 'bg-[#25D366] text-white' : 'text-black/30 hover:text-[#25D366] hover:bg-black/5'}`}
+            title="Shielded Wallet">
+            <Shield size={13} />
+          </button>
           <button onClick={() => setShowSearch(v => !v)}
             className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${showSearch ? 'bg-[#25D366] text-white' : 'text-black/30 hover:text-black/60 hover:bg-black/5'}`}>
             <Search size={13} />
@@ -1230,6 +1296,40 @@ export function CommunityChatView({
           setShowZkModal(false);
         }}
       />
+
+      {/* ── ZK WALLET PANEL (slide-over) ── */}
+      <AnimatePresence>
+        {showZkWallet && (
+          <motion.div
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            className="absolute inset-y-0 right-0 w-80 z-40 shadow-2xl"
+          >
+            <ZkWalletPanel
+              address={myAddress}
+              onClose={() => setShowZkWallet(false)}
+              onShield={() => { setZkShieldMode('shield'); setShowZkShield(true); }}
+              onUnshield={() => { setZkShieldMode('unshield'); setShowZkShield(true); }}
+              onSend={() => setShowZkModal(true)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── ZK SHIELD / UNSHIELD MODAL ── */}
+      <AnimatePresence>
+        {showZkShield && (
+          <ZkShieldModal
+            address={myAddress}
+            mode={zkShieldMode}
+            onClose={() => setShowZkShield(false)}
+            onSuccess={() => setShowZkShield(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+

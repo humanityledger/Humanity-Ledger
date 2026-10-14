@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft, Lock, Globe, Settings, Hash, Edit, Heart, Users,
   Pin, Search, X, Bell, BellOff, Share2, MoreVertical, RefreshCw,
-  MessageSquare, FileText, BarChart2, Vote, Video, PhoneCall
+  MessageSquare, FileText, BarChart2, Vote, Video, PhoneCall, Shield
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DOMPurify from 'dompurify';
@@ -16,6 +16,7 @@ import { CommunityMemberPanel } from './CommunityMemberPanel';
 import { PinnedMessagesPanel, MessageSearchPanel } from './CommunityMessageReactions';
 import CommunityAnalytics from './CommunityAnalytics';
 import { CommunityGovernanceView } from './CommunityGovernanceModal';
+import { ZkCommunityTreasury } from '@/components/zk/ZkCommunityTreasury';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -123,7 +124,7 @@ function PostCard({ post, myAddress, onEdit, onLike, localLikes }: PostCardProps
 
 export function CommunityView({ communityId, myAddress, onBack }: CommunityViewProps) {
   // Tab state
-  const [activeTab, setActiveTab] = useState<'posts' | 'chat' | 'governance' | 'analytics' | 'settings'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'chat' | 'treasury' | 'governance' | 'analytics' | 'settings'>('posts');
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
 
   // Community data
@@ -281,7 +282,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
         <div className="flex items-center gap-1">
           {/* Tab pills */}
           <div className="hidden sm:flex items-center gap-0.5 bg-[#F2F2F7] rounded-xl p-0.5 mr-1">
-            {(['posts','chat','governance','analytics','settings'] as const).map(tab => (
+            {(['posts','chat','treasury','governance','analytics','settings'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -291,7 +292,11 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                     : 'text-black/40 hover:text-black/60'
                 }`}
               >
-                {tab === 'posts' ? 'Posts' : tab === 'chat' ? 'Chat' : tab === 'governance' ? 'Gov' : tab === 'analytics' ? <BarChart2 size={13} /> : <Settings size={13} />}
+                {tab === 'posts' ? 'Posts' : tab === 'chat' ? 'Chat' : tab === 'treasury' ? (
+                  <span className="flex items-center gap-1">
+                    <Shield size={12} className="text-[#25D366]" /> Treasury
+                  </span>
+                ) : tab === 'governance' ? 'Gov' : tab === 'analytics' ? <BarChart2 size={13} /> : <Settings size={13} />}
               </button>
             ))}
           </div>
@@ -532,6 +537,24 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                   communityName={community?.name}
                 />
               </div>
+            </motion.div>
+          )}
+
+          {/* TREASURY TAB */}
+          {activeTab === 'treasury' && (
+            <motion.div
+              key="treasury"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto w-full"
+            >
+              <ZkCommunityTreasury
+                communityId={communityId}
+                communityName={community?.name || 'Community'}
+                isAdmin={isAdmin}
+                currentUserAddress={myAddress}
+              />
             </motion.div>
           )}
 

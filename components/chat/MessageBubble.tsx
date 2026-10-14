@@ -2,7 +2,12 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
-import { FastForward, MapPin, Clock, PhoneOff, PhoneMissed, Video, Check, CheckCheck, Pencil, Lock, ExternalLink } from 'lucide-react';
+import { FastForward, MapPin, Clock, PhoneOff, PhoneMissed, Video, Check, CheckCheck, Pencil, Lock, ExternalLink, Shield, Heart, Waves, FileText } from 'lucide-react';
+import { parseZkPaymentPayload, parseEscrowPayload, ZkPaymentResult, ZkEscrowState } from '@/lib/zk/zkMoney';
+import { parseTipPayload, ZkTip } from '@/lib/zk/zkCommunityPayments';
+import { parseStreamPayload, calculateStreamProgress, ZkPaymentStream } from '@/lib/zk/zkStreaming';
+import { parseInvoicePayload, ZkInvoice } from '@/lib/zk/zkInvoice';
+import { ZkEscrowCard } from '@/components/zk/ZkEscrowCard';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { StickerPicker, PREMIUM_STICKERS, RenderPremiumSticker } from './StickerPicker';
 import { useLinkPreview, extractFirstUrl, LinkPreviewCard } from './LedgerLinkPreview';
@@ -187,6 +192,218 @@ const TipBubble = React.memo(({ content, isMe }: { content: string; isMe: boolea
   );
 });
 TipBubble.displayName = 'TipBubble';
+
+// ─── Aztec zk.money Payment Bubble ──────────────────────────────────────────
+const ZkPaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
+  const result: ZkPaymentResult | null = parseZkPaymentPayload(content);
+  if (!result) return null;
+
+  return (
+    <div className="rounded-[22px] min-w-[240px] max-w-[320px] overflow-hidden shadow-lg border border-black/[0.08] bg-[#1C1C1E] text-white">
+      {/* Top Header */}
+      <div className="px-4 pt-3.5 pb-2.5 bg-gradient-to-r from-[#2C2C2E] to-[#1C1C1E] flex items-center justify-between border-b border-white/[0.08]">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-[#8B5CF6] to-[#10B981] flex items-center justify-center shadow-md">
+            <Shield size={14} className="text-white" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[12px] font-bold text-white tracking-tight">zk.money</span>
+              <span className="text-[9px] font-black uppercase tracking-wider bg-[#10B981]/25 text-[#34D399] px-1.5 py-0.2 rounded-full border border-[#10B981]/30">
+                Aztec
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 text-[10px] text-[#34D399] font-semibold bg-[#10B981]/15 px-2 py-0.5 rounded-full">
+          <Lock size={9} /> Private Note
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="px-4 py-3 flex flex-col gap-1.5">
+        <div className="text-[24px] font-black tracking-tight text-white flex items-baseline gap-1.5">
+          <span>{result.amount}</span>
+          <span className="text-[14px] font-bold text-[#34D399]">zk{result.token}</span>
+        </div>
+
+        <div className="text-[11px] font-mono text-white/70 space-y-0.5 pt-1 border-t border-white/[0.06]">
+          <div className="flex justify-between">
+            <span className="text-white/40">From:</span>
+            <span className="truncate max-w-[170px]">{result.senderTag}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/40">To:</span>
+            <span className="truncate max-w-[170px] text-[#34D399] font-bold">{result.recipientTag}</span>
+          </div>
+        </div>
+
+        {result.memo && (
+          <div className="mt-1 bg-white/[0.06] p-2 rounded-xl text-[11px] text-white/90 italic flex items-center gap-1.5">
+            <Lock size={10} className="text-[#34D399] flex-shrink-0" />
+            <span className="truncate">"{result.memo}"</span>
+          </div>
+        )}
+
+        {result.aztecExplorerUrl && (
+          <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between">
+            <span className="text-[10px] text-white/40 font-mono">UltraPlonk Note</span>
+            <a
+              href={result.aztecExplorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="text-[10px] font-bold text-[#34D399] hover:underline flex items-center gap-1"
+            >
+              AztecScan <ExternalLink size={9} />
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+ZkPaymentBubble.displayName = 'ZkPaymentBubble';
+
+// ─── Aztec zk.money Escrow Bubble ───────────────────────────────────────────
+const ZkEscrowBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
+  const escrow: ZkEscrowState | null = parseEscrowPayload(content);
+  if (!escrow) return null;
+
+  return (
+    <div className="min-w-[260px] max-w-[340px]">
+      <ZkEscrowCard
+        escrow={escrow}
+        currentUserTag={isMe ? escrow.senderTag : escrow.recipientTag}
+      />
+    </div>
+  );
+});
+ZkEscrowBubble.displayName = 'ZkEscrowBubble';
+
+// ─── Aztec zk.money Tip Bubble ──────────────────────────────────────────────
+const ZkTipBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
+  const tip: ZkTip | null = parseTipPayload(content);
+  if (!tip) return null;
+
+  return (
+    <div className="rounded-[22px] min-w-[220px] max-w-[300px] overflow-hidden shadow-md border border-[#25D366]/30 bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] text-white p-3.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <div className="w-6 h-6 rounded-full bg-[#25D366]/20 flex items-center justify-center text-[#25D366]">
+            <Heart size={12} fill="currentColor" />
+          </div>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#25D366]">Shielded Tip</span>
+        </div>
+        <span className="text-[9px] font-mono text-white/50 bg-white/10 px-1.5 py-0.5 rounded-full">Aztec</span>
+      </div>
+
+      <div className="text-[20px] font-black text-white">
+        +{tip.amount} <span className="text-[13px] text-[#25D366]">zk{tip.token}</span>
+      </div>
+
+      <div className="text-[11px] text-white/70 font-mono">
+        {tip.senderTag} → {tip.recipientTag}
+      </div>
+
+      {tip.message && (
+        <div className="text-[11px] italic text-white/80 bg-white/5 p-2 rounded-xl">
+          "{tip.message}"
+        </div>
+      )}
+    </div>
+  );
+});
+ZkTipBubble.displayName = 'ZkTipBubble';
+
+// ─── Aztec zk.money Stream Bubble ───────────────────────────────────────────
+const ZkStreamBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
+  const stream: ZkPaymentStream | null = parseStreamPayload(content);
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(() => {
+    if (!stream || stream.status !== 'active') return;
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [stream?.status]);
+  if (!stream) return null;
+  const progress = calculateStreamProgress(stream);
+  return (
+    <div className="rounded-[22px] min-w-[260px] max-w-[320px] overflow-hidden shadow-md border border-[#25D366]/30 bg-gradient-to-br from-[#1A1A1E] to-[#2C2C2E] text-white p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-xl bg-[#25D366]/20 flex items-center justify-center text-[#25D366]">
+            <Waves size={14} strokeWidth={2.5} />
+          </div>
+          <div>
+            <span className="text-[12px] font-bold text-white block leading-tight">zk.money Stream</span>
+            <span className="text-[9px] font-semibold text-[#25D366] uppercase tracking-wider">Aztec Continuous Flow</span>
+          </div>
+        </div>
+        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${stream.status === 'active' ? 'bg-[#25D366]/25 text-[#25D366]' : 'bg-white/10 text-white/50'}`}>{stream.status}</span>
+      </div>
+      <div className="text-[20px] font-black tracking-tight">{stream.depositAmount} <span className="text-[13px] font-bold text-[#25D366]">zk{stream.token}</span></div>
+      <div className="text-[11px] text-white/60 font-mono">{stream.senderTag} → {stream.recipientTag}</div>
+      <div className="space-y-1">
+        <div className="flex justify-between text-[10px] text-white/50 font-mono">
+          <span>Streamed: {progress.formattedStreamed} {stream.token}</span>
+          <span>{progress.percentCompleted.toFixed(1)}%</span>
+        </div>
+        <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+          <div className="bg-gradient-to-r from-[#25D366] to-[#128C7E] h-full transition-all duration-1000" style={{ width: `${progress.percentCompleted}%` }} />
+        </div>
+        <div className="text-[10px] text-white/40 font-mono">{progress.timeRemainingSeconds > 0 ? `≈ ${Math.ceil(progress.timeRemainingSeconds / 3600)}h remaining` : 'Stream completed'}</div>
+      </div>
+      <div className="bg-white/[0.06] rounded-xl px-3 py-2 text-[11px] font-mono text-white/70">
+        Flow rate: <span className="text-[#25D366] font-bold">{parseFloat(stream.ratePerSecond).toFixed(6)} {stream.token}/sec</span>
+      </div>
+      {stream.memo && <div className="text-[10px] italic text-white/50 flex items-center gap-1"><Lock size={9} className="text-[#25D366] flex-shrink-0" />"{stream.memo}"</div>}
+    </div>
+  );
+});
+ZkStreamBubble.displayName = 'ZkStreamBubble';
+
+// ─── Aztec zk.money Invoice Bubble ──────────────────────────────────────────
+const ZkInvoiceBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
+  const invoice: ZkInvoice | null = parseInvoicePayload(content);
+  if (!invoice) return null;
+  const overdue = invoice.status === 'unpaid' && invoice.dueDate < Date.now();
+  return (
+    <div className="rounded-[22px] min-w-[260px] max-w-[320px] overflow-hidden shadow-lg border border-black/[0.12] bg-white text-[#1C1C1E]">
+      <div className="bg-[#f0f2f5] px-4 py-3 flex items-center justify-between border-b border-black/[0.05]">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-xl bg-[#25D366]/10 flex items-center justify-center text-[#25D366]"><FileText size={14} strokeWidth={2.5} /></div>
+          <div>
+            <span className="text-[12px] font-bold text-gray-900 block leading-tight">{invoice.invoiceNumber}</span>
+            <span className="text-[9px] text-gray-400 font-semibold">Private Aztec Invoice</span>
+          </div>
+        </div>
+        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${invoice.status === 'paid' ? 'bg-[#25D366]/15 text-[#25D366]' : overdue ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>{invoice.status === 'paid' ? 'Paid' : overdue ? 'Overdue' : 'Unpaid'}</span>
+      </div>
+      <div className="px-4 py-3 space-y-2">
+        <p className="text-[13px] font-semibold text-gray-800 truncate">{invoice.title}</p>
+        <div className="text-[11px] font-mono text-gray-500">{invoice.senderTag} → {invoice.recipientTag}</div>
+        <div className="space-y-1">
+          {invoice.items.slice(0, 2).map((it, i) => (
+            <div key={i} className="flex justify-between text-[11px] text-gray-600">
+              <span className="truncate max-w-[170px]">{it.description}</span>
+              <span className="font-mono font-bold text-gray-800">${it.total.toFixed(0)}</span>
+            </div>
+          ))}
+          {invoice.items.length > 2 && <div className="text-[10px] text-gray-400 italic">+{invoice.items.length - 2} more items...</div>}
+        </div>
+        <div className="border-t border-black/[0.05] pt-2 flex items-center justify-between">
+          <div className="text-[10px] text-gray-400 uppercase tracking-wider">Total Due</div>
+          <div className="text-[18px] font-black text-[#25D366] font-mono">{invoice.totalAmount} <span className="text-[11px]">zk{invoice.token}</span></div>
+        </div>
+        <div className="text-[10px] text-gray-400 font-mono flex items-center gap-1">
+          <Clock size={10} />Due: {new Date(invoice.dueDate).toLocaleDateString()}
+          {invoice.settlementTxHash && <a href={`https://aztecscan.xyz/tx-effect/${invoice.settlementTxHash.slice(2)}`} target="_blank" rel="noopener noreferrer" className="ml-2 text-[#25D366] hover:underline flex items-center gap-0.5">View proof <ExternalLink size={9} /></a>}
+        </div>
+      </div>
+    </div>
+  );
+});
+ZkInvoiceBubble.displayName = 'ZkInvoiceBubble';
 
 // ─── Location Bubble ─────────────────────────────────────────────────────────
 const LocationBubble = React.memo(({ coords, isMe, isLive }: { coords: string; isMe: boolean; isLive: boolean }) => {
@@ -455,6 +672,11 @@ export const MessageBubble = React.memo(({
   const isPoll       = content.startsWith('__POLL__');
   const isPayment    = content.startsWith('__PAYMENT__');
   const isTip        = content.startsWith('__TIP__');
+  const isZkPayment  = content.startsWith('__ZK_MONEY_PAYMENT__:');
+  const isZkEscrow   = content.startsWith('__ZK_ESCROW__:');
+  const isZkTip      = content.startsWith('__ZK_TIP__:');
+  const isZkStream   = content.startsWith('__ZK_STREAM__:');
+  const isZkInvoice  = content.startsWith('__ZK_INVOICE__:');
   const isPremium    = content.startsWith('[PREMIUM:') || content.startsWith('__STICKER__[PREMIUM:');
   const isSticker    = content.startsWith('__STICKER__') && !isPremium;
   const isAudio      = content.startsWith('__AUDIO__');
@@ -551,7 +773,7 @@ export const MessageBubble = React.memo(({
   const activeBubbleStyle = typeof window !== 'undefined' ? ((window as any).__ledger_bubble_style || 'default') : (bubbleStyle || 'default');
   let bubbleClasses = isMe ? 'msg-bubble-sent rounded-[20px] rounded-br-[5px]' : 'msg-bubble-recv rounded-[20px] rounded-bl-[5px]';
   if (activeBubbleStyle === 'brutalist') bubbleClasses = 'rounded-none border-2 border-black/80';
-  else if (activeBubbleStyle === 'minimal') bubbleClasses = 'rounded-none border-l-4 border-[#007AFF] bg-transparent';
+  else if (activeBubbleStyle === 'minimal') bubbleClasses = 'rounded-none border-l-4 border-[#25D366] bg-transparent';
   else if (activeBubbleStyle === 'glass') bubbleClasses = 'backdrop-blur-md bg-white/40 border border-white/30 shadow-lg rounded-[20px]';
 
   return (
@@ -626,11 +848,21 @@ export const MessageBubble = React.memo(({
               )}
             </AnimatePresence>
 
-            {/* â”€â”€â”€ Content Renderer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            {/* ─── Content Renderer ────────────────────────────────────────── */}
             {isSticker ? (
               <StickerBubble content={content} />
             ) : isPoll ? (
               <PollBubble content={content} msg={msg} isMe={isMe} onVotePoll={onVotePoll} clientInboxId={clientInboxId} />
+            ) : isZkPayment ? (
+              <ZkPaymentBubble content={content} isMe={isMe} />
+            ) : isZkEscrow ? (
+              <ZkEscrowBubble content={content} isMe={isMe} />
+            ) : isZkTip ? (
+              <ZkTipBubble content={content} isMe={isMe} />
+            ) : isZkStream ? (
+              <ZkStreamBubble content={content} isMe={isMe} />
+            ) : isZkInvoice ? (
+              <ZkInvoiceBubble content={content} isMe={isMe} />
             ) : isPayment ? (
               <PaymentBubble content={content} isMe={isMe} />
             ) : isTip ? (

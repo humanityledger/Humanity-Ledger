@@ -1,0 +1,10 @@
+[package]
+name = "zk_money_vault"
+type = "contract"
+authors = ["Humanity Ledger Team <dev@humanityledger.com>", "Aztec Network Team"]
+compiler_version = ">=0.30.0"
+
+[dependencies]
+aztec = { git = "https://github.com/AztecProtocol/aztec-packages", tag = "v0.30.0", directory = "yarn-project/noir-contracts/contracts/aztec" }
+value_note = { git = "https://github.com/AztecProtocol/aztec-packages", tag = "v0.30.0", directory = "yarn-project/noir-contracts/contracts/value_note" }
+easy_private_state = { git = "https://github.com/AztecProtocol/aztec-packages", tag = "v0.30.0", directory = "yarn-project/noir-contracts/contracts/easy_private_state" }

@@ -17,8 +17,9 @@ import jsQR from 'jsqr';
 import { QRCodeSVG } from 'qrcode.react';
 import { useLedgerSettings } from '../terminal/LedgerChatSettings';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
-import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
-import { getShieldedBalances, resolveZkTag, ZkShieldedBalance } from '@/lib/zk/zkMoney';
+import { getShieldedBalances, resolveZkTag, registerZkTag, validateZkHandle, syncBalanceFromAztec, getZkTransactionHistory, clearZkTransactionHistory, ZkShieldedBalance, AZTEC_MAINNET_RPC } from '@/lib/zk/zkMoney';
+import { ZkPrivacyScore } from '@/components/zk/ZkPrivacyScore';
+import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
 
 interface LedgerSettingsFullProps {
   myAddress: string;
@@ -331,9 +332,13 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   const [qrExpiry, setQrExpiry] = useState(120); // 2 min countdown
   const qrTimerRef = useRef<any>(null);
 
-  const [serverLinkToken, setServerLinkToken] = useState<string>('');
   const [zkBalances, setZkBalances] = useState<ZkShieldedBalance>(() => getShieldedBalances(myAddress));
-  const myZkTag = resolveZkTag(myAddress);
+  const [currentZkTag, setCurrentZkTag] = useState(() => resolveZkTag(myAddress));
+  const [editingZkTag, setEditingZkTag] = useState(false);
+  const [newZkTag, setNewZkTag] = useState('');
+  const [showZkShieldModal, setShowZkShieldModal] = useState(false);
+  const [zkShieldMode, setZkShieldMode] = useState<'shield' | 'unshield'>('shield');
+  const [isSyncingAztec, setIsSyncingAztec] = useState(false);
 
   // Sync zk.money balances
   useEffect(() => {
@@ -1303,18 +1308,97 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     <p className="text-[14px] font-bold font-mono text-white mt-0.5">{zkBalances.eth}</p>
                   </div>
                 </div>
+
+                {/* Quick Shield / Unshield Actions */}
+                <div className="flex gap-2 mt-3 pt-3 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => { setZkShieldMode('shield'); setShowZkShieldModal(true); }}
+                    className="flex-1 py-2 px-3 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                  >
+                    <Shield size={13} /> Shield Funds (L1 → Aztec)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setZkShieldMode('unshield'); setShowZkShieldModal(true); }}
+                    className="flex-1 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    Unshield to L1
+                  </button>
+                </div>
               </div>
 
-              <Group title="zk.money Privacy Shield (Aztec Network)">
+              {/* Embedded Privacy Score */}
+              <ZkPrivacyScore
+                address={myAddress}
+                onShieldMore={() => { setZkShieldMode('shield'); setShowZkShieldModal(true); }}
+              />
+
+              <Group title="zk.money Sovereign Identity & Handle">
                 <Row
-                  label="zk.money Tag Handle"
-                  sublabel="Your readable sovereign payment alias"
-                  value={myZkTag}
+                  label="Registered zk Handle"
+                  sublabel="Your readable sovereign payment alias on Aztec"
+                  value={currentZkTag}
                   onTap={() => {
-                    navigator.clipboard.writeText(myZkTag);
+                    navigator.clipboard.writeText(currentZkTag);
                     toast.success('zk.money tag copied');
                   }}
                 />
+                <div className="px-4 py-3 border-t border-black/[0.04]">
+                  {!editingZkTag ? (
+                    <button
+                      type="button"
+                      onClick={() => { setNewZkTag(currentZkTag.replace('zk:', '')); setEditingZkTag(true); }}
+                      className="text-[12px] font-bold text-[#25D366] hover:underline"
+                    >
+                      Change or Register Custom Handle →
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] font-bold text-gray-500 font-mono">zk:</span>
+                        <input
+                          type="text"
+                          value={newZkTag}
+                          onChange={e => setNewZkTag(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))}
+                          placeholder="newhandle"
+                          maxLength={32}
+                          className="flex-1 px-3 py-1.5 rounded-xl border border-black/10 text-[13px] font-mono outline-none focus:border-[#25D366]"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingZkTag(false)}
+                          className="px-3 py-1.5 rounded-xl text-[12px] font-semibold bg-gray-100 text-gray-600"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const fullTag = `zk:${newZkTag}`;
+                            const validation = validateZkHandle(fullTag);
+                            if (!validation.valid) {
+                              toast.error(validation.error || 'Invalid handle');
+                              return;
+                            }
+                            registerZkTag(myAddress, fullTag);
+                            setCurrentZkTag(fullTag);
+                            setEditingZkTag(false);
+                            toast.success(`Registered handle: ${fullTag}`);
+                          }}
+                          className="px-4 py-1.5 rounded-xl text-[12px] font-bold bg-[#25D366] text-white"
+                        >
+                          Save Handle
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Group>
+
+              <Group title="zk.money Privacy Shield (Aztec Network)">
                 <Row
                   label="Private DAI Default"
                   sublabel="Send all chat payments as shielded DAI via zk.money"
@@ -1332,6 +1416,12 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   sublabel="Compute UltraPlonk proofs in browser via Aztec PXE"
                   toggle={settings.zk_client_proofs ?? true}
                   onToggle={(v) => updateSetting('zk_client_proofs', v)}
+                />
+                <Row
+                  label="Force Note Anonymity Threshold"
+                  sublabel="Require minimum 15 mixing transactions before spending"
+                  toggle={settings.zk_min_anonymity ?? true}
+                  onToggle={(v) => updateSetting('zk_min_anonymity', v)}
                 />
               </Group>
 
@@ -1874,6 +1964,19 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
             </motion.div>
           </motion.div>
+        )}
+      {/* ── ZkShieldModal for Settings ── */}
+      <AnimatePresence>
+        {showZkShieldModal && (
+          <ZkShieldModal
+            address={myAddress}
+            mode={zkShieldMode}
+            onClose={() => setShowZkShieldModal(false)}
+            onSuccess={() => {
+              setShowZkShieldModal(false);
+              setZkBalances(getShieldedBalances(myAddress));
+            }}
+          />
         )}
       </AnimatePresence>
     </motion.div>

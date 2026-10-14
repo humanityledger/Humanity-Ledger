@@ -14,8 +14,11 @@ import {
   Hash,
   Award,
   Lock,
-  Globe
+  Globe,
+  Shield
 } from 'lucide-react';
+import { getCommunityStats, ZkCommunityStats } from '@/lib/zk/zkCommunityPayments';
+import { getCommunityTreasury, ZkCommunityTreasury } from '@/lib/zk/zkMoney';
 
 interface MemberItem {
   address: string;
@@ -54,6 +57,8 @@ export default function CommunityAnalytics({ communityId, community: initialComm
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [zkStats, setZkStats] = useState<ZkCommunityStats | null>(null);
+  const [zkTreasury, setZkTreasury] = useState<ZkCommunityTreasury | null>(null);
   const [searchMember, setSearchMember] = useState('');
 
   const targetId = communityId || initialCommunity?.id;
@@ -74,6 +79,10 @@ export default function CommunityAnalytics({ communityId, community: initialComm
     } catch (err) {
       console.error('[CommunityAnalytics] Failed to fetch analytics:', err);
     } finally {
+      if (targetId) {
+        setZkStats(getCommunityStats(targetId));
+        setZkTreasury(getCommunityTreasury(targetId));
+      }
       setLoading(false);
       setIsRefreshing(false);
     }
@@ -236,6 +245,68 @@ export default function CommunityAnalytics({ communityId, community: initialComm
                   ))
                 )}
               </div>
+            </Card>
+
+            {/* Aztec Shielded Treasury & Privacy Analytics */}
+            <Card className="lg:col-span-3 bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] text-white border-0 shadow-lg">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#8B5CF6] to-[#10B981] flex items-center justify-center shadow-md">
+                    <Shield size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-bold text-white tracking-tight">Aztec Shielded Community Treasury</h2>
+                      <span className="text-[10px] font-black uppercase tracking-wider bg-[#10B981]/25 text-[#34D399] px-2 py-0.5 rounded-full border border-[#10B981]/30">
+                        zk.money Native
+                      </span>
+                    </div>
+                    <p className="text-xs text-white/60">Confidential balances, anonymous tips, and private bounties</p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[11px] font-mono text-[#34D399] bg-[#10B981]/15 px-3 py-1 rounded-full border border-[#10B981]/25 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#34D399] animate-pulse" />
+                    UltraPlonk Proof Verified
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Shielded DAI Balance</p>
+                  <p className="text-2xl font-black font-mono text-white mt-1">
+                    {zkTreasury?.balance?.dai || '0.00'} <span className="text-sm font-semibold text-[#34D399]">zkDAI</span>
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Private Tip Volume</p>
+                  <p className="text-2xl font-black font-mono text-white mt-1">
+                    ${zkStats?.totalVolume || '0.00'} <span className="text-sm font-semibold text-[#34D399]">USD</span>
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Open Shielded Bounties</p>
+                  <p className="text-2xl font-black font-mono text-white mt-1">
+                    {zkStats?.activeBounties ?? 0} <span className="text-sm font-semibold text-[#34D399]">Active</span>
+                  </p>
+                </div>
+              </div>
+
+              {zkStats?.topContributors && zkStats.topContributors.length > 0 && (
+                <div className="pt-4 border-t border-white/10">
+                  <p className="text-xs font-bold text-white/70 uppercase tracking-wider mb-3">Top Anonymous Contributors</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {zkStats.topContributors.slice(0, 3).map((c, i) => (
+                      <div key={i} className="p-2.5 rounded-lg bg-white/[0.04] flex items-center justify-between text-xs">
+                        <span className="font-mono text-white/90 truncate">{c.zkHandle}</span>
+                        <span className="font-bold text-[#34D399]">{c.amount} {c.token}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </Card>
           </div>
         )}
