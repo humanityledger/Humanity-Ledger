@@ -445,7 +445,7 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
           <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/10">
             <div className="flex items-center gap-1.5">
               <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#8B5CF6] to-[#10B981] flex items-center justify-center shadow-sm">
-                <Shield size={13} className="text-white" />
+                <Lock size={13} className="text-white" />
               </div>
               <span className="text-[12px] font-bold text-white tracking-tight">zk.money</span>
             </div>
@@ -882,7 +882,7 @@ export function CommunityChatView({
           <button onClick={() => setShowZkWallet(v => !v)}
             className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${showZkWallet ? 'bg-[#25D366] text-white' : 'text-black/30 hover:text-[#25D366] hover:bg-black/5'}`}
             title="Shielded Wallet">
-            <Shield size={13} />
+            <Lock size={13} />
           </button>
           <button onClick={() => setShowSearch(v => !v)}
             className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${showSearch ? 'bg-[#25D366] text-white' : 'text-black/30 hover:text-black/60 hover:bg-black/5'}`}>
@@ -936,11 +936,11 @@ export function CommunityChatView({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overscroll-contain"
+        className="flex-1 overflow-y-auto overscroll-contain w-full max-w-full"
         style={{ minHeight: 0 }}
         onClick={() => { setContextMenu(null); setEmojiPickerFor(null); }}
       >
-        <div className="px-3 py-4 space-y-0.5">
+        <div className="px-3 py-4 space-y-0.5 max-w-4xl mx-auto w-full">
           {/* Empty state */}
           {displayMessages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -1364,24 +1364,33 @@ export function CommunityChatView({
         }}
       />
 
-      {/* ── ZK WALLET PANEL (slide-over) ── */}
+      {/* ── ZK WALLET PANEL (slide-over with backdrop) ── */}
       <AnimatePresence>
         {showZkWallet && (
-          <motion.div
-            initial={{ opacity: 0, x: '100%' }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: '100%' }}
-            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-            className="absolute inset-y-0 right-0 w-80 z-40 shadow-2xl"
-          >
-            <ZkWalletPanel
-              address={myAddress}
-              onClose={() => setShowZkWallet(false)}
-              onShield={() => { setZkShieldMode('shield'); setShowZkShield(true); }}
-              onUnshield={() => { setZkShieldMode('unshield'); setShowZkShield(true); }}
-              onSend={() => setShowZkModal(true)}
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowZkWallet(false)}
+              className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[500]"
             />
-          </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: '100%' }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: '100%' }}
+              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+              className="fixed inset-y-0 right-0 w-full sm:w-[380px] z-[501] shadow-2xl overflow-hidden"
+            >
+              <ZkWalletPanel
+                address={myAddress}
+                onClose={() => setShowZkWallet(false)}
+                onShield={() => { setZkShieldMode('shield'); setShowZkShield(true); }}
+                onUnshield={() => { setZkShieldMode('unshield'); setShowZkShield(true); }}
+                onSend={() => setShowZkModal(true)}
+              />
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 

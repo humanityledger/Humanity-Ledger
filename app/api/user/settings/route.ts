@@ -163,9 +163,13 @@ async function handleUpdate(req: any) {
                 updateData.extendedSettings = mergedExt;
             }
 
-            updatedUser = await (prisma as any).user.update({
+            updatedUser = await (prisma as any).user.upsert({
                 where: { walletAddress: address },
-                data: updateData,
+                update: updateData,
+                create: {
+                    walletAddress: address,
+                    ...updateData,
+                },
             });
         } catch (err) {
             // Extended columns not yet migrated  write only safe columns
@@ -174,9 +178,13 @@ async function handleUpdate(req: any) {
                 if (SAFE_COLUMNS.includes(k)) safeData[k] = updateData[k];
             }
             if (Object.keys(safeData).length > 0) {
-                updatedUser = await prisma.user.update({
+                updatedUser = await (prisma as any).user.upsert({
                     where: { walletAddress: address },
-                    data: safeData,
+                    update: safeData,
+                    create: {
+                        walletAddress: address,
+                        ...safeData,
+                    },
                 });
             }
         }

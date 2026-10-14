@@ -310,18 +310,28 @@ export function getShieldedBalances(address: string): ZkShieldedBalance {
     return { dai: '0.00', usdc: '0.00', eth: '0.000', lastUpdated: Date.now() };
   }
   if (typeof window === 'undefined') {
-    return { dai: '2,500.00', usdc: '1,000.00', eth: '0.450', lastUpdated: Date.now() };
+    return { dai: '0.00', usdc: '0.00', eth: '0.000', lastUpdated: Date.now() };
   }
   const key = `${ZK_STORAGE_KEY_PREFIX}${address.toLowerCase()}`;
   const stored = lsGet<ZkShieldedBalance | null>(key, null);
-  if (stored) return stored;
+  if (stored) {
+    // Migration: sanitize legacy deterministic mock allocation if detected
+    const seed = parseInt(address.slice(2, 6), 16) || 1000;
+    const legacyDai = ((seed % 3000) + 500).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const legacyUsdc = ((seed % 1500) + 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (stored.dai === legacyDai && stored.usdc === legacyUsdc) {
+      const sanitized: ZkShieldedBalance = { dai: '0.00', usdc: '0.00', eth: '0.000', lastUpdated: Date.now() };
+      lsSet(key, sanitized);
+      return sanitized;
+    }
+    return stored;
+  }
 
-  // Deterministic initial demo allocation
-  const seed = parseInt(address.slice(2, 6), 16) || 1000;
+  // Authentic initial zero-balance until user shields or receives funds
   const initial: ZkShieldedBalance = {
-    dai:  ((seed % 3000) + 500).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-    usdc: ((seed % 1500) + 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-    eth:  (((seed % 80) + 10) / 100).toFixed(3),
+    dai:  '0.00',
+    usdc: '0.00',
+    eth:  '0.000',
     lastUpdated: Date.now(),
   };
   lsSet(key, initial);

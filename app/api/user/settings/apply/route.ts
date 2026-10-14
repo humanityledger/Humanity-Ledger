@@ -58,9 +58,13 @@ export async function POST(req: Request) {
       updateData.extendedSettings = { ...currentExt, [key]: value };
     }
 
-    await (prisma as any).user.update({
+    await (prisma as any).user.upsert({
       where: { walletAddress: address },
-      data: updateData,
+      update: updateData,
+      create: {
+        walletAddress: address,
+        ...updateData,
+      },
     });
 
     return NextResponse.json({ success: true, applied: { key, value } });

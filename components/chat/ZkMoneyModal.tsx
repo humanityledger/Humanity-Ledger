@@ -49,12 +49,14 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [escrowConditions, setEscrowConditions] = useState('');
-  const [balances, setBalances] = useState<ZkShieldedBalance>({
-    dai: '2,500.00',
-    usdc: '1,000.00',
-    eth: '0.450',
-    lastUpdated: Date.now()
-  });
+  const [balances, setBalances] = useState<ZkShieldedBalance>(() => 
+    myAddress ? getShieldedBalances(myAddress) : {
+      dai: '0.00',
+      usdc: '0.00',
+      eth: '0.000',
+      lastUpdated: Date.now()
+    }
+  );
   const [loading, setLoading] = useState(false);
   const [proofStep, setProofStep] = useState<string>('');
   const [completedTx, setCompletedTx] = useState<ZkPaymentResult | null>(null);

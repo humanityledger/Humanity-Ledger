@@ -32,7 +32,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           orderBy: { position: 'asc' },
         },
         _count: {
-          select: { members: true, channels: true, posts: true },
+          select: { members: true, channels: true },
         },
       },
     });
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     // 3. Native Posts Count & Recent Posts
     const totalPosts = await (prisma as any).communityPost.count({
       where: { communityId },
-    }).catch(() => community._count.posts || 0);
+    }).catch(() => 0);
 
     const recentPosts = await (prisma as any).communityPost.findMany({
       where: { communityId },
