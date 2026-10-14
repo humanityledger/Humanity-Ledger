@@ -128,23 +128,23 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
           ]
         });
 
-        const dummyResult: ZkPaymentResult = {
-          txHash: escrow.txHash || '0x' + Math.random().toString(16).substring(2),
+        const escrowPaymentResult: ZkPaymentResult = {
+          txHash: escrow.txHash,
           status: 'shielded',
-          timestamp: Date.now(),
+          timestamp: escrow.createdAt || Date.now(),
           token: selectedToken,
           amount,
           recipientTag,
           senderTag: resolveZkTag(myAddress),
-          aztecExplorerUrl: `${AZTEC_EXPLORER}/tx-effect/${escrow.txHash?.slice(2) || ''}`,
-          nullifierHash: escrow.noteId || '0xnullifier',
+          aztecExplorerUrl: `${AZTEC_EXPLORER}/tx-effect/${escrow.txHash.replace('0x', '')}`,
+          nullifierHash: escrow.noteId,
           memo: `Escrow: ${escrow.conditions}`
         };
 
-        setCompletedTx(dummyResult);
+        setCompletedTx(escrowPaymentResult);
         const payload = encodeEscrowPayload(escrow);
         toast.success(`Shielded Escrow (${amount} ${selectedToken}) initiated on Aztec!`);
-        onSuccess(payload, dummyResult);
+        onSuccess(payload, escrowPaymentResult);
       } else {
         const result = await executeShieldedPayment(
           {

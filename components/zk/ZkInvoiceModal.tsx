@@ -89,7 +89,7 @@ export function ZkInvoiceModal({
       senderTag: userTag || `zk:${userAddress.slice(2, 8)}`,
       senderAddress: userAddress,
       recipientTag: recipientTag.startsWith('zk:') ? recipientTag : `zk:${recipientTag}`,
-      recipientAddress: initialRecipientAddress || '0x' + Math.random().toString(36).substring(2, 12),
+      recipientAddress: initialRecipientAddress || (recipientTag.startsWith('0x') ? recipientTag : undefined),
       token,
       items,
       taxRate,

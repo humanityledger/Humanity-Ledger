@@ -873,6 +873,7 @@ export function addToTreasury(
   communityId: string,
   amount: number,
   token: SupportedToken,
+  contributorZkHandle?: string,
 ): ZkCommunityTreasury {
   const treasury = getCommunityTreasury(communityId);
   const tokenKey = token.toLowerCase() as 'dai' | 'usdc' | 'eth';
@@ -884,7 +885,13 @@ export function addToTreasury(
   treasury.totalInflow += amount;
   treasury.lastActivity = Date.now();
   treasury.balance.lastUpdated = Date.now();
-  treasury.history.unshift({ direction: 'in', amount, token, timestamp: Date.now() });
+  treasury.history.unshift({
+    direction: 'in',
+    amount,
+    token,
+    timestamp: Date.now(),
+    ...(contributorZkHandle ? { note: `Contributed by ${contributorZkHandle}` } : {})
+  });
   treasury.history = treasury.history.slice(0, 100);
 
   lsSet(`${ZK_TREASURY_PREFIX}${communityId}`, treasury);
@@ -923,12 +930,29 @@ export function getTopCommunityContributors(
 ): Array<{ zkHandle: string; amount: string; token: SupportedToken }> {
   const treasury = getCommunityTreasury(communityId);
   const inflows = treasury.history.filter(h => h.direction === 'in');
-  // Group by (fake) contributors
-  const contributors = inflows.slice(0, limit).map((h, i) => ({
-    zkHandle: `zk:contributor${i + 1}`,
-    amount: h.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-    token: h.token,
-  }));
+
+  // Group and aggregate real contributions by donor handle
+  const donorMap = new Map<string, { total: number; token: SupportedToken }>();
+  for (const item of inflows) {
+    const handleMatch = item.note?.match(/Contributed by (zk:[a-zA-Z0-9_.-]+)/);
+    const handle = handleMatch ? handleMatch[1] : (item.note || 'zk:community_member');
+    const existing = donorMap.get(handle);
+    if (existing) {
+      existing.total += item.amount;
+    } else {
+      donorMap.set(handle, { total: item.amount, token: item.token });
+    }
+  }
+
+  const contributors = Array.from(donorMap.entries())
+    .sort((a, b) => b[1].total - a[1].total)
+    .slice(0, limit)
+    .map(([zkHandle, data]) => ({
+      zkHandle,
+      amount: data.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      token: data.token,
+    }));
+
   return contributors;
 }
 
@@ -998,16 +1022,31 @@ function updateEscrow(id: string, update: Partial<ZkEscrowState>): ZkEscrowState
 
 export function releaseMilestone(escrowId: string, milestoneId: string): ZkEscrowState | null {
   const escrow = getEscrowById(escrowId);
-  if (!escrow || escrow.status !== 'locked') return null;
+  if (!escrow || (escrow.status !== 'locked' && escrow.status !== 'partially_released')) return null;
+
+  const targetMilestone = escrow.milestones.find(m => m.id === milestoneId);
+  if (!targetMilestone || targetMilestone.status === 'released') return null;
 
   const milestones = escrow.milestones.map(m =>
-    m.id === milestoneId ? { ...m, status: 'approved' as const, approvedAt: Date.now() } : m
+    m.id === milestoneId ? { ...m, status: 'released' as const, approvedAt: Date.now() } : m
   );
-  const allApproved = milestones.every(m => m.status === 'approved');
+  const allReleased = milestones.every(m => m.status === 'released');
+  const updatedStatus = allReleased ? 'completed' : 'partially_released';
+
   const updated = updateEscrow(escrowId, {
     milestones,
-    status: allApproved ? 'released' : 'locked',
+    status: updatedStatus,
   });
+
+  // Credit recipient for released milestone
+  const amt = parseFloat(targetMilestone.amount) || 0;
+  if (amt > 0) {
+    const rawRecipient = escrow.recipientTag.startsWith('0x') ? escrow.recipientTag : (escrow as any).recipientAddress;
+    if (rawRecipient && /^0x[0-9a-fA-F]{40}$/.test(rawRecipient)) {
+      updateShieldedBalance(rawRecipient, amt, escrow.token);
+    }
+  }
+
   if (updated) emit('ledger_zk_milestone_released', { escrow: updated, milestoneId });
   return updated;
 }

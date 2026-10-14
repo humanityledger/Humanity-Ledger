@@ -75,7 +75,7 @@ export function ZkStreamManager({ userAddress, userTag, onClose, className = '' 
       senderTag: userTag || `zk:${userAddress.slice(2, 8)}`,
       recipientTag: recipientTag.startsWith('zk:') ? recipientTag : `zk:${recipientTag}`,
       senderAddress: userAddress,
-      recipientAddress: '0x' + Math.random().toString(36).substring(2, 10),
+      recipientAddress: recipientTag.startsWith('0x') ? recipientTag : undefined,
       token,
       depositAmount,
       durationSeconds: durationDays * 86400,

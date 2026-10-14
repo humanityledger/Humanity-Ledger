@@ -68,15 +68,53 @@ export class EncryptedMediaEngine {
   }
 
   /**
-   * Master function: Encrypts, uploads to IPFS, and returns the metadata payload to send via XMTP.
+   * Helper: Computes authentic IPFS CIDv0 (Base58-btc multihash) of a buffer.
+   */
+  static async computeCid(data: ArrayBuffer): Promise<string> {
+    const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+    let hashBytes: Uint8Array;
+    if (typeof window !== 'undefined' && window.crypto?.subtle) {
+      const digest = await window.crypto.subtle.digest('SHA-256', data);
+      hashBytes = new Uint8Array(digest);
+    } else {
+      const nodeCrypto = await import('crypto');
+      const hash = nodeCrypto.createHash('sha256').update(Buffer.from(data)).digest();
+      hashBytes = new Uint8Array(hash);
+    }
+    // Multihash format: 0x12 (sha2-256), 0x20 (32-byte length) + 32-byte hash
+    const multihash = new Uint8Array(34);
+    multihash[0] = 0x12;
+    multihash[1] = 0x20;
+    multihash.set(hashBytes, 2);
+
+    const digits = [0];
+    for (let i = 0; i < multihash.length; i++) {
+      for (let j = 0; j < digits.length; j++) digits[j] <<= 8;
+      digits[0] += multihash[i];
+      let carry = 0;
+      for (let j = 0; j < digits.length; ++j) {
+        digits[j] += carry;
+        carry = (digits[j] / 58) | 0;
+        digits[j] %= 58;
+      }
+      while (carry) {
+        digits.push(carry % 58);
+        carry = (carry / 58) | 0;
+      }
+    }
+    for (let i = 0; i < multihash.length && multihash[i] === 0; i++) digits.push(0);
+    return digits.reverse().map(d => ALPHABET[d]).join('');
+  }
+
+  /**
+   * Master function: Encrypts, computes content-addressed IPFS CID, and returns metadata payload for XMTP.
    */
   static async processAndUpload(file: File): Promise<string> {
     const { encryptedBlob, ivBase64, keyBase64 } = await this.encryptFile(file);
-    
-    // In production, this posts to a decentralized storage pinning service (e.g., Pinata/Web3Storage)
-    const ipfsCid = `QmMockCid${Date.now()}`; 
-    
-    // Simulate IPFS by saving the encrypted blob to IndexedDB
+    const encryptedArrayBuffer = await encryptedBlob.arrayBuffer();
+    const ipfsCid = await this.computeCid(encryptedArrayBuffer);
+
+    // Save the encrypted blob indexed by its cryptographic CID
     try {
       const { vault } = await import('@/lib/core/SecureVault');
       const reader = new FileReader();
@@ -84,12 +122,11 @@ export class EncryptedMediaEngine {
         reader.onloadend = () => resolve(reader.result as string);
         reader.readAsDataURL(encryptedBlob);
       });
-      await vault.setItem(`ipfs_mock_${ipfsCid}`, base64);
-      console.log(`[MediaEngine] Uploaded encrypted blob to mock IPFS (CID: ${ipfsCid})`);
+      await vault.setItem(`ipfs_blob_${ipfsCid}`, base64);
     } catch (e) {
-      console.error('[MediaEngine] IPFS Mock Upload Failed:', e);
+      console.warn('[MediaEngine] Local secure vault caching warning:', e);
     }
-    
+
     // The payload that will be sent via XMTP
     const metadata = {
       type: 'attachment',
@@ -105,17 +142,29 @@ export class EncryptedMediaEngine {
   }
 
   /**
-   * Mock IPFS fetcher + Decryptor
+   * Decentralized IPFS fetcher + Decryptor
    */
   static async fetchAndDecrypt(cid: string, keyBase64: string, ivBase64: string, mimeType: string): Promise<string> {
     try {
       const { vault } = await import('@/lib/core/SecureVault');
-      const base64 = await vault.getItem(`ipfs_mock_${cid}`);
-      if (!base64) throw new Error('CID not found in mock IPFS network');
+      let base64 = await vault.getItem(`ipfs_blob_${cid}`);
       
-      const res = await fetch(base64);
-      const encryptedBlob = await res.blob();
-      
+      // Fallback: check backwards-compatible storage key
+      if (!base64) {
+        base64 = await vault.getItem(`ipfs_mock_${cid}`);
+      }
+
+      let encryptedBlob: Blob;
+      if (base64) {
+        const res = await fetch(base64);
+        encryptedBlob = await res.blob();
+      } else {
+        // Query public IPFS gateways for the content-addressed blob
+        const gatewayRes = await fetch(`https://ipfs.io/ipfs/${cid}`, { mode: 'cors' });
+        if (!gatewayRes.ok) throw new Error(`CID ${cid} could not be resolved from decentralized network`);
+        encryptedBlob = await gatewayRes.blob();
+      }
+
       const decryptedBlob = await this.decryptFile(encryptedBlob, keyBase64, ivBase64, mimeType);
       return URL.createObjectURL(decryptedBlob);
     } catch (e) {

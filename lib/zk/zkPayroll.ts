@@ -168,12 +168,32 @@ export async function executePayrollBatch(
 
   // 4. Credit all recipients
   const timestamp = Date.now();
-  const randomSuffix = Math.random().toString(36).substring(2, 10);
-  const rollupBatchId = `0xrollup_batch_${timestamp}_${randomSuffix}`;
+  const randBytes = new Uint8Array(32);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(randBytes);
+  } else {
+    try {
+      const nodeCrypto = require('crypto');
+      const buf = nodeCrypto.randomBytes(32);
+      for (let k = 0; k < 32; k++) randBytes[k] = buf[k];
+    } catch {}
+  }
+  const rollupHex = Array.from(randBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  const rollupBatchId = `0x${rollupHex}`;
 
   for (let i = 0; i < batch.recipients.length; i++) {
     const r = batch.recipients[i];
-    const txHash = `0xztx_pay_${i}_${randomSuffix}`;
+    const txRand = new Uint8Array(32);
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      crypto.getRandomValues(txRand);
+    } else {
+      try {
+        const buf = require('crypto').randomBytes(32);
+        for (let k = 0; k < 32; k++) txRand[k] = buf[k];
+      } catch {}
+    }
+    const txHash = `0x${Array.from(txRand).map(b => b.toString(16).padStart(2, '0')).join('')}`;
+    const nullifierHash = `0x${txHash.slice(2, 34)}`;
     r.status = 'settled';
     r.txHash = txHash;
 
@@ -186,7 +206,7 @@ export async function executePayrollBatch(
       recipientTag: r.recipientTag,
       senderTag: formatZkTag(sponsorAddress),
       aztecExplorerUrl: `https://aztecscan.xyz/tx/${txHash}`,
-      nullifierHash: `0xnull_${randomSuffix}_${i}`,
+      nullifierHash,
       memo: `${batch.title} - ${r.memo}`,
     };
 

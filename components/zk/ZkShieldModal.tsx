@@ -81,9 +81,28 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
     ? estimateShieldFee(amount || '0', token)
     : estimateUnshieldFee(amount || '0');
 
-  const mockL1Balance: Record<SupportedToken, string> = {
-    DAI: '2,500.00', USDC: '1,000.00', ETH: '0.800',
-  };
+  const [l1Balances, setL1Balances] = useState<Record<SupportedToken, string>>({
+    DAI: '0.00', USDC: '0.00', ETH: '0.000',
+  });
+
+  useEffect(() => {
+    let mounted = true;
+    if (address && /^0x[0-9a-fA-F]{40}$/.test(address)) {
+      fetch(`/api/wallet/onchain-balances?address=${address}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (mounted && data?.balances) {
+            setL1Balances({
+              DAI: data.balances.DAI ? parseFloat(data.balances.DAI).toFixed(2) : '0.00',
+              USDC: data.balances.USDC ? parseFloat(data.balances.USDC).toFixed(2) : '0.00',
+              ETH: data.balances.ETH ? parseFloat(data.balances.ETH).toFixed(4) : '0.000',
+            });
+          }
+        })
+        .catch(() => {});
+    }
+    return () => { mounted = false; };
+  }, [address]);
 
   const SHIELD_STEPS  = ['Approving ERC-20 allowance…', 'Generating deposit proof…', 'Broadcasting to L1…', 'Aztec Sequencer confirming…', 'Note committed to tree…'];
   const UNSHIELD_STEPS = ['Generating unshield proof…', 'Nullifying Aztec note…', 'Submitting to Sequencer…', 'L1 withdrawal initiated…'];
@@ -99,7 +118,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
 
     try {
       if (isShield) {
-        await executeShieldDeposit(
+        const res = await executeShieldDeposit(
           { publicAddress: address, amount, token },
           (label, pct) => {
             setProgressLabel(label);
@@ -108,8 +127,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
             if (stepIdx !== -1) setCurrentStep(stepIdx);
           }
         );
-        const txHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
-        setResult({ txHash, amount, token });
+        setResult({ txHash: res.txHash, amount, token });
       } else {
         if (!destination) { setStep('form'); return; }
         const res = await executeUnshield(
@@ -207,7 +225,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
                   {isShield ? 'L1 Balance' : 'Shielded Balance'}
                 </span>
                 <span className="text-[13px] font-bold text-gray-800">
-                  {isShield ? mockL1Balance[token] : shieldedBalance} {token}
+                  {isShield ? l1Balances[token] : shieldedBalance} {token}
                 </span>
               </div>
 
@@ -225,7 +243,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
                     className="flex-1 bg-[#f0f2f5] rounded-2xl px-4 py-3 text-[15px] font-bold text-gray-900 outline-none border-2 border-transparent focus:border-[#25D366] transition-colors"
                   />
                   <button
-                    onClick={() => setAmount(isShield ? mockL1Balance[token].replace(/,/g, '') : shieldedBalance.replace(/,/g, ''))}
+                    onClick={() => setAmount(isShield ? l1Balances[token].replace(/,/g, '') : shieldedBalance.replace(/,/g, ''))}
                     className="px-4 py-3 bg-[#25D366]/10 text-[#25D366] font-semibold text-[12px] rounded-2xl"
                   >
                     MAX
