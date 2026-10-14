@@ -75,7 +75,7 @@ function PostCard({ post, myAddress, onEdit, onLike, localLikes }: PostCardProps
           <h2 className="text-[20px] font-black leading-snug text-[#1C1C1E] mb-3">{post.title}</h2>
         )}
         <div
-          className="prose prose-sm max-w-none text-[14px] leading-relaxed text-[#1C1C1E]/80 line-clamp-6"
+          className="prose prose-sm max-w-none text-[14px] leading-relaxed text-[#1C1C1E]/80 line-clamp-6 whitespace-pre-wrap break-words"
           dangerouslySetInnerHTML={{ __html: safeHtml(post.contentHtml || post.content || '') }}
         />
       </div>
@@ -191,8 +191,13 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
       if (res.ok) {
         const d = await res.json();
         const incoming: any[] = d.posts || [];
-        // Simply replace with server data — the server already returns newest-first
-        setPosts(incoming);
+        setPosts(prev => {
+          const incomingIds = new Set(incoming.map((p: any) => p.id));
+          // Keep recently added local posts (under 2 minutes old) that haven't arrived from server yet
+          const recentLocal = prev.filter(p => !incomingIds.has(p.id) && (Date.now() - new Date(p.createdAt || Date.now()).getTime() < 120000));
+          const all = [...recentLocal, ...incoming];
+          return all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        });
       }
     } catch {}
     setLoadingPosts(false);
@@ -403,6 +408,33 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               className="flex-1 overflow-y-auto"
             >
               <div className="max-w-3xl mx-auto px-4 py-5 pb-28">
+                {/* ── QUICK POST CREATOR CARD ── */}
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-black/[0.06] mb-5">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm"
+                      style={{ backgroundColor: myAddress ? getAvatarColor(myAddress) : '#25D366' }}
+                    >
+                      {(myAddress || '0x??').slice(2, 4).toUpperCase()}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setEditingPost(null); setShowEditor(true); }}
+                      className="flex-1 bg-[#f0f2f5] hover:bg-[#e9edef] text-left px-4 py-2.5 rounded-full text-[14px] text-[#54656f] transition-all border border-black/[0.04]"
+                    >
+                      ¿Qué quieres compartir con la comunidad?
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setEditingPost(null); setShowEditor(true); }}
+                      className="px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full text-[13px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
+                    >
+                      <Edit size={14} />
+                      <span className="hidden sm:inline">Publicar</span>
+                    </button>
+                  </div>
+                </div>
+
                 {loadingPosts ? (
                   // Skeleton loaders
                   <div className="space-y-5">

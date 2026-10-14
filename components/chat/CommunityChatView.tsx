@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { NativeCryptoSendModal } from './NativeCryptoSendModal';
+import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { AnimatePresence, motion } from 'framer-motion';
 import DOMPurify from 'dompurify';
 
@@ -399,7 +400,7 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     } catch { return <span className="text-[14px]">{content}</span>; }
   }
 
-  if (content.startsWith('__AUDIO__')) return <AudioPlayer src={content.replace('__AUDIO__', '')} mine={mine} />;
+  if (content.startsWith('__AUDIO__')) return <CustomAudioPlayer src={content.replace('__AUDIO__', '')} isMe={mine} />;
 
   if (content.startsWith('[LOCATION]')) {
     const [lat, lon] = content.replace('[LOCATION]', '').split(',');
@@ -1029,7 +1030,7 @@ export function CommunityChatView({
               </button>
 
               {/* Rounded White Text Box (WhatsApp Desktop EXE Parity) */}
-              <div className="flex-1 bg-white rounded-[8px] shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] border border-black/[0.04] min-h-[42px] max-h-[120px] flex items-center px-3.5 overflow-hidden">
+              <div className="flex-1 bg-white rounded-[24px] shadow-[0_1px_1px_rgba(11,20,26,0.1)] border border-black/[0.06] focus-within:border-[#25D366]/40 min-h-[42px] max-h-[120px] flex items-center px-4 overflow-hidden transition-colors">
                 <textarea
                   ref={textareaRef}
                   value={input}
