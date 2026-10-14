@@ -7,13 +7,15 @@ import {
   Image as ImgIcon, Mic, Hash, CheckCircle, X, Reply,
   Play, Pause, Pin, Search, Users, ChevronDown, Film,
   MoreVertical, Copy, Trash2, ThumbsUp, Heart, Laugh,
-  AlertCircle, Lock, Volume2, Globe
+  AlertCircle, Lock, Volume2, Globe, Shield, ExternalLink
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { NativeCryptoSendModal } from './NativeCryptoSendModal';
+import { ZkMoneyModal } from './ZkMoneyModal';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { AnimatePresence, motion } from 'framer-motion';
 import DOMPurify from 'dompurify';
+import { parseZkPaymentPayload } from '@/lib/zk/zkMoney';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function safeHtml(raw: string): string {
@@ -427,15 +429,66 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     return <PollBubble content={content} mine={mine} />;
   }
 
+  if (content.startsWith('__ZK_MONEY_PAYMENT__:')) {
+    const payment = parseZkPaymentPayload(content);
+    if (payment) {
+      return (
+        <div className="min-w-[240px] max-w-[280px] p-3 rounded-2xl bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] text-white shadow-md border border-black/10 my-1">
+          <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/10">
+            <div className="flex items-center gap-1.5">
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#8B5CF6] to-[#10B981] flex items-center justify-center shadow-sm">
+                <Shield size={13} className="text-white" />
+              </div>
+              <span className="text-[12px] font-bold text-white tracking-tight">zk.money</span>
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-wider bg-[#10B981]/25 text-[#34D399] px-2 py-0.5 rounded-full border border-[#10B981]/30">
+              Shielded Note
+            </span>
+          </div>
+
+          <div className="py-1">
+            <p className="text-[10px] text-white/60 uppercase font-semibold tracking-wider">Private Transfer</p>
+            <p className="text-[20px] font-bold font-mono text-white mt-0.5">
+              {payment.amount} <span className="text-[#34D399] text-[16px]">{payment.token}</span>
+            </p>
+          </div>
+
+          <div className="text-[11px] text-white/75 space-y-0.5 mt-1 font-mono">
+            <p className="truncate">To: <span className="text-white font-semibold">{payment.recipientTag}</span></p>
+            {payment.memo && <p className="text-white/60 italic truncate">"{payment.memo}"</p>}
+          </div>
+
+          <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between">
+            <span className="text-[10px] text-[#34D399] flex items-center gap-1">
+              <Lock size={10} /> Verified on Aztec
+            </span>
+            <a
+              href={payment.aztecExplorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] font-semibold text-white/80 hover:text-white flex items-center gap-0.5"
+            >
+              AztecScan <ExternalLink size={10} />
+            </a>
+          </div>
+        </div>
+      );
+    }
+  }
+
   if (content.startsWith('[STICKER]:')) {
     const name = content.replace('[STICKER]:', '');
     const stickers: Record<string,string> = { fire:'🔥', heart:'❤️', clap:'👏', '100':'💯', rocket:'🚀', wave:'👋', thumbsup:'👍', cool:'😎' };
     return <span className="text-4xl select-none">{stickers[name] || '🎭'}</span>;
   }
 
-  if (content.includes('<') && content.includes('>') && content.length > 20) {
-    return <div className="prose prose-sm max-w-none text-[14px] leading-relaxed"
-      dangerouslySetInnerHTML={{ __html: safeHtml(content) }} />;
+  if (/<[a-z][\s\S]*>/i.test(content)) {
+    return (
+      <div
+        className="prose prose-sm max-w-none text-[14px] leading-relaxed [&_p]:my-0.5 [&_p]:inline"
+        dangerouslySetInnerHTML={{ __html: safeHtml(content) }}
+      />
+    );
   }
 
   return <span className="text-[14px] leading-[1.45] whitespace-pre-wrap break-words">{content}</span>;
@@ -451,6 +504,7 @@ export function CommunityChatView({
   const [sending, setSending] = useState(false);
   const [showAppDrawer, setShowAppDrawer] = useState(false);
   const [showCryptoModal, setShowCryptoModal] = useState(false);
+  const [showZkModal, setShowZkModal] = useState(false);
   const [cryptoRecipient, setCryptoRecipient] = useState('');
   const [showRecipientSheet, setShowRecipientSheet] = useState(false);
   const [showPollCreator, setShowPollCreator] = useState(false);
@@ -688,8 +742,8 @@ export function CommunityChatView({
   }, [displayMessages]);
 
   return (
-    // The key to stable layout: explicit flex-col with overflow-hidden on container
-    <div className="relative flex flex-col bg-[#efeae2] overflow-hidden" style={{ height: '100%', minHeight: 0 }}>
+    // The key to stable layout: explicit flex-1 flex-col w-full h-full overflow-hidden
+    <div className="relative flex-1 flex flex-col w-full h-full bg-[#efeae2] overflow-hidden min-h-0" style={{ height: '100%', minHeight: 0 }}>
 
 
       {/* ── CHANNEL HEADER ── */}
@@ -978,8 +1032,9 @@ export function CommunityChatView({
         <AnimatePresence>
           {showAppDrawer && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-2">
-              <div className="grid grid-cols-5 gap-3 p-3 bg-white rounded-2xl shadow-md border border-black/[0.04]">
+              <div className="grid grid-cols-6 gap-2 p-3 bg-white rounded-2xl shadow-md border border-black/[0.04]">
                 {[
+                  { icon: Shield, label: 'zk.money', color: 'bg-gradient-to-tr from-[#8B5CF6] to-[#10B981]', fn: () => setShowZkModal(true) },
                   { icon: ImgIcon, label: 'Foto/Video', color: 'bg-[#FF9500]', fn: () => fileInputRef.current?.click() },
                   { icon: CircleDollarSign, label: 'Crypto Send', color: 'bg-[#128C7E]', fn: () => { setCryptoRecipient(''); setShowRecipientSheet(true); } },
                   { icon: MapPin, label: 'Ubicación', color: 'bg-[#25D366]', fn: sendLocation },
@@ -1163,6 +1218,18 @@ export function CommunityChatView({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── ZK.MONEY PRIVATE PAYMENT MODAL ── */}
+      <ZkMoneyModal
+        isOpen={showZkModal}
+        onClose={() => setShowZkModal(false)}
+        myAddress={myAddress}
+        communityName={communityName}
+        onSuccess={(payload, result) => {
+          executeSend(payload);
+          setShowZkModal(false);
+        }}
+      />
     </div>
   );
 }

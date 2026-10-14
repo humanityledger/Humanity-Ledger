@@ -4855,7 +4855,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       </div>
 
       {/*  Chat Area  */}
-      <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'flex' : 'hidden md:flex') : (!showList ? 'flex' : 'hidden md:flex')} relative flex-1 flex-col min-w-0 min-h-0`}>
+      <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'flex' : 'hidden md:flex') : (!showList ? 'flex' : 'hidden md:flex')} relative flex-1 flex-col w-full h-full min-w-0 min-h-0 overflow-hidden`}>
         {activeCommunity ? (
           <CommunityView 
             communityId={activeCommunity} 

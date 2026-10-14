@@ -14,8 +14,11 @@ import {
 import { useAccount, useBalance, useDisconnect } from 'wagmi';
 import { toast } from 'sonner';
 import jsQR from 'jsqr';
+import { QRCodeSVG } from 'qrcode.react';
 import { useLedgerSettings } from '../terminal/LedgerChatSettings';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
+import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
+import { getShieldedBalances, resolveZkTag, ZkShieldedBalance } from '@/lib/zk/zkMoney';
 
 interface LedgerSettingsFullProps {
   myAddress: string;
@@ -23,23 +26,38 @@ interface LedgerSettingsFullProps {
   onClose: () => void;
 }
 
-// ─── iOS-style Toggle ─────────────────────────────────────────────────────────
-const Toggle = ({ value, onChange }: { value: boolean; onChange?: (v: boolean) => void }) => (
+// ─── Executive Spring Toggle (Apple / Linear Silky-Smooth Spring) ────────────
+const Toggle = ({ value, onChange, disabled = false }: { value: boolean; onChange?: (v: boolean) => void; disabled?: boolean }) => (
   <button
     type="button"
-    onClick={() => onChange?.(!value)}
-    className={`w-[51px] h-[31px] rounded-full flex items-center px-[2px] transition-all duration-200 shrink-0 ${
-      value ? 'bg-[#25D366]' : 'bg-[#E5E5EA]'
-    }`}
-    aria-pressed={value}
+    role="switch"
+    aria-checked={value}
+    disabled={disabled}
+    onClick={(e) => {
+      e.stopPropagation();
+      onChange?.(!value);
+    }}
+    className={`relative inline-flex h-[28px] w-[50px] shrink-0 cursor-pointer items-center rounded-full p-[2px] transition-colors duration-250 ease-out focus:outline-none ${
+      disabled ? 'opacity-40 cursor-not-allowed' : ''
+    } ${value ? 'bg-[#25D366]' : 'bg-[#E5E5EA]'}`}
   >
-    <div className={`w-[27px] h-[27px] rounded-full bg-white shadow-md transform transition-transform duration-200 ${
-      value ? 'translate-x-[20px]' : 'translate-x-0'
-    }`} />
+    <motion.span
+      layout
+      transition={{
+        type: 'spring',
+        stiffness: 520,
+        damping: 32,
+        mass: 0.8
+      }}
+      animate={{
+        x: value ? 22 : 0,
+      }}
+      className="pointer-events-none inline-block h-[24px] w-[24px] rounded-full bg-white shadow-[0_2px_5px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.06)]"
+    />
   </button>
 );
 
-// ─── Setting Row ─────────────────────────────────────────────────────────────
+// ─── Setting Row (Clean Minimalist Typography — No Cluttered Icon Boxes) ────────
 const Row = ({
   icon, label, sublabel, value, onTap, danger = false,
   toggle, onToggle, badge, disabled = false
@@ -56,20 +74,13 @@ const Row = ({
       if (onTap) onTap();
       else if (onToggle !== undefined && toggle !== undefined) onToggle(!toggle);
     }}
-    className={`w-full flex items-center gap-3.5 px-0 py-3.5 border-b border-[#F2F2F7] last:border-0 text-left transition-colors ${
+    className={`w-full flex items-center justify-between gap-3.5 px-0 py-3.5 border-b border-[#F2F2F7] last:border-0 text-left transition-colors ${
       disabled ? 'opacity-40 cursor-not-allowed' : onTap ? 'active:bg-[#F2F2F7] cursor-pointer' : 'cursor-default'
     }`}
   >
-    {icon && (
-      <div className={`w-[34px] h-[34px] rounded-[9px] flex items-center justify-center shrink-0 ${
-        danger ? 'bg-red-50' : 'bg-[#F2F2F7]'
-      }`}>
-        <span className={danger ? 'text-red-500' : 'text-[#3C3C43]'}>{icon}</span>
-      </div>
-    )}
-    <div className="flex-1 min-w-0">
+    <div className="flex-1 min-w-0 pr-2">
       <p className={`text-[15px] font-medium leading-tight ${danger ? 'text-red-500' : 'text-[#1C1C1E]'}`}>{label}</p>
-      {sublabel && <p className="text-[12px] text-[#8E8E93] mt-0.5 leading-snug">{sublabel}</p>}
+      {sublabel && <p className="text-[12px] text-[#8E8E93] mt-1 leading-snug">{sublabel}</p>}
     </div>
     <div className="flex items-center gap-2 shrink-0">
       {badge && (
@@ -77,9 +88,9 @@ const Row = ({
           {badge}
         </span>
       )}
-      {value && <span className="text-[14px] text-[#8E8E93]">{value}</span>}
+      {value && <span className="text-[14px] text-[#8E8E93] font-normal">{value}</span>}
       {onToggle !== undefined && toggle !== undefined ? (
-        <Toggle value={toggle} onChange={onToggle} />
+        <Toggle value={toggle} onChange={onToggle} disabled={disabled} />
       ) : onTap ? (
         <ChevronRight size={16} className="text-[#C7C7CC]" />
       ) : null}
@@ -106,63 +117,18 @@ const Group = ({ title, footer, children }: {
   </div>
 );
 
-// ─── QR Code rendered in pure SVG (no external lib needed at runtime) ─────────
-// Uses a simple matrix approach generating QR-like pattern from the data string
-const SimpleQRCode = ({ data, size = 200 }: { data: string; size?: number }) => {
-  // Generate a deterministic but visually QR-like grid from the data
-  const gridSize = 21;
-  const cellSize = size / gridSize;
-
-  const hash = (s: string) => {
-    let h = 0x811c9dc5;
-    for (let i = 0; i < s.length; i++) {
-      h ^= s.charCodeAt(i);
-      h = (h * 0x01000193) >>> 0;
-    }
-    return h;
-  };
-
-  const cells: boolean[][] = Array.from({ length: gridSize }, (_, r) =>
-    Array.from({ length: gridSize }, (_, c) => {
-      // Fixed finder patterns (corners)
-      const inFinder = (
-        (r < 8 && c < 8) ||
-        (r < 8 && c >= gridSize - 8) ||
-        (r >= gridSize - 8 && c < 8)
-      );
-      if (inFinder) {
-        const lr = r < 8 ? r : r - (gridSize - 8);
-        const lc = c < 8 ? c : c - (gridSize - 8);
-        const inOuter = lr === 0 || lr === 6 || lc === 0 || lc === 6;
-        const inInner = lr >= 2 && lr <= 4 && lc >= 2 && lc <= 4;
-        return inOuter || inInner;
-      }
-      // Data cells: use hash of position + data
-      const h = hash(`${data}|${r}|${c}`);
-      return (h & 1) === 1;
-    })
-  );
-
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} xmlns="http://www.w3.org/2000/svg">
-      <rect width={size} height={size} fill="white" rx="8" />
-      {cells.map((row, r) =>
-        row.map((filled, c) =>
-          filled ? (
-            <rect
-              key={`${r}-${c}`}
-              x={c * cellSize}
-              y={r * cellSize}
-              width={cellSize}
-              height={cellSize}
-              fill="#1C1C1E"
-            />
-          ) : null
-        )
-      )}
-    </svg>
-  );
-};
+// ─── Real ISO-Compliant QR Code (Scannable by Any Camera / Phone) ─────────────
+const DeviceQRCode = ({ data, size = 200 }: { data: string; size?: number }) => (
+  <div className="p-3 bg-white rounded-[16px] shadow-sm flex items-center justify-center">
+    <QRCodeSVG
+      value={data || 'https://humanidfi.com/chat'}
+      size={size}
+      level="M"
+      includeMargin={false}
+      className="rounded-[10px]"
+    />
+  </div>
+);
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 const TABS = [
@@ -276,12 +242,43 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           stopQrScan();
           try {
             setScanSuccess('Initiating secure handshake...');
-            const result = await completeSessionHandshake(rawValue);
+
+            // If it is a /chat/link or device link URL
+            if (rawValue.includes('action=device') || rawValue.includes('token=')) {
+              try {
+                const parsed = new URL(rawValue);
+                const tok = parsed.searchParams.get('token');
+                if (tok) {
+                  const res = await fetch('/api/device/link', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'claim', token: tok })
+                  });
+                  const data = await res.json();
+                  if (data.bundle) {
+                    try {
+                      const bundle = JSON.parse(atob(data.bundle));
+                      if (bundle.settings) {
+                        for (const [k, v] of Object.entries(bundle.settings)) {
+                          localStorage.setItem(k, v as string);
+                        }
+                      }
+                    } catch {}
+                    setScanSuccess('Device linked successfully!');
+                    toast.success('Device linked securely');
+                    setTimeout(() => setModal(null), 1800);
+                    return;
+                  }
+                }
+              } catch {}
+            }
+
+            const result = await completeSessionHandshake(rawValue, () => myAddress);
             if (result.ok) {
               setScanSuccess('Device linked successfully! The desktop will now log in automatically.');
               toast.success('Desktop linked securely');
               try { localStorage.setItem('ledger_linked_device_qr', rawValue); } catch {}
-              setTimeout(() => setModal(''), 2000);
+              setTimeout(() => setModal(null), 2000);
             } else {
               setScanError(result.message || 'Invalid QR code. Please scan a Ledger Chat login code.');
               setTimeout(() => setScanError(''), 4000);
@@ -334,6 +331,22 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   const [qrExpiry, setQrExpiry] = useState(120); // 2 min countdown
   const qrTimerRef = useRef<any>(null);
 
+  const [serverLinkToken, setServerLinkToken] = useState<string>('');
+  const [zkBalances, setZkBalances] = useState<ZkShieldedBalance>(() => getShieldedBalances(myAddress));
+  const myZkTag = resolveZkTag(myAddress);
+
+  // Sync zk.money balances
+  useEffect(() => {
+    if (myAddress) {
+      setZkBalances(getShieldedBalances(myAddress));
+    }
+    const onBalanceUpdate = () => {
+      if (myAddress) setZkBalances(getShieldedBalances(myAddress));
+    };
+    window.addEventListener('ledger_zk_balance_updated', onBalanceUpdate);
+    return () => window.removeEventListener('ledger_zk_balance_updated', onBalanceUpdate);
+  }, [myAddress]);
+
   const { address, chain } = useAccount();
   const { data: balance } = useBalance({ address: address as `0x${string}` });
   const { disconnect } = useDisconnect();
@@ -348,6 +361,29 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       setAvatarUrl(localStorage.getItem('ledger_avatar') || '');
     } catch {}
   }, [myAddress, myName]);
+
+  // Create real server-registered device link token when modal opens
+  useEffect(() => {
+    if (modal === 'linked_devices' && myAddress) {
+      fetch('/api/device/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          bundle: btoa(JSON.stringify({
+            address: myAddress,
+            settings: settings || {},
+            linkedAt: Date.now()
+          }))
+        })
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.token) setServerLinkToken(data.token);
+        })
+        .catch(() => {});
+    }
+  }, [modal, myAddress, settings]);
 
   // QR countdown when modal is open
   useEffect(() => {
@@ -443,9 +479,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   const shortAddr = (addr: string) =>
     addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
 
-  // The QR deep-link URL encodes wallet address + token for mobile app
+  // The QR deep-link URL encodes the server link token so scanning links seamlessly
   const qrLinkUrl = typeof window !== 'undefined'
-    ? `${window.location.protocol === 'file:' ? 'https://humanidfi.com' : window.location.origin}/chat/link?addr=${myAddress}&token=${phoneSessionToken}&exp=${Date.now() + qrExpiry * 1000}`
+    ? `${window.location.protocol === 'file:' ? 'https://humanidfi.com' : window.location.origin}/chat/link?action=device&token=${serverLinkToken || phoneSessionToken}`
     : '';
 
   return (
@@ -469,26 +505,22 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
         <div className="w-16" />
       </div>
 
-      {/* ── Tab Scroll ── */}
+      {/* ── Tab Scroll (Clean Pure-Typographic Pills — No Logos) ── */}
       <div className="shrink-0 flex gap-1.5 px-3 py-2.5 overflow-x-auto hide-scrollbar bg-white border-b border-[#E5E5EA]">
-        {TABS.map(tab => {
-          const Icon = tab.icon;
-          return (
-            <button
-              type="button"
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all ${
-                activeTab === tab.id
-                  ? 'bg-[#1C1C1E] text-white'
-                  : 'bg-[#F2F2F7] text-[#6D6D72] hover:bg-[#E5E5EA]'
-              }`}
-            >
-              <Icon size={12} />
-              {tab.label}
-            </button>
-          );
-        })}
+        {TABS.map(tab => (
+          <button
+            type="button"
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-3.5 py-1.5 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all ${
+              activeTab === tab.id
+                ? 'bg-[#1C1C1E] text-white shadow-sm'
+                : 'bg-[#F2F2F7] text-[#6D6D72] hover:bg-[#E5E5EA]'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* ── Content ── */}
@@ -1231,38 +1263,108 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
             </>
           )}
 
-          {/* PAYMENTS TAB */}
+          {/* PAYMENTS TAB (Including Native zk.money Aztec Private Payments) */}
           {activeTab === 'payments' && (
             <div className="space-y-4">
-              <Group label="Native Crypto Payments">
+              {/* zk.money Shielded Section */}
+              <div className="bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] rounded-[20px] p-5 text-white shadow-lg border border-black/10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#8B5CF6] to-[#10B981] flex items-center justify-center shadow-md">
+                      <Shield size={20} className="text-white" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-[16px] text-white">zk.money</span>
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-[#10B981]/25 text-[#34D399] px-2 py-0.5 rounded-full border border-[#10B981]/30">
+                          Aztec Rollup
+                        </span>
+                      </div>
+                      <p className="text-[12px] text-white/60">Zero-Knowledge Private Payments</p>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-mono text-[#34D399] bg-[#10B981]/15 px-2.5 py-1 rounded-full border border-[#10B981]/25 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#34D399] animate-pulse" />
+                    PXE Online
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2.5 pt-3 border-t border-white/10">
+                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Shielded DAI</p>
+                    <p className="text-[14px] font-bold font-mono text-white mt-0.5">{zkBalances.dai}</p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Shielded USDC</p>
+                    <p className="text-[14px] font-bold font-mono text-white mt-0.5">{zkBalances.usdc}</p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Shielded ETH</p>
+                    <p className="text-[14px] font-bold font-mono text-white mt-0.5">{zkBalances.eth}</p>
+                  </div>
+                </div>
+              </div>
+
+              <Group title="zk.money Privacy Shield (Aztec Network)">
+                <Row
+                  label="zk.money Tag Handle"
+                  sublabel="Your readable sovereign payment alias"
+                  value={myZkTag}
+                  onTap={() => {
+                    navigator.clipboard.writeText(myZkTag);
+                    toast.success('zk.money tag copied');
+                  }}
+                />
+                <Row
+                  label="Private DAI Default"
+                  sublabel="Send all chat payments as shielded DAI via zk.money"
+                  toggle={settings.zk_private_dai_default ?? true}
+                  onToggle={(v) => updateSetting('zk_private_dai_default', v)}
+                />
+                <Row
+                  label="Auto-Shield Incoming Transits"
+                  sublabel="Automatically shield received DAI into Aztec notes"
+                  toggle={settings.zk_auto_shield ?? true}
+                  onToggle={(v) => updateSetting('zk_auto_shield', v)}
+                />
+                <Row
+                  label="Client-Side Proof Generation"
+                  sublabel="Compute UltraPlonk proofs in browser via Aztec PXE"
+                  toggle={settings.zk_client_proofs ?? true}
+                  onToggle={(v) => updateSetting('zk_client_proofs', v)}
+                />
+              </Group>
+
+              <Group title="Native Crypto Payments">
                 <Row
                   label="Enable Crypto Payments"
-                  desc="Show payment CTAs and ETH/USDC send button in all chats"
+                  sublabel="Show payment CTAs and ETH/USDC send button in all chats"
                   toggle={settings.payments_enabled ?? false}
                   onToggle={(v) => updateSetting('payments_enabled', v)}
                 />
                 <Row
                   label="Payment Confirmations"
-                  desc="Always require a confirmation before sending crypto"
+                  sublabel="Always require a confirmation before sending crypto"
                   toggle={settings.payment_confirmations ?? true}
                   onToggle={(v) => updateSetting('payment_confirmations', v)}
                 />
                 <Row
                   label="Show Balances in Chat"
-                  desc="Display ETH and token balances in your profile header"
+                  sublabel="Display ETH and token balances in your profile header"
                   toggle={settings.show_balances ?? true}
                   onToggle={(v) => updateSetting('show_balances', v)}
                 />
               </Group>
-              <Group label="Default Payment Token">
+
+              <Group title="Default Payment Token">
                 <div className="px-4 pb-4">
-                  {['ETH', 'USDC', 'USDT'].map((token) => (
+                  {['zkDAI (Aztec)', 'ETH', 'USDC', 'USDT'].map((token) => (
                     <button
                       key={token}
                       onClick={() => updateSetting('default_token', token)}
                       className={"flex items-center justify-between w-full py-3 border-b border-black/5 last:border-0 " + (settings.default_token === token ? "text-[#25D366]" : "text-[#1C1C1E]")}
                     >
-                      <span className="font-semibold">{token}</span>
+                      <span className="font-semibold text-[14px]">{token}</span>
                       {settings.default_token === token && (
                         <div className="w-5 h-5 rounded-full bg-[#25D366] flex items-center justify-center">
                           <div className="w-2 h-2 bg-white rounded-full" />
@@ -1357,9 +1459,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
                       {/* QR Code */}
                       <div className="flex justify-center mb-4">
-                        <div className={`rounded-[18px] border-4 p-3 transition-all ${qrExpiry > 0 ? 'border-[#25D366]' : 'border-[#E5E5EA] opacity-40'}`}>
+                        <div className={`rounded-[20px] border-4 p-2 transition-all ${qrExpiry > 0 ? 'border-[#25D366] shadow-md' : 'border-[#E5E5EA] opacity-40'}`}>
                           {qrExpiry > 0 ? (
-                            <SimpleQRCode data={qrLinkUrl} size={200} />
+                            <DeviceQRCode data={qrLinkUrl} size={200} />
                           ) : (
                             <div className="w-[200px] h-[200px] flex flex-col items-center justify-center gap-3 bg-[#F2F2F7] rounded-[14px]">
                               <QrCode size={40} className="text-[#C7C7CC]" />

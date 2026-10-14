@@ -395,7 +395,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
       </div>
 
       {/* ── MAIN CONTENT ───────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div className="flex-1 h-full w-full overflow-hidden flex flex-col min-h-0" style={{ height: '100%' }}>
 
         {/* POSTS TAB */}
         <AnimatePresence mode="wait">
