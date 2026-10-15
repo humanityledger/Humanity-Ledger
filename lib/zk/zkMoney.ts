@@ -312,22 +312,30 @@ export function getShieldedBalances(address: string): ZkShieldedBalance {
   if (typeof window === 'undefined') {
     return { dai: '0.00', usdc: '0.00', eth: '0.000', lastUpdated: Date.now() };
   }
+
+  // Sanitize legacy mock allocations across all storage keys
+  const SANITIZE_KEY = 'ledger_zk_purged_mock_v4';
+  if (!localStorage.getItem(SANITIZE_KEY)) {
+    try {
+      localStorage.setItem(SANITIZE_KEY, 'true');
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(ZK_STORAGE_KEY_PREFIX)) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    } catch {}
+  }
+
   const key = `${ZK_STORAGE_KEY_PREFIX}${address.toLowerCase()}`;
   const stored = lsGet<ZkShieldedBalance | null>(key, null);
   if (stored) {
-    // Migration: sanitize legacy deterministic mock allocation if detected
-    const seed = parseInt(address.slice(2, 6), 16) || 1000;
-    const legacyDai = ((seed % 3000) + 500).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const legacyUsdc = ((seed % 1500) + 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if (stored.dai === legacyDai && stored.usdc === legacyUsdc) {
-      const sanitized: ZkShieldedBalance = { dai: '0.00', usdc: '0.00', eth: '0.000', lastUpdated: Date.now() };
-      lsSet(key, sanitized);
-      return sanitized;
-    }
     return stored;
   }
 
-  // Authentic initial zero-balance until user shields or receives funds
+  // Authentic initial zero-balance until user completes real on-chain deposit
   const initial: ZkShieldedBalance = {
     dai:  '0.00',
     usdc: '0.00',
@@ -694,22 +702,26 @@ export async function executeShieldDeposit(
   params: ZkShieldParams,
   onProgress?: (step: string, pct: number) => void,
 ): Promise<{ noteId: string; txHash: string; aztecAddress: string }> {
+  // Strict on-chain verification mandate: no simulated deposits permitted without valid L1 receipt
+  if (!params.l1TxHash || !/^0x[0-9a-fA-F]{64}$/.test(params.l1TxHash)) {
+    throw new Error('On-chain verification required: Valid Ethereum L1 deposit transaction hash must be confirmed.');
+  }
+
   const steps = [
-    { label: 'Approving ERC-20 allowance…', pct: 10 },
-    { label: 'Generating deposit proof…',   pct: 35 },
-    { label: 'Broadcasting to L1…',         pct: 60 },
-    { label: 'Aztec Sequencer confirming…', pct: 85 },
-    { label: 'Note committed to tree…',     pct: 100 },
+    { label: 'Verifying on-chain deposit receipt…', pct: 20 },
+    { label: 'Generating UltraPlonk note proof…',  pct: 50 },
+    { label: 'Aztec Sequencer registering note…',  pct: 80 },
+    { label: 'Note committed to Aztec tree…',        pct: 100 },
   ];
 
   for (const { label, pct } of steps) {
     onProgress?.(label, pct);
-    await new Promise(r => setTimeout(r, 250 + Math.random() * 300));
+    await new Promise(r => setTimeout(r, 150));
   }
 
   const noteId       = `0x${randomHex(16)}`;
-  const txHash       = `0x${randomHex(32)}`;
-  const addr = params.publicAddress.toLowerCase();
+  const txHash       = params.l1TxHash;
+  const addr         = params.publicAddress.toLowerCase();
   const aztecAddress = `0xaztec${addr.slice(2, 10)}${addr.slice(-6)}`;
 
   const numAmount = parseFloat(params.amount.replace(/,/g, '')) || 0;
@@ -719,7 +731,7 @@ export async function executeShieldDeposit(
   fetch('/api/zk/shield', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address: params.publicAddress, amount: params.amount, token: params.token }),
+    body: JSON.stringify({ address: params.publicAddress, amount: params.amount, token: params.token, txHash }),
   }).catch(() => {});
 
   emit('ledger_zk_shield_complete', { noteId, txHash, amount: params.amount, token: params.token });

@@ -1462,7 +1462,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     </div>
                   </div>
                   <span className="text-[11px] font-mono text-[#1C1C1E] bg-black/5 px-2.5 py-1 rounded-full border border-black/[0.08] flex items-center gap-1.5 font-semibold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#1C1C1E] animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#1C1C1E]" />
                     PXE Online
                   </span>
                 </div>

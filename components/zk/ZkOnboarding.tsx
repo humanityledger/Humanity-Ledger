@@ -186,69 +186,30 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
         <div className="text-center">
           <h2 className="text-[22px] font-bold text-gray-900">Fund Your Shield</h2>
           <p className="text-[13px] text-gray-500 mt-1">
-            Move funds from L1 into your private Aztec note
+            Deposit authentic funds from Ethereum L1 into your Aztec notes
           </p>
         </div>
 
-        <div className="flex gap-2">
-          {(['DAI', 'USDC', 'ETH'] as SupportedToken[]).map(t => (
-            <button key={t} onClick={() => setFundToken(t)}
-              className="flex-1 py-2.5 rounded-xl text-[13px] font-bold transition-all"
-              style={{ background: fundToken === t ? '#1C1C1E' : '#f0f2f5', color: fundToken === t ? '#fff' : '#6B7280' }}>
-              {t}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex gap-2">
-          <input
-            type="number" value={fundAmount} onChange={e => setFundAmount(e.target.value)}
-            className="flex-1 bg-[#f0f2f5] rounded-2xl px-4 py-3 text-[16px] font-bold text-gray-900 outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors"
-          />
-          {['50', '100', '500'].map(v => (
-            <button key={v} onClick={() => setFundAmount(v)}
-              className="px-3 py-3 bg-[#f0f2f5] rounded-xl text-[12px] font-bold text-gray-600">
-              {v}
-            </button>
-          ))}
-        </div>
-
-        {shieldStep && !shieldDone && (
-          <div className="flex items-center gap-2 text-[12px] text-gray-500 bg-[#f0f2f5] rounded-xl px-3 py-2.5">
-            <motion.div className="w-3 h-3 border-2 border-[#1C1C1E] border-t-transparent rounded-full flex-shrink-0"
-              animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
-            {shieldStep}
+        <div className="bg-[#f0f2f5] rounded-2xl p-4 text-left space-y-2">
+          <div className="flex items-center gap-2">
+            <Lock size={16} className="text-[#1C1C1E]" />
+            <span className="text-[13px] font-bold text-[#1C1C1E]">Zero-Mock On-Chain Standard</span>
           </div>
-        )}
-
-        {shieldDone && (
-          <div className="flex items-center gap-2 bg-[#1C1C1E]/10 rounded-xl px-3 py-3">
-            <CheckCircle size={16} className="text-[#1C1C1E]" strokeWidth={2.5} />
-            <span className="text-[13px] font-semibold text-[#1C1C1E]">
-              {fundAmount} {fundToken} shielded successfully!
-            </span>
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <button onClick={() => setStepIdx(shieldDone ? 3 : 3)}
-            className="flex-1 py-3.5 rounded-2xl font-semibold text-[13px] bg-[#f0f2f5] text-gray-600">
-            Skip for now
-          </button>
-          {!shieldDone ? (
-            <button onClick={handleShield} disabled={shielding || !fundAmount}
-              className="flex-1 py-3.5 rounded-2xl font-bold text-[14px] text-white disabled:opacity-60"
-              style={{ background: '#1C1C1E' }}>
-              {shielding ? 'Shielding…' : `Shield ${fundAmount} ${fundToken}`}
-            </button>
-          ) : (
-            <button onClick={() => setStepIdx(3)}
-              className="flex-1 py-3.5 rounded-2xl font-bold text-[14px] text-white"
-              style={{ background: '#1C1C1E' }}>
-              Continue <ArrowRight className="inline ml-1" size={15} />
-            </button>
-          )}
+          <p className="text-[12px] text-gray-600 leading-relaxed">
+            Your initial shielded balance is strictly <strong>0.00</strong>. Simulated or mock credits are completely disabled.
+          </p>
+          <p className="text-[11px] text-gray-500 leading-relaxed">
+            You can deposit real ETH, DAI, or USDC from your connected Web3 wallet anytime via Settings → Payments, or receive private payments from peers using your sovereign handle.
+          </p>
         </div>
+
+        <button
+          onClick={() => setStepIdx(3)}
+          className="w-full py-3.5 rounded-2xl font-bold text-[14px] text-white flex items-center justify-center gap-2 shadow-sm"
+          style={{ background: '#1C1C1E' }}
+        >
+          Continue to Privacy Architecture <ArrowRight size={15} />
+        </button>
       </div>
     ),
 

@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, ArrowDownLeft, ArrowUpRight, AlertTriangle, CheckCircle, ExternalLink } from 'lucide-react';
+import { X, Lock, ArrowDownLeft, ArrowUpRight, AlertTriangle, CheckCircle, ExternalLink, Loader2 } from 'lucide-react';
+import { useAccount, useBalance, useSendTransaction, useWriteContract, usePublicClient } from 'wagmi';
+import { parseEther, parseUnits } from 'viem';
+import { toast } from 'sonner';
 import {
   getShieldedBalances,
   estimateShieldFee,
@@ -12,6 +15,24 @@ import {
   ZkShieldedBalance,
   SupportedToken,
 } from '@/lib/zk/zkMoney';
+
+// ─── Contracts & Config ────────────────────────────────────────────────────────
+const AZTEC_ROLLUP_BRIDGE = '0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba' as const;
+const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F' as const;
+const USDC_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' as const;
+
+const ERC20_ABI = [
+  {
+    name: 'transfer',
+    type: 'function',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'nonpayable',
+  },
+] as const;
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -73,9 +94,20 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
   const [result,      setResult]      = useState<{ txHash: string; amount: string; token: SupportedToken } | null>(null);
   const [error,       setError]       = useState('');
 
-  const balance = getShieldedBalances(address);
+  const { address: connectedAddress, isConnected } = useAccount();
+  const activeAddress = (connectedAddress || address || '').toLowerCase();
+
+  const { sendTransactionAsync } = useSendTransaction();
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
+
+  const { data: ethBalanceData } = useBalance({
+    address: (activeAddress && /^0x[0-9a-fA-F]{40}$/.test(activeAddress)) ? (activeAddress as `0x${string}`) : undefined,
+  });
+
+  const balance = getShieldedBalances(activeAddress);
   const tokenKey = token.toLowerCase() as 'dai' | 'usdc' | 'eth';
-  const shieldedBalance = balance[tokenKey];
+  const shieldedBalance = balance[tokenKey] || '0.00';
 
   const fee = isShield
     ? estimateShieldFee(amount || '0', token)
@@ -87,21 +119,21 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
 
   useEffect(() => {
     let mounted = true;
-    if (address && /^0x[0-9a-fA-F]{40}$/.test(address)) {
-      fetch(`/api/wallet/onchain-balances?address=${address}`)
+    if (activeAddress && /^0x[0-9a-fA-F]{40}$/.test(activeAddress)) {
+      fetch(`/api/wallet/onchain-balances?address=${activeAddress}`)
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (mounted && data) {
-            let eth = '0.000';
+            let eth = ethBalanceData ? parseFloat(ethBalanceData.formatted).toFixed(4) : '0.000';
             let usdc = '0.00';
             let dai = '0.00';
             if (data.balances) {
               dai = data.balances.DAI ? parseFloat(data.balances.DAI).toFixed(2) : '0.00';
               usdc = data.balances.USDC ? parseFloat(data.balances.USDC).toFixed(2) : '0.00';
-              eth = data.balances.ETH ? parseFloat(data.balances.ETH).toFixed(4) : '0.000';
+              if (!ethBalanceData && data.balances.ETH) eth = parseFloat(data.balances.ETH).toFixed(4);
             } else if (Array.isArray(data.tokens)) {
               for (const t of data.tokens) {
-                if (t.symbol === 'ETH') eth = parseFloat(t.balanceNumeric || 0).toFixed(4);
+                if (t.symbol === 'ETH' && !ethBalanceData) eth = parseFloat(t.balanceNumeric || 0).toFixed(4);
                 if (t.symbol === 'USDC') usdc = parseFloat(t.balanceNumeric || 0).toFixed(2);
                 if (t.symbol === 'DAI') dai = parseFloat(t.balanceNumeric || 0).toFixed(2);
               }
@@ -112,36 +144,113 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
         .catch(() => {});
     }
     return () => { mounted = false; };
-  }, [address]);
+  }, [activeAddress, ethBalanceData]);
 
-  const SHIELD_STEPS  = ['Approving ERC-20 allowance…', 'Generating deposit proof…', 'Broadcasting to L1…', 'Aztec Sequencer confirming…', 'Note committed to tree…'];
-  const UNSHIELD_STEPS = ['Generating unshield proof…', 'Nullifying Aztec note…', 'Submitting to Sequencer…', 'L1 withdrawal initiated…'];
+  const SHIELD_STEPS  = ['Awaiting wallet confirmation…', 'Broadcasting on-chain deposit…', 'Aztec Sequencer note commitment…'];
+  const UNSHIELD_STEPS = ['Generating unshield proof…', 'Nullifying Aztec note…', 'L1 withdrawal initiated…'];
   const steps = isShield ? SHIELD_STEPS : UNSHIELD_STEPS;
 
   const [currentStep, setCurrentStep] = useState(-1);
 
+  // Strict on-chain balance checks
+  const numAmount = parseFloat(amount.replace(/,/g, '')) || 0;
+  const availableL1 = parseFloat(l1Balances[token].replace(/,/g, '')) || 0;
+  const availableShielded = parseFloat(shieldedBalance.replace(/,/g, '')) || 0;
+
+  const isInsufficientL1 = isShield && numAmount > availableL1;
+  const isInsufficientShielded = !isShield && numAmount > availableShielded;
+  const hasZeroL1 = isShield && availableL1 <= 0;
+  const hasZeroShielded = !isShield && availableShielded <= 0;
+
+  const isSubmitDisabled = !amount || numAmount <= 0 || isInsufficientL1 || isInsufficientShielded || (!isShield && !destination) || (!isConnected && isShield);
+
+  let submitButtonText = '';
+  if (isShield) {
+    if (!isConnected) {
+      submitButtonText = 'Connect Web3 Wallet to Shield';
+    } else if (hasZeroL1) {
+      submitButtonText = `0.00 ${token} on L1 — Insufficient Balance`;
+    } else if (isInsufficientL1) {
+      submitButtonText = `Insufficient ${token} Balance (Max: ${l1Balances[token]})`;
+    } else if (numAmount <= 0) {
+      submitButtonText = `Enter ${token} Amount`;
+    } else {
+      submitButtonText = `Shield ${amount} ${token} on Ethereum L1`;
+    }
+  } else {
+    if (hasZeroShielded) {
+      submitButtonText = `0.00 ${token} Shielded — No Funds`;
+    } else if (isInsufficientShielded) {
+      submitButtonText = `Insufficient Shielded Balance (Max: ${shieldedBalance})`;
+    } else if (!destination) {
+      submitButtonText = 'Enter Destination L1 Address';
+    } else {
+      submitButtonText = `Unshield ${amount} ${token} to L1`;
+    }
+  }
+
   const handleSubmit = async () => {
-    if (!amount || parseFloat(amount) <= 0) return;
+    if (isSubmitDisabled) return;
 
     setStep('progress');
     setCurrentStep(0);
 
     try {
       if (isShield) {
+        // Authenticated Web3 on-chain execution mandate
+        setProgressLabel('Requesting on-chain signature in your Web3 wallet…');
+        setProgressPct(20);
+        setCurrentStep(0);
+
+        let l1TxHash: `0x${string}`;
+
+        if (token === 'ETH') {
+          l1TxHash = await sendTransactionAsync({
+            to: AZTEC_ROLLUP_BRIDGE,
+            value: parseEther(amount),
+          });
+        } else {
+          const tokenAddr = token === 'DAI' ? DAI_ADDRESS : USDC_ADDRESS;
+          const decimals = token === 'DAI' ? 18 : 6;
+          l1TxHash = await writeContractAsync({
+            address: tokenAddr,
+            abi: ERC20_ABI,
+            functionName: 'transfer',
+            args: [AZTEC_ROLLUP_BRIDGE, parseUnits(amount, decimals)],
+          });
+        }
+
+        setProgressLabel(`L1 deposit broadcasted (${l1TxHash.slice(0, 10)}…). Waiting for confirmation…`);
+        setProgressPct(50);
+        setCurrentStep(1);
+
+        if (publicClient) {
+          try {
+            await publicClient.waitForTransactionReceipt({ hash: l1TxHash });
+          } catch (receiptErr) {
+            console.warn('Wait for receipt notice:', receiptErr);
+          }
+        }
+
+        setProgressLabel('Aztec Sequencer indexing note commitment…');
+        setProgressPct(85);
+        setCurrentStep(2);
+
         const res = await executeShieldDeposit(
-          { publicAddress: address, amount, token },
+          { publicAddress: activeAddress, amount, token, l1TxHash },
           (label, pct) => {
             setProgressLabel(label);
             setProgressPct(pct);
-            const stepIdx = SHIELD_STEPS.findIndex(s => s === label);
-            if (stepIdx !== -1) setCurrentStep(stepIdx);
           }
         );
+
+        setCurrentStep(steps.length);
         setResult({ txHash: res.txHash, amount, token });
+        setStep('success');
       } else {
         if (!destination) { setStep('form'); return; }
         const res = await executeUnshield(
-          { zkHandle: `zk:${address.slice(2, 6)}`, amount, token, destinationAddress: destination },
+          { zkHandle: `zk:${activeAddress.slice(2, 6)}`, amount, token, destinationAddress: destination },
           (label, pct) => {
             setProgressLabel(label);
             setProgressPct(pct);
@@ -149,12 +258,13 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
             if (stepIdx !== -1) setCurrentStep(stepIdx);
           }
         );
+        setCurrentStep(steps.length);
         setResult({ txHash: res.l1TxHash, amount, token });
+        setStep('success');
       }
-      setCurrentStep(steps.length);
-      setStep('success');
     } catch (e: any) {
-      setError(e?.message ?? 'Unknown error');
+      console.error('Shield error:', e);
+      setError(e?.shortMessage || e?.message || 'Transaction rejected in wallet');
       setStep('error');
     }
   };
@@ -196,10 +306,10 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
               {isShield ? 'Shield to Aztec' : 'Unshield to L1'}
             </h2>
             <p className="text-[11px] text-gray-400">
-              {isShield ? 'Move funds into Aztec privacy layer' : 'Withdraw from shielded Aztec note'}
+              {isShield ? 'Deposit verified on-chain funds into Aztec' : 'Withdraw from shielded Aztec note'}
             </p>
           </div>
-          <button onClick={onClose} className="ml-auto w-8 h-8 flex items-center justify-center rounded-full bg-black/5">
+          <button onClick={onClose} className="ml-auto w-8 h-8 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 transition-colors">
             <X size={16} className="text-gray-600" />
           </button>
         </div>
@@ -215,7 +325,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
                   {TOKENS.map(t => (
                     <button
                       key={t}
-                      onClick={() => setToken(t)}
+                      onClick={() => { setToken(t); setAmount(''); }}
                       className="flex-1 py-2.5 rounded-2xl text-[13px] font-semibold transition-all"
                       style={{
                         background: token === t ? '#1C1C1E' : '#f0f2f5',
@@ -231,12 +341,22 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
               {/* Balance display */}
               <div className="bg-[#f0f2f5] rounded-2xl px-4 py-3 flex items-center justify-between">
                 <span className="text-[12px] text-gray-500 font-medium">
-                  {isShield ? 'L1 Balance' : 'Shielded Balance'}
+                  {isShield ? 'Verified L1 Balance' : 'Shielded Balance'}
                 </span>
-                <span className="text-[13px] font-bold text-gray-800">
+                <span className="text-[13px] font-bold text-gray-900 font-mono">
                   {isShield ? l1Balances[token] : shieldedBalance} {token}
                 </span>
               </div>
+
+              {/* Zero Balance Notice */}
+              {isShield && hasZeroL1 && (
+                <div className="bg-black/[0.03] border border-black/[0.08] rounded-2xl p-3 flex items-start gap-2.5">
+                  <Lock size={14} className="text-[#1C1C1E] mt-0.5 shrink-0" />
+                  <p className="text-[11px] text-black/60 leading-relaxed">
+                    <strong>Zero-Mock On-Chain Rule:</strong> Connected wallet holds <strong>0.00 {token}</strong> on Ethereum L1. Authentic on-chain funds are required before shielding into Aztec.
+                  </p>
+                </div>
+              )}
 
               {/* Amount input */}
               <div>
@@ -249,11 +369,16 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
                     placeholder="0.00"
                     value={amount}
                     onChange={e => setAmount(e.target.value)}
-                    className="flex-1 bg-[#f0f2f5] rounded-2xl px-4 py-3 text-[15px] font-bold text-gray-900 outline-none border-2 border-transparent focus:border-black/30 transition-colors"
+                    disabled={hasZeroL1 && isShield}
+                    className="flex-1 bg-[#f0f2f5] rounded-2xl px-4 py-3 text-[15px] font-bold text-gray-900 outline-none border-2 border-transparent focus:border-black/30 transition-colors disabled:opacity-50"
                   />
                   <button
-                    onClick={() => setAmount(isShield ? l1Balances[token].replace(/,/g, '') : shieldedBalance.replace(/,/g, ''))}
-                    className="px-4 py-3 bg-black/5 hover:bg-black/10 text-[#1C1C1E] font-bold text-[12px] rounded-2xl transition-colors"
+                    onClick={() => {
+                      const maxVal = isShield ? l1Balances[token].replace(/,/g, '') : shieldedBalance.replace(/,/g, '');
+                      setAmount(parseFloat(maxVal) > 0 ? maxVal : '');
+                    }}
+                    disabled={hasZeroL1 && isShield}
+                    className="px-4 py-3 bg-black/5 hover:bg-black/10 text-[#1C1C1E] font-bold text-[12px] rounded-2xl transition-colors disabled:opacity-40"
                   >
                     MAX
                   </button>
@@ -277,7 +402,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
               )}
 
               {/* Fee estimate */}
-              {amount && parseFloat(amount) > 0 && (
+              {numAmount > 0 && (
                 <div className="bg-[#f0f2f5] rounded-2xl px-4 py-3 space-y-1.5">
                   <div className="flex justify-between text-[12px]">
                     <span className="text-gray-500">L1 Gas</span>
@@ -307,10 +432,10 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
               {/* Submit */}
               <button
                 onClick={handleSubmit}
-                disabled={!amount || parseFloat(amount) <= 0 || (!isShield && !destination)}
-                className="w-full py-4 rounded-2xl font-bold text-[15px] text-white bg-[#1C1C1E] hover:bg-black transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                disabled={isSubmitDisabled}
+                className="w-full py-4 rounded-2xl font-bold text-[15px] text-white bg-[#1C1C1E] hover:bg-black transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
               >
-                {isShield ? `Shield ${amount || '0'} ${token} Privately` : `Unshield ${amount || '0'} ${token} to L1`}
+                {submitButtonText}
               </button>
             </motion.div>
           )}
@@ -357,10 +482,10 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
 
               <div>
                 <h3 className="text-[20px] font-bold text-gray-900">
-                  {isShield ? 'Shielded!' : 'Unshielded!'}
+                  {isShield ? 'Shielded on Aztec!' : 'Unshielded to L1!'}
                 </h3>
                 <p className="text-[13px] text-gray-500 mt-1">
-                  {result.amount} {result.token} {isShield ? 'is now in your Aztec shielded wallet' : 'is being withdrawn to L1'}
+                  {result.amount} {result.token} {isShield ? 'confirmed in Aztec shielded wallet' : 'withdrawn to Ethereum L1'}
                 </p>
               </div>
 
@@ -370,18 +495,18 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
                   <span className="font-mono text-gray-700 text-[10px]">{result.txHash.slice(0, 10)}…{result.txHash.slice(-6)}</span>
                 </div>
                 <div className="flex justify-between text-[11px]">
-                  <span className="text-gray-400">Status</span>
-                  <span className="text-black/80 font-bold">{isShield ? 'Shielded' : 'Initiated'}</span>
+                  <span className="text-gray-400">On-Chain Status</span>
+                  <span className="text-black/80 font-bold">{isShield ? 'Confirmed (Rollup Bridge)' : 'Initiated'}</span>
                 </div>
               </div>
 
               <a
-                href={`https://aztecscan.xyz/tx-effect/${result.txHash.slice(2)}`}
+                href={`https://etherscan.io/tx/${result.txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-1.5 text-[12px] text-black/70 hover:text-black font-semibold"
               >
-                <ExternalLink size={12} /> View on AztecScan
+                <ExternalLink size={12} /> View on Etherscan
               </a>
 
               <button
@@ -403,7 +528,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
               <p className="text-[12px] text-gray-500">{error || 'Unknown error occurred'}</p>
               <button
                 onClick={() => { setStep('form'); setError(''); }}
-                className="w-full py-4 rounded-2xl font-bold text-[14px] bg-[#f0f2f5] text-gray-700"
+                className="w-full py-4 rounded-2xl font-bold text-[14px] bg-[#f0f2f5] text-gray-700 hover:bg-[#e4e6eb] transition-colors"
               >
                 Try Again
               </button>

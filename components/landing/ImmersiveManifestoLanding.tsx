@@ -496,10 +496,10 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
       </section>
 
       {/* ═══ SECTION: AZTEC NETWORK × ZK.MONEY ZERO-KNOWLEDGE PAYMENTS ═══════════ */}
-      <section className="bg-[#050505] text-white py-24 md:py-32 relative overflow-hidden">
+      <section className="bg-[#F8F9FA] border-y border-black/[0.06] text-[#1C1C1E] py-24 md:py-32 relative overflow-hidden">
         {/* Subtle executive grid & glow */}
-        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '32px 32px' }} />
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-white/[0.03] rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, black 1px, transparent 0)', backgroundSize: '32px 32px' }} />
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-black/[0.02] rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-5 md:px-10 relative z-10">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-16 gap-6">
@@ -510,15 +510,15 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               variants={fadeUp}
               className="max-w-2xl"
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white/90 text-[11px] font-mono uppercase tracking-[0.2em] mb-5">
-                <Lock size={12} className="text-white" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/5 border border-black/10 text-[#1C1C1E] text-[11px] font-mono uppercase tracking-[0.2em] mb-5">
+                <Lock size={12} className="text-[#1C1C1E]" />
                 <span>Aztec Network × zk.money Integration</span>
               </div>
-              <h2 className="text-[36px] md:text-[54px] font-black tracking-tight text-white leading-[1.05]">
+              <h2 className="text-[36px] md:text-[54px] font-black tracking-tight text-[#1C1C1E] leading-[1.05]">
                 Confidential financial sovereignty.<br />Powered by Aztec.
               </h2>
             </motion.div>
-            <p className="text-[16px] md:text-[18px] text-white/60 max-w-md font-medium leading-relaxed">
+            <p className="text-[16px] md:text-[18px] text-[#1C1C1E]/60 max-w-md font-medium leading-relaxed">
               We revived zk.money natively inside Humanity Ledger. Client-side UltraPlonk zero-knowledge proofs ensure zero on-chain tracing, hidden balances, and private streaming payroll.
             </p>
           </div>
@@ -557,21 +557,21 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                 viewport={{ once: true }}
                 custom={i * 0.1}
                 variants={fadeUp}
-                className="bg-white/[0.04] border border-white/[0.08] hover:border-white/20 rounded-3xl p-7 flex flex-col justify-between transition-all group"
+                className="bg-white border border-black/[0.08] hover:border-black/20 shadow-sm hover:shadow-md rounded-3xl p-7 flex flex-col justify-between transition-all group"
               >
                 <div>
                   <div className="flex items-center justify-between mb-6">
-                    <div className="w-12 h-12 rounded-2xl bg-white/10 text-white flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="w-12 h-12 rounded-2xl bg-[#1C1C1E] text-white flex items-center justify-center group-hover:scale-105 transition-transform">
                       {f.icon}
                     </div>
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-white/50 bg-white/5 px-2.5 py-1 rounded-full border border-white/10">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-[#1C1C1E]/60 bg-black/5 px-2.5 py-1 rounded-full border border-black/[0.06]">
                       {f.tag}
                     </span>
                   </div>
-                  <h3 className="text-[19px] font-bold text-white mb-2 leading-snug">{f.title}</h3>
-                  <p className="text-[14px] text-white/60 font-medium leading-relaxed">{f.desc}</p>
+                  <h3 className="text-[19px] font-bold text-[#1C1C1E] mb-2 leading-snug">{f.title}</h3>
+                  <p className="text-[14px] text-[#1C1C1E]/60 font-medium leading-relaxed">{f.desc}</p>
                 </div>
-                <div className="mt-6 pt-4 border-t border-white/[0.06] flex items-center gap-1 text-[11px] font-bold text-white/70 group-hover:text-white transition-colors">
+                <div className="mt-6 pt-4 border-t border-black/[0.06] flex items-center gap-1 text-[11px] font-bold text-[#1C1C1E]/70 group-hover:text-[#1C1C1E] transition-colors">
                   <span>Audited on Aztec</span>
                   <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
                 </div>
@@ -585,20 +585,20 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             whileInView="visible"
             viewport={{ once: true }}
             variants={fadeUp}
-            className="mt-12 flex flex-col sm:flex-row items-center justify-between p-6 md:p-8 rounded-3xl bg-white/[0.04] border border-white/10 gap-6 backdrop-blur-sm"
+            className="mt-12 flex flex-col sm:flex-row items-center justify-between p-6 md:p-8 rounded-3xl bg-white border border-black/[0.08] shadow-sm gap-6"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-[#1C1C1E] flex items-center justify-center text-white shrink-0">
                 <Lock size={22} strokeWidth={2} />
               </div>
               <div>
-                <p className="text-[16px] font-bold text-white tracking-tight">Live Aztec Rollup & zk.money Protocol</p>
-                <p className="text-[13px] text-white/55 font-medium leading-relaxed">Integrated UltraPlonk circuits with native UTXO settlement in settings & confidential chats.</p>
+                <p className="text-[16px] font-bold text-[#1C1C1E] tracking-tight">Live Aztec Rollup & zk.money Protocol</p>
+                <p className="text-[13px] text-[#1C1C1E]/60 font-medium leading-relaxed">Integrated UltraPlonk circuits with native UTXO settlement in settings & confidential chats.</p>
               </div>
             </div>
             <Link
               href="/connect"
-              className="px-6 py-3 rounded-2xl bg-white text-[#1C1C1E] font-bold text-[14px] hover:bg-neutral-100 transition shadow-lg shrink-0 flex items-center gap-2 select-none"
+              className="px-6 py-3 rounded-2xl bg-[#1C1C1E] text-white font-bold text-[14px] hover:bg-black transition shadow-sm shrink-0 flex items-center gap-2 select-none"
             >
               Launch zk.money Experience <ArrowRight size={15} />
             </Link>
