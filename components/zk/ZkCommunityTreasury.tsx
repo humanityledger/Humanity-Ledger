@@ -41,7 +41,7 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
       exit={{ opacity: 0, y: 24 }}
       className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2 bg-gray-900 text-white text-[13px] font-semibold px-4 py-3 rounded-2xl shadow-2xl"
     >
-      <CheckCircle size={14} className="text-[#25D366]" />
+      <CheckCircle size={14} className="text-[#1C1C1E]" />
       {message}
     </motion.div>
   );
@@ -60,7 +60,7 @@ function BountyCard({ bounty, onClaim }: { key?: React.Key; bounty: ZkBounty; on
           <h4 className="font-bold text-gray-900 text-[14px]">{bounty.title}</h4>
           <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{bounty.description}</p>
         </div>
-        <div className="flex-shrink-0 bg-[#25D366]/10 text-[#25D366] font-bold text-[13px] px-3 py-1.5 rounded-xl text-center">
+        <div className="flex-shrink-0 bg-[#1C1C1E]/10 text-[#1C1C1E] font-bold text-[13px] px-3 py-1.5 rounded-xl text-center">
           {bounty.reward}<br />
           <span className="text-[9px] font-medium">{bounty.token}</span>
         </div>
@@ -80,7 +80,7 @@ function BountyCard({ bounty, onClaim }: { key?: React.Key; bounty: ZkBounty; on
           onClick={onClaim}
           disabled={daysLeft === 0}
           className="py-1.5 px-4 rounded-xl text-[12px] font-bold text-white disabled:opacity-40"
-          style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}
+          style={{ background: '#1C1C1E' }}
         >
           Claim Bounty
         </button>
@@ -200,12 +200,12 @@ export function ZkCommunityTreasury({
       <div className="bg-white px-5 py-4 border-b border-black/[0.06]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}>
+            style={{ background: '#1C1C1E' }}>
             <Shield size={18} className="text-white" strokeWidth={2} />
           </div>
           <div>
             <h2 className="font-bold text-gray-900 text-[16px]">Community Treasury</h2>
-            <span className="text-[11px] font-semibold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">
+            <span className="text-[11px] font-semibold text-[#1C1C1E] bg-[#1C1C1E]/10 px-2 py-0.5 rounded-full">
               {communityName}
             </span>
           </div>
@@ -249,14 +249,14 @@ export function ZkCommunityTreasury({
         {/* Deposit */}
         <div className="bg-white rounded-2xl shadow-sm border border-black/[0.04] p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <ArrowDownLeft size={15} className="text-[#25D366]" strokeWidth={2} />
+            <ArrowDownLeft size={15} className="text-[#1C1C1E]" strokeWidth={2} />
             <span className="font-semibold text-gray-800 text-[14px]">Deposit to Treasury</span>
           </div>
           <div className="flex gap-1.5">
             {TOKENS.map(t => (
               <button key={t} onClick={() => setDepToken(t)}
                 className="flex-1 py-1.5 rounded-xl text-[11px] font-semibold transition-all"
-                style={{ background: depToken === t ? '#25D366' : '#f0f2f5', color: depToken === t ? '#fff' : '#6B7280' }}>
+                style={{ background: depToken === t ? '#1C1C1E' : '#f0f2f5', color: depToken === t ? '#fff' : '#6B7280' }}>
                 {t}
               </button>
             ))}
@@ -265,12 +265,12 @@ export function ZkCommunityTreasury({
             <input
               type="number" min="0" step="any" placeholder="Amount"
               value={depAmount} onChange={e => setDepAmount(e.target.value)}
-              className="flex-1 bg-[#f0f2f5] rounded-xl px-3 py-2.5 text-[14px] font-bold text-gray-900 outline-none border-2 border-transparent focus:border-[#25D366] transition-colors"
+              className="flex-1 bg-[#f0f2f5] rounded-xl px-3 py-2.5 text-[14px] font-bold text-gray-900 outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors"
             />
             <button onClick={handleDeposit}
               disabled={!depAmount || parseFloat(depAmount) <= 0}
               className="px-4 py-2.5 rounded-xl font-bold text-[13px] text-white disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}>
+              style={{ background: '#1C1C1E' }}>
               Deposit
             </button>
           </div>
@@ -332,7 +332,7 @@ export function ZkCommunityTreasury({
         {tips.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-black/[0.04] overflow-hidden">
             <button onClick={() => setShowTippers(v => !v)} className="w-full flex items-center gap-2 px-4 py-3">
-              <Gift size={15} className="text-[#25D366]" strokeWidth={2} />
+              <Gift size={15} className="text-[#1C1C1E]" strokeWidth={2} />
               <span className="font-semibold text-gray-800 text-[14px] flex-1 text-left">Top Tippers</span>
               <span className="text-[10px] text-gray-400">{tips.length} tips</span>
               {showTippers ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
@@ -351,7 +351,7 @@ export function ZkCommunityTreasury({
                       <div key={c.zkHandle + i} className="flex items-center gap-3 px-4 py-2.5">
                         <span className="text-[11px] font-bold text-gray-400 w-4">#{i + 1}</span>
                         <span className="font-medium text-gray-800 text-[13px] flex-1 truncate">{c.zkHandle}</span>
-                        <span className="text-[12px] font-bold text-[#25D366]">{c.amount} {c.token}</span>
+                        <span className="text-[12px] font-bold text-[#1C1C1E]">{c.amount} {c.token}</span>
                       </div>
                     ))}
                   </div>
@@ -365,13 +365,13 @@ export function ZkCommunityTreasury({
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
-              <Briefcase size={14} className="text-[#25D366]" strokeWidth={2} />
+              <Briefcase size={14} className="text-[#1C1C1E]" strokeWidth={2} />
               <span className="font-semibold text-gray-800 text-[14px]">Open Bounties ({bounties.length})</span>
             </div>
             {isAdmin && (
               <button
                 onClick={() => setShowBountyForm(v => !v)}
-                className="flex items-center gap-1 text-[11px] font-semibold text-[#25D366] bg-[#25D366]/10 px-3 py-1.5 rounded-full"
+                className="flex items-center gap-1 text-[11px] font-semibold text-[#1C1C1E] bg-[#1C1C1E]/10 px-3 py-1.5 rounded-full"
               >
                 <Plus size={11} /> New Bounty
               </button>
@@ -390,22 +390,22 @@ export function ZkCommunityTreasury({
               >
                 <div className="bg-white rounded-2xl border border-black/[0.06] p-4 space-y-2.5">
                   <input type="text" placeholder="Bounty title *" value={bTitle} onChange={e => setBTitle(e.target.value)}
-                    className="w-full bg-[#f0f2f5] rounded-xl px-3 py-2.5 text-[13px] font-medium outline-none border-2 border-transparent focus:border-[#25D366] transition-colors" />
+                    className="w-full bg-[#f0f2f5] rounded-xl px-3 py-2.5 text-[13px] font-medium outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors" />
                   <textarea placeholder="Description" value={bDesc} onChange={e => setBDesc(e.target.value)} rows={2}
-                    className="w-full bg-[#f0f2f5] rounded-xl px-3 py-2 text-[12px] outline-none border-2 border-transparent focus:border-[#25D366] transition-colors resize-none" />
+                    className="w-full bg-[#f0f2f5] rounded-xl px-3 py-2 text-[12px] outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors resize-none" />
                   <div className="flex gap-2">
                     <input type="number" placeholder="Reward *" value={bReward} onChange={e => setBReward(e.target.value)}
-                      className="flex-1 bg-[#f0f2f5] rounded-xl px-3 py-2.5 text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#25D366] transition-colors" />
+                      className="flex-1 bg-[#f0f2f5] rounded-xl px-3 py-2.5 text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors" />
                     {TOKENS.map(t => (
                       <button key={t} onClick={() => setBToken(t)}
                         className="px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all"
-                        style={{ background: bToken === t ? '#25D366' : '#f0f2f5', color: bToken === t ? '#fff' : '#6B7280' }}>
+                        style={{ background: bToken === t ? '#1C1C1E' : '#f0f2f5', color: bToken === t ? '#fff' : '#6B7280' }}>
                         {t}
                       </button>
                     ))}
                   </div>
                   <input type="text" placeholder="Skills (comma separated, optional)" value={bSkills} onChange={e => setBSkills(e.target.value)}
-                    className="w-full bg-[#f0f2f5] rounded-xl px-3 py-2 text-[12px] outline-none border-2 border-transparent focus:border-[#25D366] transition-colors" />
+                    className="w-full bg-[#f0f2f5] rounded-xl px-3 py-2 text-[12px] outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors" />
                   <div className="flex gap-2">
                     <button onClick={() => setShowBountyForm(false)}
                       className="flex-1 py-2.5 rounded-xl font-semibold text-[12px] bg-[#f0f2f5] text-gray-600">
@@ -414,7 +414,7 @@ export function ZkCommunityTreasury({
                     <button onClick={handleCreateBounty}
                       disabled={!bTitle || !bReward}
                       className="flex-1 py-2.5 rounded-xl font-bold text-[12px] text-white disabled:opacity-50"
-                      style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}>
+                      style={{ background: '#1C1C1E' }}>
                       Post Bounty
                     </button>
                   </div>
@@ -445,7 +445,7 @@ export function ZkCommunityTreasury({
         <div className="flex items-center justify-center gap-1.5 py-1">
           <Shield size={10} className="text-gray-300" />
           <span className="text-[10px] text-gray-400">
-            Shielded by <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" className="text-[#25D366] font-medium">Aztec Network</a>
+            Shielded by <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" className="text-[#1C1C1E] font-medium">Aztec Network</a>
           </span>
         </div>
       </div>

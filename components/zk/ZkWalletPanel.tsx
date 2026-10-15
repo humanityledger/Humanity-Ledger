@@ -61,25 +61,25 @@ function TokenCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.3 }}
-      className="bg-white rounded-2xl p-4 shadow-sm border border-black/[0.04] flex items-center gap-3.5"
+      className="bg-white rounded-2xl p-4 shadow-sm border border-black/[0.06] flex items-center gap-3.5"
     >
       <div
         className="w-11 h-11 rounded-full flex items-center justify-center text-lg font-bold shadow-inner"
-        style={{ background: 'linear-gradient(135deg, #F4F4F6, #E5E5EA)', color: '#1C1C1E' }}
+        style={{ background: '#F2F2F7', color: '#1C1C1E' }}
       >
         {emoji}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-gray-700 tracking-wide">zk{symbol}</span>
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#00a884] bg-[#00a884]/10 px-2 py-0.5 rounded-full">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00a884]" /> Private
+          <span className="text-xs font-bold text-[#1C1C1E] tracking-wide">zk{symbol}</span>
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-black/60 bg-black/5 px-2 py-0.5 rounded-full">
+            Shielded
           </span>
         </div>
-        <div className="text-[17px] font-extrabold text-gray-900 leading-tight mt-0.5 font-mono">
+        <div className="text-[17px] font-extrabold text-[#1C1C1E] leading-tight mt-0.5 font-mono">
           {balance}
         </div>
-        <div className="text-[11px] text-gray-400 font-medium mt-0.5">{usdValue}</div>
+        <div className="text-[11px] text-black/40 font-medium mt-0.5">{usdValue}</div>
       </div>
     </motion.div>
   );
@@ -90,66 +90,56 @@ function ActionButton({
   label,
   sublabel,
   onClick,
-  color = '#00a884',
 }: {
   icon: React.ElementType;
   label: string;
   sublabel?: string;
   onClick?: () => void;
-  color?: string;
 }) {
   return (
     <button
       onClick={onClick}
       type="button"
-      className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl active:scale-95 transition-all duration-200 border border-black/[0.03] shadow-sm hover:shadow-md"
-      style={{ background: '#FFFFFF' }}
+      className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl active:scale-95 transition-all duration-200 bg-white border border-black/[0.06] shadow-sm hover:border-black/20"
     >
-      <div
-        className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm"
-        style={{ background: color }}
-      >
+      <div className="w-10 h-10 rounded-full flex items-center justify-center text-white bg-[#1C1C1E] shadow-sm">
         <Icon size={18} strokeWidth={2.2} />
       </div>
-      <span className="text-[12px] font-bold text-gray-800 leading-tight">{label}</span>
+      <span className="text-[12px] font-bold text-[#1C1C1E] leading-tight">{label}</span>
       {sublabel && (
-        <span className="text-[9px] text-gray-400 font-medium leading-none">{sublabel}</span>
+        <span className="text-[9px] text-black/40 font-medium leading-none">{sublabel}</span>
       )}
     </button>
   );
 }
 
 function PrivacyRing({ score }: { score: number }) {
-  const color = score >= 70 ? '#00a884' : score >= 40 ? '#FF9500' : '#FF3B30';
-  const deg   = Math.round((score / 100) * 360);
+  const deg = Math.round((score / 100) * 360);
   return (
-    <div className="relative w-14 h-14 flex items-center justify-center">
+    <div className="relative w-12 h-12 flex items-center justify-center">
       <div
         className="absolute inset-0 rounded-full"
         style={{
-          background: `conic-gradient(${color} 0deg, ${color} ${deg}deg, #E5E5EA ${deg}deg, #E5E5EA 360deg)`,
+          background: `conic-gradient(#1C1C1E 0deg, #1C1C1E ${deg}deg, #E5E5EA ${deg}deg, #E5E5EA 360deg)`,
         }}
       />
-      <div className="absolute inset-1.5 rounded-full bg-white flex items-center justify-center shadow-inner">
-        <span className="text-[12px] font-extrabold font-mono" style={{ color }}>{score}</span>
+      <div className="absolute inset-1 rounded-full bg-white flex items-center justify-center shadow-inner">
+        <span className="text-[11px] font-black font-mono text-[#1C1C1E]">{score}</span>
       </div>
     </div>
   );
 }
 
 function NoteStatusBadge({ status }: { status: ZkNote['status'] }) {
-  const map: Record<ZkNote['status'], { label: string; color: string; bg: string }> = {
-    pending:   { label: 'Pending',   color: '#FF9500', bg: '#FF9500/10' },
-    settled:   { label: 'Settled',   color: '#00a884', bg: '#00a884/10' },
-    spent:     { label: 'Spent',     color: '#8E8E93', bg: '#8E8E93/10' },
-    nullified: { label: 'Nullified', color: '#FF3B30', bg: '#FF3B30/10' },
+  const map: Record<ZkNote['status'], { label: string }> = {
+    pending:   { label: 'Pending' },
+    settled:   { label: 'Settled' },
+    spent:     { label: 'Spent' },
+    nullified: { label: 'Nullified' },
   };
-  const { label, color } = map[status];
+  const { label } = map[status] || { label: status };
   return (
-    <span
-      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-      style={{ color, background: `${color}18` }}
-    >
+    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/5 text-black/70">
       {label}
     </span>
   );
@@ -293,7 +283,7 @@ export function ZkWalletPanel({
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-gray-900 text-[15px]">{displayName}</span>
                   {identity?.verified && (
-                    <CheckCircle size={13} className="text-[#00a884]" strokeWidth={2.5} />
+                    <CheckCircle size={13} className="text-[#1C1C1E]" strokeWidth={2.5} />
                   )}
                 </div>
                 <div className="text-[12px] text-gray-400 font-mono font-medium">{handle}</div>
@@ -308,10 +298,10 @@ export function ZkWalletPanel({
             </button>
           </div>
 
-          {/* Total balance card (no weird shields, clean executive privacy styling) */}
-          <div className="bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] rounded-2xl p-4 text-white shadow-md">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#25D366] uppercase tracking-wider">
+          {/* Total balance card (Swiss clean financial architecture — pure executive white) */}
+          <div className="bg-white rounded-2xl p-5 text-[#1C1C1E] border border-black/[0.08] shadow-sm">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-black/50 uppercase tracking-wider">
                 <Lock size={12} strokeWidth={2.5} />
                 <span>Total Shielded Balance</span>
               </div>
@@ -319,28 +309,28 @@ export function ZkWalletPanel({
                 onClick={handleSync}
                 disabled={syncing}
                 type="button"
-                className="flex items-center gap-1 text-[11px] font-semibold text-white/80 bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-full transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 text-[11px] font-bold text-black/70 bg-black/5 hover:bg-black/10 px-3 py-1 rounded-full transition-colors disabled:opacity-50"
               >
                 <RefreshCw size={11} className={syncing ? 'animate-spin' : ''} />
                 <span>{syncing ? 'Syncing…' : 'Sync'}</span>
               </button>
             </div>
-            <div className="text-[26px] font-black tracking-tight font-mono text-white mt-1">
-              ≈ ${totalUSD}
+            <div className="text-[28px] font-black tracking-tight font-mono text-[#1C1C1E] mt-1">
+              ${totalUSD}
             </div>
-            <div className="text-[11px] text-white/50 mt-1 flex items-center gap-1.5 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#25D366]" />
+            <div className="text-[12px] text-black/50 mt-1 flex items-center gap-1.5 font-medium">
+              <Lock size={11} className="text-black/40" />
               Client-side UltraPlonk Protected · Zero Knowledge
             </div>
           </div>
 
           {syncOk === true && (
-            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-[#00a884] font-semibold">
+            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-black/70 font-semibold">
               <Wifi size={12} /> Synced from Aztec Mainnet Sequencer
             </div>
           )}
           {syncOk === false && (
-            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-amber-600 font-semibold">
+            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-black/60 font-semibold">
               <WifiOff size={12} /> Offline cache active — Local PXE secure
             </div>
           )}
@@ -363,28 +353,24 @@ export function ZkWalletPanel({
               label="Shield"
               sublabel="L1→ZK"
               onClick={handleShieldClick}
-              color="#00a884"
             />
             <ActionButton
               icon={ArrowUpFromLine}
               label="Unshield"
               sublabel="ZK→L1"
               onClick={handleUnshieldClick}
-              color="#128C7E"
             />
             <ActionButton
               icon={Send}
               label="Send"
               sublabel="Private"
               onClick={handleSendClick}
-              color="#008069"
             />
             <ActionButton
               icon={QrCode}
               label="Receive"
               sublabel="QR / Tag"
               onClick={handleReceiveClick}
-              color="#075E54"
             />
           </div>
 
@@ -396,8 +382,8 @@ export function ZkWalletPanel({
                 className="w-full flex items-center gap-3 px-4 py-3 text-left"
                 onClick={() => setShowPrivacy(v => !v)}
               >
-                <Lock size={16} className="text-[#00a884]" strokeWidth={2.2} />
-                <span className="font-bold text-gray-800 text-[14px] flex-1">Privacy Score</span>
+                <Lock size={16} className="text-black/60" strokeWidth={2.2} />
+                <span className="font-bold text-[#1C1C1E] text-[14px] flex-1">Privacy Score</span>
                 <PrivacyRing score={privacy.score} />
                 {showPrivacy ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
               </button>
@@ -426,7 +412,7 @@ export function ZkWalletPanel({
                       <div className="space-y-1.5">
                         {privacy.suggestions.map((s, i) => (
                           <div key={i} className="flex items-start gap-2 text-[11px] text-gray-600">
-                            <AlertCircle size={12} className="mt-0.5 text-amber-500 flex-shrink-0" />
+                            <AlertCircle size={12} className="mt-0.5 text-black/50 flex-shrink-0" />
                             <span>{s}</span>
                           </div>
                         ))}
@@ -435,7 +421,7 @@ export function ZkWalletPanel({
                         href="https://aztec.network"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-[10px] text-[#00a884] font-bold"
+                        className="flex items-center gap-1 text-[10px] text-black/60 hover:text-black font-bold"
                       >
                         <ExternalLink size={10} /> Powered by Aztec Network
                       </a>
@@ -450,7 +436,7 @@ export function ZkWalletPanel({
           <div className="bg-white rounded-2xl shadow-sm border border-black/[0.04] overflow-hidden">
             <div className="px-4 py-3.5 border-b border-black/[0.04] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <TrendingUp size={16} className="text-[#00a884]" strokeWidth={2.2} />
+                <TrendingUp size={16} className="text-black/60" strokeWidth={2.2} />
                 <span className="font-bold text-gray-900 text-[14px]">Recent Transactions</span>
               </div>
               <span className="text-[11px] text-gray-400 font-semibold">{history.length} records</span>
@@ -473,13 +459,12 @@ export function ZkWalletPanel({
                   return (
                     <div key={tx.txHash + i} className="flex items-center gap-3 px-4 py-3">
                       <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ background: isSent ? '#FF3B3015' : '#00a88415' }}
+                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-black/5"
                       >
                         {isSent ? (
-                          <ArrowUpFromLine size={14} className="text-red-500" />
+                          <ArrowUpFromLine size={14} className="text-black/70" />
                         ) : (
-                          <ArrowDownToLine size={14} className="text-[#00a884]" />
+                          <ArrowDownToLine size={14} className="text-black/70" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -490,13 +475,12 @@ export function ZkWalletPanel({
                           <Clock size={10} className="text-gray-300" />
                           <span className="text-[10px] text-gray-400 font-medium">{relativeTime(tx.timestamp)}</span>
                           <span className="text-gray-200">·</span>
-                          <span className="text-[10px] text-[#00a884] font-semibold">Score: {tx.privacyScore}</span>
+                          <span className="text-[10px] text-black/60 font-semibold">Score: {tx.privacyScore}</span>
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
                         <span
-                          className="text-[13px] font-extrabold font-mono"
-                          style={{ color: isSent ? '#FF3B30' : '#00a884' }}
+                          className="text-[13px] font-extrabold font-mono text-[#1C1C1E]"
                         >
                           {isSent ? '-' : '+'}{tx.amount} {tx.token}
                         </span>
@@ -505,7 +489,7 @@ export function ZkWalletPanel({
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={e => e.stopPropagation()}
-                          className="text-[9px] text-[#00a884] font-semibold flex items-center gap-0.5 hover:underline"
+                          className="text-[9px] text-black/50 font-semibold flex items-center gap-0.5 hover:underline"
                         >
                           <ExternalLink size={8} /> AztecScan
                         </a>
@@ -524,7 +508,7 @@ export function ZkWalletPanel({
               className="w-full flex items-center gap-2.5 px-4 py-3 text-left"
               onClick={() => setShowNotes(v => !v)}
             >
-              <Layers size={16} className="text-[#00a884]" strokeWidth={2.2} />
+              <Layers size={16} className="text-black/60" strokeWidth={2.2} />
               <span className="font-bold text-gray-800 text-[14px] flex-1">
                 Shielded Notes ({notes.length})
               </span>
@@ -560,7 +544,7 @@ export function ZkWalletPanel({
           {/* Receive section with REAL interactive QR Code */}
           <div className="bg-white rounded-2xl shadow-sm border border-black/[0.04] p-5">
             <div className="flex items-center gap-2 mb-3">
-              <QrCode size={16} className="text-[#00a884]" strokeWidth={2.2} />
+              <QrCode size={16} className="text-black/60" strokeWidth={2.2} />
               <span className="font-bold text-gray-900 text-[14px]">Receive Shielded Payment</span>
             </div>
             <div className="border border-gray-100 bg-[#FAFAFA] rounded-2xl p-5 flex flex-col items-center gap-3.5">
@@ -574,7 +558,7 @@ export function ZkWalletPanel({
               <button
                 type="button"
                 onClick={() => copyToClipboard(handle, 'handle')}
-                className="flex items-center gap-1.5 text-[11px] font-bold text-[#00a884] bg-[#00a884]/10 hover:bg-[#00a884]/20 px-4 py-2 rounded-full transition-colors"
+                className="flex items-center gap-1.5 text-[11px] font-bold text-white bg-[#1C1C1E] hover:bg-black px-4 py-2 rounded-full transition-colors shadow-sm"
               >
                 {copiedHandle ? <Check size={13} /> : <Copy size={13} />}
                 <span>{copiedHandle ? 'Handle Copied!' : 'Copy Handle'}</span>
@@ -587,11 +571,11 @@ export function ZkWalletPanel({
             <Lock size={12} className="text-gray-400" />
             <span className="text-[11px] text-gray-400 font-medium">
               Powered by{' '}
-              <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" className="text-[#00a884] font-bold hover:underline">
+              <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" className="text-black/70 font-bold hover:underline">
                 Aztec Network
               </a>
               {' · '}
-              <a href="https://aztecscan.xyz" target="_blank" rel="noopener noreferrer" className="text-[#00a884] font-bold hover:underline">
+              <a href="https://aztecscan.xyz" target="_blank" rel="noopener noreferrer" className="text-black/70 font-bold hover:underline">
                 AztecScan
               </a>
             </span>
@@ -641,11 +625,11 @@ export function ZkWalletPanel({
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-[#00a884]/15 flex items-center justify-center">
-                    <QrCode size={18} className="text-[#00a884]" />
+                  <div className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center">
+                    <QrCode size={18} className="text-[#1C1C1E]" />
                   </div>
                   <div>
-                    <h3 className="text-base font-extrabold text-gray-900">Receive Shielded Payment</h3>
+                    <h3 className="text-base font-extrabold text-[#1C1C1E]">Receive Shielded Payment</h3>
                     <p className="text-[11px] text-gray-400 font-medium">Aztec Sovereign Zero-Knowledge Note</p>
                   </div>
                 </div>
@@ -669,7 +653,7 @@ export function ZkWalletPanel({
                   <button
                     type="button"
                     onClick={() => copyToClipboard(handle, 'handle')}
-                    className="mt-2.5 w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#00a884] hover:bg-[#008069] text-white text-xs font-bold transition-colors shadow-sm"
+                    className="mt-2.5 w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#1C1C1E] hover:bg-black text-white text-xs font-bold transition-colors shadow-sm"
                   >
                     {copiedHandle ? <Check size={14} /> : <Copy size={14} />}
                     <span>{copiedHandle ? 'Copied to Clipboard!' : 'Copy Handle'}</span>
@@ -683,7 +667,7 @@ export function ZkWalletPanel({
                     <button
                       type="button"
                       onClick={() => copyToClipboard(address, 'address')}
-                      className="mt-2 text-[11px] font-bold text-[#00a884] hover:underline flex items-center justify-center gap-1 mx-auto"
+                      className="mt-2 text-[11px] font-bold text-black/70 hover:text-black hover:underline flex items-center justify-center gap-1 mx-auto"
                     >
                       {copiedAddress ? <Check size={12} /> : <Copy size={12} />}
                       <span>{copiedAddress ? 'Address Copied' : 'Copy Address'}</span>

@@ -115,7 +115,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-black/10 mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#128C7E] text-white flex items-center justify-center shadow-md">
+            <div className="w-10 h-10 rounded-2xl bg-[#1C1C1E] text-white flex items-center justify-center shadow-md">
               <FileCheck2 size={20} />
             </div>
             <div>
@@ -172,7 +172,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
                     value={auditorLabel}
                     onChange={e => setAuditorLabel(e.target.value)}
                     placeholder="Ej. KPMG / Agencia Tributaria"
-                    className="w-full px-3 py-2 rounded-xl border border-black/10 text-[12px] outline-none focus:border-[#25D366]"
+                    className="w-full px-3 py-2 rounded-xl border border-black/10 text-[12px] outline-none focus:border-[#1C1C1E]"
                   />
                 </div>
                 <div>
@@ -180,7 +180,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
                   <select
                     value={scope}
                     onChange={e => setScope(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-xl border border-black/10 text-[12px] bg-white outline-none focus:border-[#25D366]"
+                    className="w-full px-3 py-2 rounded-xl border border-black/10 text-[12px] bg-white outline-none focus:border-[#1C1C1E]"
                   >
                     <option value="incoming_only">Solo Entradas (ivsk)</option>
                     <option value="outgoing_only">Solo Salidas (ovsk)</option>
@@ -195,13 +195,13 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
                     max={365}
                     value={durationDays}
                     onChange={e => setDurationDays(parseInt(e.target.value) || 30)}
-                    className="w-full px-3 py-2 rounded-xl border border-black/10 text-[12px] outline-none focus:border-[#25D366]"
+                    className="w-full px-3 py-2 rounded-xl border border-black/10 text-[12px] outline-none focus:border-[#1C1C1E]"
                   />
                 </div>
               </div>
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-[#25D366] text-white font-bold text-[13px] hover:bg-[#128C7E] shadow transition-colors"
+                className="w-full py-2.5 rounded-xl bg-[#1C1C1E] text-white font-bold text-[13px] hover:bg-[#1C1C1E] shadow transition-colors"
               >
                 Generar Viewing Key Criptográfica
               </button>
@@ -233,7 +233,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
                         className="p-1.5 rounded-lg bg-black/5 hover:bg-black/10 text-black/60"
                         title="Copiar Clave"
                       >
-                        {copiedKey === p.id ? <Check size={14} className="text-[#25D366]" /> : <Copy size={14} />}
+                        {copiedKey === p.id ? <Check size={14} className="text-[#1C1C1E]" /> : <Copy size={14} />}
                       </button>
                       {p.status === 'active' && (
                         <button
@@ -267,7 +267,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
                   <select
                     value={solvencyToken}
                     onChange={e => setSolvencyToken(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-xl border border-black/10 text-[13px] bg-white outline-none focus:border-[#25D366]"
+                    className="w-full px-3 py-2 rounded-xl border border-black/10 text-[13px] bg-white outline-none focus:border-[#1C1C1E]"
                   >
                     <option value="DAI">zkDAI (Aztec)</option>
                     <option value="USDC">zkUSDC (Aztec)</option>
@@ -281,7 +281,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
                     value={solvencyThreshold}
                     onChange={e => setSolvencyThreshold(e.target.value)}
                     placeholder="1000"
-                    className="w-full px-3 py-2 rounded-xl border border-black/10 text-[13px] font-mono outline-none focus:border-[#25D366]"
+                    className="w-full px-3 py-2 rounded-xl border border-black/10 text-[13px] font-mono outline-none focus:border-[#1C1C1E]"
                   />
                 </div>
               </div>
@@ -290,7 +290,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
                 type="button"
                 disabled={generatingSolvency}
                 onClick={handleGenerateSolvency}
-                className="w-full py-3 rounded-xl bg-[#25D366] text-white font-bold text-[14px] hover:bg-[#128C7E] shadow transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-[#1C1C1E] text-white font-bold text-[14px] hover:bg-[#1C1C1E] shadow transition-colors flex items-center justify-center gap-2"
               >
                 {generatingSolvency ? (
                   <>
@@ -307,7 +307,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
             {solvencyResult && (
               <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-200">
                 <div className="flex items-center gap-2 text-emerald-800 font-bold text-[14px] mb-2">
-                  <Check size={16} className="text-[#25D366]" />
+                  <Check size={16} className="text-[#1C1C1E]" />
                   Atestación ZK Verificada: {solvencyResult.isSolvent ? 'SOLVENTE' : 'FONDOS INSUFICIENTES'}
                 </div>
                 <p className="text-[12px] text-emerald-900 font-mono mb-2">
@@ -334,7 +334,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
                 type="button"
                 disabled={generatingOrigin}
                 onClick={handleGenerateCleanOrigin}
-                className="w-full py-3 rounded-xl bg-[#128C7E] text-white font-bold text-[14px] hover:bg-[#00a884] shadow transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-[#1C1C1E] text-white font-bold text-[14px] hover:bg-[#1C1C1E] shadow transition-colors flex items-center justify-center gap-2"
               >
                 {generatingOrigin ? (
                   <>
@@ -351,7 +351,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
             {originResult && (
               <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-200">
                 <div className="flex items-center gap-2 text-emerald-800 font-bold text-[14px] mb-1">
-                  <ShieldCheck size={18} className="text-[#25D366]" />
+                  <ShieldCheck size={18} className="text-[#1C1C1E]" />
                   Veredicto Institucional: {originResult.complianceVerdict}
                 </div>
                 <p className="text-[12px] text-emerald-900 font-semibold mb-2">

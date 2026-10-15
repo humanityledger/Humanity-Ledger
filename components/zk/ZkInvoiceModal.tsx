@@ -143,7 +143,7 @@ export function ZkInvoiceModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-black/[0.06] pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#25D366]/10 flex items-center justify-center text-[#25D366]">
+            <div className="w-10 h-10 rounded-2xl bg-[#1C1C1E]/10 flex items-center justify-center text-[#1C1C1E]">
               <FileText size={20} strokeWidth={2.5} />
             </div>
             <div>
@@ -175,7 +175,7 @@ export function ZkInvoiceModal({
                 <span
                   className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase ${
                     existingInvoice.status === 'paid'
-                      ? 'bg-[#25D366]/20 text-[#25D366]'
+                      ? 'bg-[#1C1C1E]/20 text-[#1C1C1E]'
                       : 'bg-amber-100 text-amber-700'
                   }`}
                 >
@@ -216,7 +216,7 @@ export function ZkInvoiceModal({
               </div>
               <div className="text-right">
                 <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wider block">Total Amount</span>
-                <span className="text-[20px] font-bold text-[#25D366] font-mono">
+                <span className="text-[20px] font-bold text-[#1C1C1E] font-mono">
                   {existingInvoice.totalAmount} {existingInvoice.token}
                 </span>
               </div>
@@ -226,10 +226,10 @@ export function ZkInvoiceModal({
               <div className="bg-[#f0f2f5] rounded-2xl p-4 space-y-2">
                 <div className="flex justify-between text-[12px]">
                   <span className="font-semibold text-gray-800">{proofStep}</span>
-                  <span className="font-mono text-[#25D366] font-bold">{proofProgress}%</span>
+                  <span className="font-mono text-[#1C1C1E] font-bold">{proofProgress}%</span>
                 </div>
                 <div className="w-full bg-black/10 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-[#25D366] h-full transition-all duration-300" style={{ width: `${proofProgress}%` }} />
+                  <div className="bg-[#1C1C1E] h-full transition-all duration-300" style={{ width: `${proofProgress}%` }} />
                 </div>
               </div>
             )}
@@ -238,7 +238,7 @@ export function ZkInvoiceModal({
               <button
                 onClick={handlePayInvoice}
                 disabled={isPaying}
-                className="w-full py-3.5 bg-[#25D366] text-white text-[14px] font-bold rounded-2xl hover:bg-[#20ba59] transition flex items-center justify-center gap-2 shadow-sm"
+                className="w-full py-3.5 bg-[#1C1C1E] text-white text-[14px] font-bold rounded-2xl hover:bg-[#000000] transition flex items-center justify-center gap-2 shadow-sm"
               >
                 <Shield size={16} /> Settle Privately via Aztec ({existingInvoice.totalAmount} {existingInvoice.token})
               </button>
@@ -254,7 +254,7 @@ export function ZkInvoiceModal({
                 required
                 value={title}
                 onChange={e => setTitle(e.target.value)}
-                className="w-full mt-1 bg-[#f0f2f5] border border-black/[0.06] rounded-xl px-3 py-2 text-[13px] font-semibold text-gray-900 outline-none focus:border-[#25D366]"
+                className="w-full mt-1 bg-[#f0f2f5] border border-black/[0.06] rounded-xl px-3 py-2 text-[13px] font-semibold text-gray-900 outline-none focus:border-[#1C1C1E]"
               />
             </div>
 
@@ -267,7 +267,7 @@ export function ZkInvoiceModal({
                   value={recipientTag}
                   onChange={e => setRecipientTag(e.target.value)}
                   placeholder="zk:client_name"
-                  className="w-full mt-1 bg-[#f0f2f5] border border-black/[0.06] rounded-xl px-3 py-2 text-[13px] font-mono outline-none focus:border-[#25D366]"
+                  className="w-full mt-1 bg-[#f0f2f5] border border-black/[0.06] rounded-xl px-3 py-2 text-[13px] font-mono outline-none focus:border-[#1C1C1E]"
                 />
               </div>
               <div>
@@ -291,7 +291,7 @@ export function ZkInvoiceModal({
                 <button
                   type="button"
                   onClick={handleAddItem}
-                  className="text-[11px] font-bold text-[#25D366] hover:underline flex items-center gap-1"
+                  className="text-[11px] font-bold text-[#1C1C1E] hover:underline flex items-center gap-1"
                 >
                   <Plus size={12} /> Add Item
                 </button>
@@ -305,7 +305,7 @@ export function ZkInvoiceModal({
                     placeholder="Description of milestone or work"
                     value={item.description}
                     onChange={e => handleUpdateItem(idx, 'description', e.target.value)}
-                    className="flex-3 bg-[#f0f2f5] border border-black/[0.06] rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#25D366]"
+                    className="flex-3 bg-[#f0f2f5] border border-black/[0.06] rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#1C1C1E]"
                   />
                   <input
                     type="number"
@@ -351,7 +351,7 @@ export function ZkInvoiceModal({
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-[#25D366] text-white text-[14px] font-bold rounded-2xl hover:bg-[#20ba59] transition flex items-center justify-center gap-2 shadow-sm"
+              className="w-full py-3.5 bg-[#1C1C1E] text-white text-[14px] font-bold rounded-2xl hover:bg-[#000000] transition flex items-center justify-center gap-2 shadow-sm"
             >
               <FileText size={16} /> Generate & Send Shielded Invoice
             </button>

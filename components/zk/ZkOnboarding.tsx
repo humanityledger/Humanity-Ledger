@@ -33,7 +33,7 @@ function StepDots({ current }: { current: number }) {
           style={{
             width:  i === current ? 20 : 6,
             height: 6,
-            background: i <= current ? '#25D366' : '#EBE5DC',
+            background: i <= current ? '#1C1C1E' : '#EBE5DC',
           }}
         />
       ))}
@@ -87,7 +87,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
           animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.05, 1] }}
           transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
           className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-lg"
-          style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}
+          style={{ background: '#1C1C1E' }}
         >
           <Shield size={44} className="text-white" strokeWidth={1.5} />
         </motion.div>
@@ -107,7 +107,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
             { icon: Wallet, text: 'Send DAI, USDC, ETH to any zk:handle' },
           ].map(({ icon: Icon, text }) => (
             <div key={text} className="flex items-start gap-3 bg-[#f0f2f5] rounded-2xl px-4 py-3">
-              <Icon size={15} className="text-[#25D366] flex-shrink-0 mt-0.5" strokeWidth={2} />
+              <Icon size={15} className="text-[#1C1C1E] flex-shrink-0 mt-0.5" strokeWidth={2} />
               <span className="text-[13px] text-gray-700 font-medium">{text}</span>
             </div>
           ))}
@@ -116,7 +116,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
         <button
           onClick={() => setStepIdx(1)}
           className="w-full py-4 rounded-2xl font-bold text-[15px] text-white"
-          style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}
+          style={{ background: '#1C1C1E' }}
         >
           Get Started <ArrowRight className="inline ml-1" size={16} />
         </button>
@@ -133,8 +133,8 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
         </div>
 
         <div>
-          <div className="flex items-center bg-[#f0f2f5] rounded-2xl overflow-hidden border-2 border-transparent focus-within:border-[#25D366] transition-colors">
-            <span className="pl-4 pr-1 text-[15px] font-bold text-[#25D366]">zk:</span>
+          <div className="flex items-center bg-[#f0f2f5] rounded-2xl overflow-hidden border-2 border-transparent focus-within:border-[#1C1C1E] transition-colors">
+            <span className="pl-4 pr-1 text-[15px] font-bold text-[#1C1C1E]">zk:</span>
             <input
               type="text"
               autoFocus
@@ -152,7 +152,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
             <p className="text-[11px] text-red-500 mt-1.5 ml-1">{handleErr}</p>
           )}
           {handle && !handleErr && (
-            <p className="text-[11px] text-[#25D366] mt-1.5 ml-1 flex items-center gap-1">
+            <p className="text-[11px] text-[#1C1C1E] mt-1.5 ml-1 flex items-center gap-1">
               <CheckCircle size={10} />
               Your handle: zk:{handle.startsWith('zk:') ? handle.slice(3) : handle}
             </p>
@@ -173,7 +173,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
             onClick={handleValidate}
             disabled={!handle || handle.length < 3}
             className="flex-1 py-3.5 rounded-2xl font-bold text-[14px] text-white disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}
+            style={{ background: '#1C1C1E' }}
           >
             Reserve Handle
           </button>
@@ -194,7 +194,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
           {(['DAI', 'USDC', 'ETH'] as SupportedToken[]).map(t => (
             <button key={t} onClick={() => setFundToken(t)}
               className="flex-1 py-2.5 rounded-xl text-[13px] font-bold transition-all"
-              style={{ background: fundToken === t ? '#25D366' : '#f0f2f5', color: fundToken === t ? '#fff' : '#6B7280' }}>
+              style={{ background: fundToken === t ? '#1C1C1E' : '#f0f2f5', color: fundToken === t ? '#fff' : '#6B7280' }}>
               {t}
             </button>
           ))}
@@ -203,7 +203,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
         <div className="flex gap-2">
           <input
             type="number" value={fundAmount} onChange={e => setFundAmount(e.target.value)}
-            className="flex-1 bg-[#f0f2f5] rounded-2xl px-4 py-3 text-[16px] font-bold text-gray-900 outline-none border-2 border-transparent focus:border-[#25D366] transition-colors"
+            className="flex-1 bg-[#f0f2f5] rounded-2xl px-4 py-3 text-[16px] font-bold text-gray-900 outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors"
           />
           {['50', '100', '500'].map(v => (
             <button key={v} onClick={() => setFundAmount(v)}
@@ -215,16 +215,16 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
 
         {shieldStep && !shieldDone && (
           <div className="flex items-center gap-2 text-[12px] text-gray-500 bg-[#f0f2f5] rounded-xl px-3 py-2.5">
-            <motion.div className="w-3 h-3 border-2 border-[#25D366] border-t-transparent rounded-full flex-shrink-0"
+            <motion.div className="w-3 h-3 border-2 border-[#1C1C1E] border-t-transparent rounded-full flex-shrink-0"
               animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
             {shieldStep}
           </div>
         )}
 
         {shieldDone && (
-          <div className="flex items-center gap-2 bg-[#25D366]/10 rounded-xl px-3 py-3">
-            <CheckCircle size={16} className="text-[#25D366]" strokeWidth={2.5} />
-            <span className="text-[13px] font-semibold text-[#25D366]">
+          <div className="flex items-center gap-2 bg-[#1C1C1E]/10 rounded-xl px-3 py-3">
+            <CheckCircle size={16} className="text-[#1C1C1E]" strokeWidth={2.5} />
+            <span className="text-[13px] font-semibold text-[#1C1C1E]">
               {fundAmount} {fundToken} shielded successfully!
             </span>
           </div>
@@ -238,13 +238,13 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
           {!shieldDone ? (
             <button onClick={handleShield} disabled={shielding || !fundAmount}
               className="flex-1 py-3.5 rounded-2xl font-bold text-[14px] text-white disabled:opacity-60"
-              style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}>
+              style={{ background: '#1C1C1E' }}>
               {shielding ? 'Shielding…' : `Shield ${fundAmount} ${fundToken}`}
             </button>
           ) : (
             <button onClick={() => setStepIdx(3)}
               className="flex-1 py-3.5 rounded-2xl font-bold text-[14px] text-white"
-              style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}>
+              style={{ background: '#1C1C1E' }}>
               Continue <ArrowRight className="inline ml-1" size={15} />
             </button>
           )}
@@ -295,7 +295,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
         <button
           onClick={() => setStepIdx(4)}
           className="w-full py-4 rounded-2xl font-bold text-[15px] text-white"
-          style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}
+          style={{ background: '#1C1C1E' }}
         >
           I Understand — Let's Go!
         </button>
@@ -309,7 +309,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 500, damping: 20 }}
           className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-lg"
-          style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}
+          style={{ background: '#1C1C1E' }}
         >
           <CheckCircle size={44} className="text-white" strokeWidth={1.5} />
         </motion.div>
@@ -317,7 +317,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
         <div>
           <h2 className="text-[24px] font-bold text-gray-900">You're All Set!</h2>
           <p className="text-[14px] text-gray-500 mt-2 leading-relaxed max-w-[260px] mx-auto">
-            Your zk.money identity <strong className="text-[#25D366]">zk:{handle}</strong> is ready.
+            Your zk.money identity <strong className="text-[#1C1C1E]">zk:{handle}</strong> is ready.
             Start sending private payments from any conversation.
           </p>
         </div>
@@ -326,7 +326,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
           <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Your Identity</div>
           <div className="flex justify-between text-[12px]">
             <span className="text-gray-500">zk Handle</span>
-            <span className="font-bold text-[#25D366]">zk:{handle.startsWith('zk:') ? handle.slice(3) : handle}</span>
+            <span className="font-bold text-[#1C1C1E]">zk:{handle.startsWith('zk:') ? handle.slice(3) : handle}</span>
           </div>
           <div className="flex justify-between text-[12px]">
             <span className="text-gray-500">Network</span>
@@ -334,14 +334,14 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
           </div>
           <div className="flex justify-between text-[12px]">
             <span className="text-gray-500">Privacy</span>
-            <span className="font-semibold text-[#25D366]">Maximum (UltraPlonk)</span>
+            <span className="font-semibold text-[#1C1C1E]">Maximum (UltraPlonk)</span>
           </div>
         </div>
 
         <button
           onClick={() => onComplete(handle.startsWith('zk:') ? handle : `zk:${handle}`)}
           className="w-full py-4 rounded-2xl font-bold text-[15px] text-white"
-          style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}
+          style={{ background: '#1C1C1E' }}
         >
           Open Shielded Wallet
         </button>

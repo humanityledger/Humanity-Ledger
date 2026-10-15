@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Terminal, Shield, RefreshCw, X, Play, Cpu, Check, AlertTriangle } from 'lucide-react';
+import { Terminal,  RefreshCw, X, Play, Cpu, Check, AlertTriangle } from 'lucide-react';
 import { executeAztecTerminalCommand, CommandOutput } from '@/lib/zk/zkDevtools';
 
 interface ZkTerminalProps {
@@ -64,7 +64,7 @@ export function ZkTerminal({ userAddress, onClose, className = '' }: ZkTerminalP
       {/* Header */}
       <div className="bg-[#f0f2f5] px-6 py-4 flex items-center justify-between border-b border-black/[0.06]">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gray-900 text-[#25D366] flex items-center justify-center font-mono text-[14px]">
+          <div className="w-8 h-8 rounded-xl bg-gray-900 text-[#1C1C1E] flex items-center justify-center font-mono text-[14px]">
             &gt;_
           </div>
           <div>
@@ -73,8 +73,8 @@ export function ZkTerminal({ userAddress, onClose, className = '' }: ZkTerminalP
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 text-[11px] font-bold text-[#25D366] bg-[#25D366]/10 px-2.5 py-1 rounded-full">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse" /> PXE Online
+          <span className="flex items-center gap-1.5 text-[11px] font-bold text-[#1C1C1E] bg-[#1C1C1E]/10 px-2.5 py-1 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#1C1C1E] " /> PXE Online
           </span>
           {onClose && (
             <button
@@ -96,7 +96,7 @@ export function ZkTerminal({ userAddress, onClose, className = '' }: ZkTerminalP
           <button
             key={cmd}
             onClick={() => handleQuickCommand(cmd)}
-            className="px-2.5 py-1 rounded-lg bg-white border border-black/[0.06] text-gray-700 font-mono hover:border-[#25D366] hover:text-[#25D366] transition flex-shrink-0"
+            className="px-2.5 py-1 rounded-lg bg-white border border-black/[0.06] text-gray-700 font-mono hover:border-[#1C1C1E] hover:text-[#1C1C1E] transition flex-shrink-0"
           >
             {cmd}
           </button>
@@ -111,7 +111,7 @@ export function ZkTerminal({ userAddress, onClose, className = '' }: ZkTerminalP
         {history.map((h, i) => (
           <div key={i} className="space-y-1">
             <div className="flex items-center gap-2 text-gray-400">
-              <span className="text-[#25D366] font-bold">aztec-pxe$</span>
+              <span className="text-[#1C1C1E] font-bold">aztec-pxe$</span>
               <span className="text-gray-800 font-bold">{h.command}</span>
               <span className="text-[10px] ml-auto">
                 {new Date(h.timestamp).toLocaleTimeString()}
@@ -130,7 +130,7 @@ export function ZkTerminal({ userAddress, onClose, className = '' }: ZkTerminalP
         ))}
         {isExecuting && (
           <div className="flex items-center gap-2 text-gray-400">
-            <RefreshCw size={12} className="animate-spin text-[#25D366]" />
+            <RefreshCw size={12} className="animate-spin text-[#1C1C1E]" />
             <span>Evaluating constraints & proof transcript...</span>
           </div>
         )}
@@ -138,7 +138,7 @@ export function ZkTerminal({ userAddress, onClose, className = '' }: ZkTerminalP
 
       {/* Command Input Bar */}
       <form onSubmit={handleCommand} className="p-4 bg-white border-t border-black/[0.06] flex items-center gap-2">
-        <span className="text-[#25D366] font-mono font-bold pl-2">&gt;</span>
+        <span className="text-[#1C1C1E] font-mono font-bold pl-2">&gt;</span>
         <input
           type="text"
           value={input}
@@ -153,7 +153,7 @@ export function ZkTerminal({ userAddress, onClose, className = '' }: ZkTerminalP
           className={`px-4 py-2 rounded-xl text-[12px] font-bold font-mono transition ${
             isExecuting || !input.trim()
               ? 'bg-gray-100 text-gray-400'
-              : 'bg-[#25D366] text-white hover:bg-[#20ba59]'
+              : 'bg-[#1C1C1E] text-white hover:bg-[#000000]'
           }`}
         >
           Execute

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, Shield, X, Check, CheckCheck, ExternalLink, Trash2 } from 'lucide-react';
+import { Bell, Lock, X, Check, CheckCheck, ExternalLink, Trash2 } from 'lucide-react';
 import {
   getZkNotifications,
   markNotificationsRead,
@@ -75,7 +75,7 @@ export function ZkNotificationBell({ className = '' }: { className?: string }) {
       >
         <Bell size={18} className="text-gray-600" strokeWidth={2} />
         {unread > 0 && (
-          <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-[#25D366] text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none">
+          <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-[#1C1C1E] text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
@@ -93,10 +93,10 @@ export function ZkNotificationBell({ className = '' }: { className?: string }) {
             {/* Header */}
             <div className="px-4 py-3 border-b border-black/[0.06] flex items-center justify-between bg-[#FAFAFA]">
               <div className="flex items-center gap-2">
-                <Shield size={14} className="text-[#25D366]" strokeWidth={2.5} />
+                <Lock size={14} className="text-[#1C1C1E]" strokeWidth={2.5} />
                 <span className="text-[13px] font-black text-gray-900">zk.money Alerts</span>
                 {unread > 0 && (
-                  <span className="text-[10px] font-bold bg-[#25D366]/15 text-[#25D366] px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-bold bg-black/5 text-[#1C1C1E] px-2 py-0.5 rounded-full">
                     {unread} new
                   </span>
                 )}
@@ -117,7 +117,7 @@ export function ZkNotificationBell({ className = '' }: { className?: string }) {
             <div className="max-h-[440px] overflow-y-auto">
               {notifications.length === 0 ? (
                 <div className="text-center py-12 flex flex-col items-center gap-2">
-                  <Shield size={28} strokeWidth={1.5} className="text-gray-300" />
+                  <Lock size={28} strokeWidth={1.5} className="text-gray-300" />
                   <p className="text-[13px] text-gray-400 font-semibold">No zk.money alerts yet</p>
                   <p className="text-[11px] text-gray-300 max-w-xs">Send or receive private payments to see activity here</p>
                 </div>
@@ -128,7 +128,7 @@ export function ZkNotificationBell({ className = '' }: { className?: string }) {
                     return (
                       <div
                         key={notif.id}
-                        className={`flex items-start gap-3 px-4 py-3 hover:bg-[#FAFAFA] transition ${!notif.read ? 'bg-[#25D366]/5' : ''}`}
+                        className={`flex items-start gap-3 px-4 py-3 hover:bg-[#FAFAFA] transition ${!notif.read ? 'bg-black/[0.02]' : ''}`}
                       >
                         <span className="text-[18px] leading-none mt-0.5 flex-shrink-0">{emoji}</span>
                         <div className="flex-1 min-w-0">
@@ -149,7 +149,7 @@ export function ZkNotificationBell({ className = '' }: { className?: string }) {
                             </a>
                           )}
                         </div>
-                        {!notif.read && <span className="w-2 h-2 rounded-full bg-[#25D366] mt-1 flex-shrink-0" />}
+                        {!notif.read && <span className="w-1.5 h-1.5 rounded-full bg-[#1C1C1E] mt-1 flex-shrink-0" />}
                       </div>
                     );
                   })}

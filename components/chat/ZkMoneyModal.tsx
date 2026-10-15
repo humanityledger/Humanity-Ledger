@@ -183,37 +183,37 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
           style={{ maxHeight: '90vh', overflowY: 'auto' }}
         >
           {/* Header */}
-          <div className="relative px-6 pt-6 pb-4 bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] text-white">
+          <div className="relative px-6 pt-6 pb-4 bg-white border-b border-black/[0.06] text-[#1C1C1E]">
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-white"
+              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center transition-colors text-gray-500 hover:text-black"
             >
               <X size={16} />
             </button>
 
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#8B5CF6] to-[#10B981] flex items-center justify-center shadow-md">
-                <Shield size={20} className="text-white" />
+              <div className="w-9 h-9 rounded-2xl bg-[#1C1C1E] flex items-center justify-center shadow-sm">
+                <Lock size={18} className="text-white" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-[17px] font-bold text-white tracking-tight">zk.money</h3>
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-[#10B981]/20 text-[#34D399] px-2 py-0.5 rounded-full border border-[#10B981]/30">
+                  <h3 className="text-[17px] font-bold text-gray-900 tracking-tight">zk.money</h3>
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-black/5 text-[#1C1C1E] px-2 py-0.5 rounded-full border border-black/10">
                     Aztec Rollup
                   </span>
                 </div>
-                <p className="text-[12px] text-white/70">Private Stablecoin Payments</p>
+                <p className="text-[12px] text-gray-500 font-medium">Private Stablecoin Payments</p>
               </div>
             </div>
 
             {/* Mode switch */}
-            <div className="mt-3 grid grid-cols-2 p-1 bg-white/10 rounded-xl">
+            <div className="mt-3 grid grid-cols-2 p-1 bg-[#F2F2F7] rounded-xl">
               <button
                 type="button"
                 onClick={() => setTransferMode('instant')}
                 className={`py-1.5 text-[12px] font-bold rounded-lg transition-all ${
-                  transferMode === 'instant' ? 'bg-[#25D366] text-white shadow-sm' : 'text-white/70 hover:text-white'
+                  transferMode === 'instant' ? 'bg-[#1C1C1E] text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 Instant Transfer
@@ -222,19 +222,19 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
                 type="button"
                 onClick={() => setTransferMode('escrow')}
                 className={`py-1.5 text-[12px] font-bold rounded-lg transition-all ${
-                  transferMode === 'escrow' ? 'bg-[#25D366] text-white shadow-sm' : 'text-white/70 hover:text-white'
+                  transferMode === 'escrow' ? 'bg-[#1C1C1E] text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 Shielded Escrow
               </button>
             </div>
 
-            <div className="mt-2.5 flex items-center justify-between p-2.5 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10">
+            <div className="mt-2.5 flex items-center justify-between p-2.5 rounded-xl bg-[#FAFAFA] border border-black/[0.06]">
               <div className="flex items-center gap-2">
-                <Lock size={13} className="text-[#34D399]" />
-                <span className="text-[12px] text-white/80 font-medium">Shielded Balance</span>
+                <Lock size={13} className="text-gray-600" />
+                <span className="text-[12px] text-gray-600 font-medium">Shielded Balance</span>
               </div>
-              <span className="text-[14px] font-bold font-mono text-white">
+              <span className="text-[14px] font-bold font-mono text-gray-900">
                 {currentBalance} {selectedToken}
               </span>
             </div>
@@ -245,7 +245,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
             {completedTx ? (
               /* Success State */
               <div className="py-4 text-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-[#10B981]/15 text-[#10B981] mx-auto flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full bg-black/5 text-[#1C1C1E] mx-auto flex items-center justify-center">
                   <Check size={32} />
                 </div>
                 <div>
@@ -263,7 +263,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
                 <div className="p-3 bg-[#F2F2F7] rounded-xl text-left space-y-1.5 text-[12px] font-mono">
                   <div className="flex justify-between text-[#8E8E93]">
                     <span>Status:</span>
-                    <span className="text-[#10B981] font-bold">Shielded Note Created</span>
+                    <span className="text-[#1C1C1E] font-bold">Shielded Note Created</span>
                   </div>
                   <div className="flex justify-between text-[#8E8E93]">
                     <span>Tx Hash:</span>
@@ -326,7 +326,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowRecipientPicker(true)}
-                      className="text-[11px] font-bold text-[#25D366] hover:underline flex items-center gap-1"
+                      className="text-[11px] font-bold text-[#1C1C1E] hover:underline flex items-center gap-1"
                     >
                       <Users size={12} /> Address Book
                     </button>
@@ -337,10 +337,10 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
                       value={recipientTag}
                       onChange={e => setRecipientTag(e.target.value)}
                       placeholder="zk:username or 0x..."
-                      className="w-full bg-[#F2F2F7] rounded-xl px-4 py-2.5 text-[14px] font-mono text-[#1C1C1E] outline-none focus:ring-2 focus:ring-[#25D366] transition-all"
+                      className="w-full bg-[#F2F2F7] rounded-xl px-4 py-2.5 text-[14px] font-mono text-[#1C1C1E] outline-none focus:ring-2 focus:ring-[#1C1C1E] transition-all"
                     />
                     <div className="absolute right-3 top-2.5">
-                      <Shield size={16} className="text-[#25D366]" />
+                      <Lock size={16} className="text-gray-400" />
                     </div>
                   </div>
                 </div>
@@ -359,7 +359,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setAmount(currentBalance.replace(/,/g, ''))}
-                      className="text-[11px] font-bold text-[#25D366] hover:underline"
+                      className="text-[11px] font-bold text-[#1C1C1E] hover:underline"
                     >
                       Use Max ({currentBalance})
                     </button>
@@ -371,7 +371,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
                       value={amount}
                       onChange={e => setAmount(e.target.value)}
                       placeholder="0.00"
-                      className="w-full bg-[#F2F2F7] rounded-xl px-4 py-2.5 text-[16px] font-bold text-[#1C1C1E] outline-none focus:ring-2 focus:ring-[#25D366] transition-all"
+                      className="w-full bg-[#F2F2F7] rounded-xl px-4 py-2.5 text-[16px] font-bold text-[#1C1C1E] outline-none focus:ring-2 focus:ring-[#1C1C1E] transition-all"
                     />
                     <span className="absolute right-4 top-2.5 text-[14px] font-bold text-[#8E8E93]">
                       {selectedToken}
@@ -390,7 +390,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
                       onChange={e => setEscrowConditions(e.target.value)}
                       placeholder="Specify release milestones (e.g. Design delivery, Code review)..."
                       rows={2}
-                      className="w-full bg-[#F2F2F7] rounded-xl px-4 py-2 text-[13px] text-[#1C1C1E] outline-none focus:ring-2 focus:ring-[#25D366] transition-all resize-none"
+                      className="w-full bg-[#F2F2F7] rounded-xl px-4 py-2 text-[13px] text-[#1C1C1E] outline-none focus:ring-2 focus:ring-[#1C1C1E] transition-all resize-none"
                     />
                   </div>
                 ) : (
@@ -404,7 +404,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
                       onChange={e => setMemo(e.target.value)}
                       placeholder="Private settlement note..."
                       maxLength={60}
-                      className="w-full bg-[#F2F2F7] rounded-xl px-4 py-2 text-[13px] text-[#1C1C1E] outline-none focus:ring-2 focus:ring-[#25D366] transition-all"
+                      className="w-full bg-[#F2F2F7] rounded-xl px-4 py-2 text-[13px] text-[#1C1C1E] outline-none focus:ring-2 focus:ring-[#1C1C1E] transition-all"
                     />
                   </div>
                 )}
@@ -412,7 +412,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
                 {/* Fee & Privacy Row */}
                 <div className="flex items-center justify-between text-[11px] text-gray-500 bg-gray-50 p-2.5 rounded-xl border border-black/[0.04]">
                   <span className="flex items-center gap-1">
-                    <Lock size={12} className="text-[#25D366]" />
+                    <Lock size={12} className="text-gray-600" />
                     Zero public leakage
                   </span>
                   <span>Aztec Sequencer Fee: <strong>{fee.totalUSD}</strong></span>
@@ -436,7 +436,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
                     </>
                   ) : (
                     <>
-                      <Zap size={16} className="text-[#25D366]" />
+                      <Zap size={16} className="text-white" />
                       <span>
                         {transferMode === 'escrow' ? `Lock ${selectedToken} in Escrow` : `Send Shielded ${selectedToken}`}
                       </span>

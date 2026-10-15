@@ -4622,16 +4622,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               <Avatar address={effectiveAddress} isMe={true} />
               <div className="flex flex-col">
                 <span className="text-[15px] font-bold text-[#000000] truncate max-w-[120px]">{getDisplayName(effectiveAddress)}</span>
-                <div className="flex items-center gap-1.5 text-[10px] text-[#25D366] font-semibold tracking-wide">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse" />
-                  LEDGER CHAT
+                <div className="flex items-center gap-1.5 text-[10px] text-black/45 font-bold tracking-wider uppercase">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#1C1C1E]" />
+                  Humanity Ledger
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-1">
               <ZkNotificationBell />
-              <button onClick={() => setShowZkWallet(true)} className="relative w-9 h-9 rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] flex items-center justify-center text-[#25D366] transition-colors" title="Shielded Aztec Wallet">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <button onClick={() => setShowZkWallet(true)} className="relative w-9 h-9 rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] transition-colors" title="Shielded Aztec Wallet">
+                <Lock size={16} />
               </button>
               <button onClick={() => setShowContactRequests(true)} className="relative w-9 h-9 rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] transition-colors" title="Contact Requests">
                 <Bell size={18} />
@@ -4883,7 +4883,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             />
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center bg-[#F2F2F7] p-8 text-center">
-              <div className="w-20 h-20 rounded-3xl bg-[#25D366]/10 flex items-center justify-center text-[#25D366] mb-4">
+              <div className="w-20 h-20 rounded-3xl bg-black/5 flex items-center justify-center text-[#1C1C1E] mb-4 border border-black/[0.04]">
                 <Users size={36} />
               </div>
               <h3 className="text-[20px] font-bold text-[#1C1C1E]">Select a Community</h3>
@@ -4963,10 +4963,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 {/* Aztec Shielded Wallet Quick Button */}
                 <button
                   onClick={() => setShowZkWallet(s => !s)}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${showZkWallet ? 'bg-[#25D366] text-white shadow-sm' : 'bg-[#f5f5f7] hover:bg-[#e5e5ea] text-[#25D366]'}`}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${showZkWallet ? 'bg-[#1C1C1E] text-white shadow-sm' : 'bg-[#f5f5f7] hover:bg-[#e5e5ea] text-[#1C1C1E]'}`}
                   title="Aztec Shielded Wallet"
                 >
-                  <Shield size={16} />
+                  <Lock size={16} />
                 </button>
                 <ZkNotificationBell />
 
@@ -5428,11 +5428,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             { id: 'sticker',   color: '#FFCC00', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>,      label: 'Stickers',       sublabel: 'Send a sticker',         onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
                             { id: 'poll',      color: '#10B981', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
                             // ── Crypto & Aztec Private Payments ──────────────────────────
-                            { id: 'zkmoney',   color: '#10B981', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, label: 'zk.money', sublabel: 'Private Aztec Transfer', onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
-                            { id: 'zkstream',  color: '#3B82F6', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>, label: 'Money Stream', sublabel: 'Continuous Aztec money stream', onClick: () => { setShowZkStreamModal(true); setShowAppDrawer(false); } },
-                            { id: 'zkinvoice', color: '#8B5CF6', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, label: 'Private Invoice', sublabel: 'Request shielded payment', onClick: () => { setShowZkInvoiceModal(true); setShowAppDrawer(false); } },
-                            { id: 'payment',   color: '#25D366', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>,     label: 'Payment',        sublabel: 'Send crypto',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
-                            { id: 'tip',       color: '#25D366', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, label: 'Creator Tip',  sublabel: 'Support peer with ETH/USDC', onClick: () => { setShowTipModal(true); setShowAppDrawer(false); } },
+                            { id: 'zkmoney',   color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>, label: 'zk.money', sublabel: 'Private Aztec Transfer', onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
+                            { id: 'zkstream',  color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>, label: 'Money Stream', sublabel: 'Continuous Aztec money stream', onClick: () => { setShowZkStreamModal(true); setShowAppDrawer(false); } },
+                            { id: 'zkinvoice', color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, label: 'Private Invoice', sublabel: 'Request shielded payment', onClick: () => { setShowZkInvoiceModal(true); setShowAppDrawer(false); } },
+                            { id: 'payment',   color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>,     label: 'Payment',        sublabel: 'Send crypto',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
+                            { id: 'tip',       color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, label: 'Creator Tip',  sublabel: 'Support peer with ETH/USDC', onClick: () => { setShowTipModal(true); setShowAppDrawer(false); } },
                             // ── Utilities ────────────────────────────────────────────
                             { id: 'location',  color: '#32D74B', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,    label: 'Location',       sublabel: 'Share your location',    onClick: () => { 
                               setShowAppDrawer(false);
@@ -5519,11 +5519,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   )}
 
                   {/* ── Main Input Row (WhatsApp/Signal style) ── */}
-                  <div className="flex items-end gap-2 px-2 pb-3 pt-2 w-full relative z-40 bg-[#F0F2F5]">
+                  <div
+                    className="flex items-end gap-2 px-2 pt-2 w-full relative z-40 bg-[#F0F2F5]"
+                    style={{ paddingBottom: 'max(14px, calc(0.75rem + env(safe-area-inset-bottom, 0px)))' }}
+                  >
                     <button
                       type="button"
                       onClick={() => { setShowAppDrawer(d => !d); setShowEmojiPicker(false); }}
-                      className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all duration-200 mb-0.5 ${showAppDrawer ? 'bg-[#25D366] text-white rotate-45 shadow-lg' : 'bg-white text-[#54656F] hover:bg-[#F0F2F5] shadow-sm border border-black/5'}`}
+                      className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all duration-200 mb-0.5 ${showAppDrawer ? 'bg-[#1C1C1E] text-white rotate-45 shadow-lg' : 'bg-white text-[#54656F] hover:bg-[#F0F2F5] shadow-sm border border-black/5'}`}
                     >
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </button>
@@ -5552,18 +5555,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     </AnimatePresence>
 
                     {/* WhatsApp-style gray pill container */}
-                    <div className="flex-1 bg-white rounded-[24px] flex items-center relative shadow-[0_1px_1px_rgba(11,20,26,0.1)] border border-black/[0.08] focus-within:border-[#25D366]/40 min-h-[44px] max-h-[120px] transition-colors">
+                    <div className="flex-1 bg-white rounded-[24px] flex items-center relative shadow-[0_1px_1px_rgba(11,20,26,0.1)] border border-black/[0.08] focus-within:border-[#1C1C1E]/40 min-h-[46px] max-h-[120px] transition-colors">
                       {/* Emoji button inside pill on the left */}
                       <button
                         type="button"
                         onClick={() => { setShowEmojiPicker(d => !d); setShowAppDrawer(false); }}
-                        className={`w-10 h-10 shrink-0 self-center ml-1 flex items-center justify-center transition-all ${showEmojiPicker ? 'text-[#25D366]' : 'text-[#8696A0]'} hover:text-[#25D366]`}
+                        className={`w-10 h-10 shrink-0 self-center ml-1 flex items-center justify-center transition-all ${showEmojiPicker ? 'text-[#1C1C1E]' : 'text-[#8696A0]'} hover:text-[#1C1C1E]`}
                       >
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                       </button>
 
                       {isRecording ? (
-                        <div className="flex-1 flex items-center justify-between px-3 py-2 h-[44px]">
+                        <div className="flex-1 flex items-center justify-between px-3 py-2 h-[46px]">
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-[#ff3b30] animate-pulse" />
                             <span className="text-[14px] font-mono font-medium text-[#ff3b30]">
@@ -5581,7 +5584,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             <button
                               type="button"
                               onClick={stopRecording}
-                              className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center text-white shadow-sm active:scale-95"
+                              className="w-8 h-8 rounded-full bg-[#1C1C1E] flex items-center justify-center text-white shadow-sm active:scale-95"
                             >
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="ml-0.5"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
                             </button>
@@ -5596,10 +5599,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             setInputText(val);
                             setShowBotSuggestions(val.startsWith('/') && val.length < 10);
                             if (!val) {
-                              e.target.style.height = '44px';
+                              e.target.style.height = '46px';
                             } else {
                               e.target.style.height = 'auto';
-                              e.target.style.height = `${Math.min(Math.max(e.target.scrollHeight, 44), 120)}px`;
+                              e.target.style.height = `${Math.min(Math.max(e.target.scrollHeight, 46), 120)}px`;
                             }
                             const now = Date.now();
                             if (now - lastTypingTimeRef.current > 3000 && val.trim().length > 0) {
@@ -5617,7 +5620,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                               e.preventDefault();
                               if (inputText.trim() && !isUploading) {
                                 handleSend(e as any);
-                                (e.target as HTMLTextAreaElement).style.height = '44px';
+                                (e.target as HTMLTextAreaElement).style.height = '46px';
                               }
                             }
                           }}
@@ -5625,7 +5628,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           placeholder={isUploading ? "Uploading..." : "Message"}
                           rows={1}
                           // [CRITICAL FIX] font-size: 16px prevents iOS Safari zoom on focus
-                          className="flex-1 bg-transparent px-3 py-[10px] text-[#111B21] focus:outline-none placeholder:text-[#8696A0] disabled:opacity-50 text-[16px] resize-none max-h-[120px] scrollbar-none leading-relaxed min-h-[44px]"
+                          className="flex-1 bg-transparent px-3 py-[11px] text-[#111B21] focus:outline-none placeholder:text-[#8696A0] disabled:opacity-50 text-[16px] resize-none max-h-[120px] scrollbar-none leading-relaxed min-h-[46px]"
                         />
                       )}
                     </div>
@@ -5641,7 +5644,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       <button
                         type="button"
                         onClick={startRecording}
-                        className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all bg-[#25D366] text-white shadow-md active:scale-90 mb-0.5"
+                        className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all bg-[#1C1C1E] text-white shadow-md active:scale-90 mb-0.5"
                       >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                       </button>

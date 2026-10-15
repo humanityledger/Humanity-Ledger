@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowUpRight, ArrowDownLeft, Shield, ExternalLink, Filter,
+  ArrowUpRight, ArrowDownLeft, Lock, ExternalLink, Filter,
   Search, Eye, EyeOff, Download, RefreshCw, CheckCircle, Clock,
   AlertCircle, Lock, Layers, Sparkles
 } from 'lucide-react';
@@ -114,8 +114,8 @@ export function ZkTransactionFeed({
       <div className="p-4 border-b border-black/[0.04] space-y-3 bg-gradient-to-b from-gray-50/50 to-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-[#25D366]/15 flex items-center justify-center">
-              <Shield size={16} className="text-[#25D366]" strokeWidth={2.5} />
+            <div className="w-8 h-8 rounded-xl bg-[#1C1C1E]/15 flex items-center justify-center">
+              <Lock size={16} className="text-[#1C1C1E]" strokeWidth={2.5} />
             </div>
             <div>
               <h3 className="text-[15px] font-bold tracking-tight">Aztec Activity Stream</h3>
@@ -137,7 +137,7 @@ export function ZkTransactionFeed({
               className="p-2 rounded-xl text-gray-500 hover:bg-black/5 hover:text-gray-800 transition-colors disabled:opacity-50"
               title="Refresh Transactions"
             >
-              <RefreshCw size={16} className={isRefreshing ? 'animate-spin text-[#25D366]' : ''} />
+              <RefreshCw size={16} className={isRefreshing ? 'animate-spin text-[#1C1C1E]' : ''} />
             </button>
             <button
               onClick={exportHistory}
@@ -159,7 +159,7 @@ export function ZkTransactionFeed({
               placeholder="Filter by handle, hash, or memo..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-[#f0f2f5] rounded-xl text-[12px] font-medium placeholder-gray-400 outline-none border-2 border-transparent focus:border-[#25D366] transition-colors"
+              className="w-full pl-9 pr-3 py-2 bg-[#f0f2f5] rounded-xl text-[12px] font-medium placeholder-gray-400 outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors"
             />
           </div>
 
@@ -211,7 +211,7 @@ export function ZkTransactionFeed({
                       className={`w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 ${
                         isSent
                           ? 'bg-rose-50 text-rose-500'
-                          : 'bg-[#25D366]/15 text-[#25D366]'
+                          : 'bg-[#1C1C1E]/15 text-[#1C1C1E]'
                       }`}
                     >
                       {isSent ? (
@@ -235,7 +235,7 @@ export function ZkTransactionFeed({
                         <span>{relativeTime(tx.timestamp)}</span>
                         <span>•</span>
                         <span className="flex items-center gap-0.5 text-gray-500">
-                          <CheckCircle size={10} className="text-[#25D366]" /> Confirmed (Aztec)
+                          <CheckCircle size={10} className="text-[#1C1C1E]" /> Confirmed (Aztec)
                         </span>
                       </div>
                     </div>
@@ -244,7 +244,7 @@ export function ZkTransactionFeed({
                   <div className="text-right">
                     <div
                       className={`text-[14px] font-black ${
-                        isSent ? 'text-gray-900' : 'text-[#25D366]'
+                        isSent ? 'text-gray-900' : 'text-[#1C1C1E]'
                       }`}
                     >
                       {hideAmounts ? '••••••' : `${isSent ? '-' : '+'}${tx.amount} ${tx.token}`}
@@ -255,7 +255,7 @@ export function ZkTransactionFeed({
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={e => e.stopPropagation()}
-                      className="text-[10px] text-gray-400 hover:text-[#25D366] flex items-center justify-end gap-0.5 mt-0.5 font-medium transition-colors"
+                      className="text-[10px] text-gray-400 hover:text-[#1C1C1E] flex items-center justify-end gap-0.5 mt-0.5 font-medium transition-colors"
                     >
                       Explorer <ExternalLink size={9} />
                     </a>
@@ -277,7 +277,7 @@ export function ZkTransactionFeed({
       {/* Footer Info Bar */}
       <div className="p-3 bg-gray-50 border-t border-black/[0.04] flex items-center justify-between text-[11px] text-gray-500 font-medium">
         <span className="flex items-center gap-1">
-          <Layers size={12} className="text-[#25D366]" />
+          <Layers size={12} className="text-[#1C1C1E]" />
           Sequencer Synced
         </span>
         <span className="font-mono text-[10px] text-gray-400">

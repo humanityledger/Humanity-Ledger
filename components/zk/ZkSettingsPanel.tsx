@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Settings, ChevronRight, Eye, EyeOff, Copy, Check,
   ExternalLink, RefreshCw, AlertTriangle, Zap, Lock, Key,
-  BarChart3, Layers, Waves, FileText, Terminal, QrCode,
+  BarChart3, Layers, Waves, FileText, QrCode,
   X, Sparkles, Globe, ArrowUpRight, ArrowDownLeft, Clock, Cpu, Server
 } from 'lucide-react';
 import { getShieldedBalances, syncBalanceFromAztec, calculatePrivacyScore, getZkTransactionHistory, ZkShieldedBalance } from '@/lib/zk/zkMoney';
@@ -14,7 +14,6 @@ import { deriveAztecKeySet, checkAztecNodeStatus } from '@/lib/zk/aztecPxe';
 import { getUserStreams } from '@/lib/zk/zkStreaming';
 import { getUserInvoices } from '@/lib/zk/zkInvoice';
 import { ZkBridgePortal } from './ZkBridgePortal';
-import { ZkTerminal } from './ZkTerminal';
 import { ZkPrivacyScore } from './ZkPrivacyScore';
 import { ZkStreamManager } from './ZkStreamManager';
 import { ZkShieldModal } from './ZkShieldModal';
@@ -26,12 +25,12 @@ interface ZkSettingsPanelProps {
   onClose: () => void;
 }
 
-type SettingsTab = 'overview' | 'identity' | 'keys' | 'privacy' | 'streams' | 'bridge' | 'mpc' | 'sequencer' | 'devtools';
+type SettingsTab = 'overview' | 'identity' | 'keys' | 'privacy' | 'streams' | 'bridge' | 'mpc' | 'sequencer';
 
 export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) {
   const [tab, setTab] = useState<SettingsTab>('overview');
   const [identity, setIdentity] = useState<ZkIdentity | null>(null);
-  const [balances, setBalances] = useState<ZkShieldedBalance>({ DAI: '0', USDC: '0', ETH: '0' });
+  const [balances, setBalances] = useState<ZkShieldedBalance>({ dai: '0.00', usdc: '0.00', eth: '0.000', lastUpdated: Date.now() });
   const [syncing, setSyncing] = useState(false);
   const [nodeStatus, setNodeStatus] = useState<any>(null);
   const [showKeys, setShowKeys] = useState(false);
@@ -88,18 +87,21 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
     setEditingHandle(false);
   };
 
-  const totalUSD = (parseFloat(balances.DAI || '0') + parseFloat(balances.USDC || '0') + parseFloat(balances.ETH || '0') * 3200).toFixed(2);
+  const totalUSD = (
+    parseFloat(balances.dai ?? (balances as any).DAI ?? '0') +
+    parseFloat(balances.usdc ?? (balances as any).USDC ?? '0') +
+    parseFloat(balances.eth ?? (balances as any).ETH ?? '0') * 3200
+  ).toFixed(2);
 
   const tabs: Array<{ key: SettingsTab; label: string; icon: React.ReactNode }> = [
     { key: 'overview', label: 'Overview', icon: <BarChart3 size={15} /> },
-    { key: 'identity', label: 'Identity', icon: <Shield size={15} /> },
+    { key: 'identity', label: 'Identity', icon: <Lock size={15} /> },
     { key: 'keys', label: 'Crypto Keys', icon: <Key size={15} /> },
     { key: 'privacy', label: 'Privacy', icon: <Lock size={15} /> },
     { key: 'streams', label: 'Streams', icon: <Waves size={15} /> },
     { key: 'bridge', label: 'Bridge', icon: <Layers size={15} /> },
     { key: 'mpc', label: 'MPC Setup', icon: <Cpu size={15} /> },
     { key: 'sequencer', label: 'Sequencer & V6', icon: <Server size={15} /> },
-    { key: 'devtools', label: 'Dev Console', icon: <Terminal size={15} /> },
   ];
 
   return (
@@ -112,12 +114,12 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
         className="bg-white rounded-3xl shadow-2xl border border-black/[0.08] w-full max-w-4xl max-h-[90vh] flex overflow-hidden"
       >
         {/* Left Sidebar */}
-        <div className="w-56 bg-[#FAFAFA] border-r border-black/[0.06] flex flex-col">
+        <div className="w-56 shrink-0 bg-[#FAFAFA] border-r border-black/[0.06] flex flex-col">
           {/* Header */}
           <div className="p-5 border-b border-black/[0.06]">
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center">
-                <Shield size={16} className="text-white" strokeWidth={2.5} />
+              <div className="w-8 h-8 rounded-xl bg-[#1C1C1E] flex items-center justify-center">
+                <Lock size={16} className="text-white" strokeWidth={2.2} />
               </div>
               <div>
                 <span className="text-[13px] font-black text-gray-900">zk.money</span>
@@ -134,13 +136,13 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                 onClick={() => setTab(t.key)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-[13px] font-semibold transition ${
                   tab === t.key
-                    ? 'bg-[#25D366]/10 text-[#25D366]'
+                    ? 'bg-[#1C1C1E] text-white'
                     : 'text-gray-600 hover:bg-black/5 hover:text-gray-900'
                 }`}
               >
-                <span className={tab === t.key ? 'text-[#25D366]' : 'text-gray-400'}>{t.icon}</span>
+                <span className={tab === t.key ? 'text-white' : 'text-gray-400'}>{t.icon}</span>
                 {t.label}
-                {tab === t.key && <ChevronRight size={13} className="ml-auto text-[#25D366]" />}
+                {tab === t.key && <ChevronRight size={13} className="ml-auto text-white/60" />}
               </button>
             ))}
           </nav>
@@ -148,8 +150,8 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
           {/* Node Status Indicator */}
           <div className="p-4 border-t border-black/[0.06]">
             <div className="flex items-center gap-2 text-[11px]">
-              <span className={`w-2 h-2 rounded-full ${nodeStatus?.status === 'synced' ? 'bg-[#25D366] animate-pulse' : 'bg-amber-500'}`} />
-              <span className="text-gray-500 font-medium">
+              <span className={`w-2 h-2 rounded-full ${nodeStatus?.status === 'synced' ? 'bg-[#1C1C1E]' : 'bg-gray-400'}`} />
+              <span className="text-gray-600 font-medium">
                 {nodeStatus?.status === 'synced' ? `Block #${nodeStatus.rollupBlockNumber}` : 'Connecting...'}
               </span>
             </div>
@@ -183,7 +185,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                     <button
                       onClick={handleSync}
                       disabled={syncing}
-                      className="flex items-center gap-1.5 text-[11px] font-bold text-[#25D366] hover:text-[#20ba59] transition"
+                      className="flex items-center gap-1.5 text-[11px] font-bold text-black/70 hover:text-black transition"
                     >
                       <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
                       Sync from Aztec
@@ -192,14 +194,13 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
 
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { token: 'DAI', balance: balances.DAI, icon: '🟡', usd: parseFloat(balances.DAI || '0') },
-                      { token: 'USDC', balance: balances.USDC, icon: '🔵', usd: parseFloat(balances.USDC || '0') },
-                      { token: 'ETH', balance: balances.ETH, icon: '💎', usd: parseFloat(balances.ETH || '0') * 3200 },
-                    ].map(({ token, balance, icon, usd }) => (
+                      { token: 'DAI', balance: balances.dai ?? (balances as any).DAI ?? '0.00', usd: parseFloat(balances.dai ?? (balances as any).DAI ?? '0') },
+                      { token: 'USDC', balance: balances.usdc ?? (balances as any).USDC ?? '0.00', usd: parseFloat(balances.usdc ?? (balances as any).USDC ?? '0') },
+                      { token: 'ETH', balance: balances.eth ?? (balances as any).ETH ?? '0.000', usd: parseFloat(balances.eth ?? (balances as any).ETH ?? '0') * 3200 },
+                    ].map(({ token, balance, usd }) => (
                       <div key={token} className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-4">
                         <div className="flex items-center gap-1.5 mb-2">
-                          <span className="text-base">{icon}</span>
-                          <span className="text-[11px] font-bold text-gray-500">zk{token}</span>
+                          <span className="text-[11px] font-bold text-gray-700 bg-black/5 px-2 py-0.5 rounded-md font-mono">zk{token}</span>
                         </div>
                         <div className="text-[18px] font-black text-gray-900 font-mono leading-tight">{parseFloat(balance || '0').toFixed(token === 'ETH' ? 4 : 2)}</div>
                         <div className="text-[11px] text-gray-400 mt-0.5">≈ ${usd.toFixed(2)} USD</div>
@@ -208,7 +209,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                   </div>
 
                   {/* Total */}
-                  <div className="mt-3 bg-gradient-to-r from-[#25D366]/10 to-[#128C7E]/10 border border-[#25D366]/20 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="mt-3 bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-4 flex items-center justify-between">
                     <div>
                       <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Total Private Portfolio</span>
                       <div className="text-[22px] font-black text-gray-900 font-mono">${totalUSD}</div>
@@ -216,13 +217,13 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setShieldMode('shield')}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-[#25D366] text-white text-[12px] font-bold rounded-xl hover:bg-[#20ba59] transition"
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-[#1C1C1E] text-white text-[12px] font-semibold rounded-xl hover:bg-black transition"
                       >
-                        <ArrowDownLeft size={13} /> Shield
+                        <ArrowDownLeft size={13} /> Shield Funds
                       </button>
                       <button
                         onClick={() => setShieldMode('unshield')}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-[#f0f2f5] text-gray-700 text-[12px] font-bold rounded-xl hover:bg-[#e4e6eb] transition"
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-[#F2F2F7] text-gray-700 text-[12px] font-semibold rounded-xl hover:bg-[#E5E5EA] transition border border-black/[0.04]"
                       >
                         <ArrowUpRight size={13} /> Unshield
                       </button>
@@ -253,7 +254,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                   <h3 className="text-[13px] font-bold text-gray-700 mb-3">Recent Private Transactions</h3>
                   {txHistory.length === 0 ? (
                     <div className="text-center py-8 text-gray-400">
-                      <Shield size={28} strokeWidth={1.5} className="mx-auto mb-2 text-gray-300" />
+                      <Lock size={24} strokeWidth={1.5} className="mx-auto mb-2 text-gray-300" />
                       <p className="text-[13px]">No transactions yet. Send your first shielded payment!</p>
                     </div>
                   ) : (
@@ -261,8 +262,8 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                       {txHistory.slice(0, 5).map((tx, i) => (
                         <div key={i} className="flex items-center justify-between bg-[#FAFAFA] border border-black/[0.06] rounded-xl px-4 py-2.5">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center text-[#25D366]">
-                              <Shield size={14} />
+                            <div className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center text-gray-700">
+                              <Lock size={14} />
                             </div>
                             <div>
                               <div className="text-[12px] font-bold text-gray-900">{tx.recipientTag}</div>
@@ -275,7 +276,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                               href={tx.aztecExplorerUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[10px] text-[#25D366] hover:underline flex items-center gap-0.5 justify-end"
+                              className="text-[10px] text-black/70 hover:underline flex items-center gap-0.5 justify-end"
                             >
                               AztecScan <ExternalLink size={9} />
                             </a>
@@ -291,34 +292,34 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
             {/* ─── Identity Tab ──────────────────────────────────────────────── */}
             {tab === 'identity' && (
               <div className="space-y-5">
-                {/* Current Identity Card */}
-                <div className="bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] rounded-2xl p-5 text-white">
+                {/* Current Identity Card (Pure executive Swiss white card) */}
+                <div className="bg-white border border-black/[0.08] rounded-2xl p-5 text-[#1C1C1E] shadow-sm">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#25D366]/20 flex items-center justify-center">
-                      <Shield size={22} className="text-[#25D366]" strokeWidth={2.5} />
+                    <div className="w-12 h-12 rounded-2xl bg-black/5 flex items-center justify-center">
+                      <Lock size={22} className="text-[#1C1C1E]" strokeWidth={2.2} />
                     </div>
                     <div>
-                      <div className="text-[16px] font-black text-white">{identity?.zkHandle || 'Not registered'}</div>
-                      <div className="text-[11px] text-white/50 font-mono">Humanity Ledger Sovereign Identity</div>
+                      <div className="text-[16px] font-black text-[#1C1C1E]">{identity?.zkHandle || 'Not registered'}</div>
+                      <div className="text-[11px] text-black/50 font-mono">Humanity Ledger Sovereign Identity</div>
                     </div>
                     {identity?.verified && (
-                      <span className="ml-auto text-[10px] font-bold bg-[#25D366]/20 text-[#25D366] px-2 py-0.5 rounded-full border border-[#25D366]/30">
+                      <span className="ml-auto text-[10px] font-bold bg-black/5 text-[#1C1C1E] px-2 py-0.5 rounded-full border border-black/10">
                         ✓ Verified
                       </span>
                     )}
                   </div>
-                  <div className="space-y-2 text-[11px] font-mono text-white/60">
+                  <div className="space-y-2 text-[11px] font-mono text-black/60">
                     <div className="flex justify-between">
-                      <span className="text-white/40">EVM Address</span>
+                      <span className="text-black/40">EVM Address</span>
                       <span>{userAddress.slice(0, 10)}...{userAddress.slice(-6)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/40">Aztec Address</span>
-                      <span className="text-[#25D366]">{keySet.aztecAddress.slice(0, 16)}...{keySet.aztecAddress.slice(-6)}</span>
+                      <span className="text-black/40">Aztec Address</span>
+                      <span className="text-black/80">{keySet.aztecAddress.slice(0, 16)}...{keySet.aztecAddress.slice(-6)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/40">Reputation</span>
-                      <span className="text-amber-400">{identity?.reputationScore || 0} pts</span>
+                      <span className="text-black/40">Reputation</span>
+                      <span className="text-black/80">{identity?.reputationScore || 0} pts</span>
                     </div>
                   </div>
                 </div>
@@ -329,13 +330,13 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                   {editingHandle ? (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-bold text-[#25D366]">zk:</span>
+                        <span className="text-[13px] font-bold text-[#1C1C1E]">zk:</span>
                         <input
                           type="text"
                           value={newHandle}
                           onChange={e => setNewHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))}
                           placeholder="yourhandle"
-                          className="flex-1 bg-white border border-black/[0.08] rounded-xl px-3 py-2 text-[13px] font-mono outline-none focus:border-[#25D366]"
+                          className="flex-1 bg-white border border-black/[0.08] rounded-xl px-3 py-2 text-[13px] font-mono outline-none focus:border-black/30"
                           maxLength={32}
                           autoFocus
                         />
@@ -345,7 +346,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                         <button
                           onClick={handleSaveHandle}
                           disabled={!newHandle.match(/^[a-z0-9_.-]{3,32}$/)}
-                          className="flex-1 py-2 bg-[#25D366] text-white text-[12px] font-bold rounded-xl hover:bg-[#20ba59] transition disabled:opacity-50"
+                          className="flex-1 py-2 bg-[#1C1C1E] text-white text-[12px] font-bold rounded-xl hover:bg-black transition disabled:opacity-50 shadow-sm"
                         >
                           Confirm Handle
                         </button>
@@ -365,7 +366,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                       </div>
                       <button
                         onClick={() => { setEditingHandle(true); setNewHandle(identity?.zkHandle?.replace('zk:', '') || ''); }}
-                        className="px-3 py-1.5 bg-[#25D366]/10 text-[#25D366] text-[11px] font-bold rounded-lg hover:bg-[#25D366]/20 transition"
+                        className="px-3 py-1.5 bg-black/5 text-[#1C1C1E] text-[11px] font-bold rounded-lg hover:bg-black/10 transition"
                       >
                         {identity ? 'Edit' : 'Register'}
                       </button>
@@ -425,9 +426,9 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                         </div>
                         <button
                           onClick={() => handleCopy(value, key)}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[#25D366]/10 text-gray-400 hover:text-[#25D366] transition"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-black/5 text-gray-400 hover:text-black transition"
                         >
-                          {copied === key ? <Check size={13} className="text-[#25D366]" /> : <Copy size={13} />}
+                          {copied === key ? <Check size={13} className="text-[#1C1C1E]" /> : <Copy size={13} />}
                         </button>
                       </div>
                       <div className="font-mono text-[11px] text-gray-600 bg-white border border-black/[0.05] rounded-xl px-3 py-2 break-all">
@@ -460,7 +461,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                         <div className="text-[10px] text-gray-400 mt-0.5">{desc}</div>
                       </div>
                       <div
-                        className={`w-10 h-5.5 rounded-full relative cursor-pointer transition-colors ${enabled ? 'bg-[#25D366]' : 'bg-gray-200'}`}
+                        className={`w-10 h-5.5 rounded-full relative cursor-pointer transition-colors ${enabled ? 'bg-[#1C1C1E]' : 'bg-gray-200'}`}
                         style={{ minWidth: 40, height: 22 }}
                       >
                         <div className={`absolute top-0.5 w-[18px] h-[18px] rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-[20px]' : 'translate-x-0.5'}`} />
@@ -492,11 +493,6 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
             {/* ─── Sequencer & V6 Dashboard Tab ────────────────────────────────── */}
             {tab === 'sequencer' && (
               <ZkSequencerDashboard userAddress={userAddress} className="border-0 shadow-none" />
-            )}
-
-            {/* ─── Dev Console Tab ─────────────────────────────────────────────── */}
-            {tab === 'devtools' && (
-              <ZkTerminal userAddress={userAddress} className="h-[500px]" />
             )}
           </div>
         </div>

@@ -11,7 +11,7 @@ import { useAccount, useConnect, useSignMessage, useDisconnect, useReconnect, us
 import { reconnect as wagmiReconnect, watchAccount, getAccount, getConnectorClient } from '@wagmi/core';
 import { config as wagmiConfig } from '@/config/appkit';
 import { useAppKit } from "@reown/appkit/react";
-import { HLLogo } from "@/components/shared/HLLogo";
+import { HLLogo, HLMark } from "@/components/shared/HLLogo";
 import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { 
   Scan, MessageSquare, LogOut, MessageCircle, ScanLine, 
@@ -388,11 +388,7 @@ function ConnectedScreen({
           )}
           
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-             <img
-               src="/logo-mark.png"
-               className="h-20 w-auto object-contain"
-               alt="Humanity Ledger"
-             />
+             <HLLogo size={32} theme="dark" />
           </div>
           
           <div className="w-8" />
@@ -1463,10 +1459,10 @@ export function MobileLanding() {
                 } catch {}
               }
             }}
-            className="group w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-[#5200FF]/30 bg-gradient-to-r from-[#5200FF]/5 to-[#5200FF]/10 hover:from-[#5200FF]/10 hover:to-[#5200FF]/15 hover:border-[#5200FF]/50 active:scale-[0.97] transition-all duration-150 shadow-sm"
+            className="group w-full flex items-center gap-4 p-4 rounded-2xl border border-black/10 bg-white hover:border-black active:scale-[0.97] transition-all duration-150 shadow-sm"
           >
-            <div className="w-11 h-11 rounded-xl bg-[#5200FF] flex items-center justify-center p-2.5 shrink-0 shadow-lg">
-              <img src="/logo-mark.png" alt="Connect" className="w-full h-full object-contain invert" />
+            <div className="w-11 h-11 rounded-xl bg-black flex items-center justify-center p-2 shrink-0 shadow-sm">
+              <HLMark size={28} />
             </div>
             <div className="flex-1 text-left">
               <p className="text-[14px] font-black uppercase tracking-tight text-[#050505]">Connect Wallet</p>
@@ -1474,7 +1470,7 @@ export function MobileLanding() {
                 MetaMask, Trust, Rainbow, WalletConnect
               </p>
             </div>
-            <ArrowRight size={16} className="text-[#5200FF]/60 group-hover:text-[#5200FF] group-hover:translate-x-1 transition-all shrink-0" />
+            <ArrowRight size={16} className="text-black/40 group-hover:text-black group-hover:translate-x-1 transition-all shrink-0" />
           </button>
 
           {/* Divider */}
@@ -1496,7 +1492,7 @@ export function MobileLanding() {
 
           {/* QR Code Scanner */}
           <WalletOption
-            logo="/logo-mark.png"
+            logo="/favicon.png"
             name="Scan QR Code"
             badge="Link your desktop session via camera"
             loading={false}

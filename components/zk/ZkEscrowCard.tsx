@@ -26,7 +26,7 @@ interface ZkEscrowCardProps {
 
 function EscrowStatusBadge({ status }: { status: ZkEscrowState['status'] }) {
   const map: Record<ZkEscrowState['status'], { label: string; color: string }> = {
-    locked:    { label: 'Locked',    color: '#25D366' },
+    locked:    { label: 'Locked',    color: '#1C1C1E' },
     released:  { label: 'Released',  color: '#34C759' },
     disputed:  { label: 'Disputed',  color: '#FF9500' },
     cancelled: { label: 'Cancelled', color: '#FF3B30' },
@@ -56,7 +56,7 @@ function MilestoneRow({
 }) {
   const statusConfig = {
     pending:  { icon: Clock,         color: '#FF9500', label: 'Pending'  },
-    approved: { icon: CheckCircle,   color: '#25D366', label: 'Approved' },
+    approved: { icon: CheckCircle,   color: '#1C1C1E', label: 'Approved' },
     rejected: { icon: X,             color: '#FF3B30', label: 'Rejected' },
   };
   const { icon: Icon, color, label } = statusConfig[milestone.status];
@@ -74,7 +74,7 @@ function MilestoneRow({
           <button
             onClick={onApprove}
             className="py-1 px-3 rounded-lg text-[11px] font-bold text-white"
-            style={{ background: '#25D366' }}
+            style={{ background: '#1C1C1E' }}
           >
             Release
           </button>
@@ -123,7 +123,7 @@ export function ZkEscrowCard({ escrow: initialEscrow, currentUserTag, onUpdate, 
       <div className="flex items-center gap-3 px-4 py-3 border-b border-black/[0.04]">
         <div
           className="w-9 h-9 rounded-full flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}
+          style={{ background: '#1C1C1E' }}
         >
           <Lock size={15} className="text-white" strokeWidth={2} />
         </div>
@@ -154,7 +154,7 @@ export function ZkEscrowCard({ escrow: initialEscrow, currentUserTag, onUpdate, 
             <div className="h-2 bg-[#EBE5DC] rounded-full overflow-hidden">
               <motion.div
                 className="h-full rounded-full"
-                style={{ background: 'linear-gradient(90deg, #25D366, #00a884)' }}
+                style={{ background: '#1C1C1E' }}
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -181,7 +181,7 @@ export function ZkEscrowCard({ escrow: initialEscrow, currentUserTag, onUpdate, 
               href={getAztecExplorerTxUrl(escrow.txHash)}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-0.5 text-[#25D366]"
+              className="flex items-center gap-0.5 text-[#1C1C1E]"
               onClick={e => e.stopPropagation()}
             >
               <ExternalLink size={9} /> AztecScan
@@ -262,7 +262,7 @@ export function ZkEscrowCard({ escrow: initialEscrow, currentUserTag, onUpdate, 
                 {isRecipient && escrow.milestones.length === 0 && (
                   <button onClick={() => handleReleaseMilestone('full')}
                     className="flex-1 py-2 rounded-xl text-[11px] font-bold text-white"
-                    style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}>
+                    style={{ background: '#1C1C1E' }}>
                     Release All
                   </button>
                 )}
@@ -273,9 +273,9 @@ export function ZkEscrowCard({ escrow: initialEscrow, currentUserTag, onUpdate, 
 
         {/* Settled confirmation */}
         {escrow.status === 'released' && (
-          <div className="flex items-center gap-2 bg-[#25D366]/10 rounded-xl px-3 py-2.5">
-            <CheckCircle size={14} className="text-[#25D366]" strokeWidth={2.5} />
-            <span className="text-[12px] font-semibold text-[#25D366]">
+          <div className="flex items-center gap-2 bg-[#1C1C1E]/10 rounded-xl px-3 py-2.5">
+            <CheckCircle size={14} className="text-[#1C1C1E]" strokeWidth={2.5} />
+            <span className="text-[12px] font-semibold text-[#1C1C1E]">
               Escrow released — funds transferred via Aztec note
             </span>
           </div>

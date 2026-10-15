@@ -28,14 +28,14 @@ function StepRow({ label, pct, active, done }: { label: string; pct: number; act
   return (
     <div className="flex items-center gap-3">
       <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
-        done   ? 'bg-[#25D366]'  :
-        active ? 'bg-[#EBE5DC] border-2 border-[#25D366]' :
-        'bg-[#EBE5DC]'
+        done   ? 'bg-[#1C1C1E]'  :
+        active ? 'bg-black/5 border-2 border-[#1C1C1E]' :
+        'bg-black/5'
       }`}>
         {done && <CheckCircle size={12} className="text-white" strokeWidth={3} />}
         {active && (
           <motion.div
-            className="w-2 h-2 rounded-full bg-[#25D366]"
+            className="w-2 h-2 rounded-full bg-[#1C1C1E]"
             animate={{ scale: [1, 1.4, 1] }}
             transition={{ repeat: Infinity, duration: 0.8 }}
           />
@@ -46,9 +46,9 @@ function StepRow({ label, pct, active, done }: { label: string; pct: number; act
           {label}
         </div>
         {active && (
-          <div className="mt-1 h-1 bg-[#EBE5DC] rounded-full overflow-hidden">
+          <div className="mt-1 h-1 bg-black/5 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-[#25D366] rounded-full"
+              className="h-full bg-[#1C1C1E] rounded-full"
               animate={{ width: ['10%', '90%'] }}
               transition={{ duration: 1.5, ease: 'easeInOut', repeat: Infinity, repeatType: 'reverse' }}
             />
@@ -185,8 +185,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
       >
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-black/[0.06]">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ background: isShield ? '#25D366' : '#00a884' }}>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1C1C1E] text-white">
             {isShield
               ? <ArrowDownLeft size={18} className="text-white" />
               : <ArrowUpRight size={18} className="text-white" />
@@ -219,7 +218,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
                       onClick={() => setToken(t)}
                       className="flex-1 py-2.5 rounded-2xl text-[13px] font-semibold transition-all"
                       style={{
-                        background: token === t ? '#25D366' : '#f0f2f5',
+                        background: token === t ? '#1C1C1E' : '#f0f2f5',
                         color: token === t ? '#fff' : '#374151',
                       }}
                     >
@@ -250,11 +249,11 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
                     placeholder="0.00"
                     value={amount}
                     onChange={e => setAmount(e.target.value)}
-                    className="flex-1 bg-[#f0f2f5] rounded-2xl px-4 py-3 text-[15px] font-bold text-gray-900 outline-none border-2 border-transparent focus:border-[#25D366] transition-colors"
+                    className="flex-1 bg-[#f0f2f5] rounded-2xl px-4 py-3 text-[15px] font-bold text-gray-900 outline-none border-2 border-transparent focus:border-black/30 transition-colors"
                   />
                   <button
                     onClick={() => setAmount(isShield ? l1Balances[token].replace(/,/g, '') : shieldedBalance.replace(/,/g, ''))}
-                    className="px-4 py-3 bg-[#25D366]/10 text-[#25D366] font-semibold text-[12px] rounded-2xl"
+                    className="px-4 py-3 bg-black/5 hover:bg-black/10 text-[#1C1C1E] font-bold text-[12px] rounded-2xl transition-colors"
                   >
                     MAX
                   </button>
@@ -272,7 +271,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
                     placeholder="0x…"
                     value={destination}
                     onChange={e => setDestination(e.target.value)}
-                    className="w-full bg-[#f0f2f5] rounded-2xl px-4 py-3 text-[13px] text-gray-900 outline-none border-2 border-transparent focus:border-[#25D366] transition-colors font-mono"
+                    className="w-full bg-[#f0f2f5] rounded-2xl px-4 py-3 text-[13px] text-gray-900 outline-none border-2 border-transparent focus:border-black/30 transition-colors font-mono"
                   />
                 </div>
               )}
@@ -297,9 +296,9 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
 
               {/* Privacy warning for unshield */}
               {!isShield && (
-                <div className="flex items-start gap-2.5 bg-orange-50 border border-orange-200 rounded-2xl px-3 py-3">
-                  <AlertTriangle size={14} className="text-orange-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-orange-700 font-medium leading-relaxed">
+                <div className="flex items-start gap-2.5 bg-gray-50 border border-black/10 rounded-2xl px-3 py-3">
+                  <AlertTriangle size={14} className="text-black/60 flex-shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-gray-600 font-medium leading-relaxed">
                     Once unshielded, the transaction amount and destination will be <strong>publicly visible on Ethereum L1</strong>.
                   </p>
                 </div>
@@ -309,8 +308,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
               <button
                 onClick={handleSubmit}
                 disabled={!amount || parseFloat(amount) <= 0 || (!isShield && !destination)}
-                className="w-full py-4 rounded-2xl font-bold text-[15px] text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}
+                className="w-full py-4 rounded-2xl font-bold text-[15px] text-white bg-[#1C1C1E] hover:bg-black transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
               >
                 {isShield ? `Shield ${amount || '0'} ${token} Privately` : `Unshield ${amount || '0'} ${token} to L1`}
               </button>
@@ -322,8 +320,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
             <motion.div key="progress" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="px-5 py-6 space-y-4">
               <div className="text-center mb-4">
                 <motion.div
-                  className="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3"
-                  style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}
+                  className="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3 bg-[#1C1C1E]"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                 >
@@ -353,9 +350,9 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                className="w-20 h-20 rounded-full bg-[#25D366] flex items-center justify-center mx-auto"
+                className="w-16 h-16 rounded-full bg-[#1C1C1E] flex items-center justify-center mx-auto text-white"
               >
-                <CheckCircle size={36} className="text-white" strokeWidth={2} />
+                <CheckCircle size={32} className="text-white" strokeWidth={2.5} />
               </motion.div>
 
               <div>
@@ -374,7 +371,7 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
                 </div>
                 <div className="flex justify-between text-[11px]">
                   <span className="text-gray-400">Status</span>
-                  <span className="text-[#25D366] font-semibold">{isShield ? 'Shielded' : 'Initiated'}</span>
+                  <span className="text-black/80 font-bold">{isShield ? 'Shielded' : 'Initiated'}</span>
                 </div>
               </div>
 
@@ -382,15 +379,14 @@ export function ZkShieldModal({ address, mode, onClose, onSuccess }: ZkShieldMod
                 href={`https://aztecscan.xyz/tx-effect/${result.txHash.slice(2)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 text-[12px] text-[#25D366] font-semibold"
+                className="flex items-center justify-center gap-1.5 text-[12px] text-black/70 hover:text-black font-semibold"
               >
                 <ExternalLink size={12} /> View on AztecScan
               </a>
 
               <button
                 onClick={() => { onSuccess?.(result); onClose(); }}
-                className="w-full py-4 rounded-2xl font-bold text-[15px] text-white"
-                style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}
+                className="w-full py-4 rounded-2xl font-bold text-[15px] text-white bg-[#1C1C1E] hover:bg-black transition-all"
               >
                 Done
               </button>

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { HLMark } from "@/components/shared/HLLogo";
 
 interface Props {
   isOpen: boolean;
@@ -215,12 +216,8 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                 <div className="flex items-start justify-between">
                     <div className="pr-2 min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-2.5">
-                        <img
-                          src="/logo-mark.png"
-                          alt="Humanity Ledger"
-                          className="w-5 h-5 object-contain shrink-0"
-                        />
-                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-black/40 truncate">
+                        <HLMark size={22} />
+                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-black/50 truncate">
                           Humanity Ledger
                         </span>
                       </div>

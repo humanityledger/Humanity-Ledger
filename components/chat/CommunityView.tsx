@@ -28,7 +28,7 @@ interface CommunityViewProps {
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
-const AVATAR_COLORS = ['#25D366','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55','#5856D6'];
+const AVATAR_COLORS = ['#1C1C1E','#3A3A3C','#636366','#FF9500','#FF3B30','#AF52DE','#FF2D55','#5856D6'];
 const getAvatarColor = (id: string) => AVATAR_COLORS[(id?.charCodeAt(0) || 0) % AVATAR_COLORS.length];
 
 function safeHtml(raw: string): string {
@@ -297,21 +297,21 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
       const el = document.getElementById(`msg-${msgId}`);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.classList.add('bg-[#25D366]/10');
-        setTimeout(() => el.classList.remove('bg-[#25D366]/10'), 2500);
+        el.classList.add('bg-black/5');
+        setTimeout(() => el.classList.remove('bg-black/5'), 2500);
       }
     }, 400);
   };
 
-  const avatarColor = community?.id ? getAvatarColor(community.id) : '#25D366';
+  const avatarColor = community?.id ? getAvatarColor(community.id) : '#1C1C1E';
   const isAdmin = community?.ownerAddress?.toLowerCase() === myAddress?.toLowerCase()
     || community?.members?.some((m: any) => m.walletAddress?.toLowerCase() === myAddress?.toLowerCase() && (m.role === 'ADMIN' || m.role === 'MODERATOR'));
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#F2F2F7] overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-[#F2F2F7] overflow-hidden min-h-0">
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
-      <div className="h-[64px] px-3 md:px-5 border-b border-black/[0.07] flex items-center justify-between bg-white/95 backdrop-blur-md shrink-0 z-10 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
+      <div className="h-[64px] px-3 md:px-5 border-b border-black/[0.07] flex items-center justify-between bg-white shrink-0 sticky top-0 z-30 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
         {/* Left: back + identity */}
         <div className="flex items-center gap-2.5">
           <button
@@ -362,7 +362,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               >
                 {tab === 'posts' ? 'Posts' : tab === 'chat' ? 'Chat' : tab === 'treasury' ? (
                   <span className="flex items-center gap-1">
-                    <Shield size={12} className="text-[#25D366]" /> Treasury
+                    <Lock size={12} className="text-[#1C1C1E]" /> Treasury
                   </span>
                 ) : tab === 'governance' ? 'Gov' : tab === 'analytics' ? <BarChart2 size={13} /> : <Settings size={13} />}
               </button>
@@ -379,7 +379,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               setPartyCallParticipants([myAddress]);
               toast.success('Party call started — members can join from the header');
             }}
-            className="p-2 rounded-xl hover:bg-[#25D366]/10 text-black/30 hover:text-[#25D366] transition-colors"
+            className="p-2 rounded-xl hover:bg-black/5 text-black/30 hover:text-[#1C1C1E] transition-colors"
             title="Start party call"
           >
             <PhoneCall size={17} />
@@ -458,7 +458,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors ${
-              activeTab === tab.id ? 'text-[#25D366]' : 'text-black/30'
+              activeTab === tab.id ? 'text-[#1C1C1E]' : 'text-black/30'
             }`}
           >
             <tab.icon size={18} />
@@ -468,7 +468,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
       </div>
 
       {/* ── MAIN CONTENT ───────────────────────────────────────────────────── */}
-      <div className="flex-1 h-full w-full overflow-hidden flex flex-col min-h-0" style={{ height: '100%' }}>
+      <div className="flex-1 w-full overflow-hidden flex flex-col min-h-0">
 
         {/* POSTS TAB */}
         <AnimatePresence mode="wait">
@@ -487,7 +487,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                     <div className="flex items-center gap-3">
                       <div
                         className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm"
-                        style={{ backgroundColor: myAddress ? getAvatarColor(myAddress) : '#25D366' }}
+                        style={{ backgroundColor: myAddress ? getAvatarColor(myAddress) : '#1C1C1E' }}
                       >
                         {(myAddress || '0x??').slice(2, 4).toUpperCase()}
                       </div>
@@ -501,7 +501,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                       <button
                         type="button"
                         onClick={() => setShowInlineForm(true)}
-                        className="px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full text-[13px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
+                        className="px-4 py-2 bg-[#1C1C1E] hover:bg-black text-white rounded-full text-[13px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
                       >
                         <Edit size={14} />
                         <span className="hidden sm:inline">Publicar</span>
@@ -515,7 +515,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                           <button
                             type="button"
                             onClick={() => { setShowInlineForm(false); setShowEditor(true); }}
-                            className="text-[11px] font-semibold text-[#128C7E] hover:underline"
+                            className="text-[11px] font-semibold text-[#1C1C1E] hover:underline"
                           >
                             Editor completo →
                           </button>
@@ -554,7 +554,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                           type="button"
                           disabled={isPostingInline || !inlineBody.trim()}
                           onClick={handlePublishInline}
-                          className="px-5 py-2 bg-[#25D366] hover:bg-[#128C7E] disabled:opacity-50 text-white rounded-xl text-[13px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
+                          className="px-5 py-2 bg-[#1C1C1E] hover:bg-black disabled:opacity-50 text-white rounded-xl text-[13px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
                         >
                           {isPostingInline ? 'Publicando…' : 'Publicar Ahora'}
                         </button>
@@ -577,8 +577,8 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                   </div>
                 ) : posts.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 text-center">
-                    <div className="w-20 h-20 rounded-3xl bg-[#25D366]/10 flex items-center justify-center mb-5">
-                      <FileText size={36} className="text-[#25D366]" />
+                    <div className="w-20 h-20 rounded-3xl bg-black/5 flex items-center justify-center mb-5">
+                      <FileText size={36} className="text-[#1C1C1E]" />
                     </div>
                     <h3 className="text-[20px] font-black text-[#1C1C1E] mb-2">No posts yet</h3>
                     <p className="text-[14px] text-black/40 max-w-xs">
@@ -626,11 +626,11 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-1 h-full w-full overflow-hidden min-h-0"
+              className="flex flex-1 w-full overflow-hidden min-h-0"
             >
               {/* Channel sidebar — only show if community has multiple channels */}
               {community?.channels && community.channels.length > 1 && (
-                <div className="w-[180px] md:w-[200px] shrink-0 bg-white border-r border-black/5 flex flex-col py-3 overflow-y-auto">
+                <div className="hidden md:flex w-[200px] shrink-0 bg-white border-r border-black/5 flex-col py-3 overflow-y-auto">
                   <p className="text-[10px] font-black uppercase tracking-widest text-black/25 px-4 mb-2">Channels</p>
                   {community.channels.map((ch: any) => (
                     <button
@@ -638,7 +638,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                       onClick={() => setActiveChannelId(ch.id)}
                       className={`flex items-center gap-2.5 px-4 py-2.5 text-left transition-all group ${
                         activeChannelId === ch.id
-                          ? 'bg-[#25D366]/10 text-[#25D366]'
+                          ? 'bg-black/5 text-[#1C1C1E]'
                           : 'text-black/40 hover:bg-black/[0.03] hover:text-black/70'
                       }`}
                     >
@@ -652,7 +652,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                 </div>
               )}
 
-              <div className="flex-1 h-full w-full overflow-hidden min-h-0 flex flex-col">
+              <div className="flex-1 w-full overflow-hidden min-h-0 flex flex-col">
                 <CommunityChatView
                   communityId={communityId}
                   channelId={activeChannelId}
@@ -729,7 +729,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                 />
               ) : (
                 <div className="flex items-center justify-center h-40">
-                  <div className="w-8 h-8 border-2 border-[#25D366] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-2 border-[#1C1C1E] border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </motion.div>
@@ -810,11 +810,11 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                 {/* Live pulse */}
                 <div className="relative flex items-center justify-center w-8 h-8">
                   <motion.div
-                    className="absolute w-8 h-8 rounded-full bg-[#25D366]/30"
+                    className="absolute w-8 h-8 rounded-full bg-black/20"
                     animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }}
                     transition={{ duration: 1.8, repeat: Infinity }}
                   />
-                  <div className="w-3 h-3 rounded-full bg-[#25D366]" />
+                  <div className="w-3 h-3 rounded-full bg-[#1C1C1E]" />
                 </div>
                 <div>
                   <p className="text-white text-[13px] font-bold leading-tight">Party call in progress</p>
@@ -832,7 +832,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                     setPartyCallMode('video');
                     toast.success('Joined with video');
                   }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366] text-white text-[12px] font-bold rounded-xl hover:bg-[#20bd59] transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1C1C1E] text-white text-[12px] font-bold rounded-xl hover:bg-black transition-colors"
                 >
                   <Video size={13} /> Video
                 </button>

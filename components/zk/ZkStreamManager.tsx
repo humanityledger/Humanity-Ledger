@@ -1,16 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Waves,
-  Play,
-  Pause,
-  XCircle,
-  ArrowDownLeft,
-  Plus,
-  Clock,
-  Shield,
+import { Lock,
   CheckCircle,
   ExternalLink,
   X,
@@ -93,7 +84,7 @@ export function ZkStreamManager({ userAddress, userTag, onClose, className = '' 
       {/* Header */}
       <div className="bg-[#f0f2f5] px-6 py-4 flex items-center justify-between border-b border-black/[0.06]">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-2xl bg-[#25D366]/10 flex items-center justify-center text-[#25D366]">
+          <div className="w-9 h-9 rounded-2xl bg-[#1C1C1E]/10 flex items-center justify-center text-[#1C1C1E]">
             <Waves size={18} strokeWidth={2.5} />
           </div>
           <div>
@@ -104,7 +95,7 @@ export function ZkStreamManager({ userAddress, userTag, onClose, className = '' 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366] text-white text-[12px] font-bold rounded-xl hover:bg-[#20ba59] transition shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1C1C1E] text-white text-[12px] font-bold rounded-xl hover:bg-[#000000] transition shadow-xs"
           >
             <Plus size={14} /> New Stream
           </button>
@@ -125,7 +116,7 @@ export function ZkStreamManager({ userAddress, userTag, onClose, className = '' 
           onClick={() => setTab('outgoing')}
           className={`flex items-center gap-2 px-4 py-2 text-[12px] font-bold rounded-xl transition ${
             tab === 'outgoing'
-              ? 'bg-[#25D366] text-white shadow-xs'
+              ? 'bg-[#1C1C1E] text-white shadow-xs'
               : 'bg-[#f0f2f5] text-gray-600 hover:bg-[#e4e6eb]'
           }`}
         >
@@ -135,7 +126,7 @@ export function ZkStreamManager({ userAddress, userTag, onClose, className = '' 
           onClick={() => setTab('incoming')}
           className={`flex items-center gap-2 px-4 py-2 text-[12px] font-bold rounded-xl transition ${
             tab === 'incoming'
-              ? 'bg-[#25D366] text-white shadow-xs'
+              ? 'bg-[#1C1C1E] text-white shadow-xs'
               : 'bg-[#f0f2f5] text-gray-600 hover:bg-[#e4e6eb]'
           }`}
         >
@@ -178,7 +169,7 @@ export function ZkStreamManager({ userAddress, userTag, onClose, className = '' 
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-[16px] font-bold text-gray-900 flex items-center gap-2">
-                  <Waves size={18} className="text-[#25D366]" /> Start Shielded Stream
+                  <Waves size={18} className="text-[#1C1C1E]" /> Start Shielded Stream
                 </h3>
                 <button
                   onClick={() => setShowCreateModal(false)}
@@ -197,7 +188,7 @@ export function ZkStreamManager({ userAddress, userTag, onClose, className = '' 
                     value={recipientTag}
                     onChange={e => setRecipientTag(e.target.value)}
                     placeholder="zk:alice or 0x..."
-                    className="w-full mt-1 bg-[#f0f2f5] border border-black/[0.06] rounded-xl px-3 py-2 text-[13px] font-mono outline-none focus:border-[#25D366]"
+                    className="w-full mt-1 bg-[#f0f2f5] border border-black/[0.06] rounded-xl px-3 py-2 text-[13px] font-mono outline-none focus:border-[#1C1C1E]"
                   />
                 </div>
 
@@ -209,7 +200,7 @@ export function ZkStreamManager({ userAddress, userTag, onClose, className = '' 
                       required
                       value={depositAmount}
                       onChange={e => setDepositAmount(e.target.value)}
-                      className="w-full mt-1 bg-[#f0f2f5] border border-black/[0.06] rounded-xl px-3 py-2 text-[14px] font-bold outline-none focus:border-[#25D366]"
+                      className="w-full mt-1 bg-[#f0f2f5] border border-black/[0.06] rounded-xl px-3 py-2 text-[14px] font-bold outline-none focus:border-[#1C1C1E]"
                     />
                   </div>
                   <div>
@@ -240,7 +231,7 @@ export function ZkStreamManager({ userAddress, userTag, onClose, className = '' 
                         onClick={() => setDurationDays(d.days)}
                         className={`py-1.5 text-[11px] font-bold rounded-lg transition ${
                           durationDays === d.days
-                            ? 'bg-[#25D366] text-white shadow-xs'
+                            ? 'bg-[#1C1C1E] text-white shadow-xs'
                             : 'bg-[#f0f2f5] text-gray-600 hover:bg-[#e4e6eb]'
                         }`}
                       >
@@ -257,12 +248,12 @@ export function ZkStreamManager({ userAddress, userTag, onClose, className = '' 
                     value={memo}
                     onChange={e => setMemo(e.target.value)}
                     placeholder="e.g. Freelance sprint settlement"
-                    className="w-full mt-1 bg-[#f0f2f5] border border-black/[0.06] rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#25D366]"
+                    className="w-full mt-1 bg-[#f0f2f5] border border-black/[0.06] rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#1C1C1E]"
                   />
                 </div>
 
-                <div className="bg-[#25D366]/10 p-3 rounded-xl flex items-start gap-2">
-                  <Shield size={14} className="text-[#25D366] mt-0.5 flex-shrink-0" />
+                <div className="bg-[#1C1C1E]/10 p-3 rounded-xl flex items-start gap-2">
+                  <Lock size={14} className="text-[#1C1C1E] mt-0.5 flex-shrink-0" />
                   <p className="text-[11px] text-gray-700 leading-tight">
                     Flow rate: <span className="font-bold text-gray-900">{(parseFloat(depositAmount || '0') / (durationDays * 86400)).toFixed(6)} {token}/sec</span>. Recipient withdraws continuously in real-time.
                   </p>
@@ -270,7 +261,7 @@ export function ZkStreamManager({ userAddress, userTag, onClose, className = '' 
 
                 <button
                   type="submit"
-                  className="w-full py-3 bg-[#25D366] text-white text-[13px] font-bold rounded-xl hover:bg-[#20ba59] transition shadow-sm"
+                  className="w-full py-3 bg-[#1C1C1E] text-white text-[13px] font-bold rounded-xl hover:bg-[#000000] transition shadow-sm"
                 >
                   Confirm & Launch Shielded Stream
                 </button>
@@ -326,7 +317,7 @@ function StreamCard({
             <span
               className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
                 stream.status === 'active'
-                  ? 'bg-[#25D366]/20 text-[#25D366]'
+                  ? 'bg-[#1C1C1E]/20 text-[#1C1C1E]'
                   : stream.status === 'completed'
                   ? 'bg-blue-100 text-blue-600'
                   : 'bg-red-100 text-red-600'
@@ -351,7 +342,7 @@ function StreamCard({
       {/* Animated Live Progress Bar */}
       <div className="w-full bg-black/5 rounded-full h-2 overflow-hidden relative">
         <div
-          className="bg-gradient-to-r from-[#25D366] to-[#128C7E] h-full transition-all duration-500"
+          className="bg-gradient-to-r from-[#1C1C1E] to-[#3A3A3C] h-full transition-all duration-500"
           style={{ width: `${progress.percentCompleted}%` }}
         />
       </div>
@@ -373,7 +364,7 @@ function StreamCard({
               disabled={withdrawing || progress.withdrawableAmount <= 0.0001}
               className={`flex items-center gap-1 px-3 py-1 text-[11px] font-bold rounded-lg transition ${
                 progress.withdrawableAmount > 0.0001
-                  ? 'bg-[#25D366] text-white hover:bg-[#20ba59]'
+                  ? 'bg-[#1C1C1E] text-white hover:bg-[#000000]'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >

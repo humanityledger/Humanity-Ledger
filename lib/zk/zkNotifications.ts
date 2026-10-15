@@ -190,25 +190,25 @@ export function notifyBountyClaimed(bountyTitle: string, reward: string, token: 
 
 export function getNotificationIconAndColor(type: ZkNotificationType): { emoji: string; color: string } {
   const map: Record<ZkNotificationType, { emoji: string; color: string }> = {
-    payment_received:     { emoji: '💚', color: '#25D366' },
-    payment_sent:         { emoji: '📤', color: '#128C7E' },
-    note_settled:         { emoji: '✅', color: '#25D366' },
-    escrow_locked:        { emoji: '🔒', color: '#F59E0B' },
-    escrow_released:      { emoji: '🔓', color: '#25D366' },
-    escrow_disputed:      { emoji: '⚠️', color: '#EF4444' },
-    stream_started:       { emoji: '🌊', color: '#3B82F6' },
-    stream_milestone:     { emoji: '🎯', color: '#8B5CF6' },
-    stream_completed:     { emoji: '🏁', color: '#25D366' },
-    invoice_sent:         { emoji: '📄', color: '#6B7280' },
-    invoice_paid:         { emoji: '💰', color: '#25D366' },
-    privacy_score_drop:   { emoji: '🔴', color: '#EF4444' },
-    anonymity_set_low:    { emoji: '⚠️', color: '#F59E0B' },
-    note_pending:         { emoji: '⏳', color: '#6B7280' },
-    treasury_deposit:     { emoji: '🏦', color: '#25D366' },
-    bounty_claimed:       { emoji: '🎯', color: '#F59E0B' },
-    tip_received:         { emoji: '🎉', color: '#25D366' },
+    payment_received:     { emoji: '🔒', color: '#1C1C1E' },
+    payment_sent:         { emoji: '📤', color: '#1C1C1E' },
+    note_settled:         { emoji: '✓',  color: '#1C1C1E' },
+    escrow_locked:        { emoji: '🔒', color: '#1C1C1E' },
+    escrow_released:      { emoji: '🔓', color: '#1C1C1E' },
+    escrow_disputed:      { emoji: '⚠️', color: '#1C1C1E' },
+    stream_started:       { emoji: '🌊', color: '#1C1C1E' },
+    stream_milestone:     { emoji: '🎯', color: '#1C1C1E' },
+    stream_completed:     { emoji: '✓',  color: '#1C1C1E' },
+    invoice_sent:         { emoji: '📄', color: '#1C1C1E' },
+    invoice_paid:         { emoji: '✓',  color: '#1C1C1E' },
+    privacy_score_drop:   { emoji: '⚠️', color: '#1C1C1E' },
+    anonymity_set_low:    { emoji: '⚠️', color: '#1C1C1E' },
+    note_pending:         { emoji: '⏳', color: '#1C1C1E' },
+    treasury_deposit:     { emoji: '🏦', color: '#1C1C1E' },
+    bounty_claimed:       { emoji: '🎯', color: '#1C1C1E' },
+    tip_received:         { emoji: '✦',  color: '#1C1C1E' },
   };
-  return map[type] || { emoji: '🔔', color: '#6B7280' };
+  return map[type] || { emoji: '🔔', color: '#1C1C1E' };
 }
 
 // ─── Request Browser Notification Permission ──────────────────────────────────

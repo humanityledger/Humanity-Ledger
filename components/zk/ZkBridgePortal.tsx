@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Shield,
+  Lock,
   ArrowRight,
   ArrowDownUp,
   ExternalLink,
@@ -89,7 +89,7 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
       {/* Header */}
       <div className="bg-[#f0f2f5] px-6 py-4 flex items-center justify-between border-b border-black/[0.06]">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-2xl bg-[#25D366]/10 flex items-center justify-center text-[#25D366]">
+          <div className="w-9 h-9 rounded-2xl bg-[#1C1C1E]/10 flex items-center justify-center text-[#1C1C1E]">
             <Layers size={18} strokeWidth={2.5} />
           </div>
           <div>
@@ -145,16 +145,16 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
           </div>
 
           <div className="flex flex-col items-center gap-1">
-            <div className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center text-[#25D366]">
+            <div className="w-8 h-8 rounded-full bg-[#1C1C1E]/10 flex items-center justify-center text-[#1C1C1E]">
               <ArrowRight size={16} strokeWidth={2.5} />
             </div>
-            <span className="text-[9px] font-semibold text-[#25D366]">Encrypted Portal</span>
+            <span className="text-[9px] font-semibold text-[#1C1C1E]">Encrypted Portal</span>
           </div>
 
           <div className="flex flex-col items-center gap-1">
             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Destination</span>
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-xl border border-black/[0.06] shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-[#25D366]" />
+              <span className="w-2 h-2 rounded-full bg-[#1C1C1E]" />
               <span className="text-[12px] font-bold text-gray-800">
                 {tab === 'deposit' ? 'Aztec Private L2' : 'Ethereum L1'}
               </span>
@@ -173,7 +173,7 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
                   onClick={() => setToken(t)}
                   className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition ${
                     token === t
-                      ? 'bg-[#25D366] text-white shadow-xs'
+                      ? 'bg-[#1C1C1E] text-white shadow-xs'
                       : 'bg-black/5 text-gray-600 hover:bg-black/10'
                   }`}
                 >
@@ -188,7 +188,7 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
               value={amount}
               onChange={e => setAmount(e.target.value)}
               placeholder="0.00"
-              className="w-full bg-[#f0f2f5] border border-black/[0.06] rounded-2xl px-4 py-3 text-[18px] font-bold text-gray-900 outline-none focus:border-[#25D366] transition"
+              className="w-full bg-[#f0f2f5] border border-black/[0.06] rounded-2xl px-4 py-3 text-[18px] font-bold text-gray-900 outline-none focus:border-[#1C1C1E] transition"
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] font-bold text-gray-400">
               {token}
@@ -204,7 +204,7 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
               value={destination}
               onChange={e => setDestination(e.target.value)}
               placeholder="0x..."
-              className="w-full bg-[#f0f2f5] border border-black/[0.06] rounded-2xl px-4 py-2.5 text-[12px] font-mono text-gray-800 outline-none focus:border-[#25D366] transition"
+              className="w-full bg-[#f0f2f5] border border-black/[0.06] rounded-2xl px-4 py-2.5 text-[12px] font-mono text-gray-800 outline-none focus:border-[#1C1C1E] transition"
             />
           </div>
         )}
@@ -220,10 +220,10 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] text-[#25D366] font-semibold flex items-center gap-1">
+            <span className="text-[10px] text-[#1C1C1E] font-semibold flex items-center gap-1">
               <Shield size={11} /> Aztec Batch
             </span>
-            <span className="text-[12px] font-bold text-[#25D366]">
+            <span className="text-[12px] font-bold text-[#1C1C1E]">
               ${gasSavings.aztecFeeUSD}
             </span>
           </div>
@@ -240,14 +240,14 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
           <div className="bg-[#f0f2f5] rounded-2xl p-4 space-y-2">
             <div className="flex items-center justify-between text-[12px]">
               <span className="font-semibold text-gray-800 flex items-center gap-2">
-                <RefreshCw size={13} className="animate-spin text-[#25D366]" />
+                <RefreshCw size={13} className="animate-spin text-[#1C1C1E]" />
                 {currentStep}
               </span>
-              <span className="font-mono text-[#25D366] font-bold">{stepProgress}%</span>
+              <span className="font-mono text-[#1C1C1E] font-bold">{stepProgress}%</span>
             </div>
             <div className="w-full bg-black/10 rounded-full h-1.5 overflow-hidden">
               <div
-                className="bg-[#25D366] h-full transition-all duration-300"
+                className="bg-[#1C1C1E] h-full transition-all duration-300"
                 style={{ width: `${stepProgress}%` }}
               />
             </div>
@@ -255,9 +255,9 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
         )}
 
         {completedTx && (
-          <div className="bg-[#25D366]/10 border border-[#25D366]/20 rounded-2xl p-4 flex items-center justify-between">
+          <div className="bg-[#1C1C1E]/10 border border-[#1C1C1E]/20 rounded-2xl p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CheckCircle2 size={18} className="text-[#25D366]" />
+              <CheckCircle2 size={18} className="text-[#1C1C1E]" />
               <div>
                 <span className="text-[12px] font-bold text-gray-900 block">Bridge Request Executed</span>
                 <span className="text-[10px] text-gray-500 font-mono">
@@ -269,7 +269,7 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
               href={`https://aztecscan.xyz/tx-effect/${completedTx.txHash.slice(2)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] font-bold text-[#25D366] flex items-center gap-1 hover:underline"
+              className="text-[11px] font-bold text-[#1C1C1E] flex items-center gap-1 hover:underline"
             >
               AztecScan <ExternalLink size={11} />
             </a>
@@ -283,7 +283,7 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
           className={`w-full py-3.5 rounded-2xl text-[14px] font-bold transition flex items-center justify-center gap-2 shadow-sm ${
             isProcessing || !amount || parseFloat(amount) <= 0
               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-[#25D366] text-white hover:bg-[#20ba59]'
+              : 'bg-[#1C1C1E] text-white hover:bg-[#000000]'
           }`}
         >
           <Shield size={16} />

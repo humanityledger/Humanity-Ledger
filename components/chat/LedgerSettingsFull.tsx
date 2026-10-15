@@ -9,7 +9,7 @@ import {
   Fingerprint, Zap, RefreshCw, AlertTriangle, Smartphone, Monitor,
   QrCode, Link, Unlink, Sun, Sliders, HardDrive, Archive, Clock,
   Mic, Video, WifiOff, BellOff, EyeOff, FileText, Star, Hash,
-  ChevronDown, Info, Send
+  ChevronDown, Info, Send, ArrowDownToLine, ArrowUpFromLine, Cpu
 } from 'lucide-react';
 import { useAccount, useBalance, useDisconnect, useSignMessage } from 'wagmi';
 import { toast } from 'sonner';
@@ -19,6 +19,7 @@ import { useLedgerSettings } from '../terminal/LedgerChatSettings';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { getShieldedBalances, resolveZkTag, registerZkTag, validateZkHandle, syncBalanceFromAztec, getZkTransactionHistory, clearZkTransactionHistory, ZkShieldedBalance, AZTEC_MAINNET_RPC } from '@/lib/zk/zkMoney';
+import { deriveAztecKeySet } from '@/lib/zk/aztecPxe';
 import { ZkPrivacyScore } from '@/components/zk/ZkPrivacyScore';
 import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
 import { ZkSettingsPanel } from '@/components/zk/ZkSettingsPanel';
@@ -42,7 +43,7 @@ const Toggle = ({ value, onChange, disabled = false }: { value: boolean; onChang
     }}
     className={`relative inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer items-center rounded-full p-[2px] transition-colors duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] focus:outline-none border border-black/[0.08] ${
       disabled ? 'opacity-40 cursor-not-allowed' : ''
-    } ${value ? 'bg-[#128C7E] shadow-[inset_0_1px_2px_rgba(0,0,0,0.18)]' : 'bg-[#E4E4E7] shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]'}`}
+    } ${value ? 'bg-[#1C1C1E] shadow-[inset_0_1px_2px_rgba(0,0,0,0.18)]' : 'bg-[#E4E4E7] shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]'}`}
   >
     <motion.span
       layout
@@ -58,7 +59,7 @@ const Toggle = ({ value, onChange, disabled = false }: { value: boolean; onChang
       className="pointer-events-none relative inline-flex items-center justify-center h-[18px] w-[18px] rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.2),0_1px_1px_rgba(0,0,0,0.1)]"
     >
       {/* Precision Micro-Indicator Dot */}
-      <span className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${value ? 'bg-[#128C7E]' : 'bg-[#D4D4D8]'}`} />
+      <span className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${value ? 'bg-[#1C1C1E]' : 'bg-[#D4D4D8]'}`} />
     </motion.span>
   </button>
 );
@@ -196,7 +197,7 @@ const CustomRpcModalContent: React.FC<{
         value={rpcVal}
         onChange={e => { setRpcVal(e.target.value); setRpcErr(null); }}
         placeholder="https://mainnet.infura.io/v3/your-key"
-        className={`w-full bg-[#F2F2F7] rounded-2xl px-4 py-4 text-[14px] font-mono text-[#1C1C1E] outline-none focus:ring-2 mb-1 ${rpcErr ? 'ring-2 ring-red-400 focus:ring-red-400' : 'focus:ring-[#25D366]'}`}
+        className={`w-full bg-[#F2F2F7] rounded-2xl px-4 py-4 text-[14px] font-mono text-[#1C1C1E] outline-none focus:ring-2 mb-1 ${rpcErr ? 'ring-2 ring-red-400 focus:ring-red-400' : 'focus:ring-black/30'}`}
       />
       {rpcErr && <p className="text-[12px] text-red-500 mb-3 px-1">{rpcErr}</p>}
       <div className="flex gap-3 mt-4">
@@ -674,8 +675,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
         className="shrink-0 bg-white border-b border-[#E5E5EA] flex items-center justify-between px-4"
         style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))', paddingBottom: '12px' }}
       >
-        <button type="button" onClick={onClose} className="flex items-center gap-1 text-[#25D366] font-medium text-[16px]">
-          <ArrowLeft size={20} className="text-[#25D366]" />
+        <button type="button" onClick={onClose} className="flex items-center gap-1 text-[#1C1C1E] font-medium text-[16px]">
+          <ArrowLeft size={20} className="text-[#1C1C1E]" />
           Back
         </button>
         <span className="text-[17px] font-semibold text-[#1C1C1E]">Settings</span>
@@ -726,13 +727,13 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     <button
                       type="button"
                       onClick={() => avatarFileRef.current?.click()}
-                      className="w-[88px] h-[88px] rounded-full overflow-hidden shadow-lg ring-4 ring-[#25D366]/20 hover:ring-[#25D366]/50 transition-all active:scale-95"
+                      className="w-[88px] h-[88px] rounded-full overflow-hidden shadow-lg ring-4 ring-black/[0.08] hover:ring-black/20 transition-all active:scale-95"
                       title="Change profile photo"
                     >
                       {avatarUrl ? (
                         <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center">
+                        <div className="w-full h-full bg-[#1C1C1E] flex items-center justify-center">
                           <span className="text-white text-3xl font-black">
                             {myAddress ? myAddress.slice(2, 4).toUpperCase() : '??'}
                           </span>
@@ -743,7 +744,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     <button
                       type="button"
                       onClick={() => avatarFileRef.current?.click()}
-                      className="absolute -bottom-1 -right-1 w-8 h-8 bg-[#25D366] rounded-full flex items-center justify-center shadow-md border-2 border-white hover:bg-[#128C7E] transition-colors"
+                      className="absolute -bottom-1 -right-1 w-8 h-8 bg-[#1C1C1E] rounded-full flex items-center justify-center shadow-md border-2 border-white hover:bg-black transition-colors"
                       title="Change photo"
                     >
                       <Camera size={14} className="text-white" />
@@ -771,11 +772,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         value={displayName}
                         onChange={e => setDisplayName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && saveDisplayName()}
-                        className="flex-1 text-center text-[20px] font-bold text-[#1C1C1E] bg-[#F2F2F7] rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-[#25D366]"
+                        className="flex-1 text-center text-[20px] font-bold text-[#1C1C1E] bg-[#F2F2F7] rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-black/30"
                         placeholder="Display name"
                         maxLength={32}
                       />
-                      <button type="button" onClick={saveDisplayName} className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center shadow-sm">
+                      <button type="button" onClick={saveDisplayName} className="w-9 h-9 bg-[#1C1C1E] rounded-full flex items-center justify-center shadow-sm">
                         <Check size={16} className="text-white" />
                       </button>
                     </div>
@@ -784,7 +785,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       <span className="text-[20px] font-bold text-[#1C1C1E]">
                         {displayName || 'Add display name'}
                       </span>
-                      <span className="text-[12px] text-[#25D366] opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Edit</span>
+                      <span className="text-[12px] text-[#8E8E93] opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Edit</span>
                     </button>
                   )}
 
@@ -796,18 +797,18 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         value={bio}
                         onChange={e => setBio(e.target.value)}
                         rows={2}
-                        className="flex-1 text-center text-[14px] text-[#8E8E93] bg-[#F2F2F7] rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-[#25D366] resize-none"
+                        className="flex-1 text-center text-[14px] text-[#8E8E93] bg-[#F2F2F7] rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-black/30 resize-none"
                         placeholder="About / bio..."
                         maxLength={100}
                       />
-                      <button type="button" onClick={saveBio} className="w-8 h-8 bg-[#25D366] rounded-full flex items-center justify-center shadow-sm mt-1">
+                      <button type="button" onClick={saveBio} className="w-8 h-8 bg-[#1C1C1E] rounded-full flex items-center justify-center shadow-sm mt-1">
                         <Check size={14} className="text-white" />
                       </button>
                     </div>
                   ) : (
                     <button type="button" onClick={() => setEditingBio(true)} className="text-[14px] text-[#8E8E93] group flex items-center gap-1">
                       {bio || 'Add a bio…'}
-                      <span className="text-[11px] text-[#25D366] opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Edit</span>
+                      <span className="text-[11px] text-[#8E8E93] opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Edit</span>
                     </button>
                   )}
 
@@ -819,7 +820,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   >
                     <Wallet size={13} className="text-[#8E8E93]" />
                     <span className="text-[12px] font-mono text-[#8E8E93]">{shortAddr(myAddress)}</span>
-                    {copied ? <Check size={13} className="text-[#25D366]" /> : <Copy size={13} className="text-[#8E8E93]" />}
+                    {copied ? <Check size={13} className="text-[#1C1C1E]" /> : <Copy size={13} className="text-[#8E8E93]" />}
                   </button>
 
                   {/* ETH balance */}
@@ -1024,7 +1025,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   {push.isSupported && push.permission !== 'denied' && (
                     push.isSubscribed ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-[13px] text-[#25D366] font-bold">✓ On</span>
+                        <span className="text-[13px] text-[#1C1C1E] font-bold">✓ On</span>
                         <button onClick={push.unsubscribe} className="text-[12px] text-[#8E8E93] underline">Off</button>
                       </div>
                     ) : (
@@ -1035,7 +1036,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                           else toast.error('Could not enable notifications');
                         }}
                         disabled={push.isLoading}
-                        className="px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white text-[13px] font-bold rounded-xl disabled:opacity-50 transition-colors"
+                        className="px-4 py-2 bg-[#1C1C1E] hover:bg-black text-white text-[13px] font-bold rounded-xl disabled:opacity-50 transition-colors"
                       >
                         {push.isLoading ? 'Enabling…' : 'Enable'}
                       </button>
@@ -1401,7 +1402,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     </div>
                     <div className="w-full bg-[#F2F2F7] rounded-full h-2">
                       <div
-                        className="bg-[#25D366] h-2 rounded-full transition-all"
+                        className="bg-[#1C1C1E] h-2 rounded-full transition-all"
                         style={{ width: `${Math.min((parseFloat(mb) / 50) * 100, 100)}%` }}
                       />
                     </div>
@@ -1442,98 +1443,75 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
           {/* PAYMENTS TAB (Including Native zk.money Aztec Private Payments) */}
           {activeTab === 'payments' && (
-            <div className="space-y-4">
-              {/* zk.money Shielded Section */}
-              <div className="bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] rounded-[20px] p-5 text-white shadow-lg border border-black/10">
+            <div className="space-y-6">
+              {/* Shielded Portfolio Overview Card */}
+              <div className="bg-white rounded-[18px] p-5 shadow-sm border border-black/[0.04]">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#8B5CF6] to-[#10B981] flex items-center justify-center shadow-md">
-                      <Shield size={20} className="text-white" />
+                    <div className="w-9 h-9 rounded-xl bg-black/5 flex items-center justify-center text-[#1C1C1E]">
+                      <Lock size={18} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-[16px] text-white">zk.money</span>
-                        <span className="text-[10px] font-black uppercase tracking-wider bg-[#10B981]/25 text-[#34D399] px-2 py-0.5 rounded-full border border-[#10B981]/30">
-                          Aztec Rollup
+                        <span className="font-bold text-[16px] text-[#1C1C1E]">Shielded Portfolio</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider bg-black/5 text-[#6D6D72] px-2 py-0.5 rounded-full">
+                          zk.money
                         </span>
                       </div>
-                      <p className="text-[12px] text-white/60">Zero-Knowledge Private Payments</p>
+                      <p className="text-[12px] text-[#8E8E93]">Aztec Rollup · Zero-Knowledge Confidentiality</p>
                     </div>
                   </div>
-                  <span className="text-[11px] font-mono text-[#34D399] bg-[#10B981]/15 px-2.5 py-1 rounded-full border border-[#10B981]/25 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#34D399] animate-pulse" />
+                  <span className="text-[11px] font-mono text-[#1C1C1E] bg-black/5 px-2.5 py-1 rounded-full border border-black/[0.08] flex items-center gap-1.5 font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#1C1C1E] animate-pulse" />
                     PXE Online
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2.5 pt-3 border-t border-white/10">
-                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
-                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Shielded DAI</p>
-                    <p className="text-[14px] font-bold font-mono text-white mt-0.5">{zkBalances.dai}</p>
+                {/* Balances grid */}
+                <div className="grid grid-cols-3 gap-2.5 pt-3 border-t border-black/[0.04]">
+                  <div className="p-3 rounded-xl bg-[#F2F2F7]">
+                    <p className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider">Shielded DAI</p>
+                    <p className="text-[15px] font-bold font-mono text-[#1C1C1E] mt-0.5">{zkBalances.dai || '0.00'}</p>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
-                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Shielded USDC</p>
-                    <p className="text-[14px] font-bold font-mono text-white mt-0.5">{zkBalances.usdc}</p>
+                  <div className="p-3 rounded-xl bg-[#F2F2F7]">
+                    <p className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider">Shielded USDC</p>
+                    <p className="text-[15px] font-bold font-mono text-[#1C1C1E] mt-0.5">{zkBalances.usdc || '0.00'}</p>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
-                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Shielded ETH</p>
-                    <p className="text-[14px] font-bold font-mono text-white mt-0.5">{zkBalances.eth}</p>
+                  <div className="p-3 rounded-xl bg-[#F2F2F7]">
+                    <p className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider">Shielded ETH</p>
+                    <p className="text-[15px] font-bold font-mono text-[#1C1C1E] mt-0.5">{zkBalances.eth || '0.00'}</p>
                   </div>
                 </div>
 
                 {/* Quick Shield / Unshield Actions */}
-                <div className="flex gap-2 mt-3 pt-3 border-t border-white/10">
+                <div className="flex gap-2.5 mt-3.5 pt-3.5 border-t border-black/[0.04]">
                   <button
                     type="button"
                     onClick={() => { setZkShieldMode('shield'); setShowZkShieldModal(true); }}
-                    className="flex-1 py-2 px-3 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-[#1C1C1E] hover:bg-black text-white text-[13px] font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
                   >
-                    <Shield size={13} /> Shield Funds (L1 → Aztec)
+                    <ArrowDownToLine size={15} /> Shield Funds (L1 → Aztec)
                   </button>
                   <button
                     type="button"
                     onClick={() => { setZkShieldMode('unshield'); setShowZkShieldModal(true); }}
-                    className="flex-1 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-colors"
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-[#F2F2F7] hover:bg-[#E5E5EA] text-[#1C1C1E] text-[13px] font-semibold flex items-center justify-center gap-2 transition-colors border border-black/[0.04]"
                   >
-                    Unshield to L1
+                    <ArrowUpFromLine size={15} /> Unshield to L1
                   </button>
                 </div>
               </div>
 
-              {/* Embedded Privacy Score */}
-              <ZkPrivacyScore
-                address={myAddress}
-                onShieldMore={() => { setZkShieldMode('shield'); setShowZkShieldModal(true); }}
-              />
-
-              {/* Advanced zk.money Architecture Console Button */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#1C1C1E] to-[#2C2C2E] text-white flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#25D366]/20 text-[#25D366] flex items-center justify-center font-bold">
-                    <Shield size={18} />
-                  </div>
-                  <div>
-                    <h4 className="text-[14px] font-bold">Advanced zk.money Console</h4>
-                    <p className="text-[11px] text-white/60">Aztec PXE Keys, Streams, Bridge & Devtools</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowZkSettingsPanel(true)}
-                  className="px-3.5 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white text-[12px] font-bold shadow-sm transition-colors"
-                >
-                  Open Console →
-                </button>
-              </div>
-
-              <Group title="zk.money Sovereign Identity & Handle">
+              {/* Sovereign Aztec Identity */}
+              <Group title="Sovereign Aztec Identity" footer="Your sovereign zk tag allows receiving confidential payments on Aztec without exposing your public 0x Ethereum address.">
                 <Row
+                  icon={<Wallet size={18} />}
                   label="Registered zk Handle"
-                  sublabel="Your readable sovereign payment alias on Aztec"
+                  sublabel="Your readable payment alias on Aztec"
                   value={currentZkTag}
                   onTap={() => {
                     navigator.clipboard.writeText(currentZkTag);
-                    toast.success('zk.money tag copied');
+                    toast.success('zk.money handle copied');
                   }}
                 />
                 <div className="px-4 py-3 border-t border-black/[0.04]">
@@ -1541,12 +1519,12 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     <button
                       type="button"
                       onClick={() => { setNewZkTag(currentZkTag.replace('zk:', '')); setEditingZkTag(true); }}
-                      className="text-[12px] font-bold text-[#25D366] hover:underline"
+                      className="text-[13px] font-semibold text-[#1C1C1E] hover:underline flex items-center gap-1.5"
                     >
                       Change or Register Custom Handle →
                     </button>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       <div className="flex items-center gap-2">
                         <span className="text-[13px] font-bold text-gray-500 font-mono">zk:</span>
                         <input
@@ -1555,14 +1533,14 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                           onChange={e => setNewZkTag(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))}
                           placeholder="newhandle"
                           maxLength={32}
-                          className="flex-1 px-3 py-1.5 rounded-xl border border-black/10 text-[13px] font-mono outline-none focus:border-[#25D366]"
+                          className="flex-1 px-3.5 py-2 rounded-xl bg-[#F2F2F7] text-[13px] font-mono outline-none focus:ring-1 focus:ring-black/30"
                         />
                       </div>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => setEditingZkTag(false)}
-                          className="px-3 py-1.5 rounded-xl text-[12px] font-semibold bg-gray-100 text-gray-600"
+                          className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold bg-[#F2F2F7] text-gray-600 hover:bg-[#E5E5EA]"
                         >
                           Cancel
                         </button>
@@ -1580,7 +1558,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                             setEditingZkTag(false);
                             toast.success(`Registered handle: ${fullTag}`);
                           }}
-                          className="px-4 py-1.5 rounded-xl text-[12px] font-bold bg-[#25D366] text-white"
+                          className="px-4 py-1.5 rounded-xl text-[12px] font-semibold bg-[#1C1C1E] text-white hover:bg-black"
                         >
                           Save Handle
                         </button>
@@ -1590,47 +1568,95 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 </div>
               </Group>
 
-              <Group title="zk.money Privacy Shield (Aztec Network)">
+              {/* Aztec Privacy & PXE Architecture */}
+              <Group title="Aztec Privacy & PXE Architecture" footer="All zero-knowledge proofs are generated locally in your browser using UltraPlonk through the Aztec Private Execution Environment.">
                 <Row
+                  icon={<Lock size={18} />}
                   label="Private DAI Default"
                   sublabel="Send all chat payments as shielded DAI via zk.money"
                   toggle={settings.zk_private_dai_default ?? true}
                   onToggle={(v) => updateSetting('zk_private_dai_default', v)}
                 />
                 <Row
+                  icon={<Lock size={18} />}
                   label="Auto-Shield Incoming Transits"
                   sublabel="Automatically shield received DAI into Aztec notes"
                   toggle={settings.zk_auto_shield ?? true}
                   onToggle={(v) => updateSetting('zk_auto_shield', v)}
                 />
                 <Row
+                  icon={<Cpu size={18} />}
                   label="Client-Side Proof Generation"
                   sublabel="Compute UltraPlonk proofs in browser via Aztec PXE"
                   toggle={settings.zk_client_proofs ?? true}
                   onToggle={(v) => updateSetting('zk_client_proofs', v)}
                 />
                 <Row
+                  icon={<Sliders size={18} />}
                   label="Force Note Anonymity Threshold"
-                  sublabel="Require minimum 15 mixing transactions before spending"
+                  sublabel="Require minimum note mixing before spending"
                   toggle={settings.zk_min_anonymity ?? true}
                   onToggle={(v) => updateSetting('zk_min_anonymity', v)}
                 />
               </Group>
 
+              {/* Cryptographic Keys & Aztec State */}
+              <Group title="Aztec Cryptography & Note Tree" footer="Your viewing key decrypts incoming notes while your spending key authorizes nullification locally.">
+                {(() => {
+                  const azKey = deriveAztecKeySet(myAddress);
+                  return (
+                    <>
+                      <Row
+                        icon={<Key size={18} />}
+                        label="Aztec Viewing Key"
+                        sublabel="Authorizes local decryption of notes"
+                        value={`${azKey.incomingViewingKey.slice(0, 8)}...${azKey.incomingViewingKey.slice(-6)}`}
+                        onTap={() => {
+                          navigator.clipboard.writeText(azKey.incomingViewingKey);
+                          toast.success('Aztec viewing key copied');
+                        }}
+                      />
+                      <Row
+                        icon={<RefreshCw size={18} className={isSyncingAztec ? 'animate-spin' : ''} />}
+                        label="Sync Note Tree from Aztec"
+                        sublabel="Scan rollup commitments for your incoming notes"
+                        value={isSyncingAztec ? 'Syncing...' : 'Sync Now'}
+                        onTap={async () => {
+                          setIsSyncingAztec(true);
+                          try {
+                            const b = await syncBalanceFromAztec(myAddress);
+                            setZkBalances(b);
+                            toast.success('Aztec note tree synced');
+                          } catch {
+                            toast.error('Sync completed with local state');
+                          } finally {
+                            setIsSyncingAztec(false);
+                          }
+                        }}
+                      />
+                    </>
+                  );
+                })()}
+              </Group>
+
+              {/* Native Crypto Payments */}
               <Group title="Native Crypto Payments">
                 <Row
+                  icon={<Wallet size={18} />}
                   label="Enable Crypto Payments"
                   sublabel="Show payment CTAs and ETH/USDC send button in all chats"
                   toggle={settings.payments_enabled ?? false}
                   onToggle={(v) => updateSetting('payments_enabled', v)}
                 />
                 <Row
+                  icon={<Lock size={18} />}
                   label="Payment Confirmations"
                   sublabel="Always require a confirmation before sending crypto"
                   toggle={settings.payment_confirmations ?? true}
                   onToggle={(v) => updateSetting('payment_confirmations', v)}
                 />
                 <Row
+                  icon={<Eye size={18} />}
                   label="Show Balances in Chat"
                   sublabel="Display ETH and token balances in your profile header"
                   toggle={settings.show_balances ?? true}
@@ -1644,11 +1670,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     <button
                       key={token}
                       onClick={() => updateSetting('default_token', token)}
-                      className={"flex items-center justify-between w-full py-3 border-b border-black/5 last:border-0 " + (settings.default_token === token ? "text-[#25D366]" : "text-[#1C1C1E]")}
+                      className={"flex items-center justify-between w-full py-3 border-b border-black/5 last:border-0 " + (settings.default_token === token ? "text-[#1C1C1E]" : "text-[#1C1C1E]")}
                     >
                       <span className="font-semibold text-[14px]">{token}</span>
                       {settings.default_token === token && (
-                        <div className="w-5 h-5 rounded-full bg-[#25D366] flex items-center justify-center">
+                        <div className="w-5 h-5 rounded-full bg-[#1C1C1E] flex items-center justify-center">
                           <div className="w-2 h-2 bg-white rounded-full" />
                         </div>
                       )}
@@ -1656,7 +1682,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   ))}
                 </div>
               </Group>
-              <Group label="Transaction History">
+
+              <Group title="Transaction History">
                 <Row label="View Full History" onTap={() => window.open('/payments/history', '_blank')} />
                 <Row label="Export CSV" onTap={() => {
                   try {
@@ -1742,20 +1769,20 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       {/* QR Code */}
                       <div className="flex justify-center mb-4">
                         {deviceLinkedSuccess ? (
-                          <div className="w-[220px] p-6 bg-[#25D366]/10 rounded-[24px] border border-[#25D366]/30 flex flex-col items-center justify-center text-center shadow-sm">
-                            <div className="w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center text-white text-2xl shadow-md mb-2">
+                          <div className="w-[220px] p-6 bg-black/5 rounded-[24px] border border-black/[0.08] flex flex-col items-center justify-center text-center shadow-sm">
+                            <div className="w-14 h-14 bg-[#1C1C1E] rounded-full flex items-center justify-center text-white text-2xl shadow-md mb-2">
                               ✓
                             </div>
                             <h4 className="text-[16px] font-bold text-[#1C1C1E]">¡Dispositivo Vinculado!</h4>
-                            <p className="text-[12px] text-[#25D366] font-semibold mt-1">Sesión sincronizada</p>
+                            <p className="text-[12px] text-[#1C1C1E] font-semibold mt-1">Sesión sincronizada</p>
                           </div>
                         ) : isGeneratingQr ? (
                           <div className="w-[200px] h-[200px] flex flex-col items-center justify-center gap-2 bg-[#F2F2F7] rounded-[20px]">
-                            <div className="w-7 h-7 border-2 border-[#25D366] border-t-transparent rounded-full animate-spin" />
+                            <div className="w-7 h-7 border-2 border-[#1C1C1E] border-t-transparent rounded-full animate-spin" />
                             <p className="text-[12px] text-[#8E8E93] font-medium">Generando código seguro…</p>
                           </div>
                         ) : (
-                          <div className={`rounded-[20px] border-4 p-2 transition-all ${qrExpiry > 0 ? 'border-[#25D366] shadow-md' : 'border-[#E5E5EA] opacity-40'}`}>
+                          <div className={`rounded-[20px] border-4 p-2 transition-all ${qrExpiry > 0 ? 'border-[#1C1C1E] shadow-md' : 'border-[#E5E5EA] opacity-40'}`}>
                             {qrExpiry > 0 && qrLinkUrl ? (
                               <DeviceQRCode data={qrLinkUrl} size={200} />
                             ) : (
@@ -1772,7 +1799,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       <div className="flex items-center justify-center gap-2 mb-5">
                         {deviceLinkedSuccess ? null : qrExpiry > 0 ? (
                           <>
-                            <div className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse" />
+                            <div className="w-2 h-2 rounded-full bg-[#1C1C1E]" />
                             <p className="text-[13px] text-[#8E8E93] font-mono">
                               Expira en {Math.floor(qrExpiry / 60)}:{String(qrExpiry % 60).padStart(2, '0')}
                             </p>
@@ -1781,7 +1808,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                           <button
                             type="button"
                             onClick={generateDeviceLinkQr}
-                            className="flex items-center gap-2 text-[#25D366] font-semibold text-[14px]"
+                            className="flex items-center gap-2 text-[#1C1C1E] font-semibold text-[14px]"
                           >
                             <RefreshCw size={14} />
                             Generar nuevo código
@@ -1799,7 +1826,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                           { n: '4', text: 'Scan this QR code to sync your session' },
                         ].map(step => (
                           <div key={step.n} className="flex items-center gap-3 mb-2 last:mb-0">
-                            <div className="w-6 h-6 rounded-full bg-[#25D366] flex items-center justify-center shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-[#1C1C1E] flex items-center justify-center shrink-0">
                               <span className="text-white text-[11px] font-black">{step.n}</span>
                             </div>
                             <p className="text-[13px] text-[#1C1C1E]">{step.text}</p>
@@ -1808,7 +1835,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       </div>
 
                       <div className="flex items-center gap-2 text-[12px] text-[#8E8E93] justify-center">
-                        <ShieldCheck size={13} className="text-[#25D366]" />
+                        <ShieldCheck size={13} className="text-[#1C1C1E]" />
                         Secured with end-to-end encryption. No passwords required.
                       </div>
                     </>
@@ -1823,12 +1850,12 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         <canvas ref={qrCanvasRef} className="hidden" />
                         
                         {/* Scanner overlay */}
-                        <div className="absolute inset-0 pointer-events-none border-[3px] border-[#25D366]/30 m-8 rounded-[16px]">
-                          <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-[#25D366] rounded-tl-[12px]" />
-                          <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-[#25D366] rounded-tr-[12px]" />
-                          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-[#25D366] rounded-bl-[12px]" />
-                          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-[#25D366] rounded-br-[12px]" />
-                          <div className="w-full h-0.5 bg-[#25D366] shadow-[0_0_8px_#25D366] animate-pulse relative top-1/2" />
+                        <div className="absolute inset-0 pointer-events-none border-[3px] border-[#1C1C1E]/20 m-8 rounded-[16px]">
+                          <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-[#1C1C1E] rounded-tl-[12px]" />
+                          <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-[#1C1C1E] rounded-tr-[12px]" />
+                          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-[#1C1C1E] rounded-bl-[12px]" />
+                          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-[#1C1C1E] rounded-br-[12px]" />
+                          <div className="w-full h-0.5 bg-[#1C1C1E] opacity-60 animate-pulse relative top-1/2" />
                         </div>
 
                         {scanError && (
@@ -1840,9 +1867,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                           </div>
                         )}
                         {scanSuccess && (
-                          <div className="absolute inset-0 bg-[#25D366]/90 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
+                          <div className="absolute inset-0 bg-[#1C1C1E]/90 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
                             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-3">
-                              <Check size={24} className="text-[#25D366]" />
+                              <Check size={24} className="text-[#1C1C1E]" />
                             </div>
                             <p className="text-white text-[16px] font-bold">{scanSuccess}</p>
                           </div>
@@ -1872,7 +1899,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       type="button"
                       key={opt}
                       onClick={() => { updateSetting(modal as any, opt); setModal(null); toast.success('Privacy updated'); }}
-                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${(settings as any)[modal!] === opt ? 'bg-[#25D366] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA]'}`}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${(settings as any)[modal!] === opt ? 'bg-[#1C1C1E] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA]'}`}
                     >
                       <span className="font-semibold capitalize">{opt}</span>
                       {(settings as any)[modal!] === opt && <Check size={18} />}
@@ -1961,7 +1988,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       step={1}
                       value={settings.text_size ?? 2}
                       onChange={e => updateSetting('text_size', parseInt(e.target.value))}
-                      className="flex-1 accent-[#25D366]"
+                      className="flex-1 accent-[#1C1C1E]"
                     />
                     <span className="text-[18px] text-[#8E8E93] font-semibold">A</span>
                   </div>
@@ -1981,7 +2008,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         onClick={() => { updateSetting('chat_background', bg); setModal(null); toast.success('Wallpaper saved'); }}
                         className={`h-24 rounded-2xl border-2 flex items-center justify-center font-semibold text-[12px] transition-all ${
                           (settings.chat_background || 'default') === bg
-                            ? 'border-[#25D366] text-[#25D366] bg-[#25D366]/5'
+                            ? 'border-[#1C1C1E] text-[#1C1C1E] bg-black/5'
                             : 'border-transparent bg-[#F2F2F7] text-[#8E8E93]'
                         }`}
                       >
@@ -2005,7 +2032,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       type="button"
                       key={style.id}
                       onClick={() => { updateSetting('bubble_style', style.id); setModal(null); toast.success('Saved'); }}
-                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 ${(settings.bubble_style || 'default') === style.id ? 'bg-[#25D366] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E]'}`}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 ${(settings.bubble_style || 'default') === style.id ? 'bg-[#1C1C1E] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E]'}`}
                     >
                       <div className="text-left">
                         <p className="font-semibold">{style.label}</p>
@@ -2066,7 +2093,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     ) : blocked.map((addr: string) => (
                       <div key={addr} className="flex items-center justify-between bg-[#F2F2F7] rounded-2xl px-4 py-3 mb-2">
                         <p className="text-[14px] font-semibold text-[#1C1C1E] font-mono">{addr.slice(0, 8)}...{addr.slice(-6)}</p>
-                        <button type="button" onClick={() => { const upd = blocked.filter(b => b !== addr); localStorage.setItem('ledger_blocked_users', JSON.stringify(upd)); toast.success('Unblocked'); setModal(null); }} className="text-[13px] text-[#25D366] font-bold px-3 py-1.5 rounded-xl hover:bg-[#25D366]/10">Unblock</button>
+                        <button type="button" onClick={() => { const upd = blocked.filter(b => b !== addr); localStorage.setItem('ledger_blocked_users', JSON.stringify(upd)); toast.success('Unblocked'); setModal(null); }} className="text-[13px] text-[#1C1C1E] font-bold px-3 py-1.5 rounded-xl hover:bg-black/5">Unblock</button>
                       </div>
                     ))}
                   </div>
@@ -2088,7 +2115,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       <p className="text-[13px] text-[#8E8E93] mb-1">Cached media storage</p>
                       <p className="text-[28px] font-bold text-[#1C1C1E]">{mb} <span className="text-[16px] font-medium text-[#8E8E93]">MB</span></p>
                       <p className="text-[12px] text-[#8E8E93] mt-1">{mediaCount} media item{mediaCount !== 1 ? 's' : ''}</p>
-                      <div className="mt-3 h-2 bg-[#E5E5EA] rounded-full overflow-hidden"><div className="h-full bg-[#25D366] rounded-full" style={{ width: `${Math.min((parseFloat(mb) / 10) * 100, 100)}%` }} /></div>
+                      <div className="mt-3 h-2 bg-[#E5E5EA] rounded-full overflow-hidden"><div className="h-full bg-[#1C1C1E] rounded-full" style={{ width: `${Math.min((parseFloat(mb) / 10) * 100, 100)}%` }} /></div>
                     </div>
                     <button type="button" onClick={() => { let n = 0; for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i)!; if (k.startsWith('ledger_') && (localStorage.getItem(k) || '').startsWith('data:')) { localStorage.removeItem(k); n++; } } toast.success(`Cleared ${n} item${n !== 1 ? 's' : ''}`); setModal(null); }} className="w-full py-4 bg-[#FF3B30] rounded-2xl text-white font-bold text-[16px] mb-2">Clear Media Cache</button>
                     <button type="button" onClick={() => setModal(null)} className="w-full py-3 text-[#8E8E93] font-semibold text-[16px]">Cancel</button>

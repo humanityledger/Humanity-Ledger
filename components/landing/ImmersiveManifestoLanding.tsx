@@ -495,6 +495,117 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
         </div>
       </section>
 
+      {/* ═══ SECTION: AZTEC NETWORK × ZK.MONEY ZERO-KNOWLEDGE PAYMENTS ═══════════ */}
+      <section className="bg-[#050505] text-white py-24 md:py-32 relative overflow-hidden">
+        {/* Subtle executive grid & glow */}
+        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '32px 32px' }} />
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-white/[0.03] rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-5 md:px-10 relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-16 gap-6">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              className="max-w-2xl"
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white/90 text-[11px] font-mono uppercase tracking-[0.2em] mb-5">
+                <Lock size={12} className="text-white" />
+                <span>Aztec Network × zk.money Integration</span>
+              </div>
+              <h2 className="text-[36px] md:text-[54px] font-black tracking-tight text-white leading-[1.05]">
+                Confidential financial sovereignty.<br />Powered by Aztec.
+              </h2>
+            </motion.div>
+            <p className="text-[16px] md:text-[18px] text-white/60 max-w-md font-medium leading-relaxed">
+              We revived zk.money natively inside Humanity Ledger. Client-side UltraPlonk zero-knowledge proofs ensure zero on-chain tracing, hidden balances, and private streaming payroll.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                icon: <Lock size={22} />,
+                title: "Client-Side UltraPlonk",
+                desc: "Proofs are synthesized entirely inside your browser's Private eXecution Environment (PXE). Sequencers and miners never learn transaction amounts or participants.",
+                tag: "Zero-Knowledge"
+              },
+              {
+                icon: <Fingerprint size={22} />,
+                title: "Sovereign Aliases (zk:tag)",
+                desc: "Send and receive shielded DAI, USDC, and ETH using privacy-preserving handles. Your public Ethereum address is completely shielded from counterparty view.",
+                tag: "Sovereign Identity"
+              },
+              {
+                icon: <BarChart2 size={22} />,
+                title: "Private Streaming",
+                desc: "Stream micro-payments continuously per second within chat conversations. Continuous payroll and private subscriptions with zero public transaction trails.",
+                tag: "Confidential Streams"
+              },
+              {
+                icon: <Globe size={22} />,
+                title: "UTXO Nullifier Trees",
+                desc: "Mathematical double-spend prevention through cryptographic note commitments settled on Aztec rollup contracts with instant state finality.",
+                tag: "Aztec Rollup"
+              }
+            ].map((f, i) => (
+              <motion.div
+                key={f.title}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                custom={i * 0.1}
+                variants={fadeUp}
+                className="bg-white/[0.04] border border-white/[0.08] hover:border-white/20 rounded-3xl p-7 flex flex-col justify-between transition-all group"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="w-12 h-12 rounded-2xl bg-white/10 text-white flex items-center justify-center group-hover:scale-105 transition-transform">
+                      {f.icon}
+                    </div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-white/50 bg-white/5 px-2.5 py-1 rounded-full border border-white/10">
+                      {f.tag}
+                    </span>
+                  </div>
+                  <h3 className="text-[19px] font-bold text-white mb-2 leading-snug">{f.title}</h3>
+                  <p className="text-[14px] text-white/60 font-medium leading-relaxed">{f.desc}</p>
+                </div>
+                <div className="mt-6 pt-4 border-t border-white/[0.06] flex items-center gap-1 text-[11px] font-bold text-white/70 group-hover:text-white transition-colors">
+                  <span>Audited on Aztec</span>
+                  <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Interactive Aztec × zk.money CTA banner for Harry Bridge & partners */}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="mt-12 flex flex-col sm:flex-row items-center justify-between p-6 md:p-8 rounded-3xl bg-white/[0.04] border border-white/10 gap-6 backdrop-blur-sm"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white shrink-0">
+                <Lock size={22} strokeWidth={2} />
+              </div>
+              <div>
+                <p className="text-[16px] font-bold text-white tracking-tight">Live Aztec Rollup & zk.money Protocol</p>
+                <p className="text-[13px] text-white/55 font-medium leading-relaxed">Integrated UltraPlonk circuits with native UTXO settlement in settings & confidential chats.</p>
+              </div>
+            </div>
+            <Link
+              href="/connect"
+              className="px-6 py-3 rounded-2xl bg-white text-[#1C1C1E] font-bold text-[14px] hover:bg-neutral-100 transition shadow-lg shrink-0 flex items-center gap-2 select-none"
+            >
+              Launch zk.money Experience <ArrowRight size={15} />
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
       {/* ═══ SECTION 4.5 — ACCESSIBILITY & THE NEXT STEP ═══════════════════════ */}
       <section className="bg-white py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-5 md:px-10">

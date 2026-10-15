@@ -73,13 +73,13 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
       {/* Top Header */}
       <div className="bg-[#1C1C1E] text-white px-6 py-5 flex items-center justify-between border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#25D366] to-[#00A884] flex items-center justify-center shadow-md">
+          <div className="w-10 h-10 rounded-2xl bg-[#1C1C1E] flex items-center justify-center shadow-md">
             <Server size={20} className="text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-[17px] font-bold text-white">Aztec Sequencer & Node Operations</h2>
-              <span className="text-[10px] font-black uppercase tracking-wider bg-[#25D366]/20 text-[#34D399] px-2 py-0.5 rounded-full border border-[#25D366]/30">
+              <span className="text-[10px] font-black uppercase tracking-wider bg-[#1C1C1E]/20 text-[#FFFFFF] px-2 py-0.5 rounded-full border border-[#1C1C1E]/30">
                 Rollup v6 Active
               </span>
             </div>
@@ -94,7 +94,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
               type="button"
               onClick={() => setActiveNetwork('testnet')}
               className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                activeNetwork === 'testnet' ? 'bg-[#25D366] text-white shadow' : 'text-white/60 hover:text-white'
+                activeNetwork === 'testnet' ? 'bg-[#1C1C1E] text-white shadow' : 'text-white/60 hover:text-white'
               }`}
             >
               Testnet ({AZTEC_TESTNET_VERSION})
@@ -103,7 +103,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
               type="button"
               onClick={() => setActiveNetwork('mainnet')}
               className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                activeNetwork === 'mainnet' ? 'bg-[#25D366] text-white shadow' : 'text-white/60 hover:text-white'
+                activeNetwork === 'mainnet' ? 'bg-[#1C1C1E] text-white shadow' : 'text-white/60 hover:text-white'
               }`}
             >
               Mainnet ({AZTEC_MAINNET_VERSION})
@@ -184,14 +184,14 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
         <div className="bg-[#F2F2F7] rounded-2xl p-5 border border-black/5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Radio size={18} className="text-[#25D366] animate-pulse" />
+              <Radio size={18} className="text-[#1C1C1E] " />
               <h3 className="text-[15px] font-bold text-[#1C1C1E]">Señalización de Gobernanza V6 para Sequencers</h3>
             </div>
             <a
               href="https://forum.aztec.network/t/proposal-v6-payload/8671"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[12px] text-[#25D366] font-bold flex items-center gap-1 hover:underline"
+              className="text-[12px] text-[#1C1C1E] font-bold flex items-center gap-1 hover:underline"
             >
               Ver Propuesta en Forum <ExternalLink size={12} />
             </a>
@@ -212,7 +212,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
               onClick={handleCopyPayload}
               className="px-3 py-1.5 rounded-lg bg-black/5 hover:bg-black/10 text-[12px] font-semibold text-black/70 flex items-center gap-1 shrink-0"
             >
-              {copiedPayload ? <Check size={13} className="text-[#25D366]" /> : <Copy size={13} />}
+              {copiedPayload ? <Check size={13} className="text-[#1C1C1E]" /> : <Copy size={13} />}
               {copiedPayload ? 'Copiado' : 'Copiar'}
             </button>
           </div>
@@ -225,7 +225,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
               className={`flex-1 py-3 rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 shadow transition-all ${
                 signalled
                   ? 'bg-emerald-600 text-white'
-                  : 'bg-[#25D366] hover:bg-[#128C7E] text-white active:scale-[0.99]'
+                  : 'bg-[#1C1C1E] hover:bg-[#000000] text-white active:scale-[0.99]'
               }`}
             >
               {signalling ? (
@@ -252,7 +252,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
             <p className="text-[20px] font-black text-[#1C1C1E] font-mono mt-1">
               #{data?.currentBlock || '14,824'}
             </p>
-            <p className="text-[11px] text-[#25D366] font-semibold mt-0.5">Época #{data?.currentEpoch || '463'}</p>
+            <p className="text-[11px] text-[#1C1C1E] font-semibold mt-0.5">Época #{data?.currentEpoch || '463'}</p>
           </div>
 
           <div className="p-4 rounded-2xl bg-[#F9F9FB] border border-black/5">
@@ -265,7 +265,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
 
           <div className="p-4 rounded-2xl bg-[#F9F9FB] border border-black/5">
             <p className="text-[11px] font-bold uppercase tracking-wider text-black/40">Ahorro de Gas vs L1</p>
-            <p className="text-[20px] font-black text-[#25D366] font-mono mt-1">
+            <p className="text-[20px] font-black text-[#1C1C1E] font-mono mt-1">
               {data?.sequencerMetrics?.avgGasSavedVsL1 || '99.4%'}
             </p>
             <p className="text-[11px] text-black/40 font-semibold mt-0.5">Amortización por Lote</p>
@@ -284,7 +284,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
         <div>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-[14px] font-bold text-[#1C1C1E] flex items-center gap-1.5">
-              <Activity size={16} className="text-[#25D366]" />
+              <Activity size={16} className="text-[#1C1C1E]" />
               Lotes Recientes Procesados por el Sequencer
             </h4>
             <span className="text-[11px] font-mono text-black/40">Cadencia: ~12s por lote</span>

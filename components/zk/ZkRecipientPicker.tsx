@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, Shield, CheckCircle, Clock, Users, Star } from 'lucide-react';
+import { X, Search, Lock, CheckCircle, Clock, Users, Star } from 'lucide-react';
 import { formatZkTag, resolveIdentity, ZkIdentityRecord } from '@/lib/zk/zkMoney';
 import { getAllIdentities, getRecentContacts, resolveDisplayName, getAvatarColor, getInitials, ZkIdentity } from '@/lib/zk/zkIdentity';
 
@@ -46,7 +46,7 @@ function ContactRow({
             {identity.displayName || identity.zkHandle}
           </span>
           {identity.verified && (
-            <CheckCircle size={12} className="text-[#25D366] flex-shrink-0" strokeWidth={2.5} />
+            <CheckCircle size={12} className="text-[#1C1C1E] flex-shrink-0" strokeWidth={2.5} />
           )}
         </div>
         <div className="text-[11px] text-gray-400 truncate">{identity.zkHandle}</div>
@@ -141,7 +141,7 @@ export function ZkRecipientPicker({ senderAddress, onSelect, onClose }: ZkRecipi
       >
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-black/[0.06] flex-shrink-0">
-          <Shield size={18} className="text-[#25D366]" strokeWidth={2} />
+          <Lock size={18} className="text-[#1C1C1E]" strokeWidth={2} />
           <h2 className="font-bold text-gray-900 text-[16px] flex-1">Select Recipient</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5">
             <X size={15} className="text-gray-600" />
@@ -157,7 +157,7 @@ export function ZkRecipientPicker({ senderAddress, onSelect, onClose }: ZkRecipi
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[12px] font-semibold transition-all"
               style={{
                 background: tab === id ? '#fff' : 'transparent',
-                color: tab === id ? '#25D366' : '#9CA3AF',
+                color: tab === id ? '#1C1C1E' : '#9CA3AF',
                 boxShadow: tab === id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
               }}
             >
@@ -229,7 +229,7 @@ export function ZkRecipientPicker({ senderAddress, onSelect, onClose }: ZkRecipi
                     placeholder="zk:handle or 0x address…"
                     value={query}
                     onChange={e => setQuery(e.target.value)}
-                    className="w-full bg-[#f0f2f5] rounded-2xl pl-10 pr-4 py-3 text-[14px] text-gray-900 outline-none border-2 border-transparent focus:border-[#25D366] transition-colors"
+                    className="w-full bg-[#f0f2f5] rounded-2xl pl-10 pr-4 py-3 text-[14px] text-gray-900 outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors"
                   />
                 </div>
 
@@ -237,7 +237,7 @@ export function ZkRecipientPicker({ senderAddress, onSelect, onClose }: ZkRecipi
                 {searching && (
                   <div className="flex items-center gap-2 text-[12px] text-gray-400">
                     <motion.div
-                      className="w-3 h-3 border-2 border-[#25D366] border-t-transparent rounded-full"
+                      className="w-3 h-3 border-2 border-[#1C1C1E] border-t-transparent rounded-full"
                       animate={{ rotate: 360 }}
                       transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
                     />
@@ -247,9 +247,9 @@ export function ZkRecipientPicker({ senderAddress, onSelect, onClose }: ZkRecipi
 
                 {!searching && query && searchResult && searchResult !== 'not-found' && (
                   <div className="bg-[#f0f2f5] rounded-2xl overflow-hidden">
-                    <div className="px-4 py-2 bg-[#25D366]/10 border-b border-[#25D366]/20 flex items-center gap-1.5">
-                      <CheckCircle size={12} className="text-[#25D366]" />
-                      <span className="text-[11px] text-[#25D366] font-semibold">Verified by Humanity Ledger</span>
+                    <div className="px-4 py-2 bg-[#1C1C1E]/10 border-b border-[#1C1C1E]/20 flex items-center gap-1.5">
+                      <CheckCircle size={12} className="text-[#1C1C1E]" />
+                      <span className="text-[11px] text-[#1C1C1E] font-semibold">Verified by Humanity Ledger</span>
                     </div>
                     <button
                       onClick={() => onSelect(searchResult.zkHandle, null)}
@@ -257,7 +257,7 @@ export function ZkRecipientPicker({ senderAddress, onSelect, onClose }: ZkRecipi
                     >
                       <div
                         className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                        style={{ background: '#25D366' }}
+                        style={{ background: '#1C1C1E' }}
                       >
                         {searchResult.zkHandle.slice(3, 5).toUpperCase()}
                       </div>
@@ -278,7 +278,7 @@ export function ZkRecipientPicker({ senderAddress, onSelect, onClose }: ZkRecipi
                     <button
                       onClick={() => onSelect(formatZkTag(query), null)}
                       className="w-full py-3 rounded-2xl font-semibold text-[14px] text-white"
-                      style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}
+                      style={{ background: '#1C1C1E' }}
                     >
                       Send to {query.slice(0, 8)}…
                     </button>
@@ -294,7 +294,7 @@ export function ZkRecipientPicker({ senderAddress, onSelect, onClose }: ZkRecipi
                     <button
                       onClick={() => onSelect(query, null)}
                       className="w-full py-3 rounded-2xl font-semibold text-[14px] text-white"
-                      style={{ background: 'linear-gradient(135deg, #25D366, #00a884)' }}
+                      style={{ background: '#1C1C1E' }}
                     >
                       Send to {query}
                     </button>

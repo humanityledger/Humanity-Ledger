@@ -131,16 +131,16 @@ const PaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: bo
     recipient = parsed.to ? `${String(parsed.to).slice(0, 6)}...${String(parsed.to).slice(-4)}` : '';
   } catch { amount = raw; }
   return (
-    <div className={`rounded-[18px] min-w-[180px] overflow-hidden shadow-md border ${isMe ? 'bg-[#30d158] border-transparent' : 'bg-white border-black/8'}`}>
+    <div className={`rounded-[18px] min-w-[180px] overflow-hidden shadow-md border ${isMe ? 'bg-[#1C1C1E] text-white border-transparent' : 'bg-white text-[#1C1C1E] border-black/8'}`}>
       <div className="px-4 py-3 flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${isMe ? 'bg-white/25' : 'bg-[#30d158]/15'}`}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isMe ? 'white' : '#30d158'} strokeWidth="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${isMe ? 'bg-white/20 text-white' : 'bg-black/5 text-[#1C1C1E]'}`}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
           </div>
-          <span className={`text-[11px] font-bold uppercase tracking-widest ${isMe ? 'text-white/80' : 'text-[#30d158]'}`}>Crypto Transfer</span>
+          <span className={`text-[11px] font-bold uppercase tracking-widest ${isMe ? 'text-white/80' : 'text-[#1C1C1E]'}`}>Crypto Transfer</span>
         </div>
         <p className={`text-[22px] font-black tracking-tight ${isMe ? 'text-white' : 'text-[#1c1c1e]'}`}>{amount} <span className="text-[14px] font-semibold opacity-70">{token}</span></p>
-        {recipient && <p className={`text-[11px] font-mono ${isMe ? 'text-white/60' : 'text-black/40'}`}>â†’ {recipient}</p>}
+        {recipient && <p className={`text-[11px] font-mono ${isMe ? 'text-white/60' : 'text-black/40'}`}>→ {recipient}</p>}
       </div>
     </div>
   );
@@ -161,13 +161,13 @@ const TipBubble = React.memo(({ content, isMe }: { content: string; isMe: boolea
     amount = raw;
   }
   return (
-    <div className={`rounded-[20px] min-w-[200px] overflow-hidden shadow-sm border ${isMe ? 'bg-[#25D366] text-white border-transparent' : 'bg-white text-[#1C1C1E] border-black/10'}`}>
+    <div className={`rounded-[20px] min-w-[200px] overflow-hidden shadow-sm border ${isMe ? 'bg-[#1C1C1E] text-white border-transparent' : 'bg-white text-[#1C1C1E] border-black/10'}`}>
       <div className="px-4 py-3 flex flex-col gap-1.5">
         <div className="flex items-center gap-2">
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${isMe ? 'bg-white/20' : 'bg-[#25D366]/10'}`}>
-            <Heart size={14} fill="currentColor" className={isMe ? 'text-white' : 'text-[#25D366]'} />
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${isMe ? 'bg-white/20' : 'bg-black/5'}`}>
+            <Heart size={14} fill="currentColor" className={isMe ? 'text-white' : 'text-[#1C1C1E]'} />
           </div>
-          <span className={`text-[11px] font-bold uppercase tracking-widest ${isMe ? 'text-white/80' : 'text-[#25D366]'}`}>Creator Tip</span>
+          <span className={`text-[11px] font-bold uppercase tracking-widest ${isMe ? 'text-white/80' : 'text-[#1C1C1E]'}`}>Creator Tip</span>
         </div>
         <p className={`text-[22px] font-black tracking-tight ${isMe ? 'text-white' : 'text-[#1C1C1E]'}`}>
           +{amount} <span className="text-[14px] font-semibold opacity-80">{token}</span>
@@ -182,7 +182,7 @@ const TipBubble = React.memo(({ content, isMe }: { content: string; isMe: boolea
             href={`https://etherscan.io/tx/${txHash}`}
             target="_blank"
             rel="noopener noreferrer"
-            className={`text-[10px] font-mono underline mt-1 ${isMe ? 'text-white/80' : 'text-[#25D366]'}`}
+            className={`text-[10px] font-mono underline mt-1 ${isMe ? 'text-white/80' : 'text-[#1C1C1E]'}`}
           >
             Verify on-chain
           </a>
@@ -213,21 +213,21 @@ const ZkPaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: 
   return (
     <div className="rounded-[22px] min-w-[240px] max-w-[320px] overflow-hidden shadow-lg border border-black/[0.08] bg-[#1C1C1E] text-white">
       {/* Top Header */}
-      <div className="px-4 pt-3.5 pb-2.5 bg-gradient-to-r from-[#2C2C2E] to-[#1C1C1E] flex items-center justify-between border-b border-white/[0.08]">
+      <div className="px-4 pt-3.5 pb-2.5 bg-[#2C2C2E] flex items-center justify-between border-b border-white/[0.08]">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-[#8B5CF6] to-[#10B981] flex items-center justify-center shadow-md">
-            <Shield size={14} className="text-white" />
+          <div className="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center shadow-sm">
+            <Lock size={14} className="text-white" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-[12px] font-bold text-white tracking-tight">zk.money</span>
-              <span className="text-[9px] font-black uppercase tracking-wider bg-[#10B981]/25 text-[#34D399] px-1.5 py-0.2 rounded-full border border-[#10B981]/30">
+              <span className="text-[9px] font-black uppercase tracking-wider bg-white/10 text-white/90 px-1.5 py-0.5 rounded-full border border-white/15">
                 Aztec
               </span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1 text-[10px] text-[#34D399] font-semibold bg-[#10B981]/15 px-2 py-0.5 rounded-full">
+        <div className="flex items-center gap-1 text-[10px] text-white/80 font-semibold bg-white/10 px-2 py-0.5 rounded-full">
           <Lock size={9} /> Private Note
         </div>
       </div>
@@ -236,7 +236,7 @@ const ZkPaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: 
       <div className="px-4 py-3 flex flex-col gap-1.5">
         <div className="text-[24px] font-black tracking-tight text-white flex items-baseline gap-1.5">
           <span>{result.amount}</span>
-          <span className="text-[14px] font-bold text-[#34D399]">zk{result.token}</span>
+          <span className="text-[14px] font-bold text-white/80">zk{result.token}</span>
         </div>
 
         <div className="text-[11px] font-mono text-white/70 space-y-0.5 pt-1 border-t border-white/[0.06]">
@@ -246,13 +246,13 @@ const ZkPaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: 
           </div>
           <div className="flex justify-between">
             <span className="text-white/40">To:</span>
-            <span className="truncate max-w-[170px] text-[#34D399] font-bold">{result.recipientTag}</span>
+            <span className="truncate max-w-[170px] text-white font-bold">{result.recipientTag}</span>
           </div>
         </div>
 
         {result.memo && (
           <div className="mt-1 bg-white/[0.06] p-2 rounded-xl text-[11px] text-white/90 italic flex items-center gap-1.5">
-            <Lock size={10} className="text-[#34D399] flex-shrink-0" />
+            <Lock size={10} className="text-white/70 flex-shrink-0" />
             <span className="truncate">"{result.memo}"</span>
           </div>
         )}
@@ -265,7 +265,7 @@ const ZkPaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: 
               target="_blank"
               rel="noopener noreferrer"
               onClick={e => e.stopPropagation()}
-              className="text-[10px] font-bold text-[#34D399] hover:underline flex items-center gap-1"
+              className="text-[10px] font-bold text-white/80 hover:text-white hover:underline flex items-center gap-1"
             >
               AztecScan <ExternalLink size={9} />
             </a>
@@ -299,19 +299,19 @@ const ZkTipBubble = React.memo(({ content, isMe }: { content: string; isMe: bool
   if (!tip) return null;
 
   return (
-    <div className="rounded-[22px] min-w-[220px] max-w-[300px] overflow-hidden shadow-md border border-[#25D366]/30 bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] text-white p-3.5 space-y-2">
+    <div className="rounded-[22px] min-w-[220px] max-w-[300px] overflow-hidden shadow-md border border-white/10 bg-[#1C1C1E] text-white p-3.5 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <div className="w-6 h-6 rounded-full bg-[#25D366]/20 flex items-center justify-center text-[#25D366]">
+          <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-white">
             <Heart size={12} fill="currentColor" />
           </div>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#25D366]">Shielded Tip</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-white">Shielded Tip</span>
         </div>
         <span className="text-[9px] font-mono text-white/50 bg-white/10 px-1.5 py-0.5 rounded-full">Aztec</span>
       </div>
 
       <div className="text-[20px] font-black text-white">
-        +{tip.amount} <span className="text-[13px] text-[#25D366]">zk{tip.token}</span>
+        +{tip.amount} <span className="text-[13px] text-white/80">zk{tip.token}</span>
       </div>
 
       <div className="text-[11px] text-white/70 font-mono">
@@ -340,20 +340,20 @@ const ZkStreamBubble = React.memo(({ content, isMe }: { content: string; isMe: b
   if (!stream) return null;
   const progress = calculateStreamProgress(stream);
   return (
-    <div className="rounded-[22px] min-w-[260px] max-w-[320px] overflow-hidden shadow-md border border-[#25D366]/30 bg-gradient-to-br from-[#1A1A1E] to-[#2C2C2E] text-white p-4 space-y-3">
+    <div className="rounded-[22px] min-w-[260px] max-w-[320px] overflow-hidden shadow-md border border-white/10 bg-[#1C1C1E] text-white p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-[#25D366]/20 flex items-center justify-center text-[#25D366]">
+          <div className="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center text-white">
             <Waves size={14} strokeWidth={2.5} />
           </div>
           <div>
             <span className="text-[12px] font-bold text-white block leading-tight">zk.money Stream</span>
-            <span className="text-[9px] font-semibold text-[#25D366] uppercase tracking-wider">Aztec Continuous Flow</span>
+            <span className="text-[9px] font-semibold text-white/70 uppercase tracking-wider">Aztec Continuous Flow</span>
           </div>
         </div>
-        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${stream.status === 'active' ? 'bg-[#25D366]/25 text-[#25D366]' : 'bg-white/10 text-white/50'}`}>{stream.status}</span>
+        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${stream.status === 'active' ? 'bg-white/15 text-white' : 'bg-white/10 text-white/50'}`}>{stream.status}</span>
       </div>
-      <div className="text-[20px] font-black tracking-tight">{stream.depositAmount} <span className="text-[13px] font-bold text-[#25D366]">zk{stream.token}</span></div>
+      <div className="text-[20px] font-black tracking-tight">{stream.depositAmount} <span className="text-[13px] font-bold text-white/80">zk{stream.token}</span></div>
       <div className="text-[11px] text-white/60 font-mono">{stream.senderTag} → {stream.recipientTag}</div>
       <div className="space-y-1">
         <div className="flex justify-between text-[10px] text-white/50 font-mono">
@@ -361,14 +361,14 @@ const ZkStreamBubble = React.memo(({ content, isMe }: { content: string; isMe: b
           <span>{progress.percentCompleted.toFixed(1)}%</span>
         </div>
         <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
-          <div className="bg-gradient-to-r from-[#25D366] to-[#128C7E] h-full transition-all duration-1000" style={{ width: `${progress.percentCompleted}%` }} />
+          <div className="bg-white h-full transition-all duration-1000" style={{ width: `${progress.percentCompleted}%` }} />
         </div>
         <div className="text-[10px] text-white/40 font-mono">{progress.timeRemainingSeconds > 0 ? `≈ ${Math.ceil(progress.timeRemainingSeconds / 3600)}h remaining` : 'Stream completed'}</div>
       </div>
       <div className="bg-white/[0.06] rounded-xl px-3 py-2 text-[11px] font-mono text-white/70">
-        Flow rate: <span className="text-[#25D366] font-bold">{parseFloat(stream.ratePerSecond).toFixed(6)} {stream.token}/sec</span>
+        Flow rate: <span className="text-white font-bold">{parseFloat(stream.ratePerSecond).toFixed(6)} {stream.token}/sec</span>
       </div>
-      {stream.memo && <div className="text-[10px] italic text-white/50 flex items-center gap-1"><Lock size={9} className="text-[#25D366] flex-shrink-0" />"{stream.memo}"</div>}
+      {stream.memo && <div className="text-[10px] italic text-white/50 flex items-center gap-1"><Lock size={9} className="text-white/70 flex-shrink-0" />"{stream.memo}"</div>}
     </div>
   );
 });
@@ -383,13 +383,13 @@ const ZkInvoiceBubble = React.memo(({ content, isMe }: { content: string; isMe: 
     <div className="rounded-[22px] min-w-[260px] max-w-[320px] overflow-hidden shadow-lg border border-black/[0.12] bg-white text-[#1C1C1E]">
       <div className="bg-[#f0f2f5] px-4 py-3 flex items-center justify-between border-b border-black/[0.05]">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-[#25D366]/10 flex items-center justify-center text-[#25D366]"><FileText size={14} strokeWidth={2.5} /></div>
+          <div className="w-7 h-7 rounded-xl bg-black/5 flex items-center justify-center text-[#1C1C1E]"><FileText size={14} strokeWidth={2.5} /></div>
           <div>
             <span className="text-[12px] font-bold text-gray-900 block leading-tight">{invoice.invoiceNumber}</span>
             <span className="text-[9px] text-gray-400 font-semibold">Private Aztec Invoice</span>
           </div>
         </div>
-        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${invoice.status === 'paid' ? 'bg-[#25D366]/15 text-[#25D366]' : overdue ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>{invoice.status === 'paid' ? 'Paid' : overdue ? 'Overdue' : 'Unpaid'}</span>
+        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${invoice.status === 'paid' ? 'bg-black/5 text-[#1C1C1E]' : overdue ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-700'}`}>{invoice.status === 'paid' ? 'Paid' : overdue ? 'Overdue' : 'Unpaid'}</span>
       </div>
       <div className="px-4 py-3 space-y-2">
         <p className="text-[13px] font-semibold text-gray-800 truncate">{invoice.title}</p>
@@ -405,11 +405,11 @@ const ZkInvoiceBubble = React.memo(({ content, isMe }: { content: string; isMe: 
         </div>
         <div className="border-t border-black/[0.05] pt-2 flex items-center justify-between">
           <div className="text-[10px] text-gray-400 uppercase tracking-wider">Total Due</div>
-          <div className="text-[18px] font-black text-[#25D366] font-mono">{invoice.totalAmount} <span className="text-[11px]">zk{invoice.token}</span></div>
+          <div className="text-[18px] font-black text-[#1C1C1E] font-mono">{invoice.totalAmount} <span className="text-[11px]">zk{invoice.token}</span></div>
         </div>
         <div className="text-[10px] text-gray-400 font-mono flex items-center gap-1">
           <Clock size={10} />Due: {new Date(invoice.dueDate).toLocaleDateString()}
-          {invoice.settlementTxHash && <a href={`https://aztecscan.xyz/tx-effect/${invoice.settlementTxHash.slice(2)}`} target="_blank" rel="noopener noreferrer" className="ml-2 text-[#25D366] hover:underline flex items-center gap-0.5">View proof <ExternalLink size={9} /></a>}
+          {invoice.settlementTxHash && <a href={`https://aztecscan.xyz/tx-effect/${invoice.settlementTxHash.slice(2)}`} target="_blank" rel="noopener noreferrer" className="ml-2 text-[#1C1C1E] hover:underline flex items-center gap-0.5">View proof <ExternalLink size={9} /></a>}
         </div>
       </div>
     </div>

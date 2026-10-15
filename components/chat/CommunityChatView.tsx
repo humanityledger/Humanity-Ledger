@@ -37,7 +37,7 @@ function safeHtml(raw: string): string {
 const addr = (a: string) => `${(a||'0x??').slice(0,6)}...${(a||'').slice(-4)}`;
 const fmt2 = (s: number) =>
   `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
-const AVATAR_COLORS = ['#25D366','#128C7E','#FF9500','#FF3B30','#AF52DE','#FF2D55','#34C759','#5856D6'];
+const AVATAR_COLORS = ['#1C1C1E','#3A3A3C','#636366','#FF9500','#FF3B30','#AF52DE','#FF2D55','#5856D6'];
 const avatarColor = (a: string) => AVATAR_COLORS[(parseInt((a||'0x0').slice(2,4),16)||0) % AVATAR_COLORS.length];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ function VoiceRecorder({ onSend, onCancel }: { onSend: (b64: string) => void; on
           return (
             <div
               key={idx}
-              className="w-1 bg-[#25D366] rounded-full transition-all duration-75"
+              className="w-1 bg-[#1C1C1E] rounded-full transition-all duration-75"
               style={{ height: `${mod}%` }}
             />
           );
@@ -242,7 +242,7 @@ function VoiceRecorder({ onSend, onCancel }: { onSend: (b64: string) => void; on
       <button
         type="button"
         onClick={handleFinish}
-        className="w-9 h-9 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow hover:bg-[#128C7E] active:scale-95 transition-all shrink-0"
+        className="w-9 h-9 bg-[#1C1C1E] text-white rounded-full flex items-center justify-center shadow hover:bg-black active:scale-95 transition-all shrink-0"
         title="Send voice note"
       >
         <Send size={15} className="-ml-0.5" />
@@ -314,7 +314,7 @@ function AudioPlayer({ src, mine }: { src: string; mine: boolean }) {
       <button
         type="button"
         onClick={toggle}
-        className="w-9 h-9 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 transition-transform active:scale-90 shadow-sm hover:bg-[#128C7E]"
+        className="w-9 h-9 rounded-full bg-[#1C1C1E] text-white flex items-center justify-center shrink-0 transition-transform active:scale-90 shadow-sm hover:bg-black"
       >
         {playing ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
       </button>
@@ -329,7 +329,7 @@ function AudioPlayer({ src, mine }: { src: string; mine: boolean }) {
             step="0.1"
             value={progress}
             onChange={handleSeek}
-            className="w-full h-1.5 rounded-full appearance-none bg-black/15 accent-[#25D366] cursor-pointer"
+            className="w-full h-1.5 rounded-full appearance-none bg-black/15 accent-[#1C1C1E] cursor-pointer"
           />
         </div>
         <div className="flex items-center justify-between text-[11px] font-mono text-[#667781] leading-none">
@@ -370,10 +370,10 @@ function PollBubble({ content, mine }: { content: string; mine: boolean }) {
             <button
               key={i}
               onClick={() => { setVoted(i); setVotes(prev => prev.map((v, j) => j === i ? v + 1 : v)); }}
-              className={`relative w-full text-left text-[12px] font-semibold px-3 py-2 rounded-xl overflow-hidden transition-all ${isVoted ? 'text-[#25D366]' : 'text-[#1C1C1E]/70'}`}
+              className={`relative w-full text-left text-[12px] font-semibold px-3 py-2 rounded-xl overflow-hidden transition-all ${isVoted ? 'text-[#1C1C1E] font-bold' : 'text-[#1C1C1E]/70'}`}
             >
               <div
-                className={`absolute inset-y-0 left-0 rounded-xl transition-all ${isVoted ? 'bg-[#25D366]/15' : 'bg-black/5'}`}
+                className={`absolute inset-y-0 left-0 rounded-xl transition-all ${isVoted ? 'bg-black/10' : 'bg-black/5'}`}
                 style={{ width: `${voted !== null ? pct : 0}%` }}
               />
               <div className="relative flex justify-between">
@@ -395,16 +395,16 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     try {
       const d = JSON.parse(content.replace('__PAYMENT__::', ''));
       return (
-        <div className={`flex items-center gap-3 rounded-2xl px-4 py-3 min-w-[220px] ${mine ? 'bg-white/15 border border-white/20' : 'bg-[#25D366]/10 border border-[#25D366]/20'}`}>
-          <div className="w-9 h-9 rounded-full bg-[#25D366]/20 flex items-center justify-center shrink-0">
-            <CircleDollarSign size={18} className="text-[#25D366]" />
+        <div className={`flex items-center gap-3 rounded-2xl px-4 py-3 min-w-[220px] ${mine ? 'bg-white/15 border border-white/20' : 'bg-black/5 border border-black/10'}`}>
+          <div className="w-9 h-9 rounded-full bg-black/10 flex items-center justify-center shrink-0">
+            <CircleDollarSign size={18} className="text-[#1C1C1E]" />
           </div>
           <div>
             <p className={`text-[13px] font-black ${mine ? 'text-white' : 'text-[#1C1C1E]'}`}>{d.amount} {d.token}</p>
             <a href={`https://etherscan.io/tx/${d.txHash}`} target="_blank" rel="noopener noreferrer"
-              className="text-[11px] text-[#25D366] font-medium hover:underline">View on Etherscan ↗</a>
+              className="text-[11px] text-[#1C1C1E] font-medium hover:underline">View on Etherscan ↗</a>
           </div>
-          <CheckCircle size={16} className="text-[#25D366] ml-auto shrink-0" />
+          <CheckCircle size={16} className="text-[#1C1C1E] ml-auto shrink-0" />
         </div>
       );
     } catch { return <span className="text-[14px]">{content}</span>; }
@@ -441,15 +441,15 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     const payment = parseZkPaymentPayload(content);
     if (payment) {
       return (
-        <div className="min-w-[240px] max-w-[280px] p-3 rounded-2xl bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] text-white shadow-md border border-black/10 my-1">
+        <div className="min-w-[240px] max-w-[280px] p-3 rounded-2xl bg-[#1C1C1E] text-white shadow-md border border-black/10 my-1">
           <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/10">
             <div className="flex items-center gap-1.5">
-              <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#8B5CF6] to-[#10B981] flex items-center justify-center shadow-sm">
+              <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center shadow-sm">
                 <Lock size={13} className="text-white" />
               </div>
               <span className="text-[12px] font-bold text-white tracking-tight">zk.money</span>
             </div>
-            <span className="text-[9px] font-black uppercase tracking-wider bg-[#10B981]/25 text-[#34D399] px-2 py-0.5 rounded-full border border-[#10B981]/30">
+            <span className="text-[9px] font-black uppercase tracking-wider bg-white/10 text-white/90 px-2 py-0.5 rounded-full border border-white/15">
               Shielded Note
             </span>
           </div>
@@ -457,7 +457,7 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
           <div className="py-1">
             <p className="text-[10px] text-white/60 uppercase font-semibold tracking-wider">Private Transfer</p>
             <p className="text-[20px] font-bold font-mono text-white mt-0.5">
-              {payment.amount} <span className="text-[#34D399] text-[16px]">{payment.token}</span>
+              {payment.amount} <span className="text-white/80 text-[16px]">{payment.token}</span>
             </p>
           </div>
 
@@ -467,7 +467,7 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
           </div>
 
           <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between">
-            <span className="text-[10px] text-[#34D399] flex items-center gap-1">
+            <span className="text-[10px] text-white/70 flex items-center gap-1">
               <Lock size={10} /> Verified on Aztec
             </span>
             <a
@@ -499,13 +499,13 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     const tip = parseTipPayload(content);
     if (tip) {
       return (
-        <div className="min-w-[220px] max-w-[280px] p-3 rounded-2xl bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] text-white shadow-md border border-[#25D366]/30 my-1 space-y-1.5">
+        <div className="min-w-[220px] max-w-[280px] p-3 rounded-2xl bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] text-white shadow-md border border-black/10 my-1 space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#25D366]">Shielded Tip</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#1C1C1E]">Shielded Tip</span>
             <span className="text-[9px] font-mono text-white/50 bg-white/10 px-1.5 py-0.5 rounded-full">Aztec</span>
           </div>
           <div className="text-[20px] font-black text-white">
-            +{tip.amount} <span className="text-[13px] text-[#25D366]">zk{tip.token}</span>
+            +{tip.amount} <span className="text-[13px] text-[#1C1C1E]">zk{tip.token}</span>
           </div>
           <div className="text-[11px] text-white/70 font-mono">{tip.senderTag} → {tip.recipientTag}</div>
           {tip.message && <div className="text-[11px] italic text-white/80 bg-white/5 p-2 rounded-xl">"{tip.message}"</div>}
@@ -521,12 +521,12 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
         <div className="min-w-[240px] max-w-[300px] p-3.5 rounded-2xl bg-white border border-black/10 shadow-sm my-1 space-y-2">
           <div className="flex justify-between items-start">
             <div>
-              <span className="text-[9px] font-bold uppercase tracking-wider bg-[#25D366]/15 text-[#25D366] px-2 py-0.5 rounded-full">
+              <span className="text-[9px] font-bold uppercase tracking-wider bg-black/5 text-[#1C1C1E] px-2 py-0.5 rounded-full">
                 Shielded Bounty
               </span>
               <h4 className="font-bold text-gray-900 text-[13px] mt-1">{bounty.title}</h4>
             </div>
-            <div className="text-right font-black text-[#25D366] text-[15px]">
+            <div className="text-right font-black text-[#1C1C1E] text-[15px]">
               {bounty.reward} <span className="text-[10px] text-gray-400">zk{bounty.token}</span>
             </div>
           </div>
@@ -670,7 +670,12 @@ export function CommunityChatView({
   }, []);
 
   const scrollToBottom = useCallback((smooth = true) => {
-    bottomRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    }
     setUnreadCount(0);
   }, []);
 
@@ -839,11 +844,12 @@ export function CommunityChatView({
     });
   };
 
-  // ─── FILTER MESSAGES BY SEARCH ──────────────────────────────────────────────
+  // ─── FILTER MESSAGES BY SEARCH & NON-EMPTY ─────────────────────────────────
   const displayMessages = useMemo(() => {
-    if (!searchQuery.trim()) return messages;
+    const valid = messages.filter(m => m && m.content && m.content.trim().length > 0);
+    if (!searchQuery.trim()) return valid;
     const q = searchQuery.toLowerCase();
-    return messages.filter(m => m.content.toLowerCase().includes(q));
+    return valid.filter(m => m.content.toLowerCase().includes(q));
   }, [messages, searchQuery]);
 
   // ─── GROUPED MESSAGES (group consecutive from same author) ──────────────────
@@ -868,24 +874,23 @@ export function CommunityChatView({
   }, [displayMessages]);
 
   return (
-    // The key to stable layout: explicit flex-1 flex-col w-full h-full overflow-hidden
-    <div className="relative flex-1 flex flex-col w-full h-full bg-[#efeae2] overflow-hidden min-h-0" style={{ height: '100%', minHeight: 0 }}>
-
+    // Explicit flex-1 flex-col w-full bg-[#efeae2] overflow-hidden min-h-0
+    <div className="relative flex-1 flex flex-col w-full bg-[#efeae2] overflow-hidden min-h-0">
 
       {/* ── CHANNEL HEADER ── */}
-      <div className="px-4 py-2 bg-white/95 backdrop-blur-md border-b border-black/[0.06] flex items-center gap-2 shrink-0 z-10">
+      <div className="px-4 py-2.5 bg-white border-b border-black/[0.06] flex items-center gap-2 shrink-0 sticky top-0 z-20">
         <Hash size={14} className="text-black/30 shrink-0" />
         <span className="text-[13px] font-bold text-[#1C1C1E]/70 flex-1 min-w-0 truncate">
           {communityName || 'Channel'}
         </span>
         <div className="flex items-center gap-1">
           <button onClick={() => setShowZkWallet(v => !v)}
-            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${showZkWallet ? 'bg-[#25D366] text-white' : 'text-black/30 hover:text-[#25D366] hover:bg-black/5'}`}
+            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${showZkWallet ? 'bg-[#1C1C1E] text-white' : 'text-black/30 hover:text-black hover:bg-black/5'}`}
             title="Shielded Wallet">
             <Lock size={13} />
           </button>
           <button onClick={() => setShowSearch(v => !v)}
-            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${showSearch ? 'bg-[#25D366] text-white' : 'text-black/30 hover:text-black/60 hover:bg-black/5'}`}>
+            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${showSearch ? 'bg-[#1C1C1E] text-white' : 'text-black/30 hover:text-black/60 hover:bg-black/5'}`}>
             <Search size={13} />
           </button>
           <button onClick={() => fetchMessages(false)}
@@ -944,8 +949,8 @@ export function CommunityChatView({
           {/* Empty state */}
           {displayMessages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="w-16 h-16 rounded-full bg-[#25D366]/15 flex items-center justify-center mb-4 shadow-sm">
-                <Send size={24} className="text-[#25D366]" />
+              <div className="w-16 h-16 rounded-full bg-black/5 flex items-center justify-center mb-4 shadow-sm">
+                <Send size={24} className="text-[#1C1C1E]" />
               </div>
               <p className="text-[16px] font-bold text-[#111b21]">
                 {searchQuery ? 'No messages found' : 'Comienza la conversación'}
@@ -973,14 +978,28 @@ export function CommunityChatView({
                 )}
 
                 {msgs.map((msg, idx) => {
-                  const isSystem = msg.content.startsWith('__SYSTEM__');
-                  if (isSystem) return (
-                    <div key={msg.id} className="w-full flex justify-center py-1">
-                      <span className="text-[11px] text-[#54656f] bg-white/80 backdrop-blur-sm shadow-sm rounded-lg px-3 py-1 border border-black/[0.04]">
-                        {msg.content.replace('__SYSTEM__', '')}
-                      </span>
-                    </div>
-                  );
+                  const trimmed = (msg.content || '').trim();
+                  if (!trimmed) return null;
+
+                  const contentLower = trimmed.toLowerCase();
+                  const isSystem = trimmed.startsWith('__SYSTEM__') ||
+                                   trimmed.startsWith('[SYSTEM]') ||
+                                   contentLower.startsWith('system...') ||
+                                   contentLower.includes('joined the group') ||
+                                   contentLower.includes('joined the community');
+                  if (isSystem) {
+                    const displayTxt = trimmed
+                      .replace('__SYSTEM__', '')
+                      .replace('[SYSTEM]', '')
+                      .replace(/^system\.\.\.\s*/i, '');
+                    return (
+                      <div key={msg.id} className="w-full flex justify-center py-1.5 my-1">
+                        <span className="text-[11px] font-medium text-[#54656f] bg-white/90 backdrop-blur-sm shadow-sm rounded-full px-3.5 py-1 border border-black/[0.05] select-text">
+                          {displayTxt}
+                        </span>
+                      </div>
+                    );
+                  }
 
                   const isFirst = idx === 0;
                   const isLast = idx === msgs.length - 1;
@@ -1005,8 +1024,8 @@ export function CommunityChatView({
                       <div className={`flex flex-col ${me ? 'items-end' : 'items-start'}`}>
                         {/* Reply preview */}
                         {replyTo?.id === msg.id && (
-                          <div className={`text-[10px] mb-1 border-l-2 pl-2 rounded-r bg-black/[0.03] py-0.5 pr-2 ${me ? 'border-[#25D366] text-[#111b21]' : 'border-[#25D366] text-[#111b21]'}`}>
-                            <span className="font-bold text-[#25D366]">{addr(replyTo.authorAddress)}: </span>
+                          <div className={`text-[10px] mb-1 border-l-2 pl-2 rounded-r bg-black/[0.03] py-0.5 pr-2 ${me ? 'border-[#1C1C1E] text-[#111b21]' : 'border-[#1C1C1E] text-[#111b21]'}`}>
+                            <span className="font-bold text-[#1C1C1E]">{addr(replyTo.authorAddress)}: </span>
                             <span className="text-[#667781]">{replyTo.content.slice(0,40)}</span>
                           </div>
                         )}
@@ -1041,7 +1060,7 @@ export function CommunityChatView({
                                 {new Date(msg.createdAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}
                               </span>
                               {me && msg.isOptimistic && (
-                                <div className="w-2.5 h-2.5 border-[1.5px] border-black/30 border-t-[#25D366] rounded-full animate-spin" />
+                                <div className="w-2.5 h-2.5 border-[1.5px] border-black/30 border-t-[#1C1C1E] rounded-full animate-spin" />
                               )}
                               {me && !msg.isOptimistic && (
                                 <span className="text-[#53bdeb] text-[12px] font-bold leading-none select-none">✓✓</span>
@@ -1071,9 +1090,9 @@ export function CommunityChatView({
                           <div className={`flex flex-wrap gap-1 mt-1 ${me ? 'justify-end' : 'justify-start'}`}>
                             {Object.entries(myReactions).filter(([,on]) => on).map(([emoji]) => (
                               <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
-                                className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#25D366]/10 border border-[#25D366]/20 text-[11px] font-semibold text-[#1C1C1E] hover:bg-[#25D366]/20 transition-colors active:scale-95">
+                                className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/5 border border-black/10 text-[11px] font-semibold text-[#1C1C1E] hover:bg-black/10 transition-colors active:scale-95">
                                 <span>{emoji}</span>
-                                <span className="text-[#25D366]">1</span>
+                                <span className="text-[#1C1C1E]">1</span>
                               </button>
                             ))}
                           </div>
@@ -1097,9 +1116,9 @@ export function CommunityChatView({
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
             className="absolute bottom-[80px] right-4 z-20 flex items-center gap-2">
             <button onClick={() => scrollToBottom(true)}
-              className="flex items-center gap-1.5 bg-white shadow-lg border border-black/8 rounded-full pl-3 pr-2.5 py-1.5 text-[12px] font-bold text-[#1C1C1E] hover:bg-[#25D366] hover:text-white hover:border-transparent transition-all">
+              className="flex items-center gap-1.5 bg-white shadow-lg border border-black/8 rounded-full pl-3 pr-2.5 py-1.5 text-[12px] font-bold text-[#1C1C1E] hover:bg-[#1C1C1E] hover:text-white hover:border-transparent transition-all">
               {unreadCount > 0 && (
-                <span className="bg-[#25D366] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none -ml-1 mr-0.5">
+                <span className="bg-[#1C1C1E] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none -ml-1 mr-0.5">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -1143,10 +1162,10 @@ export function CommunityChatView({
       <AnimatePresence>
         {replyTo && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            className="px-4 py-2.5 bg-[#25D366]/5 border-t border-[#25D366]/15 flex items-center gap-3 shrink-0">
-            <div className="w-0.5 h-8 bg-[#25D366] rounded-full shrink-0" />
+            className="px-4 py-2.5 bg-black/[0.02] border-t border-black/5 flex items-center gap-3 shrink-0">
+            <div className="w-0.5 h-8 bg-[#1C1C1E] rounded-full shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-bold text-[#25D366]">Replying to {addr(replyTo.authorAddress)}</p>
+              <p className="text-[11px] font-bold text-[#1C1C1E]">Replying to {addr(replyTo.authorAddress)}</p>
               <p className="text-[12px] text-black/50 truncate">{replyTo.content.slice(0, 80)}</p>
             </div>
             <button onClick={() => setReplyTo(null)} className="p-1.5 text-black/30 hover:text-black/60 rounded-lg hover:bg-black/5 shrink-0">
@@ -1156,8 +1175,11 @@ export function CommunityChatView({
         )}
       </AnimatePresence>
 
-      {/* ── WHATSAPP DESKTOP INPUT AREA (EXE Parity) ── */}
-      <div className="bg-[#f0f2f5] border-t border-[#e9edef] shrink-0 px-4 py-2.5 z-10">
+      {/* ── WHATSAPP DESKTOP INPUT AREA (Mobile Ergonomics & iOS / Android Safe-Area) ── */}
+      <div
+        className="bg-[#f0f2f5] border-t border-[#e9edef] shrink-0 px-3 sm:px-4 py-2 sm:py-2.5 z-10"
+        style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom, 10px))' }}
+      >
 
         {/* App Drawer */}
         <AnimatePresence>
@@ -1165,12 +1187,12 @@ export function CommunityChatView({
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-2">
               <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 p-3 bg-white rounded-2xl shadow-md border border-black/[0.04]">
                 {[
-                  { icon: Shield, label: 'zk.money', color: 'bg-gradient-to-tr from-[#8B5CF6] to-[#10B981]', fn: () => setShowZkModal(true) },
-                  { icon: Zap, label: 'ZK Stream', color: 'bg-emerald-600', fn: () => setShowZkStreamModal(true) },
-                  { icon: FileText, label: 'ZK Factura', color: 'bg-blue-600', fn: () => setShowZkInvoiceModal(true) },
+                  { icon: Lock, label: 'zk.money', color: 'bg-[#1C1C1E]', fn: () => setShowZkModal(true) },
+                  { icon: Zap, label: 'ZK Stream', color: 'bg-[#1C1C1E]', fn: () => setShowZkStreamModal(true) },
+                  { icon: FileText, label: 'ZK Factura', color: 'bg-[#1C1C1E]', fn: () => setShowZkInvoiceModal(true) },
                   { icon: ImgIcon, label: 'Foto/Video', color: 'bg-[#FF9500]', fn: () => fileInputRef.current?.click() },
-                  { icon: CircleDollarSign, label: 'Crypto Send', color: 'bg-[#128C7E]', fn: () => { setCryptoRecipient(''); setShowRecipientSheet(true); } },
-                  { icon: MapPin, label: 'Ubicación', color: 'bg-[#25D366]', fn: sendLocation },
+                  { icon: CircleDollarSign, label: 'Crypto Send', color: 'bg-[#1C1C1E]', fn: () => { setCryptoRecipient(''); setShowRecipientSheet(true); } },
+                  { icon: MapPin, label: 'Ubicación', color: 'bg-[#3A3A3C]', fn: sendLocation },
                   { icon: BarChart2, label: 'Encuesta', color: 'bg-purple-500', fn: () => setShowPollCreator(true) },
                   { icon: Smile, label: 'Sticker', color: 'bg-orange-500', fn: () => executeSend('[STICKER]:fire') },
                 ].map(({ icon: Icon, label, color, fn }) => (
@@ -1201,24 +1223,24 @@ export function CommunityChatView({
               <button
                 type="button"
                 onClick={() => setShowAppDrawer(v => !v)}
-                className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-[#54656f] hover:bg-black/5 hover:text-[#111b21] transition-all active:scale-95 mb-0.5 ${showAppDrawer ? 'rotate-45 text-[#25D366]' : ''}`}
+                className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-[#54656f] hover:bg-black/5 hover:text-[#111b21] transition-all active:scale-95 mb-0.5 ${showAppDrawer ? 'rotate-45 text-[#1C1C1E]' : ''}`}
                 title="Adjuntar"
               >
                 <Plus size={22} />
               </button>
 
-              {/* Emoji (😊) Button */}
+              {/* Emoji (😊) Button - hidden on mobile to maximize spacious input */}
               <button
                 type="button"
                 onClick={() => setEmojiPickerFor(prev => prev ? null : 'input')}
-                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-[#54656f] hover:bg-black/5 hover:text-[#111b21] transition-all active:scale-95 mb-0.5"
+                className="hidden sm:flex w-10 h-10 rounded-full items-center justify-center shrink-0 text-[#54656f] hover:bg-black/5 hover:text-[#111b21] transition-all active:scale-95 mb-0.5"
                 title="Emojis"
               >
                 <Smile size={22} />
               </button>
 
-              {/* Rounded White Text Box (WhatsApp Desktop EXE Parity) */}
-              <div className="flex-1 bg-white rounded-[24px] shadow-[0_1px_1px_rgba(11,20,26,0.1)] border border-black/[0.06] focus-within:border-[#25D366]/40 min-h-[42px] max-h-[120px] flex items-center px-4 overflow-hidden transition-colors">
+              {/* Rounded White Text Box (Ergonomic on iOS & Android — min font-size 16px prevents browser zoom) */}
+              <div className="flex-1 bg-white rounded-[24px] shadow-[0_1px_1px_rgba(11,20,26,0.1)] border border-black/[0.06] focus-within:border-black/30 min-h-[46px] max-h-[140px] flex items-center px-4 overflow-hidden transition-colors">
                 <textarea
                   ref={textareaRef}
                   value={input}
@@ -1227,11 +1249,11 @@ export function CommunityChatView({
                   placeholder="Escribe un mensaje"
                   disabled={sending}
                   rows={1}
-                  className="w-full bg-transparent outline-none text-[15px] text-[#111b21] placeholder-[#8696a0] resize-none leading-[22px] max-h-[100px] overflow-y-auto disabled:opacity-50 py-[10px]"
+                  className="w-full bg-transparent outline-none text-[16px] sm:text-[15px] text-[#111b21] placeholder-[#8696a0] resize-none leading-[22px] max-h-[120px] overflow-y-auto disabled:opacity-50 py-[11px]"
                 />
               </div>
 
-              {/* Right Action: Mic when empty, Green Send when text present */}
+              {/* Right Action: Mic when empty, Send when text present */}
               {!input.trim() ? (
                 <button
                   type="button"
@@ -1245,7 +1267,7 @@ export function CommunityChatView({
                 <button
                   type="submit"
                   disabled={sending}
-                  className="w-10 h-10 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-sm hover:bg-[#128c7e] active:scale-95 transition-all shrink-0 disabled:opacity-40 mb-0.5"
+                  className="w-10 h-10 bg-[#1C1C1E] text-white rounded-full flex items-center justify-center shadow-sm hover:bg-black active:scale-95 transition-all shrink-0 disabled:opacity-40 mb-0.5"
                   title="Enviar"
                 >
                   {sending ? (
@@ -1279,10 +1301,10 @@ export function CommunityChatView({
               <p className="text-[13px] text-black/50">Enter the recipient wallet address</p>
               <input value={cryptoRecipient} onChange={e => setCryptoRecipient(e.target.value)}
                 placeholder="0x..." autoFocus autoComplete="off" spellCheck={false}
-                className="w-full px-4 py-3 rounded-2xl border border-black/10 text-[15px] font-mono outline-none focus:border-[#25D366] focus:ring-2 focus:ring-[#25D366]/15 transition-all" />
+                className="w-full px-4 py-3 rounded-2xl border border-black/10 text-[15px] font-mono outline-none focus:border-black/30 focus:ring-2 focus:ring-black/10 transition-all" />
               <button disabled={!/^0x[0-9a-fA-F]{40}$/.test(cryptoRecipient.trim())}
                 onClick={() => { setShowRecipientSheet(false); setShowCryptoModal(true); }}
-                className="w-full py-3.5 bg-[#25D366] disabled:bg-[#25D366]/40 text-white font-bold rounded-2xl transition-all active:scale-[0.98]">
+                className="w-full py-3.5 bg-[#1C1C1E] disabled:bg-[#1C1C1E]/40 text-white font-bold rounded-2xl transition-all active:scale-[0.98]">
                 Continue
               </button>
             </motion.div>
@@ -1318,13 +1340,13 @@ export function CommunityChatView({
               </div>
               <input type="text" placeholder="Ask a question..." value={pollQuestion} autoFocus
                 onChange={e => setPollQuestion(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl border border-black/10 text-[14px] outline-none focus:border-[#25D366] focus:ring-2 focus:ring-[#25D366]/15" />
+                className="w-full px-4 py-3 rounded-2xl border border-black/10 text-[14px] outline-none focus:border-black/30 focus:ring-2 focus:ring-black/10" />
               <div className="flex flex-col gap-2">
                 {pollOptions.map((opt, i) => (
                   <div key={i} className="flex gap-2">
                     <input type="text" placeholder={`Option ${i + 1}`} value={opt}
                       onChange={e => setPollOptions(prev => prev.map((o, j) => j === i ? e.target.value : o))}
-                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-black/10 text-[13px] outline-none focus:border-[#25D366]" />
+                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-black/10 text-[13px] outline-none focus:border-black/30" />
                     {pollOptions.length > 2 && (
                       <button onClick={() => setPollOptions(prev => prev.filter((_, j) => j !== i))}
                         className="text-black/30 hover:text-red-500 transition-colors"><X size={14}/></button>
@@ -1333,7 +1355,7 @@ export function CommunityChatView({
                 ))}
                 {pollOptions.length < 6 && (
                   <button onClick={() => setPollOptions(p => [...p, ''])}
-                    className="text-[13px] font-bold text-[#25D366] hover:text-[#128C7E] text-left transition-colors">
+                    className="text-[13px] font-bold text-[#1C1C1E] hover:text-[#128C7E] text-left transition-colors">
                     + Add option
                   </button>
                 )}
@@ -1344,7 +1366,7 @@ export function CommunityChatView({
                 executeSend(`__POLL__poll_${Date.now()}__::${pollQuestion.trim()}__::${validOpts.join('|')}`);
                 setShowPollCreator(false); setPollQuestion(''); setPollOptions(['', '']);
               }}
-                className="w-full py-3.5 bg-[#25D366] text-white font-bold rounded-2xl hover:bg-[#128C7E] transition-colors active:scale-[0.98]">
+                className="w-full py-3.5 bg-[#1C1C1E] text-white font-bold rounded-2xl hover:bg-black transition-colors active:scale-[0.98]">
                 Send Poll
               </button>
             </motion.div>

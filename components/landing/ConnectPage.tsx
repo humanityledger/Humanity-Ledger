@@ -6,7 +6,7 @@ import { PasskeyOnboarding } from '@/components/auth/PasskeyOnboarding';
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { HLLogo } from "@/components/shared/HLLogo";
+import { HLLogo, HLMark } from "@/components/shared/HLLogo";
 import { useAccount, useConnect, useDisconnect, useSignMessage } from "wagmi";
 import { useAppKit } from "@reown/appkit/react";
 import { useUIStore } from "@/lib/store/ui-store";
@@ -399,17 +399,17 @@ export default function ConnectPage() {
           <img src="/worldmap.png" alt="" aria-hidden="true" className="w-[140%] max-w-none h-auto object-contain opacity-[0.03]" />
         </div>
         
-        <div className="relative z-10 w-28 h-28 rounded-[36px] overflow-hidden mb-6" style={{ boxShadow: '0 24px 48px -12px rgba(255,42,133,0.25), inset 0 1px 1px rgba(255,255,255,0.5), 0 0 0 1px rgba(0,0,0,0.02)' }}>
-          <img src="/ledgerchaticon.jpg" alt="Ledger Chat" className="w-full h-full object-cover" />
+        <div className="relative z-10 w-24 h-24 rounded-[30px] overflow-hidden mb-5 bg-white border border-black/[0.08] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] flex items-center justify-center p-3">
+          <HLMark size={64} />
         </div>
-        <h2 className="relative z-10 text-[32px] font-black tracking-[-0.03em] text-black mb-2">Ledger Chat</h2>
+        <h2 className="relative z-10 text-[30px] font-black tracking-[-0.03em] text-black mb-2">Humanity Ledger</h2>
         <p className="relative z-10 text-[14px] text-neutral-500 font-medium mb-6 text-center max-w-[280px] leading-relaxed">
           The ultimate secure messenger. Pure peer-to-peer decentralization. No central servers.
         </p>
         
         {/* Real community count badge */}
-        <div className="relative z-10 inline-flex items-center gap-2.5 pl-3 pr-4 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-[#25D366]/20">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#25D366] animate-pulse block shrink-0" />
+        <div className="relative z-10 inline-flex items-center gap-2.5 pl-3 pr-4 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/[0.08]">
+          <span className="w-2 h-2 rounded-full bg-[#1C1C1E] block shrink-0" />
           <span className="text-[12px] font-bold tracking-tight text-black">{userCountStr} registered members</span>
         </div>
       </div>
@@ -437,12 +437,12 @@ export default function ConnectPage() {
             className="relative z-20 flex flex-col justify-center gap-0 w-full max-w-[560px] mx-auto mt-[-40px]"
           >
             <div className="inline-flex items-center gap-2.5 pl-3 pr-4 py-2 rounded-full bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-black/5 w-fit mb-8">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#25D366] animate-pulse block shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-[#1C1C1E] block shrink-0" />
               <span className="text-[12px] font-mono uppercase tracking-widest text-black/60 font-semibold">{userCountStr} registered members</span>
             </div>
 
             <h1 className="text-[52px] xl:text-[64px] font-black tracking-[-0.04em] leading-[1.05] text-black mb-6">
-              Ledger Chat
+              Humanity Ledger
             </h1>
 
             <p className="text-[18px] text-neutral-500 leading-[1.6] font-medium mb-12 max-w-[480px]">

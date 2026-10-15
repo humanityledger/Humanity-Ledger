@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Shield, Lock, AlertTriangle, CheckCircle, Info, ChevronDown,
+  Lock, AlertTriangle, CheckCircle, Info, ChevronDown,
   ChevronUp, Sparkles, Activity, Layers, Clock, ExternalLink, ArrowRight
 } from 'lucide-react';
 import {
@@ -85,11 +85,7 @@ export function ZkPrivacyScore({
   }, [address, txHash]);
 
   const score = analysis?.score ?? 70;
-  const riskColor = useMemo(() => {
-    if (score >= 80) return '#25D366';
-    if (score >= 50) return '#FF9500';
-    return '#FF3B30';
-  }, [score]);
+  const riskColor = '#1C1C1E';
 
   const riskLabel = useMemo(() => {
     if (score >= 80) return 'Maximum Confidentiality';
@@ -110,16 +106,16 @@ export function ZkPrivacyScore({
         <div className="flex items-center gap-3">
           <div
             className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm"
-            style={{ background: `${riskColor}15` }}
+            style={{ background: '#1C1C1E10' }}
           >
-            <Shield size={20} style={{ color: riskColor }} strokeWidth={2.2} />
+            <Lock size={20} style={{ color: '#1C1C1E' }} strokeWidth={2.2} />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[14px] font-bold tracking-tight">Aztec Privacy Rating</span>
               <span
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
-                style={{ background: `${riskColor}18`, color: riskColor }}
+                style={{ background: '#1C1C1E0F', color: '#1C1C1E' }}
               >
                 {analysis?.riskLevel || 'Normal'}
               </span>
@@ -142,13 +138,13 @@ export function ZkPrivacyScore({
               <path
                 strokeDasharray={`${score}, 100`}
                 strokeWidth="3.5"
-                stroke={riskColor}
+                stroke="#1C1C1E"
                 strokeLinecap="round"
                 fill="none"
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
             </svg>
-            <span className="absolute text-[11px] font-black" style={{ color: riskColor }}>
+            <span className="absolute text-[11px] font-black" style={{ color: '#1C1C1E' }}>
               {score}
             </span>
           </div>
@@ -217,7 +213,7 @@ export function ZkPrivacyScore({
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`pb-2 px-2 text-[12px] font-bold border-b-2 transition-all ${
                     activeTab === tab.id
-                      ? 'border-[#25D366] text-[#128C7E]'
+                      ? 'border-[#1C1C1E] text-[#1C1C1E]'
                       : 'border-transparent text-gray-400 hover:text-gray-600'
                   }`}
                 >
@@ -232,7 +228,7 @@ export function ZkPrivacyScore({
                   <div className="bg-[#f0f2f5] p-3.5 rounded-2xl space-y-2">
                     <div className="flex justify-between items-center text-[12px]">
                       <span className="text-gray-600 font-medium">UltraPlonk Circuit Proof Validity</span>
-                      <span className="font-bold text-[#25D366] flex items-center gap-1">
+                      <span className="font-bold text-[#1C1C1E] flex items-center gap-1">
                         <CheckCircle size={13} /> 100% Cryptographic
                       </span>
                     </div>
@@ -244,7 +240,7 @@ export function ZkPrivacyScore({
                     </div>
                     <div className="flex justify-between items-center text-[12px]">
                       <span className="text-gray-600 font-medium">On-chain Public Leakage</span>
-                      <span className="font-bold text-[#25D366]">0.00% (Fully Private)</span>
+                      <span className="font-bold text-[#1C1C1E]">0.00% (Fully Private)</span>
                     </div>
                   </div>
 
@@ -257,7 +253,7 @@ export function ZkPrivacyScore({
                     <div className="h-2 w-full bg-[#EBE5DC] rounded-full overflow-hidden">
                       <motion.div
                         className="h-full rounded-full"
-                        style={{ background: `linear-gradient(90deg, ${riskColor}, #128C7E)` }}
+                        style={{ background: "#1C1C1E" }}
                         initial={{ width: 0 }}
                         animate={{ width: `${score}%` }}
                         transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -296,7 +292,7 @@ export function ZkPrivacyScore({
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               note.status === 'settled'
-                                ? 'bg-[#25D366]/15 text-[#25D366]'
+                                ? 'bg-black/5 text-[#1C1C1E]'
                                 : note.status === 'pending'
                                 ? 'bg-orange-500/15 text-orange-600'
                                 : 'bg-gray-200 text-gray-600'
@@ -321,7 +317,7 @@ export function ZkPrivacyScore({
                       key={idx}
                       className="p-3 bg-[#f0f2f5] rounded-2xl flex items-start gap-2.5 text-[12px] text-gray-700"
                     >
-                      <Sparkles size={15} className="text-[#25D366] flex-shrink-0 mt-0.5" />
+                      <Sparkles size={15} className="text-[#1C1C1E] flex-shrink-0 mt-0.5" />
                       <span className="leading-snug">{sug}</span>
                     </div>
                   ))}
@@ -330,7 +326,7 @@ export function ZkPrivacyScore({
                     {onShieldMore && (
                       <button
                         onClick={onShieldMore}
-                        className="flex-1 py-2.5 px-3 bg-[#25D366] hover:bg-[#128C7E] text-white text-[12px] font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                        className="flex-1 py-2.5 px-3 bg-[#1C1C1E] hover:bg-black text-white text-[12px] font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors"
                       >
                         Shield More Notes <ArrowRight size={14} />
                       </button>

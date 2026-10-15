@@ -102,7 +102,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
     if (canvas) {
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.fillStyle = '#25D366';
+        ctx.fillStyle = '#1C1C1E';
         ctx.beginPath();
         ctx.arc(x, y, 2.5, 0, Math.PI * 2);
         ctx.fill();
@@ -226,7 +226,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
         <div className="md:col-span-4 border-r border-black/5 bg-[#F9F9FB] p-4 flex flex-col gap-2.5 overflow-y-auto">
           <div className="flex items-center justify-between px-1 mb-1">
             <span className="text-[11px] font-bold uppercase tracking-wider text-black/50">Ceremonias Activas</span>
-            <button type="button" onClick={loadCeremonies} className="text-[11px] text-[#25D366] font-semibold flex items-center gap-1 hover:underline">
+            <button type="button" onClick={loadCeremonies} className="text-[11px] text-[#1C1C1E] font-semibold flex items-center gap-1 hover:underline">
               <RefreshCw size={11} /> Actualizar
             </button>
           </div>
@@ -241,7 +241,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                 onClick={() => setSelectedCeremony(c)}
                 className={`w-full text-left p-3.5 rounded-2xl border transition-all ${
                   isSelected
-                    ? 'bg-white border-[#25D366] shadow-sm ring-1 ring-[#25D366]/20'
+                    ? 'bg-white border-[#1C1C1E] shadow-sm ring-1 ring-[#1C1C1E]/20'
                     : 'bg-white/70 hover:bg-white border-black/5'
                 }`}
               >
@@ -296,7 +296,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                   </div>
                   <div className="p-2.5 rounded-xl bg-white border border-black/5">
                     <p className="text-[10px] font-bold uppercase text-black/40">Estado de Seguridad</p>
-                    <p className="text-[13px] font-bold text-[#25D366] flex items-center justify-center gap-1 mt-0.5">
+                    <p className="text-[13px] font-bold text-[#1C1C1E] flex items-center justify-center gap-1 mt-0.5">
                       <ShieldCheck size={14} /> 1-of-N Honesto
                     </p>
                   </div>
@@ -307,10 +307,10 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
               <div className="border border-black/10 rounded-2xl p-5 bg-[#FAFAFC] relative overflow-hidden">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Sparkles size={16} className="text-[#25D366]" />
+                    <Sparkles size={16} className="text-[#1C1C1E]" />
                     <h4 className="text-[14px] font-bold text-[#1C1C1E]">Recolector de Entropía Criptográfica</h4>
                   </div>
-                  <span className="text-[12px] font-mono font-bold text-[#25D366]">
+                  <span className="text-[12px] font-mono font-bold text-[#1C1C1E]">
                     {entropyProgress}% ({entropyBits.length}/128 bytes)
                   </span>
                 </div>
@@ -322,7 +322,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                   onMouseMove={handleEntropyMouseMove}
                   className={`w-full h-32 rounded-xl border-2 border-dashed relative cursor-crosshair overflow-hidden transition-colors ${
                     isCollectingEntropy
-                      ? 'border-[#25D366] bg-emerald-500/5'
+                      ? 'border-[#1C1C1E] bg-emerald-500/5'
                       : entropyProgress >= 100
                       ? 'border-emerald-500 bg-emerald-500/10'
                       : 'border-black/10 bg-white'
@@ -370,8 +370,8 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                       selectedCeremony.status === 'completed'
                         ? 'bg-gray-300 cursor-not-allowed'
                         : isContributing
-                        ? 'bg-[#128C7E] opacity-90'
-                        : 'bg-[#25D366] hover:bg-[#128C7E] active:scale-[0.99]'
+                        ? 'bg-[#1C1C1E] opacity-90'
+                        : 'bg-[#1C1C1E] hover:bg-[#1C1C1E] active:scale-[0.99]'
                     }`}
                   >
                     {isContributing ? (
@@ -473,7 +473,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                     value={newCircuitName}
                     onChange={e => setNewCircuitName(e.target.value)}
                     placeholder="Ej. Aztec Confidential Voting Circuit v1"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-black/10 text-[13px] outline-none focus:border-[#25D366]"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-black/10 text-[13px] outline-none focus:border-[#1C1C1E]"
                   />
                 </div>
 
@@ -484,7 +484,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                     value={newDescription}
                     onChange={e => setNewDescription(e.target.value)}
                     placeholder="Detalles sobre las restricciones y parámetros del circuito..."
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-black/10 text-[13px] outline-none focus:border-[#25D366] resize-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-black/10 text-[13px] outline-none focus:border-[#1C1C1E] resize-none"
                   />
                 </div>
 
@@ -494,7 +494,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                     <select
                       value={newPhase}
                       onChange={e => setNewPhase(e.target.value as any)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-black/10 text-[13px] bg-white outline-none focus:border-[#25D366]"
+                      className="w-full px-3 py-2.5 rounded-xl border border-black/10 text-[13px] bg-white outline-none focus:border-[#1C1C1E]"
                     >
                       <option value="phase2">Fase 2 (Circuito)</option>
                       <option value="phase1">Fase 1 (Universal)</option>
@@ -508,7 +508,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                       max={50}
                       value={newMinContributions}
                       onChange={e => setNewMinContributions(parseInt(e.target.value) || 5)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-black/10 text-[13px] outline-none focus:border-[#25D366]"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-black/10 text-[13px] outline-none focus:border-[#1C1C1E]"
                     />
                   </div>
                 </div>
@@ -523,7 +523,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 rounded-xl bg-[#25D366] text-white font-bold text-[13px] shadow hover:bg-[#128c7e]"
+                    className="flex-1 py-3 rounded-xl bg-[#1C1C1E] text-white font-bold text-[13px] shadow hover:bg-[#1C1C1E]"
                   >
                     Crear Ceremonia
                   </button>
