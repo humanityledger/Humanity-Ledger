@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowUpRight, ArrowDownLeft, Lock, ExternalLink, Filter,
   Search, Eye, EyeOff, Download, RefreshCw, CheckCircle, Clock,
-  AlertCircle, Lock, Layers, Sparkles
+  AlertCircle, Layers, Sparkles
 } from 'lucide-react';
 import {
   getZkTransactionHistory,
@@ -185,8 +185,8 @@ export function ZkTransactionFeed({
       <div className="flex-1 overflow-y-auto divide-y divide-black/[0.04] min-h-[300px] max-h-[500px]">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-14 h-14 rounded-full bg-[#f0f2f5] flex items-center justify-center text-gray-300 mb-3">
-              <Shield size={24} />
+            <div className="w-14 h-14 rounded-full bg-[#f0f2f5] flex items-center justify-center text-gray-400 mb-3">
+              <Lock size={24} />
             </div>
             <p className="text-[14px] font-bold text-gray-700">No shielded transactions detected</p>
             <p className="text-[12px] text-gray-400 max-w-xs mt-1">

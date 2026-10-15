@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Shield, Settings, ChevronRight, Eye, EyeOff, Copy, Check,
+  Settings, ChevronRight, Eye, EyeOff, Copy, Check,
   ExternalLink, RefreshCw, AlertTriangle, Zap, Lock, Key,
   BarChart3, Layers, Waves, FileText, QrCode,
   X, Sparkles, Globe, ArrowUpRight, ArrowDownLeft, Clock, Cpu, Server

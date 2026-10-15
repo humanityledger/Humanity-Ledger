@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, CheckCircle, ArrowRight, Wallet, Lock, Zap, X } from 'lucide-react';
+import { CheckCircle, ArrowRight, Wallet, Lock, Zap, X } from 'lucide-react';
 import {
   validateZkHandle, formatZkTag, registerIdentity,
   getShieldedBalances, executeShieldDeposit, SupportedToken,
@@ -89,7 +89,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
           className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-lg"
           style={{ background: '#1C1C1E' }}
         >
-          <Shield size={44} className="text-white" strokeWidth={1.5} />
+          <Lock size={44} className="text-white" strokeWidth={1.5} />
         </motion.div>
 
         <div>

@@ -272,7 +272,7 @@ export function ZkRecipientPicker({ senderAddress, onSelect, onClose }: ZkRecipi
                 {!searching && query && (searchResult === 'not-found' || !searchResult) && isValidAddress && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-[11px] text-gray-400 bg-[#f0f2f5] rounded-xl px-3 py-2">
-                      <Shield size={11} />
+                      <Lock size={11} />
                       Unknown address — will derive Aztec handle automatically
                     </div>
                     <button
@@ -287,8 +287,8 @@ export function ZkRecipientPicker({ senderAddress, onSelect, onClose }: ZkRecipi
 
                 {!searching && query && (searchResult === 'not-found' || !searchResult) && isValidHandle && !isValidAddress && (
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[11px] text-orange-500 bg-orange-50 rounded-xl px-3 py-2">
-                      <Shield size={11} />
+                    <div className="flex items-center gap-2 text-[11px] text-gray-600 bg-black/[0.04] rounded-xl px-3 py-2">
+                      <Lock size={11} />
                       Handle not yet registered — confirm to send anyway
                     </div>
                     <button
@@ -308,7 +308,7 @@ export function ZkRecipientPicker({ senderAddress, onSelect, onClose }: ZkRecipi
         {/* Footer */}
         <div className="flex-shrink-0 px-5 py-3 border-t border-black/[0.04] bg-[#f0f2f5]">
           <p className="text-center text-[10px] text-gray-400">
-            <Shield size={9} className="inline mr-1" />
+            <Lock size={9} className="inline mr-1" />
             Recipients receive payments privately — amounts are hidden on-chain via Aztec
           </p>
         </div>

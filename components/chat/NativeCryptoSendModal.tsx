@@ -11,7 +11,7 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, ShieldCheck, AlertTriangle, Copy, Check,
+  X, Lock, AlertTriangle, Copy, Check,
   Send, Loader2, ExternalLink, QrCode, ChevronDown
 } from 'lucide-react';
 import { useSendTransaction, useWriteContract, useAccount, useWaitForTransactionReceipt } from 'wagmi';
@@ -241,20 +241,20 @@ export function NativeCryptoSendModal({
                     </span>
                     <button
                       onClick={copyAddress}
-                      className="shrink-0 p-1 rounded-md hover:bg-amber-100 transition-colors"
+                      className="shrink-0 p-1 rounded-md hover:bg-black/[0.05] transition-colors"
                     >
-                      {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} className="text-amber-600" />}
+                      {copied ? <Check size={14} className="text-[#1C1C1E]" /> : <Copy size={14} className="text-black/40" />}
                     </button>
                   </div>
                 </div>
               </div>
 
               {/* ── CERTIFIED SECURE SEAL ─────────────────────────────────── */}
-              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
-                <ShieldCheck size={18} className="text-emerald-600 shrink-0" />
+              <div className="flex items-center gap-2 bg-black/[0.04] border border-black/[0.08] rounded-2xl px-4 py-3">
+                <Lock size={16} className="text-[#1C1C1E] shrink-0" />
                 <div>
-                  <p className="text-[12px] font-black text-emerald-800">End-to-End Secure Transaction</p>
-                  <p className="text-[10px] text-emerald-600 leading-relaxed">
+                  <p className="text-[12px] font-bold text-[#1C1C1E]">End-to-End Secure Transaction</p>
+                  <p className="text-[10px] text-black/60 leading-relaxed">
                     Signed locally in your wallet. Never exposed to Ledger Chat servers. Verified on Ethereum mainnet.
                   </p>
                 </div>
@@ -294,7 +294,7 @@ export function NativeCryptoSendModal({
                             <p className="text-[14px] font-bold text-[#1C1C1E]">{t.symbol}</p>
                             <p className="text-[11px] text-black/40">{t.name}</p>
                           </div>
-                          {t.symbol === selectedToken.symbol && <Check size={16} className="text-[#25D366]" />}
+                          {t.symbol === selectedToken.symbol && <Check size={16} className="text-[#1C1C1E]" />}
                         </button>
                       ))}
                     </motion.div>
