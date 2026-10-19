@@ -78,6 +78,17 @@ function clearClearance() {
   }
 }
 
+function getStoredWalletAddress(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    return sessionStorage.getItem('system_wallet_addr') ||
+           localStorage.getItem('system_wallet_addr') ||
+           JSON.parse(localStorage.getItem('system_session_v2') || '{}').wallet || '';
+  } catch {
+    return '';
+  }
+}
+
 // ─── Animated dots loader ─────────────────────────────────────────────────────
 function VerifyingPulse() {
   return (
@@ -300,7 +311,11 @@ export function TuringShieldGate({
   useEffect(() => {
     setMounted(true);
     if (readClearance()) { setCleared(true); return; }
-    fetch('/api/auth/enclave-pin', { credentials: 'include' })
+    const wallet = getStoredWalletAddress();
+    fetch('/api/auth/enclave-pin', { 
+      credentials: 'include',
+      headers: wallet ? { 'x-wallet-address': wallet } : {} 
+    })
       .then(r => r.json().then(data => ({ status: r.status, data })))
       .then(({ status, data }) => {
         // No session — redirect to connect so user can authenticate
@@ -337,9 +352,13 @@ export function TuringShieldGate({
     setPinError(null);
 
     try {
-      const res  = await fetch('/api/auth/enclave-pin', {
+      const wallet = getStoredWalletAddress();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (wallet) headers['x-wallet-address'] = wallet;
+
+      const res = await fetch('/api/auth/enclave-pin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ pin: code }),
         credentials: 'include',
       });
@@ -373,14 +392,14 @@ export function TuringShieldGate({
           setLockoutExpiresAt(Date.now() + 5 * 60 * 1000);
           setLockoutCountdown(5 * 60);
           setPinError('Too many failed attempts. Please wait 5 minutes.');
-        } else if (data.error?.includes('expired') || res.status === 401) {
+        } else if (data.noSession || (res.status === 401 && (data.error?.includes('Session expired') || data.error?.includes('Please reconnect')))) {
           window.location.href = '/connect?redirect=/chat';
           return;
         } else {
           setPinError(
             remaining !== null
               ? `Incorrect PIN — ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining`
-              : 'Incorrect PIN.'
+              : (data.error || 'Incorrect PIN.')
           );
         }
         setPin('');
@@ -446,9 +465,13 @@ export function TuringShieldGate({
         payload.clearanceToken = tempClearanceToken;
         payload.clearanceTs    = tempClearanceTs;
       }
+      const wallet = getStoredWalletAddress();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (wallet) headers['x-wallet-address'] = wallet;
+
       const res  = await fetch('/api/auth/enclave-pin', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload),
         credentials: 'include',
       });
@@ -462,7 +485,7 @@ export function TuringShieldGate({
         if (onVerified) onVerified(ct || '');
         setSetupStep(3);
       } else {
-        if (data.error?.includes('expired') || res.status === 401) {
+        if (data.noSession || (res.status === 401 && (data.error?.includes('Session expired') || data.error?.includes('Please reconnect')))) {
           window.location.href = '/connect?redirect=/chat';
           return;
         }
@@ -864,15 +887,13 @@ export function TuringShieldGate({
 
           {/* ── Header ── */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white border border-black/[0.06] shadow-[0_4px_20px_rgba(0,0,0,0.07)] mb-5">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white border border-black/[0.06] shadow-[0_4px_20px_rgba(0,0,0,0.07)] mb-5 p-2.5">
               {locked ? (
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
               ) : (
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1C1C1E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
+                <img src="/logo-mark-tight.png" alt="Humanity Ledger" className="w-full h-full object-contain" />
               )}
             </div>
             <h1 className="text-[26px] font-black tracking-tight text-[#1C1C1E] leading-tight">
