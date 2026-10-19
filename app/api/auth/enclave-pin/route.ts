@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       }).catch(() => null);
     }
     
-    const dbRow = userRow || authUserRow;
+    const dbRow: any = userRow || authUserRow;
     const isUserTable = !!userRow;
     
     // Determine lockout state

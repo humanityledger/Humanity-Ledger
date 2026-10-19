@@ -124,11 +124,11 @@ export default async function CloneRegistryPage({
           </div>
 
           {/* All Unique Origins */}
-          {data.summary?.uniqueOrigins?.length > 0 && (
+          {Boolean(data.summary?.uniqueOrigins?.length) && (
             <section className="mb-10">
               <h2 className="text-[17px] font-bold mb-4 text-[#1C1C1E]">All Detected Origins</h2>
               <div className="flex flex-wrap gap-2">
-                {data.summary.uniqueOrigins.map((origin: string, i: number) => {
+                {data.summary?.uniqueOrigins?.map((origin: string, i: number) => {
                   const isClone = !origin.includes('humanidfi.com') && origin !== 'unknown';
                   return (
                     <span
@@ -149,10 +149,10 @@ export default async function CloneRegistryPage({
           )}
 
           {/* Clone Detail Table */}
-          {data.clones?.length > 0 ? (
+          {Boolean(data.clones?.length) ? (
             <section className="mb-10 bg-white border border-black/10 rounded-2xl p-6 shadow-sm">
               <h2 className="text-[17px] font-bold mb-2 text-[#FF3B30]">
-                ⚠️ Unauthorized Deployments ({data.clones.length})
+                ⚠️ Unauthorized Deployments ({data.clones?.length ?? 0})
               </h2>
               <p className="text-[13px] text-[#8E8E93] mb-6">
                 These deployments are running Humanity Ledger code on non-canonical origins.
@@ -171,7 +171,7 @@ export default async function CloneRegistryPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {data.clones.map((clone: any, i: number) => {
+                    {data.clones?.map((clone: any, i: number) => {
                       let commercialObj: any = {};
                       try { commercialObj = JSON.parse(clone.commercialData || '{}'); } catch {}
                       const isMonetized = commercialObj.stripe || commercialObj.paypal || commercialObj.adsense || commercialObj.web3Active;

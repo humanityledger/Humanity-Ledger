@@ -268,13 +268,13 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
       ) : (
         /* DISCOVER TAB (Real Native Public Groups) */
         <div className="flex-1 flex flex-col p-4 gap-4">
-          <div className="bg-[#1C1C1E] rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
-            <div className="absolute -right-6 -bottom-6 w-36 h-36 bg-[#25D366]/15 rounded-full blur-2xl" />
+          <div className="bg-gradient-to-br from-[#FAFAFA] to-white rounded-2xl p-5 text-[#1C1C1E] shadow-sm border border-black/[0.08] relative overflow-hidden">
+            <div className="absolute -right-6 -bottom-6 w-36 h-36 bg-[#25D366]/10 rounded-full blur-2xl pointer-events-none" />
             <div className="flex items-center gap-2 mb-2">
               <Compass size={22} className="text-[#25D366]" />
-              <h2 className="text-[18px] font-black leading-tight">Explore Public Communities</h2>
+              <h2 className="text-[18px] font-black leading-tight text-[#1C1C1E]">Explore Public Communities</h2>
             </div>
-            <p className="text-[13px] text-white/60 font-medium leading-relaxed">
+            <p className="text-[13px] text-[#1C1C1E]/60 font-medium leading-relaxed">
               Discover native groups and spaces verified on-chain.
             </p>
           </div>

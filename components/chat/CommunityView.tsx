@@ -17,6 +17,7 @@ import { PinnedMessagesPanel, MessageSearchPanel } from './CommunityMessageReact
 import CommunityAnalytics from './CommunityAnalytics';
 import { CommunityGovernanceView } from './CommunityGovernanceModal';
 import { ZkCommunityTreasury } from '@/components/zk/ZkCommunityTreasury';
+import { GroupPartyCall } from './GroupPartyCall';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -729,7 +730,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                 />
               ) : (
                 <div className="flex items-center justify-center h-40">
-                  <div className="w-8 h-8 border-2 border-[#1C1C1E] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-6 h-6 border-2 border-[#1C7AFF]/30 border-t-[#1C7AFF] rounded-full animate-spin" />
                 </div>
               )}
             </motion.div>
@@ -796,72 +797,20 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
         )}
       </AnimatePresence>
 
-      {/* ── PARTY CALL ACTIVE BANNER ─────────────────────────────────────── */}
+      {/* ── NATIVE GROUP PARTY CALL ────────────────────────────────────────── */}
       <AnimatePresence>
         {partyCallActive && (
-          <motion.div
-            initial={{ y: -60, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -60, opacity: 0 }}
-            className="absolute top-[64px] left-0 right-0 z-30 mx-3 mt-2"
-          >
-            <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3 flex items-center justify-between shadow-xl">
-              <div className="flex items-center gap-3">
-                {/* Live pulse */}
-                <div className="relative flex items-center justify-center w-8 h-8">
-                  <motion.div
-                    className="absolute w-8 h-8 rounded-full bg-black/20"
-                    animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }}
-                    transition={{ duration: 1.8, repeat: Infinity }}
-                  />
-                  <div className="w-3 h-3 rounded-full bg-[#1C1C1E]" />
-                </div>
-                <div>
-                  <p className="text-white text-[13px] font-bold leading-tight">Party call in progress</p>
-                  <p className="text-white/40 text-[11px]">
-                    {partyCallParticipants.length} participant{partyCallParticipants.length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    if (!partyCallParticipants.includes(myAddress)) {
-                      setPartyCallParticipants(prev => [...prev, myAddress]);
-                    }
-                    setPartyCallMode('video');
-                    toast.success('Joined with video');
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1C1C1E] text-white text-[12px] font-bold rounded-xl hover:bg-black transition-colors"
-                >
-                  <Video size={13} /> Video
-                </button>
-                <button
-                  onClick={() => {
-                    if (!partyCallParticipants.includes(myAddress)) {
-                      setPartyCallParticipants(prev => [...prev, myAddress]);
-                    }
-                    setPartyCallMode('voice');
-                    toast.success('Joined voice call');
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 text-white text-[12px] font-bold rounded-xl hover:bg-white/20 transition-colors"
-                >
-                  <PhoneCall size={13} /> Join
-                </button>
-                <button
-                  onClick={() => {
-                    setPartyCallActive(false);
-                    setPartyCallRoomId(null);
-                    setPartyCallParticipants([]);
-                    toast('Call ended');
-                  }}
-                  className="w-7 h-7 flex items-center justify-center rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            </div>
-          </motion.div>
+          <GroupPartyCall
+            groupId={communityId}
+            groupName={community?.name || 'Community'}
+            myAddress={myAddress}
+            onClose={() => {
+              setPartyCallActive(false);
+              setPartyCallRoomId(null);
+              setPartyCallParticipants([]);
+            }}
+            isActive={partyCallActive}
+          />
         )}
       </AnimatePresence>
     </div>

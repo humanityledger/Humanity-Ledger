@@ -67,7 +67,7 @@ export default function GlobalError({
 
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-transparent text-[#050505] dark:text-[#FFFFFF] antialiased`}>
+      <body className={`${inter.className} bg-transparent text-[#050505] antialiased`}>
         <div className="flex flex-col items-center justify-center min-h-screen space-y-8 text-center px-4">
           
           <div className="relative z-10 w-full max-w-lg p-10 bg-white border border-black/5 rounded-[2.5rem] shadow-2xl flex flex-col items-center">

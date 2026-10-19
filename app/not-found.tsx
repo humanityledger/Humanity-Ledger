@@ -18,7 +18,7 @@ export default function NotFound() {
                     <h1 className="text-[140px] font-black text-black/5 leading-none tracking-tighter mix-blend-multiply">
                         404
                     </h1>
-                    <h2 className="text-3xl font-black text-black dark:text-white uppercase tracking-widest mt-[-20px] bg-transparent px-4">
+                    <h2 className="text-3xl font-black text-black uppercase tracking-widest mt-[-20px] bg-transparent px-4">
                         Void Protocol
                     </h2>
                 </div>

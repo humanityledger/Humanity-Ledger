@@ -87,16 +87,19 @@ export const metadata = {
   icons: {
     icon: [
       { url: '/favicon.png', type: 'image/png', sizes: '32x32' },
-      { url: '/favicon.png', type: 'image/png', sizes: '192x192' },
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/icon-512.png', type: 'image/png', sizes: '512x512' },
     ],
     shortcut: '/favicon.png',
-    apple: '/favicon.png',
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     title: 'Ledger',
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
   },
 
   creator: 'Stefan Antonio Cirisanu',
