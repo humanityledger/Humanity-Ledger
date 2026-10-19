@@ -16,13 +16,13 @@ function checkModerateRateLimit(address: string): boolean {
   return true;
 }
 
+import { getSession } from '@/lib/session';
+
 async function getSessionAddress(req: NextRequest): Promise<string | null> {
   try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get('system_handshake')?.value;
-    if (session) return session.toLowerCase();
-    const header = req.headers.get('x-wallet-address');
-    return header ? header.toLowerCase() : null;
+    const session = await getSession();
+    if (session?.userId) return session.userId.toLowerCase();
+    return null;
   } catch { return null; }
 }
 

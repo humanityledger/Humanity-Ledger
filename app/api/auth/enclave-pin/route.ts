@@ -39,20 +39,23 @@ const MAX_ATTEMPTS = 8;                     // 8 attempts (was 5)
 // case it was originally stored — potentially checksummed (0xAbCd...).
 // If a PIN was set with checksummed userId but verified with lowercase userId,
 // the HMAC output differs → CORRECT PIN FAILS → user gets locked out in 5 attempts.
+function getEnclavePinSecret(): string {
+  const s = process.env.ENCLAVE_PIN_SECRET;
+  if (s) return s;
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) throw new Error('CRITICAL: Missing ENCLAVE_PIN_SECRET or JWT_SECRET');
+  // [H6 FIX]: Domain separation ensures PIN HMAC never shares key space with JWT signer
+  return crypto.createHmac('sha256', jwtSecret).update('humanity-ledger:enclave-pin-domain-separation:v1').digest('hex');
+}
+
 function hashPin(userId: string, pin: string): string {
-  const secret = (() => { const s = process.env.ENCLAVE_PIN_SECRET || process.env.JWT_SECRET; if (!s) throw new Error('CRITICAL: Missing ENCLAVE_PIN_SECRET'); return s; })();
+  const secret = getEnclavePinSecret();
   // Normalize: always lowercase the userId so hash is stable across all auth paths
   const normalizedId = userId.toLowerCase();
   return crypto
     .createHmac('sha256', secret)
     .update(`${normalizedId}:${pin}`)
     .digest('hex');
-}
-
-// ── Default PIN from env (fallback for users who haven't set one) ─────────────
-function getDefaultPinHash(userId: string): string {
-  const defaultPin = process.env.ENCLAVE_DEFAULT_PIN || '777777';
-  return hashPin(userId, defaultPin);
 }
 
 // ── POST — Verify PIN ─────────────────────────────────────────────────────────
@@ -101,7 +104,13 @@ export async function POST(req: NextRequest) {
     }
 
     const storedPinHash = dbRow?.enclavePinHash || null;
-    const expectedHash = storedPinHash ?? getDefaultPinHash(userId);
+    if (!storedPinHash) {
+      return NextResponse.json({
+        error: 'No Enclave PIN configured for this account. Please set a PIN.',
+        needsPinSetup: true
+      }, { status: 404 });
+    }
+    const expectedHash = storedPinHash;
     const submittedHash = hashPin(userId, pin);
 
     // Constant-time comparison to prevent timing attacks
@@ -361,7 +370,7 @@ export async function PUT(req: NextRequest) {
         }
       }
 
-      const expectedHash  = storedPinHash ?? getDefaultPinHash(userId);
+      const expectedHash  = storedPinHash || '';
       const submittedHash = hashPin(userId, currentPin);
 
       const isValid = crypto.timingSafeEqual(

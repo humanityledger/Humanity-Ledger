@@ -5,11 +5,12 @@ import { Shield, Users, Lock, Globe, ArrowRight, XCircle } from 'lucide-react';
 import Link from 'next/link';
 
 interface Props {
-  params: { code: string };
+  params: Promise<{ code: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const code = params.code.toUpperCase();
+  const resolvedParams = await params;
+  const code = resolvedParams.code.toUpperCase();
   const community = await (prisma as any).community.findUnique({
     where: { joinCode: code },
     include: { _count: { select: { members: true } } }
@@ -55,7 +56,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function JoinCommunityPage({ params }: Props) {
-  const code = params.code.toUpperCase();
+  const resolvedParams = await params;
+  const code = resolvedParams.code.toUpperCase();
 
   const community = await (prisma as any).community.findUnique({
     where: { joinCode: code },

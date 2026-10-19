@@ -5158,9 +5158,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             <div className="flex flex-col items-center gap-3">
               <button
                 onClick={declineCall}
-                className="w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm bg-[#f5f5f7] border border-black/10"
+                className="w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg bg-[#FF3B30] hover:bg-red-600 text-white"
               >
-                <PhoneOff size={30} className="text-[#050505]" />
+                <PhoneOff size={30} className="text-white" />
               </button>
               <span className="text-black/50 text-[11px] font-medium tracking-widest uppercase">Decline</span>
             </div>
@@ -5169,7 +5169,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             <div className="flex flex-col items-center gap-3">
               <button
                 onClick={answerCall}
-                className="w-[84px] h-[84px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-xl bg-[#F6F7F9]"
+                className="w-[84px] h-[84px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-xl bg-[#30D158] hover:bg-[#28B84D] text-white"
               >
                 <Phone size={36} className="text-white" />
               </button>
@@ -5179,13 +5179,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         </div>,
         document.body
       ) as React.ReactNode) : null}
-      {/* â”€â”€ Outgoing Call (state: calling â€” waiting for answer) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Outgoing Call (state: calling — waiting for answer) ──────────────── */}
       {(callState === 'calling' && isMounted && typeof document !== 'undefined')
         ? (createPortal(
         <div className="fixed inset-0 w-full h-full flex flex-col items-center justify-between bg-white" style={{ zIndex: 200000, touchAction: 'none' }}>
           <div className="flex flex-col items-center w-full pt-[max(60px,env(safe-area-inset-top,60px))] px-6">
             <p className="text-black/40 text-[11px] font-semibold uppercase tracking-[0.3em] mb-2">
-              {callTypeRef.current === 'video' ? 'ðŸ“¹ Video Call' : 'ðŸŽ™ï¸ Voice Call'}
+              {callTypeRef.current === 'video' ? '📹 Video Call' : '🎙️ Voice Call'}
             </p>
             <p className="text-black/25 text-[13px] font-mono mb-10">Ledger Chat • End-to-end encrypted</p>
 
@@ -5193,7 +5193,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               <div className="absolute w-52 h-52 rounded-full border border-black/10 animate-ping" style={{ animationDuration: '3s' }} />
               <div className="absolute w-40 h-40 rounded-full border border-black/10 animate-ping" style={{ animationDuration: '2.2s', animationDelay: '0.4s' }} />
               <div className="w-28 h-28 rounded-full flex items-center justify-center relative z-10 shadow-xl bg-[#f5f5f7] border border-black/10">
-                <span className="text-black text-4xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : 'ðŸ³'}</span>
+                <span className="text-black text-4xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '🐳'}</span>
               </div>
             </div>
 
@@ -5204,9 +5204,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           <div className="w-full flex flex-col items-center pb-[max(32px,env(safe-area-inset-bottom,32px))]">
              <button
                 onClick={performEndCallRef.current}
-                className="w-16 h-16 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm bg-[#f5f5f7] border border-black/10"
+                className="w-16 h-16 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg bg-[#FF3B30] hover:bg-red-600 text-white"
               >
-                <PhoneOff size={28} className="text-[#050505]" />
+                <PhoneOff size={28} className="text-white" />
               </button>
               <span className="text-black/40 text-[11px] font-mono mt-3 uppercase tracking-widest">Cancel</span>
           </div>
@@ -5217,43 +5217,66 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       {/* â”€â”€ Active Call Overlay â€” WhatsApp/Telegram parity â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {callState === 'active' && isMounted && (
         isCallMinimized ? createPortal(
-          /* â”€â”€ MINIMIZED VIEW (Floating Banner or Video PiP) â”€â”€ */
+          /* ── MINIMIZED VIEW (Floating Banner or Video PiP) ── */
           callType === 'video' ? (
              <motion.div
               drag
               dragConstraints={{ top: 0, left: 0, right: typeof window !== 'undefined' ? window.innerWidth - 120 : 0, bottom: typeof window !== 'undefined' ? window.innerHeight - 160 : 0 }}
               initial={{ x: 20, y: 80 }}
               onClick={() => setIsCallMinimized(false)}
-              className="fixed z-[100000] w-28 h-40 md:w-36 md:h-52 rounded-2xl overflow-hidden shadow-2xl bg-black cursor-pointer border-2 border-black/30"
+              className="fixed z-[100000] w-28 h-40 md:w-36 md:h-52 rounded-2xl overflow-hidden shadow-2xl bg-[#1C1C1E] cursor-pointer border-2 border-black/10 group"
             >
                <video 
                   ref={el => { if (el && el.srcObject !== remoteStream) el.srcObject = remoteStream; }} 
                   autoPlay playsInline muted={false} className="w-full h-full object-cover" 
                />
-               <div className="absolute top-2 left-2 bg-black text-white text-[10px] font-mono px-2 py-0.5 rounded-full font-bold">
+               <div className="absolute top-2 left-2 bg-white/95 text-[#1C1C1E] text-[10px] font-mono px-2 py-0.5 rounded-full font-bold shadow-sm">
                  {formatDuration(callDurationSeconds)}
                </div>
+               <button
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   endCall();
+                 }}
+                 className="absolute top-2 right-2 w-7 h-7 bg-[#FF3B30] text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-md"
+                 aria-label="End call"
+               >
+                 <PhoneOff size={12} className="text-white" />
+               </button>
             </motion.div>
           ) : (
             <div 
               onClick={() => setIsCallMinimized(false)}
-              className="fixed top-0 left-0 w-full z-[100000] bg-black text-white px-4 py-2 flex items-center justify-between cursor-pointer shadow-lg animate-in slide-in-from-top"
+              className="fixed top-0 left-0 w-full z-[100000] bg-white text-[#1C1C1E] border-b border-[#EBEBEB] px-4 py-2.5 flex items-center justify-between cursor-pointer shadow-md animate-in slide-in-from-top"
               style={{ paddingTop: 'max(8px, env(safe-area-inset-top, 8px))' }}
             >
               <div className="flex items-center gap-2">
-                <Volume2 size={16} className="animate-pulse" />
+                <Volume2 size={16} className="text-[#30D158] animate-pulse" />
                 <span className="text-xs font-bold font-mono">Tap to return to call</span>
               </div>
-              <span className="text-xs font-mono font-black">{formatDuration(callDurationSeconds)}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-mono font-black">{formatDuration(callDurationSeconds)}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    endCall();
+                  }}
+                  className="px-3 py-1 bg-[#FF3B30] text-white text-[11px] font-bold rounded-full hover:bg-red-600 transition-colors flex items-center gap-1 shadow-sm"
+                  aria-label="End call"
+                >
+                  <PhoneOff size={12} className="text-white" />
+                  <span>End</span>
+                </button>
+              </div>
               <audio ref={remoteAudioRef} autoPlay playsInline style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }} />
             </div>
           ),
           document.body
         ) : (
-          /* â”€â”€ FULL SCREEN VIEW â”€â”€ */
-          <div className="fixed inset-0 w-full h-full bg-black flex flex-col" style={{ zIndex: 200000, touchAction: 'none' }}>
+          /* ── FULL SCREEN VIEW ── */
+          <div className="fixed inset-0 w-full h-full bg-[#F8F9FA] flex flex-col" style={{ zIndex: 200000, touchAction: 'none' }}>
             
-            {/* â”€â”€ BACKGROUND â”€â”€ */}
+            {/* ── BACKGROUND ── */}
             <div className="absolute inset-0">
               {callTypeRef.current === 'video' ? (
                 remoteStream ? (
@@ -5267,14 +5290,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     <div className="relative">
                       <div className="absolute inset-0 rounded-full bg-black/5 animate-ping scale-150" style={{ animationDuration: '2s' }} />
                       <div className="w-28 h-28 rounded-full flex items-center justify-center shadow-xl relative z-10 bg-white border border-black/5">
-                        <span className="text-black text-4xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : 'ðŸ³'}</span>
+                        <span className="text-black text-4xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '🐳'}</span>
                       </div>
                     </div>
                     <p className="text-black/50 text-sm font-mono uppercase tracking-widest animate-pulse">Connecting video...</p>
                   </div>
                 )
               ) : (
-                /* â”€â”€ AUDIO CALL â”€â”€ */
+                /* ── AUDIO CALL ── */
                 <div className="w-full h-full flex flex-col items-center justify-center bg-[#f5f5f7]">
                   <div className="relative z-10 flex flex-col items-center gap-8">
                     {/* Audio Visualizer Rings */}
@@ -5286,7 +5309,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         </>
                       )}
                       <div className="w-32 h-32 rounded-full flex items-center justify-center shadow-lg relative z-10 bg-white border border-black/5">
-                        <span className="text-black text-5xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : 'ðŸ³'}</span>
+                        <span className="text-black text-5xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '🐳'}</span>
                       </div>
                     </div>
                     <div className="text-center">
@@ -5305,7 +5328,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               )}
             </div>
 
-            {/* â”€â”€ PiP LOCAL VIDEO â”€â”€ */}
+            {/* ── PiP LOCAL VIDEO ── */}
             {callType === 'video' && (
               <motion.div
                 drag
@@ -5314,21 +5337,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 className="absolute top-[80px] right-4 z-20 cursor-grab active:cursor-grabbing"
               >
                 {!isCamOff && localStream ? (
-                  <div className="w-28 h-40 md:w-36 md:h-52 rounded-2xl overflow-hidden border-2 border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.5)] bg-black">
+                  <div className="w-28 h-40 md:w-36 md:h-52 rounded-2xl overflow-hidden border-2 border-white shadow-[0_20px_60px_rgba(0,0,0,0.15)] bg-black">
                     <video 
                        ref={el => { if (el && el.srcObject !== localStream) el.srcObject = localStream; }} 
                        autoPlay playsInline muted className="w-full h-full object-cover" 
                     />
                   </div>
                 ) : (
-                  <div className="w-28 h-40 md:w-36 md:h-52 rounded-2xl bg-black/80 border-2 border-white/20 flex items-center justify-center">
-                    <VideoOff size={24} className="text-white/40" />
+                  <div className="w-28 h-40 md:w-36 md:h-52 rounded-2xl bg-[#E5E5EA] border border-black/10 flex items-center justify-center shadow-lg">
+                    <VideoOff size={24} className="text-black/40" />
                   </div>
                 )}
               </motion.div>
             )}
 
-            {/* â”€â”€ Top Bar â”€â”€ */}
+            {/* ── Top Bar ── */}
             <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-5 pointer-events-none" style={{ paddingTop: 'max(16px, env(safe-area-inset-top, 16px))' }}>
               <div className="flex items-center gap-3 bg-white/90 backdrop-blur-xl rounded-2xl px-4 py-2.5 border border-black/10 shadow-sm pointer-events-auto">
                 <div className="w-8 h-8 rounded-full bg-[#f5f5f7] border border-black/10 flex items-center justify-center">
@@ -5336,34 +5359,44 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 </div>
                 <div>
                   <p className="text-black text-[13px] font-bold leading-none">{activePeer ? getDisplayName(activePeer) : 'Peer'}</p>
-                  <p className="text-black/50 text-[10px] font-mono mt-0.5">{callType === 'video' ? 'ðŸ“¹ Video' : 'ðŸŽ™ï¸ Audio'}</p>
+                  <p className="text-black/50 text-[10px] font-mono mt-0.5">{callType === 'video' ? '📹 Video' : '🎙️ Audio'}</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 pointer-events-auto">
                 <button 
                   onClick={() => setShowCallSettings(true)}
-                  className="bg-white/90 hover:bg-white active:scale-95 transition-all backdrop-blur-xl rounded-full w-10 h-10 flex items-center justify-center border border-black/10 shadow-sm pointer-events-auto text-black"
+                  className="bg-white/90 hover:bg-white active:scale-95 transition-all backdrop-blur-xl rounded-full w-10 h-10 flex items-center justify-center border border-black/10 shadow-sm text-black"
+                  aria-label="Call Settings"
                 >
                   <Settings size={20} />
                 </button>
                 <button 
                   onClick={() => setIsCallMinimized(true)}
-                  className="bg-white/90 hover:bg-white active:scale-95 transition-all backdrop-blur-xl rounded-full w-10 h-10 flex items-center justify-center border border-black/10 shadow-sm pointer-events-auto"
+                  className="bg-white/90 hover:bg-white active:scale-95 transition-all backdrop-blur-xl rounded-full w-10 h-10 flex items-center justify-center border border-black/10 shadow-sm"
+                  aria-label="Minimize Call"
                 >
                   <div className="w-3 h-3 border-b-2 border-l-2 border-black transform -rotate-45" />
+                </button>
+                <button 
+                  onClick={endCall}
+                  className="bg-[#FF3B30] hover:bg-red-600 active:scale-95 transition-all text-white rounded-full px-3.5 h-10 flex items-center gap-1.5 shadow-sm font-semibold text-[13px]"
+                  aria-label="End Call"
+                >
+                  <PhoneOff size={16} className="text-white" />
+                  <span>End</span>
                 </button>
               </div>
             </div>
 
-            {/* â”€â”€ Network Alert â”€â”€ */}
+            {/* ── Network Alert ── */}
             {networkQuality === 'poor' && (
-              <div className="absolute top-[100px] left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur text-white text-[11px] font-mono font-bold px-4 py-1.5 rounded-full z-20 flex items-center gap-2">
-                 âš ï¸ Weak Connection
+              <div className="absolute top-[100px] left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur text-[#FF9500] text-[11px] font-mono font-bold px-4 py-1.5 rounded-full z-20 flex items-center gap-2 border border-black/10 shadow-sm">
+                 ⚠️ Weak Connection
               </div>
             )}
 
-            {/* â”€â”€ Expanded Controls â”€â”€ */}
+            {/* ── Expanded Controls ── */}
             <div
               className="absolute bottom-0 inset-x-0 z-30 flex flex-col gap-4 pb-8"
               style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom, 32px))' }}
@@ -5402,9 +5435,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
                 <button
                   onClick={endCall}
-                  className="w-[72px] h-[72px] bg-white rounded-[28px] flex items-center justify-center text-white hover:opacity-80 active:scale-90 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
+                  className="w-[72px] h-[72px] bg-[#FF3B30] hover:bg-red-600 rounded-[28px] flex items-center justify-center text-white active:scale-90 transition-all shadow-[0_8px_32px_rgba(255,59,48,0.35)]"
+                  aria-label="Hang up call"
                 >
-                  <PhoneOff size={32} />
+                  <PhoneOff size={32} className="text-white" />
                 </button>
 
                 {callType === 'video' ? (

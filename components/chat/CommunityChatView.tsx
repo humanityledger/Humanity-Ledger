@@ -15,7 +15,7 @@ import { ZkMoneyModal } from './ZkMoneyModal';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { AnimatePresence, motion } from 'framer-motion';
 import DOMPurify from 'dompurify';
-import { parseZkPaymentPayload, parseEscrowPayload, recordIncomingShieldedPayment } from '@/lib/zk/zkMoney';
+import { parseZkPaymentPayload, parseEscrowPayload } from '@/lib/zk/zkMoney';
 import { parseTipPayload, parseBountyPayload } from '@/lib/zk/zkCommunityPayments';
 import { parseStreamPayload, encodeStreamPayload, ZkPaymentStream } from '@/lib/zk/zkStreaming';
 import { parseInvoicePayload, encodeInvoicePayload, ZkInvoice } from '@/lib/zk/zkInvoice';

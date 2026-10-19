@@ -140,25 +140,32 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
                     return;
                 }
 
-                // [NEW] Generate and encrypt internal wallet
+                // [C6 SECURITY HARDENING]: Non-custodial sovereign wallet architecture.
+                // The mnemonic is encrypted client-side and stored EXCLUSIVELY in client storage.
+                // It is NEVER transmitted to the server or database.
                 const wallet = Wallet.createRandom();
                 const mnemonic = wallet.mnemonic?.phrase || '';
                 const walletAddress = wallet.address;
                 const walletSalt = generateWalletSalt();
                 const encryptedMnemonic = await encryptWithPassword(mnemonic, password);
 
-                // Complete signup with wallet data
+                if (typeof window !== 'undefined') {
+                    try {
+                        localStorage.setItem(`hl_vault_encrypted_mnemonic_${walletAddress.toLowerCase()}`, encryptedMnemonic);
+                        localStorage.setItem(`hl_vault_salt_${walletAddress.toLowerCase()}`, walletSalt);
+                    } catch {}
+                }
+
+                // Complete signup with public profile data only (zero mnemonic disclosure)
                 const response = await fetch('/api/auth/complete-signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         email, 
                         password, 
-                        username, // [NEW] Elite Username
+                        username,
                         name,
-                        walletAddress,
-                        encryptedMnemonic,
-                        walletSalt
+                        walletAddress
                     })
                 });
 

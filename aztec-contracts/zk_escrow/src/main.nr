@@ -100,8 +100,10 @@ contract ZkEscrow {
     }
 
     // Cancel escrow if expired and no milestones released
+    // [H2 FIX]: Block number must be read from context global variables, NOT supplied by caller
     #[aztec(public)]
-    fn cancel_expired(current_block: Field) {
+    fn cancel_expired() {
+        let current_block = context.historical_header.global_variables.block_number as Field;
         assert(current_block > storage.expiry_block.read(), "not expired yet");
         assert(storage.released_amount.read() == 0, "milestones already released");
         storage.status.write(3); // 3 = Cancelled

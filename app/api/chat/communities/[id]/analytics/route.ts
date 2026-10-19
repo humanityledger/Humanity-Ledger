@@ -6,9 +6,9 @@ export const dynamic = 'force-dynamic';
 
 const ETH_ADDR_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const communityId = params.id;
+    const { id: communityId } = await params;
     if (!communityId) {
       return NextResponse.json({ error: 'Missing community id' }, { status: 400 });
     }

@@ -14,10 +14,11 @@ async function isAdminOrOwner(communityId: string, caller: string): Promise<bool
   return !!membership;
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id: communityId } = await params;
     const members = await (prisma as any).communityMember.findMany({
-      where: { communityId: params.id },
+      where: { communityId },
       orderBy: { joinedAt: 'asc' }
     });
     return NextResponse.json({ members });
@@ -27,19 +28,20 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // Change member role (admin can promote/demote)
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const caller = await resolveVerifiedCaller(req);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!(await isAdminOrOwner(params.id, caller)))
+    const { id: communityId } = await params;
+    if (!(await isAdminOrOwner(communityId, caller)))
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { walletAddress, role } = await req.json();
     if (!walletAddress || !role) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 
     const updated = await (prisma as any).communityMember.updateMany({
-      where: { communityId: params.id, walletAddress: walletAddress.toLowerCase() },
+      where: { communityId, walletAddress: walletAddress.toLowerCase() },
       data: { role }
     });
     return NextResponse.json({ ok: true, updated });
@@ -49,21 +51,22 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 // Kick member (admin) or leave (self)
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const caller = await resolveVerifiedCaller(req);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const { id: communityId } = await params;
     const body = await req.json().catch(() => ({}));
     const target = (body.walletAddress || caller).toLowerCase();
 
     if (target !== caller) {
-      if (!(await isAdminOrOwner(params.id, caller)))
+      if (!(await isAdminOrOwner(communityId, caller)))
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     await (prisma as any).communityMember.deleteMany({
-      where: { communityId: params.id, walletAddress: target }
+      where: { communityId, walletAddress: target }
     });
     return NextResponse.json({ ok: true });
   } catch (e: any) {

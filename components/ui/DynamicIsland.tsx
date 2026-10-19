@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
-import { Phone, Mic, Shield, Wallet, Loader2, Bell, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Phone, PhoneOff, Mic, Shield, Wallet, Loader2, Bell, CheckCircle2, ChevronRight } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 
 export function DynamicIsland() {
@@ -124,6 +124,18 @@ export function DynamicIsland() {
                    </div>
                 )}
                 <span className="text-[13px] font-mono text-green-400 font-bold">{formatTime(timer)}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.dispatchEvent(new CustomEvent('ledger_end_active_call'));
+                    dismiss();
+                  }}
+                  className="w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white ml-1.5 transition-all active:scale-90 shadow-sm"
+                  title="Hang up call"
+                >
+                  <PhoneOff size={11} />
+                </button>
               </div>
             </motion.div>
           )}

@@ -6,12 +6,13 @@ export const dynamic = 'force-dynamic';
 
 const ETH_ADDR_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id: communityId } = await params;
     // Posts tab = rich community posts (with a title)
     const posts = await (prisma as any).communityPost.findMany({
       where: {
-        communityId: params.id,
+        communityId,
         title: { not: null },
       },
       orderBy: { createdAt: 'desc' },
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let caller = await resolveVerifiedCaller(req);
     if (!caller) {
@@ -35,21 +36,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const { id: communityId } = await params;
     const community = await (prisma as any).community.findUnique({
-      where: { id: params.id },
+      where: { id: communityId },
       include: { permissions: true }
     });
     if (!community) return NextResponse.json({ error: 'Community not found' }, { status: 404 });
 
     const isOwner = community.ownerAddress?.toLowerCase() === caller.toLowerCase();
     let membership = await (prisma as any).communityMember.findFirst({
-      where: { communityId: params.id, walletAddress: caller.toLowerCase() }
+      where: { communityId, walletAddress: caller.toLowerCase() }
     });
 
     if (!membership && isOwner) {
       membership = await (prisma as any).communityMember.create({
         data: {
-          communityId: params.id,
+          communityId,
           walletAddress: caller.toLowerCase(),
           role: 'ADMIN'
         }
@@ -57,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     } else if (!membership && !community.isPrivate) {
       membership = await (prisma as any).communityMember.create({
         data: {
-          communityId: params.id,
+          communityId,
           walletAddress: caller.toLowerCase(),
           role: 'MEMBER'
         }
@@ -80,7 +82,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const post = await (prisma as any).communityPost.create({
       data: {
-        communityId: params.id,
+        communityId,
         channelId: channelId || null,
         authorAddress: caller.toLowerCase(),
         title: postTitle,

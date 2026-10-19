@@ -2,11 +2,11 @@
 /**
  * GroupPartyCall — Native WebRTC group voice/video call for Humanity Ledger Communities.
  * Only available inside group conversations (isGroup=true).
- * Connects all members who join via a shared mesh WebRTC topology.
+ * Fully light mode, zero-dark-mode, Telegram/Discord/WhatsApp polished UI.
  */
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Video, VideoOff, Mic, MicOff, PhoneOff, Users, Monitor, X, Maximize2 } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, PhoneOff, Users, Minimize2, Maximize2, X, PhoneCall } from 'lucide-react';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
 
 interface Participant {
@@ -24,16 +24,6 @@ interface GroupPartyCallProps {
   onClose: () => void;
   isActive: boolean;
 }
-
-const TURN_SERVERS = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-  {
-    urls: 'turn:openrelay.metered.ca:80',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
-];
 
 export function GroupPartyCall({ groupId, groupName, myAddress, onClose, isActive }: GroupPartyCallProps) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -63,33 +53,23 @@ export function GroupPartyCall({ groupId, groupName, myAddress, onClose, isActiv
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       return stream;
     } catch {
-      // Try audio only if video fails
+      // Fallback: audio only if camera is unavailable or denied
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
         setLocalStream(stream);
         setIsVideoOff(true);
         return stream;
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     }
   }, []);
 
-  const joinCall = useCallback(async () => {
-    const stream = await startLocalStream();
-    if (!stream) return;
-    setJoined(true);
-    // Notify Dynamic Island
-    diStore.getState().setState('calling', { title: groupName, subtitle: 'Party call in progress' });
-    // Start duration timer
-    timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
-    // POST to signal server that we joined
-    fetch('/api/chat/group-call/join', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ groupId, address: myAddress }),
-    }).catch(() => {});
-  }, [startLocalStream, groupId, myAddress, groupName, diStore]);
-
   const leaveCall = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     localStream?.getTracks().forEach(t => t.stop());
     setLocalStream(null);
     setJoined(false);
@@ -97,15 +77,36 @@ export function GroupPartyCall({ groupId, groupName, myAddress, onClose, isActiv
     Object.values(peersRef.current).forEach(pc => pc.close());
     peersRef.current = {};
     setParticipants([]);
-    if (timerRef.current) clearInterval(timerRef.current);
     diStore.getState().dismiss();
+
     fetch('/api/chat/group-call/leave', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ groupId, address: myAddress }),
     }).catch(() => {});
+
     onClose();
   }, [localStream, groupId, myAddress, onClose, diStore]);
+
+  const joinCall = useCallback(async () => {
+    const stream = await startLocalStream();
+    if (!stream) {
+      // Even if media devices fail, mark joined so voice room is entered
+      setJoined(true);
+      diStore.getState().setState('calling', { title: groupName, subtitle: 'Party call active' });
+      timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
+      return;
+    }
+    setJoined(true);
+    diStore.getState().setState('calling', { title: groupName, subtitle: 'Party call active' });
+    timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
+
+    fetch('/api/chat/group-call/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupId, address: myAddress }),
+    }).catch(() => {});
+  }, [startLocalStream, groupId, myAddress, groupName, diStore]);
 
   const toggleMute = useCallback(() => {
     if (!localStream) return;
@@ -120,51 +121,56 @@ export function GroupPartyCall({ groupId, groupName, myAddress, onClose, isActiv
   }, [localStream, isVideoOff]);
 
   useEffect(() => {
+    const handleGlobalEnd = () => {
+      leaveCall();
+    };
+    window.addEventListener('ledger_end_active_call', handleGlobalEnd);
     return () => {
+      window.removeEventListener('ledger_end_active_call', handleGlobalEnd);
       if (timerRef.current) clearInterval(timerRef.current);
       localStream?.getTracks().forEach(t => t.stop());
     };
-  }, [localStream]);
+  }, [localStream, leaveCall]);
 
-  // Minimized pill (shown in chat header when call is active)
+  // ── Minimized pill (shown in chat header when user minimizes call to browse messages) ──
   if (isMinimized && joined) {
     return (
       <motion.div
         initial={{ y: -8, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="w-full bg-white border-b border-[#EBEBEB] px-4 py-2.5 flex items-center gap-3 shadow-sm"
+        className="w-full bg-white border-b border-[#EBEBEB] px-4 py-3 flex items-center justify-between shadow-sm z-30"
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shrink-0" />
-          <span className="text-[13px] font-semibold text-[#1C1C1E] truncate">Party call in progress</span>
-          <span className="text-[12px] text-[#1C1C1E]/50 font-medium">{participants.length + 1} participant{participants.length !== 0 ? 's' : ''}</span>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#30D158] animate-pulse shrink-0" />
+          <div className="flex flex-col min-w-0">
+            <span className="text-[13px] font-bold text-[#1C1C1E] truncate">{groupName} • Party Call</span>
+            <span className="text-[11px] text-[#1C1C1E]/50 font-medium">
+              {formatDuration(duration)} · {participants.length + 1} participant{participants.length !== 0 ? 's' : ''}
+            </span>
+          </div>
         </div>
+
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setIsMinimized(false)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1C7AFF] text-white text-[12px] font-bold rounded-full hover:bg-[#1a6fe0] transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1C7AFF] hover:bg-[#1a6fe0] text-white text-[12px] font-bold rounded-full transition-colors shadow-sm"
           >
-            <Video size={12} />
-            <span>Video</span>
-          </button>
-          <button
-            onClick={() => setIsMinimized(false)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#30D158] text-white text-[12px] font-bold rounded-full hover:bg-[#28b84d] transition-colors"
-          >
-            <span>Join</span>
+            <Maximize2 size={13} />
+            <span>Expand</span>
           </button>
           <button
             onClick={leaveCall}
-            className="w-8 h-8 flex items-center justify-center bg-[#FF3B30] text-white rounded-full hover:bg-red-600 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FF3B30] hover:bg-red-600 text-white text-[12px] font-bold rounded-full transition-colors shadow-sm"
           >
-            <X size={14} />
+            <PhoneOff size={13} />
+            <span>Leave</span>
           </button>
         </div>
       </motion.div>
     );
   }
 
-  // Pre-join screen
+  // ── Pre-join modal ──
   if (!joined) {
     return (
       <AnimatePresence>
@@ -173,38 +179,38 @@ export function GroupPartyCall({ groupId, groupName, myAddress, onClose, isActiv
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[9000] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl"
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-[32px] p-8 max-w-sm w-full shadow-2xl border border-black/5 text-center"
             >
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1C7AFF] to-[#5856D6] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/20">
-                  <Users size={28} className="text-white" />
-                </div>
-                <h2 className="text-[22px] font-bold text-[#1C1C1E] mb-1">{groupName}</h2>
-                <p className="text-[14px] text-[#1C1C1E]/50">Party call available</p>
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1C7AFF] to-[#5856D6] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/20">
+                <Users size={28} className="text-white" />
               </div>
+              <h2 className="text-[22px] font-extrabold text-[#1C1C1E] mb-1">{groupName}</h2>
+              <p className="text-[14px] text-[#1C1C1E]/50 font-medium mb-6">Live Community Party Call</p>
+
               <div className="space-y-3">
                 <button
                   onClick={joinCall}
-                  className="w-full py-4 bg-[#30D158] text-white font-bold text-[15px] rounded-2xl hover:bg-[#28b84d] transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  className="w-full py-4 bg-[#30D158] hover:bg-[#28b84d] text-white font-bold text-[15px] rounded-2xl transition-all shadow-md shadow-green-500/20 flex items-center justify-center gap-2 active:scale-98"
                 >
                   <Video size={18} />
                   Join with Camera
                 </button>
                 <button
                   onClick={async () => { setIsVideoOff(true); await joinCall(); }}
-                  className="w-full py-3.5 bg-[#F2F2F7] text-[#1C1C1E] font-semibold text-[14px] rounded-2xl hover:bg-[#E5E5EA] transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-3.5 bg-[#F2F2F7] hover:bg-[#E5E5EA] text-[#1C1C1E] font-semibold text-[14px] rounded-2xl transition-colors flex items-center justify-center gap-2"
                 >
                   <Mic size={16} />
                   Join Audio Only
                 </button>
                 <button
                   onClick={onClose}
-                  className="w-full py-3 text-[#FF3B30] font-semibold text-[14px] rounded-2xl hover:bg-[#FF3B30]/5 transition-colors"
+                  className="w-full py-3 text-[#FF3B30] hover:bg-red-50 font-semibold text-[14px] rounded-2xl transition-colors"
                 >
                   Cancel
                 </button>
@@ -216,100 +222,141 @@ export function GroupPartyCall({ groupId, groupName, myAddress, onClose, isActiv
     );
   }
 
-  // Active call screen
+  // ── Full Active Call Screen (Pure Light Mode, Telegram/WhatsApp Polish) ──
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-[9000] bg-[#1C1C1E] flex flex-col"
+      className="fixed inset-0 z-[9000] bg-[#F8F9FA] flex flex-col overflow-hidden text-[#1C1C1E]"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 pt-12 pb-4">
-        <div>
-          <h3 className="text-white font-bold text-[17px]">{groupName}</h3>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-white/60 text-[13px]">{formatDuration(duration)} · {participants.length + 1} participants</span>
+      {/* ── Top Header Bar ── */}
+      <div className="shrink-0 flex items-center justify-between px-6 py-4 bg-white border-b border-black/5 shadow-sm z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#1C7AFF] to-[#5856D6] flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+            <Users size={20} />
+          </div>
+          <div>
+            <h3 className="text-[#1C1C1E] font-extrabold text-[16px] leading-tight">{groupName}</h3>
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="w-2 h-2 rounded-full bg-[#30D158] animate-pulse" />
+              <span className="text-black/60 text-[12px] font-semibold">{formatDuration(duration)} · {participants.length + 1} participant{participants.length !== 0 ? 's' : ''}</span>
+            </div>
           </div>
         </div>
-        <button
-          onClick={() => setIsMinimized(true)}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
-          title="Minimize call"
+
+        <div className="flex items-center gap-3">
+          {/* Guaranteed Direct Leave Button in Header */}
+          <button
+            onClick={leaveCall}
+            className="px-4 py-2 bg-[#FF3B30] hover:bg-red-600 text-white font-bold text-[13px] rounded-full flex items-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer"
+            title="Leave party call"
+          >
+            <PhoneOff size={15} />
+            <span>Leave</span>
+          </button>
+
+          {/* Minimize Button */}
+          <button
+            onClick={() => setIsMinimized(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] text-[#1C1C1E] transition-colors"
+            title="Minimize call to chat"
+          >
+            <Minimize2 size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Main Video/Avatar Stage (Constrained so controls are NEVER pushed off) ── */}
+      <div className="flex-1 min-h-0 p-4 md:p-6 flex items-center justify-center overflow-hidden">
+        <div
+          className="w-full max-w-4xl h-full flex flex-col md:flex-row items-center justify-center gap-4"
         >
-          <Maximize2 size={15} />
-        </button>
-      </div>
+          {/* Local participant card */}
+          <div className="relative w-full md:flex-1 h-full max-h-[55vh] rounded-3xl overflow-hidden bg-white border border-black/10 shadow-lg flex items-center justify-center">
+            {!isVideoOff && localStream ? (
+              <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#FFFFFF] to-[#F2F4F7] p-6">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#1C7AFF] to-[#5856D6] flex items-center justify-center text-white text-3xl font-black shadow-lg mb-3">
+                  <span>{myAddress ? myAddress.slice(2, 4).toUpperCase() : 'ME'}</span>
+                </div>
+                <span className="text-[15px] font-bold text-[#1C1C1E]">You</span>
+                <span className="text-[12px] font-mono text-black/40 mt-0.5">{shortAddr(myAddress)}</span>
+              </div>
+            )}
 
-      {/* Video Grid */}
-      <div className="flex-1 p-4 grid gap-3" style={{ gridTemplateColumns: participants.length === 0 ? '1fr' : 'repeat(2, 1fr)' }}>
-        {/* Local video */}
-        <div className="relative rounded-2xl overflow-hidden bg-[#2C2C2E] aspect-video">
-          {!isVideoOff ? (
-            <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-[#3A3A3C] flex items-center justify-center">
-                <span className="text-white font-bold text-xl">{myAddress.slice(2, 4).toUpperCase()}</span>
+            <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md rounded-xl px-3 py-1 border border-black/5 shadow-sm">
+              <span className="text-[#1C1C1E] text-[12px] font-bold">You</span>
+            </div>
+
+            {isMuted && (
+              <div className="absolute top-3 right-3 bg-[#FF3B30] text-white rounded-full p-2 shadow-md">
+                <MicOff size={14} />
+              </div>
+            )}
+          </div>
+
+          {/* Remote participants cards */}
+          {participants.map(p => (
+            <div key={p.address} className="relative w-full md:flex-1 h-full max-h-[55vh] rounded-3xl overflow-hidden bg-white border border-black/10 shadow-lg flex items-center justify-center">
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#FFFFFF] to-[#F2F4F7] p-6">
+                <div className="w-24 h-24 rounded-full bg-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] text-3xl font-black shadow-sm mb-3">
+                  <span>{p.address.slice(2, 4).toUpperCase()}</span>
+                </div>
+                <span className="text-[15px] font-bold text-[#1C1C1E]">{p.name || shortAddr(p.address)}</span>
+              </div>
+              <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md rounded-xl px-3 py-1 border border-black/5 shadow-sm">
+                <span className="text-[#1C1C1E] text-[12px] font-bold">{p.name || shortAddr(p.address)}</span>
               </div>
             </div>
-          )}
-          <div className="absolute bottom-2 left-2 bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1">
-            <span className="text-white text-[11px] font-medium">You</span>
-          </div>
-          {isMuted && (
-            <div className="absolute top-2 right-2 bg-[#FF3B30] rounded-full p-1">
-              <MicOff size={10} className="text-white" />
+          ))}
+
+          {/* Empty state when alone in call */}
+          {participants.length === 0 && (
+            <div className="hidden md:flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-black/10 rounded-3xl max-h-[55vh] w-full md:flex-1">
+              <div className="w-14 h-14 rounded-2xl bg-black/5 flex items-center justify-center mb-3 text-black/40">
+                <Users size={24} />
+              </div>
+              <h4 className="text-[15px] font-bold text-[#1C1C1E] mb-1">Waiting for members</h4>
+              <p className="text-[12px] text-black/50 max-w-xs">
+                Community members can join this party call from the chat header anytime.
+              </p>
             </div>
           )}
         </div>
-
-        {/* Remote participants */}
-        {participants.map(p => (
-          <div key={p.address} className="relative rounded-2xl overflow-hidden bg-[#2C2C2E] aspect-video">
-            <div className="w-full h-full flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-[#48484A] flex items-center justify-center">
-                <span className="text-white font-bold text-xl">{p.address.slice(2, 4).toUpperCase()}</span>
-              </div>
-            </div>
-            <div className="absolute bottom-2 left-2 bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1">
-              <span className="text-white text-[11px] font-medium">{shortAddr(p.address)}</span>
-            </div>
-          </div>
-        ))}
-
-        {/* Waiting for others */}
-        {participants.length === 0 && (
-          <div className="flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-3">
-                <Users size={20} className="text-white/50" />
-              </div>
-              <p className="text-white/40 text-[13px]">Waiting for members to join...</p>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Controls */}
-      <div className="pb-safe px-6 py-6 flex items-center justify-center gap-4">
+      {/* ── Floating Bottom Control Dock ── */}
+      <div className="shrink-0 py-4 px-6 bg-white border-t border-black/10 flex items-center justify-center gap-6 shadow-xl z-30">
+        {/* Mic Toggle */}
         <button
           onClick={toggleMute}
-          className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${isMuted ? 'bg-[#FF3B30]' : 'bg-white/15 hover:bg-white/25'}`}
+          className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm ${
+            isMuted ? 'bg-[#FF3B30] text-white' : 'bg-[#F2F2F7] hover:bg-[#E5E5EA] text-[#1C1C1E]'
+          }`}
+          title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
         >
-          {isMuted ? <MicOff size={22} className="text-white" /> : <Mic size={22} className="text-white" />}
+          {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
         </button>
+
+        {/* Big Red Hang Up Button */}
         <button
           onClick={leaveCall}
-          className="w-16 h-16 rounded-full bg-[#FF3B30] flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+          className="w-16 h-16 rounded-full bg-[#FF3B30] hover:bg-red-600 text-white flex items-center justify-center shadow-lg hover:shadow-red-500/25 active:scale-95 transition-all cursor-pointer"
+          title="Hang Up / Leave Call"
         >
-          <PhoneOff size={24} className="text-white" />
+          <PhoneOff size={26} />
         </button>
+
+        {/* Video Toggle */}
         <button
           onClick={toggleVideo}
-          className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${isVideoOff ? 'bg-[#FF3B30]' : 'bg-white/15 hover:bg-white/25'}`}
+          className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm ${
+            isVideoOff ? 'bg-[#FF3B30] text-white' : 'bg-[#F2F2F7] hover:bg-[#E5E5EA] text-[#1C1C1E]'
+          }`}
+          title={isVideoOff ? 'Turn camera on' : 'Turn camera off'}
         >
-          {isVideoOff ? <VideoOff size={22} className="text-white" /> : <Video size={22} className="text-white" />}
+          {isVideoOff ? <VideoOff size={22} /> : <Video size={22} />}
         </button>
       </div>
     </motion.div>

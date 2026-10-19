@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const caller = await resolveVerifiedCaller(req);
@@ -15,7 +15,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized. Sign in to generate invites.' }, { status: 401 });
     }
 
-    const communityId = params.id;
+    const { id: communityId } = await params;
     const community = await (prisma as any).community.findUnique({
       where: { id: communityId },
       include: {

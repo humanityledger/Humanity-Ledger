@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { hashRoomPassword, generateCrockfordRoomId, generateJoinToken } from '@/lib/utils/roomCrypto';
+import { getSession } from '@/lib/session';
 
 const ROOM_SECRET = process.env.CALL_ROOM_SECRET || process.env.NEXTAUTH_SECRET || 'ledger-call-secret-change-in-prod';
 const MAX_PARTICIPANTS = 20;
@@ -14,11 +15,9 @@ const createRateMap = new Map<string, { count: number; resetAt: number }>();
 
 async function getSessionAddress(req: NextRequest): Promise<string | null> {
   try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get('system_handshake')?.value;
-    if (session) return session.toLowerCase();
-    const header = req.headers.get('x-wallet-address');
-    return header ? header.toLowerCase() : null;
+    const session = await getSession();
+    if (session?.userId) return session.userId.toLowerCase();
+    return null;
   } catch { return null; }
 }
 

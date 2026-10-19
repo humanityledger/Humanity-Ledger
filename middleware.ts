@@ -295,12 +295,15 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   });
   response.headers.set('x-request-id', requestId);
 
-  // [SECURITY] Strict CSP — unsafe-eval removed (was allowing arbitrary JS execution)
-  // unsafe-inline kept only for Next.js inline hydration scripts (required for App Router)
+  // [SECURITY] Strict CSP: includes 'wasm-unsafe-eval' for Barretenberg UltraHonk client proving
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
   );
+
+  // [SECURITY] Cross-Origin Isolation for Barretenberg WASM Multithreading (SharedArrayBuffer)
+  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
 
   // [SECURITY] Additional hardening headers
   response.headers.set('X-Content-Type-Options', 'nosniff');

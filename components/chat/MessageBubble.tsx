@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
 import { FastForward, MapPin, Clock, PhoneOff, PhoneMissed, Video, Check, CheckCheck, Pencil, Lock, ExternalLink, Shield, Heart, Waves, FileText } from 'lucide-react';
-import { parseZkPaymentPayload, parseEscrowPayload, recordIncomingShieldedPayment, ZkPaymentResult, ZkEscrowState } from '@/lib/zk/zkMoney';
+import { parseZkPaymentPayload, parseEscrowPayload, ZkPaymentResult, ZkEscrowState } from '@/lib/zk/zkMoney';
 import { parseTipPayload, ZkTip } from '@/lib/zk/zkCommunityPayments';
 import { parseStreamPayload, calculateStreamProgress, ZkPaymentStream } from '@/lib/zk/zkStreaming';
 import { parseInvoicePayload, ZkInvoice } from '@/lib/zk/zkInvoice';
@@ -197,16 +197,8 @@ TipBubble.displayName = 'TipBubble';
 const ZkPaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
   const result: ZkPaymentResult | null = parseZkPaymentPayload(content);
 
-  useEffect(() => {
-    if (!isMe && result) {
-      const myAddress = typeof window !== 'undefined'
-        ? (localStorage.getItem('ledger_active_address') || localStorage.getItem('human_active_wallet') || '')
-        : '';
-      if (myAddress) {
-        recordIncomingShieldedPayment(myAddress, result);
-      }
-    }
-  }, [isMe, result]);
+  // Security Hardening (C2 fix): A chat message is strictly a payment announcement/receipt.
+  // Balances are never credited from unverified chat strings.
 
   if (!result) return null;
 

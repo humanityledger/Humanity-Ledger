@@ -70,6 +70,25 @@ export function calculateStreamProgress(stream: ZkPaymentStream, atTimestamp: nu
   const rate = parseFloat(stream.ratePerSecond || '0');
   const duration = (stream.stopTime - stream.startTime) / 1000;
 
+  if (stream.status === 'cancelled') {
+    // [H3 FIX]: Cancelled stream is frozen at cancellation stopTime.
+    // Sender already received refund of remainingDeposit; recipient can only withdraw up to streamedSoFar.
+    const effectiveStop = Math.min(stream.stopTime, atTimestamp);
+    const elapsedSeconds = Math.max(0, (effectiveStop - stream.startTime) / 1000);
+    const totalStreamed = Math.min(deposit, elapsedSeconds * rate);
+    const withdrawable = Math.max(0, totalStreamed - withdrawn);
+    return {
+      streamedSoFar: totalStreamed,
+      withdrawableAmount: withdrawable,
+      remainingDeposit: 0,
+      percentCompleted: Math.min(100, (totalStreamed / (deposit || 1)) * 100),
+      isComplete: true,
+      timeRemainingSeconds: 0,
+      formattedStreamed: totalStreamed.toFixed(4),
+      formattedWithdrawable: withdrawable.toFixed(4),
+    };
+  }
+
   if (stream.status === 'completed' || atTimestamp >= stream.stopTime) {
     const remaining = Math.max(0, deposit - withdrawn);
     return {
@@ -183,6 +202,12 @@ export function withdrawFromStream(streamId: string, claimerAddress: string): { 
   if (idx === -1) return { success: false, amountWithdrawn: '0', error: 'Stream not found' };
 
   const stream = streams[idx];
+
+  // [H3 FIX]: Only the intended recipient can withdraw streamed funds
+  if (stream.recipientAddress.toLowerCase() !== claimerAddress.toLowerCase()) {
+    return { success: false, amountWithdrawn: '0', error: 'Unauthorized: Only the stream recipient can claim funds' };
+  }
+
   const progress = calculateStreamProgress(stream);
   if (progress.withdrawableAmount <= 0.0001) {
     return { success: false, amountWithdrawn: '0', error: 'No withdrawable balance available yet' };
@@ -195,7 +220,7 @@ export function withdrawFromStream(streamId: string, claimerAddress: string): { 
   streams[idx] = {
     ...stream,
     withdrawnAmount: newWithdrawn,
-    status: isDone ? 'completed' : stream.status,
+    status: isDone ? (stream.status === 'cancelled' ? 'cancelled' : 'completed') : stream.status,
     lastWithdrawnAt: Date.now(),
   };
 
@@ -213,8 +238,13 @@ export function cancelStream(streamId: string, callerAddress: string): { success
     return { success: false, refundedAmount: '0', error: 'Unauthorized to cancel stream' };
   }
 
+  // [H3 FIX]: Prevent double cancellation and double refunding
+  if (stream.status === 'cancelled' || stream.status === 'completed') {
+    return { success: false, refundedAmount: '0', error: 'Stream is already finished or cancelled' };
+  }
+
   const progress = calculateStreamProgress(stream);
-  const refund = progress.remainingDeposit.toFixed(4);
+  const refund = Math.max(0, parseFloat(progress.remainingDeposit.toFixed(4))).toFixed(4);
 
   streams[idx] = {
     ...stream,

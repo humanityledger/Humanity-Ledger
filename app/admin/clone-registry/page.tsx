@@ -65,9 +65,10 @@ async function getCloneData(adminKey: string) {
 export default async function CloneRegistryPage({
   searchParams,
 }: {
-  searchParams: { key?: string };
+  searchParams: Promise<{ key?: string }>;
 }) {
-  const adminKey = searchParams?.key || '';
+  const resolvedSearchParams = await searchParams;
+  const adminKey = resolvedSearchParams?.key || '';
   const data     = adminKey ? await getCloneData(adminKey) : null;
   const isAuthed = !!data && !data.error;
 

@@ -70,8 +70,14 @@ contract ZkMoneyVault {
         recipient_2: AztecAddress, amount_2: Field,
         recipient_3: AztecAddress, amount_3: Field
     ) {
+        // [H1 FIX]: Prevent Field arithmetic overflow
+        amount_1.assert_max_bit_size::<120>();
+        amount_2.assert_max_bit_size::<120>();
+        amount_3.assert_max_bit_size::<120>();
+
         let sender = context.msg_sender();
         let total = amount_1 + amount_2 + amount_3;
+        total.assert_max_bit_size::<120>();
         
         storage.balances.at(sender).sub(total);
         
@@ -94,9 +100,14 @@ contract ZkMoneyVault {
         amount: Field,
         secret_hash_for_l1_to_l2_message: Field
     ) {
-        // Consume L1 to L2 message from portal
+        // [H1 FIX]: Enforce amount bounds to prevent wrap-around
+        amount.assert_max_bit_size::<120>();
+
+        // Consume L1 to L2 message from portal binding (to, amount, secret_hash)
+        let content_hash = dep::aztec::hash::compute_message_hash([to.to_field(), amount, secret_hash_for_l1_to_l2_message]);
         context.consume_l1_to_l2_message(
             storage.portal_address.read(),
+            content_hash,
             secret_hash_for_l1_to_l2_message
         );
 

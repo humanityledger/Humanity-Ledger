@@ -123,12 +123,16 @@ export default function MetaMaskWalletView() {
     const handleRevealPhrase = async () => {
         setIsRevealing(true);
         try {
-            const res = await fetch('/api/user/wallet/encrypted-mnemonic');
-            const data = await res.json();
-            
-            if (data.error) throw new Error(data.error);
+            const cleanAddr = activeAddress ? activeAddress.toLowerCase() : '';
+            const storedEncrypted = (typeof window !== 'undefined'
+                ? (localStorage.getItem(`hl_vault_encrypted_mnemonic_${cleanAddr}`) || localStorage.getItem('hl_vault_encrypted_mnemonic'))
+                : null);
 
-            const decrypted = await decryptWithPassword(data.encryptedMnemonic, revealPassword);
+            if (!storedEncrypted) {
+                throw new Error("No locally encrypted vault found on this device.");
+            }
+
+            const decrypted = await decryptWithPassword(storedEncrypted, revealPassword);
             setDecryptedMnemonic(decrypted);
             toast.success("Mnemonic decrypted successfully");
         } catch (err: unknown) {

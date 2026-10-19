@@ -4,7 +4,7 @@ import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     let address = await resolveVerifiedCaller(req);
     if (!address) {
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
     }
     if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const identifier = params.slug;
+    const { slug: identifier } = await params;
     const community = await (prisma as any).community.findFirst({
       where: {
         OR: [

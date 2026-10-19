@@ -158,10 +158,9 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
         setStepProgress(50);
 
         if (publicClient) {
-          try {
-            await publicClient.waitForTransactionReceipt({ hash: l1TxHash });
-          } catch (e) {
-            console.warn(e);
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: l1TxHash });
+          if (receipt.status === 'reverted') {
+            throw new Error('L1 deposit transaction reverted on-chain.');
           }
         }
 

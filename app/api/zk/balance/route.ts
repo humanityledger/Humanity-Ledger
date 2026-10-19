@@ -62,24 +62,3 @@ export async function GET(req: NextRequest) {
   });
 }
 
-// POST /api/zk/balance — Update server-side balance cache (called by shield/unshield)
-export async function POST(req: NextRequest) {
-  let body: any;
-  try { body = await req.json(); } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const { address, balances } = body;
-  if (!address || !balances) {
-    return NextResponse.json({ error: 'address and balances required' }, { status: 400 });
-  }
-
-  balanceOverrides.set(address.toLowerCase(), {
-    DAI: balances.DAI || '0.00',
-    USDC: balances.USDC || '0.00',
-    ETH: balances.ETH || '0.0000',
-    updatedAt: Date.now(),
-  });
-
-  return NextResponse.json({ success: true, address: address.toLowerCase(), balances });
-}

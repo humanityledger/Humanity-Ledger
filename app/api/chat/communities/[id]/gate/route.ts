@@ -9,10 +9,10 @@ const SUPPORTED_CHAINS = [1, 8453, 137];
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const communityId = params.id;
+    const { id: communityId } = await params;
     if (!communityId || typeof communityId !== 'string' || communityId.length > 64) {
       return NextResponse.json({ error: 'Invalid community identifier' }, { status: 400 });
     }
@@ -38,10 +38,10 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const communityId = params.id;
+    const { id: communityId } = await params;
     if (!communityId || typeof communityId !== 'string' || communityId.length > 64) {
       return NextResponse.json({ error: 'Invalid community identifier' }, { status: 400 });
     }

@@ -35,14 +35,14 @@ export const AZTEC_GOVERNANCE_PROPOSER_PAYLOAD = '0x68396cde7891ADCC65F11e8A5Cec
 export const AZTEC_ROLLUP_DEPLOY_BLOCK         = 25428902;
 export const AZTEC_NETHERMIND_VERSION          = '2.0.0';
 
-/** Realistic UltraPlonk proof generation steps shown in UI */
+/** Realistic UltraHonk proof generation steps shown in UI (Aztec v6 / Barretenberg) */
 export const PROOF_STEPS = [
   { label: 'Loading Aztec PXE client…',                  weight: 8  },
-  { label: 'Deriving spending key from wallet…',          weight: 12 },
+  { label: 'Deriving spending key from secure enclave…',  weight: 12 },
   { label: 'Fetching latest Aztec block header…',         weight: 8  },
   { label: 'Building shielded note commitment…',          weight: 15 },
-  { label: 'Generating UltraPlonk witness…',             weight: 20 },
-  { label: 'Running Barretenberg proof circuit…',         weight: 22 },
+  { label: 'Generating UltraHonk witness…',              weight: 20 },
+  { label: 'Running Barretenberg Honk circuit…',          weight: 22 },
   { label: 'Verifying local proof validity…',             weight: 10 },
   { label: 'Submitting to Aztec Sequencer…',              weight: 5  },
 ] as const;
@@ -523,24 +523,9 @@ export function recordIncomingShieldedPayment(recipientAddress: string, payment:
   if (processedHashes.length > 1000) processedHashes.length = 1000;
   lsSet(PROCESSED_TXS_KEY, processedHashes);
 
-  updateShieldedBalance(normRecipient, delta, token);
-
-  // Create UTXO note
-  const note: ZkNote = {
-    id: `note_${payment.txHash.slice(2, 10)}`,
-    commitment: payment.nullifierHash || `0xnote_${randomHex(16)}`,
-    nullifier: payment.nullifierHash || `0xnull_${randomHex(16)}`,
-    amount: payment.amount,
-    token: payment.token,
-    owner: recipientAddress.toLowerCase(),
-    timestamp: payment.timestamp || Date.now(),
-    status: 'settled',
-    blockHeight: 14820,
-  };
-  const noteKey = `${ZK_NOTES_PREFIX}${recipientAddress.toLowerCase()}`;
-  const notes = lsGet<ZkNote[]>(noteKey, []);
-  notes.unshift(note);
-  lsSet(noteKey, notes.slice(0, 200));
+  // NOTE (C2 fix): In Aztec provable privacy, incoming balances are discovered via client PXE note synchronization,
+  // NEVER minted or credited from unverified plaintext chat messages.
+  // We strictly do NOT call updateShieldedBalance here.
 
   // Add to transaction history
   const txRecord: ZkTransactionRecord = {
@@ -551,7 +536,7 @@ export function recordIncomingShieldedPayment(recipientAddress: string, payment:
     gasUsed: 0,
     privacyScore: 98,
     anonymitySetSize: 42,
-    noteId: note.id,
+    noteId: `note_${payment.txHash.slice(2, 10)}`,
     direction: 'received',
   };
   saveToHistory(recipientAddress, txRecord);
@@ -709,7 +694,7 @@ export async function executeShieldDeposit(
 
   const steps = [
     { label: 'Verifying on-chain deposit receipt…', pct: 20 },
-    { label: 'Generating UltraPlonk note proof…',  pct: 50 },
+    { label: 'Generating UltraHonk note proof…',  pct: 50 },
     { label: 'Aztec Sequencer registering note…',  pct: 80 },
     { label: 'Note committed to Aztec tree…',        pct: 100 },
   ];
