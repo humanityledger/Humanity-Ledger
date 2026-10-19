@@ -3,7 +3,7 @@ builder = "DOCKERFILE"
 dockerfilePath = "./Dockerfile"
 
 [deploy]
-preDeployCommand = "npx prisma migrate deploy"
+preDeployCommand = "node scripts/railway-pre-deploy.js"
 startCommand = "sh ./start.sh"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3

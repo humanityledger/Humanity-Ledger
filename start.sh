@@ -5,21 +5,14 @@ echo "[start.sh] Booting Ledger Network — humanidfi.com"
 echo "[start.sh] NODE_ENV=${NODE_ENV}"
 echo "[start.sh] PORT=${PORT:-3000}"
 
-# ── DB MIGRATIONS (with retry) ────────────────────────────────────────────────
-# Retry up to 10 times with 5s delay to handle Railway DB cold-start latency.
-if [ -f "/app/prisma/schema.prisma" ]; then
+# ── DB MIGRATIONS (with automated resolution) ──────────────────────────────────
+if [ -f "/app/scripts/railway-pre-deploy.js" ]; then
+  echo "[start.sh] Running database migration & resilience engine..."
+  node /app/scripts/railway-pre-deploy.js || true
+  echo "[start.sh] DB migrations check complete."
+elif [ -f "/app/prisma/schema.prisma" ]; then
   echo "[start.sh] Deploying Prisma migrations..."
-  MAX_RETRIES=10
-  RETRY=0
-  until npx prisma migrate deploy --schema=/app/prisma/schema.prisma 2>/dev/null; do
-    RETRY=$((RETRY + 1))
-    if [ $RETRY -ge $MAX_RETRIES ]; then
-      echo "[start.sh] WARNING: DB migration deploy failed after ${MAX_RETRIES} retries — starting anyway."
-      break
-    fi
-    echo "[start.sh] DB not ready, retry ${RETRY}/${MAX_RETRIES} in 5s..."
-    sleep 5
-  done
+  npx prisma migrate deploy --schema=/app/prisma/schema.prisma 2>/dev/null || true
   echo "[start.sh] DB migrations complete."
 fi
 
