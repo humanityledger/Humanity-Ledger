@@ -26,6 +26,7 @@ export default function OwnershipPage() {
           Official Ownership Declaration
         </h1>
         <p className="text-lg text-black/60">Humanity Ledger — All Rights Reserved</p>
+        <p className="text-sm text-black/40 mt-1">Last updated: October 19, 2026</p>
       </header>
 
       <section className="space-y-12">

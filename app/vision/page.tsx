@@ -13,7 +13,7 @@ export default function VisionPage() {
       title="Vision & Manifesto"
       category="Company"
       description="The foundational philosophy behind Humanity Ledger: securing human rights, informational sovereignty, and financial privacy through applied cryptography."
-      lastUpdated="August 2026"
+      lastUpdated="October 19, 2026"
     >
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 font-serif leading-relaxed text-slate-800">
 

@@ -216,7 +216,7 @@ export function ZkPrivacyScore({
                 <div className="space-y-3">
                   <div className="bg-[#f0f2f5] p-3.5 rounded-2xl space-y-2">
                     <div className="flex justify-between items-center text-[12px]">
-                      <span className="text-gray-600 font-medium">UltraPlonk Circuit Proof Validity</span>
+                      <span className="text-gray-600 font-medium">UltraHonk Circuit Proof Validity</span>
                       <span className="font-bold text-[#1C1C1E] flex items-center gap-1">
                         <CheckCircle size={13} /> 100% Cryptographic
                       </span>
@@ -251,7 +251,7 @@ export function ZkPrivacyScore({
                   </div>
 
                   <p className="text-[11px] text-gray-500 leading-relaxed italic">
-                    The Aztec sequencer batches confidential UltraPlonk notes together. 
+                    The Aztec sequencer batches confidential UltraHonk notes together. 
                     Every note added to your sovereign identity strengthens resistance against heuristic cluster analysis.
                   </p>
                 </div>

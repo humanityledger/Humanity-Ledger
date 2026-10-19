@@ -6,7 +6,7 @@ export default function WhitepaperPage() {
     <AztecDocPage
       eyebrow="Cryptography — Technical Whitepaper"
       title="The Humanity Ledger Platform Paper"
-      subtitle="A technical description of the Humanity Ledger platform architecture, security model, privacy guarantees, and design decisions. Published October 2026."
+      subtitle="A technical description of the Humanity Ledger platform architecture, security model, privacy guarantees, and design decisions. Published October 19, 2026."
       sections={MASSIVE_WHITEPAPER}
     />
   );

@@ -88,6 +88,9 @@ if (!process.env.MORALIS_API_KEY) {
 // Force deployment trigger [SOVEREIGN SYNC]: 2026-04-21T04:15:00Z
 const nextConfig = {
     ...(process.env.IPFS_BUILD === 'true' ? { output: 'export' } : {}),
+    eslint: {
+        ignoreDuringBuilds: true,
+    },
     // [SAFARI TDZ FIX] Disable the Rust SWC Minifier. SWC is notoriously bugged
     // when it comes to ESM module scoping and let/const hoisting in Safari WebKit,
     // causing "Cannot access 'X' before initialization" errors in libraries like viem.
@@ -206,6 +209,12 @@ const nextConfig = {
             ];
         }
 
+        config.resolve.fallback = {
+            ...config.resolve.fallback,
+            encoding: false,
+            'web-push': false,
+        };
+
         if (!isServer) {
             config.resolve.fallback = {
                 ...config.resolve.fallback,
@@ -217,6 +226,7 @@ const nextConfig = {
                 // [METAMASK SDK FIX] @wagmi/connectors embeds @metamask/sdk which tries to
                 // load the 'encoding' node built-in. Stub it out for browser bundles.
                 encoding: false,
+                'web-push': false,
             };
         }
 

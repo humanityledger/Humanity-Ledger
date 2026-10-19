@@ -19,7 +19,7 @@ export default function BlogPage() {
           id: 'roadmap-update',
           title: 'Dispatch 002: Path to Alpha Mainnet',
           paragraphs: [
-            'September 2026 — Following our unveiling at the European Blockchain Convention in Barcelona, the core engineering team is accelerating toward the Alpha Mainnet launch scheduled for January 2027. Key milestones include the finalization of the hardware-rooted ZK Identity circuits, the deployment of the UltraPlonk verifiers to the Sepolia testnet, and the completion of our primary cryptographic audit.',
+            'September 2026 — Following our unveiling at the European Blockchain Convention in Barcelona, the core engineering team is accelerating toward the Alpha Mainnet launch scheduled for January 2027. Key milestones include the finalization of the hardware-rooted ZK Identity circuits, the deployment of the UltraHonk verifiers to the Sepolia testnet, and the completion of our primary cryptographic audit.',
             'We are currently onboarding external security researchers to stress-test the circuit constraints and the WebAuthn enclave integration.',
           ],
         },

@@ -54,13 +54,13 @@ export async function runProverBenchmark(constraintCount: number = 24512): Promi
   const totalTime = performance.now() - start;
 
   return {
-    circuitType: 'UltraPlonk BN254',
+    circuitType: 'UltraHonk BN254',
     constraints: constraintCount,
     witnessTimeMs: Math.round(witnessTime),
     provingTimeMs: Math.round(provingTime),
     verificationTimeMs: Math.round(verificationTime),
     totalTimeMs: Math.round(totalTime),
-    proofSizeBytes: 1472, // standard UltraPlonk proof size
+    proofSizeBytes: 1472, // standard UltraHonk proof size
     passed: true,
   };
 }
@@ -170,7 +170,7 @@ export async function executeAztecTerminalCommand(
           '  keys          - View derived cryptographic keys (sk_m, nsk_m, ivsk_m)',
           '  notes         - List all client-side shielded UTXO notes and nullifiers',
           '  nullifiers    - Inspect the client-side nullifier double-spend tree',
-          '  bench         - Run in-browser UltraPlonk client prover benchmark',
+          '  bench         - Run in-browser UltraHonk client prover benchmark',
           '  audit         - Audit note commitments and double-spend integrity',
           '  clear         - Clear terminal output',
         ].join('\n'),
@@ -233,7 +233,7 @@ export async function executeAztecTerminalCommand(
         command: cmdLine,
         timestamp: now,
         output: [
-          `UltraPlonk Client Prover Benchmark:`,
+          `UltraHonk Client Prover Benchmark:`,
           `  Constraint Count:     ${bench.constraints.toLocaleString()}`,
           `  Witness Time:         ${bench.witnessTimeMs} ms`,
           `  Proving (MSM + Poly): ${bench.provingTimeMs} ms`,

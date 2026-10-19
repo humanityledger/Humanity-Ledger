@@ -59,7 +59,7 @@ export function ZkInvoiceModal({
 
   const [items, setItems] = useState<Array<{ description: string; quantity: number; unitPrice: number }>>([
     { description: 'Aztec zk.money Native Chat Integration', quantity: 1, unitPrice: 2500 },
-    { description: 'UltraPlonk Prover Pipeline Optimization', quantity: 1, unitPrice: 1500 },
+    { description: 'UltraHonk Prover Pipeline Optimization', quantity: 1, unitPrice: 1500 },
   ]);
 
   const handleAddItem = () => {

@@ -46,7 +46,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
     if (list.length === 0) {
       // Seed default Aztec Network ceremonies
       const c1 = createCeremony({
-        circuitName: 'Aztec UltraPlonk SRS Phase 2 (zkDAI & Private Rails)',
+        circuitName: 'Aztec UltraHonk SRS Phase 2 (zkDAI & Private Rails)',
         phase: 'phase2',
         coordinatorAddress: '0xaztec_coordinator_genesis',
         description: 'Multi-party trusted setup for Aztec Rollup v6 circuit verification keys.',
@@ -192,7 +192,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
             <div className="flex items-center gap-2">
               <h2 className="text-[17px] font-bold text-white">Aztec MPC Ceremony Coordinator</h2>
               <span className="text-[10px] font-black uppercase tracking-wider bg-[#10B981]/20 text-[#34D399] px-2 py-0.5 rounded-full border border-[#10B981]/30">
-                UltraPlonk SRS
+                UltraHonk SRS
               </span>
             </div>
             <p className="text-[12px] text-white/60">Trusted setup colaborativo para circuitos de privacidad zero-knowledge</p>

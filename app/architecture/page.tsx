@@ -13,7 +13,7 @@ export default function ArchitecturePage() {
       title="System Architecture Protocol" 
       category="Technical" 
       description="A rigorous technical dissection of the Humanity Ledger's ecosystem, execution environments, and state transition mechanisms." 
-      lastUpdated="August 2026"
+      lastUpdated="October 19, 2026"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-slate-900 font-sans leading-relaxed">
         

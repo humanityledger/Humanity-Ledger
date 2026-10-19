@@ -115,7 +115,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
       setLoading(true);
 
       if (transferMode === 'escrow') {
-        setProofStep('Generating UltraPlonk Escrow Condition Note...');
+        setProofStep('Generating UltraHonk Escrow Condition Note...');
         await new Promise(r => setTimeout(r, 600));
 
         const escrow = createEscrow({
@@ -433,7 +433,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
                   {loading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span className="truncate max-w-[280px]">{proofStep || 'Generating UltraPlonk Proof...'}</span>
+                      <span className="truncate max-w-[280px]">{proofStep || 'Generating UltraHonk Proof...'}</span>
                     </>
                   ) : (
                     <>

@@ -251,7 +251,7 @@ const ZkPaymentBubble = React.memo(({ content, isMe }: { content: string; isMe: 
 
         {result.aztecExplorerUrl && (
           <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between">
-            <span className="text-[10px] text-white/40 font-mono">UltraPlonk Note</span>
+            <span className="text-[10px] text-white/40 font-mono">UltraHonk Note</span>
             <a
               href={result.aztecExplorerUrl}
               target="_blank"
@@ -528,6 +528,8 @@ const MissedCallBubble = React.memo(({ content, isMe }: { content: string; isMe:
 });
 
 CallOfferBubble.displayName = 'CallOfferBubble';
+GroupCallBubble.displayName = 'GroupCallBubble';
+MissedCallBubble.displayName = 'MissedCallBubble';
 
 // â”€â”€â”€ Sticker Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // [FIX] No nested Framer Motion scale inside the parent motion.div.
@@ -702,8 +704,6 @@ export const MessageBubble = React.memo(({
   const attachmentMatch = (!isAudio && !isGif && !isMedia) ? content.match(/^\[ATTACHMENT:([^\]]*)\](.*?)\|(.*)$/is) : null;
   const attachment   = attachmentMatch ? { mime: attachmentMatch[1] || 'application/octet-stream', url: attachmentMatch[2], name: attachmentMatch[3] } : null;
 
-  if (isSystemMsg) return null;
-
   // â”€â”€ Gesture handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleDragEnd = (_: any, info: PanInfo) => {
     if (info.offset.x < -50) {
@@ -772,6 +772,8 @@ export const MessageBubble = React.memo(({
       return () => clearTimeout(t);
     }
   }, [isMe]);
+
+  if (isSystemMsg) return null;
 
   
   const activeBubbleStyle = typeof window !== 'undefined' ? ((window as any).__ledger_bubble_style || 'default') : (bubbleStyle || 'default');

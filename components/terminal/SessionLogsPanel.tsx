@@ -98,7 +98,7 @@ function buildSeedEvents(): SessionEvent[] {
             timestamp: new Date(now - 20_000).toISOString(),
             action: "ZK_PROOF_GENERATED",
             category: "ZK",
-            detail: "UltraPlonk proof constructed in 2.1s. Public inputs verified by L1 smart contract. Witness discarded.",
+            detail: "UltraHonk proof constructed in 2.1s. Public inputs verified by L1 smart contract. Witness discarded.",
             severity: "SECURE",
         },
         {

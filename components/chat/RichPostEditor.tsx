@@ -1,33 +1,29 @@
 'use client';
 
 /**
- * ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
- *  RichPostEditor ÔÇö Ledger Chat Post Composer
- *  Full-featured rich text editor for Communities & Group announcements
- *  Built on Tiptap v2 ┬À Framer Motion ┬À Tailwind CSS
+ * ═════════════════════════════════════════════════════════════════════════════
+ *  RichPostEditor — Ledger Chat Native Post Composer
+ *  Full-featured, dependency-free rich text editor for Communities & Group announcements
+ *  Pure HTML5 contentEditable · Framer Motion · Tailwind CSS
  *
  *  Features:
- *  ÔöÇ Bold, Italic, Underline, Strikethrough
- *  ÔöÇ H1, H2, H3 headings
- *  ÔöÇ Bullet list, Ordered list, Task checklist
- *  ÔöÇ Blockquote, Code block, Inline code
- *  ÔöÇ Hyperlinks (auto-detect + manual)
- *  ÔöÇ Text highlight (8 colours)
- *  ÔöÇ Text colour (8 colours)
- *  ÔöÇ Align left / centre / right / justify
- *  ÔöÇ Subscript / Superscript
- *  ÔöÇ Horizontal divider
- *  ÔöÇ Image upload (base64 inline)
- *  ÔöÇ @Mention autocomplete
- *  ÔöÇ Character + word counter
- *  ÔöÇ Undo / Redo with keyboard shortcuts
- *  ÔöÇ Floating bubble menu on text selection
- *  ÔöÇ Slash (/) command menu
- *  ÔöÇ Full-screen mode
- *  ÔöÇ Preview mode (rendered HTML)
- *  ÔöÇ Spoiler/blur toggle
- *  ÔöÇ Send immediately or schedule
- * ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+ *  ─ Bold, Italic, Underline, Strikethrough
+ *  ─ H1, H2, H3 headings, Paragraph
+ *  ─ Bullet list, Ordered list
+ *  ─ Blockquote, Code block, Inline code
+ *  ─ Hyperlinks (modal input)
+ *  ─ Text highlight (8 colours)
+ *  ─ Text colour (8 colours)
+ *  ─ Align left / centre / right / justify
+ *  ─ Subscript / Superscript
+ *  ─ Horizontal divider
+ *  ─ Image upload (base64 inline)
+ *  ─ Character + word counter
+ *  ─ Undo / Redo with keyboard shortcuts (⌘Z / ⌘⇧Z)
+ *  ─ Full-screen mode
+ *  ─ Preview mode (rendered HTML)
+ *  ─ Instant publish or cancel
+ * ═════════════════════════════════════════════════════════════════════════════
  */
 
 import React, {
@@ -37,60 +33,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bold, Italic, Underline, Strikethrough,
   Link2, Image as ImageIcon, Code, AlignLeft, AlignCenter,
-  AlignRight, AlignJustify, List, ListOrdered, ListChecks,
+  AlignRight, AlignJustify, List, ListOrdered,
   Quote, Heading1, Heading2, Heading3,
   Highlighter, Palette, Subscript, Superscript,
-  Minus, Undo2, Redo2, Type, Maximize2, Minimize2,
-  Eye, EyeOff, Send, X, ChevronDown,
-  ZapIcon, Hash, AtSign
+  Minus, Undo2, Redo2, Maximize2, Minimize2,
+  Eye, EyeOff, Send, X,
+  ZapIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { safeHTML } from '@/hooks/useSanitizer';
 
-// ÔöÇÔöÇÔöÇ TYPE GUARDS: graceful when Tiptap is not yet installed ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
-// (These will be replaced by real imports after first Railway deploy)
-let useEditor: any = null;
-let EditorContent: any = null;
-let BubbleMenu: any = null;
-let StarterKit: any = null;
-let Placeholder: any = null;
-let CharacterCount: any = null;
-let LinkExt: any = null;
-let ImageExt: any = null;
-let TextAlign: any = null;
-let UnderlineExt: any = null;
-let Highlight: any = null;
-let TaskList: any = null;
-let TaskItem: any = null;
-let TextStyle: any = null;
-let ColorExt: any = null;
-let SubscriptExt: any = null;
-let SuperscriptExt: any = null;
-
-try {
-  const tiptapReact = require('@tiptap/react');
-  useEditor = tiptapReact.useEditor;
-  EditorContent = tiptapReact.EditorContent;
-  BubbleMenu = tiptapReact.BubbleMenu;
-  StarterKit = require('@tiptap/starter-kit').default;
-  Placeholder = require('@tiptap/extension-placeholder').default;
-  CharacterCount = require('@tiptap/extension-character-count').default;
-  LinkExt = require('@tiptap/extension-link').default;
-  ImageExt = require('@tiptap/extension-image').default;
-  TextAlign = require('@tiptap/extension-text-align').default;
-  UnderlineExt = require('@tiptap/extension-underline').default;
-  Highlight = require('@tiptap/extension-highlight').default;
-  TaskList = require('@tiptap/extension-task-list').default;
-  TaskItem = require('@tiptap/extension-task-item').default;
-  TextStyle = require('@tiptap/extension-text-style').default;
-  ColorExt = require('@tiptap/extension-color').default;
-  SubscriptExt = require('@tiptap/extension-subscript').default;
-  SuperscriptExt = require('@tiptap/extension-superscript').default;
-} catch {
-  // Tiptap not installed yet ÔÇô will be available after Railway deploy
-}
-
-// ÔöÇÔöÇÔöÇ CONSTANTS ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
 const HIGHLIGHT_COLORS = [
   { label: 'Yellow', value: '#FEF08A' },
@@ -114,34 +67,27 @@ const TEXT_COLORS = [
   { label: 'Cyan', value: '#0891B2' },
 ];
 
-const SLASH_COMMANDS = [
-  { label: 'Heading 1', icon: Heading1, action: (editor: any) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
-  { label: 'Heading 2', icon: Heading2, action: (editor: any) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
-  { label: 'Heading 3', icon: Heading3, action: (editor: any) => editor.chain().focus().toggleHeading({ level: 3 }).run() },
-  { label: 'Bullet list', icon: List, action: (editor: any) => editor.chain().focus().toggleBulletList().run() },
-  { label: 'Numbered list', icon: ListOrdered, action: (editor: any) => editor.chain().focus().toggleOrderedList().run() },
-  { label: 'Task list', icon: ListChecks, action: (editor: any) => editor.chain().focus().toggleTaskList().run() },
-  { label: 'Quote', icon: Quote, action: (editor: any) => editor.chain().focus().toggleBlockquote().run() },
-  { label: 'Code block', icon: Code, action: (editor: any) => editor.chain().focus().toggleCodeBlock().run() },
-  { label: 'Divider', icon: Minus, action: (editor: any) => editor.chain().focus().setHorizontalRule().run() },
-];
-
-// ÔöÇÔöÇÔöÇ TOOLBAR BUTTON ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── TOOLBAR BUTTON ──────────────────────────────────────────────────────────
 
 function TB({
   icon: Icon, label, onClick, active = false, disabled = false, danger = false,
 }: {
   icon: any;
   label: string;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent) => void;
   active?: boolean;
   disabled?: boolean;
   danger?: boolean;
 }) {
   return (
     <button
+      type="button"
       title={label}
-      onClick={onClick}
+      onMouseDown={(e) => {
+        // Prevent losing focus from contentEditable
+        e.preventDefault();
+        onClick(e);
+      }}
       disabled={disabled}
       className={`
         relative flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-150
@@ -159,12 +105,12 @@ function TB({
   );
 }
 
-// ÔöÇÔöÇÔöÇ DIVIDER ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── DIVIDER ─────────────────────────────────────────────────────────────────
 function TDiv() {
   return <div className="w-px h-5 bg-black/10 mx-0.5 shrink-0" />;
 }
 
-// ÔöÇÔöÇÔöÇ COLOUR PICKER POPUP ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── COLOUR PICKER POPUP ─────────────────────────────────────────────────────
 function ColorPicker({
   colors, onSelect, onClose, label,
 }: { colors: typeof HIGHLIGHT_COLORS; onSelect: (v: string) => void; onClose: () => void; label: string }) {
@@ -180,8 +126,13 @@ function ColorPicker({
         {colors.map((c) => (
           <button
             key={c.value}
+            type="button"
             title={c.label}
-            onClick={() => { onSelect(c.value); onClose(); }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onSelect(c.value);
+              onClose();
+            }}
             className="w-8 h-8 rounded-lg border-2 border-white hover:scale-110 transition-transform shadow-sm"
             style={{ backgroundColor: c.value }}
           />
@@ -191,58 +142,7 @@ function ColorPicker({
   );
 }
 
-// ÔöÇÔöÇÔöÇ SLASH COMMAND MENU ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
-function SlashMenu({ editor, position, onClose }: { editor: any; position: { x: number; y: number }; onClose: () => void }) {
-  const [filter, setFilter] = useState('');
-  const filtered = SLASH_COMMANDS.filter(c => c.label.toLowerCase().includes(filter.toLowerCase()));
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 4 }}
-      style={{ position: 'fixed', top: position.y, left: position.x, zIndex: 9999 }}
-      className="bg-white/95 backdrop-blur-xl border border-black/10 rounded-2xl shadow-2xl w-56 overflow-hidden"
-    >
-      <div className="px-3 pt-2.5 pb-1.5 border-b border-black/8">
-        <input
-          autoFocus
-          placeholder="Search commands..."
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-          className="w-full text-[12px] font-medium outline-none bg-transparent text-[#1C1C1E] placeholder:text-black/30"
-        />
-      </div>
-      <div className="py-1 max-h-64 overflow-y-auto">
-        {filtered.map((cmd) => (
-          <button
-            key={cmd.label}
-            onClick={() => { cmd.action(editor); onClose(); }}
-            className="flex items-center gap-3 w-full px-3 py-2.5 hover:bg-black/5 transition-colors text-left"
-          >
-            <div className="w-7 h-7 rounded-lg bg-[#F2F2F7] flex items-center justify-center">
-              <cmd.icon size={14} className="text-[#1C1C1E]/70" />
-            </div>
-            <span className="text-[13px] font-medium text-[#1C1C1E]">{cmd.label}</span>
-          </button>
-        ))}
-        {filtered.length === 0 && (
-          <p className="text-center text-[12px] text-black/30 py-4">No commands found</p>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-// ÔöÇÔöÇÔöÇ MAIN EDITOR ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── MAIN EDITOR PROPS ───────────────────────────────────────────────────────
 
 export interface RichPostEditorProps {
   /** Called with { html, text, json, title } when user submits */
@@ -264,7 +164,7 @@ export function RichPostEditor({
   onPublish,
   title = 'New Post',
   initialContent = '',
-  placeholder = 'Write your post here... Use / for commands, @ to mention, and the toolbar to format.',
+  placeholder = 'Write your post here... Use the toolbar above to format headings, quotes, and links.',
   maxChars = 4096,
   communityName,
   onClose,
@@ -274,59 +174,42 @@ export function RichPostEditor({
   const [publishing, setPublishing] = useState(false);
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [showSlashMenu, setShowSlashMenu] = useState(false);
-  const [slashPos, setSlashPos] = useState({ x: 0, y: 0 });
   const [linkUrl, setLinkUrl] = useState('');
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [postTitle, setPostTitle] = useState('');
+  const [charCount, setCharCount] = useState(0);
+  const [wordCount, setWordCount] = useState(0);
+  const [htmlContent, setHtmlContent] = useState(initialContent);
 
+  const editorRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLInputElement>(null);
-  const editorWrapRef = useRef<HTMLDivElement>(null);
 
-  const tiptapAvailable = !!useEditor;
+  // Sync initial content on mount
+  useEffect(() => {
+    if (editorRef.current && initialContent) {
+      editorRef.current.innerHTML = initialContent;
+      updateStats();
+    }
+  }, [initialContent]);
 
-  const editor = tiptapAvailable ? useEditor({
-    extensions: [
-      StarterKit.configure({
-        codeBlock: false,
-      }),
-      UnderlineExt,
-      LinkExt.configure({ openOnClick: false, autolink: true }),
-      ImageExt.configure({ inline: false, allowBase64: true }),
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Highlight.configure({ multicolor: true }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      TextStyle,
-      ColorExt,
-      SubscriptExt,
-      SuperscriptExt,
-      Placeholder.configure({ placeholder }),
-      CharacterCount.configure({ limit: maxChars }),
-    ],
-    content: initialContent,
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[200px] px-5 py-4 text-[15px] leading-relaxed',
-      },
-      handleKeyDown(view: any, event: any) {
-        if (event.key === '/') {
-          setTimeout(() => {
-            const selection = window.getSelection();
-            if (selection && selection.rangeCount > 0) {
-              const range = selection.getRangeAt(0);
-              const rect = range.getBoundingClientRect();
-              setSlashPos({ x: rect.left, y: rect.bottom + 8 });
-              setShowSlashMenu(true);
-            }
-          }, 0);
-        }
-        return false;
-      },
-    },
-  }) : null;
+  const updateStats = useCallback(() => {
+    if (!editorRef.current) return;
+    const text = editorRef.current.innerText || '';
+    setCharCount(text.length);
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    setWordCount(words);
+    setHtmlContent(editorRef.current.innerHTML);
+  }, []);
 
-  // Close pickers when clicking outside
+  // Format execution helper using document.execCommand
+  const exec = useCallback((command: string, value: string | undefined = undefined) => {
+    if (typeof document === 'undefined') return;
+    editorRef.current?.focus();
+    document.execCommand(command, false, value);
+    updateStats();
+  }, [updateStats]);
+
+  // Close pickers on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (!(e.target as Element)?.closest('[data-picker]')) {
@@ -340,58 +223,52 @@ export function RichPostEditor({
 
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !editor) return;
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      editor.chain().focus().setImage({ src: ev.target?.result as string }).run();
+      const src = ev.target?.result as string;
+      if (src) {
+        exec('insertHTML', `<img src="${src}" alt="Uploaded image" style="max-width:100%; border-radius:12px; margin:12px 0;" />`);
+      }
     };
     reader.readAsDataURL(file);
     e.target.value = '';
-  }, [editor]);
+  }, [exec]);
 
   const setLink = useCallback(() => {
-    if (!editor) return;
-    if (!linkUrl) {
-      editor.chain().focus().unsetLink().run();
+    if (!linkUrl.trim()) {
+      exec('unlink');
     } else {
-      editor.chain().focus().setLink({ href: linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}` }).run();
+      const finalUrl = linkUrl.startsWith('http://') || linkUrl.startsWith('https://')
+        ? linkUrl
+        : `https://${linkUrl}`;
+      exec('createLink', finalUrl);
     }
     setShowLinkInput(false);
     setLinkUrl('');
-  }, [editor, linkUrl]);
+  }, [exec, linkUrl]);
 
   const handlePublish = async () => {
-    if (!editor) return;
-    const html = editor.getHTML();
-    const text = editor.getText();
-    if (!text.trim() && !postTitle.trim()) return;
+    const html = editorRef.current?.innerHTML || htmlContent;
+    const text = editorRef.current?.innerText || '';
+    if (!text.trim() && !postTitle.trim()) {
+      toast.error('Post content or title cannot be empty');
+      return;
+    }
     setPublishing(true);
     try {
-      await onPublish({ html, text, json: editor.getJSON(), title: postTitle.trim() || 'Community Post' });
+      await onPublish({
+        html,
+        text,
+        json: { type: 'doc', content: html },
+        title: postTitle.trim() || 'Community Post',
+      });
     } finally {
       setPublishing(false);
     }
   };
 
-  const chars = editor?.storage?.characterCount?.characters?.() ?? 0;
-  const words = editor?.storage?.characterCount?.words?.() ?? 0;
-  const isOverLimit = chars > maxChars * 0.9;
-
-  // ÔöÇÔöÇ FALLBACK when Tiptap not yet installed ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
-  if (!tiptapAvailable) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-[#1C1C1E]/5 flex items-center justify-center">
-            <Type size={28} className="text-[#1C1C1E]/40" />
-          </div>
-          <p className="text-[15px] font-medium text-[#1C1C1E]/60 max-w-xs">
-            The rich text editor is being installed. It will be ready after the next deploy.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const isOverLimit = charCount > maxChars * 0.9;
 
   return (
     <div
@@ -403,15 +280,18 @@ export function RichPostEditor({
         }
       `}
     >
-      {/* ÔöÇÔöÇ HEADER ÔöÇÔöÇ */}
+      {/* ── HEADER ── */}
       <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-black/8 bg-white/95 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <button
-            onClick={onClose}
-            className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-black/5 transition-colors"
-          >
-            <X size={16} className="text-black/50" />
-          </button>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-black/5 transition-colors"
+            >
+              <X size={16} className="text-black/50" />
+            </button>
+          )}
           <div>
             <p className="text-[13px] font-bold text-[#1C1C1E] leading-tight">{title}</p>
             {communityName && (
@@ -421,13 +301,20 @@ export function RichPostEditor({
         </div>
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => setIsPreview(p => !p)}
+            type="button"
+            onClick={() => {
+              if (!isPreview && editorRef.current) {
+                setHtmlContent(editorRef.current.innerHTML);
+              }
+              setIsPreview(p => !p);
+            }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${isPreview ? 'bg-[#1C1C1E] text-white' : 'text-black/50 hover:bg-black/5'}`}
           >
             {isPreview ? <EyeOff size={13} /> : <Eye size={13} />}
             {isPreview ? 'Edit' : 'Preview'}
           </button>
           <button
+            type="button"
             onClick={() => setIsFullscreen(f => !f)}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-black/40 hover:bg-black/5 hover:text-black/70 transition-all"
           >
@@ -436,7 +323,7 @@ export function RichPostEditor({
         </div>
       </div>
 
-      {/* ÔöÇÔöÇ POST TITLE INPUT ÔöÇÔöÇ */}
+      {/* ── POST TITLE INPUT ── */}
       <div className="shrink-0 px-5 pt-4 pb-0">
         <input
           value={postTitle}
@@ -446,30 +333,30 @@ export function RichPostEditor({
         />
       </div>
 
-      {/* ÔöÇÔöÇ TOOLBAR ÔöÇÔöÇ */}
+      {/* ── TOOLBAR ── */}
       {!isPreview && (
         <div className="shrink-0 border-b border-black/6 bg-[#FAFAFA] px-2 py-2">
-          {/* Row 1: History + Headings + Formatting */}
           <div className="flex items-center gap-0.5 flex-wrap">
-            <TB icon={Undo2} label="Undo (ÔîÿZ)" onClick={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()} />
-            <TB icon={Redo2} label="Redo (ÔîÿÔçºZ)" onClick={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()} />
+            <TB icon={Undo2} label="Undo (⌘Z)" onClick={() => exec('undo')} />
+            <TB icon={Redo2} label="Redo (⌘⇧Z)" onClick={() => exec('redo')} />
             <TDiv />
 
-            <TB icon={Heading1} label="Heading 1" onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} />
-            <TB icon={Heading2} label="Heading 2" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} />
-            <TB icon={Heading3} label="Heading 3" onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} active={editor?.isActive('heading', { level: 3 })} />
+            <TB icon={Heading1} label="Heading 1" onClick={() => exec('formatBlock', '<h1>')} />
+            <TB icon={Heading2} label="Heading 2" onClick={() => exec('formatBlock', '<h2>')} />
+            <TB icon={Heading3} label="Heading 3" onClick={() => exec('formatBlock', '<h3>')} />
             <TDiv />
 
-            <TB icon={Bold} label="Bold (ÔîÿB)" onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} />
-            <TB icon={Italic} label="Italic (ÔîÿI)" onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} />
-            <TB icon={Underline} label="Underline (ÔîÿU)" onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} />
-            <TB icon={Strikethrough} label="Strikethrough" onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} />
-            <TB icon={Code} label="Inline code" onClick={() => editor?.chain().focus().toggleCode().run()} active={editor?.isActive('code')} />
+            <TB icon={Bold} label="Bold (⌘B)" onClick={() => exec('bold')} />
+            <TB icon={Italic} label="Italic (⌘I)" onClick={() => exec('italic')} />
+            <TB icon={Underline} label="Underline (⌘U)" onClick={() => exec('underline')} />
+            <TB icon={Strikethrough} label="Strikethrough" onClick={() => exec('strikeThrough')} />
+            <TB icon={Code} label="Inline code" onClick={() => exec('insertHTML', '<code>' + (window.getSelection()?.toString() || 'code') + '</code>')} />
             <TDiv />
 
             {/* Highlight colour picker */}
             <div className="relative" data-picker>
               <button
+                type="button"
                 title="Highlight text"
                 onClick={() => { setShowHighlightPicker(p => !p); setShowColorPicker(false); }}
                 className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${showHighlightPicker ? 'bg-[#1C1C1E] text-white' : 'text-black/60 hover:bg-black/5'}`}
@@ -478,7 +365,12 @@ export function RichPostEditor({
               </button>
               <AnimatePresence>
                 {showHighlightPicker && (
-                  <ColorPicker colors={HIGHLIGHT_COLORS} label="Highlight" onSelect={(v) => editor?.chain().focus().setHighlight({ color: v }).run()} onClose={() => setShowHighlightPicker(false)} />
+                  <ColorPicker
+                    colors={HIGHLIGHT_COLORS}
+                    label="Highlight"
+                    onSelect={(v) => exec('hiliteColor', v)}
+                    onClose={() => setShowHighlightPicker(false)}
+                  />
                 )}
               </AnimatePresence>
             </div>
@@ -486,6 +378,7 @@ export function RichPostEditor({
             {/* Text colour picker */}
             <div className="relative" data-picker>
               <button
+                type="button"
                 title="Text colour"
                 onClick={() => { setShowColorPicker(p => !p); setShowHighlightPicker(false); }}
                 className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${showColorPicker ? 'bg-[#1C1C1E] text-white' : 'text-black/60 hover:bg-black/5'}`}
@@ -494,34 +387,38 @@ export function RichPostEditor({
               </button>
               <AnimatePresence>
                 {showColorPicker && (
-                  <ColorPicker colors={TEXT_COLORS} label="Text colour" onSelect={(v) => editor?.chain().focus().setColor(v).run()} onClose={() => setShowColorPicker(false)} />
+                  <ColorPicker
+                    colors={TEXT_COLORS}
+                    label="Text colour"
+                    onSelect={(v) => exec('foreColor', v)}
+                    onClose={() => setShowColorPicker(false)}
+                  />
                 )}
               </AnimatePresence>
             </div>
             <TDiv />
 
             {/* Align */}
-            <TB icon={AlignLeft} label="Align left" onClick={() => editor?.chain().focus().setTextAlign('left').run()} active={editor?.isActive({ textAlign: 'left' })} />
-            <TB icon={AlignCenter} label="Align center" onClick={() => editor?.chain().focus().setTextAlign('center').run()} active={editor?.isActive({ textAlign: 'center' })} />
-            <TB icon={AlignRight} label="Align right" onClick={() => editor?.chain().focus().setTextAlign('right').run()} active={editor?.isActive({ textAlign: 'right' })} />
-            <TB icon={AlignJustify} label="Justify" onClick={() => editor?.chain().focus().setTextAlign('justify').run()} active={editor?.isActive({ textAlign: 'justify' })} />
+            <TB icon={AlignLeft} label="Align left" onClick={() => exec('justifyLeft')} />
+            <TB icon={AlignCenter} label="Align center" onClick={() => exec('justifyCenter')} />
+            <TB icon={AlignRight} label="Align right" onClick={() => exec('justifyRight')} />
+            <TB icon={AlignJustify} label="Justify" onClick={() => exec('justifyFull')} />
             <TDiv />
 
             {/* Lists */}
-            <TB icon={List} label="Bullet list" onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} />
-            <TB icon={ListOrdered} label="Numbered list" onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} />
-            <TB icon={ListChecks} label="Task list" onClick={() => editor?.chain().focus().toggleTaskList().run()} active={editor?.isActive('taskList')} />
+            <TB icon={List} label="Bullet list" onClick={() => exec('insertUnorderedList')} />
+            <TB icon={ListOrdered} label="Numbered list" onClick={() => exec('insertOrderedList')} />
             <TDiv />
 
             {/* Block elements */}
-            <TB icon={Quote} label="Blockquote" onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} />
-            <TB icon={ZapIcon} label="Code block" onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} />
-            <TB icon={Minus} label="Horizontal rule" onClick={() => editor?.chain().focus().setHorizontalRule().run()} />
+            <TB icon={Quote} label="Blockquote" onClick={() => exec('formatBlock', '<blockquote>')} />
+            <TB icon={ZapIcon} label="Code block" onClick={() => exec('insertHTML', '<pre><code>' + (window.getSelection()?.toString() || 'Code block') + '</code></pre>')} />
+            <TB icon={Minus} label="Horizontal rule" onClick={() => exec('insertHorizontalRule')} />
             <TDiv />
 
             {/* Sub/Superscript */}
-            <TB icon={Subscript} label="Subscript" onClick={() => editor?.chain().focus().toggleSubscript().run()} active={editor?.isActive('subscript')} />
-            <TB icon={Superscript} label="Superscript" onClick={() => editor?.chain().focus().toggleSuperscript().run()} active={editor?.isActive('superscript')} />
+            <TB icon={Subscript} label="Subscript" onClick={() => exec('subscript')} />
+            <TB icon={Superscript} label="Superscript" onClick={() => exec('superscript')} />
             <TDiv />
 
             {/* Link */}
@@ -530,7 +427,7 @@ export function RichPostEditor({
                 icon={Link2}
                 label="Insert link"
                 onClick={() => setShowLinkInput(l => !l)}
-                active={editor?.isActive('link') || showLinkInput}
+                active={showLinkInput}
               />
               <AnimatePresence>
                 {showLinkInput && (
@@ -548,8 +445,20 @@ export function RichPostEditor({
                       placeholder="https://..."
                       className="flex-1 text-[12px] px-2 py-1.5 rounded-lg border border-black/10 outline-none focus:border-[#2563EB] text-[#1C1C1E]"
                     />
-                    <button onClick={setLink} className="px-3 py-1.5 bg-[#1C1C1E] text-white text-[11px] font-bold rounded-lg hover:opacity-80">Apply</button>
-                    <button onClick={() => { editor?.chain().focus().unsetLink().run(); setShowLinkInput(false); }} className="px-2 py-1.5 text-red-500 hover:bg-red-50 rounded-lg text-[11px] font-bold">Remove</button>
+                    <button
+                      type="button"
+                      onClick={setLink}
+                      className="px-3 py-1.5 bg-[#1C1C1E] text-white text-[11px] font-bold rounded-lg hover:opacity-80"
+                    >
+                      Apply
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { exec('unlink'); setShowLinkInput(false); }}
+                      className="px-2 py-1.5 text-red-500 hover:bg-red-50 rounded-lg text-[11px] font-bold"
+                    >
+                      Remove
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -557,6 +466,7 @@ export function RichPostEditor({
 
             {/* Image upload */}
             <button
+              type="button"
               title="Insert image"
               onClick={() => imageRef.current?.click()}
               className="flex items-center justify-center w-8 h-8 rounded-lg transition-all text-black/60 hover:bg-black/5 hover:text-[#1C1C1E]"
@@ -564,85 +474,42 @@ export function RichPostEditor({
               <ImageIcon size={15} />
             </button>
             <input ref={imageRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-
-            {/* Slash commands shortcut */}
-            <button
-              title="Insert block (/)"
-              onClick={() => editor?.chain().focus().run()}
-              className="flex items-center gap-1 px-2 h-8 rounded-lg text-[11px] font-bold text-black/40 hover:bg-black/5 hover:text-black/70 transition-all"
-            >
-              <Hash size={13} />
-              <span className="hidden sm:inline">Blocks</span>
-            </button>
           </div>
         </div>
       )}
 
-      {/* ÔöÇÔöÇ BUBBLE MENU (selection popup) ÔöÇÔöÇ */}
-      {editor && BubbleMenu && !isPreview && (
-        <BubbleMenu
-          editor={editor}
-          tippyOptions={{ duration: 150, placement: 'top' }}
-        >
-          <div className="flex items-center gap-0.5 bg-[#1C1C1E] rounded-xl px-2 py-1.5 shadow-2xl">
-            {[
-              { icon: Bold, label: 'Bold', fn: () => editor.chain().focus().toggleBold().run(), active: editor.isActive('bold') },
-              { icon: Italic, label: 'Italic', fn: () => editor.chain().focus().toggleItalic().run(), active: editor.isActive('italic') },
-              { icon: Underline, label: 'Underline', fn: () => editor.chain().focus().toggleUnderline().run(), active: editor.isActive('underline') },
-              { icon: Strikethrough, label: 'Strike', fn: () => editor.chain().focus().toggleStrike().run(), active: editor.isActive('strike') },
-              { icon: Code, label: 'Code', fn: () => editor.chain().focus().toggleCode().run(), active: editor.isActive('code') },
-              { icon: Link2, label: 'Link', fn: () => setShowLinkInput(l => !l), active: editor.isActive('link') },
-              { icon: Highlighter, label: 'Highlight', fn: () => editor.chain().focus().toggleHighlight().run(), active: editor.isActive('highlight') },
-            ].map(({ icon: Icon, label, fn, active }) => (
-              <button
-                key={label}
-                title={label}
-                onClick={fn}
-                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${active ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
-              >
-                <Icon size={13} />
-              </button>
-            ))}
-          </div>
-        </BubbleMenu>
-      )}
-
-      {/* ÔöÇÔöÇ EDITOR CONTENT / PREVIEW ÔöÇÔöÇ */}
-      <div className="flex-1 overflow-y-auto relative" ref={editorWrapRef}>
+      {/* ── EDITOR CONTENT / PREVIEW ── */}
+      <div className="flex-1 overflow-y-auto relative p-5">
         {isPreview ? (
           <div
-            className="prose prose-sm max-w-none px-5 py-4 text-[15px]"
-            dangerouslySetInnerHTML={safeHTML(editor?.getHTML() ?? '')}
+            className="prose prose-sm max-w-none text-[15px] leading-relaxed"
+            dangerouslySetInnerHTML={safeHTML(htmlContent || '<p className="text-black/40 italic">Nothing to preview yet.</p>')}
           />
         ) : (
-          <div className="tiptap-editor-wrap">
-            {EditorContent && <EditorContent editor={editor} />}
-          </div>
+          <div
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={updateStats}
+            onKeyUp={updateStats}
+            data-placeholder={placeholder}
+            className="native-rich-editor outline-none min-h-[220px] text-[15px] leading-relaxed text-[#1C1C1E]"
+          />
         )}
-
-        {/* Slash command menu */}
-        <AnimatePresence>
-          {showSlashMenu && editor && (
-            <SlashMenu
-              editor={editor}
-              position={slashPos}
-              onClose={() => setShowSlashMenu(false)}
-            />
-          )}
-        </AnimatePresence>
       </div>
 
-      {/* ÔöÇÔöÇ FOOTER ÔöÇÔöÇ */}
+      {/* ── FOOTER ── */}
       <div className="shrink-0 flex items-center justify-between px-4 py-3 border-t border-black/8 bg-white/95 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <span className={`text-[11px] font-mono ${isOverLimit ? 'text-orange-500 font-bold' : 'text-black/30'}`}>
-            {chars}/{maxChars}
+            {charCount}/{maxChars}
           </span>
-          <span className="text-[11px] text-black/25">{words} words</span>
+          <span className="text-[11px] text-black/25">{wordCount} words</span>
         </div>
         <div className="flex items-center gap-2">
           {onClose && (
             <button
+              type="button"
               onClick={onClose}
               className="px-4 py-2 rounded-xl text-[13px] font-bold text-black/50 hover:bg-black/5 transition-colors"
             >
@@ -650,8 +517,9 @@ export function RichPostEditor({
             </button>
           )}
           <button
+            type="button"
             onClick={handlePublish}
-            disabled={publishing || (editor?.getText().trim().length === 0 && !postTitle.trim())}
+            disabled={publishing || (charCount === 0 && !postTitle.trim())}
             className="flex items-center gap-2 px-5 py-2 bg-[#1C1C1E] hover:bg-black text-white text-[13px] font-bold rounded-xl transition-all shadow-lg shadow-black/15 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
           >
             {publishing ? (
@@ -664,52 +532,39 @@ export function RichPostEditor({
         </div>
       </div>
 
-      {/* ÔöÇÔöÇ TIPTAP PROSE STYLES (scoped) ÔöÇÔöÇ */}
+      {/* ── NATIVE RICH EDITOR STYLES ── */}
       <style>{`
-        .tiptap-editor-wrap .ProseMirror {
-          outline: none;
-          caret-color: #1C1C1E;
-        }
-        .tiptap-editor-wrap .ProseMirror p.is-editor-empty:first-child::before {
+        .native-rich-editor:empty:before {
           content: attr(data-placeholder);
-          float: left;
           color: rgba(28,28,30,0.3);
           pointer-events: none;
-          height: 0;
-          font-size: 15px;
+          display: block;
         }
-        .tiptap-editor-wrap .ProseMirror h1 { font-size: 26px; font-weight: 800; margin: 16px 0 8px; }
-        .tiptap-editor-wrap .ProseMirror h2 { font-size: 20px; font-weight: 700; margin: 14px 0 6px; }
-        .tiptap-editor-wrap .ProseMirror h3 { font-size: 17px; font-weight: 700; margin: 12px 0 4px; }
-        .tiptap-editor-wrap .ProseMirror p { margin: 0 0 6px; }
-        .tiptap-editor-wrap .ProseMirror ul, .tiptap-editor-wrap .ProseMirror ol { padding-left: 20px; margin: 6px 0; }
-        .tiptap-editor-wrap .ProseMirror li { margin: 2px 0; }
-        .tiptap-editor-wrap .ProseMirror blockquote { border-left: 3px solid #1C1C1E; padding-left: 14px; margin: 8px 0; opacity: 0.7; font-style: italic; }
-        .tiptap-editor-wrap .ProseMirror code { background: rgba(28,28,30,0.08); border-radius: 5px; padding: 1px 5px; font-size: 13px; font-family: 'SF Mono', monospace; }
-        .tiptap-editor-wrap .ProseMirror pre { background: #1C1C1E; border-radius: 12px; padding: 14px 16px; margin: 10px 0; overflow-x: auto; }
-        .tiptap-editor-wrap .ProseMirror pre code { background: none; color: #f8f8f2; padding: 0; font-size: 13px; }
-        .tiptap-editor-wrap .ProseMirror hr { border: none; border-top: 2px solid rgba(28,28,30,0.08); margin: 16px 0; }
-        .tiptap-editor-wrap .ProseMirror img { max-width: 100%; border-radius: 12px; margin: 10px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        .tiptap-editor-wrap .ProseMirror a { color: #2563EB; text-decoration: underline; }
-        .tiptap-editor-wrap .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 4px; }
-        .tiptap-editor-wrap .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 8px; }
-        .tiptap-editor-wrap .ProseMirror ul[data-type="taskList"] li > label { display: flex; align-items: center; user-select: none; margin-top: 2px; }
-        .tiptap-editor-wrap .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] { width: 16px; height: 16px; border-radius: 4px; border: 2px solid rgba(28,28,30,0.3); accent-color: #1C1C1E; cursor: pointer; }
-        .tiptap-editor-wrap .ProseMirror mark { border-radius: 3px; padding: 1px 2px; }
-        .tiptap-editor-wrap .ProseMirror ::selection { background-color: rgba(37,99,235,0.2); }
+        .native-rich-editor h1 { font-size: 24px; font-weight: 800; margin: 14px 0 8px; }
+        .native-rich-editor h2 { font-size: 20px; font-weight: 700; margin: 12px 0 6px; }
+        .native-rich-editor h3 { font-size: 17px; font-weight: 700; margin: 10px 0 4px; }
+        .native-rich-editor p { margin: 0 0 6px; }
+        .native-rich-editor ul { list-style-type: disc; padding-left: 24px; margin: 6px 0; }
+        .native-rich-editor ol { list-style-type: decimal; padding-left: 24px; margin: 6px 0; }
+        .native-rich-editor li { margin: 2px 0; }
+        .native-rich-editor blockquote { border-left: 3px solid #1C1C1E; padding-left: 14px; margin: 8px 0; opacity: 0.75; font-style: italic; }
+        .native-rich-editor code { background: rgba(28,28,30,0.08); border-radius: 4px; padding: 1px 5px; font-size: 13px; font-family: monospace; }
+        .native-rich-editor pre { background: #1C1C1E; color: #FFF; border-radius: 10px; padding: 12px 16px; margin: 8px 0; overflow-x: auto; }
+        .native-rich-editor hr { border: none; border-top: 1px solid rgba(28,28,30,0.1); margin: 14px 0; }
+        .native-rich-editor a { color: #2563EB; text-decoration: underline; }
       `}</style>
     </div>
   );
 }
 
-// ÔöÇÔöÇÔöÇ MODAL WRAPPER ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── MODAL WRAPPER ───────────────────────────────────────────────────────────
 
 export function RichPostEditorModal({
   postToEdit,
   open,
   onClose,
   communityName,
-  communityId, // <--- Added this
+  communityId,
   myAddress,
   onPublished,
 }: {
@@ -734,7 +589,6 @@ export function RichPostEditorModal({
 
       const postTitle = (content.title || '').trim() || 'Community Post';
 
-      // Use /api/chat/communities/[id]/posts (or unified posts endpoint)
       const res = await fetch(`/api/chat/communities/${communityId}/posts`, {
         method: 'POST',
         headers: {
@@ -768,22 +622,17 @@ export function RichPostEditorModal({
     }
   };
 
-
-  // ÔöÇÔöÇ CRITICAL FIX: use a flat portal-style render to avoid the React
-  // "removeChild" crash that occurs when AnimatePresence tries to unmount
-  // nested motion.divs that were moved in the DOM by the browser.
-  // We render backdrop + sheet as two siblings, NOT nested inside a wrapper.
   if (!open) return null;
 
   return (
     <>
-      {/* Backdrop ÔÇö plain div, no animation, avoids reconciliation issues */}
+      {/* Backdrop */}
       <div
         className="fixed inset-0 z-[9990] bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Editor panel ÔÇö single motion.div, no nesting */}
+      {/* Editor panel */}
       <motion.div
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
@@ -794,6 +643,7 @@ export function RichPostEditorModal({
         <RichPostEditor
           title={communityName ? `Post in ${communityName}` : 'New Post'}
           communityName={communityName}
+          initialContent={postToEdit?.contentHtml || postToEdit?.content || ''}
           onPublish={handlePublish}
           onClose={onClose}
         />

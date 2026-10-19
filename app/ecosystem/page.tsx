@@ -11,7 +11,7 @@ export default function EcosystemPage() {
           id: 'testnet-sequencer',
           title: 'Official Aztec Testnet Sequencer',
           paragraphs: [
-            'Humanity Ledger is an officially verified operator within the Aztec Network testnet ecosystem. As a testnet sequencer, our infrastructure is directly responsible for aggregating private L2 transactions, generating recursive UltraPlonk proofs, and committing state roots to the Ethereum Sepolia testnet.',
+            'Humanity Ledger is an officially verified operator within the Aztec Network testnet ecosystem. As a testnet sequencer, our infrastructure is directly responsible for aggregating private L2 transactions, generating recursive UltraHonk proofs, and committing state roots to the Ethereum Sepolia testnet.',
             'This is not merely a partnership; it is a structural integration. By operating core network infrastructure, Humanity Ledger ensures that our users\' shielded transactions are processed with maximum censorship resistance and minimal latency. We do not rely on third-party RPC endpoints for our core functionality.',
           ],
           callout: {

@@ -4329,7 +4329,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   };
 
   // [AUDIO REMOVED] playAudioPing is permanently silenced.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line no-unused-vars
   const playAudioPing = (_type: 'send' | 'receive') => { /* no-op */ };
 
   const [prevMsgCount, setPrevMsgCount] = useState<number>(0);

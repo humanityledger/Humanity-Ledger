@@ -275,7 +275,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
                 <div className="text-right">
                   <span className="text-[11px] font-mono text-[#34D399] bg-[#10B981]/15 px-3 py-1 rounded-full border border-[#10B981]/25 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#34D399] animate-pulse" />
-                    UltraPlonk Proof Verified
+                    UltraHonk Proof Verified
                   </span>
                 </div>
               </div>

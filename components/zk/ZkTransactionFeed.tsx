@@ -119,7 +119,7 @@ export function ZkTransactionFeed({
             </div>
             <div>
               <h3 className="text-[15px] font-bold tracking-tight">Aztec Activity Stream</h3>
-              <p className="text-[11px] text-gray-400 font-medium">UltraPlonk Sequencer Audit Trail</p>
+              <p className="text-[11px] text-gray-400 font-medium">UltraHonk Sequencer Audit Trail</p>
             </div>
           </div>
 

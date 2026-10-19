@@ -27,7 +27,13 @@ export async function POST(req: NextRequest) {
 
     if (!sub) return NextResponse.json({ skipped: true, reason: 'No subscription' });
 
-    const webpush = (await import('web-push' as any)).default;
+    let webpush: any;
+    try {
+      const dynamicReq = eval('require');
+      webpush = dynamicReq('web-push');
+    } catch {
+      return NextResponse.json({ skipped: true, reason: 'web-push module not available' });
+    }
     webpush.setVapidDetails(vapidEmail, vapidPublic, vapidPrivate);
 
     const pushSub = {

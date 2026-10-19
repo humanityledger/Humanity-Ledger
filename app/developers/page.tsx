@@ -510,7 +510,7 @@ export default function DevelopersPage() {
                transition={{ delay: 0.2 }}
                className="font-sans text-[20px] md:text-[24px] text-[#1a1a1a] max-w-4xl leading-[1.7] mb-20 text-balance tracking-[0.01em]"
              >
-               The definitive technical reference for builders integrating with Humanity Ledger. This document covers the exact cryptographic models, zero knowledge constraints, and state transition logic that power the underlying architecture. Last updated July 26, 2026.
+               The definitive technical reference for builders integrating with Humanity Ledger. This document covers the exact cryptographic models, zero knowledge constraints, and state transition logic that power the underlying architecture. Last updated October 19, 2026.
              </motion.p>
 
          </div>

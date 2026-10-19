@@ -320,7 +320,7 @@ export function ZkWalletPanel({
             </div>
             <div className="text-[12px] text-black/50 mt-1 flex items-center gap-1.5 font-medium">
               <Lock size={11} className="text-black/40" />
-              Client-side UltraPlonk Protected · Zero Knowledge
+              Client-side UltraHonk Protected · Zero Knowledge
             </div>
           </div>
 
@@ -675,7 +675,7 @@ export function ZkWalletPanel({
               </div>
 
               <div className="mt-4 pt-3 border-t border-gray-100 text-center text-[11px] text-gray-400">
-                Incoming shielded payments generate private UltraPlonk commitments settled directly on Aztec Network.
+                Incoming shielded payments generate private UltraHonk commitments settled directly on Aztec Network.
               </div>
             </motion.div>
           </div>

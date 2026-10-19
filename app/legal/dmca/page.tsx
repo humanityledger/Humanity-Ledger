@@ -15,7 +15,7 @@ export default function DMCAPage() {
           Legal — DMCA Policy
         </p>
         <h1 className="text-4xl font-black tracking-tight mb-4">DMCA Copyright Policy</h1>
-        <p className="text-black/60">Effective: 2024 · Owner: Stefan Antonio Cirisanu</p>
+        <p className="text-black/60">Effective: 2024 · Last updated: October 19, 2026 · Owner: Stefan Antonio Cirisanu</p>
       </header>
 
       <section className="space-y-10">

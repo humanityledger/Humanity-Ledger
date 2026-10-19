@@ -5,7 +5,7 @@ export default function TermsPage() {
     <AztecDocPage
       eyebrow="Compliance — Terms of Operation"
       title="Terms of Use"
-      subtitle="The rules for using the Ledger Chat platform. By connecting your wallet and using Ledger Chat, you agree to these terms. Last updated October 2026."
+      subtitle="The rules for using the Ledger Chat platform. By connecting your wallet and using Ledger Chat, you agree to these terms. Last updated October 19, 2026."
       sections={[
         {
           id: 'who-we-are',

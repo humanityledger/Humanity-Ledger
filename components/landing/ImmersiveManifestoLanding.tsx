@@ -43,10 +43,14 @@ function LandingNav() {
   }, []);
 
   useEffect(() => {
-    try {
-      const m = document.cookie.match(/system_handshake=(0x[a-fA-F0-9]{40}|email_[^;\s]+)/i);
-      if (m?.[1]) setConnectedAddress(m[1].toLowerCase());
-    } catch {}
+    fetch('/api/auth/verify-session')
+      .then(res => res.json())
+      .then(data => {
+        if (data.authenticated && data.user?.address) {
+          setConnectedAddress(data.user.address.toLowerCase());
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const fmtAddr = (a: string) =>
@@ -56,6 +60,8 @@ function LandingNav() {
     setDisconnecting(true);
     try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch {}
     try {
+      document.cookie = 'human_session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'ledger_session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       document.cookie = 'system_handshake=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       document.cookie = 'wallet-auth=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     } catch {}
@@ -143,9 +149,9 @@ function AppStoreBadge() {
       className="inline-flex items-center gap-[10px] bg-black text-white px-[14px] py-[8px] rounded-[10px] border border-white/[0.12] hover:bg-[#111] active:scale-[0.97] transition-all select-none"
       style={{ height: '50px', minWidth: '148px' }}
     >
-      {/* Official Apple logo — correct viewBox so the leaf doesn't clip */}
-      <svg width="20" height="24" viewBox="0 0 170 209" fill="white" xmlns="http://www.w3.org/2000/svg">
-        <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.2-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.75 3.35-4.94.21-9.84-1.96-14.72-6.52-3.13-2.73-7.05-7.41-11.76-14.03-5.04-7.08-9.19-15.29-12.43-24.65-3.47-10.11-5.21-19.9-5.21-29.38 0-10.86 2.35-20.23 7.06-28.1 3.7-6.31 8.63-11.3 14.82-14.99 6.19-3.69 12.87-5.57 20.07-5.69 3.94 0 9.1 1.22 15.53 3.61 6.41 2.4 10.52 3.62 12.32 3.62 1.35 0 5.92-1.43 13.68-4.27 7.33-2.65 13.52-3.75 18.6-3.32 13.75 1.11 24.08 6.52 30.95 16.26-12.29 7.45-18.37 17.87-18.25 31.22.11 10.41 3.88 19.07 11.3 25.95 3.36 3.19 7.11 5.65 11.27 7.4-.9 2.62-1.86 5.12-2.88 7.52zM113.22 3.48c0 8.16-2.98 15.78-8.92 22.84-7.17 8.38-15.84 13.23-25.23 12.47-.12-.98-.19-2-.19-3.07 0-7.83 3.41-16.21 9.46-23.07 3.02-3.48 6.86-6.37 11.52-8.69 4.65-2.29 9.05-3.55 13.18-3.77.12 1.1.18 2.2.18 3.29z"/>
+      {/* Official Apple logo — standard 24x24 crisp centered vector */}
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white" className="shrink-0" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
       </svg>
       <div className="flex flex-col text-left leading-none">
         <span className="text-[10px] font-normal opacity-75 tracking-wide mb-[2px]">Download on the</span>
@@ -470,13 +476,13 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             {[
               ["No phone number required", true, false, false],
               ["Messages encrypted End to end", true, true, false],
-              ["No ads, ever", true, true, false],
-              ["We can't read your messages", true, false, false],
-              ["Zero tracking or ads", true, false, false],
-              ["Send money in a conversation", true, false, false],
+              ["Zero ads and zero data monetization", true, false, false],
+              ["We cannot read your messages", true, false, false],
+              ["Client-side Zero-Knowledge proofs", true, false, false],
+              ["Send digital assets peer-to-peer", true, false, false],
               ["Voice and video calls", true, true, true],
-              ["Group communities", true, true, true],
-              ["No phone number required", true, false, false],
+              ["Sovereign wallet identity", true, false, false],
+              ["Decentralized relay (no central DB)", true, false, false],
             ].map(([label, lc, wa, tg], i) => (
               <div key={String(label)} className={`grid grid-cols-4 px-6 py-4 items-center ${i % 2 === 0 ? '' : 'bg-[#FAFAFA]'} border-b border-black/[0.03] last:border-0`}>
                 <span className="text-[15px] font-medium text-[#1C1C1E]/80">{String(label)}</span>
@@ -519,7 +525,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               </h2>
             </motion.div>
             <p className="text-[16px] md:text-[18px] text-[#1C1C1E]/60 max-w-md font-medium leading-relaxed">
-              We revived zk.money natively inside Humanity Ledger. Client-side UltraPlonk zero-knowledge proofs ensure zero on-chain tracing, hidden balances, and private streaming payroll.
+              We revived zk.money natively inside Humanity Ledger. Client-side UltraHonk zero-knowledge proofs ensure zero on-chain tracing, hidden balances, and private streaming payroll.
             </p>
           </div>
 
@@ -527,7 +533,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
             {[
               {
                 icon: <Lock size={22} />,
-                title: "Client-Side UltraPlonk",
+                title: "Client-Side UltraHonk",
                 desc: "Proofs are synthesized entirely inside your browser's Private eXecution Environment (PXE). Sequencers and miners never learn transaction amounts or participants.",
                 tag: "Zero-Knowledge"
               },
@@ -593,7 +599,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
               </div>
               <div>
                 <p className="text-[16px] font-bold text-[#1C1C1E] tracking-tight">Live Aztec Rollup & zk.money Protocol</p>
-                <p className="text-[13px] text-[#1C1C1E]/60 font-medium leading-relaxed">Integrated UltraPlonk circuits with native UTXO settlement in settings & confidential chats.</p>
+                <p className="text-[13px] text-[#1C1C1E]/60 font-medium leading-relaxed">Integrated UltraHonk circuits with native UTXO settlement in settings & confidential chats.</p>
               </div>
             </div>
             <Link

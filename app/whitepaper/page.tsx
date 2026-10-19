@@ -13,7 +13,7 @@ export default function WhitepaperPage() {
       title="Humanity Ledger Whitepaper" 
       category="Technical" 
       description="A formal cryptographic thesis on establishing a privacy-preserving, quantum-resistant Layer 2 protocol for humanity's sovereign data and value." 
-      lastUpdated="August 2026"
+      lastUpdated="October 19, 2026"
     >
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-slate-300 font-serif leading-relaxed">
         
@@ -130,7 +130,7 @@ export default function WhitepaperPage() {
           </p>
           <div className="mt-12 text-sm text-slate-500 font-sans text-center">
             <p>Authored by the Humanity Ledger Cryptography Team</p>
-            <p>August 2026</p>
+            <p>October 2026</p>
           </div>
         </section>
 

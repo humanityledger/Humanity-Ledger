@@ -19,7 +19,7 @@ const STATS = [
   { label: 'Total Supply',      value: '210,000,000', sub: 'Hard cap — immutable by protocol' },
   { label: 'Decimals',          value: '8',            sub: 'Native Aztec precision' },
   { label: 'Distribution',      value: '100% earned',  sub: 'No pre-mine, no team allocation' },
-  { label: 'Network',           value: 'Aztec V5',     sub: 'Testnet active now' },
+  { label: 'Network',           value: 'Aztec v6',     sub: 'Testnet active now' },
   { label: 'Privacy Model',     value: 'ZK by default',sub: 'Noir circuits, Barretenberg proofs' },
   { label: 'Governance',        value: 'On-chain',     sub: 'Cryptographic community vote' },
 ];
@@ -66,7 +66,7 @@ const SECTIONS: Section[] = [
     title: 'How to get QDs — Step by step',
     tag: 'Getting Started',
     paragraphs: [
-      'Currently (Aztec Mainnet phase, July 2026), QDs are distributed exclusively through the network\'s Proof of Contribution airdrop mechanism. There is no purchase, no presale, and no ICO. Acquiring QDs requires participation.',
+      'Currently (Aztec Testnet phase, October 2026), QDs are distributed exclusively through the network\'s Proof of Contribution airdrop mechanism. There is no purchase, no presale, and no ICO. Acquiring QDs requires participation.',
       'Step 1 — Authenticate: Connect to the Humanity Ledger at humanidfi.com/connect using your Web3 wallet (MetaMask, Coinbase Wallet, WalletConnect) or via Turing Shield (email + 6-digit PIN for mobile users).',
       'Step 2 — Open the Terminal: Once authenticated, press Cmd+K (Mac) or Ctrl+K (Windows) to open the Ledger Terminal from anywhere on the platform.',
       'Step 3 — Navigate to Identity: In the terminal sidebar, find the "Identity / Airdrop" tab. This section shows your current ZK identity status, your Aztec account address, and your current QD balance.',
@@ -155,7 +155,7 @@ const SECTIONS: Section[] = [
     tag: 'Technical',
     paragraphs: [
       'QDs are built on the Aztec Network\'s Noir smart contract system. Noir is a domain-specific language for writing Zero Knowledge circuits. A Noir program encodes the rules of a token transfer: "the spender owns a valid note, the amount is positive, the total supply constraint is preserved." These rules compile to ACIR (Abstract Circuit Intermediate Representation) bytecode.',
-      'When you perform any QD operation, the Barretenberg proving engine — a highly optimized C++ library compiled to WebAssembly — runs in your browser and generates a UltraHonk/UltraPlonk proof that you followed all the rules, without revealing any of your private inputs. This proof is then submitted to the Aztec sequencer, which batches it with other proofs and posts a single aggregated proof to Ethereum L1 for final settlement.',
+      'When you perform any QD operation, the Barretenberg proving engine — a highly optimized C++ library compiled to WebAssembly — runs in your browser and generates an UltraHonk proof that you followed all the rules, without revealing any of your private inputs. This proof is then submitted to the Aztec sequencer, which batches it with other proofs and posts a single aggregated proof to Ethereum L1 for final settlement.',
       'The cryptographic primitives: Schnorr signatures on the BN254 Grumpkin curve for account authorization. Poseidon2 hashing for the Note commitment Merkle tree (depth 32). An Indexed Merkle tree for the nullifier set (depth 20). These are not arbitrary choices — they are the most efficient primitives for proof generation inside the BN254 proving system.',
     ],
     diagram: [
@@ -199,10 +199,10 @@ const SECTIONS: Section[] = [
   },
   {
     num: '10',
-    title: 'Current Status — Aztec Mainnet (July 2026)',
+    title: 'Current Status — Aztec v6 Testnet (October 2026)',
     tag: 'Status',
     paragraphs: [
-      'QDs are currently live on the Aztec V5 testnet (endpoint: node.aztec.network). All functionality described in this document is operational on testnet: airdrops, Ledger Chat payments, governance votes, and Studio Provenance records.',
+      'QDs are currently live on the Aztec v6 testnet (endpoint: node.aztec.network). All functionality described in this document is operational on testnet: airdrops, Ledger Chat payments, governance votes, and Studio Provenance records.',
       'Testnet tokens have zero monetary value. They exist for the purpose of protocol validation, security testing, and infrastructure preparation before mainnet deployment. Do not purchase, sell, or treat testnet QDs as financial instruments. Any marketplace offering to sell testnet QDs is operating outside the canonical protocol.',
       'The transition from testnet to mainnet will happen only when: (1) a Tier-1 ZK security audit of the Noir circuit is complete and all findings are publicly disclosed, (2) the Barretenberg proving system reaches the performance benchmarks required for mainnet throughput, and (3) Aztec Network\'s L1 settlement contracts are formally verified and deployed.',
     ],

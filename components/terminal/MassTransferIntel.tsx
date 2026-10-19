@@ -220,7 +220,7 @@ export function MassTransferIntel() {
   const [error, setError] = useState(false);
 
   // [AUDIO REMOVED] playPing is permanently silenced.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line no-unused-vars
   const playPing = useCallback(() => { /* no-op */ }, []);
 
   useEffect(() => {

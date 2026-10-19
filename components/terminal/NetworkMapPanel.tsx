@@ -222,7 +222,7 @@ export function NetworkMapPanel() {
                         <Tag color="purple">Aztec PXE</Tag>
                         <Tag color="purple">WASM Prover</Tag>
                         <Tag color="purple">Barretenberg</Tag>
-                        <Tag color="purple">Honk / UltraPlonk</Tag>
+                        <Tag color="purple">UltraHonk</Tag>
                       </div>
                     </div>
                     <div className="p-4 bg-[#F9F9F9] border border-black/5 rounded-2xl">
@@ -335,7 +335,7 @@ export function NetworkMapPanel() {
                   title="Noir Circuits"
                   subtitle="WASM — Client-Side Witness Generation"
                   tags={[
-                    { text: "UltraPlonk", color: "purple" },
+                    { text: "UltraHonk", color: "purple" },
                     { text: "Honk", color: "purple" },
                     { text: "Witness Gen", color: "purple" },
                     { text: "Proof Compression", color: "purple" },

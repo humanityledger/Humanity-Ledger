@@ -294,7 +294,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
               >
                 {generatingSolvency ? (
                   <>
-                    <RefreshCw size={16} className="animate-spin" /> Computando UltraPlonk Range Proof…
+                    <RefreshCw size={16} className="animate-spin" /> Computando UltraHonk Range Proof…
                   </>
                 ) : (
                   <>

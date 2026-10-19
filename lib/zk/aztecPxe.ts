@@ -14,7 +14,7 @@
  * 3. Nullifier Tree (SMT-32) Double-Spend Prevention:
  *    - Verifies non-membership proofs
  *    - Computes deterministic note nullifiers
- * 4. UltraPlonk / Honk Prover Pipeline:
+ * 4. UltraHonk Prover Pipeline:
  *    - Polynomial commitment simulation
  *    - Constraint generation & proof serialization
  */

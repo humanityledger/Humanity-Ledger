@@ -16,11 +16,11 @@ export default function ZeroKnowledgePage() {
           ],
         },
         {
-          id: 'ultraplonk',
-          title: 'UltraPlonk Proof System',
+          id: 'ultrahonk',
+          title: 'UltraHonk Proof System',
           paragraphs: [
-            'The Humanity Ledger protocol uses the UltraPlonk arithmetisation scheme, developed by Aztec Network. UltraPlonk is a universal and updatable zk-SNARK that eliminates the need for a per-circuit trusted setup ceremony. Instead, it relies on a universal structured reference string (SRS) that can be reused across all circuits in the protocol.',
-            'UltraPlonk achieves superior performance characteristics compared to Groth16 (the proof system used by legacy centralised protocols). The proof size is constant regardless of the circuit size. Verification on-chain is O(1) in gas cost. The system supports custom gates (lookup tables, range checks, elliptic curve operations) via the PLOOKUP protocol, enabling dramatic efficiency improvements for cryptographic primitives that would otherwise be prohibitively expensive in a vanilla R1CS arithmetisation.',
+            'The Humanity Ledger protocol uses the UltraHonk arithmetisation scheme, developed by Aztec Network. UltraHonk is a universal and updatable zk-SNARK that eliminates the need for a per-circuit trusted setup ceremony. Instead, it relies on a universal structured reference string (SRS) that can be reused across all circuits in the protocol.',
+            'UltraHonk achieves superior performance characteristics compared to Groth16 and legacy proving systems. The proof size is succinct and constant regardless of the circuit size. Verification on-chain is O(1) in gas cost. The system supports custom gates (lookup tables, range checks, elliptic curve operations) via sumcheck protocols and multivariate polynomials, enabling dramatic efficiency improvements for cryptographic primitives that would otherwise be prohibitively expensive in a vanilla R1CS arithmetisation.',
           ],
           bullets: [
             'Proof Size: ~2KB (constant, independent of circuit size).',
@@ -63,7 +63,7 @@ export default function ZeroKnowledgePage() {
           title: 'Poseidon Hash Function',
           paragraphs: [
             'All hash operations within Humanity Ledger circuits use the Poseidon hash function rather than SHA-256 or Keccak-256. Poseidon is an arithmetic-friendly hash function designed specifically for use inside zero-knowledge proof circuits. Its round function operates natively over a prime field (BN254 in our case), meaning there are no expensive bit decomposition operations required to compute a hash inside a circuit.',
-            'The practical consequence is dramatic: hashing two 256-bit field elements with Poseidon costs approximately 300 circuit gates in UltraPlonk, compared to approximately 25,000 gates for SHA-256. This efficiency difference is what makes the Humanity Ledger identity tree (with 20-level Merkle proofs) feasible to verify in sub-second proving times on consumer hardware.',
+            'The practical consequence is dramatic: hashing two 256-bit field elements with Poseidon costs approximately 300 circuit gates in UltraHonk, compared to approximately 25,000 gates for SHA-256. This efficiency difference is what makes the Humanity Ledger identity tree (with 20-level Merkle proofs) feasible to verify in sub-second proving times on consumer hardware.',
           ],
           bullets: [
             'Field: BN254 (alt-BN128), prime order 21888242871839275222246405745257275088548364400416034343698204186575808495617.',
@@ -87,11 +87,11 @@ export default function ZeroKnowledgePage() {
           paragraphs: [
             'The current Humanity Ledger cryptographic stack uses elliptic curve primitives (ECDSA P-256, BN254, X25519) that are vulnerable to Shor\'s algorithm on a sufficiently powerful quantum computer. We are actively monitoring the development of cryptographically relevant quantum computers and the NIST Post-Quantum Cryptography standardisation programme.',
             'The NIST PQC standards published in 2024 include ML-KEM (based on CRYSTALS-Kyber, for key encapsulation) and ML-DSA (based on CRYSTALS-Dilithium, for digital signatures). The Humanity Ledger protocol is designed to be crypto-agile: the signature scheme used for the Secure Enclave binding is abstracted into a circuit constraint that can be swapped without changing the upper layers of the protocol.',
-            'Our roadmap includes a migration to lattice-based signature schemes for the hardware enclave binding by Q4 2027, contingent on browser-side WebAuthn implementations adding support for ML-DSA authenticators. The Poseidon hash function and the UltraPlonk proof system are quantum-resistant (based on collision resistance of arithmetic hash functions over large prime fields).',
+            'Our roadmap includes a migration to lattice-based signature schemes for the hardware enclave binding by Q4 2027, contingent on browser-side WebAuthn implementations adding support for ML-DSA authenticators. The Poseidon hash function and the UltraHonk proof system are quantum-resistant (based on collision resistance of arithmetic hash functions over large prime fields).',
           ],
           callout: {
             title: 'Quantum Security Status',
-            body: 'VULNERABLE to quantum: ECDSA P-256 (Shor\'s), X25519 DH (Shor\'s), BN254 pairings (Shor\'s)\nQUANTUM-RESISTANT: Poseidon hash (Grover\'s has negligible effect), UltraPlonk soundness (relies on DLP hardness in pairing groups — will need migration)\nRoadmap: ML-KEM + ML-DSA integration by Q4 2027',
+            body: 'VULNERABLE to quantum: ECDSA P-256 (Shor\'s), X25519 DH (Shor\'s), BN254 pairings (Shor\'s)\nQUANTUM-RESISTANT: Poseidon hash (Grover\'s has negligible effect), UltraHonk soundness (relies on DLP hardness in pairing groups — will need migration)\nRoadmap: ML-KEM + ML-DSA integration by Q4 2027',
           },
         },
       ]}

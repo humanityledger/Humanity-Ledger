@@ -260,7 +260,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
             <p className="text-[20px] font-black text-[#1C1C1E] font-mono mt-1">
               {data?.sequencerMetrics?.avgProverTimeMs || '940'} <span className="text-[13px] font-semibold text-black/40">ms</span>
             </p>
-            <p className="text-[11px] text-black/40 font-semibold mt-0.5">UltraPlonk BN254</p>
+            <p className="text-[11px] text-black/40 font-semibold mt-0.5">UltraHonk BN254</p>
           </div>
 
           <div className="p-4 rounded-2xl bg-[#F9F9FB] border border-black/5">

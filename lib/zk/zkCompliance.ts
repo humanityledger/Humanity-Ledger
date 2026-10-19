@@ -123,7 +123,7 @@ export async function generateProofOfSolvency(
     throw new Error('Monto límite para prueba de solvencia inválido: debe ser un número positivo.');
   }
 
-  // Simulate UltraPlonk Solvency Range Circuit
+  // Simulate UltraHonk Solvency Range Circuit
   await new Promise(r => setTimeout(r, 650));
 
   const randBytes = new Uint8Array(32);

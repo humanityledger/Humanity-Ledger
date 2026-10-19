@@ -103,7 +103,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
         <div className="w-full space-y-2.5 text-left">
           {[
             { icon: Lock,   text: 'Zero on-chain exposure — amounts stay private' },
-            { icon: Zap,    text: 'Instant UltraPlonk proof generation in browser' },
+            { icon: Zap,    text: 'Instant UltraHonk proof generation in browser' },
             { icon: Wallet, text: 'Send DAI, USDC, ETH to any zk:handle' },
           ].map(({ icon: Icon, text }) => (
             <div key={text} className="flex items-start gap-3 bg-[#f0f2f5] rounded-2xl px-4 py-3">
@@ -295,7 +295,7 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
           </div>
           <div className="flex justify-between text-[12px]">
             <span className="text-gray-500">Privacy</span>
-            <span className="font-semibold text-[#1C1C1E]">Maximum (UltraPlonk)</span>
+            <span className="font-semibold text-[#1C1C1E]">Maximum (UltraHonk)</span>
           </div>
         </div>
 

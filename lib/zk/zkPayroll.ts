@@ -19,7 +19,7 @@ import {
   recordIncomingShieldedPayment,
   ZkPaymentResult
 } from './zkMoney';
-import { generateUltraPlonkProof } from './aztecPxe';
+import { generateUltraHonkProof } from './aztecPxe';
 
 export interface PayrollRecipient {
   id: string;
@@ -143,9 +143,9 @@ export async function executePayrollBatch(
     throw new Error(`Fondos confidenciales insuficientes: ${available} zk${batch.token} disponibles, ${needed} requeridos.`);
   }
 
-  // 2. Client-side UltraPlonk batch proof generation
-  if (onProgress) onProgress('Compilando lote confidencial UltraPlonk…', 20);
-  const proof = await generateUltraPlonkProof(
+  // 2. Client-side UltraHonk batch proof generation
+  if (onProgress) onProgress('Compilando lote confidencial UltraHonk…', 20);
+  const proof = await generateUltraHonkProof(
     'PrivateTransfer',
     {
       batchId: batch.id,

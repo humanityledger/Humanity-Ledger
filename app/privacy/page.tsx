@@ -5,7 +5,7 @@ export default function PrivacyPage() {
     <AztecDocPage
       eyebrow="Compliance — Privacy Policy"
       title="Privacy Policy"
-      subtitle="What we collect, what we do not collect, and how we protect your information. Last updated October 2026."
+      subtitle="What we collect, what we do not collect, and how we protect your information. Last updated October 19, 2026."
       sections={[
         {
           id: 'principles',
@@ -73,7 +73,7 @@ export default function PrivacyPage() {
           title: '6. Contact',
           paragraphs: [
             'For all privacy inquiries, data subject requests, and complaints, contact us at humanityledger@icloud.com. We will respond within 72 hours.',
-            'This Privacy Policy was last reviewed in October 2026.',
+            'This Privacy Policy was last reviewed on October 19, 2026.',
           ],
         },
       ]}

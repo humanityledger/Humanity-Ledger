@@ -9,14 +9,14 @@ export const metadata: Metadata = {
 
 export default function ApiDocsPage() {
   return (
-    <DocLayout title="Developer SDK & API Reference" category="Developers" description="The definitive, exhaustive guide for integrating with the Humanity Ledger PXE, writing Noir circuits, and deploying Aztec L2 privacy-preserving smart contracts." lastUpdated="August 2026">
+    <DocLayout title="Developer SDK & API Reference" category="Developers" description="The definitive, exhaustive guide for integrating with the Humanity Ledger PXE, writing Noir circuits, and deploying Aztec L2 privacy-preserving smart contracts." lastUpdated="October 19, 2026">
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-slate-300">
         
         <h1 className="text-5xl font-extrabold mb-8 text-white tracking-tight">Humanity Ledger API & Aztec SDK</h1>
         
         <p className="text-xl text-slate-400 mb-12 leading-relaxed">
-          Welcome to the developer documentation for the Humanity Ledger. Building on Aztec requires a paradigm shift from traditional EVM development. Here, state is private by default, computation is proven client-side, and data availability is bifurcated between L1 and L2. This guide provides the <strong className="text-emerald-400">trillions of parameters</strong> of technical depth required by senior protocol engineers.
+          Welcome to the developer documentation for the Humanity Ledger. Building on Aztec requires a paradigm shift from traditional EVM development. Here, state is private by default, computation is proven client-side, and data availability is bifurcated between L1 and L2. This guide provides the <strong className="text-emerald-400">rigorous engineering specifications</strong> required by senior protocol engineers.
         </p>
 
         {/* 1. ARCHITECTURE */}

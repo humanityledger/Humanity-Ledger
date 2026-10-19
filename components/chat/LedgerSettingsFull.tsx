@@ -1569,7 +1569,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               </Group>
 
               {/* Aztec Privacy & PXE Architecture */}
-              <Group title="Aztec Privacy & PXE Architecture" footer="All zero-knowledge proofs are generated locally in your browser using UltraPlonk through the Aztec Private Execution Environment.">
+              <Group title="Aztec Privacy & PXE Architecture" footer="All zero-knowledge proofs are generated locally in your browser using UltraHonk through the Aztec Private Execution Environment.">
                 <Row
                   icon={<Lock size={18} />}
                   label="Private DAI Default"
@@ -1587,7 +1587,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <Row
                   icon={<Cpu size={18} />}
                   label="Client-Side Proof Generation"
-                  sublabel="Compute UltraPlonk proofs in browser via Aztec PXE"
+                  sublabel="Compute UltraHonk proofs in browser via Aztec PXE"
                   toggle={settings.zk_client_proofs ?? true}
                   onToggle={(v) => updateSetting('zk_client_proofs', v)}
                 />
