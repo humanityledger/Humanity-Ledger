@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
         const ledgerSession = request.cookies.get('ledger_session')?.value;
         const humanSession = request.cookies.get('human_session')?.value;
         const humanitySession = request.cookies.get('humanity_session')?.value;
-        const handshake    = request.cookies.get('system_handshake')?.value;
         const primaryJwt   = ledgerSession || humanSession || humanitySession;
 
         const isProd      = process.env.NODE_ENV === 'production';
@@ -68,20 +67,8 @@ export async function GET(request: NextRequest) {
                         humanityIdentity,
                     });
 
-                    // [HEAL] If system_handshake was missing, restore it now so
-                    // client-side guards (useSystemAccount, TitaniumGate, etc.)
-                    // can read it from document.cookie on the next render.
-                    if (!handshake || !handshake.startsWith('0x')) {
-                        console.info('[verify-session] Valid JWT but missing handshake — healing cookie for:', address);
-                        res.cookies.set('system_handshake', address.toLowerCase(), {
-                            httpOnly: false,
-                            secure: isProd,
-                            sameSite: 'lax',
-                            maxAge: 604800,
-                            path: '/',
-                            domain: cookieDomain,
-                        });
-                    }
+                    // Ensure obsolete system_handshake cookie is purged
+                    res.cookies.delete('system_handshake');
 
                     return res;
                 }
@@ -94,9 +81,9 @@ export async function GET(request: NextRequest) {
             const res = NextResponse.json({ authenticated: false }, { status: 401 });
             const expiredDate = 'Thu, 01 Jan 1970 00:00:00 GMT';
             const secure = isProd ? '; Secure' : '';
-            for (const name of ['ledger_session', 'human_session', 'humanity_session', 'siwe_session']) {
+            for (const name of ['ledger_session', 'human_session', 'humanity_session', 'siwe_session', 'system_handshake']) {
                 res.headers.append('Set-Cookie', `${name}=; Path=/; Expires=${expiredDate}; HttpOnly${secure}; SameSite=Strict`);
-                res.headers.append('Set-Cookie', `${name}=; Path=/; Expires=${expiredDate}; HttpOnly${secure}; SameSite=Lax`);
+                res.headers.append('Set-Cookie', `${name}=; Path=/; Expires=${expiredDate}; SameSite=Lax`);
             }
             return res;
         }
@@ -118,19 +105,7 @@ export async function GET(request: NextRequest) {
                     user: { address: emailId, email, tier: 'FREE', authType: 'google_oauth' }
                 });
 
-                // Heal the JS-readable handshake cookie for client-side guards
-                const needsHeal = !handshake || (!handshake.startsWith('0x') && !handshake.startsWith('email_'));
-                if (needsHeal) {
-                    res.cookies.set('system_handshake', emailId, {
-                        httpOnly: false,
-                        secure: isProd,
-                        sameSite: 'lax',
-                        maxAge: 7 * 24 * 60 * 60,
-                        path: '/',
-                        domain: cookieDomain,
-                    });
-                }
-
+                res.cookies.delete('system_handshake');
                 return res;
             }
         } catch (nextAuthError) {

@@ -18,44 +18,75 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import crypto from 'crypto';
+import { argon2id } from '@noble/hashes/argon2';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 
 // ── Brute-force tracker (Migrated to DB for Serverless/Edge persistence) ──
-// HISTORY: was 5 attempts / 15 min. Reduced lockout to 5 min and raised
-// threshold to 8 to avoid legitimate users being locked out during hash
-// migration (case-normalization fix, 2026-10-13). Still secure against bots
-// (8 × 10^-6 probability of guessing a 6-digit PIN before lockout).
-const ATTEMPT_WINDOW_MS = 5 * 60 * 1000;  // 5 minutes (was 15)
-const MAX_ATTEMPTS = 8;                     // 8 attempts (was 5)
+const ATTEMPT_WINDOW_MS = 5 * 60 * 1000;  // 5 minutes
+const MAX_ATTEMPTS = 8;                     // 8 attempts
 
-// ── PIN hashing ───────────────────────────────────────────────────────────────
-// We use HMAC-SHA256 with a server-side secret for PIN storage.
-// This is appropriate for a short PIN because:
-//   1. The salt is the userId (unique per user, no rainbow tables)
-//   2. The HMAC secret adds a server-side factor (knowing the DB is not enough)
-// For production, bcrypt would be ideal but adds latency on Edge.
-// CRITICAL: ALWAYS normalize userId to lowercase before hashing.
-// getSession() returns lowercase for SIWE (ledger_session/human_session) but
-// the legacy email session (human.access-token) can return the userId in the
-// case it was originally stored — potentially checksummed (0xAbCd...).
-// If a PIN was set with checksummed userId but verified with lowercase userId,
-// the HMAC output differs → CORRECT PIN FAILS → user gets locked out in 5 attempts.
+// ── Argon2id PIN Hashing (T-07 / H6) ──────────────────────────────────────────
+// Parameters: m=65536 (64MB), t=3 (iterations), p=1 (parallelism), 32-byte key length.
+function getEnclavePinPepper(): string {
+  const pepper = process.env.ENCLAVE_PIN_PEPPER || process.env.ENCLAVE_PIN_SECRET || process.env.JWT_SECRET;
+  if (!pepper) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CRITICAL: Missing ENCLAVE_PIN_PEPPER environment variable in production');
+    }
+    return 'dev-enclave-pin-pepper-local-dev-only';
+  }
+  return pepper;
+}
+
+function hashPinArgon2id(userId: string, pin: string): string {
+  const pepper = getEnclavePinPepper();
+  const normalizedId = userId.toLowerCase();
+  const salt = utf8ToBytes(`${normalizedId}:${pepper}`.slice(0, 32).padEnd(16, '0'));
+  const pinBytes = utf8ToBytes(pin);
+  const hash = argon2id(pinBytes, salt, {
+    m: 65536,
+    t: 3,
+    p: 1,
+    dkLen: 32,
+  });
+  return bytesToHex(hash);
+}
+
 function getEnclavePinSecret(): string {
   const s = process.env.ENCLAVE_PIN_SECRET;
   if (s) return s;
   const jwtSecret = process.env.JWT_SECRET;
   if (!jwtSecret) throw new Error('CRITICAL: Missing ENCLAVE_PIN_SECRET or JWT_SECRET');
-  // [H6 FIX]: Domain separation ensures PIN HMAC never shares key space with JWT signer
   return crypto.createHmac('sha256', jwtSecret).update('humanity-ledger:enclave-pin-domain-separation:v1').digest('hex');
 }
 
-function hashPin(userId: string, pin: string): string {
+function hashPinLegacy(userId: string, pin: string): string {
   const secret = getEnclavePinSecret();
-  // Normalize: always lowercase the userId so hash is stable across all auth paths
   const normalizedId = userId.toLowerCase();
   return crypto
     .createHmac('sha256', secret)
     .update(`${normalizedId}:${pin}`)
     .digest('hex');
+}
+
+function verifyPin(userId: string, pin: string, storedHash: string): boolean {
+  try {
+    const argonHash = hashPinArgon2id(userId, pin);
+    const argonBuf = Buffer.from(argonHash, 'hex');
+    const storedBuf = Buffer.from(storedHash, 'hex');
+    if (argonBuf.length === storedBuf.length && crypto.timingSafeEqual(argonBuf, storedBuf)) {
+      return true;
+    }
+    // Backward compatibility with legacy HMAC-SHA256
+    const legacyHash = hashPinLegacy(userId, pin);
+    const legacyBuf = Buffer.from(legacyHash, 'hex');
+    if (legacyBuf.length === storedBuf.length && crypto.timingSafeEqual(legacyBuf, storedBuf)) {
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 // ── POST — Verify PIN ─────────────────────────────────────────────────────────
@@ -110,14 +141,8 @@ export async function POST(req: NextRequest) {
         needsPinSetup: true
       }, { status: 404 });
     }
-    const expectedHash = storedPinHash;
-    const submittedHash = hashPin(userId, pin);
 
-    // Constant-time comparison to prevent timing attacks
-    const isValid = crypto.timingSafeEqual(
-      Buffer.from(submittedHash, 'hex'),
-      Buffer.from(expectedHash, 'hex')
-    );
+    const isValid = verifyPin(userId, pin, storedPinHash);
 
     if (!isValid) {
       const now = new Date();
@@ -277,69 +302,15 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    const isFirstTimeUser = !storedPinHash;
-
-    // [SECURITY] If no PIN is set yet, require a valid clearance token
-    // (issued either by POST /api/auth/enclave-pin default-pin verification OR OTP reset).
-    // This prevents unauthenticated first-time PIN setting.
-    if (isFirstTimeUser) {
-      // If they have a DB clearance token (from OTP reset), validate it strictly.
-      // If no DB clearance token exists, validate the client token as a server-issued
-      // verification token (from POST /api/auth/enclave-pin on successful default PIN check).
-      if (!clientClearanceToken || !clientClearanceTs) {
-        return NextResponse.json({
-          error: 'Verification required. Please verify your identity before setting a PIN.',
-        }, { status: 403 });
-      }
-
-      // If DB has a clearance token (OTP reset flow), validate against it
-      if (dbClearanceToken && dbClearanceTs) {
-        const CLEARANCE_TTL = 15 * 60 * 1000; // 15 min
-        const tokenAge = Date.now() - new Date(dbClearanceTs).getTime();
-        if (tokenAge >= CLEARANCE_TTL) {
-          return NextResponse.json({ error: 'Clearance token expired. Please restart the reset flow.' }, { status: 403 });
-        }
-        try {
-          const clientBuf = Buffer.from(String(clientClearanceToken), 'hex');
-          const dbBuf     = Buffer.from(String(dbClearanceToken), 'hex');
-          if (clientBuf.length !== dbBuf.length || !crypto.timingSafeEqual(clientBuf, dbBuf)) {
-            return NextResponse.json({ error: 'Invalid clearance token.' }, { status: 403 });
-          }
-        } catch {
-          return NextResponse.json({ error: 'Invalid clearance token.' }, { status: 403 });
-        }
-      } else {
-        // No DB clearance token → validate as a server-issued POST clearance token
-        // (this covers the first-time user flow via default PIN verification)
-        const clearanceSecret = (() => {
-          const s = process.env.ENCLAVE_PIN_SECRET || process.env.JWT_SECRET;
-          if (!s) throw new Error('CRITICAL: Missing ENCLAVE_PIN_SECRET');
-          return s;
-        })();
-        const expectedToken = crypto
-          .createHmac('sha256', clearanceSecret)
-          .update(`${userId}:cleared:${clientClearanceTs}`)
-          .digest('hex');
-        const CLEARANCE_TTL = 8 * 60 * 60 * 1000; // 8 hours (matches session TTL)
-        try {
-          const clientBuf   = Buffer.from(String(clientClearanceToken), 'hex');
-          const expectedBuf = Buffer.from(expectedToken, 'hex');
-          const tokenAge    = Date.now() - Number(clientClearanceTs);
-          if (
-            clientBuf.length !== expectedBuf.length ||
-            !crypto.timingSafeEqual(clientBuf, expectedBuf) ||
-            tokenAge > CLEARANCE_TTL
-          ) {
-            return NextResponse.json({ error: 'Invalid or expired clearance token. Please re-enter your PIN.' }, { status: 403 });
-          }
-        } catch {
-          return NextResponse.json({ error: 'Invalid clearance token.' }, { status: 403 });
-        }
-      }
+    if (!storedPinHash) {
+      return NextResponse.json({
+        error: 'No Enclave PIN configured for this account. Initial PIN setup required.',
+        needsPinSetup: true,
+      }, { status: 404 });
     }
 
-    // [SECURITY] If they already have a PIN, they MUST provide the current PIN
-    if (!isFirstTimeUser && !currentPin) {
+    // Current PIN is required to update PIN
+    if (!currentPin) {
       return NextResponse.json({ error: 'Current PIN is required to change PIN.' }, { status: 400 });
     }
 
@@ -350,7 +321,6 @@ export async function PUT(req: NextRequest) {
       dbOtpAttempts = (userRow as any).enclaveOtpAttempts || 0;
       dbOtpExpiresAt = (userRow as any).enclaveOtpExpiresAt || null;
     } else if (dbTable === 'authUser') {
-      // Need to fetch authUser again if we want attempts because it wasn't selected
       const authRowRefetched = await prisma.authUser.findUnique({
         where: { id: dbId as string },
         select: { enclaveOtpAttempts: true, enclaveOtpExpiresAt: true } as any
@@ -362,60 +332,52 @@ export async function PUT(req: NextRequest) {
     }
 
     // Verify current PIN before changing
-    if (currentPin) {
-      if (dbOtpExpiresAt && new Date() < new Date(dbOtpExpiresAt)) {
-        if (dbOtpAttempts >= MAX_ATTEMPTS) {
-          const retryAfterMin = Math.ceil((new Date(dbOtpExpiresAt).getTime() - Date.now()) / 60000);
-          return NextResponse.json({ error: `Too many attempts. Try again in ${retryAfterMin} minutes.` }, { status: 429 });
-        }
-      }
-
-      const expectedHash  = storedPinHash || '';
-      const submittedHash = hashPin(userId, currentPin);
-
-      const isValid = crypto.timingSafeEqual(
-        Buffer.from(submittedHash, 'hex'),
-        Buffer.from(expectedHash, 'hex')
-      );
-
-      if (!isValid) {
-        const now = new Date();
-        const isWindowExpired = !dbOtpExpiresAt || now > new Date(dbOtpExpiresAt);
-        const newAttempts = isWindowExpired ? 1 : dbOtpAttempts + 1;
-        const newExpiresAt = isWindowExpired ? new Date(now.getTime() + ATTEMPT_WINDOW_MS) : dbOtpExpiresAt;
-        
-        if (dbTable === 'user') {
-          await prisma.user.update({
-            where: { walletAddress: userId.toLowerCase() },
-            data: { enclaveOtpAttempts: newAttempts, enclaveOtpExpiresAt: newExpiresAt }
-          });
-        } else {
-          await prisma.authUser.update({
-            where: { id: dbId as string },
-            data: { enclaveOtpAttempts: newAttempts, enclaveOtpExpiresAt: newExpiresAt } as any
-          });
-        }
-        
-        return NextResponse.json({ error: 'Current PIN incorrect.' }, { status: 401 });
-      }
-      
-      // Success - clear
-      if (dbOtpAttempts > 0) {
-        if (dbTable === 'user') {
-          await prisma.user.update({
-            where: { walletAddress: userId.toLowerCase() },
-            data: { enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null }
-          });
-        } else {
-          await prisma.authUser.update({
-            where: { id: dbId as string },
-            data: { enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null } as any
-          });
-        }
+    if (dbOtpExpiresAt && new Date() < new Date(dbOtpExpiresAt)) {
+      if (dbOtpAttempts >= MAX_ATTEMPTS) {
+        const retryAfterMin = Math.ceil((new Date(dbOtpExpiresAt).getTime() - Date.now()) / 60000);
+        return NextResponse.json({ error: `Too many attempts. Try again in ${retryAfterMin} minutes.` }, { status: 429 });
       }
     }
 
-    const newPinHash = hashPin(userId, newPin);
+    const isCurrentValid = verifyPin(userId, currentPin, storedPinHash);
+
+    if (!isCurrentValid) {
+      const now = new Date();
+      const isWindowExpired = !dbOtpExpiresAt || now > new Date(dbOtpExpiresAt);
+      const newAttempts = isWindowExpired ? 1 : dbOtpAttempts + 1;
+      const newExpiresAt = isWindowExpired ? new Date(now.getTime() + ATTEMPT_WINDOW_MS) : dbOtpExpiresAt;
+      
+      if (dbTable === 'user') {
+        await prisma.user.update({
+          where: { walletAddress: userId.toLowerCase() },
+          data: { enclaveOtpAttempts: newAttempts, enclaveOtpExpiresAt: newExpiresAt }
+        });
+      } else {
+        await prisma.authUser.update({
+          where: { id: dbId as string },
+          data: { enclaveOtpAttempts: newAttempts, enclaveOtpExpiresAt: newExpiresAt } as any
+        });
+      }
+      
+      return NextResponse.json({ error: 'Current PIN incorrect.' }, { status: 401 });
+    }
+    
+    // Success - clear lockout counter
+    if (dbOtpAttempts > 0) {
+      if (dbTable === 'user') {
+        await prisma.user.update({
+          where: { walletAddress: userId.toLowerCase() },
+          data: { enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null }
+        });
+      } else {
+        await prisma.authUser.update({
+          where: { id: dbId as string },
+          data: { enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null } as any
+        });
+      }
+    }
+
+    const newPinHash = hashPinArgon2id(userId, newPin);
 
     // Save to User table
     await prisma.user.update({

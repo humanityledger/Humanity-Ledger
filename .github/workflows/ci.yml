@@ -19,10 +19,16 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
+      - name: Generate Prisma Client
+        run: npx prisma generate
       - name: Type check
-        run: npx tsc --noEmit || true
+        run: npx tsc --noEmit
       - name: Lint
-        run: npx eslint . --ext .ts,.tsx --max-warnings 50 || true
+        run: npx next lint
+      - name: Unit & Cryptographic Tests
+        run: npx vitest run test/unit/audit test/unit/crypto
+      - name: Production Build
+        run: npx next build
 
   secret-scan:
     name: Secret Scanning (Gitleaks)

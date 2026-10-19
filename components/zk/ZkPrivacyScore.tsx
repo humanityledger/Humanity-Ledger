@@ -57,18 +57,7 @@ export function ZkPrivacyScore({
         const settledCount = userNotes.filter(n => n.status === 'settled').length;
         const totalCount = userNotes.length;
         const maturityScore = Math.min(100, (settledCount * 25) + 30);
-        setAnalysis({
-          score: totalCount === 0 ? 50 : maturityScore,
-          anonymitySetSize: Math.max(12, settledCount * 8 + 15),
-          noteAge: Math.max(4, settledCount * 3),
-          recommendedWaitMs: settledCount > 2 ? 0 : 300000,
-          riskLevel: maturityScore >= 75 ? 'low' : maturityScore >= 45 ? 'medium' : 'high',
-          suggestions: [
-            settledCount < 2 ? 'Shield more notes to build a deeper private UTXO tree.' : 'Mature notes provide elevated anonymity sets.',
-            'Avoid linking fixed integer amounts across public L1 and Aztec.',
-            'Use zk handles to prevent address correlation on public RPC nodes.'
-          ]
-        });
+        setAnalysis(calculatePrivacyScore(undefined));
       }
     };
 

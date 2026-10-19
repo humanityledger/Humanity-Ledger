@@ -505,6 +505,15 @@ function PrivacyView({ s, update }: any) {
   return (
     <div className="p-4 space-y-6 pb-20">
       <SH title="Security Controls" />
+      <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-2xl flex items-start gap-3">
+        <Shield className="text-amber-600 shrink-0 mt-0.5" size={18} />
+        <div>
+          <h4 className="text-[13px] font-bold text-amber-900">Security Advisory</h4>
+          <p className="text-[11px] text-amber-800 leading-relaxed mt-0.5">
+            Accounts created before 7746250: move funds to a new wallet.
+          </p>
+        </div>
+      </div>
       <BBlock>
         <TRow label="Hardware Passcode" checked={s.passcode_enabled} onChange={(v: boolean) => update('passcode_enabled', v)} />
         <TRow label="Biometric Lock" checked={s.biometric_lock} onChange={(v: boolean) => update('biometric_lock', v)} />

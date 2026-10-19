@@ -17,10 +17,10 @@ export default async function AcademyModulePage({ params }: { params: Promise<{ 
     }
 
     return (
-        <div className="bg-transparent text-[#0A0A0A] dark:text-[#FFFFFF] flex flex-col">
+        <div className="bg-transparent text-[#0A0A0A] flex flex-col">
             {/* Header / Navigation */}
-            <header className="sticky top-0 z-50 px-6 py-4 border-b border-black/5 dark:border-white/5 bg-white/20 dark:bg-black/20 backdrop-blur-3xl flex items-center justify-between">
-                <Link href="/academy" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-colors">
+            <header className="sticky top-0 z-50 px-6 py-4 border-b border-black/5 bg-white/20 backdrop-blur-3xl flex items-center justify-between">
+                <Link href="/academy" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-black/50 hover:text-black transition-colors">
                     <ArrowLeft size={14} />
                     Back to Curriculum
                 </Link>
@@ -35,31 +35,31 @@ export default async function AcademyModulePage({ params }: { params: Promise<{ 
                     {/* Hero Section */}
                     <div className="flex flex-col gap-6">
                         <div className="flex items-center gap-3">
-                            <span className="px-3 py-1.5 rounded-lg bg-black/5 dark:bg-white/5 text-[10px] font-black uppercase tracking-widest text-black dark:text-white border border-black/10 dark:border-white/10">
+                            <span className="px-3 py-1.5 rounded-lg bg-black/5 text-[10px] font-black uppercase tracking-widest text-black border border-black/10">
                                 {moduleData.category}
                             </span>
-                            <span className="text-[10px] font-mono text-black/40 dark:text-white/40 uppercase tracking-widest">
+                            <span className="text-[10px] font-mono text-black/40 uppercase tracking-widest">
                                 MODULE {moduleData.level}
                             </span>
                         </div>
                         
                         <div className="max-w-4xl">
-                            <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-[1.1] text-black dark:text-white">
+                            <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-[1.1] text-black">
                                 {moduleData.title}
                             </h1>
                         </div>
 
-                        <p className="text-lg md:text-xl font-mono text-black/60 dark:text-white/60 max-w-3xl leading-relaxed">
+                        <p className="text-lg md:text-xl font-mono text-black/60 max-w-3xl leading-relaxed">
                             {moduleData.desc}
                         </p>
 
                         <div className="flex flex-wrap items-center gap-4 mt-4">
-                            <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-black/50 dark:text-white/50">
+                            <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-black/50">
                                 <Clock size={14} />
                                 {moduleData.time}
                             </div>
-                            <div className="w-1 h-1 rounded-full bg-black/20 dark:bg-white/20" />
-                            <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-black/50 dark:text-white/50">
+                            <div className="w-1 h-1 rounded-full bg-black/20" />
+                            <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-black/50">
                                 <Activity size={14} />
                                 Level {moduleData.level} Security Clearance
                             </div>
@@ -67,18 +67,18 @@ export default async function AcademyModulePage({ params }: { params: Promise<{ 
                     </div>
 
                     {/* Divider */}
-                    <div className="w-full h-px bg-black/10 dark:bg-white/10" />
+                    <div className="w-full h-px bg-black/10" />
 
                     {/* Content Grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                         {/* Main Reading / Documentation */}
                         <div className="lg:col-span-2 flex flex-col gap-8">
                             <div className="flex flex-col gap-4">
-                                <h3 className="text-sm font-black uppercase tracking-widest text-black dark:text-white flex items-center gap-2">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-black flex items-center gap-2">
                                     <BookOpen size={16} />
                                     Executive Summary
                                 </h3>
-                                <div className="p-6 md:p-8 rounded-3xl bg-white dark:bg-[#111111] border border-black/5 dark:border-white/5 shadow-sm text-[13px] md:text-[15px] font-mono text-black/80 dark:text-white/80 leading-loose">
+                                <div className="p-6 md:p-8 rounded-3xl bg-white border border-black/5 shadow-sm text-[13px] md:text-[15px] font-mono text-black/80 leading-loose">
                                     <p className="mb-6">{moduleData.content}</p>
                                     <p className="mb-6">
                                         In sovereign environments, the precise architecture defined in this module governs billions in capital flow. A complete mastery of 
@@ -92,11 +92,11 @@ export default async function AcademyModulePage({ params }: { params: Promise<{ 
                             </div>
 
                             <div className="flex flex-col gap-4">
-                                <h3 className="text-sm font-black uppercase tracking-widest text-black dark:text-white flex items-center gap-2">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-black flex items-center gap-2">
                                     <Terminal size={16} />
                                     Terminal Execution Directives
                                 </h3>
-                                <div className="p-6 md:p-8 rounded-3xl bg-[#0A0A0A] border border-black/90 dark:border-white/10 shadow-sm relative overflow-hidden">
+                                <div className="p-6 md:p-8 rounded-3xl bg-[#0A0A0A] border border-black/90 shadow-sm relative overflow-hidden">
                                     <div className="absolute top-0 right-0 p-4 opacity-10">
                                         <Zap size={64} className="text-white" />
                                     </div>
@@ -126,9 +126,9 @@ export default async function AcademyModulePage({ params }: { params: Promise<{ 
 
                         {/* Sidebar */}
                         <div className="flex flex-col gap-6">
-                            <div className="p-6 rounded-3xl bg-white dark:bg-[#111111] border border-black/5 dark:border-white/5 flex flex-col gap-4 shadow-sm">
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-black/40 dark:text-white/40">Knowledge Vectors</h4>
-                                <ul className="flex flex-col gap-3 text-[11px] font-black font-mono uppercase tracking-tight text-black/80 dark:text-white/80">
+                            <div className="p-6 rounded-3xl bg-white border border-black/5 flex flex-col gap-4 shadow-sm">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-black/40">Knowledge Vectors</h4>
+                                <ul className="flex flex-col gap-3 text-[11px] font-black font-mono uppercase tracking-tight text-black/80">
                                     <li className="flex items-center gap-2">
                                         <Shield size={14} className="text-[#0052FF]" />
                                         Consensus Validation
@@ -144,15 +144,15 @@ export default async function AcademyModulePage({ params }: { params: Promise<{ 
                                 </ul>
                             </div>
 
-                            <div className="p-6 rounded-3xl bg-white/20 dark:bg-black/20 backdrop-blur-xl border border-black/5 dark:border-white/5 flex flex-col gap-4 shadow-inner">
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-black/40 dark:text-white/40">Requirements</h4>
+                            <div className="p-6 rounded-3xl bg-white/20 backdrop-blur-xl border border-black/5 flex flex-col gap-4 shadow-inner">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-black/40">Requirements</h4>
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-black dark:bg-white flex items-center justify-center text-white dark:text-black font-black text-sm">
+                                    <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white font-black text-sm">
                                         {Math.max(1, moduleData.level - 1)}
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-white">Previous Module</span>
-                                        <span className="text-[9px] font-mono text-black/50 dark:text-white/50 uppercase">Completion Mandatory</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-black">Previous Module</span>
+                                        <span className="text-[9px] font-mono text-black/50 uppercase">Completion Mandatory</span>
                                     </div>
                                 </div>
                             </div>

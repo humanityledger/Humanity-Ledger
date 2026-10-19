@@ -7,7 +7,7 @@
  *
  * Architecture:
  * - Humanity Ledger sovereign identity → zk.money handle (zk:<tag>)
- * - Client-side UltraPlonk ZK proof generation via Aztec PXE
+ * - Client-side UltraHonk ZK proof generation via Aztec PXE
  * - Shielded note lifecycle: create → commit → nullify → spend
  * - Private DAI/USDC/ETH transfers inside any conversation
  * - Community payment rails, escrow, tipping, bounties
@@ -160,11 +160,18 @@ export interface ZkCommunityTreasury {
 
 export interface ZkPrivacyAnalysis {
   score: number;
-  anonymitySetSize: number;
-  noteAge: number;
-  recommendedWaitMs: number;
-  riskLevel: 'low' | 'medium' | 'high';
-  suggestions: string[];
+  breakdown: { anonymitySet: number; noteAge: number; mixDepth: number; reuseRisk: number };
+  grade: 'Pending' | string;
+  recommendation: string;
+  shieldedBalance: string;
+  totalTxCount: number;
+  averageNoteAge: number;
+  lastActivity: null | number;
+  anonymitySetSize?: number;
+  noteAge?: number;
+  recommendedWaitMs?: number;
+  riskLevel?: 'low' | 'medium' | 'high';
+  suggestions?: string[];
 }
 
 export interface ZkProofProgress {
@@ -430,7 +437,7 @@ export function createNote(params: ZkPaymentParams, txResult: ZkPaymentResult): 
     timestamp: Date.now(),
     status: 'pending',
     blockHeight: Math.floor(Math.random() * 100_000) + 500_000,
-    proofData: `ultraplonk_${randomHex(16)}`,
+    proofData: `ultrahonk_${randomHex(16)}`,
   };
 
   const key = `${ZK_NOTES_PREFIX}${params.senderAddress.toLowerCase()}`;
@@ -490,59 +497,9 @@ function saveToHistory(address: string, record: ZkTransactionRecord): void {
  * Credits their balance, adds note to UTXO store, creates transaction record, and dispatches notification.
  */
 export function recordIncomingShieldedPayment(recipientAddress: string, payment: ZkPaymentResult): void {
-  if (!recipientAddress || !payment?.amount || !payment?.token || !payment?.txHash) return;
-
-  // Validate Ethereum recipient address
-  const normRecipient = recipientAddress.toLowerCase();
-  if (!/^0x[0-9a-fA-F]{40}$/.test(recipientAddress)) return;
-
-  // Validate txHash format (hex 0x... min 16 chars)
-  if (!/^0x[0-9a-fA-F]{16,66}$/.test(payment.txHash)) return;
-
-  // Validate token
-  const tokenUpper = payment.token.toUpperCase();
-  if (!['DAI', 'USDC', 'ETH'].includes(tokenUpper)) return;
-  const token = tokenUpper as SupportedToken;
-
-  // Validate recipient match if explicitly embedded in payment payload
-  if (payment.recipientTag && payment.recipientTag.startsWith('0x') && payment.recipientTag.toLowerCase() !== normRecipient) {
-    return;
-  }
-
-  // Validate finite positive amount (bounds check: > 0 and <= 1,000,000,000)
-  const delta = parseFloat(String(payment.amount).replace(/,/g, ''));
-  if (!Number.isFinite(delta) || delta <= 0 || delta > 1_000_000_000) return;
-
-  // Guard against duplicate processing of the same txHash using capped bounded store
-  const PROCESSED_TXS_KEY = 'ledger_zk_processed_tx_hashes';
-  const processedHashes = lsGet<string[]>(PROCESSED_TXS_KEY, []);
-  if (processedHashes.includes(payment.txHash)) return;
-
-  // Add to bounded set (capped at 1000 items to avoid localStorage bloat)
-  processedHashes.unshift(payment.txHash);
-  if (processedHashes.length > 1000) processedHashes.length = 1000;
-  lsSet(PROCESSED_TXS_KEY, processedHashes);
-
-  // NOTE (C2 fix): In Aztec provable privacy, incoming balances are discovered via client PXE note synchronization,
-  // NEVER minted or credited from unverified plaintext chat messages.
-  // We strictly do NOT call updateShieldedBalance here.
-
-  // Add to transaction history
-  const txRecord: ZkTransactionRecord = {
-    ...payment,
-    confirmations: 12,
-    blockHeight: 14820,
-    fee: '0.00 zkETH',
-    gasUsed: 0,
-    privacyScore: 98,
-    anonymitySetSize: 42,
-    noteId: `note_${payment.txHash.slice(2, 10)}`,
-    direction: 'received',
-  };
-  saveToHistory(recipientAddress, txRecord);
-
-  // Dispatch real-time events
-  emit('ledger_zk_payment_received', { recipient: recipientAddress, payment });
+  // T-08: No-op — incoming shielded payments are tracked by Aztec PXE, not by this client.
+  console.warn('[zkMoney] recordIncomingShieldedPayment called but PXE not connected. No balance credited.');
+  return;
 }
 
 // ─── Privacy Analytics ─────────────────────────────────────────────────────────
@@ -551,72 +508,62 @@ export function recordIncomingShieldedPayment(recipientAddress: string, payment:
  * Calculates a privacy score and anonymity analysis for a given payment result.
  * Score 0–100; higher = more private.
  */
-export function calculatePrivacyScore(tx: ZkPaymentResult): ZkPrivacyAnalysis {
-  // Deterministic randomness seeded on txHash
-  const seed = parseInt((tx.txHash || '0x1').slice(2, 10), 16) || 42;
-  const anonymitySetSize = ANONYMITY_SET_MIN + (seed % (100 - ANONYMITY_SET_MIN));
-  const noteAge = NOTE_MATURITY_BLOCKS + (seed % 50);
-  const baseScore = Math.min(100, Math.floor(
-    (anonymitySetSize / 100) * 50 +
-    (noteAge / 50) * 30 +
-    (tx.token === 'ETH' ? 20 : tx.token === 'DAI' ? 15 : 10)
-  ));
-
-  const riskLevel: 'low' | 'medium' | 'high' =
-    baseScore >= 70 ? 'low' : baseScore >= 40 ? 'medium' : 'high';
-
-  const suggestions: string[] = [];
-  if (anonymitySetSize < 20) suggestions.push('Wait for more transactions to join anonymity set');
-  if (noteAge < 10) suggestions.push('Notes mature with age — spending later increases privacy');
-  if (tx.token === 'ETH') suggestions.push('zkDAI provides stronger anonymity than zkETH');
-  suggestions.push('Avoid reusing recipient tags across multiple transactions');
-
+export function calculatePrivacyScore(tx?: ZkPaymentResult): ZkPrivacyAnalysis {
+  // T-08: Real score requires Aztec testnet PXE — return static placeholder.
   return {
-    score: baseScore,
-    anonymitySetSize,
-    noteAge,
-    recommendedWaitMs: anonymitySetSize < 20 ? 30 * 60 * 1000 : 5 * 60 * 1000,
-    riskLevel,
-    suggestions: suggestions.slice(0, 3),
+    score: 0,
+    breakdown: { anonymitySet: 0, noteAge: 0, mixDepth: 0, reuseRisk: 0 },
+    grade: 'Pending' as const,
+    recommendation: 'Connect Aztec testnet to compute real privacy score.',
+    shieldedBalance: '0',
+    totalTxCount: 0,
+    averageNoteAge: 0,
+    lastActivity: null,
   };
 }
 
 // ─── Fee Estimation ────────────────────────────────────────────────────────────
 
-export function estimateShieldFee(amount: string, token: string): ZkFeeEstimate {
-  const parsed = parseFloat(amount.replace(/,/g, '')) || 0;
-  const gasCost = Math.max(0.5, parsed * 0.003);
+export function estimateShieldFee(amount?: string, token?: string): ZkFeeEstimate {
+  // T-08: Real fee estimation requires Aztec testnet PXE.
   return {
-    l1Gas: `$${gasCost.toFixed(2)}`,
-    aztecFee: '$0.05',
-    totalUSD: `$${(gasCost + 0.05).toFixed(2)}`,
+    l1Gas: 'Estimation requires Aztec testnet',
+    aztecFee: 'Estimation requires Aztec testnet',
+    totalUSD: 'Estimation requires Aztec testnet',
   };
 }
 
-export function estimateTransferFee(token: string): { aztecFee: string; totalUSD: string } {
-  return { aztecFee: '$0.02', totalUSD: '$0.02' };
+export function estimateTransferFee(token?: string): { aztecFee: string; totalUSD: string } {
+  // T-08: Real fee estimation requires Aztec testnet PXE.
+  return {
+    aztecFee: 'Estimation requires Aztec testnet',
+    totalUSD: 'Estimation requires Aztec testnet',
+  };
 }
 
-export function estimateUnshieldFee(amount: string): ZkFeeEstimate {
-  const parsed = parseFloat(amount.replace(/,/g, '')) || 0;
-  const gasCost = Math.max(0.8, parsed * 0.004);
+export function estimateUnshieldFee(amount?: string): ZkFeeEstimate {
+  // T-08: Real fee estimation requires Aztec testnet PXE.
   return {
-    l1Gas: `$${gasCost.toFixed(2)}`,
-    aztecFee: '$0.07',
-    totalUSD: `$${(gasCost + 0.07).toFixed(2)}`,
+    l1Gas: 'Estimation requires Aztec testnet',
+    aztecFee: 'Estimation requires Aztec testnet',
+    totalUSD: 'Estimation requires Aztec testnet',
   };
 }
 
 // ─── Core Payment Execution ────────────────────────────────────────────────────
 
 /**
- * Executes a shielded payment with full UltraPlonk proof simulation.
+ * Executes a shielded payment with full UltraHonk proof simulation.
  * 8-step proof generation with realistic delays.
  */
 export async function executeShieldedPayment(
   params: ZkPaymentParams,
   onProgress?: (step: string, progress: number) => void,
 ): Promise<ZkPaymentResult> {
+  if (process.env.NEXT_PUBLIC_ZK_MODE !== 'demo') {
+    throw new Error('Shielded payments require Aztec testnet PXE. Set NEXT_PUBLIC_ZK_MODE=demo for local testing.');
+  }
+
   const { senderAddress, recipientTag, amount, token, memo } = params;
 
   let cumulativeProgress = 0;
@@ -645,34 +592,21 @@ export async function executeShieldedPayment(
     memo,
   };
 
-  // Deduct balance
-  const numAmount = parseFloat(amount.replace(/,/g, '')) || 0;
-  updateShieldedBalance(senderAddress, -numAmount, token);
-
-  // Create note
+  // Demo mode: record to local history only (no real balance changes)
   createNote(params, result);
 
-  // Save extended record
-  const privacyAnalysis = calculatePrivacyScore(result);
   const record: ZkTransactionRecord = {
     ...result,
     confirmations: 0,
-    blockHeight: Math.floor(Math.random() * 100_000) + 500_000,
-    fee: estimateTransferFee(token).totalUSD,
-    gasUsed: Math.floor(Math.random() * 500_000) + 100_000,
-    privacyScore: privacyAnalysis.score,
-    anonymitySetSize: privacyAnalysis.anonymitySetSize,
+    blockHeight: 0,
+    fee: 'Demo mode',
+    gasUsed: 0,
+    privacyScore: 0,
+    anonymitySetSize: 0,
     noteId: `note_${randomHex(8)}`,
     direction: 'sent',
   };
   saveToHistory(senderAddress, record);
-
-  // Also call API relay (fire and forget)
-  fetch('/api/zk/transfer', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: senderAddress, to: recipientCanon, amount, token, memo }),
-  }).catch(() => {});
 
   emit('ledger_zk_payment_sent', result);
   return result;
@@ -687,6 +621,10 @@ export async function executeShieldDeposit(
   params: ZkShieldParams,
   onProgress?: (step: string, pct: number) => void,
 ): Promise<{ noteId: string; txHash: string; aztecAddress: string }> {
+  if (process.env.NEXT_PUBLIC_ZK_MODE !== 'demo') {
+    throw new Error('Shield deposits require Aztec testnet PXE. Set NEXT_PUBLIC_ZK_MODE=demo for local testing.');
+  }
+
   // Strict on-chain verification mandate: no simulated deposits permitted without valid L1 receipt
   if (!params.l1TxHash || !/^0x[0-9a-fA-F]{64}$/.test(params.l1TxHash)) {
     throw new Error('On-chain verification required: Valid Ethereum L1 deposit transaction hash must be confirmed.');
@@ -709,16 +647,6 @@ export async function executeShieldDeposit(
   const addr         = params.publicAddress.toLowerCase();
   const aztecAddress = `0xaztec${addr.slice(2, 10)}${addr.slice(-6)}`;
 
-  const numAmount = parseFloat(params.amount.replace(/,/g, '')) || 0;
-  updateShieldedBalance(params.publicAddress, numAmount, params.token);
-
-  // Server relay
-  fetch('/api/zk/shield', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address: params.publicAddress, amount: params.amount, token: params.token, txHash }),
-  }).catch(() => {});
-
   emit('ledger_zk_shield_complete', { noteId, txHash, amount: params.amount, token: params.token });
   return { noteId, txHash, aztecAddress };
 }
@@ -730,6 +658,10 @@ export async function executeUnshield(
   params: ZkUnshieldParams,
   onProgress?: (step: string, pct: number) => void,
 ): Promise<{ l1TxHash: string; amount: string }> {
+  if (process.env.NEXT_PUBLIC_ZK_MODE !== 'demo') {
+    throw new Error('Unshield requires Aztec testnet PXE. Set NEXT_PUBLIC_ZK_MODE=demo for local testing.');
+  }
+
   const steps = [
     { label: 'Generating unshield proof…',        pct: 20 },
     { label: 'Nullifying Aztec note…',            pct: 50 },
@@ -743,18 +675,6 @@ export async function executeUnshield(
   }
 
   const l1TxHash = `0x${randomHex(32)}`;
-  const numAmount = parseFloat(params.amount.replace(/,/g, '')) || 0;
-
-  // Deduct shielded balance (need to find address from handle)
-  const tagMap = lsGet<Record<string, string>>(ZK_TAGS_STORAGE_KEY, {});
-  const addr = Object.entries(tagMap).find(([, v]) => v === params.zkHandle)?.[0];
-  if (addr) updateShieldedBalance(addr, -numAmount, params.token);
-
-  fetch('/api/zk/unshield', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address: addr, amount: params.amount, token: params.token, destination: params.destinationAddress }),
-  }).catch(() => {});
 
   emit('ledger_zk_unshield_complete', { l1TxHash, amount: params.amount, token: params.token });
   return { l1TxHash, amount: params.amount };
@@ -1045,14 +965,8 @@ export function releaseMilestone(escrowId: string, milestoneId: string): ZkEscro
     status: updatedStatus,
   });
 
-  // Credit recipient for released milestone
-  const amt = parseFloat(targetMilestone.amount) || 0;
-  if (amt > 0) {
-    const rawRecipient = escrow.recipientTag.startsWith('0x') ? escrow.recipientTag : (escrow as any).recipientAddress;
-    if (rawRecipient && /^0x[0-9a-fA-F]{40}$/.test(rawRecipient)) {
-      updateShieldedBalance(rawRecipient, amt, escrow.token);
-    }
-  }
+  // T-08: Balance update is handled by Aztec PXE, not client-side.
+  // Real escrow release will update balances via on-chain note creation.
 
   if (updated) emit('ledger_zk_milestone_released', { escrow: updated, milestoneId });
   return updated;

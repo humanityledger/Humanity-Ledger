@@ -4,7 +4,17 @@ import { cookies } from 'next/headers';
 import { hashRoomPassword, generateCrockfordRoomId, generateJoinToken } from '@/lib/utils/roomCrypto';
 import { getSession } from '@/lib/session';
 
-const ROOM_SECRET = process.env.CALL_ROOM_SECRET || process.env.NEXTAUTH_SECRET || 'ledger-call-secret-change-in-prod';
+function getCallRoomSecret(): string {
+  const secret = process.env.CALL_ROOM_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CALL_ROOM_SECRET environment variable is strictly required in production');
+    }
+    return 'dev-call-room-secret-local-only';
+  }
+  return secret;
+}
+
 const MAX_PARTICIPANTS = 20;
 const ROOM_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 const TOKEN_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours (longer than room TTL to avoid mid-call kicks)
@@ -79,7 +89,7 @@ export async function POST(req: NextRequest) {
   });
 
   // Issue a host join token
-  const token = generateJoinToken(roomId, address, ROOM_SECRET);
+  const token = generateJoinToken(roomId, address, getCallRoomSecret());
   const tokenExpiry = new Date(Date.now() + TOKEN_TTL_MS);
   await prisma.callRoomToken.create({
     data: { roomId, address, token, expiresAt: tokenExpiry }

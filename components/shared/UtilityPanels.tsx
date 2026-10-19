@@ -305,7 +305,6 @@ export function UtilityPanels() {
                                     className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[11px] font-black font-mono text-[#050505] focus:outline-none focus:border-black transition-all uppercase tracking-wider appearance-none"
                                 >
                                     <option value="light">Arctic Light</option>
-                                    <option value="dark">Void Dark</option>
                                     <option value="auto">System OS</option>
                                 </select>
                             </div>

@@ -419,7 +419,7 @@ export async function runWAF(req: NextRequest): Promise<NextResponse | null> {
     
     // [ABYSMALLY COMPLEX OPTIMIZATION]: Defeat NAT overlap (e.g. Apple Private Relay)
     // by composing a compound key using session tokens or user-agent hashes.
-    const sessionCookie = req.cookies.get('ledger_session')?.value || req.cookies.get('system_handshake')?.value;
+    const sessionCookie = req.cookies.get('ledger_session')?.value || req.cookies.get('humanity_session')?.value;
     const uaHash = ua ? Array.from(ua).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0).toString(16) : 'noua';
     
     // Use session token if available (perfect isolation), otherwise fallback to IP + UA Hash

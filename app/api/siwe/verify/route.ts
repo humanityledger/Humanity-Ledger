@@ -38,6 +38,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Nonce mismatch  replay attack rejected.' }, { status: 401 });
     }
 
+    // Nonce TTL: reject if issued more than 10 minutes ago
+    const issuedAt = fields.issuedAt ? new Date(fields.issuedAt).getTime() : 0;
+    if (issuedAt && Date.now() - issuedAt > 10 * 60 * 1000) {
+      return NextResponse.json({ error: 'Nonce expired' }, { status: 400 });
+    }
+
     //  Upsert System User 
     let user;
     try {

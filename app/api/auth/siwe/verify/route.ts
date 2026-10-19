@@ -25,6 +25,12 @@ export async function POST(req: NextRequest) {
       if (dbNonce.expiresAt < new Date()) {
         return NextResponse.json({ error: 'Nonce expired' }, { status: 400 });
       }
+
+      // Nonce TTL: reject if issued more than 10 minutes ago
+      const issuedAt = dbNonce.createdAt ? new Date(dbNonce.createdAt).getTime() : 0;
+      if (Date.now() - issuedAt > 10 * 60 * 1000) {
+        return NextResponse.json({ error: 'Nonce expired' }, { status: 400 });
+      }
     } catch (e: any) {
       console.warn('[SIWE] Nonce consumption failed or reused:', siweMessage.nonce);
       return NextResponse.json({ error: 'Invalid or consumed nonce' }, { status: 400 });

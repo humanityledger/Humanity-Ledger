@@ -252,8 +252,6 @@ model AuthUser {
   username            String?   @unique
   passwordHash        String?
   walletAddress       String?   @unique
-  encryptedMnemonic   String?   @db.Text
-  walletSalt          String?
   verified            Boolean   @default(false)
   verificationCode    String? // legacy inline code field (kept for compatibility)
   codeExpiresAt       DateTime?

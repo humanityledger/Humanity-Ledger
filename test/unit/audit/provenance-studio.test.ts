@@ -12,8 +12,8 @@ vi.mock('../../../lib/session', () => ({
 }));
 
 // 2. Mock Prisma
-vi.mock('../../../lib/prisma', () => ({
-  prisma: {
+const { prismaMock } = vi.hoisted(() => {
+  const mock: any = {
     productPassport: {
       count: vi.fn().mockResolvedValue(0),
       findUnique: vi.fn().mockResolvedValue(null),
@@ -27,8 +27,14 @@ vi.mock('../../../lib/prisma', () => ({
     },
     user: {
       findUnique: vi.fn().mockResolvedValue({ tier: 'CRYPTOGRAPHIC' })
-    }
-  }
+    },
+    $transaction: vi.fn().mockImplementation(async (cb: any) => typeof cb === 'function' ? cb(mock) : Promise.all(cb))
+  };
+  return { prismaMock: mock };
+});
+
+vi.mock('../../../lib/prisma', () => ({
+  prisma: prismaMock
 }));
 
 // 3. Mock OpenAI for Semantic Validation

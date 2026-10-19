@@ -152,18 +152,30 @@ export function GroupPartyCall({ groupId, groupName, myAddress, onClose, isActiv
 
         <div className="flex items-center gap-2 shrink-0">
           <button
+            onClick={toggleVideo}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold rounded-full transition-all shadow-sm ${
+              isVideoOff ? 'bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA]' : 'bg-[#30D158] text-white hover:bg-[#28b84d]'
+            }`}
+            title={isVideoOff ? 'Turn video on' : 'Turn video off'}
+          >
+            {isVideoOff ? <VideoOff size={13} /> : <Video size={13} />}
+            <span>Video</span>
+          </button>
+          <button
             onClick={() => setIsMinimized(false)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1C7AFF] hover:bg-[#1a6fe0] text-white text-[12px] font-bold rounded-full transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1C7AFF] hover:bg-[#1a6fe0] text-white text-[12px] font-bold rounded-full transition-all shadow-sm active:scale-95"
+            title="Join and expand call"
           >
             <Maximize2 size={13} />
-            <span>Expand</span>
+            <span>Join</span>
           </button>
           <button
             onClick={leaveCall}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FF3B30] hover:bg-red-600 text-white text-[12px] font-bold rounded-full transition-colors shadow-sm"
+            className="w-8 h-8 bg-[#FF3B30] hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all shadow-sm active:scale-95"
+            title="Leave / Close call"
+            aria-label="Leave call"
           >
-            <PhoneOff size={13} />
-            <span>Leave</span>
+            <X size={14} />
           </button>
         </div>
       </motion.div>

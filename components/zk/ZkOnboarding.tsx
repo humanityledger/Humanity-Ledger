@@ -310,6 +310,18 @@ export function ZkOnboarding({ address, onComplete, onSkip }: ZkOnboardingProps)
     ),
   };
 
+  if (process.env.NEXT_PUBLIC_ZK_MODE !== 'demo') {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 gap-4 text-center">
+        <div className="w-12 h-12 rounded-full bg-[#F2F2F7] flex items-center justify-center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1C7AFF" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3 className="text-[17px] font-bold text-[#1C1C1E]">Aztec Testnet Required</h3>
+        <p className="text-[14px] text-[#1C1C1E]/60 max-w-xs">Shielded payments will be available once Aztec testnet integration is complete. All privacy proofs use UltraHonk.</p>
+      </div>
+    );
+  }
+
   return (
     <div
       className="flex flex-col gap-5 bg-white rounded-3xl p-5 w-full max-w-sm mx-auto"

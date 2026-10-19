@@ -750,8 +750,6 @@ export function CommunityChatView({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-web3-address': myAddress.toLowerCase(),
-          'x-verified-session-address': myAddress.toLowerCase(),
         },
         credentials: 'same-origin',
         body: JSON.stringify({
@@ -760,7 +758,7 @@ export function CommunityChatView({
           // NO title field — keeps this record as a chat message (title=null)
           content: text,
           contentHtml: text,
-          plainText: text,
+          // F2-02: plainText intentionally omitted — private community messages must not expose cleartext
         }),
       });
       const body = await res.json().catch(() => ({}));

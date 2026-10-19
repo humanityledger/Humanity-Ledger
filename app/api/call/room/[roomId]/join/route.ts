@@ -4,7 +4,17 @@ import { cookies } from 'next/headers';
 import { verifyRoomPassword, generateJoinToken } from '@/lib/utils/roomCrypto';
 import { getSession } from '@/lib/session';
 
-const ROOM_SECRET = process.env.CALL_ROOM_SECRET || process.env.NEXTAUTH_SECRET || 'ledger-call-secret-change-in-prod';
+function getCallRoomSecret(): string {
+  const secret = process.env.CALL_ROOM_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CALL_ROOM_SECRET environment variable is strictly required in production');
+    }
+    return 'dev-call-room-secret-local-only';
+  }
+  return secret;
+}
+
 const TOKEN_TTL_MS = 4 * 60 * 60 * 1000;
 
 async function getSessionAddress(req: NextRequest): Promise<string | null> {
@@ -89,7 +99,7 @@ export async function POST(
   }
 
   // Issue join token
-  const token = generateJoinToken(roomId, address, ROOM_SECRET, peerId);
+  const token = generateJoinToken(roomId, address, getCallRoomSecret(), peerId);
   const tokenExpiry = new Date(Date.now() + TOKEN_TTL_MS);
   await prisma.callRoomToken.create({
     data: { roomId, address, token, expiresAt: tokenExpiry }

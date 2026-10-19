@@ -73,7 +73,6 @@ const PUBLIC_PREFIXES = [
   // '/api/chat/', (Removed from public routes for security)
   '/api/call/',          // Group call room API
   '/api/provenance/',    // Provenance log API called on XMTP connect
-  '/api/notifications/', // Notification inbox
   '/api/chat/users/search',
   '/_next/',
   '/connect',
@@ -193,8 +192,11 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
   // 1. Edge Rate Limiting for ALL API Routes
   if (pathname.startsWith('/api/')) {
-    const ip = req.headers.get('x-forwarded-for') || (req as any).ip || '127.0.0.1';
-    const clientIp = ip.split(',')[0].trim();
+    // T-12: Use the LAST hop of X-Forwarded-For (the Railway proxy IP closest to us).
+    // Using the first hop is easy to spoof by injecting fake IPs. Last hop = trusted.
+    const forwardedFor = req.headers.get('x-forwarded-for') || '';
+    const hops = forwardedFor.split(',').map(h => h.trim()).filter(Boolean);
+    const clientIp = hops.length > 0 ? hops[hops.length - 1] : ((req as any).ip || '127.0.0.1');
     const rateLimitRes = applyRateLimit(clientIp, pathname);
     if (rateLimitRes) return rateLimitRes;
   }
@@ -298,12 +300,14 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   // [SECURITY] Strict CSP: includes 'wasm-unsafe-eval' for Barretenberg UltraHonk client proving
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+    "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
   );
 
   // [SECURITY] Cross-Origin Isolation for Barretenberg WASM Multithreading (SharedArrayBuffer)
-  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-  response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
+  if (req.nextUrl.pathname.startsWith('/prove')) {
+    response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+    response.headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
+  }
 
   // [SECURITY] Additional hardening headers
   response.headers.set('X-Content-Type-Options', 'nosniff');

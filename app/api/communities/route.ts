@@ -47,13 +47,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    let address = await resolveVerifiedCaller(req);
-    if (!address) {
-      const headerAddr = req.headers.get('x-web3-address');
-      if (headerAddr && /^0x[a-fA-F0-9]{40}$/.test(headerAddr)) {
-        address = headerAddr.toLowerCase();
-      }
-    }
+    const address = await resolveVerifiedCaller(req);
     if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { name, description, isPrivate } = await req.json();

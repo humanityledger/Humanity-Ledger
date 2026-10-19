@@ -756,7 +756,7 @@ function RegistryContent() {
   // ── UI State
   const [activeTab, setActiveTab] = useState<TabType>("map");
   const [network, setNetwork] = useState<NetworkType>("testnet");
-  const [isDark, setIsDark] = useState(false);
+  const isDark = false;
   const [netDropOpen, setNetDropOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -1338,21 +1338,7 @@ function RegistryContent() {
               </button>
             </div>
 
-            {/* Dark / Light Toggle */}
-            <button
-              onClick={() => setIsDark((p) => !p)}
-              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              className="p-2 rounded-lg transition-all"
-              style={{
-                border: isDark
-                  ? "1px solid rgba(255,255,255,0.1)"
-                  : "1px solid rgba(0,0,0,0.1)",
-                backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "#fff",
-                color: isDark ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.55)",
-              }}
-            >
-              <span className="text-[10px] font-bold uppercase tracking-wider">{isDark ? "DARK" : "LIGHT"}</span>
-            </button>
+
           </div>
         </div>
 

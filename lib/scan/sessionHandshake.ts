@@ -6,19 +6,6 @@ export type SessionHandshakeResult =
   | { ok: true; cleanup?: () => void }
   | { ok: false; message: string; needsWallet?: boolean };
 
-/**
- * Read the wallet address from the system_handshake cookie (JS-readable).
- * Returns null if not set or invalid format.
- */
-function getHandshakeCookieAddress(): string | null {
-  try {
-    const match = document.cookie.match(/system_handshake=(0x[0-9a-fA-F]{40})/i);
-    return match?.[1]?.toLowerCase() ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export async function completeSessionHandshake(
   decodedText: string,
   getAddress: () => string | null,
@@ -112,12 +99,7 @@ export async function completeSessionHandshake(
   }
 
   // Determine the authoritative address
-  let resolvedAddress: string | null = null;
-  if (wagmiAddr) {
-    resolvedAddress = wagmiAddr.toLowerCase();
-  } else {
-    resolvedAddress = getHandshakeCookieAddress();
-  }
+  let resolvedAddress: string | null = wagmiAddr ? wagmiAddr.toLowerCase() : null;
 
   // 1. Verify if the server already recognizes our session (via HttpOnly cookies)
   // We CANNOT check document.cookie for human_session because it is HttpOnly.

@@ -46,7 +46,7 @@ export default async function KnowledgeGraphEntityPage({
   const inEdges = record.get('inEdges').filter((e: any) => e.node);
 
   return (
-    <div className="min-h-screen bg-transparent text-[#050505] dark:text-[#FFFFFF] p-12">
+    <div className="min-h-screen bg-transparent text-[#050505] p-12">
       <header className="mb-12 border-b border-black/10 pb-6 flex justify-between items-end">
         <div>
           <span className="text-[10px] font-black uppercase tracking-[0.25em] opacity-40 mb-2 block text-indigo-600">
@@ -117,7 +117,7 @@ export default async function KnowledgeGraphEntityPage({
                       <h4 className="text-[10px] uppercase font-bold tracking-widest opacity-30 mb-3">Outgoing Relations</h4>
                       <div className="grid grid-cols-2 gap-4">
                          {outEdges.map((edge: any, i: number) => (
-                           <div key={i} className="p-4 bg-white/20 dark:bg-black/20 backdrop-blur-md border border-black/5 dark:border-white/5 rounded-2xl flex items-center gap-4 hover:border-indigo-600/30 transition-colors cursor-pointer group">
+                           <div key={i} className="p-4 bg-white/20 backdrop-blur-md border border-black/5 rounded-2xl flex items-center gap-4 hover:border-indigo-600/30 transition-colors cursor-pointer group">
                               <span className="text-[9px] font-mono font-black uppercase text-indigo-500 bg-indigo-50 px-2 py-1 rounded-md">{edge.relation}</span>
                               <div className="flex flex-col">
                                  <span className="font-bold text-[12px]">{edge.node.properties.name || edge.node.properties.address || edge.node.properties.symbol}</span>
@@ -135,7 +135,7 @@ export default async function KnowledgeGraphEntityPage({
                       <h4 className="text-[10px] uppercase font-bold tracking-widest opacity-30 mb-3 mt-6">Incoming Flows</h4>
                       <div className="grid grid-cols-2 gap-4">
                          {inEdges.map((edge: any, i: number) => (
-                           <div key={i} className="p-4 bg-white/20 dark:bg-black/20 backdrop-blur-md border border-black/5 dark:border-white/5 rounded-2xl flex items-center gap-4 hover:border-black/20 dark:hover:border-white/20 transition-colors cursor-pointer group">
+                           <div key={i} className="p-4 bg-white/20 backdrop-blur-md border border-black/5 rounded-2xl flex items-center gap-4 hover:border-black/20 transition-colors cursor-pointer group">
                               <span className="text-[9px] font-mono font-black uppercase text-black/50 bg-black/5 px-2 py-1 rounded-md">{edge.relation}</span>
                               <div className="flex flex-col">
                                  <span className="font-bold text-[12px]">{edge.node.properties.name || edge.node.properties.address || edge.node.properties.symbol}</span>

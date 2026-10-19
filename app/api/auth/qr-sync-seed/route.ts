@@ -40,7 +40,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'QR session not found or already expired' }, { status: 404 });
     }
 
-    await safeRedisSet(`qr-seed:${uuid}`, JSON.stringify({ encryptedSeed, iv, tag }), 'EX', 300);
+    // Tie seed to creator's session
+    const { getSession } = await import('@/lib/session');
+    const session = await getSession();
+    const creatorAddress = session?.userId ? session.userId.toLowerCase() : null;
+
+    await safeRedisSet(`qr-seed:${uuid}`, JSON.stringify({ encryptedSeed, iv, tag, creatorAddress }), 'EX', 300);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Sync failed' }, { status: 500 });
@@ -53,18 +58,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing or invalid uuid' }, { status: 400 });
   }
 
-  // [SECURITY] Require a valid JWT — the mobile always has human_session after completing qr-mobile-link
-  const humanSession =
-    req.cookies.get('human_session')?.value ||
-    req.cookies.get('ledger_session')?.value;
-  if (!humanSession) {
-    return NextResponse.json({ error: 'Unauthenticated: session required to retrieve seed' }, { status: 401 });
-  }
-  try {
-    const { verifyJWT } = await import('@/lib/jwt');
-    await verifyJWT(humanSession);
-  } catch {
-    return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
+  // [SECURITY] Session check: Ensure requesting client is authenticated
+  const { getSession } = await import('@/lib/session');
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const data = await safeRedisGet(`qr-seed:${uuid}`);
@@ -72,5 +70,14 @@ export async function GET(req: NextRequest) {
 
   const parsed = safeJsonParse(data, null, 'QR_SYNC_SEED');
   if (!parsed) return NextResponse.json({ error: 'Invalid seed data' }, { status: 500 });
+
+  // Only return seeds created by this address (T-13 session binding)
+  const parsedAny = parsed as any;
+  if (parsedAny?.creatorAddress && session.userId) {
+    if (parsedAny.creatorAddress.toLowerCase() !== session.userId.toLowerCase()) {
+      return NextResponse.json({ error: 'Forbidden: seed belongs to another user' }, { status: 403 });
+    }
+  }
+
   return NextResponse.json(parsed);
 }

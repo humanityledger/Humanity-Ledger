@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 import { useChatEngine } from '@/context/ChatEngineProvider';
 import { createPortal } from 'react-dom';
-import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Smile, Paperclip, BarChart2, Wallet, Flame } from 'lucide-react';
+import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Smile, Paperclip, BarChart2, Wallet, Flame, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import type Peer from 'peerjs';
@@ -4164,21 +4164,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             </button>
             <button onClick={() => window.location.href = '/portfolio'} className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#F2F2F7] text-[#000000] hover:bg-[#E5E5EA] transition-all text-[12px] font-semibold active:scale-95">
               <PieChart size={13} />
-            </button>
-            {/* â”€â”€ GROUP CALL BUTTONS â”€â”€ */}
-            <button
-              onClick={() => createGroupCall('')}
-              title="Start Group Video Call"
-              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#34C759]/10 text-[#34C759] hover:bg-[#34C759]/20 transition-all text-[12px] font-semibold active:scale-95"
-            >
-              <Video size={13} />
-            </button>
-            <button
-              onClick={() => setShowJoinModal(true)}
-              title="Join Call by Room ID"
-              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-all text-[12px] font-semibold active:scale-95"
-            >
-              <Radio size={13} />
             </button>
             <button onClick={() => setShowSettings(true)} className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-[10px] bg-[#F2F2F7] text-[#000000] hover:bg-[#E5E5EA] transition-all text-[12px] font-semibold active:scale-95">
               <Settings size={13} />

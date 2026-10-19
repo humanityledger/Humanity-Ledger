@@ -320,8 +320,6 @@ const nextConfig = {
         '@aztec/bb.js',
     ],
 
-    typescript: { ignoreBuildErrors: true },
-    eslint: { ignoreDuringBuilds: true },
     experimental: {
         serverActions: {
             // [QUANTUM HARDENING] Block massive payloads at the framework level
@@ -337,13 +335,6 @@ const nextConfig = {
         removeConsole: process.env.NODE_ENV === 'production'
             ? { exclude: ['error', 'warn'] }
             : false,
-    },
-
-    typescript: {
-        ignoreBuildErrors: true
-    },
-    eslint: {
-        ignoreDuringBuilds: true
     },
 
     // External packages are defined above in experimental.serverComponentsExternalPackages

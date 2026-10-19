@@ -71,86 +71,30 @@ const PXE_STORAGE_KEY_PREFIX = 'ledger_aztec_pxe_';
 const NULLIFIER_TREE_KEY = 'ledger_aztec_nullifier_tree';
 const NOTES_CACHE_KEY = 'ledger_aztec_notes_cache';
 
-// ─── Key Derivation ──────────────────────────────────────────────────────────
+import { sha256 } from '@noble/hashes/sha256';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 
-function sha256Hex(input: string): string {
-  try {
-    const nodeCrypto = require('crypto');
-    return nodeCrypto.createHash('sha256').update(input).digest('hex');
-  } catch {
-    // Browser fallback
-    if (typeof crypto !== 'undefined' && crypto.subtle) {
-      // Synchronous SHA-256 approximation for browser when subtle is async
-    }
-    let h = 0x811c9dc5;
-    for (let i = 0; i < input.length; i++) {
-      h = Math.imul(h ^ input.charCodeAt(i), 0x01000193);
-    }
-    return Math.abs(h).toString(16).padStart(64, '0');
-  }
+// ─── Cryptographic Hashes (@noble/hashes) ───────────────────────────────────
+
+export function sha256Hex(input: string | Uint8Array): string {
+  const bytes = typeof input === 'string' ? utf8ToBytes(input) : input;
+  return bytesToHex(sha256(bytes));
 }
 
 /**
- * Derives a full Aztec cryptographic key set.
- * [C5 HARDENING]: Aztec secret keys (sk_m, nsk_m, ivsk_m, ovsk_m) must NEVER be derived
- * purely from a public Ethereum address. We require a private entropy seed (from user signature
- * or secure client-side enclave).
+ * [C5 / T-04 HARDENING]: Aztec secret keys must NEVER be derived from public Ethereum addresses.
+ * Official Aztec key management is provided via Aztec PXE Wallet (@aztec/aztec.js).
  */
-export function deriveAztecKeySet(evmAddress: string, secretEntropy?: string): AztecKeySet {
+export function deriveAztecKeySet(evmAddress: string, _secretEntropy?: string): AztecKeySet {
   const cleanAddr = evmAddress.toLowerCase().replace('0x', '');
-  
-  let seed = secretEntropy;
-  if (!seed && typeof window !== 'undefined') {
-    try {
-      const storageKey = `hl_aztec_pxe_seed_${cleanAddr}`;
-      let stored = localStorage.getItem(storageKey);
-      if (!stored) {
-        const randBytes = new Uint8Array(32);
-        crypto.getRandomValues(randBytes);
-        stored = Array.from(randBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-        localStorage.setItem(storageKey, stored);
-      }
-      seed = stored;
-    } catch {}
-  }
-  
-  const baseEntropy = seed ? `${cleanAddr}:${seed}` : `${cleanAddr}:enclave-seed-v2`;
-  const masterEntropy = sha256Hex(`${baseEntropy}:master`);
-  const sk_m = `0x${masterEntropy}`;
-  const nsk_m = `0x${sha256Hex(`${sk_m}:nullifier_secret_key`)}`;
-  const ivsk_m = `0x${sha256Hex(`${sk_m}:incoming_viewing_key`)}`;
-  const ovsk_m = `0x${sha256Hex(`${sk_m}:outgoing_viewing_key`)}`;
-  const npk = `0x04${sha256Hex(`${nsk_m}:nullifier_public_key`).slice(0, 64)}`;
-  const aztecAddr = `0xaztec${cleanAddr.slice(0, 8)}${sha256Hex(`${cleanAddr}:${npk}`).slice(0, 8)}`;
-
   return {
-    masterSecretKey: sk_m,
-    nullifierSecretKey: nsk_m,
-    incomingViewingKey: ivsk_m,
-    outgoingViewingKey: ovsk_m,
-    nullifierPublicKey: npk,
-    aztecAddress: aztecAddr,
+    masterSecretKey: 'Unavailable (Aztec Testnet PXE required)',
+    nullifierSecretKey: 'Unavailable (Aztec Testnet PXE required)',
+    incomingViewingKey: 'Unavailable (Aztec Testnet PXE required)',
+    outgoingViewingKey: 'Unavailable (Aztec Testnet PXE required)',
+    nullifierPublicKey: 'Unavailable (Aztec Testnet PXE required)',
+    aztecAddress: `0xaztec:testnet:${cleanAddr.slice(0, 8)}...`,
   };
-}
-
-// ─── Note Commitment & Nullifier Cryptography ────────────────────────────────
-
-/**
- * Computes deterministic Note Commitment: Poseidon2/SHA-256(value, owner, randomness, token)
- */
-export function computeNoteCommitment(value: string, owner: string, randomness: string, token: string): string {
-  const inputStr = `${value}:${owner.toLowerCase()}:${randomness}:${token}`;
-  const hash = sha256Hex(inputStr);
-  return `0xnote_${hash.slice(0, 32)}`;
-}
-
-/**
- * Computes deterministic Note Nullifier: Poseidon2/SHA-256(commitment, nullifierSecretKey)
- */
-export function computeNoteNullifier(commitment: string, nullifierSecretKey: string): string {
-  const inputStr = `${commitment}:${nullifierSecretKey}`;
-  const hash = sha256Hex(inputStr);
-  return `0xnull_${hash.slice(0, 32)}`;
 }
 
 // ─── Local PXE Note Store & Cache ────────────────────────────────────────────

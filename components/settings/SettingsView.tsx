@@ -10,7 +10,7 @@ import { useWalletStore } from '@/lib/store/wallet-store';
 import { toast } from 'sonner';
 import {
   X, Globe, Shield, EyeOff, FileText, Database, CreditCard,
-  Activity, Bell, Moon, Sun, Monitor, Lock, Key, Fingerprint, AlertTriangle,
+  Activity, Bell, Sun, Monitor, Lock, Key, Fingerprint, AlertTriangle,
   Wifi, WifiOff, Zap, BarChart2, Layers, RefreshCw, Trash2, Download,
   Upload, Clock, Sliders, UserCheck, ShieldOff, BellOff, PlugZap, Cpu,
   Gauge, HardDrive, Network, Code2, ChevronDown, Check, Info, ArrowUpRight,
@@ -320,10 +320,9 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
     return (
       <div className="flex flex-col gap-1.5">
         <SectionLabel>Theme</SectionLabel>
-        <div className="grid grid-cols-3 gap-2 mb-1">
+        <div className="grid grid-cols-2 gap-2 mb-1">
           {([
             { label: 'Light', value: 'light', icon: Sun },
-            { label: 'Dark', value: 'dark', icon: Moon },
             { label: 'System', value: 'auto', icon: Monitor },
           ] as const).map(({ label, value, icon: Icon }) => (
             <button
@@ -355,6 +354,15 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
   function renderSecurity() {
     return (
       <div className="flex flex-col gap-1.5">
+        <div className="mb-3 p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
+          <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={18} />
+          <div>
+            <h4 className="text-[13px] font-bold text-amber-900">Security Advisory</h4>
+            <p className="text-[11px] text-amber-700 leading-relaxed mt-0.5">
+              Accounts created before 7746250: move funds to a new wallet.
+            </p>
+          </div>
+        </div>
         <SectionLabel>Auto-Lock</SectionLabel>
         <Row icon={Clock} title="Auto-Lock Timer" desc="Automatically lock wallet after inactivity.">
           <div className="mt-1.5">

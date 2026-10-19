@@ -10,19 +10,15 @@ export async function POST(req: Request) {
     }
 
     try {
-        const cookieStore = await cookies();
-        const address = cookieStore.get('system_handshake')?.value;
-
+        const address = session.userId.toLowerCase();
         let userId: string | undefined = undefined;
-        if (address) {
-            try {
-                const user = await prisma.user.findUnique({
-                    where: { walletAddress: address },
-                    select: { id: true }
-                });
-                if (user) userId = user.id;
-            } catch { /* ignore */ }
-        }
+        try {
+            const user = await prisma.user.findUnique({
+                where: { walletAddress: address },
+                select: { id: true }
+            });
+            if (user) userId = user.id;
+        } catch { /* ignore */ }
 
         const body = await req.json();
         const { action, metadata } = body;

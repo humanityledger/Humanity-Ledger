@@ -399,9 +399,9 @@ export function ZkWalletPanel({
                     <div className="px-4 pb-4 space-y-3">
                       <div className="grid grid-cols-3 gap-2 text-center">
                         {[
-                          { label: 'Anonymity Set', value: `${privacy.anonymitySetSize} wallets` },
-                          { label: 'Note Age',      value: `${privacy.noteAge} blocks` },
-                          { label: 'Risk Level',    value: privacy.riskLevel.charAt(0).toUpperCase() + privacy.riskLevel.slice(1) },
+                          { label: 'Privacy Score', value: `${privacy.score}/100` },
+                          { label: 'Grade',         value: privacy.grade ?? 'Pending' },
+                          { label: 'Status',        value: privacy.score === 0 ? 'Testnet Required' : 'Active' },
                         ].map(({ label, value }) => (
                           <div key={label} className="bg-[#F4F4F6] rounded-xl p-2.5">
                             <div className="text-[10px] text-gray-400 font-semibold uppercase">{label}</div>
@@ -410,12 +410,10 @@ export function ZkWalletPanel({
                         ))}
                       </div>
                       <div className="space-y-1.5">
-                        {privacy.suggestions.map((s, i) => (
-                          <div key={i} className="flex items-start gap-2 text-[11px] text-gray-600">
-                            <AlertCircle size={12} className="mt-0.5 text-black/50 flex-shrink-0" />
-                            <span>{s}</span>
-                          </div>
-                        ))}
+                        <div className="flex items-start gap-2 text-[11px] text-gray-600">
+                          <AlertCircle size={12} className="mt-0.5 text-black/50 flex-shrink-0" />
+                          <span>{privacy.recommendation ?? 'Connect Aztec testnet to compute real privacy score.'}</span>
+                        </div>
                       </div>
                       <a
                         href="https://aztec.network"
