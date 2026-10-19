@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
+'use client';
+import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 
 interface VirtualizedMessageListProps {
   messages: any[];
@@ -24,12 +24,9 @@ const MemoizedMessageRow = React.memo(({
 }) => {
   const senderLower = (msg.senderInboxId ?? '').toLowerCase();
   const isMe =
-    // Explicit flags set by DirectMessage polling and offline queue handlers
     (typeof msg.isMe === 'boolean' ? msg.isMe : false) ||
     (typeof msg.fromPeer === 'boolean' ? !msg.fromPeer : false) ||
-    // XMTP inboxId match
     (clientInboxIdLower && !!senderLower && senderLower === clientInboxIdLower) ||
-    // Ethereum address match (covers WalletConnect users)
     (!!senderLower && senderLower === myAddressLower) ||
     (!!msg.senderAddress && msg.senderAddress.toLowerCase() === myAddressLower);
   
@@ -54,55 +51,51 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
   onLoadMore,
   isLoadingMore
 }) => {
-  const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   
   const myAddressLower = useMemo(() => myAddress.toLowerCase(), [myAddress]);
   const clientInboxIdLower = useMemo(() => (clientInboxId ?? '').toLowerCase(), [clientInboxId]);
 
-  const startReached = useCallback(() => {
-    if (!isLoadingMore) onLoadMore();
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    if (scrollRef.current.scrollTop < 60 && !isLoadingMore) {
+      onLoadMore();
+    }
   }, [isLoadingMore, onLoadMore]);
 
-  // Scroll to bottom when new messages arrive or peer changes
+  // Scroll to bottom when messages update or peer changes
   useEffect(() => {
     if (messages.length > 0) {
-      // Small delay to let DOM settle before scrolling
       const t = setTimeout(() => {
-        virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, behavior: 'smooth' });
-      }, 80);
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 60);
       return () => clearTimeout(t);
     }
   }, [messages.length, activePeer]);
 
   return (
-    // CRITICAL: parent must have explicit height so Virtuoso can scroll.
-    // Using `style={{ height: '100%', overflow: 'hidden' }}` so flex parent drives the height.
-    <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <Virtuoso
-        ref={virtuosoRef}
-        data={messages}
-        initialTopMostItemIndex={messages.length > 0 ? messages.length - 1 : 0}
-        startReached={startReached}
-        alignToBottom={true}
-        followOutput="smooth"
-        style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
-        itemContent={(_index, msg) => (
-          <MemoizedMessageRow 
-            key={msg.id}
-            msg={msg} 
-            myAddressLower={myAddressLower}
-            clientInboxIdLower={clientInboxIdLower}
-            renderMessage={renderMessage} 
-          />
-        )}
-        components={{
-          Header: () => isLoadingMore ? (
-            <div className="h-10 w-full flex items-center justify-center">
-              <div className="text-xs text-black/40 animate-pulse">Loading older messages...</div>
-            </div>
-          ) : null
-        }}
-      />
+    <div 
+      ref={scrollRef}
+      onScroll={handleScroll}
+      className="flex-1 overflow-y-auto overscroll-contain flex flex-col p-4 space-y-2"
+      style={{ WebkitOverflowScrolling: 'touch' }}
+    >
+      {isLoadingMore && (
+        <div className="h-10 w-full flex items-center justify-center shrink-0">
+          <div className="text-xs text-black/40 animate-pulse font-medium">Loading previous messages...</div>
+        </div>
+      )}
+      {messages.map((msg: any) => (
+        <MemoizedMessageRow 
+          key={msg.id}
+          msg={msg} 
+          myAddressLower={myAddressLower}
+          clientInboxIdLower={clientInboxIdLower}
+          renderMessage={renderMessage} 
+        />
+      ))}
+      <div ref={bottomRef} className="h-1 shrink-0" />
     </div>
   );
 };

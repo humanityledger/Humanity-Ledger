@@ -153,7 +153,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
   const [partyCallMode, setPartyCallMode] = useState<'voice' | 'video'>('voice');
 
   // Post refresh interval
-  const refreshRef = useRef<ReturnType<typeof setInterval>>();
+  const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Fetch Community ─────────────────────────────────────────────────────────
   const fetchCommunity = useCallback(async () => {
@@ -279,7 +279,9 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
     fetchCommunity();
     fetchPosts();
     refreshRef.current = setInterval(fetchPosts, 6000);
-    return () => clearInterval(refreshRef.current);
+    return () => {
+      if (refreshRef.current) clearInterval(refreshRef.current);
+    };
   }, [fetchCommunity, fetchPosts]);
 
   // ── Like handler ────────────────────────────────────────────────────────────

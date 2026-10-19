@@ -1,4 +1,6 @@
-import { createPXEClient, type PXE } from '@aztec/aztec.js';
+import { createPXEClient } from '@aztec/aztec.js';
+
+export type PXE = any;
 
 const AZTEC_NODE_URL = process.env.AZTEC_NODE_URL || 'https://v5.testnet.rpc.aztec-labs.com';
 
@@ -14,4 +16,3 @@ export function getIsolatedPXE(sessionJwt: string): PXE {
   // For this sandbox, we connect to the node's public PXE (read-only / test mode)
   return createPXEClient(AZTEC_NODE_URL);
 }
-

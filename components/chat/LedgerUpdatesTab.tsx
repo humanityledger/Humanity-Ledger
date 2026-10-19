@@ -10,6 +10,7 @@ interface StatusUpdate {
   id: string;
   text: string;
   emoji?: string;
+  avatarUrl?: string;
   createdAt: number;
   expiresAt: number;
   privacy: 'everyone' | 'contacts' | 'except';

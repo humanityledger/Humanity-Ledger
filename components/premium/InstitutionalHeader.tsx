@@ -109,7 +109,7 @@ export default function InstitutionalHeader() {
         <div className="flex items-center gap-12">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
-              <HLLogo className="w-7 h-7" priority />
+              <HLLogo variant="mark" size={28} />
               <span className="font-black text-lg tracking-tight">Humanity Ledger NETWORK</span>
             </div>
             <nav className="flex items-center gap-8 font-black">

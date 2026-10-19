@@ -1,4 +1,4 @@
-import { useContractRead, useContractWrite, useAccount } from 'wagmi';
+import { useReadContract, useWriteContract, useAccount } from 'wagmi';
 import { parseAbi } from 'viem';
 
 /**
@@ -42,39 +42,60 @@ export function useHumanityAppchain() {
   const { address, isConnected } = useAccount();
 
   // 1. Fetch all App Addresses
-  const { data: systemConfig } = useContractRead({
+  const { data: systemConfig } = useReadContract({
     address: CORE_CONTRACT_ADDRESS,
     abi: CORE_ABI,
     functionName: 'getSystemConfiguration',
   });
 
+  const { writeContractAsync } = useWriteContract();
+
   // 2. Identity Registration
-  const { writeAsync: registerIdentity } = useContractWrite({
-    address: systemConfig?.[0], // Identity Registry Address
-    abi: IDENTITY_ABI,
-    functionName: 'registerIdentity',
-  });
+  const registerIdentity = async (args: any) => {
+    const registryAddr = (systemConfig as any)?.[0];
+    if (!registryAddr) return;
+    return writeContractAsync({
+      address: registryAddr as `0x${string}`,
+      abi: IDENTITY_ABI,
+      functionName: 'registerIdentity',
+      args,
+    });
+  };
 
   // 3. Decentralized Chat
-  const { writeAsync: sendOnChainMessage } = useContractWrite({
-    address: systemConfig?.[2], // Ledger Chat Address
-    abi: CHAT_ABI,
-    functionName: 'sendMessage',
-  });
+  const sendOnChainMessage = async (args: any) => {
+    const chatAddr = (systemConfig as any)?.[2];
+    if (!chatAddr) return;
+    return writeContractAsync({
+      address: chatAddr as `0x${string}`,
+      abi: CHAT_ABI,
+      functionName: 'sendMessage',
+      args,
+    });
+  };
 
   // 4. Academy Submissions
-  const { writeAsync: submitLesson } = useContractWrite({
-    address: systemConfig?.[6], // Academy Core Address
-    abi: ACADEMY_ABI,
-    functionName: 'submitLesson',
-  });
+  const submitLesson = async (args: any) => {
+    const academyAddr = (systemConfig as any)?.[6];
+    if (!academyAddr) return;
+    return writeContractAsync({
+      address: academyAddr as `0x${string}`,
+      abi: ACADEMY_ABI,
+      functionName: 'submitLesson',
+      args,
+    });
+  };
 
   // 5. Vault Heartbeat
-  const { writeAsync: pingVaultHeartbeat } = useContractWrite({
-    address: systemConfig?.[7], // TimeLockVault Address
-    abi: VAULT_ABI,
-    functionName: 'pingHeartbeat',
-  });
+  const pingVaultHeartbeat = async () => {
+    const vaultAddr = (systemConfig as any)?.[7];
+    if (!vaultAddr) return;
+    return writeContractAsync({
+      address: vaultAddr as `0x${string}`,
+      abi: VAULT_ABI,
+      functionName: 'pingHeartbeat',
+    });
+  };
 
   return {
     isReady: !!systemConfig || !CORE_CONTRACT_ADDRESS,

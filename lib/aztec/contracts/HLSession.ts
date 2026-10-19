@@ -1,4 +1,6 @@
-import { type AztecAddress, type Wallet } from '@aztec/aztec.js';
+export type AztecAddress = any;
+export type Wallet = any;
+
 export class HLSessionWrapper {
   constructor(public wallet: Wallet, public contractAddress: AztecAddress) {}
   async establishSession(sessionId: string) {

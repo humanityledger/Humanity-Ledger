@@ -1,11 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Lock,
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Lock,
   CheckCircle,
   ExternalLink,
   X,
-  Sparkles
+  Sparkles,
+  Waves,
+  Plus,
+  Clock,
+  ArrowDownLeft
 } from 'lucide-react';
 import {
   ZkPaymentStream,
@@ -20,10 +26,11 @@ interface ZkStreamManagerProps {
   userAddress: string;
   userTag?: string;
   onClose?: () => void;
+  onStreamCreated?: (stream: any) => void;
   className?: string;
 }
 
-export function ZkStreamManager({ userAddress, userTag, onClose, className = '' }: ZkStreamManagerProps) {
+export function ZkStreamManager({ userAddress, userTag, onClose, onStreamCreated, className = '' }: ZkStreamManagerProps) {
   const [tab, setTab] = useState<'incoming' | 'outgoing'>('outgoing');
   const [streams, setStreams] = useState<{ outgoing: ZkPaymentStream[]; incoming: ZkPaymentStream[] }>({
     outgoing: [],
@@ -62,16 +69,20 @@ export function ZkStreamManager({ userAddress, userTag, onClose, className = '' 
     e.preventDefault();
     if (!recipientTag || !depositAmount) return;
 
-    createShieldedStream({
+    const newStream = createShieldedStream({
       senderTag: userTag || `zk:${userAddress.slice(2, 8)}`,
       recipientTag: recipientTag.startsWith('zk:') ? recipientTag : `zk:${recipientTag}`,
-      senderAddress: userAddress,
-      recipientAddress: recipientTag.startsWith('0x') ? recipientTag : undefined,
+      senderAddress: userAddress || '0x0',
+      recipientAddress: recipientTag.startsWith('0x') ? recipientTag : '',
       token,
       depositAmount,
       durationSeconds: durationDays * 86400,
       memo,
     });
+
+    if (onStreamCreated) {
+      onStreamCreated(newStream);
+    }
 
     setShowCreateModal(false);
     refreshStreams();

@@ -18,6 +18,8 @@ export function TerminalSettingsPanel() {
   const { isLoading, updateSetting, fetchSettings } = store;
   const [activeTab, setActiveTab] = useState('general');
   const { nuclearDisconnect } = useSystemSignOut();
+  const { address } = useAccount();
+  const { data: balance } = useBalance({ address });
 
   const CATEGORIES = [
     { id: 'account', label: 'Account' },

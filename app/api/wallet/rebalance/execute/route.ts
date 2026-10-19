@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
         const authUser = await prisma.authUser.findUnique({
             where: { id: plan.userId },
-            select: { encryptedPrivateKey: true, walletAddress: true }
+            select: { walletAddress: true }
         });
 
         if (!authUser || !authUser.walletAddress) {

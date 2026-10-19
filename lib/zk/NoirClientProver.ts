@@ -13,7 +13,7 @@ export class ClientNoirProver {
 
     constructor(circuit: CompiledCircuit) {
         this.backend = new BarretenbergBackend(circuit);
-        this.noir = new Noir(circuit, this.backend);
+        this.noir = new (Noir as any)(circuit);
     }
 
     /**

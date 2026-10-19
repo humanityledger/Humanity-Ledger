@@ -1916,7 +1916,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     <button
                       type="button"
                       key={opt}
-                      onClick={() => { updateSetting('auto_delete_timer', opt === 'off' ? undefined : opt); setModal(null); toast.success('Timer saved'); }}
+                      onClick={() => { updateSetting('auto_delete_timer', (opt === 'off' ? 'off' : opt) as any); setModal(null); toast.success('Timer saved'); }}
                       className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${(settings.auto_delete_timer || 'off') === opt ? 'bg-[#1C1C1E] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA]'}`}
                     >
                       <span className="font-semibold">{opt === 'off' ? 'Disabled' : opt}</span>
@@ -1939,7 +1939,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     <button
                       type="button"
                       key={pack.id}
-                      onClick={() => { updateSetting('sound_pack', pack.id); setModal(null); toast.success('Sound pack saved'); }}
+                      onClick={() => { updateSetting('sound_pack', pack.id as any); setModal(null); toast.success('Sound pack saved'); }}
                       className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${(settings.sound_pack || 'default') === pack.id ? 'bg-[#1C1C1E] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA]'}`}
                     >
                       <div className="text-left">
@@ -2005,7 +2005,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       <button
                         type="button"
                         key={bg}
-                        onClick={() => { updateSetting('chat_background', bg); setModal(null); toast.success('Wallpaper saved'); }}
+                        onClick={() => { updateSetting('chat_background', bg as any); setModal(null); toast.success('Wallpaper saved'); }}
                         className={`h-24 rounded-2xl border-2 flex items-center justify-center font-semibold text-[12px] transition-all ${
                           (settings.chat_background || 'default') === bg
                             ? 'border-[#1C1C1E] text-[#1C1C1E] bg-black/5'
@@ -2031,7 +2031,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     <button
                       type="button"
                       key={style.id}
-                      onClick={() => { updateSetting('bubble_style', style.id); setModal(null); toast.success('Saved'); }}
+                      onClick={() => { updateSetting('bubble_style', style.id as any); setModal(null); toast.success('Saved'); }}
                       className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 ${(settings.bubble_style || 'default') === style.id ? 'bg-[#1C1C1E] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E]'}`}
                     >
                       <div className="text-left">

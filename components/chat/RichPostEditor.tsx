@@ -131,7 +131,7 @@ const SLASH_COMMANDS = [
 function TB({
   icon: Icon, label, onClick, active = false, disabled = false, danger = false,
 }: {
-  icon: React.ElementType;
+  icon: any;
   label: string;
   onClick: () => void;
   active?: boolean;
@@ -309,7 +309,7 @@ export function RichPostEditor({
       attributes: {
         class: 'prose prose-sm max-w-none focus:outline-none min-h-[200px] px-5 py-4 text-[15px] leading-relaxed',
       },
-      handleKeyDown(view, event) {
+      handleKeyDown(view: any, event: any) {
         if (event.key === '/') {
           setTimeout(() => {
             const selection = window.getSelection();

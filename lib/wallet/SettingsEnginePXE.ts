@@ -242,10 +242,22 @@ export interface LedgerProtocolSettings {
   requireSignature?: boolean;
   /** Anti-screenshot mode */
   anti_screenshot?: boolean;
-  /** Save to photos gallery */
-  saveToPhotos?: boolean;
   /** Disappearing messages timer */
   disappearing_messages?: string;
+  address_book_sync?: boolean;
+  zk_private_dai_default?: boolean;
+  zk_auto_shield?: boolean;
+  zk_client_proofs?: boolean;
+  zk_min_anonymity?: boolean;
+  payments_enabled?: boolean;
+  payment_confirmations?: boolean;
+  show_balances?: boolean;
+  default_token?: string;
+  chat_background_custom_url?: string;
+  chat_font?: string;
+  font_size?: string | number;
+  font_family?: string;
+  privacy_read_receipts?: boolean;
 }
 
 // ───────────────────────────────────────────────────────────────────────────

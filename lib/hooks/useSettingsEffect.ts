@@ -88,7 +88,7 @@ export function useSettingsEffect(
       };
       document.documentElement.style.setProperty(
         '--ledger-chat-font-size',
-        sizes[settings.font_size] || '15px'
+        sizes[settings.font_size as string] || '15px'
       );
     }
 
@@ -104,7 +104,7 @@ export function useSettingsEffect(
       };
       document.documentElement.style.setProperty(
         '--ledger-chat-font-family',
-        fonts[settings.font_family] || fonts.system
+        fonts[settings.font_family as string] || fonts.system
       );
     }
 

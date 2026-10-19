@@ -957,7 +957,7 @@ export const MessageBubble = React.memo(({
                     <span className="text-[10px] font-bold text-[#25D366] uppercase tracking-wider">Ledger Bot</span>
                   </div>
                   <div className="text-[14px] text-[#1C1C1E] whitespace-pre-wrap">
-                    {content.replace(/^🤖 /, '').split('\n').map((line, i) => (
+                    {content.replace(/^🤖 /, '').split('\n').map((line: string, i: number) => (
                       <p key={i} className={line.startsWith('**') ? 'font-bold text-[#25D366]' : ''}>
                         {line.replace(/\*\*/g, '')}
                       </p>

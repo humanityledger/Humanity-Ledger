@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { validateSecureRequest } from '@/lib/security/premium-security';
 import { prisma } from '@/lib/prisma';
 
@@ -20,7 +20,7 @@ const DIRECT_COLUMNS: Record<string, string> = {
   stealthy_mode:         'stealthMode',
 };
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const validation = await validateSecureRequest(req);
     if (!validation.valid || !validation.userId) {

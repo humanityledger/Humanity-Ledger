@@ -118,7 +118,7 @@ export function ZkRecipientPicker({ senderAddress, onSelect, onClose }: ZkRecipi
   const isValidAddress = /^0x[0-9a-fA-F]{40}$/.test(query.trim());
   const isValidHandle  = /^zk:[a-z0-9_.-]{3,32}$/.test(query.trim());
 
-  const tabs: Array<{ id: 'contacts' | 'recent' | 'search'; label: string; icon: React.ElementType }> = [
+  const tabs: Array<{ id: 'contacts' | 'recent' | 'search'; label: string; icon: any }> = [
     { id: 'contacts', label: 'Contacts',  icon: Users  },
     { id: 'recent',   label: 'Recent',    icon: Clock  },
     { id: 'search',   label: 'Search',    icon: Search },

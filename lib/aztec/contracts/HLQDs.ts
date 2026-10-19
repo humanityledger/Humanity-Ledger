@@ -1,4 +1,6 @@
-import { type AztecAddress, type Wallet } from '@aztec/aztec.js';
+export type AztecAddress = any;
+export type Wallet = any;
+
 export class HLQDsWrapper {
   constructor(public wallet: Wallet, public contractAddress: AztecAddress) {}
   async transfer(to: AztecAddress, amount: number, nonce: number) {

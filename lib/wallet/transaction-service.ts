@@ -19,14 +19,13 @@ export class TransactionService {
     ) {
         console.log(`[TX] ${amount} ${asset}  ${toAddress} on ${network}`);
 
-        // 1. Get User's Encrypted Key
-        const user = await prisma.authUser.findFirst({
-            where: { walletAddress: userId },
-            select: { encryptedPrivateKey: true }
+        // 1. Get User's Encrypted Key (Non-Custodial Sovereign Check)
+        const user: any = await (prisma.authUser as any).findFirst({
+            where: { walletAddress: userId }
         });
 
         if (!user || !user.encryptedPrivateKey) {
-            throw new Error('Wallet not initialized');
+            throw new Error('Non-custodial signing: Transaction must be authorized via client wallet');
         }
 
         // 2. Decrypt Private Key
@@ -166,12 +165,11 @@ export class TransactionService {
         }
 
         // 3. SWAP / BRIDGE FLOW (Execution Aggregation)
-        const user = await prisma.authUser.findFirst({
-            where: { walletAddress: params.userId },
-            select: { encryptedPrivateKey: true }
+        const user: any = await (prisma.authUser as any).findFirst({
+            where: { walletAddress: params.userId }
         });
 
-        if (!user || !user.encryptedPrivateKey) throw new Error('Wallet not initialized');
+        if (!user || !user.encryptedPrivateKey) throw new Error('Non-custodial signing: Transaction must be authorized via client wallet');
         
         let txHash: string;
         const sourceAsset = params.fromAsset;

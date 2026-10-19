@@ -127,7 +127,7 @@ export async function DELETE(
   const room = await prisma.callRoom.findFirst({ where: { roomId, isActive: true } });
   if (!room) return NextResponse.json({ success: true }); // idempotent
 
-  const updatedParticipants = room.participants.filter(p => p !== address);
+  const updatedParticipants = room.participants.filter((p: string) => p !== address);
   let newModerator = room.moderatorAddress;
 
   // If moderator is leaving, transfer to next participant (or deactivate if empty)

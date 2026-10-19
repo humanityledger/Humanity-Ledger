@@ -554,8 +554,8 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           </div>
           <div className="py-2 border-y border-white/10 my-2">
-            <p className="text-[20px] font-black text-white font-mono">{stream.totalAmount} <span className="text-[12px] text-emerald-400">zk{stream.token}</span></p>
-            <p className="text-[11px] text-white/50">{stream.flowRate} {stream.token}/sec</p>
+            <p className="text-[20px] font-black text-white font-mono">{(stream as any).totalAmount || stream.depositAmount} <span className="text-[12px] text-emerald-400">zk{stream.token}</span></p>
+            <p className="text-[11px] text-white/50">{(stream as any).flowRate || stream.ratePerSecond} {stream.token}/sec</p>
           </div>
           <div className="text-[10px] font-mono text-white/60 flex justify-between">
             <span>To: {stream.recipientTag}</span>
@@ -583,9 +583,9 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
             </span>
           </div>
           <h4 className="font-bold text-white text-[13px]">{invoice.title || 'Private Invoice'}</h4>
-          <p className="text-[11px] text-white/60 mb-2">{invoice.description}</p>
+          <p className="text-[11px] text-white/60 mb-2">{(invoice as any).description || invoice.notes || 'Confidential Invoice'}</p>
           <div className="flex items-center justify-between pt-2 border-t border-white/10">
-            <span className="text-[18px] font-black text-emerald-400">{invoice.amount} <span className="text-[11px]">zk{invoice.token}</span></span>
+            <span className="text-[18px] font-black text-emerald-400">{(invoice as any).amount || invoice.totalAmount || '0'} <span className="text-[11px]">zk{invoice.token}</span></span>
             <span className="px-2.5 py-1 rounded-xl bg-white/10 text-white text-[11px] font-mono">
               zk.money
             </span>
@@ -719,7 +719,9 @@ export function CommunityChatView({
     fetchMessages(false);
     setTimeout(() => scrollToBottom(false), 150);
     pollIntervalRef.current = setInterval(() => fetchMessages(true), 3000);
-    return () => clearInterval(pollIntervalRef.current);
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
   }, [fetchMessages]);
 
   // ─── SEND MESSAGE ───────────────────────────────────────────────────────────
@@ -1435,10 +1437,10 @@ export function CommunityChatView({
             <ZkStreamManager
               userAddress={myAddress}
               onClose={() => setShowZkStreamModal(false)}
-              onStreamCreated={(stream) => {
+              onStreamCreated={(stream: any) => {
                 executeSend(encodeStreamPayload(stream));
                 setShowZkStreamModal(false);
-                toast.success('Flujo privado lanzado en Aztec!');
+                toast.success('Private Aztec payment stream active');
               }}
             />
           </div>

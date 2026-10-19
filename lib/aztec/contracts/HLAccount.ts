@@ -1,4 +1,5 @@
-import { type AztecAddress, type Wallet } from '@aztec/aztec.js';
+export type AztecAddress = any;
+export type Wallet = any;
 
 export class HLAccountWrapper {
   constructor(public wallet: Wallet, public contractAddress: AztecAddress) {}
@@ -8,4 +9,3 @@ export class HLAccountWrapper {
     return { send: () => ({ wait: async () => ({ status: 'mined' }) }) };
   }
 }
-

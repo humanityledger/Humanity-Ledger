@@ -239,7 +239,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                       { label: 'Total Txs', value: txHistory.length },
                       { label: 'Active Streams', value: streams.outgoing.filter(s => s.status === 'active').length + streams.incoming.filter(s => s.status === 'active').length },
                       { label: 'Invoices', value: invoices.issued.length + invoices.received.length },
-                      { label: 'Privacy Score', value: calculatePrivacyScore({ txHash: '0x', senderTag: 'x', recipientTag: 'x', amount: '0', token: 'DAI', status: 'settled', timestamp: Date.now(), noteId: 'x', aztecExplorerUrl: '' }).score },
+                      { label: 'Privacy Score', value: calculatePrivacyScore({ txHash: '0x', senderTag: 'x', recipientTag: 'x', amount: '0', token: 'DAI', status: 'settled', timestamp: Date.now(), nullifierHash: 'x', aztecExplorerUrl: '' }).score },
                     ].map(({ label, value }) => (
                       <div key={label} className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-3 text-center">
                         <div className="text-[20px] font-black text-gray-900">{value}</div>

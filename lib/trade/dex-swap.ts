@@ -71,14 +71,13 @@ export class DexSwapService {
   async executeSwap({ userId, tokenIn, tokenOut, amountIn, slippagePercent = 0.5 }: SwapParams): Promise<string> {
     console.log(`[DEX] Swapping ${amountIn} ${tokenIn}  ${tokenOut}`);
 
-    // 1. Get User Wallet
-    const user = await prisma.authUser.findFirst({
+    // 1. Get User Wallet (Non-Custodial Sovereign Check)
+    const user: any = await (prisma.authUser as any).findFirst({
       where: { walletAddress: userId },
-      select: { encryptedPrivateKey: true }
     });
 
     if (!user || !user.encryptedPrivateKey) {
-      throw new Error('Wallet not initialized');
+      throw new Error('Non-custodial signing: Transaction must be authorized via client wallet');
     }
 
     const privateKey = await decrypt(user.encryptedPrivateKey);

@@ -91,7 +91,7 @@ function ActionButton({
   sublabel,
   onClick,
 }: {
-  icon: React.ElementType;
+  icon: any;
   label: string;
   sublabel?: string;
   onClick?: () => void;

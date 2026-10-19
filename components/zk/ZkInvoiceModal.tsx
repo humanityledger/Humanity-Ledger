@@ -89,7 +89,7 @@ export function ZkInvoiceModal({
       senderTag: userTag || `zk:${userAddress.slice(2, 8)}`,
       senderAddress: userAddress,
       recipientTag: recipientTag.startsWith('zk:') ? recipientTag : `zk:${recipientTag}`,
-      recipientAddress: initialRecipientAddress || (recipientTag.startsWith('0x') ? recipientTag : undefined),
+      recipientAddress: initialRecipientAddress || (recipientTag.startsWith('0x') ? recipientTag : ''),
       token,
       items,
       taxRate,
@@ -108,7 +108,7 @@ export function ZkInvoiceModal({
     try {
       const paymentResult = await executeShieldedPayment(
         {
-          senderTag: userTag || `zk:${userAddress.slice(2, 8)}`,
+          senderAddress: userAddress || '0x0',
           recipientTag: existingInvoice.senderTag,
           amount: existingInvoice.totalAmount,
           token: existingInvoice.token,
@@ -120,7 +120,7 @@ export function ZkInvoiceModal({
         }
       );
 
-      markInvoicePaid(existingInvoice.id, paymentResult.txHash, paymentResult.noteId);
+      markInvoicePaid(existingInvoice.id, paymentResult.txHash, paymentResult.nullifierHash);
       if (onInvoicePaid) {
         onInvoicePaid({ ...existingInvoice, status: 'paid', settlementTxHash: paymentResult.txHash });
       }

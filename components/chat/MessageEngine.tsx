@@ -303,7 +303,7 @@ export default function MessageEngine({
 
   // Chat background style
   const bgStyle = useMemo((): React.CSSProperties => {
-    switch (chatBackground) {
+    switch (chatBackground as string) {
       case 'amoled':
         return { background: '#000000' };
       case 'holographic':

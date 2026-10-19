@@ -67,7 +67,9 @@ export async function POST(req: Request) {
             await prisma.$transaction(async (tx) => {
                 // Delete core relationship trees (Prisma handles some cascades, but we are explicit)
                 await tx.session.deleteMany({ where: { userId: userAddress } });
-                await tx.userSessionLog.deleteMany({ where: { userId: userAddress } });
+                if ((tx as any).userSessionLog) {
+                    await (tx as any).userSessionLog.deleteMany({ where: { userId: userAddress } });
+                }
                 await tx.blockchainTransaction.deleteMany({ where: { userId: userAddress } });
                 
                 // Finally delete the user completely

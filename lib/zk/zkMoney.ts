@@ -118,7 +118,7 @@ export interface ZkMilestone {
   id: string;
   description: string;
   amount: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'released';
   approvedAt?: number;
 }
 
@@ -129,7 +129,7 @@ export interface ZkEscrowState {
   amount: string;
   token: SupportedToken;
   conditions: string;
-  status: 'locked' | 'released' | 'disputed' | 'cancelled';
+  status: 'locked' | 'released' | 'disputed' | 'cancelled' | 'partially_released' | 'completed';
   milestones: ZkMilestone[];
   createdAt: number;
   expiresAt: number;

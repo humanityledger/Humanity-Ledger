@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       select: { id: true, enclavePinHash: true, enclaveOtpAttempts: true, enclaveOtpExpiresAt: true } as any,
     }).catch(() => null);
     
-    let authUserRow = null;
+    let authUserRow: any = null;
     if (!userRow) {
       authUserRow = await prisma.authUser.findFirst({
         where: { OR: [{ id: userId }, { walletAddress: userId.toLowerCase() }] },

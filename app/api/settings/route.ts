@@ -59,10 +59,10 @@ export async function POST(req: Request) {
 
     const settings = await prisma.userSettings.upsert({
       where: { walletAddress: userId.toLowerCase() },
-      update: { settings: sanitized, lastSyncedAt: new Date() },
+      update: { settings: sanitized as any, lastSyncedAt: new Date() },
       create: {
         walletAddress: userId.toLowerCase(),
-        settings: sanitized,
+        settings: sanitized as any,
         lastSyncedAt: new Date()
       }
     });

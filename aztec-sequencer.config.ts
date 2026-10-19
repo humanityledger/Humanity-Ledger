@@ -1,5 +1,31 @@
-import { SequencerConfig, P2PConfig, L1Contracts } from '@aztec/aztec.js';
 import dotenv from 'dotenv';
+
+export interface L1Contracts {
+  rollupAddress?: string;
+  registryAddress?: string;
+  inboxAddress?: string;
+  outboxAddress?: string;
+}
+
+export interface SequencerConfig {
+  publisherPrivateKey?: string;
+  l1RpcUrl?: string;
+  l1ChainId?: number;
+  minTxsPerBlock?: number;
+  maxTxsPerBlock?: number;
+  coinbase?: string;
+  feeRecipient?: string;
+  archiverUrl?: string;
+  disableProverGpu?: boolean;
+  l1Contracts?: L1Contracts;
+}
+
+export interface P2PConfig {
+  p2pEnabled?: boolean;
+  tcpListenIp?: string;
+  tcpListenPort?: number;
+  bootstrapNodes?: string[];
+}
 
 dotenv.config();
 
@@ -43,7 +69,7 @@ export const humanityLedgerSequencerConfig: SequencerConfig & P2PConfig = {
   archiverUrl: process.env.ARCHIVER_URL || 'http://localhost:8080',
   
   // Mempool Constraints for High-Throughput Ledger Chat
-  maxTxPerBlock: 1024,
+  maxTxsPerBlock: 1024,
   minTxsPerBlock: 1,
   
   // Proving infrastructure (Delegated to specialized hardware)

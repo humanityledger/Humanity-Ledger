@@ -26,10 +26,12 @@ interface ZkEscrowCardProps {
 
 function EscrowStatusBadge({ status }: { status: ZkEscrowState['status'] }) {
   const map: Record<ZkEscrowState['status'], { label: string; color: string }> = {
-    locked:    { label: 'Locked',    color: '#1C1C1E' },
-    released:  { label: 'Released',  color: '#34C759' },
-    disputed:  { label: 'Disputed',  color: '#FF9500' },
-    cancelled: { label: 'Cancelled', color: '#FF3B30' },
+    locked:             { label: 'Locked',             color: '#1C1C1E' },
+    released:           { label: 'Released',           color: '#34C759' },
+    partially_released: { label: 'Partially Released', color: '#007AFF' },
+    completed:          { label: 'Completed',          color: '#34C759' },
+    disputed:           { label: 'Disputed',           color: '#FF9500' },
+    cancelled:          { label: 'Cancelled',          color: '#FF3B30' },
   };
   const { label, color } = map[status];
   return (
@@ -57,6 +59,7 @@ function MilestoneRow({
   const statusConfig = {
     pending:  { icon: Clock,         color: '#FF9500', label: 'Pending'  },
     approved: { icon: CheckCircle,   color: '#1C1C1E', label: 'Approved' },
+    released: { icon: CheckCircle,   color: '#34C759', label: 'Released' },
     rejected: { icon: X,             color: '#FF3B30', label: 'Rejected' },
   };
   const { icon: Icon, color, label } = statusConfig[milestone.status];

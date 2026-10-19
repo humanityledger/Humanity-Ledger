@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const EASE = [0.16, 1, 0.3, 1];
+const EASE: any = [0.16, 1, 0.3, 1];
 
 const CSSIPhone = ({ children, title, subtitle }: { children: React.ReactNode; title: string; subtitle: string }) => (
   <div className="flex flex-col items-center">

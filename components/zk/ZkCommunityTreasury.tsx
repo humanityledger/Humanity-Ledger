@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import {
   getCommunityTreasury, addToTreasury, withdrawFromTreasury,
-  ZkCommunityTreasury, SupportedToken,
+  type ZkCommunityTreasury as ZkCommunityTreasuryModel, SupportedToken,
 } from '@/lib/zk/zkMoney';
 import {
   getCommunityTips, getOpenBounties, claimBounty,
@@ -97,7 +97,7 @@ export function ZkCommunityTreasury({
   isAdmin = false,
   currentUserAddress = '',
 }: ZkCommunityTreasuryProps) {
-  const [treasury,   setTreasury]   = useState<ZkCommunityTreasury>(getCommunityTreasury(communityId));
+  const [treasury,   setTreasury]   = useState<ZkCommunityTreasuryModel>(getCommunityTreasury(communityId));
   const [stats,      setStats]      = useState<ZkCommunityStats>(getCommunityStats(communityId));
   const [tips,       setTips]       = useState<ZkTip[]>(getCommunityTips(communityId).slice(0, 10));
   const [bounties,   setBounties]   = useState<ZkBounty[]>(getOpenBounties(communityId));

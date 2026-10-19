@@ -76,16 +76,16 @@ export function ZkCommunityAnalytics({ communityId, communityName = 'Community',
 
         <div className="grid grid-cols-3 gap-3">
           {[
-            { token: 'zkDAI', amount: treasury.balance.DAI, icon: '🟡' },
-            { token: 'zkUSDC', amount: treasury.balance.USDC, icon: '🔵' },
-            { token: 'zkETH', amount: treasury.balance.ETH, icon: '💎' },
+            { token: 'zkDAI', amount: (treasury.balance as any).dai || (treasury.balance as any).DAI || '0', icon: '🟡' },
+            { token: 'zkUSDC', amount: (treasury.balance as any).usdc || (treasury.balance as any).USDC || '0', icon: '🔵' },
+            { token: 'zkETH', amount: (treasury.balance as any).eth || (treasury.balance as any).ETH || '0', icon: '💎' },
           ].map(({ token, amount, icon }) => (
             <div key={token} className="bg-white/[0.07] rounded-2xl p-3">
               <div className="text-[10px] text-white/50 font-semibold flex items-center gap-1">
                 <Lock size={9} /> {token}
               </div>
               <div className="text-[16px] font-black font-mono text-white mt-1">
-                {parseFloat(amount || '0').toFixed(token === 'zkETH' ? 4 : 2)}
+                {parseFloat(String(amount || '0')).toFixed(token === 'zkETH' ? 4 : 2)}
               </div>
             </div>
           ))}
@@ -94,11 +94,11 @@ export function ZkCommunityAnalytics({ communityId, communityName = 'Community',
         <div className="mt-3 pt-3 border-t border-white/[0.08] grid grid-cols-2 gap-3 text-[11px] font-mono">
           <div>
             <span className="text-white/40">Total Inflow:</span>
-            <span className="text-[#1C1C1E] font-bold ml-1">{parseFloat(treasury.totalInflow || '0').toFixed(2)} DAI</span>
+            <span className="text-[#1C1C1E] font-bold ml-1">{parseFloat(String(treasury.totalInflow || '0')).toFixed(2)} DAI</span>
           </div>
           <div>
             <span className="text-white/40">Total Outflow:</span>
-            <span className="text-red-400 font-bold ml-1">{parseFloat(treasury.totalOutflow || '0').toFixed(2)} DAI</span>
+            <span className="text-red-400 font-bold ml-1">{parseFloat(String(treasury.totalOutflow || '0')).toFixed(2)} DAI</span>
           </div>
         </div>
       </div>
@@ -158,7 +158,9 @@ export function ZkCommunityAnalytics({ communityId, communityName = 'Community',
                 <div className="w-6 h-6 rounded-full bg-[#f0f2f5] flex items-center justify-center text-[11px] font-black text-gray-500">
                   {i + 1}
                 </div>
-                <div className="flex-1 text-[12px] font-mono text-gray-700">{c.address.slice(0, 8)}...{c.address.slice(-4)}</div>
+                <div className="flex-1 text-[12px] font-mono text-gray-700">
+                  {c.zkHandle ? `${c.zkHandle.slice(0, 8)}...${c.zkHandle.slice(-4)}` : 'zk:anon'}
+                </div>
                 <div className="text-[12px] font-bold text-[#1C1C1E] font-mono">{parseFloat(c.amount || '0').toFixed(2)} DAI</div>
               </div>
             ))}

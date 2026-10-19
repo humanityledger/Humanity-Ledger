@@ -130,16 +130,17 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({
           ]
         });
 
+        const escrowTxHash = escrow.txHash || `0x_escrow_${Date.now()}`;
         const escrowPaymentResult: ZkPaymentResult = {
-          txHash: escrow.txHash,
+          txHash: escrowTxHash,
           status: 'shielded',
           timestamp: escrow.createdAt || Date.now(),
           token: selectedToken,
           amount,
           recipientTag,
           senderTag: resolveZkTag(myAddress),
-          aztecExplorerUrl: `${AZTEC_EXPLORER}/tx-effect/${escrow.txHash.replace('0x', '')}`,
-          nullifierHash: escrow.noteId,
+          aztecExplorerUrl: `${AZTEC_EXPLORER}/tx-effect/${escrowTxHash.replace('0x', '')}`,
+          nullifierHash: escrow.noteId || `0x_nullifier_${Date.now()}`,
           memo: `Escrow: ${escrow.conditions}`
         };
 

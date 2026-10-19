@@ -78,17 +78,18 @@ export async function POST(req: NextRequest) {
 
     if (!fallbackToModeB) {
       try {
-        const { createPXEClient }           = await import('@aztec/aztec.js');
-        const { getSchnorrAccount }         = await import('@aztec/accounts/schnorr');
-        const { Fr }                        = await import('@aztec/foundation/curves/bn254');
-        const { AztecAddress }              = await import('@aztec/stdlib/aztec-address');
-        const { TokenContract }             = await import('@aztec/noir-contracts.js/Token');
-        const { SponsoredFeePaymentMethod } = await import('@aztec/aztec.js/fee');
-        const { getFpcAddress }             = await import('@/lib/aztec/client');
+        const { createPXEClient }           = await import('@aztec/aztec.js') as any;
+        const schnorrModule: any            = await import('@aztec/accounts/schnorr');
+        const getSchnorrAccount             = schnorrModule.getSchnorrAccount;
+        const { Fr }                        = await import('@aztec/foundation/curves/bn254') as any;
+        const { AztecAddress }              = await import('@aztec/stdlib/aztec-address') as any;
+        const { TokenContract }             = await import('@aztec/noir-contracts.js/Token') as any;
+        const { SponsoredFeePaymentMethod } = await import('@aztec/aztec.js/fee') as any;
+        const { getFpcAddress }             = await import('@/lib/aztec/client') as any;
 
         const pxe = createPXEClient(pxeUrl);
         
-        const secretKey = Fr.fromHexString(relayerSecret.replace(/^0x/i, ''));
+        const secretKey = Fr.fromHexString(relayerSecret!.replace(/^0x/i, ''));
         const accountManager = getSchnorrAccount(pxe, secretKey, new Fr(0n), Fr.ZERO);
         const wallet = await accountManager.getWallet();
         const relayerAddr = wallet.getAddress();

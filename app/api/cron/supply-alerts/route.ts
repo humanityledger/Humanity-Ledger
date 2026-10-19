@@ -120,10 +120,10 @@ export async function GET(req: NextRequest) {
         `;
 
         // Dispatch emails parallelly (batching recommended for big lists, but okay for MVP)
-        const emailPromises = subscribers.map(sub => 
+        const emailPromises = subscribers.filter(sub => Boolean(sub.email)).map(sub => 
             resend.emails.send({
                 from: getSender('Humanity Ledger Vault'),
-                to: sub.email,
+                to: sub.email as string,
                 subject: ' Real-Time Supply Unlock Alert (Hourly Update)',
                 html: htmlContent
             }).catch(err => console.error(`[CRON] Failed to send email to ${sub.email}:`, err))

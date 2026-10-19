@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
     const { createAccessToken, createRefreshToken, setSessionCookies, generateFingerprint } = await import('@/lib/session');
     const fingerprint = generateFingerprint(userAgent, ip);
     
-    const accessToken  = await createAccessToken(user.id, user.email, fingerprint);
-    const refreshToken = await createRefreshToken(user.id, user.email, fingerprint);
+    const accessToken  = await createAccessToken(user.id, user.email || '', fingerprint);
+    const refreshToken = await createRefreshToken(user.id, user.email || '', fingerprint);
 
     // Set secure httpOnly cookies
     await setSessionCookies(accessToken, refreshToken);
