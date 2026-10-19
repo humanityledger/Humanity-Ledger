@@ -6,7 +6,6 @@
  * Compatible with @aztec/aztec.js v5 SDK (using @aztec/wallets).
  */
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 require('dotenv').config();
 
 const AZTEC_PXE_URL = process.env.AZTEC_PXE_URL || 'https://node.aztec.network';

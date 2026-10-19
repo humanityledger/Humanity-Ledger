@@ -19,7 +19,6 @@ import { polygon, polygonAmoy }                    from "viem/chains";
 
 let deploymentData: { address: string; abi: any[] } | null = null;
 try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   deploymentData = require("@/lib/blockchain/abi/SystemDeadmanSwitch.json");
 } catch {
   /* Not yet deployed */

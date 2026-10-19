@@ -26,7 +26,6 @@ export async function createWeb3Wallet() {
     });
 
     web3wallet = await Web3Wallet.init({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         core: core as any, // pino Logger types diverge between nested @walletconnect package versions
         metadata: {
             name: 'Ledger Portfolio',
