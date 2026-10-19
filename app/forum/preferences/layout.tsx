@@ -25,21 +25,21 @@ export default function PreferencesLayout({ children }: { children: React.ReactN
     <div className="max-w-[1440px] mx-auto px-4 py-8">
       
       {/* Top Banner (User Info) */}
-      <div className="flex items-start gap-6 mb-8 border-b border-black/5 dark:border-white/10 pb-6">
-        <div className="w-24 h-24 rounded-full overflow-hidden border border-black/10 dark:border-white/10 shrink-0">
+      <div className="flex items-start gap-6 mb-8 border-b border-black/5 pb-6">
+        <div className="w-24 h-24 rounded-full overflow-hidden border border-black/10 shrink-0">
           <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ledger" alt="Avatar" className="w-full h-full object-cover" />
         </div>
         <div>
-          <h1 className="text-2xl font-black text-black dark:text-white mb-1">humanityledger</h1>
-          <p className="text-black/50 dark:text-white/50 text-sm font-semibold mb-3">People can mention you as @humanityledger</p>
+          <h1 className="text-2xl font-black text-black mb-1">humanityledger</h1>
+          <p className="text-black/50 text-sm font-semibold mb-3">People can mention you as @humanityledger</p>
           <div className="flex items-center gap-4 text-sm font-semibold">
-            <Link href="/forum/u/humanityledger/summary" className="text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white flex items-center gap-2"><User size={14} /> Summary</Link>
-            <Link href="/forum/u/humanityledger/activity" className="text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white flex items-center gap-2"><Activity size={14} /> Activity</Link>
-            <Link href="/forum/u/humanityledger/notifications" className="text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white flex items-center gap-2"><Bell size={14} /> Notifications</Link>
+            <Link href="/forum/u/humanityledger/summary" className="text-black/60 hover:text-black flex items-center gap-2"><User size={14} /> Summary</Link>
+            <Link href="/forum/u/humanityledger/activity" className="text-black/60 hover:text-black flex items-center gap-2"><Activity size={14} /> Activity</Link>
+            <Link href="/forum/u/humanityledger/notifications" className="text-black/60 hover:text-black flex items-center gap-2"><Bell size={14} /> Notifications</Link>
           </div>
         </div>
         <div className="ml-auto">
-          <button className="px-4 py-2 border border-black/10 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/5 rounded-full text-sm font-bold flex items-center gap-2 transition-colors">
+          <button className="px-4 py-2 border border-black/10 hover:bg-black/5 rounded-full text-sm font-bold flex items-center gap-2 transition-colors">
             Expand
           </button>
         </div>
@@ -57,8 +57,8 @@ export default function PreferencesLayout({ children }: { children: React.ReactN
                   href={t.href}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${
                     isActive 
-                      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                      : 'text-black/60 hover:bg-black/5 hover:text-black dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white'
+                      ? 'bg-blue-50 text-blue-600' 
+                      : 'text-black/60 hover:bg-black/5 hover:text-black'
                   }`}
                 >
                   {t.icon}
@@ -83,4 +83,3 @@ const Activity = ({ size }: { size: number }) => (
     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
   </svg>
 );
-

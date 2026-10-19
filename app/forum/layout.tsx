@@ -8,7 +8,7 @@ export default async function ForumLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col bg-white dark:bg-[#1a1a1a] text-slate-900 dark:text-white transition-colors duration-300">
+    <div className="flex flex-col bg-white text-slate-900">
       <TelemetryTracker />
 
       <main className="flex-1 w-full overflow-x-hidden">

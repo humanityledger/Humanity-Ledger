@@ -15,7 +15,7 @@ export default function PredictionGridTab() {
   const [activeFilter, setActiveFilter] = useState('All');
 
   return (
-    <div className="w-full bg-transparent text-[#050505] dark:text-[#FFFFFF] p-12">
+    <div className="w-full bg-transparent text-[#050505] p-12">
       <header className="mb-14 border-b border-black/10 pb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <div className="flex items-center gap-3 mb-3">
@@ -44,7 +44,7 @@ export default function PredictionGridTab() {
              animate={{ opacity: 1, y: 0 }}
              transition={{ delay: i * 0.05 }}
              key={market.id}
-             className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 rounded-3xl shadow-sm hover:shadow-xl transition-all group flex flex-col justify-between"
+             className="bg-white/40 backdrop-blur-xl border border-black/5 p-6 rounded-3xl shadow-sm hover:shadow-xl transition-all group flex flex-col justify-between"
            >
               <div>
                 <div className="flex justify-between items-start mb-4">
@@ -78,7 +78,7 @@ export default function PredictionGridTab() {
                   href={`https://bridge.system.network/predict/${market.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full bg-white/20 dark:bg-black/20 backdrop-blur-md text-[#050505] dark:text-[#FFFFFF] p-3 rounded-xl flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest hover:bg-white/40 dark:hover:bg-white/10 transition-colors border border-black/5 dark:border-white/5"
+                  className="w-full bg-white/20 backdrop-blur-md text-[#050505] p-3 rounded-xl flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest hover:bg-white/40 transition-colors border border-black/5"
                 >
                   Direct Capital Routing <ChevronRight size={14} />
                 </a>
