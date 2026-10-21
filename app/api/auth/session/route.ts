@@ -48,13 +48,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    //  Priority 2: system_handshake cookie (raw wallet address) 
-    // [SECURITY PATCH] system_handshake is a JS-readable cookie set by the QR handshake flow.
-    // It is NOT a cryptographic proof of identity. Trusting it alone is equivalent to
-    // allowing anyone who can forge a cookie to impersonate any wallet.
-    // Removed: this block was the last remaining "blind trust" IDOR pattern.
-    // The user must have a valid signed JWT (human_session / ledger_session) to be authenticated.
-
     return NextResponse.json({ authenticated: false, user: null });
   } catch (error) {
     console.error('[Session API] Error:', error);

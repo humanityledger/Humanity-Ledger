@@ -222,7 +222,8 @@ const nextConfig = {
                 readline: false,
                 os: false,
                 path: false,
-                crypto: false,
+                crypto: require.resolve('crypto-browserify'),
+                stream: require.resolve('stream-browserify'),
                 // [METAMASK SDK FIX] @wagmi/connectors embeds @metamask/sdk which tries to
                 // load the 'encoding' node built-in. Stub it out for browser bundles.
                 encoding: false,

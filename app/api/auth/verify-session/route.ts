@@ -4,21 +4,16 @@ import { NextRequest, NextResponse } from 'next/server';
  * GET /api/auth/verify-session
  *
  * [UNIVERSAL SESSION VERIFICATION]
- * Checks ALL valid session token types used across the system:
- *   - ledger_session   : JWT from system-verify (MetaMask/Rainbow/Wagmi connect)
- *   - human_session   : JWT from qr-hydrate or system-verify
- *   - humanity_session: JWT from SIWE flow (P2-C.1 Identity Adapter)
- *   - system_handshake: raw 0x address (QR mobile handshake, fast path)
- *   - human.session-token: NextAuth JWT (Google OAuth, Email OTP via NextAuth)
+ * Cryptographically verifies session tokens:
+ *   - hl_session / ledger_session / human_session: Signed JWTs
+ *   - human.session-token: NextAuth JWT (Google OAuth)
  *
  * Priority order:
- *   1. Verify ledger_session / human_session JWT cryptographically.
- *   2. If JWT valid → session authentic. Heal system_handshake if missing.
- *   3. If JWT invalid/missing → check NextAuth session (Google OAuth).
- *   4. If NextAuth valid → authenticated. Heal system_handshake with email_ prefix.
- *   5. Otherwise → 401 Unauthenticated.
+ *   1. Verify primary JWT cryptographically (lib/jwt).
+ *   2. If JWT invalid/missing → check NextAuth session (Google OAuth).
+ *   3. Otherwise → 401 Unauthenticated.
  *
- * Also checks for humanity_session (SIWE P2-C.1) as supplementary identity context.
+ * NOTE: Legacy unauthenticated cookies are completely purged on every check.
  */
 export async function GET(request: NextRequest) {
     try {
@@ -113,8 +108,6 @@ export async function GET(request: NextRequest) {
             console.debug('[verify-session] NextAuth check skipped:', String(nextAuthError).substring(0, 80));
         }
 
-        // ─── Priority 3: [REMOVED INSECURE FALLBACK] ─────────────
-        // The system_handshake cookie alone is NOT trusted for auth bypass.
         // All sessions MUST be cryptographically verified via SIWE/JWT or NextAuth.
 
         return NextResponse.json(

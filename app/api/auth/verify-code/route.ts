@@ -204,9 +204,7 @@ export async function POST(request: NextRequest) {
     // Secure httpOnly session cookies
     await setSessionCookies(accessToken, refreshToken);
 
-    // ── 8. Set system_handshake cookie with full security flags ───────────────
-    // This cookie is read by useSystemAccount on the client to detect login.
-    // HttpOnly = false so client JS can read it, but Secure + SameSite protect it.
+    // ── 8. Return authenticated response ─────────────────────────────────────
     const isProd = process.env.NODE_ENV === 'production';
     const response = NextResponse.json({
       success: true,
