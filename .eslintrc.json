@@ -5,6 +5,10 @@
   "rules": {
     "react/no-unescaped-entities": "off",
     "react/jsx-no-comment-textnodes": "off",
-    "no-unused-vars": "off"
+    "no-unused-vars": "off",
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
+    "no-script-url": "error"
   }
 }

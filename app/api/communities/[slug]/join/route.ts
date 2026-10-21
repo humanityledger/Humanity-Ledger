@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
+import { requireWallet } from '@/lib/security/requireWallet';
 
 export const dynamic = 'force-dynamic';
 
+// A-008: Use requireWallet instead of resolveVerifiedCaller + x-web3-address header
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
-    let address = await resolveVerifiedCaller(req);
-    if (!address) {
-      const headerAddr = req.headers.get('x-web3-address');
-      if (headerAddr && /^0x[a-fA-F0-9]{40}$/.test(headerAddr)) {
-        address = headerAddr.toLowerCase();
-      }
-    }
-    if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const address = auth.walletAddress;
 
     const { slug: identifier } = await params;
     const community = await (prisma as any).community.findFirst({

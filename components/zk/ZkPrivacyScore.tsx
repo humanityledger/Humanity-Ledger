@@ -1,4 +1,6 @@
-'use client';
+﻿'use client';
+
+import { isZkEnabled } from '@/lib/features/zk';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,6 +33,7 @@ export function ZkPrivacyScore({
   onExploreNotes,
   onShieldMore
 }: ZkPrivacyScoreProps) {
+  if (!isZkEnabled) return null;
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'metrics' | 'notes' | 'recommendations'>('metrics');
   const [analysis, setAnalysis] = useState<ZkPrivacyAnalysis | null>(null);
@@ -338,3 +341,4 @@ export function ZkPrivacyScore({
     </div>
   );
 }
+

@@ -7,21 +7,22 @@ import { ClientMobileLanding } from '@/components/landing/ClientMobileLanding';
 // ── Minimal white skeleton shown during JS hydration on mobile ──────────────
 // ClientMobileLanding (MobileImmersiveGate) has ssr:false because it reads
 // cookies synchronously to decide its starting phase. While the bundle loads,
-// we show a white screen with the "Humanity Ledger" wordmark so the user never
-// sees a blank flash.
+// we show a white screen with the authentic world map logo so the user never
+// sees a blank flash or strange text.
 function MobileSkeleton() {
   return (
     <div
       className="fixed inset-0 bg-white flex flex-col items-center justify-center"
       style={{ height: '100vh' }}
     >
-      <div className="flex flex-col items-center gap-5">
-        <h1 className="font-serif text-[13.5vw] font-normal tracking-[-0.02em] text-[#0A0A0A] leading-none select-none text-center">
-          LEDGER
-          <br />
-          NETWORK
-        </h1>
-        <div className="w-6 h-6 border-2 border-[#0A0A0A]/20 border-t-[#0A0A0A]/60 rounded-full animate-spin" />
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-white border border-black/5 shadow-md p-1">
+          <img src="/worldmap.png" alt="Humanity Ledger" className="w-full h-full object-cover" />
+        </div>
+        <span className="font-black text-2xl tracking-tight text-[#0A0A0A]">
+          Humanity Ledger
+        </span>
+        <div className="w-6 h-6 border-2 border-[#0A0A0A]/20 border-t-[#0A0A0A]/60 rounded-full animate-spin mt-2" />
       </div>
     </div>
   );

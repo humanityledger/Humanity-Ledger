@@ -111,7 +111,7 @@ async function step2_schema(): Promise<boolean> {
     console.log('║ [2] SCHEMA MIGRATION & VERIFICATION       ║');
     console.log('╚═══════════════════════════════════════════╝');
 
-    run(`npx prisma db push --accept-data-loss --skip-generate`);
+    run(`npx prisma db push --skip-generate`);
 
     const tables: any[] = await prisma.$queryRaw`
         SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`;

@@ -1,49 +1,41 @@
 import { generateNonce } from 'siwe';
 import { NextRequest, NextResponse } from 'next/server';
+import { getRedisClient } from '@/lib/redis';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
-// In-memory rate limit: max 10 nonce requests per IP per minute
-const nonceRequests = new Map<string, { count: number; resetAt: number }>();
-
-function isNonceRateLimited(ip: string): boolean {
-    const now = Date.now();
-    const WINDOW_MS = 60 * 1000;
-    const MAX = 10;
-    const record = nonceRequests.get(ip);
-    if (!record || now > record.resetAt) {
-        nonceRequests.set(ip, { count: 1, resetAt: now + WINDOW_MS });
-        return false;
-    }
-    if (record.count >= MAX) return true;
-    record.count += 1;
-    return false;
-}
-
 export async function GET(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-  if (isNonceRateLimited(ip)) {
+  
+  // Rate limit: max 10 nonces per minute per IP
+  const rate = await checkRateLimit(ip, { max: 10, windowSec: 60, prefix: 'rl:siwe_nonce' });
+  if (!rate.allowed) {
     return new NextResponse('Too Many Requests', { status: 429 });
   }
 
-  const nonce = generateNonce(); // Cryptographically secure nonce (8+ chars)
+  const nonce = generateNonce(); // Cryptographically secure nonce
+
+  // B-011: Store nonce in Redis with 10-minute TTL, single-use
+  try {
+    const redis = await getRedisClient();
+    await redis.setex(`siwe:nonce:${nonce}`, 600, ip);
+  } catch (err) {
+    logger.warn({ err }, 'Redis error storing SIWE nonce — falling back to cookie only');
+  }
 
   const res = new NextResponse(nonce, {
     status: 200,
     headers: { 'Content-Type': 'text/plain' },
   });
 
-  // [IOS CHROME CRITICAL FIX] sameSite MUST be 'lax', NOT 'strict'.
-  // iOS WKWebView (Chrome on iOS, Safari) DROPS cookies with SameSite=Strict
-  // during cross-site navigation (deep-link to wallet app  universal link back).
-  // WalletConnect's redirect flow IS a cross-site top-level GET  'lax' allows it.
-  // Using 'strict' = nonce cookie is gone on return  "No nonce in session" error.
   res.cookies.set('siwe-nonce', nonce, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax', // CRITICAL: was 'strict', breaks all iOS wallet redirects
+    sameSite: 'lax',
     path: '/',
-    maxAge: 60 * 5, // 5 minutes  tight enough to prevent replay
+    maxAge: 600, // 10 minutes TTL
   });
 
   return res;

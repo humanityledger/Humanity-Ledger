@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-
-import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
-
-const ETH_ADDR_REGEX = /^0x[a-fA-F0-9]{40}$/;
+import { requireWallet } from '@/lib/security/requireWallet';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,16 +11,9 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(req: NextRequest) {
   try {
-    let address = await resolveVerifiedCaller(req);
-    if (!address) {
-      const headerAddr = req.headers.get('x-web3-address') || req.headers.get('x-verified-session-address');
-      const searchAddr = req.nextUrl.searchParams.get('address');
-      const candidate = headerAddr || searchAddr;
-      if (candidate && ETH_ADDR_REGEX.test(candidate)) {
-        address = candidate.toLowerCase();
-      }
-    }
-    if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const address = auth.walletAddress;
 
     const sinceParam = req.nextUrl.searchParams.get('since');
     const since = sinceParam ? new Date(parseInt(sinceParam, 10)) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -89,15 +79,9 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    let address = await resolveVerifiedCaller(req);
-    if (!address) {
-      // Fallback for wallet-connect users who don't have a session cookie
-      const headerAddr = req.headers.get('x-web3-address') || req.headers.get('x-verified-session-address');
-      if (headerAddr && ETH_ADDR_REGEX.test(headerAddr)) {
-        address = headerAddr.toLowerCase();
-      }
-    }
-    if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const address = auth.walletAddress;
 
     const body = await req.json();
     const { recipient, content } = body;

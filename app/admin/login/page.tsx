@@ -1,131 +1,115 @@
 "use client";
-import { useState } from "react";
+
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ShieldCheck, Lock, KeyRound } from "lucide-react";
+import { HLLogo } from "@/components/shared/HLLogo";
 
 export const dynamic = 'force-dynamic';
 
-
 export default function AdminLoginPage() {
-    const router = useRouter();
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-        try {
-            const res = await fetch("/api/admin/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
-            });
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, mfaCode }),
+      });
 
-            const data = await res.json();
+      const data = await res.json();
 
-            if (data.success) {
-                toast.success("Access granted");
-                router.push("/"); // Redirect to main app
-                router.refresh();
-            } else {
-                toast.error(data.message || "Access denied");
-            }
-        } catch (error) {
-            toast.error("Connection error");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+      if (data.success) {
+        toast.success("Administrator access granted");
+        router.push("/admin/clone-registry");
+        router.refresh();
+      } else {
+        toast.error(data.message || "Access denied");
+      }
+    } catch {
+      toast.error("Connection error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    return (
-        <div className="min-h-screen bg-black flex items-center justify-center relative overflow-hidden">
-            {/* Void Background */}
-            <div className="absolute inset-0 bg-gradient-radial from-neutral-900/50 to-black" />
-
-            {/* Animated Stars */}
-            <div className="absolute inset-0">
-                {[...Array(50)].map((_idx, i) => (
-                    <div
-                        key={i}
-                        className="absolute w-0.5 h-0.5 bg-white rounded-full opacity-30 animate-float"
-                        style={{
-                            left: `${Math.random() * 100}%`,
-                            animationDelay: `${Math.random() * 20}s`,
-                            animationDuration: `${20 + Math.random() * 10}s`,
-                        }}
-                    />
-                ))}
-            </div>
-
-            {/* Login Box */}
-            <div className="relative z-10 w-full max-w-md px-6">
-                <div className="bg-white/[0.02] backdrop-blur-2xl border border-white/5 rounded-3xl p-12 shadow-2xl">
-                    {/* Logo */}
-                    <div className="text-center mb-10">
-                        <h1 className="text-2xl font-extralight tracking-[0.5em] uppercase text-white">
-                            Humanity Ledger
-                        </h1>
-                        <p className="text-xs text-neutral-500 mt-2 tracking-widest">
-                            ADMIN PORTAL
-                        </p>
-                    </div>
-
-                    {/* Form */}
-                    <form onSubmit={handleLogin} className="space-y-4">
-                        <div>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Email"
-                                required
-                                className="w-full bg-black/50 border border-white/10 text-white placeholder-neutral-500 p-3 rounded-lg focus:outline-none focus:border-white/40 transition-colors"
-                            />
-                        </div>
-
-                        <div>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Password"
-                                required
-                                className="w-full bg-black/50 border border-white/10 text-white placeholder-neutral-500 p-3 rounded-lg focus:outline-none focus:border-white/40 transition-colors"
-                            />
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="w-full bg-white text-black py-3 rounded-lg font-bold hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-500 transition-all"
-                        >
-                            {isLoading ? "ACCESSING..." : "ENTER"}
-                        </button>
-                    </form>
-
-                    {/* Info */}
-                    <p className="text-center text-xs text-neutral-600 mt-6">
-                        Secure access via MongoDB Atlas
-                    </p>
-                </div>
-            </div>
-
-            <style jsx>{`
-                @keyframes float {
-                    from {
-                        transform: translateY(100dvh);
-                    }
-                    to {
-                        transform: translateY(-10vh);
-                    }
-                }
-                .animate-float {
-                    animation: float linear infinite;
-                }
-            `}</style>
+  return (
+    <div className="min-h-screen bg-[#FBFBFA] flex items-center justify-center p-6 font-sans">
+      <div className="w-full max-w-[400px] bg-white rounded-3xl border border-black/[0.08] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
+        <div className="flex flex-col items-center text-center mb-8">
+          <div className="mb-4">
+            <HLLogo size={36} />
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/5 text-[11px] font-bold text-black uppercase tracking-wider mb-2">
+            <ShieldCheck size={14} className="text-emerald-600" />
+            Restricted Admin Portal
+          </div>
+          <h1 className="text-2xl font-black text-[#1C1C1E] tracking-tight">Admin Authentication</h1>
+          <p className="text-xs text-black/40 mt-1 font-medium">MFA 2-Factor Authentication Required</p>
         </div>
-    );
-}
 
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-black/70 mb-1.5">Admin Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="admin@humanityledger.com"
+              className="w-full px-4 py-2.5 rounded-xl border border-black/10 focus:border-black focus:outline-none text-sm transition-colors text-black"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-black/70 mb-1.5">Password</label>
+            <div className="relative">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="••••••••••••"
+                className="w-full px-4 py-2.5 rounded-xl border border-black/10 focus:border-black focus:outline-none text-sm transition-colors text-black"
+              />
+              <Lock size={15} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-black/30" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-black/70 mb-1.5">6-Digit 2FA Code</label>
+            <div className="relative">
+              <input
+                type="text"
+                maxLength={6}
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value)}
+                required
+                placeholder="123456"
+                className="w-full px-4 py-2.5 rounded-xl border border-black/10 focus:border-black focus:outline-none text-sm font-mono tracking-widest text-black"
+              />
+              <KeyRound size={15} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-black/30" />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full mt-2 py-3 bg-[#1C1C1E] hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50"
+          >
+            {isLoading ? "Verifying Credentials..." : "Authenticate"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}

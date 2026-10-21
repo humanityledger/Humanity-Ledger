@@ -18,6 +18,11 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  // B-005: Disabled in production
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
+
   const nodeUrl = process.env.AZTEC_NODE_URL || 'https://node.aztec.network';
   const relayerSecretHex = process.env.AZTEC_RELAYER_SECRET_KEY;
   const existingAddress = process.env.AZTEC_TOKEN_CONTRACT_ADDRESS;

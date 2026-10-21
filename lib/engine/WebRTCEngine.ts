@@ -1,4 +1,4 @@
-import Peer, { MediaConnection, DataConnection } from 'peerjs';
+﻿import Peer, { MediaConnection, DataConnection } from 'peerjs';
 
 export type CallState = 'idle' | 'calling' | 'ringing' | 'connecting' | 'active';
 
@@ -99,35 +99,19 @@ export class WebRTCEngine {
     this.startTelemetry();
     const peerId = this.derivePeerId(this.myAddress);
     this.peer = new Peer(peerId, {
-      // Use PeerJS cloud signaling — reliable and free for signaling only
+      // Use PeerJS cloud signaling â€” reliable and free for signaling only
       // (Media goes P2P directly, signaling traffic is minimal)
       config: {
         iceServers: [
-          // Google STUN — most reliable globally
+          // Google STUN â€” most reliable globally
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
           { urls: 'stun:stun2.l.google.com:19302' },
-          // Twilio STUN — good Asian/LatAm coverage
+          // Twilio STUN â€” good Asian/LatAm coverage
           { urls: 'stun:global.stun.twilio.com:3478' },
           // Cloudflare STUN
           { urls: 'stun:stun.cloudflare.com:3478' },
-          // Public TURN relays as fallback for symmetric NAT, hotel WiFi, CGNAT
-          // These handle UDP-blocked networks (airports, corporate firewalls)
-          {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          },
-          {
-            urls: 'turn:openrelay.metered.ca:443',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          },
-          {
-            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          },
+          // TODO: Configure TURN_URLS, TURN_USERNAME, TURN_CREDENTIAL env vars for production TURN server
         ],
         iceTransportPolicy: 'all', // Try direct first, fall back to TURN
         iceCandidatePoolSize: 10,  // Gather more candidates upfront
@@ -141,7 +125,7 @@ export class WebRTCEngine {
     this.peer.on('call', (call) => {
       const incomingAddress = this.peerIdToAddress(call.peer);
       if (this.localStream && this.activeCalls.size > 0) {
-        // Already in a group call — auto-answer new participants
+        // Already in a group call â€” auto-answer new participants
         call.answer(this.localStream);
         this._trackCall(call, incomingAddress);
         this.activeCalls.set(incomingAddress, call);
@@ -163,7 +147,7 @@ export class WebRTCEngine {
     });
 
     this.peer.on('disconnected', () => {
-      console.warn('[WebRTCEngine] Disconnected from signaling server — reconnecting');
+      console.warn('[WebRTCEngine] Disconnected from signaling server â€” reconnecting');
       setTimeout(() => { this.peer?.reconnect(); }, 1000);
     });
   }
@@ -330,7 +314,7 @@ export class WebRTCEngine {
     }
   }
 
-  /** Stop screen share — revert to camera */
+  /** Stop screen share â€” revert to camera */
   public stopScreenShare(): void {
     if (!this.localStream) return;
     const screenTrack = this.localStream.getVideoTracks()[0];
@@ -369,4 +353,5 @@ export class WebRTCEngine {
     }
   }
 }
+
 

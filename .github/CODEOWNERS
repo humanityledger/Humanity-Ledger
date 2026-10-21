@@ -1,2 +1,30 @@
-# Humanity Ledger — All code owned by Stefan Antonio Cirisanu
+# Humanity Ledger — CODEOWNERS
+# All code owned by the core team. Security-sensitive files require a dedicated review.
+
+# Default owner for all files
 * @humanityledger
+
+# Security-critical: auth, middleware, crypto
+middleware.ts @humanityledger
+lib/security/* @humanityledger
+lib/session.ts @humanityledger
+lib/jwt.ts @humanityledger
+lib/env.ts @humanityledger
+lib/auth* @humanityledger
+app/api/auth/** @humanityledger
+app/api/siwe/** @humanityledger
+
+# ZK / Aztec contracts
+aztec-contracts/** @humanityledger
+lib/aztec/** @humanityledger
+lib/zk/** @humanityledger
+
+# Database schema — every migration needs review
+prisma/schema.prisma @humanityledger
+prisma/migrations/** @humanityledger
+
+# CI and deployment pipelines
+.github/workflows/** @humanityledger
+scripts/railway-pre-deploy.js @humanityledger
+start.sh @humanityledger
+railway.toml @humanityledger

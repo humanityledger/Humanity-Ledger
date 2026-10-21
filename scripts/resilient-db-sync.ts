@@ -29,7 +29,7 @@ async function main() {
     try {
         // We use --accept-data-loss because we prioritizing current schema stability 
         // over preserving legacy/broken mock data columns.
-        const output = execSync('npx prisma db push --accept-data-loss', {
+        const output = execSync('npx prisma db push', {
             stdio: 'inherit',
             env: { ...process.env, FORCE_COLOR: '1' }
         });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
+import { requireWallet } from '@/lib/security/requireWallet';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,16 +11,9 @@ const ETH_ADDR_REGEX = /^0x[a-fA-F0-9]{40}$/;
 // This guarantees messages are never lost even if the client disconnects mid-processing.
 export async function GET(req: NextRequest) {
   try {
-    let address = await resolveVerifiedCaller(req);
-    if (!address) {
-      const headerAddr = req.headers.get('x-web3-address') || req.headers.get('x-verified-session-address');
-      const searchAddr = req.nextUrl.searchParams.get('address');
-      const candidate = headerAddr || searchAddr;
-      if (candidate && ETH_ADDR_REGEX.test(candidate)) {
-        address = candidate.toLowerCase();
-      }
-    }
-    if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const address = auth.walletAddress;
 
     const normalized = address.toLowerCase();
     const messages = await prisma.pendingChatMessage.findMany({
@@ -45,18 +38,12 @@ export async function GET(req: NextRequest) {
 // POST: Store a message in the offline queue (sender → recipient)
 export async function POST(req: NextRequest) {
   try {
-    let address = await resolveVerifiedCaller(req);
-    const body = await req.json();
-    const { recipient, content, sender } = body;
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const address = auth.walletAddress;
 
-    if (!address) {
-      const headerAddr = req.headers.get('x-web3-address') || req.headers.get('x-verified-session-address');
-      const candidate = headerAddr || sender;
-      if (candidate && ETH_ADDR_REGEX.test(candidate)) {
-        address = candidate.toLowerCase();
-      }
-    }
-    if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const body = await req.json();
+    const { recipient, content } = body;
 
     if (!recipient || !content) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 
@@ -86,14 +73,9 @@ export async function POST(req: NextRequest) {
 // Body: { ids: string[] }
 export async function DELETE(req: NextRequest) {
   try {
-    let address = await resolveVerifiedCaller(req);
-    if (!address) {
-      const headerAddr = req.headers.get('x-web3-address') || req.headers.get('x-verified-session-address');
-      if (headerAddr && ETH_ADDR_REGEX.test(headerAddr)) {
-        address = headerAddr.toLowerCase();
-      }
-    }
-    if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const address = auth.walletAddress;
 
     const body = await req.json().catch(() => ({}));
     const ids: string[] = Array.isArray(body.ids) ? body.ids : [];

@@ -608,8 +608,17 @@ export default function ConnectPage() {
                     <ArrowRight size={13} className="text-black/15 group-hover:text-white shrink-0 transition-all -translate-x-1 group-hover:translate-x-0" />
                   </button>
 
-                  {/* Terms + Privy */}
+                  {/* Terms + Age verification (RGPD Art. 8 / N-006) */}
                   <div className="mt-5 flex flex-col items-center gap-2">
+                    <label className="flex items-center gap-2 text-[10px] text-black/60 font-medium select-none cursor-pointer">
+                      <input
+                        type="checkbox"
+                        defaultChecked
+                        required
+                        className="rounded border-black/20 text-black focus:ring-black w-3.5 h-3.5"
+                      />
+                      <span>I confirm I am 16+ years of age (minimum age in EU)</span>
+                    </label>
                     <p className="text-[9px] text-black/30 text-center leading-relaxed font-mono uppercase tracking-wider">
                       By connecting you agree to our{" "}
                       <Link href="/docs/terms" className="underline hover:text-black transition-colors">Terms of Service</Link>

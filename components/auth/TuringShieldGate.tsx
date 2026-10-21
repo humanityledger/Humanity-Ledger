@@ -307,14 +307,13 @@ export function TuringShieldGate({
     return () => clearInterval(id);
   }, [lockoutExpiresAt]);
 
-  // Mount + clearance check
   useEffect(() => {
+    // Mount + clearance check
+    // A-015: No longer sending x-wallet-address header — identity resolved server-side from session only
     setMounted(true);
     if (readClearance()) { setCleared(true); return; }
-    const wallet = getStoredWalletAddress();
     fetch('/api/auth/enclave-pin', { 
       credentials: 'include',
-      headers: wallet ? { 'x-wallet-address': wallet } : {} 
     })
       .then(r => r.json().then(data => ({ status: r.status, data })))
       .then(({ status, data }) => {
@@ -352,9 +351,8 @@ export function TuringShieldGate({
     setPinError(null);
 
     try {
-      const wallet = getStoredWalletAddress();
+      // A-015: No longer sending x-wallet-address header — identity from session cookie only
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (wallet) headers['x-wallet-address'] = wallet;
 
       const res = await fetch('/api/auth/enclave-pin', {
         method: 'POST',
@@ -465,9 +463,8 @@ export function TuringShieldGate({
         payload.clearanceToken = tempClearanceToken;
         payload.clearanceTs    = tempClearanceTs;
       }
-      const wallet = getStoredWalletAddress();
+      // A-015: No longer sending x-wallet-address header — identity from session cookie only
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (wallet) headers['x-wallet-address'] = wallet;
 
       const res  = await fetch('/api/auth/enclave-pin', {
         method: 'PUT',
@@ -893,7 +890,7 @@ export function TuringShieldGate({
                   <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
               ) : (
-                <img src="/logo-mark-tight.png" alt="Humanity Ledger" className="w-full h-full object-contain" />
+                <img src="/worldmap.png" alt="Humanity Ledger" className="w-full h-full object-contain" />
               )}
             </div>
             <h1 className="text-[26px] font-black tracking-tight text-[#1C1C1E] leading-tight">

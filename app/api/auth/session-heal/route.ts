@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
       const email = nextAuthSession.user.email;
       const emailId = `email_${email.toLowerCase().replace(/[^a-z0-9@._-]/g, '')}`;
       const res = NextResponse.json({ healed: true, type: 'google_oauth', address: emailId });
-      res.cookies.set('system_handshake', emailId, { httpOnly: false, secure: isProd, sameSite: 'lax', maxAge: 604800, path: '/', domain: cookieDomain });
       return res;
     }
 
@@ -36,7 +35,6 @@ export async function GET(req: NextRequest) {
           const res = NextResponse.json({ healed: true, type: 'jwt', address });
           res.cookies.set('ledger_session', newJwt, { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 604800, path: '/', domain: cookieDomain });
           res.cookies.set('human_session', newJwt, { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 604800, path: '/', domain: cookieDomain });
-          res.cookies.set('system_handshake', address.toLowerCase(), { httpOnly: false, secure: isProd, sameSite: 'lax', maxAge: 604800, path: '/', domain: cookieDomain });
           return res;
         }
       } catch { /* Expired or invalid, fall through */ }

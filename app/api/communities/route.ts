@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
+import { requireWallet } from '@/lib/security/requireWallet';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,13 +47,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const address = await resolveVerifiedCaller(req);
-    if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const address = auth.walletAddress;
 
     const { name, description, isPrivate } = await req.json();
     if (!name || typeof name !== 'string') return NextResponse.json({ error: 'Name required' }, { status: 400 });
 
-    const joinCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+    // A-008: use crypto.randomBytes instead of Math.random for join codes
+    const { randomBytes } = await import('crypto');
+    const joinCode = randomBytes(4).toString('hex').toUpperCase();
 
     const community = await (prisma as any).community.create({
       data: {

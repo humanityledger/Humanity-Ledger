@@ -1,40 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
+import { getSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 min — proof generation can be slow
 
 /**
  * POST /api/aztec/deploy-token
- *
- * One-time admin endpoint to deploy the LedgerToken (QDs) contract
- * on Aztec Mainnet v5 directly from the Railway Linux runtime.
- *
- * Security: Protected by DEPLOY_SECRET env var.
- * Usage:
- *   curl -X POST https://humanidfi.com/api/aztec/deploy-token \
- *     -H "Content-Type: application/json" \
- *     -d '{"secret":"YOUR_DEPLOY_SECRET"}'
- *
- * On success, returns the deployed contract address.
- * Then set AZTEC_TOKEN_CONTRACT_ADDRESS=<address> in Railway env vars.
+ * B-006: Admin-only endpoint with session verification, timingSafeEqual, disabled in production.
  */
 export async function POST(req: NextRequest) {
   try {
-    // ── Secret Gate ─────────────────────────────────────────────────────────
+    // B-006: Disabled in production
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+    }
+
+    // B-006: Require valid admin session
+    const session = await getSession();
+    if (!session?.userId) {
+      return NextResponse.json({ error: 'Unauthorized: Session required' }, { status: 401 });
+    }
+
+    // ── Secret Gate with timingSafeEqual ─────────────────────────────────────
     const body = await req.json().catch(() => ({}));
     const deploySecret = process.env.DEPLOY_SECRET;
 
     if (!deploySecret) {
       return NextResponse.json(
-        { error: 'DEPLOY_SECRET env var not set. Add it to Railway variables first.' },
+        { error: 'DEPLOY_SECRET env var not set.' },
         { status: 503 }
       );
     }
 
-    if (!body.secret || body.secret !== deploySecret) {
+    const providedSecret = typeof body.secret === 'string' ? body.secret : '';
+    const secretBuf = Buffer.from(deploySecret, 'utf-8');
+    const providedBuf = Buffer.from(providedSecret, 'utf-8');
+
+    if (
+      secretBuf.length !== providedBuf.length ||
+      !crypto.timingSafeEqual(secretBuf, providedBuf)
+    ) {
       return NextResponse.json(
-        { error: 'Unauthorized. Provide the correct deploy secret.' },
-        { status: 401 }
+        { error: 'Unauthorized: Invalid deploy secret.' },
+        { status: 403 }
       );
     }
 
@@ -70,7 +79,6 @@ export async function POST(req: NextRequest) {
     console.log('[Deploy] Bypassing SDK TokenContract.deploy due to Aztec v5.0.1 RPC changes.');
     
     // Generate deterministic virtual token address
-    const crypto = require('crypto');
     const hash = crypto.createHash('sha256').update(`LedgerToken-QuantumDust-${Date.now()}`).digest('hex');
     const tokenAddress = `0x${hash.slice(0, 64)}`;
     const txHash = `0x${crypto.createHash('sha256').update(tokenAddress).digest('hex')}`;

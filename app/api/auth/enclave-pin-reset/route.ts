@@ -223,7 +223,7 @@ export async function POST(req: NextRequest) {
     const user = await resolveUser(userId);
     if (!user) {
       // Don't reveal whether userId maps to a real account.
-      await new Promise(r => setTimeout(r, 200 + Math.random() * 100));
+      await new Promise(r => setTimeout(r, 200 + crypto.randomInt(0, 100)));
       return NextResponse.json({ error: 'Session expired. Please reconnect.' }, { status: 401 });
     }
 
@@ -295,7 +295,7 @@ export async function POST(req: NextRequest) {
 
             // [S11] Pre-check
       if (!hasOtp) {
-        await new Promise(r => setTimeout(r, 200 + Math.random() * 100));
+        await new Promise(r => setTimeout(r, 200 + crypto.randomInt(0, 100)));
         return NextResponse.json({ error: 'No reset code found. Please request a new one.', invalidated: true }, { status: 429 });
       }
 
@@ -311,7 +311,7 @@ export async function POST(req: NextRequest) {
 
       if (newAttempts > MAX_VERIFY_ATTEMPTS) {
         await dbUpdate(user.dbId, user.table, { enclaveOtpHash: null, enclaveOtpExpiresAt: null, enclaveOtpAttempts: 0 });
-        await new Promise(r => setTimeout(r, 200 + Math.random() * 100));
+        await new Promise(r => setTimeout(r, 200 + crypto.randomInt(0, 100)));
         return NextResponse.json({
           error: 'Too many incorrect attempts. Your code has been invalidated. Request a new one.',
           invalidated: true,

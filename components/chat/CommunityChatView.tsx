@@ -687,8 +687,9 @@ export function CommunityChatView({
       const res = await fetch(url, { credentials: 'same-origin' });
       if (!res.ok) return;
       const data = await res.json();
-      // API already filters: title=null (chat messages only), ordered asc
-      const ordered: Msg[] = data.posts || [];
+      // API returns newest messages descending (orderBy desc, take 50); client reverses to render chronologically
+      const rawPosts = data.posts || [];
+      const ordered: Msg[] = [...rawPosts].reverse();
 
       setMessages(prev => {
         const confirmedIds = new Set(ordered.map(m => m.id));

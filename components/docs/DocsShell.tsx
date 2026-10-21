@@ -150,10 +150,11 @@ export function DocsShell({
         <div className="w-full max-w-[1200px] mx-auto flex items-center justify-between gap-8">
           <Link href="/" className="flex items-center gap-2.5">
             <img
-              src="/logo-text.png"
+              src="/worldmap.png"
               alt="Humanity Ledger"
-              style={{ height: 24, width: 'auto', objectFit: 'contain' }}
+              style={{ height: 22, width: 'auto', objectFit: 'contain' }}
             />
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#050505', fontFamily: 'system-ui, -apple-system, sans-serif', letterSpacing: '-0.02em' }}>Humanity</span>
             <span className="text-slate-300">/</span>
             <span className="text-[13px] font-medium text-slate-400">Docs</span>
           </Link>

@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 "use client";
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -83,7 +83,7 @@ const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
 
 
-// NOTE: QDs state is sourced from AztecNativeContext (DB polling) — no local store needed.
+// NOTE: QDs state is sourced from AztecNativeContext (DB polling) â€” no local store needed.
 
 
 interface ConversationMeta {
@@ -164,12 +164,12 @@ export const formatMessagePreview = (content: string): string => {
 
   // Handle system messages and metadata
   if (cleanContent.startsWith('__CALL_OFFER__:')) {
-    return cleanContent.includes(':video') ? '📹 Video Call' : '📞 Voice Call';
+    return cleanContent.includes(':video') ? 'ðŸ“¹ Video Call' : 'ðŸ“ž Voice Call';
   }
-  if (cleanContent.startsWith('__AUDIO__')) return '🎙️ Voice Note';
-  if (cleanContent.startsWith('[LOCATION]')) return '📍 Location';
-  if (cleanContent.startsWith('[ATTACHMENT')) return '📎 Attachment';
-  if (cleanContent.startsWith('[GIF]')) return '🖼️ GIF';
+  if (cleanContent.startsWith('__AUDIO__')) return 'ðŸŽ™ï¸ Voice Note';
+  if (cleanContent.startsWith('[LOCATION]')) return 'ðŸ“ Location';
+  if (cleanContent.startsWith('[ATTACHMENT')) return 'ðŸ“Ž Attachment';
+  if (cleanContent.startsWith('[GIF]')) return 'ðŸ–¼ï¸ GIF';
   if (cleanContent.startsWith('__PIN__') || cleanContent.startsWith('__REVOKE__') || cleanContent.startsWith('__READ__')) {
     return 'System Message';
   }
@@ -219,7 +219,7 @@ function scheduleBurnOnRead(msgId: string, seconds: number, onBurn: (id: string)
 
 export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const { address, isConnected, isSystemHandshake, isChecking, connector, isZkVerified, isLocalSystemWallet } = useSystemAccount();
-  // Email-authenticated users have address like 'email_user@gmail.com' — they have no wallet signer
+  // Email-authenticated users have address like 'email_user@gmail.com' â€” they have no wallet signer
   // so XMTP is not available. We detect this and route them to server-relay messaging.
   const isEmailUser = typeof address === 'string' && (address as string).startsWith('email_');
   const { signMessageAsync } = useSignMessage();
@@ -306,7 +306,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
 
   // MASTER RECOVERY: If wallet is connected but connector is missing (zombie session after mobile deep-link)
-  // Run a retry loop instead of a single instant attempt — the WalletConnect relay
+  // Run a retry loop instead of a single instant attempt â€” the WalletConnect relay
   // needs time to re-establish after the user returns from the wallet app.
   useEffect(() => {
     if (isConnected && address) {
@@ -413,7 +413,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
        window.history.replaceState({}, '', window.location.pathname);
     }
 
-    // ── [FIX] ?join=CODE — auto-join a community from the public landing page ──
+    // â”€â”€ [FIX] ?join=CODE â€” auto-join a community from the public landing page â”€â”€
     // When the user is redirected from /join/[code], we read the code here,
     // call the join API, and open the community view automatically.
     const joinCode = params.get('join');
@@ -462,10 +462,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [threadParentId, setThreadParentId] = useState<string | null>(null);
   const [showBotSuggestions, setShowBotSuggestions] = useState(false);
   const BOT_COMMANDS_LIST = [
-    { cmd: '/price', hint: '/price ETH — Get crypto price' },
-    { cmd: '/ens', hint: '/ens vitalik.eth — Resolve ENS name' },
-    { cmd: '/gas', hint: '/gas — Current Ethereum gas prices' },
-    { cmd: '/help', hint: '/help — Show all commands' },
+    { cmd: '/price', hint: '/price ETH â€” Get crypto price' },
+    { cmd: '/ens', hint: '/ens vitalik.eth â€” Resolve ENS name' },
+    { cmd: '/gas', hint: '/gas â€” Current Ethereum gas prices' },
+    { cmd: '/help', hint: '/help â€” Show all commands' },
   ];
   
   // High-End Feature States
@@ -473,7 +473,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showVoiceNote, setShowVoiceNote] = useState(false);
   const { peerStatus, broadcastTyping } = useLedgerChatPresence(address || '', activePeer);
 
-  // ── v2: Telegram-Parity state ──────────────────────────────────────────
+  // â”€â”€ v2: Telegram-Parity state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [callHistoryList, setCallHistoryList] = useState<CallRecord[]>([]);
   const [sidebarTab, setSidebarTab] = useState<'chats' | 'calls' | 'contacts' | 'updates' | 'communities'>('chats');
   const [showSaveContactModal, setShowSaveContactModal] = useState(false);
@@ -543,7 +543,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [peerInput, setPeerInput] = useState('');
   const [sending, setSending] = useState(false);
   const [sendAnimKey, setSendAnimKey] = useState(0);
-  // ── [FASE 16: Rate Limiting Anti-Spam] ───────────────────────────────
+  // â”€â”€ [FASE 16: Rate Limiting Anti-Spam] â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Prevents spam abuse: max 5 messages per 10 seconds (App Store Guideline 1.2)
   const rateLimitRef = useRef<{ timestamps: number[] }>({ timestamps: [] });
   const RATE_LIMIT_MAX = 5;
@@ -588,14 +588,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   const [contextMenu, setContextMenu] = useState<{ id: string, content: string, x: number, y: number } | null>(null);
 
-  // ─── Phase 4: Ecosystem Features ─────────────────────────────────────────────
+  // â”€â”€â”€ Phase 4: Ecosystem Features â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [archivedPeers, setArchivedPeers] = useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false); // toggle archived section
   const [sidebarMenu, setSidebarMenu] = useState<{ peer: string; x: number; y: number } | null>(null); // right-click on sidebar
   const [editingMsg, setEditingMsg] = useState<{ id: string; content: string } | null>(null); // inline edit state
   const [showClearConfirm, setShowClearConfirm] = useState(false); // clear chat confirmation
 
-  // ─── v2 + Phase 5: Chat Features ──────────────────────────────────────────────
+  // â”€â”€â”€ v2 + Phase 5: Chat Features â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [isSecretChat, setIsSecretChat] = useState(false);
   const [showPollCreator, setShowPollCreator] = useState(false);
   const [showBurnSheet, setShowBurnSheet] = useState(false);
@@ -613,7 +613,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [transferAmount, setTransferAmount] = useState('');
   const [transferSending, setTransferSending] = useState(false);
 
-  // ─── Hito 4: Search, Forward, GIF, Scheduled ──────────────────────────────
+  // â”€â”€â”€ Hito 4: Search, Forward, GIF, Scheduled â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [searchQuery, setSearchQuery] = useState(''); // in-chat search
   const [typingPeers, setTypingPeers] = useState<Set<string>>(new Set()); // typing indicators
   const lastTypingTimeRef = useRef<number>(0);
@@ -627,14 +627,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showAppDrawer, setShowAppDrawer] = useState(false); // iMessage style + menu
   const [liveLocationWatchId, setLiveLocationWatchId] = useState<number | null>(null); // watchPosition ID for live location
   const [isLiveLocationActive, setIsLiveLocationActive] = useState(false); // whether live location is broadcasting
-  const [gifSearch, setGifSearch] = useState(''); // GIF search query — start empty so user types first
+  const [gifSearch, setGifSearch] = useState(''); // GIF search query â€” start empty so user types first
   const [gifResults, setGifResults] = useState<string[]>([]); // GIF URLs
   const [linkPreview, setLinkPreview] = useState<{ url: string, title: string, description: string, image?: string } | null>(null);
 
-  // ─── WebRTC Call State Machine ───────────────────────────────────────────────
-  // States: idle → calling (outgoing) → ringing (incoming) → active → idle
+  // â”€â”€â”€ WebRTC Call State Machine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // States: idle â†’ calling (outgoing) â†’ ringing (incoming) â†’ active â†’ idle
   const [peerInstance, setPeerInstance] = useState<Peer | null>(null);
-  // [ANDROID FIX] peerInstanceRef — always holds the current peer, avoids stale closures
+  // [ANDROID FIX] peerInstanceRef â€” always holds the current peer, avoids stale closures
   // in answerCall/startCall which are async and can capture stale state.
   const peerInstanceRef = useRef<Peer | null>(null);
   const [myPeerId, setMyPeerId] = useState<string>('');
@@ -642,7 +642,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // [WEBRTC RE-INIT FIX] peerInitKey is a counter that forces the PeerJS useEffect
   // to re-execute when the peer is destroyed (network drop, ID conflict, etc.).
   // Without this, once peerInstance is destroyed and nulled, the useEffect never
-  // re-runs because 'address' hasn't changed — leaving calls permanently broken.
+  // re-runs because 'address' hasn't changed â€” leaving calls permanently broken.
   const [peerInitKey, setPeerInitKey] = useState(0);
   const peerInitKeyRef = useRef(0); // ref for use inside peer callbacks
 
@@ -672,7 +672,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [localStream, _setLocalStream] = useState<MediaStream | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  // WeakSet to track answered PeerJS calls — avoids mutating MediaConnection type
+  // WeakSet to track answered PeerJS calls â€” avoids mutating MediaConnection type
   const answeredCallsRef = useRef<WeakSet<object>>(new WeakSet());
   const setLocalStream = useCallback((s: MediaStream | null) => {
     localStreamRef.current = s;
@@ -681,9 +681,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   
   // The PeerJS MediaConnection object (from peerInstance.call() or Peer.on('call'))
   const [activeConnection, setActiveConnection] = useState<any>(null);
-  // [ARCH-FIX] Pending PeerJS connection queued by peer.on('call') — used by answerCall()
+  // [ARCH-FIX] Pending PeerJS connection queued by peer.on('call') â€” used by answerCall()
   const pendingConnectionRef = useRef<any>(null);
-  // Caller stores the remotePeerId — now derived deterministically, not from XMTP
+  // Caller stores the remotePeerId â€” now derived deterministically, not from XMTP
   const remotePeerIdRef = useRef<string>('');
   // Caller stores the call type sent to peer
   const callTypeRef = useRef<'audio'|'video'>('audio');
@@ -699,14 +699,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [dataSaver, setDataSaver] = useState(false);
   const [showE2EE, setShowE2EE] = useState(false);
 
-  // [ARCH-FIX] Deterministic PeerID derivation — mirrors the logic in PeerJS initialization.
+  // [ARCH-FIX] Deterministic PeerID derivation â€” mirrors the logic in PeerJS initialization.
   // Both caller and receiver can compute each other's PeerID from the wallet address alone.
   // This eliminates the need for XMTP to carry the PeerID in CALL_ANSWER.
   const derivePeerId = useCallback((walletAddress: string): string => {
     return `ledger${walletAddress.slice(2, 12).toLowerCase()}`;
   }, []);
   
-  // ── Telegram/WhatsApp Parity States ──
+  // â”€â”€ Telegram/WhatsApp Parity States â”€â”€
   const [isCallMinimized, setIsCallMinimized] = useState(false);
   const [networkQuality, setNetworkQuality] = useState<'good' | 'poor' | 'disconnected'>('good');
   const [audioLevel, setAudioLevel] = useState<number>(0);
@@ -733,12 +733,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
   }, []);
 
-  // Ringtone refs — all three must be declared here (before the safety useEffect at ~L860)
+  // Ringtone refs â€” all three must be declared here (before the safety useEffect at ~L860)
   // to avoid Temporal Dead Zone (TDZ) crashes.
   const ringtoneRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ringtoneCtxRef = useRef<AudioContext | null>(null);
   const ringtoneStopped = useRef(true);
-  // ─── Backward compat shims so existing JSX works unchanged ──────────────────
+  // â”€â”€â”€ Backward compat shims so existing JSX works unchanged â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const callActive = callState === 'active' || callState === 'calling' || callState === 'connecting';
   const incomingCall = callState === 'ringing';
 
@@ -840,7 +840,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setShowWalletTransfer(false);
   }, [activePeer]);
 
-  // ─── Call Timer Effect ────────────────────────────────────────────────────────
+  // â”€â”€â”€ Call Timer Effect â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (callState === 'active') {
       setCallDurationSeconds(0);
@@ -864,8 +864,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
   }, [callState]);
 
-  // ─── Safety: stop ringtone whenever callState leaves 'ringing' ───────────────
-  // IMPORTANT: Cannot call stopRingtone() here — it's declared below with useCallback (TDZ).
+  // â”€â”€â”€ Safety: stop ringtone whenever callState leaves 'ringing' â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // IMPORTANT: Cannot call stopRingtone() here â€” it's declared below with useCallback (TDZ).
   // Instead, directly set the shared ref flag + clear the interval ref.
   // This is safe because refs are initialized synchronously before any effects run.
   useEffect(() => {
@@ -940,7 +940,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setShowProfile(false);
   };
 
-  // Phase 4: clearChat — shows confirmation modal first
+  // Phase 4: clearChat â€” shows confirmation modal first
   const clearChat = () => {
     setShowProfile(false);
     setShowClearConfirm(true);
@@ -964,7 +964,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }));
     // Deduplication set is left intact to prevent stream from re-injecting them
     setShowClearConfirm(false);
-    toast.success('✅ Chat cleared.');
+    toast.success('âœ… Chat cleared.');
   };
 
   // Phase 4: Archive/Unarchive a conversation (persisted to localStorage)
@@ -994,7 +994,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     toast.success('Conversation removed.');
   };
 
-  // Phase 4: Submit edited message — sends XMTP signal __EDIT__id__::newContent
+  // Phase 4: Submit edited message â€” sends XMTP signal __EDIT__id__::newContent
   const submitEditMessage = async () => {
     if (!editingMsg || !editingMsg.content.trim()) return;
     const signal = `__EDIT__${editingMsg.id}__::${editingMsg.content.trim()}`;
@@ -1013,9 +1013,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const peerToConvId = useRef<Map<string, string>>(new Map());
   const convIdToPeer = useRef<Map<string, string>>(new Map());
   // Stores the native XMTP DM convo ID (UUID) for the currently active peer.
-  // Used as fallback when inboxId→address resolution fails in the stream loop.
+  // Used as fallback when inboxIdâ†’address resolution fails in the stream loop.
   const activeXmtpDmIdRef = useRef<string | null>(null);
-  // [BUG FIX] Dedicated ref for the active peer's inboxId — MUST be a separate ref, NOT a
+  // [BUG FIX] Dedicated ref for the active peer's inboxId â€” MUST be a separate ref, NOT a
   // property on activeXmtpDmIdRef, because setting .current = null would wipe sibling props.
   const activePeerInboxIdRef = useRef<string>('');
   
@@ -1037,7 +1037,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const confirmedMsgIds = useRef<Set<string>>(new Set());
   const optimisticContentMap = useRef<Map<string, string>>(new Map()); // content -> optimisticId
   // Prune confirmedMsgIds to prevent unbounded growth in long sessions.
-  // [FIX] Raised from 500/250 to 2000/1000 — fetchHistorical bulk-inserts all history IDs.
+  // [FIX] Raised from 500/250 to 2000/1000 â€” fetchHistorical bulk-inserts all history IDs.
   // In conversations with 300-500 messages, the old threshold would prune IDs that are still
   // in view, causing the next poll to re-insert them as "new" (phantom duplicate messages).
   const pruneConfirmedIds = useCallback(() => {
@@ -1046,10 +1046,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       confirmedMsgIds.current = new Set(arr.slice(arr.length - 1000));
     }
   }, []);
-  // Prune optimisticContentMap — entries lingering >60s were never echoed back (failed send)
+  // Prune optimisticContentMap â€” entries lingering >60s were never echoed back (failed send)
   // and should be cleared to prevent unbounded growth.
   const pruneOptimisticMap = useCallback(() => {
-    // [BUG FIX] Don't clear() the entire map — that would destroy in-flight optimistic
+    // [BUG FIX] Don't clear() the entire map â€” that would destroy in-flight optimistic
     // entries for messages that haven't been echoed back yet, causing duplicates.
     // Instead, evict only the OLDEST half when the map exceeds the threshold.
     if (optimisticContentMap.current.size > 100) {
@@ -1059,7 +1059,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       optimisticContentMap.current = new Map(toKeep);
     }
   }, []);
-  // Always-fresh ref to executeSend — avoids stale closure in event listeners
+  // Always-fresh ref to executeSend â€” avoids stale closure in event listeners
   const executeSendRef = useRef<((content: string) => Promise<void>) | null>(null);
 
   // Detect physical device type (touch + narrow screen = mobile)
@@ -1085,7 +1085,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [activePeer]);
 
-  // Auto-scroll to bottom on new messages — ONLY if user is already near the bottom.
+  // Auto-scroll to bottom on new messages â€” ONLY if user is already near the bottom.
   // If the user has scrolled up to read history, do NOT hijack them back to the bottom.
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -1232,11 +1232,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
 
   // Detect Offline Status & Process Queue
-  // Uses executeSendRef to avoid stale closure — safe for production at scale
+  // Uses executeSendRef to avoid stale closure â€” safe for production at scale
   useEffect(() => {
     const handleOnline = async () => {
       setIsOffline(false);
-      // Flush the outbox — uses ref to always get the latest executeSend fn
+      // Flush the outbox â€” uses ref to always get the latest executeSend fn
       if (address) {
         const outboxKey = `ledger_outbox_${address.toLowerCase()}`;
         const queueStr = localStorage.getItem(outboxKey);
@@ -1245,7 +1245,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const queue: string[] = JSON.parse(queueStr);
             if (queue.length > 0) {
               localStorage.removeItem(outboxKey);
-              toast.info(`📤 Back online — sending ${queue.length} queued message${queue.length > 1 ? 's' : ''}...`);
+              toast.info(`ðŸ“¤ Back online â€” sending ${queue.length} queued message${queue.length > 1 ? 's' : ''}...`);
               for (const item of queue) {
                 const peer = typeof item === 'string' ? null : item.peer;
                 const text = typeof item === 'string' ? item : item.content;
@@ -1261,7 +1261,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   await new Promise(r => setTimeout(r, 300));
                 }
               }
-              toast.success('✅ All queued messages delivered.');
+              toast.success('âœ… All queued messages delivered.');
             }
           } catch (e) {
             console.warn('[Outbox] Failed to flush queue:', e);
@@ -1271,7 +1271,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
     const handleOffline = () => {
       setIsOffline(true);
-      toast.warning('📶 No internet connection. Messages will be queued.');
+      toast.warning('ðŸ“¶ No internet connection. Messages will be queued.');
     };
     
     window.addEventListener('online', handleOnline);
@@ -1283,7 +1283,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       window.removeEventListener('offline', handleOffline);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address]); // address is the only real dep — executeSend accessed via ref
+  }, [address]); // address is the only real dep â€” executeSend accessed via ref
 
   
   // [4G/5G RESILIENCE] Network change handler - re-sync XMTP when connection changes
@@ -1344,7 +1344,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     } catch {}
   };
 
-  // ─── Ringtone Generator ──────────────────────────────────────────────────────
+  // â”€â”€â”€ Ringtone Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Note: ringtoneCtxRef and ringtoneStopped are declared above (hoisted)
   // to avoid TDZ with the safety useEffect. Do NOT re-declare them here.
 
@@ -1356,7 +1356,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       ringtoneCtxRef.current = ctx;
     } catch { return; }
     const playRing = () => {
-      // Check the shared ref — stopRingtone sets this to true immediately
+      // Check the shared ref â€” stopRingtone sets this to true immediately
       if (ringtoneStopped.current || !ctx) return;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -1387,11 +1387,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, []);
 
 
-  // ─── PeerJS Initialisation ───────────────────────────────────────────────────
+  // â”€â”€â”€ PeerJS Initialisation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // [WEBRTC RE-INIT FIX] This effect now depends on BOTH address AND peerInitKey.
   // When the peer dies (disconnect, error, ID conflict), we increment peerInitKey
   // to force this effect to re-run and create a fresh peer instance.
-  // Previously, only 'address' was in the dependency array — so a dead peer could
+  // Previously, only 'address' was in the dependency array â€” so a dead peer could
   // NEVER be re-created, leaving the user permanently stuck with "WebRTC not ready".
   useEffect(() => {
     if (!address) return;
@@ -1405,9 +1405,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (destroyed) return; // component unmounted before import resolved
       const Peer = (peerjsModule as any).default?.Peer || (peerjsModule as any).Peer || (peerjsModule as any).default;
 
-      // ─── DETERMINISTIC PEERID — CRITICAL FOR REVERSE-DIAL ARCHITECTURE ───
+      // â”€â”€â”€ DETERMINISTIC PEERID â€” CRITICAL FOR REVERSE-DIAL ARCHITECTURE â”€â”€â”€
       // Both peers derive each other's ID from the wallet address alone.
-      // This means: Caller computes derivePeerId(activePeer) → dials the receiver.
+      // This means: Caller computes derivePeerId(activePeer) â†’ dials the receiver.
       // No XMTP signaling of PeerID needed. Connection is instantaneous.
       const basePeerId = derivePeerId(address);
       // [FIX] For peerInitKey > 0 (i.e. this is a re-init after a failure),
@@ -1427,7 +1427,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             { urls: 'stun:stun2.l.google.com:19302' },
             { urls: 'stun:stun3.l.google.com:19302' },
             { urls: 'stun:stun4.l.google.com:19302' },
-            // OpenRelay TURN — free, reliable, no account needed
+            // OpenRelay TURN â€” free, reliable, no account needed
             { urls: 'stun:openrelay.metered.ca:80' },
             {
               urls: 'turn:openrelay.metered.ca:80',
@@ -1474,7 +1474,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       peer.on('open', (id: string) => {
         if (destroyed) return;
-        console.log('[Ledger Chat:PeerJS] Open — PeerID:', id, '(key:', thisKey, ')');
+        console.log('[Ledger Chat:PeerJS] Open â€” PeerID:', id, '(key:', thisKey, ')');
         // Sync both state and ref immediately so calls can start without waiting
         setMyPeerId(id);
         myPeerIdRef.current = id;
@@ -1482,7 +1482,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         peerInstanceRef.current = peer;
       });
 
-      // ─── Universal Incoming Call Handler ─────────────────────────────────
+      // â”€â”€â”€ Universal Incoming Call Handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // With the deterministic architecture, EITHER party can receive an incoming
       // PeerJS connection. The Caller dials the receiver directly, so the receiver
       // gets peer.on('call') in 'ringing' state BEFORE they have a localStream.
@@ -1492,7 +1492,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         console.log('[Ledger Chat:PeerJS] Incoming PeerJS connection from:', connection.peer, '| callState:', callStateRef.current);
 
         if (callStateRef.current === 'ringing' || callStateRef.current === 'idle') {
-          // Receiver gets the call before clicking Answer — store it for answerCall()
+          // Receiver gets the call before clicking Answer â€” store it for answerCall()
           // If we were idle, the WebRTC packet beat the XMTP packet. Trigger ringing.
           console.log('[Ledger Chat:PeerJS] Storing pending connection for answerCall()');
           pendingConnectionRef.current = connection;
@@ -1517,13 +1517,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           (callStateRef.current === 'calling' || callStateRef.current === 'connecting')
           && localStreamRef.current
         ) {
-          // Caller gets a reverse-dial from receiver — answer immediately
+          // Caller gets a reverse-dial from receiver â€” answer immediately
           connection.answer(localStreamRef.current!);
           setActiveConnection(connection);
           setCallState('active');
           if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
           connection.on('stream', (rStream: MediaStream) => {
-            console.log('[Ledger Chat:PeerJS] Got remote stream — ACTIVE');
+            console.log('[Ledger Chat:PeerJS] Got remote stream â€” ACTIVE');
             setRemoteStream(rStream);
             setCallState('active');
             stopRingtone();
@@ -1538,7 +1538,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           connection.on('close', () => performEndCallRef.current());
           connection.on('error', () => performEndCallRef.current());
         } else {
-          console.warn('[Call] Received peer.on(call) in unexpected state:', callStateRef.current, '— rejecting.');
+          console.warn('[Call] Received peer.on(call) in unexpected state:', callStateRef.current, 'â€” rejecting.');
           connection.close();
         }
       });
@@ -1548,11 +1548,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         if (err.type === 'unavailable-id') {
           // The ID is taken by a lingering previous session (happens when quickly
           // reconnecting). Re-init with a suffix after a short delay.
-          console.warn('[Ledger Chat:PeerJS] ID unavailable — re-init with session suffix');
+          console.warn('[Ledger Chat:PeerJS] ID unavailable â€” re-init with session suffix');
           schedulePeerReinit(1000);
         } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error' || err.type === 'socket-closed') {
-          // Network error — re-init with full backoff
-          console.warn('[Ledger Chat:PeerJS] Network error — scheduling re-init');
+          // Network error â€” re-init with full backoff
+          console.warn('[Ledger Chat:PeerJS] Network error â€” scheduling re-init');
           schedulePeerReinit(2000);
         } else if (err.type === 'peer-unavailable') {
           // Remote peer is not connected on their base PeerID.
@@ -1560,15 +1560,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           // and will reverse-dial us back via the XMTP __CALL_OFFER__ signal.
           // The 60-second caller timeout will clean up if they truly don't connect.
           if (callStateRef.current === 'calling') {
-            console.warn('[Ledger Chat:PeerJS] Peer unavailable on base ID — waiting for XMTP reverse-dial fallback...');
+            console.warn('[Ledger Chat:PeerJS] Peer unavailable on base ID â€” waiting for XMTP reverse-dial fallback...');
           }
         }
         // Other errors (e.g. 'disconnected') are handled by peer.on('disconnected')
       });
 
       peer.on('disconnected', () => {
-        console.warn('[Ledger Chat:PeerJS] Disconnected — destroying and scheduling re-init');
-        // [FIX] Don't call peer.reconnect() — it can hang indefinitely on mobile
+        console.warn('[Ledger Chat:PeerJS] Disconnected â€” destroying and scheduling re-init');
+        // [FIX] Don't call peer.reconnect() â€” it can hang indefinitely on mobile
         // (iOS WKWebView, Android WebView) if the server connection is fully lost.
         // Instead, destroy and trigger a clean re-init via peerInitKey.
         schedulePeerReinit(1500);
@@ -1607,13 +1607,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
 
 
-  // ─── XMTP Signaling Listener ─────────────────────────────────────────────────
+  // â”€â”€â”€ XMTP Signaling Listener â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Monitors XMTP messages for call control signals.
   // Protocol:
-  //   CALL_OFFER:<callerPeerId>:<callType>   — caller announces intent + its PeerID
-  //   CALL_ANSWER:<receiverPeerId>           — receiver sends back its PeerID
-  //   CALL_DECLINE                           — receiver declines
-  //   CALL_HANGUP                            — either party ends the call
+  //   CALL_OFFER:<callerPeerId>:<callType>   â€” caller announces intent + its PeerID
+  //   CALL_ANSWER:<receiverPeerId>           â€” receiver sends back its PeerID
+  //   CALL_DECLINE                           â€” receiver declines
+  //   CALL_HANGUP                            â€” either party ends the call
   // NOTE: performEndCallRef is wired below after performEndCall is defined.
   // performEndCallRef is wired after performEndCall is defined below
   const processedSignalIds = useRef<Set<string>>(new Set());
@@ -1635,17 +1635,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (isMine) return; // ignore our own signals
     const content: string = typeof lastMsg.content === 'string' ? lastMsg.content : '';
 
-    // ── CALL_ANSWER signal from receiver (kept for compatibility / fallback logging) ─
+    // â”€â”€ CALL_ANSWER signal from receiver (kept for compatibility / fallback logging) â”€
     // [ARCH-FIX] The caller NO LONGER waits for CALL_ANSWER to dial.
     // The caller already called peerInstance.call() immediately in startCall().
     // This signal is kept for potential future use (e.g., logging, compatibility with
     // older clients) but does NOT trigger any WebRTC action in the new architecture.
     if (content.startsWith('__CALL_ANSWER__:')) {
       processedSignalIds.current.add(lastMsg.id);
-      console.log('[Ledger Chat:Signal] CALL_ANSWER (ack) received — WebRTC already initiated directly.');
+      console.log('[Ledger Chat:Signal] CALL_ANSWER (ack) received â€” WebRTC already initiated directly.');
     }
 
-    // ── CALL_DECLINE: Callee declined ─────────────────────────────────────────
+    // â”€â”€ CALL_DECLINE: Callee declined â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (content === '__CALL_DECLINE__') {
       processedSignalIds.current.add(lastMsg.id);
       console.log('[Ledger Chat:Signal] Decline received');
@@ -1655,7 +1655,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       }
     }
 
-    // ── CALL_HANGUP: Remote party hung up ─────────────────────────────────────
+    // â”€â”€ CALL_HANGUP: Remote party hung up â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (content === '__CALL_HANGUP__') {
       processedSignalIds.current.add(lastMsg.id);
       console.log('[Ledger Chat:Signal] Hangup received');
@@ -1669,7 +1669,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
-  // ─── WebRTC DOM Binding for Mobile (iOS/Android) ───────────────────────────
+  // â”€â”€â”€ WebRTC DOM Binding for Mobile (iOS/Android) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Ensure video elements receive the stream once React actually mounts them
   useEffect(() => {
     if (myVideoRef.current && localStream && myVideoRef.current.srcObject !== localStream) {
@@ -1687,7 +1687,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [callState, remoteStream]);
 
-  // ─── WebRTC Advanced Telemetry & Telegram-Parity Visuals ─────────────────
+  // â”€â”€â”€ WebRTC Advanced Telemetry & Telegram-Parity Visuals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   
   // Audio Visualizer for Audio Calls
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -1736,7 +1736,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
   }, [callState, remoteStream]);
 
-  // Network Quality Monitor (RAF-based — saves battery on mobile vs setInterval)
+  // Network Quality Monitor (RAF-based â€” saves battery on mobile vs setInterval)
   useEffect(() => {
     if (callState !== 'active' || !activeConnectionRef.current) {
       setNetworkQuality('good');
@@ -1777,7 +1777,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     return () => cancelAnimationFrame(rafId);
   }, [callState]);
 
-  // ─── performEndCall: Universal cleanup ── uses refs to avoid stale closures ──
+  // â”€â”€â”€ performEndCall: Universal cleanup â”€â”€ uses refs to avoid stale closures â”€â”€
   // AUDIT FIX: All mutable values accessed via refs, not closure captures.
   // This ensures that when called from async contexts (timeouts, PeerJS events),
   // we always clean up the CURRENT stream/connection, not a stale captured one.
@@ -1790,7 +1790,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const performEndCall = useCallback(() => {
     stopRingtone();
     if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
-    // Use refs — never captured closure values
+    // Use refs â€” never captured closure values
     const ls = localStreamRef.current;
     const rs = remoteStreamRef.current;
     const ac = activeConnectionRef.current;
@@ -1826,7 +1826,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const performEndCallRef = useRef<() => void>(performEndCall);
   useEffect(() => { performEndCallRef.current = performEndCall; }, [performEndCall]);
 
-  // ─── startCall: Initiates an outgoing call ───────────────────────────────────
+  // â”€â”€â”€ startCall: Initiates an outgoing call â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // ANDROID FIX: This function MUST be called directly from a user-gesture handler
   // (onClick). Android Chrome enforces that getUserMedia() is only callable from
   // a trusted user-gesture context. Any async indirection breaks this.
@@ -1843,12 +1843,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
     const livePeer = peerInstanceRef.current;
     if (!livePeer || livePeer.destroyed) {
-      // Peer not yet ready — destroy stale ref and schedule re-init via peerInitKey
-      toast.error("WebRTC is not ready. Reconnecting… please try again in a moment.");
+      // Peer not yet ready â€” destroy stale ref and schedule re-init via peerInitKey
+      toast.error("WebRTC is not ready. Reconnectingâ€¦ please try again in a moment.");
       peerInstanceRef.current = null;
       setPeerInstance(null);
       // [CRITICAL FIX] Incrementing peerInitKey triggers the PeerJS useEffect to re-run.
-      // Without this, the useEffect only depends on [address, peerInitKey] — nulling
+      // Without this, the useEffect only depends on [address, peerInitKey] â€” nulling
       // peerInstance state alone does NOT trigger a re-run because address hasn't changed.
       const nextKey = peerInitKeyRef.current + 1;
       peerInitKeyRef.current = nextKey;
@@ -1856,13 +1856,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       return;
     }
 
-    // [ARCH-FIX] Derive receiver PeerID deterministically — no XMTP round-trip needed
+    // [ARCH-FIX] Derive receiver PeerID deterministically â€” no XMTP round-trip needed
     const receiverPeerId = derivePeerId(targetPeer);
     console.log('[Call:ARCH-FIX] Derived receiver PeerID:', receiverPeerId, 'for address:', targetPeer);
 
     let stream: MediaStream | null = null;
     try {
-      // ─── ROBUST SINGLE-CALL WEBRTC (Android Fix) ─────────────────────────
+      // â”€â”€â”€ ROBUST SINGLE-CALL WEBRTC (Android Fix) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // We must NEVER use nested try-catch fallbacks for getUserMedia on Android.
       // If the first request fails, the transient user-activation token is lost,
       // and all subsequent fallbacks will automatically throw NotAllowedError.
@@ -1885,7 +1885,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       setCallState('calling');
       if (myVideoRef.current) myVideoRef.current.srcObject = stream;
 
-      // ─── DETERMINISTIC CALL ARCHITECTURE (Caller Side) ────────────────────
+      // â”€â”€â”€ DETERMINISTIC CALL ARCHITECTURE (Caller Side) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // With deterministic PeerIDs, the Caller dials the receiver DIRECTLY using
       // derivePeerId(activePeer). We also send CALL_OFFER via XMTP so the receiver's
       // UI shows the ringing screen. The CALL_OFFER carries the caller's stable PeerID.
@@ -1895,10 +1895,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       const myStablePeerId = myPeerIdRef.current || derivePeerId(address!);
       executeSend(`__CALL_OFFER__:${myStablePeerId}:${type}`).catch(() => {});
 
-      // Directly dial the receiver via PeerJS — no XMTP round-trip needed
+      // Directly dial the receiver via PeerJS â€” no XMTP round-trip needed
       const livePeerForStart = peerInstanceRef.current;
       if (!livePeerForStart || livePeerForStart.destroyed) {
-        toast.error('WebRTC lost connection — please retry.');
+        toast.error('WebRTC lost connection â€” please retry.');
         performEndCallRef.current();
         return;
       }
@@ -1909,7 +1909,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         if (outConn) {
           setActiveConnection(outConn);
           outConn.on('stream', (rStream: MediaStream) => {
-            console.log('[Call:PeerJS] Caller received remote stream — ACTIVE');
+            console.log('[Call:PeerJS] Caller received remote stream â€” ACTIVE');
             setRemoteStream(rStream);
             setCallState('active');
             stopRingtone();
@@ -1928,7 +1928,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       // Caller timeout: if no stream arrives in 60s, clean up
       callTimeoutRef.current = setTimeout(() => {
         if (callStateRef.current === 'calling') {
-          toast.error('No answer — call timed out.');
+          toast.error('No answer â€” call timed out.');
           performEndCallRef.current();
         }
       }, 60000);
@@ -1952,8 +1952,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   };
 
-  // ─── answerCall: Receiver accepts incoming call ──────────────────────────────
-  // ANDROID FIX: Called directly from the "Answer" onClick — preserves user-gesture
+  // â”€â”€â”€ answerCall: Receiver accepts incoming call â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ANDROID FIX: Called directly from the "Answer" onClick â€” preserves user-gesture
   // context required by Android Chrome for getUserMedia.
   const answerCall = async () => {
     stopRingtone();
@@ -1966,7 +1966,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
     let stream: MediaStream | null = null;
     try {
-      // ─── ROBUST SINGLE-CALL WEBRTC (Android Fix) ─────────────────────────
+      // â”€â”€â”€ ROBUST SINGLE-CALL WEBRTC (Android Fix) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // We must NEVER use nested try-catch fallbacks for getUserMedia on Android.
       // If the first request fails, the transient user-activation token is lost,
       // and all subsequent fallbacks will automatically throw NotAllowedError.
@@ -1984,7 +1984,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       setLocalStream(stream);
       if (myVideoRef.current) myVideoRef.current.srcObject = stream;
 
-      // ── AUDIO AUTOPLAY UNLOCK ─────────────────────────────────────────────────
+      // â”€â”€ AUDIO AUTOPLAY UNLOCK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // Browsers require a user-gesture (the 'Answer' button click) to allow autoplay.
       // Create a silent AudioContext with the gesture to unlock audio on iOS/Android.
       try {
@@ -1996,15 +1996,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         src.start(0);
         await unlockCtx.resume();
         unlockCtx.close();
-      } catch { /* ignore — best effort */ }
+      } catch { /* ignore â€” best effort */ }
 
       setCallState('connecting');
       toast.success('Answering call...');
 
-      // ─── DETERMINISTIC ANSWER ARCHITECTURE ────────────────────────────────
+      // â”€â”€â”€ DETERMINISTIC ANSWER ARCHITECTURE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // PRIMARY PATH: If the Caller dialed us directly (deterministic architecture),
       // peer.on('call') already stored the pending connection in pendingConnectionRef.
-      // We answer THAT connection with our stream — no outbound call needed.
+      // We answer THAT connection with our stream â€” no outbound call needed.
       //
       // FALLBACK PATH: If pendingConnectionRef is empty (e.g., old session, XMTP-only),
       // we make an outbound call to the Caller's deterministic PeerID.
@@ -2016,7 +2016,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         pendingConn.answer(stream);
         setActiveConnection(pendingConn);
         pendingConn.on('stream', (rStream: MediaStream) => {
-          console.log('[Call:PeerJS] Receiver got remote stream — ACTIVE');
+          console.log('[Call:PeerJS] Receiver got remote stream â€” ACTIVE');
           setRemoteStream(rStream);
           setCallState('active');
           stopRingtone();
@@ -2031,7 +2031,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         pendingConn.on('error', () => performEndCallRef.current());
       } else {
         // FALLBACK: Outbound call to Caller's deterministic PeerID
-        console.log('[Call:answerCall] No pending connection — falling back to outbound dial');
+        console.log('[Call:answerCall] No pending connection â€” falling back to outbound dial');
         const targetPeerId = remotePeerIdRef.current || (activePeer ? derivePeerId(activePeer) : null);
         if (!targetPeerId) {
           toast.error('Cannot answer: caller identity unknown. Please wait and retry.');
@@ -2057,7 +2057,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         
         setActiveConnection(conn);
         conn.on('stream', (rStream: MediaStream) => {
-          console.log('[Call:PeerJS] Receiver got remote stream (fallback) — ACTIVE');
+          console.log('[Call:PeerJS] Receiver got remote stream (fallback) â€” ACTIVE');
           setRemoteStream(rStream);
           setCallState('active');
           if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
@@ -2078,7 +2078,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       // Failsafe: if remote stream does not arrive within 20s, abort
       callTimeoutRef.current = setTimeout(() => {
         if (callStateRef.current === 'connecting') {
-          toast.error('Call timed out — no media stream received.');
+          toast.error('Call timed out â€” no media stream received.');
           performEndCallRef.current();
         }
       }, 30000);
@@ -2124,7 +2124,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   };
 
-  // ─── declineCall: Receiver declines ─────────────────────────────────────────
+  // â”€â”€â”€ declineCall: Receiver declines â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const declineCall = useCallback(async () => {
     try {
       if (executeSendRef.current) await executeSendRef.current('__CALL_DECLINE__');
@@ -2143,7 +2143,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [performEndCall, address, activePeer]);
 
-  // ─── endCall: Either party hangs up ─────────────────────────────────────────
+  // â”€â”€â”€ endCall: Either party hangs up â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const endCall = useCallback(async () => {
     try {
       if (executeSendRef.current) await executeSendRef.current('__CALL_HANGUP__');
@@ -2162,7 +2162,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [performEndCall, address, activePeer, callType, callDurationSeconds]);
 
-  // ─── toggleMic ───────────────────────────────────────────────────────────────
+  // â”€â”€â”€ toggleMic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const toggleMic = useCallback(() => {
     if (!localStream) return;
     const nextMuted = !isMicMuted;
@@ -2170,7 +2170,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setIsMicMuted(nextMuted);
   }, [localStream, isMicMuted]);
 
-  // ─── toggleCamera ────────────────────────────────────────────────────────────
+  // â”€â”€â”€ toggleCamera â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const toggleCamera = useCallback(() => {
     if (!localStream) return;
     const nextOff = !isCamOff;
@@ -2178,7 +2178,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setIsCamOff(nextOff);
   }, [localStream, isCamOff]);
 
-  // ─── toggleVoiceIsolation ────────────────────────────────────────────────────────
+  // â”€â”€â”€ toggleVoiceIsolation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const toggleVoiceIsolation = useCallback(async () => {
     if (!localStreamRef.current || !activeConnectionRef.current) return;
     const nextIsolation = !voiceIsolation;
@@ -2211,7 +2211,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [voiceIsolation, isMicMuted]);
 
-  // ─── toggleDataSaver ──────────────────────────────────────────────────────────
+  // â”€â”€â”€ toggleDataSaver â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const toggleDataSaver = useCallback(async () => {
     if (!localStreamRef.current || !activeConnectionRef.current || callTypeRef.current !== 'video') return;
     const nextSaver = !dataSaver;
@@ -2242,7 +2242,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [dataSaver, activeCamera, isCamOff]);
 
-  // ─── Hardware Media Routing (replaceTrack) ──────────────────────────────────
+  // â”€â”€â”€ Hardware Media Routing (replaceTrack) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const switchCamera = async () => {
     if (!localStreamRef.current || !activeConnectionRef.current) return;
     const newFacingMode = activeCamera === 'user' ? 'environment' : 'user';
@@ -2415,7 +2415,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }
 
         try {
-          // Convert blob to base64 data URL — sent over already-encrypted XMTP channel
+          // Convert blob to base64 data URL â€” sent over already-encrypted XMTP channel
           const reader = new FileReader();
           reader.onloadend = async () => {
             const dataUrl = reader.result as string; // data:audio/webm;base64,...
@@ -2460,7 +2460,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     } catch (err) {
       console.warn('[Voice] Microphone access denied or unavailable:', err);
     }
-  // [BUG FIX] Added 'address' to dependency array — was causing stale closure where
+  // [BUG FIX] Added 'address' to dependency array â€” was causing stale closure where
   // audio messages were sent with null/undefined address after wallet reconnect
   }, [isRecording, activePeer, client, address]);
 
@@ -2520,7 +2520,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             }
           }
           
-          // FETCH PENDING MESSAGES (OFFLINE ROUTING) — works for both HL and WalletConnect users
+          // FETCH PENDING MESSAGES (OFFLINE ROUTING) â€” works for both HL and WalletConnect users
           // [BUG FIX] Route is /api/chat/queue (not /api/chat/pending).
           // Auth via x-web3-address header. Response shape: { messages: [...] } not { pending: [...] }.
           // Timestamp field is createdAt (PendingChatMessage schema), not timestamp.
@@ -2732,7 +2732,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   useEffect(() => {
     // Aggressive Auto-Init: Trigger for all connected users including mobile.
-    // Skip email users — they don't have a wallet signer for XMTP.
+    // Skip email users â€” they don't have a wallet signer for XMTP.
     if (isConnected && address && !isEmailUser && !client && !initInFlight.current && !initError) {
       initClient();
       // [SAFETY TIMEOUT] If init hasn't resolved in 45s, reset state to unblock the UI
@@ -2753,7 +2753,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (!address) return;
     localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: arr }));
     
-    // Also backup to server — send x-web3-address so WalletConnect users are accepted
+    // Also backup to server â€” send x-web3-address so WalletConnect users are accepted
     fetch('/api/chat/contacts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-web3-address': address },
@@ -2790,7 +2790,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     activePeerDmIdRef.current = `dm-${activePeer.toLowerCase()}`;
     peerToConvId.current.set(activePeer.toLowerCase(), activePeerDmIdRef.current);
     convIdToPeer.current.set(activePeerDmIdRef.current, activePeer);
-    // Reset native XMTP dm id AND peer inboxId — will be resolved by fetchHistorical
+    // Reset native XMTP dm id AND peer inboxId â€” will be resolved by fetchHistorical
     activeXmtpDmIdRef.current = null;
     activePeerInboxIdRef.current = '';
   }, [client, activePeer]);
@@ -2948,15 +2948,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     syncGlobal();
     const globalPoll = setInterval(syncGlobal, 4000);
 
-    // ─── GLOBAL XMTP STREAM ────────────────────────────────────────────────────
+    // â”€â”€â”€ GLOBAL XMTP STREAM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // DEDUPLICATION CONTRACT:
     // 1. Every real XMTP message ID is registered in confirmedMsgIds on first sight.
-    // 2. If the ID is already registered → skip (absolute deduplication).
-    // 3. If the message is from SELF → look up the optimistic placeholder via
+    // 2. If the ID is already registered â†’ skip (absolute deduplication).
+    // 3. If the message is from SELF â†’ look up the optimistic placeholder via
     //    optimisticContentMap (content-keyed) and swap it atomically.
     //    This prevents the "sender sees message twice" bug caused by XMTP echoing
     //    the sender's own message back through the stream.
-    // 4. If no optimistic placeholder exists (e.g. opened in a second tab) →
+    // 4. If no optimistic placeholder exists (e.g. opened in a second tab) â†’
     //    insert normally, but only after confirming the ID is not already present.
     // Self-healing stream loop: if GroupInactive kills the stream, restart it with backoff.
     let activeAbortController: AbortController | null = null;
@@ -2989,7 +2989,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 resolvedPeerAddr = currentActivePeer || '';
               }
               
-              // Second fast path: check the global inboxId→address cache
+              // Second fast path: check the global inboxIdâ†’address cache
               if (!resolvedPeerAddr && fromPeer && msg.senderInboxId) {
                 const cached = await resolveSenderAddress(msg.senderInboxId, undefined as any);
                 if (cached) resolvedPeerAddr = cached.toLowerCase();
@@ -3054,21 +3054,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const msgConvPeer = resolvedPeerAddr || convoId || msg.senderInboxId || 'unknown';
             const realId = msg.id ?? `real-${sentAtNs}-${Math.random()}`;
 
-            // ── ABSOLUTE DEDUPLICATION GATE ──────────────────────────────────────
+            // â”€â”€ ABSOLUTE DEDUPLICATION GATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             // [CRITICAL FIX #3] On stream restart after a network drop, the stream
             // replays recent messages. Their IDs may be in confirmedMsgIds, but the
             // React state may have been wiped (e.g. peer switch + remount).
-            // Only skip if the ID is already IN React state — not just in the Set.
+            // Only skip if the ID is already IN React state â€” not just in the Set.
             if (confirmedMsgIds.current.has(realId)) {
               const alreadyInState = messagesRef.current?.some((m: any) => m.id === realId);
               if (alreadyInState) continue;
-              // ID was in dedup Set but NOT in state — re-insert (fall through).
+              // ID was in dedup Set but NOT in state â€” re-insert (fall through).
             } else {
               confirmedMsgIds.current.add(realId);
             }
             pruneConfirmedIds(); // keep Set bounded to last 2000 IDs
             pruneOptimisticMap(); // prune stale optimistic entries
-            // ─────────────────────────────────────────────────────────────────────
+            // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
             // Phase 2: Intercept Reactions
             if (typeof content === 'string' && content.startsWith('__REACT__')) {
@@ -3140,7 +3140,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 setMessages(prev => prev.map(m => {
                   if (typeof m.content === 'string' && m.content.startsWith('__POLL__')) {
                     // [CRITICAL FIX] Match by pollId extracted from the POLL payload,
-                    // not by m.id — because m.id changes when optimistic→real swap happens.
+                    // not by m.id â€” because m.id changes when optimisticâ†’real swap happens.
                     // Poll payload format: __POLL__<pollId>__::<question>__::<opts>
                     const pollPayloadId = m.content.replace('__POLL__', '').split('__::')[0];
                     if (pollPayloadId === targetPollId || m.id === targetPollId) {
@@ -3154,7 +3154,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               continue;
             }
 
-            // Phase 4: Intercept __EDIT__ — remote peer edited a message
+            // Phase 4: Intercept __EDIT__ â€” remote peer edited a message
             if (typeof content === 'string' && content.startsWith('__EDIT__')) {
               const editParts = content.replace('__EDIT__', '').split('__::');
               if (editParts.length >= 2) {
@@ -3179,7 +3179,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   setActivePeer(msgConvPeer);
                   setConversations(prev => {
                     if (!prev.find(c => c.peerAddress.toLowerCase() === msgConvPeer.toLowerCase())) {
-                      const newConv = { peerAddress: msgConvPeer, lastMessage: '📞 Incoming call...', lastAt: new Date() };
+                      const newConv = { peerAddress: msgConvPeer, lastMessage: 'ðŸ“ž Incoming call...', lastAt: new Date() };
                       const next = [newConv, ...prev];
                       persistToLocal(next);
                       return next;
@@ -3288,7 +3288,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
             if (belongsToActive) {
 
-              // ── CATCH-ALL SIGNAL GUARD ───────────────────────────────────────
+              // â”€â”€ CATCH-ALL SIGNAL GUARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
               // Signals that were not caught by earlier phases (e.g. __CALL_DECLINE__,
               // __CALL_HANGUP__, __READ__, __VOTE__) must NOT be inserted as chat bubbles.
               // The render filter is a secondary defence; this is the primary one.
@@ -3298,7 +3298,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 mappedContent.startsWith('__VOTE__') ||
                 false /* __PAYMENT__ bubbles are rendered */
               )) {
-                // Signal consumed — do not insert into message list
+                // Signal consumed â€” do not insert into message list
                 continue;
               }
 
@@ -3319,11 +3319,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 if (prev.some(m => m.id === realId)) return prev;
 
                 if (!fromPeer) {
-                  // ── OWN MESSAGE ECHO: atomic optimistic swap ──────────────────
+                  // â”€â”€ OWN MESSAGE ECHO: atomic optimistic swap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   // Strategy 1: look up by content key in optimisticContentMap
                   const knownOptId = optimisticContentMap.current.get(content);
                   if (knownOptId) {
-                    optimisticContentMap.current.delete(content); // consume the entry — key is the raw echoed content
+                    optimisticContentMap.current.delete(content); // consume the entry â€” key is the raw echoed content
                     const idx = prev.findIndex(m => m.id === knownOptId);
                     if (idx !== -1) {
                       const next = [...prev];
@@ -3331,7 +3331,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
                     }
                   }
-                  // Strategy 2: fallback — find any optimistic with identical content
+                  // Strategy 2: fallback â€” find any optimistic with identical content
                   const optIdx = prev.findIndex(
                     m => m.id.startsWith('optimistic-') &&
                          m.content === content
@@ -3353,12 +3353,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     next[burnIdx] = mappedMsg;
                     return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
                   }
-                  // Strategy 4: no optimistic found (e.g. second tab) — insert if not duplicate
+                  // Strategy 4: no optimistic found (e.g. second tab) â€” insert if not duplicate
                   if (prev.some(m => m.id === mappedMsg.id)) return prev;
                   return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
                 }
 
-                // ── PEER MESSAGE: straightforward insert ──────────────────────────
+                // â”€â”€ PEER MESSAGE: straightforward insert â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 if (fromPeer && !content.startsWith('__')) {
                   // We are focused on this chat, so send a read receipt!
                   if (!document.hidden) {
@@ -3458,7 +3458,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             }
             try { await client.conversations.sync(); } catch {}
             await new Promise(resolve => setTimeout(resolve, backoffMs));
-            continue; // restart the while loop → restart stream
+            continue; // restart the while loop â†’ restart stream
           }
           break; // only exit if cancelled
         }
@@ -3507,7 +3507,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         (window as any).__xmtp_peer = activePeer;
 
         // Capture the native XMTP conversation ID so the stream loop can
-        // route messages correctly even when inboxId→address resolution fails.
+        // route messages correctly even when inboxIdâ†’address resolution fails.
         try {
           if (raw && raw.length > 0) {
             // BEST SOURCE OF TRUTH: The actual messages fetched
@@ -3515,7 +3515,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const convoId = firstMsg.conversation?.id || firstMsg.conversationId || firstMsg.groupId;
             if (convoId) {
               activeXmtpDmIdRef.current = convoId;
-              // Cache for stream routing: convoId → peer eth address
+              // Cache for stream routing: convoId â†’ peer eth address
               convIdToPeer.current.set(convoId, activePeer.toLowerCase());
             }
             
@@ -3670,9 +3670,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             latestPinnedId = content.replace('__PIN__', '');
           } else if (typeof content === 'string' && content.startsWith('__REVOKE__')) {
             revokedIds.add(content.replace('__REVOKE__', ''));
-          // [BUG FIX] Skip __VOTE__ signals from main message list — they are control signals only
+          // [BUG FIX] Skip __VOTE__ signals from main message list â€” they are control signals only
           } else if (typeof content === 'string' && content.startsWith('__VOTE__')) {
-            // Already processed above — skip rendering as bubble
+            // Already processed above â€” skip rendering as bubble
           } else if (typeof content === 'string' && !content.startsWith('__CALL_')) {
              // [CRITICAL FIX] senderInboxId is an XMTP hash, not an eth address!
              // To know if it's from the peer, check if it is NOT from us.
@@ -3722,17 +3722,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           }
         }
 
-        // ── POLL MERGE WITH FULL DEDUPLICATION ───────────────────────────────
+        // â”€â”€ POLL MERGE WITH FULL DEDUPLICATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Register all newly fetched real IDs in confirmedMsgIds so the stream
         // cannot double-insert them when the echo arrives after the poll.
         processedMsgs.forEach((m: any) => confirmedMsgIds.current.add(m.id));
         
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // CRITICAL FIX: PURELY ADDITIVE MERGE
-        // We NEVER replace the message list — we only add messages not yet present.
+        // We NEVER replace the message list â€” we only add messages not yet present.
         // This prevents poll failures (empty array from XMTP) from wiping optimistic
         // messages or stream-received messages that haven't been confirmed yet.
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         setMessages(prev => {
           const activeId = `dm-${activePeer.toLowerCase()}`;
           
@@ -3751,10 +3751,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             newConfirmed = newConfirmed.filter((m: any) => m.sentAtNs > clearTsNs);
           }
           
-          // ── KEY GUARD ──────────────────────────────────────────────────────
+          // â”€â”€ KEY GUARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           // If the poll returned NOTHING new, return prev UNCHANGED.
           // This is what prevents an empty XMTP response from wiping all messages.
-          // ──────────────────────────────────────────────────────────────────
+          // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           if (newConfirmed.length === 0) return prev;
           
           // For each NEW confirmed message, find and remove its optimistic twin
@@ -3831,7 +3831,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
   }, [client, activePeer, address]);
 
-  // [BUG FIX] Separate flag for opening a new conversation — previously used the shared
+  // [BUG FIX] Separate flag for opening a new conversation â€” previously used the shared
   // 'sending' flag, which caused executeSend to silently abort the user's first message
   // because (!isSystemSignal && sending) returned true while the peer lookup was in-flight.
   const [isStartingConversation, setIsStartingConversation] = useState(false);
@@ -3949,7 +3949,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         const botMsg = {
           id: `bot-${Date.now()}`,
           senderInboxId: '__bot__',
-          content: `🤖 ${botResponse}`,
+          content: `ðŸ¤– ${botResponse}`,
           sentAtNs: Date.now() + 1,
           conversationId: `dm-${activePeer?.toLowerCase()}`
         };
@@ -4001,7 +4001,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       else if (timer === '1 week') finalContent = `__BURN_604800__::${finalContent}`;
     }
 
-    // ── Messages are 100% free — no QD deduction per message (Axel strategy) ──
+    // â”€â”€ Messages are 100% free â€” no QD deduction per message (Axel strategy) â”€â”€
     // Chat must always be free. QDs are only for optional premium features.
     // Rate limiting is handled by the checkRateLimit() call above.
 
@@ -4013,7 +4013,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
     try {
       if (!isReaction) {
-        // ─── OPTIMISTIC INSERT ────────────────────────────────────────────────────
+        // â”€â”€â”€ OPTIMISTIC INSERT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Register the content in the map BEFORE inserting, so the stream echo
         // can find and replace this optimistic message atomically when it arrives.
         optimisticContentMap.current.set(finalContent, optimisticId); // FIX: must match what XMTP echoes back
@@ -4073,7 +4073,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         toast.info("You are offline. Message queued to outbox.");
       }
 
-      // ALWAYS send via XMTP / offline queue — works both online AND offline.
+      // ALWAYS send via XMTP / offline queue â€” works both online AND offline.
       // sendMessage() handles: XMTP retries, fallback to DB offline queue, and
       // guarantees delivery when the recipient opens Ledger Chat.
       await sendMessage(client, activePeer, finalContent, address);
@@ -4122,11 +4122,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   };
 
-  // Wire the always-fresh ref — this is read by the offline outbox flush event listener
+  // Wire the always-fresh ref â€” this is read by the offline outbox flush event listener
   // Using a ref avoids stale closures across render cycles (production-critical for scale)
   executeSendRef.current = executeSend;
 
-  // ─── Hito 4: Link Preview Detection ─────────────────────────────────────
+  // â”€â”€â”€ Hito 4: Link Preview Detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   
   // Detect link in input and fetch preview metadata
@@ -4149,7 +4149,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     return () => clearTimeout(t);
   }, [inputText, detectLinkPreview]);
 
-  // ─── Hito 4: GIF Search (Proxy via internal API) ────────────────────────────────
+  // â”€â”€â”€ Hito 4: GIF Search (Proxy via internal API) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const searchGifs = useCallback(async (q: string) => {
     if (!q.trim()) { setGifResults([]); return; }
     try {
@@ -4171,7 +4171,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     return () => clearTimeout(t);
   }, [gifSearch, searchGifs]);
 
-  // ─── Hito 4: Scheduled Messages ──────────────────────────────────────────
+  // â”€â”€â”€ Hito 4: Scheduled Messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -4201,10 +4201,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   };
 
-  // ─── Live Location: watchPosition-based real-time sharing ───────────────────
+  // â”€â”€â”€ Live Location: watchPosition-based real-time sharing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const startLiveLocation = useCallback(() => {
     if (liveLocationWatchId !== null) {
-      // Already tracking — stop it
+      // Already tracking â€” stop it
       navigator.geolocation.clearWatch(liveLocationWatchId);
       setLiveLocationWatchId(null);
       setIsLiveLocationActive(false);
@@ -4236,7 +4236,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
     setLiveLocationWatchId(watchId);
     setIsLiveLocationActive(true);
-    toast.success('Live location started — sharing position');
+    toast.success('Live location started â€” sharing position');
 
     // Auto-stop after 15 minutes
     setTimeout(() => {
@@ -4251,12 +4251,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     e.preventDefault();
     if (!inputText.trim()) return;
     setSendAnimKey(k => k + 1);
-    // ── [FASE 16: Rate-Limit Guard] ──────────────────────────────────────
+    // â”€â”€ [FASE 16: Rate-Limit Guard] â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const now = Date.now();
     const rl = rateLimitRef.current;
     rl.timestamps = rl.timestamps.filter(t => now - t < RATE_LIMIT_WINDOW_MS);
     if (rl.timestamps.length >= RATE_LIMIT_MAX) {
-      toast.warning('Slow down — you are sending messages too quickly.');
+      toast.warning('Slow down â€” you are sending messages too quickly.');
       return;
     }
     rl.timestamps.push(now);
@@ -4296,7 +4296,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       const TONE_MAP: Record<string, string> = { 'hate': 'strongly dislike', 'stupid': 'not optimal', 'idiot': 'mistaken', 'kill': 'stop' };
       let softened = txt;
       Object.entries(TONE_MAP).forEach(([w, r]) => softened = softened.replace(new RegExp(`\\b${w}\\b`, 'gi'), r));
-      if (softened !== txt) { txt = softened; toast('Tone softened by AI', { icon: '🤝' }); }
+      if (softened !== txt) { txt = softened; toast('Tone softened by AI', { icon: 'ðŸ¤' }); }
     }
     await executeSend(txt);
   };
@@ -4411,7 +4411,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     );
   }
 
-  //  Email User — dedicated relay-based chat (no XMTP wallet signer needed) 
+  //  Email User â€” dedicated relay-based chat (no XMTP wallet signer needed) 
   if (isEmailUser) {
     const emailLabel = (address as string).replace('email_', '');
     return (
@@ -4551,7 +4551,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         )}
       </AnimatePresence>
 
-      {/* ── CONTACT INFO PANEL ── */}
+      {/* â”€â”€ CONTACT INFO PANEL â”€â”€ */}
       <AnimatePresence>
         {showContactInfo && activePeer && (
           <ContactInfoPanel key="contact-info-panel"
@@ -4591,7 +4591,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         )}
       </AnimatePresence>
 
-      {/* ── FULL SETTINGS (WhatsApp parity) ── */}
+      {/* â”€â”€ FULL SETTINGS (WhatsApp parity) â”€â”€ */}
       <AnimatePresence>
         {showFullSettings && (
           <LedgerSettingsFull key="ledger-settings-full"
@@ -4602,19 +4602,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         )}
       </AnimatePresence>
 
-    {/* ─── WebRTC Ringtone Audio Element ────────────────────────────────────── */}
+    {/* â”€â”€â”€ WebRTC Ringtone Audio Element â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
     <audio ref={ringAudioRef} loop playsInline x-webkit-airplay="allow" src="/sounds/call_ringtone.mp3" style={{ display: 'none' }} />
 
-    {/* Solid white container — two-panel layout: sidebar (left) + chat (right) */}
+    {/* Solid white container â€” two-panel layout: sidebar (left) + chat (right) */}
       <div className={`relative flex flex-row flex-1 min-h-0 w-full overflow-hidden shadow-sm ${(showScanner || showMyQR || showProfile) ? 'overflow-visible' : ''}`} style={{ 
       borderRadius: isMobile ? 0 : '0',
       ...bgStyle,
       fontFamily,
     }}>
-      {/*  Sidebar: Conversation List — fixed width on desktop, full screen on mobile when no chat is active  */}
+      {/*  Sidebar: Conversation List â€” fixed width on desktop, full screen on mobile when no chat is active  */}
       <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'hidden md:flex' : 'flex') : (showList ? 'flex' : 'hidden md:flex')} w-full md:w-80 lg:w-96 flex-col border-r border-black/[0.08] bg-white shrink-0 h-full overflow-hidden`}>
 
-        {/* ── Sidebar Header ── */}
+        {/* â”€â”€ Sidebar Header â”€â”€ */}
         <div className="px-4 py-3 border-b border-black/[0.05] bg-[#F9F9F9] flex flex-col gap-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}>
           {/* Top row: Identity + Quick Actions */}
           <div className="flex items-center justify-between">
@@ -4665,7 +4665,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           </div>
         </div>
 
-        {/* ── Crystal Glass NavBar ── */}
+        {/* â”€â”€ Crystal Glass NavBar â”€â”€ */}
         <CrystalNavBar
           activeTab={(['chats','calls','contacts'].includes(sidebarTab) ? sidebarTab === 'chats' || sidebarTab === 'contacts' ? 'chats' : 'calls' : sidebarTab) as NavTab}
           onTabChange={(tab: NavTab) => {
@@ -4681,7 +4681,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
         <div className="flex-1 overflow-y-auto flex flex-col bg-[#F2F2F7]" style={bgStyle}>
 
-          {/* ── UPDATES TAB ── */}
+          {/* â”€â”€ UPDATES TAB â”€â”€ */}
           {sidebarTab === 'updates' && (
             <LedgerUpdatesTab
               myAddress={address || ''}
@@ -4691,7 +4691,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             />
           )}
 
-          {/* ── COMMUNITIES TAB ── */}
+          {/* â”€â”€ COMMUNITIES TAB â”€â”€ */}
           {sidebarTab === 'communities' && (
             <LedgerCommunitiesTab
               myAddress={address || ''}
@@ -4703,7 +4703,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             />
           )}
 
-          {/* ── CHATS TAB ── */}
+          {/* â”€â”€ CHATS TAB â”€â”€ */}
           {sidebarTab === 'chats' && (
             <>
               {conversations.length > 0 && archivedPeers.size > 0 && (
@@ -4811,7 +4811,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             </>
           )}
 
-          {/* ── CALLS TAB (New LedgerCallsTab) ── */}
+          {/* â”€â”€ CALLS TAB (New LedgerCallsTab) â”€â”€ */}
           {sidebarTab === 'calls' && (
             <LedgerCallsTab
               callHistory={callHistoryList.map(c => ({
@@ -4835,7 +4835,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             />
           )}
 
-          {/* ── CONTACTS TAB ── */}
+          {/* â”€â”€ CONTACTS TAB â”€â”€ */}
 
           {sidebarTab === 'contacts' && (
             <div className="flex-1 overflow-y-auto">
@@ -4897,7 +4897,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             <div className="h-[68px] px-4 border-b border-black/[0.05] flex items-center justify-between bg-white/80 backdrop-blur-xl shrink-0 z-10 shadow-[0_4px_30px_rgba(0,0,0,0.03)]">
               <div className="flex items-center gap-3">
                 <button onClick={() => setShowList(true)} className="md:hidden p-1.5 rounded-lg hover:bg-black/5 text-black/40 text-[10px] font-black tracking-wider mr-1">
-                  ←
+                  â†
                 </button>
                 <button onClick={() => setShowContactInfo(true)} className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity">
                   <div className="relative">
@@ -5040,8 +5040,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   )}
                   {matches.length > 1 && (
                     <>
-                      <button onClick={() => handleNavSearch(-1)} className="p-1 hover:bg-black/5 rounded-lg text-black/50">↑</button>
-                      <button onClick={() => handleNavSearch(1)} className="p-1 hover:bg-black/5 rounded-lg text-black/50">↓</button>
+                      <button onClick={() => handleNavSearch(-1)} className="p-1 hover:bg-black/5 rounded-lg text-black/50">â†‘</button>
+                      <button onClick={() => handleNavSearch(1)} className="p-1 hover:bg-black/5 rounded-lg text-black/50">â†“</button>
                     </>
                   )}
                   <button onClick={() => { setShowSearch(false); setSearchQuery(''); }} className="p-1 hover:bg-black/5 rounded-lg text-black/40">
@@ -5061,7 +5061,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <div className="flex-1 min-w-0 flex flex-col">
                   <span className="text-[10px] font-black text-black uppercase tracking-widest flex items-center gap-1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg> Pinned Message</span>
                   <span className="text-[12px] font-mono font-medium text-black/70 truncate">
-                    {messages.find(m => m.id === pinnedMessageId)?.content?.replace(/__REPLY__[a-zA-Z0-9_-]+__::/, '').replace('__AUDIO__', '🎙️ Voice Note') || 'Pinned Message'}
+                    {messages.find(m => m.id === pinnedMessageId)?.content?.replace(/__REPLY__[a-zA-Z0-9_-]+__::/, '').replace('__AUDIO__', 'ðŸŽ™ï¸ Voice Note') || 'Pinned Message'}
                   </span>
                 </div>
                 <button 
@@ -5094,7 +5094,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
-                <span className="text-[11px] text-[#8E8E93] font-medium">End-to-end encrypted · Secured by XMTP</span>
+                <span className="text-[11px] text-[#8E8E93] font-medium">End-to-end encrypted Â· Secured by XMTP</span>
               </div>
 
               {(() => {
@@ -5112,7 +5112,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   if (c.startsWith('__EDIT__')) return false;
                   if (c.startsWith('__READ__')) return false;
                   if (c.startsWith('__VOTE__')) return false;
-                  // __PAYMENT__ messages ARE rendered (as PaymentBubble) — do NOT filter them out
+                  // __PAYMENT__ messages ARE rendered (as PaymentBubble) â€” do NOT filter them out
                   if (c.startsWith('__TYPING__')) return false;
                   return true;
                 });
@@ -5218,16 +5218,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <div className="flex items-center gap-2 px-4 pt-3 pb-1">
                     <div className="flex items-center gap-1.5 bg-[#f5f5f7] text-[#050505] px-3 py-1.5 rounded-full">
                         <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                        <span className="text-[12px] font-medium">{recordingSeconds}s — Recording voice message</span>
+                        <span className="text-[12px] font-medium">{recordingSeconds}s â€” Recording voice message</span>
                     </div>
                 </div>
               )}
-              {/* [BUG FIX] Secret Chat Active Banner — clearly visible above input */}
+              {/* [BUG FIX] Secret Chat Active Banner â€” clearly visible above input */}
               {isSecretChat && !isRecording && (
                 <div className="flex items-center gap-2 px-4 pt-2 pb-1 bg-black/5 border-b border-black/10 animate-in slide-in-from-top-1 duration-200">
                   <span className="flex items-center gap-1.5 text-[11px] font-mono font-black text-[#050505] uppercase tracking-wider">
                     <span className="w-2 h-2 rounded-full bg-white animate-pulse inline-block" />
-                    🔥 SECRET CHAT ACTIVE — Messages burn in 15s
+                    ðŸ”¥ SECRET CHAT ACTIVE â€” Messages burn in 15s
                   </span>
                   <button
                     type="button"
@@ -5398,12 +5398,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 </div>
               )}
                 <input type="file" ref={fileRef} className="hidden" onChange={handleFileUpload} />
-                {/* Camera capture — opens native camera on iOS/Android */}
+                {/* Camera capture â€” opens native camera on iOS/Android */}
                 <input type="file" ref={cameraRef} className="hidden" accept="image/*,video/*" capture="environment" onChange={handleFileUpload} />
-                {/* Gallery picker — opens photo library on iOS/Android */}
+                {/* Gallery picker â€” opens photo library on iOS/Android */}
                 <input type="file" ref={galleryRef} className="hidden" accept="image/*,video/*" onChange={handleFileUpload} />
                 <form onSubmit={handleSend} className="flex flex-col w-full relative">
-                  {/* ── App Drawer (WhatsApp-style icon grid) ── */}
+                  {/* â”€â”€ App Drawer (WhatsApp-style icon grid) â”€â”€ */}
                   <AnimatePresence>
                   {showAppDrawer && (
                     <>
@@ -5418,28 +5418,28 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         <div className="w-10 h-1.5 bg-black/10 rounded-full mx-auto mb-5" />
                         <div className="flex flex-col py-2">
                           {[
-                            // ── Media ──────────────────────────────────────────────
+                            // â”€â”€ Media â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                             { id: 'camera',    color: '#FF3B30', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>,  label: 'Camera',        sublabel: 'Take a photo or video', onClick: () => { cameraRef.current?.click(); setShowAppDrawer(false); } },
                             { id: 'gallery',   color: '#5856D6', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,   label: 'Photos & Video', sublabel: 'Choose from library',   onClick: () => { galleryRef.current?.click(); setShowAppDrawer(false); } },
                             { id: 'attach',    color: '#34C759', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>,  label: 'Document',       sublabel: 'Any file up to 1 MB',    onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
                             { id: 'audio',     color: '#FF9500', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>,     label: 'Audio Note',     sublabel: 'Record a voice message', onClick: () => { setShowAppDrawer(false); startRecording(); } },
-                            // ── Interactive ──────────────────────────────────────────
+                            // â”€â”€ Interactive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                             { id: 'gif',       color: '#AF52DE', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><text x="5" y="16" fontSize="9" fontWeight="bold" fill="currentColor" stroke="none">GIF</text></svg>,   label: 'GIF',            sublabel: 'Search animated GIFs',   onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
                             { id: 'sticker',   color: '#FFCC00', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>,      label: 'Stickers',       sublabel: 'Send a sticker',         onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
                             { id: 'poll',      color: '#10B981', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
-                            // ── Crypto & Aztec Private Payments ──────────────────────────
+                            // â”€â”€ Crypto & Aztec Private Payments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                             { id: 'zkmoney',   color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>, label: 'zk.money', sublabel: 'Private Aztec Transfer', onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
                             { id: 'zkstream',  color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>, label: 'Money Stream', sublabel: 'Continuous Aztec money stream', onClick: () => { setShowZkStreamModal(true); setShowAppDrawer(false); } },
                             { id: 'zkinvoice', color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, label: 'Private Invoice', sublabel: 'Request shielded payment', onClick: () => { setShowZkInvoiceModal(true); setShowAppDrawer(false); } },
                             { id: 'payment',   color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>,     label: 'Payment',        sublabel: 'Send crypto',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
                             { id: 'tip',       color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, label: 'Creator Tip',  sublabel: 'Support peer with ETH/USDC', onClick: () => { setShowTipModal(true); setShowAppDrawer(false); } },
-                            // ── Utilities ────────────────────────────────────────────
+                            // â”€â”€ Utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                             { id: 'location',  color: '#32D74B', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,    label: 'Location',       sublabel: 'Share your location',    onClick: () => { 
                               setShowAppDrawer(false);
                               if (navigator.geolocation) {
                                 navigator.geolocation.getCurrentPosition(
                                   (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
-                                  () => toast.error('Location access denied — enable it in browser settings')
+                                  () => toast.error('Location access denied â€” enable it in browser settings')
                                 );
                               } else {
                                 toast.error('Geolocation not supported on this device');
@@ -5512,13 +5512,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           className="flex items-center gap-3 w-full px-4 py-3 hover:bg-[#F2F2F7] text-left transition-colors"
                         >
                           <span className="text-[14px] font-mono font-bold text-[#25D366]">{bot.cmd}</span>
-                          <span className="text-[12px] text-[#8E8E93]">{bot.hint.split(' — ')[1]}</span>
+                          <span className="text-[12px] text-[#8E8E93]">{bot.hint.split(' â€” ')[1]}</span>
                         </button>
                       ))}
                     </div>
                   )}
 
-                  {/* ── Main Input Row (WhatsApp/Signal style) ── */}
+                  {/* â”€â”€ Main Input Row (WhatsApp/Signal style) â”€â”€ */}
                   <div
                     className="flex items-end gap-2 px-2 pt-2 w-full relative z-40 bg-[#F0F2F5]"
                     style={{ paddingBottom: 'max(14px, calc(0.75rem + env(safe-area-inset-bottom, 0px)))' }}
@@ -5709,7 +5709,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       {/* NOTE: remoteAudioRef lives ONLY inside the active call portal below to avoid ref conflicts */}
 
-      {/* ── Incoming Call Screen (state: ringing) ──────────────────────────────── */}
+      {/* â”€â”€ Incoming Call Screen (state: ringing) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {callState === 'ringing' && isMounted && typeof document !== 'undefined'
         ? (createPortal(
         <div
@@ -5732,10 +5732,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 {callTypeRef.current === 'video' ? 'Incoming Video Call' : 'Incoming Voice Call'}
               </span>
             </div>
-            <p className="text-white/20 text-[12px] tracking-wide">Ledger Chat • End-to-end encrypted</p>
+            <p className="text-white/20 text-[12px] tracking-wide">Ledger Chat â€¢ End-to-end encrypted</p>
           </div>
 
-          {/* Center — Avatar with animated rings */}
+          {/* Center â€” Avatar with animated rings */}
           <div className="flex flex-col items-center gap-6">
             {/* Rings */}
             <div className="relative flex items-center justify-center">
@@ -5776,7 +5776,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             </div>
           </div>
 
-          {/* Bottom — Decline & Answer */}
+          {/* Bottom â€” Decline & Answer */}
           <div className="w-full pb-[max(52px,env(safe-area-inset-bottom,52px))] px-16">
             <div className="flex items-center justify-between">
               {/* Decline */}
@@ -5821,7 +5821,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         </div>,
         document.body
       ) as React.ReactNode) : null}
-      {/* ── Outgoing Call Screen (state: calling — waiting for answer) ─────── */}
+      {/* â”€â”€ Outgoing Call Screen (state: calling â€” waiting for answer) â”€â”€â”€â”€â”€â”€â”€ */}
       {(callState === 'calling' && isMounted && typeof document !== 'undefined')
         ? (createPortal(
         <div
@@ -5844,10 +5844,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 {callTypeRef.current === 'video' ? 'Video Call' : 'Voice Call'}
               </span>
             </div>
-            <p className="text-white/20 text-[12px] tracking-wide">Ledger Chat • End-to-end encrypted</p>
+            <p className="text-white/20 text-[12px] tracking-wide">Ledger Chat â€¢ End-to-end encrypted</p>
           </div>
 
-          {/* Center — Avatar with slow animated rings */}
+          {/* Center â€” Avatar with slow animated rings */}
           <div className="flex flex-col items-center gap-6">
             <div className="relative flex items-center justify-center">
               {[200, 160].map((size, i) => (
@@ -5885,7 +5885,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             </div>
           </div>
 
-          {/* Bottom — Cancel */}
+          {/* Bottom â€” Cancel */}
           <div className="w-full flex flex-col items-center pb-[max(52px,env(safe-area-inset-bottom,52px))]">
             <button
               onClick={performEndCallRef.current}
@@ -5900,10 +5900,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         document.body
       ) as React.ReactNode) : null}
 
-      {/* ── Active Call Overlay — WhatsApp/Telegram parity ──────── */}
+      {/* â”€â”€ Active Call Overlay â€” WhatsApp/Telegram parity â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {callState === 'active' && isMounted && (
         isCallMinimized ? createPortal(
-          /* ── MINIMIZED VIEW (Floating Banner or Video PiP) ── */
+          /* â”€â”€ MINIMIZED VIEW (Floating Banner or Video PiP) â”€â”€ */
           callType === 'video' ? (
              <motion.div
               drag
@@ -5936,10 +5936,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           ),
           document.body
         ) : (
-          /* ── FULL SCREEN VIEW ── */
+          /* â”€â”€ FULL SCREEN VIEW â”€â”€ */
           <div className="fixed inset-0 w-full h-full bg-black flex flex-col" style={{ zIndex: 200000, touchAction: 'none' }}>
             
-            {/* ── BACKGROUND ── */}
+            {/* â”€â”€ BACKGROUND â”€â”€ */}
             <div className="absolute inset-0">
               {callTypeRef.current === 'video' ? (
                 remoteStream ? (
@@ -5953,14 +5953,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     <div className="relative">
                       <div className="absolute inset-0 rounded-full bg-black/5 animate-ping scale-150" style={{ animationDuration: '2s' }} />
                       <div className="w-28 h-28 rounded-full flex items-center justify-center shadow-xl relative z-10 bg-white border border-black/5">
-                        <span className="text-black text-4xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '🐳'}</span>
+                        <span className="text-black text-4xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : 'ðŸ³'}</span>
                       </div>
                     </div>
                     <p className="text-black/50 text-sm font-mono uppercase tracking-widest animate-pulse">Connecting video...</p>
                   </div>
                 )
               ) : (
-                /* ── AUDIO CALL - Dark cinematic background ── */
+                /* â”€â”€ AUDIO CALL - Dark cinematic background â”€â”€ */
                 <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#1A1A2E] via-[#16213E] to-[#0F3460]">
                   {/* Subtle animated background pulse */}
                   <div className="absolute inset-0 overflow-hidden">
@@ -5997,7 +5997,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               )}
             </div>
 
-            {/* ── PiP LOCAL VIDEO ── */}
+            {/* â”€â”€ PiP LOCAL VIDEO â”€â”€ */}
             {callType === 'video' && (
               <motion.div
                 drag
@@ -6020,10 +6020,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </motion.div>
             )}
 
-            {/* ── Top Gradient for Readability ── */}
+            {/* â”€â”€ Top Gradient for Readability â”€â”€ */}
             <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none z-20" />
 
-            {/* ── Top Bar (Sleek & Professional) ── */}
+            {/* â”€â”€ Top Bar (Sleek & Professional) â”€â”€ */}
             <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-4 sm:px-6" style={{ paddingTop: 'max(16px, env(safe-area-inset-top, 16px))' }}>
               <button 
                 onClick={() => setIsCallMinimized(true)}
@@ -6053,7 +6053,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </button>
             </div>
 
-            {/* ── Network Alert ── */}
+            {/* â”€â”€ Network Alert â”€â”€ */}
             <AnimatePresence>
               {networkQuality === 'poor' && (
                 <motion.div 
@@ -6065,10 +6065,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               )}
             </AnimatePresence>
 
-            {/* ── Bottom Gradient for Readability ── */}
+            {/* â”€â”€ Bottom Gradient for Readability â”€â”€ */}
             <div className="absolute bottom-0 inset-x-0 h-48 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none z-20" />
 
-            {/* ── Bottom Controls (Ultra-Mature Frosted Pill) ── */}
+            {/* â”€â”€ Bottom Controls (Ultra-Mature Frosted Pill) â”€â”€ */}
             <div
               className="absolute bottom-0 inset-x-0 z-30 flex flex-col items-center pb-8"
               style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom, 32px))' }}
@@ -6265,7 +6265,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                      <div>
                        <h4 className="text-[14px] font-bold text-[#1C1C1E]">Network Status</h4>
                        <p className={`text-[11px] font-medium mt-0.5 ${networkQuality === 'poor' ? 'text-yellow-500' : 'text-[#25D366]'}`}>
-                         {networkQuality === 'poor' ? 'Weak — reconnecting...' : 'Excellent connection'}
+                         {networkQuality === 'poor' ? 'Weak â€” reconnecting...' : 'Excellent connection'}
                        </p>
                      </div>
                    </div>
@@ -6380,7 +6380,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       ) : null}
 
        
-      {/* ─── MISSING MODALS FOR APP DRAWER ─── */}
+      {/* â”€â”€â”€ MISSING MODALS FOR APP DRAWER â”€â”€â”€ */}
       {showGifPicker && (
         <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm flex justify-center items-end" onClick={() => setShowGifPicker(false)}>
           <div className="bg-white w-full max-w-md h-[50vh] rounded-t-3xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
@@ -6503,7 +6503,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                <button onClick={() => {
                    reportMessage(contextMenu.id, contextMenu.content);
                }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-red-500 text-left">
-                  🚩 Report Message
+                  ðŸš© Report Message
                </button>
              )}
            </div>
@@ -6517,7 +6517,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             <div className="w-full max-w-md bg-white rounded-t-3xl p-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-800">Forward to...</h3>
-                <button onClick={() => setForwardMsg(null)} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#e5e5ea] text-black/40">✕</button>
+                <button onClick={() => setForwardMsg(null)} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#e5e5ea] text-black/40">âœ•</button>
               </div>
               <div className="bg-[#f5f5f7] rounded-xl border border-black/5 px-3 py-2 mb-3">
                 <p className="text-[11px] font-mono text-black/50 truncate">{forwardMsg.content ? formatMessagePreview(forwardMsg.content) : 'Message'}</p>
@@ -6556,7 +6556,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           </div>
         )}
 
-        {/* Profile Popover Overlay — fixed + portal so it escapes overflow:hidden containers */}
+        {/* Profile Popover Overlay â€” fixed + portal so it escapes overflow:hidden containers */}
        <AnimatePresence>
         {showProfile && activePeer && (
           <LedgerChatProfile
@@ -6657,7 +6657,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
              <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl flex flex-col gap-4">
                <div className="flex items-center justify-between">
                  <h3 className="text-[16px] font-black tracking-tight text-gray-900">Create Poll</h3>
-                 <button onClick={() => { setShowPollCreator(false); setPollQuestion(''); setPollOptions(['', '']); }} className="p-2 rounded-full hover:bg-[#e5e5ea] text-black/40">✕</button>
+                 <button onClick={() => { setShowPollCreator(false); setPollQuestion(''); setPollOptions(['', '']); }} className="p-2 rounded-full hover:bg-[#e5e5ea] text-black/40">âœ•</button>
                </div>
                <input
                  type="text"
@@ -6677,7 +6677,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                        className="flex-1 px-3 py-2 rounded-xl border border-black/10 text-[13px] focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10"
                      />
                      {pollOptions.length > 2 && (
-                       <button onClick={() => setPollOptions(prev => prev.filter((_, j) => j !== i))} className="text-black/40 hover:text-black/60 text-[12px] font-black">✕</button>
+                       <button onClick={() => setPollOptions(prev => prev.filter((_, j) => j !== i))} className="text-black/40 hover:text-black/60 text-[12px] font-black">âœ•</button>
                      )}
                    </div>
                  ))}
@@ -6704,7 +6704,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
            </div>
        )}
 
-       {/* ── Native Crypto Send Modal (replaces QD Transfer) ── */}
+       {/* â”€â”€ Native Crypto Send Modal (replaces QD Transfer) â”€â”€ */}
        {showWalletTransfer && activePeer && (
          <NativeCryptoSendModal
            isOpen={showWalletTransfer}
@@ -6721,8 +6721,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       </div>
 
-      {/* Fase 13: WebRTC Pre-Prompt — shown before getUserMedia is called */}
-       {/* ── Creator Tip Modal (Phase 3 Monetization #129-130) ── */}
+      {/* Fase 13: WebRTC Pre-Prompt â€” shown before getUserMedia is called */}
+       {/* â”€â”€ Creator Tip Modal (Phase 3 Monetization #129-130) â”€â”€ */}
        {showTipModal && activePeer && (
          <SendTipModal
            open={showTipModal}
@@ -6736,7 +6736,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
          />
        )}
 
-       {/* ── Aztec zk.money Private Payment Modal ── */}
+       {/* â”€â”€ Aztec zk.money Private Payment Modal â”€â”€ */}
        {showZkModal && activePeer && (
          <ZkMoneyModal
            isOpen={showZkModal}
@@ -6750,7 +6750,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
          />
        )}
 
-       {/* ── Aztec zk.money Shielded Wallet Panel ── */}
+       {/* â”€â”€ Aztec zk.money Shielded Wallet Panel â”€â”€ */}
        <AnimatePresence>
          {showZkWallet && (
            <motion.div
@@ -6769,7 +6769,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
          )}
        </AnimatePresence>
 
-       {/* ── Aztec zk.money Payment Stream Modal ── */}
+       {/* â”€â”€ Aztec zk.money Payment Stream Modal â”€â”€ */}
        {showZkStreamModal && activePeer && (
          <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setShowZkStreamModal(false)}>
            <div className="bg-white rounded-3xl shadow-2xl border border-black/10 w-full max-w-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -6787,7 +6787,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
          </div>
        )}
 
-       {/* ── Aztec zk.money Invoice Modal ── */}
+       {/* â”€â”€ Aztec zk.money Invoice Modal â”€â”€ */}
        {showZkInvoiceModal && activePeer && (
          <ZkInvoiceModal
            userAddress={address || ''}
@@ -6818,7 +6818,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           )
         : null}
 
-      {/* ── Save Contact Modal ── */}
+      {/* â”€â”€ Save Contact Modal â”€â”€ */}
       {showSaveContactModal && activePeer && isMounted && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[300000] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowSaveContactModal(false)}>
           <div
@@ -6873,7 +6873,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             setPendingRequestCount(0); // optimistically clear badge on close
           }}
           onAccepted={(peer, nickname) => {
-            // [FIX 1] Close the modal immediately — no zombie overlay
+            // [FIX 1] Close the modal immediately â€” no zombie overlay
             setShowContactRequests(false);
             setPendingRequestCount(0);
             // [FIX 2] Persist to local contacts with the nickname the requester has
@@ -6960,6 +6960,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
 
 
 

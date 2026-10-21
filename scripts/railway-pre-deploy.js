@@ -107,7 +107,7 @@ async function runCliMigrations() {
     // Expected if already applied or not found; proceed safely
   }
 
-  // 2. Deploy all pending migrations
+  // 2. Deploy all pending migrations — A-017: Exit with code 1 on failure. No --accept-data-loss fallback.
   console.log('[pre-deploy] Executing: npx prisma migrate deploy...');
   try {
     execSync('npx prisma migrate deploy', {
@@ -117,19 +117,9 @@ async function runCliMigrations() {
     console.log('[pre-deploy] Prisma migrations deployed successfully.');
     return;
   } catch (deployErr) {
-    console.error('[pre-deploy] prisma migrate deploy error:', deployErr.message);
-  }
-
-  // 3. Fallback: synchronize schema directly via db push if migration files have conflicts
-  console.log('[pre-deploy] Falling back to npx prisma db push --accept-data-loss...');
-  try {
-    execSync('npx prisma db push --accept-data-loss', {
-      stdio: 'inherit',
-      timeout: 120000,
-    });
-    console.log('[pre-deploy] Schema synchronized via db push.');
-  } catch (pushErr) {
-    console.warn('[pre-deploy] db push warning:', pushErr.message);
+    console.error('[pre-deploy] FATAL: prisma migrate deploy failed:', deployErr.message);
+    console.error('[pre-deploy] A-017: --accept-data-loss fallback REMOVED for safety. Fix the migration conflict before deploying.');
+    process.exit(1);
   }
 }
 
@@ -150,6 +140,6 @@ async function main() {
 
 main().catch((fatal) => {
   console.error('[pre-deploy] Fatal error caught in pre-deploy script:', fatal);
-  // Ensure we exit 0 so Railway container startup is not blocked
-  process.exit(0);
+  // A-017: Exit 1 on unhandled fatal — do NOT swallow errors silently
+  process.exit(1);
 });

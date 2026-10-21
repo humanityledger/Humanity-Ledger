@@ -400,17 +400,20 @@ export function MobileImmersiveGate() {
 
             {/* Main content — centered vertically */}
             <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-5">
-              {/* Wordmark */}
-              <motion.h1
+              {/* World Map Logo */}
+              <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                className="font-serif text-[11vw] font-normal tracking-tight text-[#0A0A0A] leading-none select-none text-center mb-10"
+                className="flex flex-col items-center gap-3 mb-8"
               >
-                LEDGER
-                <br />
-                NETWORK
-              </motion.h1>
+                <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-white border border-black/5 shadow-md p-1">
+                  <img src="/worldmap.png" alt="Humanity Ledger" className="w-full h-full object-cover" />
+                </div>
+                <h1 className="font-black text-2xl tracking-tight text-[#0A0A0A] leading-none select-none text-center">
+                  Humanity Ledger
+                </h1>
+              </motion.div>
 
               {/* Auth card */}
               <motion.div

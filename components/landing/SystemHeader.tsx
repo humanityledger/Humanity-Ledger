@@ -14,24 +14,20 @@ const NAV_ITEMS: NavItem[] = [];
 function HLLogo() {
   return (
     <Link href="/" className="flex items-center gap-2.5 group" aria-label="Humanity Ledger — Home">
-      <svg
-        width="22"
-        height="22"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#1a1a1a"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="transition-transform duration-300 group-hover:rotate-12"
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="12" r="10" />
-        <line x1="2" y1="12" x2="22" y2="12" />
-        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-      </svg>
+      {/* World map logo — the authentic Humanity Ledger mark */}
+      <img
+        src="/worldmap.png"
+        alt="World map"
+        width={34}
+        height={22}
+        style={{
+          objectFit: 'contain',
+          filter: 'none',
+        }}
+        className="pointer-events-none select-none transition-opacity duration-300 group-hover:opacity-75"
+      />
       <span className="font-sans text-[17px] font-bold tracking-tight text-[#1a1a1a] group-hover:text-black/70 transition-colors duration-200">
-        HumanityLedger
+        Humanity
       </span>
     </Link>
   );

@@ -5,8 +5,8 @@ import { prisma } from '../../lib/prisma';
 import { sequencer } from '../../lib/provenance/qd-sequencer';
 
 // Mock the dependencies
-vi.mock('../../lib/prisma', () => ({
-  prisma: {
+vi.mock('../../lib/prisma', () => {
+  const mockPrisma: any = {
     productPassport: {
       count: vi.fn(),
       create: vi.fn(),
@@ -14,9 +14,19 @@ vi.mock('../../lib/prisma', () => ({
     },
     user: {
       findUnique: vi.fn(),
-    }
-  }
-}));
+    },
+    $transaction: vi.fn(async (cbOrArray: any) => {
+      if (typeof cbOrArray === 'function') {
+        return cbOrArray(mockPrisma);
+      }
+      if (Array.isArray(cbOrArray)) {
+        return Promise.all(cbOrArray);
+      }
+      return cbOrArray;
+    }),
+  };
+  return { prisma: mockPrisma };
+});
 
 vi.mock('../../lib/session', () => ({
   getSession: vi.fn()

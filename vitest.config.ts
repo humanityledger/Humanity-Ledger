@@ -1,4 +1,4 @@
-﻿import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 /**
@@ -22,6 +22,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./test/setup.ts'],
+    retry: 2,
     include: [
       'test/**/*.test.ts',
       'test/**/*.spec.ts',
@@ -55,6 +56,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
+      'server-only': path.resolve(__dirname, 'test/mocks/empty.js'),
     },
   },
 });

@@ -1,63 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mintJWT } from '@/lib/jwt';
 import { safeRedisSet } from '@/lib/redis/client';
-import { isAddress } from 'viem';
 
-/**
- * POST /api/auth/qr-mobile-link
- *
- * Called by the mobile QRScannerModal to complete the desktop QR handshake.
- * This endpoint is the correct replacement for export-jwt in the mobile flow.
- *
- * WHY this exists:
- *   - `export-jwt` returns 401 on mobile because `human_session` doesn't exist
- *     until after desktop-side hydration (chicken-and-egg).
- *   - This endpoint mints a fresh mobile JWT from the `system_handshake`
- *     cookie (set after wallet sign) and stores the encrypted payload in Redis
- *     so the desktop poll can pick it up immediately.
- *
- * Auth Resolution (3 layers):
- *   LAYER 1: human_session / ledger_session JWT  standard path for returning users
- *   LAYER 2: system_handshake cookie  set after wallet.connect() on mobile,
- *            before any JWT exists. This is the "first QR scan" path.
- *   LAYER 3: 401 if neither is present.
- *
- * Flow:
- *   1. Mobile reads QR  parses { uuid, ephemeralPub, isECDH }
- *   2. Mobile generates its own ephemeral keypair
- *   3. Mobile derives shared secret: X25519(mobile.priv, desktop.pub)
- *   4. Mobile encrypts the JWT with AES-GCM
- *   5. Mobile POSTs here: { uuid, encryptedPayload, iv, tag, mobilePub }
- *   6. This endpoint stores the encrypted payload in Redis
- *   7. Desktop poll (/api/auth/qr-poll) returns it  desktop decrypts  hydrates
- */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { uuid, encryptedPayload, iv, tag, mobilePub, isServerMint, fallbackJwt } = body;
+    const { uuid, encryptedPayload, iv, tag, mobilePub, isServerMint } = body;
 
-    //  1. Validate required fields 
     if (!uuid || typeof uuid !== 'string' || uuid.length < 8) {
       return NextResponse.json({ error: 'Missing or invalid uuid' }, { status: 400 });
     }
     if (!mobilePub) {
       return NextResponse.json({ error: 'Missing mobilePub' }, { status: 400 });
     }
-    // In client-encrypt mode (isServerMint !== true), encryptedPayload + iv are required.
-    // In server-mint mode (isServerMint === true), they are omitted intentionally.
     if (!isServerMint && (!encryptedPayload || !iv)) {
       return NextResponse.json({ error: 'Missing encrypted payload fields' }, { status: 400 });
     }
 
-    //  2. Verify mobile identity via secure JWT ONLY 
-    // We STRICTLY require a cryptographic SIWE JWT from HttpOnly cookies (human_session or ledger_session).
-    // SECURITY: fallbackJwt from the request body is NEVER used for authentication —
-    // a client can craft any JWT and pass it as fallbackJwt to bypass session checks.
-    // Only cookie-based JWTs are trusted; cookies cannot be set cross-origin by an attacker.
     const humanSession = req.cookies.get('human_session')?.value || req.cookies.get('ledger_session')?.value;
 
     if (!humanSession) {
-      console.error(`[QR:Handshake:FAILURE] No secure JWT session found for UUID: ${uuid}. IP: ${req.headers.get('x-forwarded-for')}`);
       return NextResponse.json(
         { error: 'Session unauthenticated. Sign the cryptographic message in your wallet first.' },
         { status: 401 }
@@ -66,26 +28,17 @@ export async function POST(req: NextRequest) {
 
     let walletAddress: string | null = null;
 
-    // PATH A: Validate via secure JWT
     try {
       const { verifyJWT } = await import('@/lib/jwt');
       const payload = await verifyJWT(humanSession);
       walletAddress = (payload.sub as string) || (payload.address as string) || null;
-      if (walletAddress) {
-        console.log(`[QR:Handshake] [JWT] Resolved wallet: ${walletAddress}`);
-      } else {
+      if (!walletAddress) {
         throw new Error('JWT payload missing address');
       }
     } catch (err: any) {
-      console.error(`[QR:Handshake] JWT validation failed: ${err.message}`);
       return NextResponse.json({ error: 'Invalid or expired session. Please reconnect.' }, { status: 401 });
     }
 
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Unable to resolve wallet identity. Please reconnect.' }, { status: 401 });
-    }
-
-    //  3. Mint a system JWT for this wallet address 
     const { prisma } = await import('@/lib/prisma');
     const existingUser = await prisma.user.upsert({
       where: { walletAddress: walletAddress.toLowerCase() },
@@ -109,30 +62,21 @@ export async function POST(req: NextRequest) {
       humanityScore: existingUser?.humanityScore || 0,
       iss: 'humanity-ledger',
       source: 'qr-mobile-handshake',
-      nonce: cryptographicNonce, //  INHUMAN OPTIMIZATION: Replay Prevention
+      nonce: cryptographicNonce,
       issuedAt: new Date().toISOString()
     });
 
-    //  4. Build and store Redis payload depending on mode 
-    // PATH A (client-encrypted): store the full ECDH bundle so the desktop
-    //   can decrypt it with X25519(desktop.priv, mobilePub).
-    // [SECURITY PATCH A4] Removed insecure serverJwt plaintext fallback.
     let sessionPayload: string;
 
     if (!isServerMint && encryptedPayload && iv) {
-      // PATH A: client encrypted the JWT  store encrypted bundle
       sessionPayload = JSON.stringify({
-        // [SECURITY PATCH B] Injecting server-signed JWT to prevent client-side forgery
         serverSignedJwt: jwt,
         encryptedPayload,
         iv,
         tag: tag || null,
         mobilePub,
-        // serverJwt fallback strictly removed (A4 fix)
       });
     } else {
-      // PATH B (Insecure): Reject this. If they can't encrypt, they can't handshake.
-      console.error(`[QR:Handshake] Server-mint fallback rejected for UUID: ${uuid} (Security A4)`);
       return NextResponse.json(
         { error: 'Insecure handshake mode rejected. Please update your mobile app.' },
         { status: 403 }
@@ -141,7 +85,6 @@ export async function POST(req: NextRequest) {
 
     await safeRedisSet(`qr-session:${uuid}`, sessionPayload, 'EX', 300);
 
-    //  5. Also set human_session on this response for the mobile 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
     const cookieDomain = (process.env.NODE_ENV === 'production' && appUrl)
         ? (() => { try { return new URL(appUrl).hostname; } catch { return undefined; } })()
@@ -149,14 +92,6 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json({ success: true });
     response.cookies.set('human_session', jwt, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 604800,
-      path: '/',
-      domain: cookieDomain,
-    });
-    response.cookies.set('system_handshake', walletAddress, {
-      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 604800,
@@ -171,4 +106,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Server error during mobile QR link' }, { status: 500 });
   }
 }
-

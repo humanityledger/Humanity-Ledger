@@ -1023,9 +1023,14 @@ export function getAztecExplorerAddressUrl(address: string): string {
   return `${AZTEC_EXPLORER}/address/${address}`;
 }
 
-export function formatUSDValue(amount: string, token: SupportedToken): string {
+export function formatUSDValue(amount: string, token: SupportedToken, ethPriceUsd = 0): string {
   const num = parseFloat(amount.replace(/,/g, '')) || 0;
-  const rates: Record<SupportedToken, number> = { DAI: 1, USDC: 1, ETH: 2650 };
-  const usd = num * rates[token];
-  return `≈ $${usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (token === 'DAI' || token === 'USDC') {
+    return `≈ $${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  if (ethPriceUsd > 0) {
+    const usd = num * ethPriceUsd;
+    return `≈ $${usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  return '';
 }

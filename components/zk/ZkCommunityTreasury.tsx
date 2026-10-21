@@ -1,4 +1,6 @@
-'use client';
+﻿'use client';
+
+import { isZkEnabled } from '@/lib/features/zk';
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,7 +19,7 @@ import {
   getCommunityStats, ZkCommunityStats,
 } from '@/lib/zk/zkCommunityPayments';
 
-// ─── Props ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Props â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ZkCommunityTreasuryProps {
   communityId: string;
@@ -26,7 +28,7 @@ interface ZkCommunityTreasuryProps {
   currentUserAddress?: string;
 }
 
-// ─── Toast ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   useEffect(() => {
@@ -47,7 +49,7 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   );
 }
 
-// ─── Bounty Card ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Bounty Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function BountyCard({ bounty, onClaim }: { key?: React.Key; bounty: ZkBounty; onClaim: () => void }) {
   const msLeft = bounty.expiresAt - Date.now();
@@ -89,7 +91,7 @@ function BountyCard({ bounty, onClaim }: { key?: React.Key; bounty: ZkBounty; on
   );
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function ZkCommunityTreasury({
   communityId,
@@ -97,6 +99,7 @@ export function ZkCommunityTreasury({
   isAdmin = false,
   currentUserAddress = '',
 }: ZkCommunityTreasuryProps) {
+  if (!isZkEnabled) return null;
   const [treasury,   setTreasury]   = useState<ZkCommunityTreasuryModel>(getCommunityTreasury(communityId));
   const [stats,      setStats]      = useState<ZkCommunityStats>(getCommunityStats(communityId));
   const [tips,       setTips]       = useState<ZkTip[]>(getCommunityTips(communityId).slice(0, 10));
@@ -217,9 +220,9 @@ export function ZkCommunityTreasury({
         {/* Balance Cards */}
         <div className="grid grid-cols-3 gap-2">
           {([
-            { symbol: 'DAI',  val: treasury.balance.dai,  emoji: '◈' },
+            { symbol: 'DAI',  val: treasury.balance.dai,  emoji: 'â—ˆ' },
             { symbol: 'USDC', val: treasury.balance.usdc, emoji: '$' },
-            { symbol: 'ETH',  val: treasury.balance.eth,  emoji: 'Ξ' },
+            { symbol: 'ETH',  val: treasury.balance.eth,  emoji: 'Îž' },
           ] as const).map(({ symbol, val, emoji }) => (
             <div key={symbol} className="bg-white rounded-2xl p-3 text-center shadow-sm border border-black/[0.04]">
               <div className="text-xl mb-1">{emoji}</div>
@@ -457,3 +460,4 @@ export function ZkCommunityTreasury({
     </div>
   );
 }
+

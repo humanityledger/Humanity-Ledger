@@ -162,12 +162,14 @@ export async function POST(request: NextRequest) {
       data:  { used: true },
     });
 
-    // ── 6. Generate & persist new code ───────────────────────────────────────
+    // ── 6. Generate & persist new code (hashed with SHA-256, 10 min TTL - B-013) ──
+    const crypto = await import('crypto');
     const code      = generateVerificationCode();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const codeHash  = crypto.createHash('sha256').update(code).digest('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes (B-013)
 
     await (prisma as any).verificationCode.create({
-      data: { code, userId: user.id, expiresAt },
+      data: { code: codeHash, userId: user.id, expiresAt },
     });
 
     // ── 7. Send email ─────────────────────────────────────────────────────────

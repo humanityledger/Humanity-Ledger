@@ -1,18 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/session';
+import { requireWallet } from '@/lib/security/requireWallet';
 
 export const dynamic = 'force-dynamic';
-
-async function resolveCaller(req: NextRequest) {
-  const verified = req.headers.get('x-verified-session-address');
-  if (verified && /^0x[a-fA-F0-9]{40}$/.test(verified)) return verified.toLowerCase();
-  const session = await getSession();
-  if (session?.userId && /^0x[a-fA-F0-9]{40}$/.test(session.userId)) return session.userId.toLowerCase();
-  const web3 = req.headers.get('x-web3-address');
-  if (web3 && /^0x[a-fA-F0-9]{40}$/.test(web3)) return web3.toLowerCase();
-  return null;
-}
 
 function generateJoinCode() {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -20,8 +10,9 @@ function generateJoinCode() {
 
 export async function GET(req: NextRequest) {
   try {
-    const caller = await resolveCaller(req);
-    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const caller = auth.walletAddress;
 
     const isDiscover = req.nextUrl.searchParams.get('discover') === 'true';
 
@@ -76,8 +67,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const caller = await resolveCaller(req);
-    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const caller = auth.walletAddress;
 
     const { name, description, isPrivate } = await req.json();
     if (!name || typeof name !== 'string') return NextResponse.json({ error: 'Name required' }, { status: 400 });
@@ -122,8 +114,9 @@ export async function POST(req: NextRequest) {
 // Update Community Settings & Revoke Links
 export async function PATCH(req: NextRequest) {
   try {
-    const caller = await resolveCaller(req);
-    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const caller = auth.walletAddress;
 
     const body = await req.json();
     const { communityId, action, isPrivate } = body;
@@ -230,8 +223,9 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const caller = await resolveCaller(req);
-    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const caller = auth.walletAddress;
 
     const id = req.nextUrl.searchParams.get('id');
     if (!id || typeof id !== 'string') return NextResponse.json({ error: 'Invalid community id' }, { status: 400 });

@@ -14,8 +14,29 @@ interface HLLogoProps {
 }
 
 export function HLLogo({ variant = 'full', theme = 'dark', className = '', size = 32 }: HLLogoProps) {
-  // If theme is 'light', invert black blackletter calligraphy to white for dark backgrounds
-  const filterStyle = theme === 'light' ? { filter: 'invert(1) brightness(100)' } : {};
+  const isLight = theme === 'light';
+  const textColor = isLight ? '#ffffff' : '#050505';
+
+  const WorldMapIcon = (
+    <div
+      className={`shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-white border ${
+        isLight ? 'border-white/20' : 'border-black/5'
+      } shadow-sm`}
+      style={{ width: size, height: size }}
+    >
+      <img
+        src="/worldmap.png"
+        alt="Humanity Ledger"
+        style={{
+          width: '120%',
+          height: '120%',
+          objectFit: 'cover',
+          filter: isLight ? 'invert(1)' : 'none',
+        }}
+        className="pointer-events-none select-none"
+      />
+    </div>
+  );
 
   if (variant === 'mark') {
     return (
@@ -25,29 +46,30 @@ export function HLLogo({ variant = 'full', theme = 'dark', className = '', size 
         role="img"
         aria-label="Humanity Ledger"
       >
-        <img
-          src="/logo-mark-tight.png"
-          alt="HL"
-          style={{ width: '100%', height: '100%', objectFit: 'contain', ...filterStyle }}
-          className="pointer-events-none select-none"
-        />
+        {WorldMapIcon}
       </div>
     );
   }
 
   return (
     <div
-      className={`flex items-center shrink-0 ${className}`}
+      className={`flex items-center gap-2.5 shrink-0 ${className}`}
       role="img"
       aria-label="Humanity Ledger"
-      style={{ height: size }}
     >
-      <img
-        src="/logo-text.png"
-        alt="Humanity Ledger"
-        style={{ height: '100%', width: 'auto', objectFit: 'contain', ...filterStyle }}
-        className="pointer-events-none select-none"
-      />
+      {WorldMapIcon}
+      <span
+        style={{
+          fontSize: size * 0.55,
+          fontWeight: 800,
+          letterSpacing: '-0.03em',
+          color: textColor,
+          lineHeight: 1,
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        }}
+      >
+        Humanity Ledger
+      </span>
     </div>
   );
 }

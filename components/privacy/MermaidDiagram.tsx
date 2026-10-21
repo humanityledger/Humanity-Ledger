@@ -89,9 +89,9 @@ export function MermaidDiagram({ chart, caption }: Props) {
       try {
         const mermaid = (await import('mermaid')).default;
 
-        // Initialize once globally — the %%{init}%% per-chart override handles theming
+        // B-029: Initialize with securityLevel: 'strict' to prevent XSS via embedded scripts
         if (!mermaidReady) {
-          mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
+          mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
           mermaidReady = true;
         }
 

@@ -382,7 +382,7 @@ const nextConfig = {
                     //   - blob: in media-src for getUserMedia MediaStream playback
                     //   - wss: in connect-src for PeerJS WebSocket signaling
                     //   - stun: and turn: schemes are handled by browser internally, NOT via CSP
-                    { key: 'Content-Security-Policy',    value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' blob: data: https:; connect-src 'self' https: wss: blob:; media-src 'self' blob: mediastream:; frame-src 'self' https:; worker-src 'self' blob:;" },
+                    // B-016: CSP is centralized in middleware.ts with dynamic per-request nonce (N-05)
                     { key: 'Referrer-Policy',            value: 'strict-origin-when-cross-origin' },
                     // [ANDROID WEBRTC FIX] Permissions-Policy MUST be set correctly.
                     // 'camera=*' and 'microphone=*' allow ALL origins (including iframes) to request them.

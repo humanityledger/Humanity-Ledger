@@ -106,16 +106,6 @@ export async function POST(req: NextRequest) {
         console.error('[WalletSync] Failed to mint human_session:', jwtErr);
     }
 
-    // Clean backend architecture: issue the identity cookie directly from the server
-    // after cryptographic verification, reducing client-side trust.
-    response.cookies.set('system_handshake', userId, {
-        path: '/',
-        maxAge: 604800, // 7 days
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: false // false so the frontend can read it if needed, but issued by backend
-    });
-
     // --- REAL-TIME CLOUDFLARE GEOLOCATION & ANALYTICS ---
     try {
         const country = req.headers.get('cf-ipcountry') || req.headers.get('x-vercel-ip-country') || 'UNKNOWN';

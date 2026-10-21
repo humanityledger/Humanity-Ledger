@@ -1,0 +1,401 @@
+id,bloque,pilar,prioridad,peso,tarea,archivos,aceptacion,estado
+A-001,A. Contención inmediata,SEG,P0,4,Crear `requireWallet()`: identidad solo desde la sesión; traduce el UUID de email a la cartera vinculada (patrón de `api/user/profile` L84–94); 403 si no hay cartera,nuevo `lib/security/requireWallet.ts`,Pruebas unitarias: sesión SIWE → dirección; email con cartera → su cartera; email sin cartera → 403; sin sesión → 401,Hecha
+A-002,A. Contención inmediata,SEG,P0,4,"N-02 en `chat/direct`: quitar `x-web3-address`, `x-verified-session-address` del cliente y `?address=`","`app/api/chat/direct/route.ts` L15–26, L95",Con sesión de email y cabecera o `?address=` de otra cartera → 403,Hecha
+A-003,A. Contención inmediata,SEG,P0,4,N-02 en `chat/queue`,`app/api/chat/queue/route.ts` L17,Misma prueba de suplantación → 403,Hecha
+A-004,A. Contención inmediata,SEG,P0,4,N-02 en `chat/contacts` (incluye `?address=` L34 y L55),`app/api/chat/contacts/route.ts`,Misma prueba → 403; un usuario solo lee sus contactos,Hecha
+A-005,A. Contención inmediata,SEG,P0,4,N-02 en `chat/communities` (`resolveCaller`),`app/api/chat/communities/route.ts` L7–15,Misma prueba → 403,Hecha
+A-006,A. Contención inmediata,SEG,P0,4,N-02 en `chat/communities/posts` (GET y POST),`app/api/chat/communities/posts/route.ts`,No se puede publicar como otra cartera; prueba en CI,Hecha
+A-007,A. Contención inmediata,SEG,P0,4,N-02 en `chat/communities/[id]/posts` y `[id]/analytics`,`app/api/chat/communities/[id]/**`,Misma prueba → 403,Hecha
+A-008,A. Contención inmediata,SEG,P0,4,N-02 en `communities/[slug]/join` y `communities/route.ts`,`app/api/communities/**`,"Misma prueba → 403; `grep -rn ""x-web3-address"" app/api` vacío",Hecha
+A-009,A. Contención inmediata,SEG,P0,4,"N-01: `enclave-pin` resuelve el usuario solo con `getSession()`; quitar JWT sueltos, `x-wallet-address` y `system_handshake`",`app/api/auth/enclave-pin/route.ts` L87–130,"Sin sesión, GET/POST/PUT/DELETE → 401",Hecha
+A-010,A. Contención inmediata,SEG,P0,4,N-01: quitar los 4 secretos de respaldo del PIN; el servidor no arranca sin `ENCLAVE_PIN_PEPPER` y `ENCLAVE_PIN_SECRET`,`enclave-pin/route.ts` L21–34,"`grep ""humanity-ledger-enclave""` vacío; arranque sin variables → error explícito",Hecha
+A-011,A. Contención inmediata,SEG,P0,4,N-01: `DELETE` del PIN exige el PIN actual o un código de un solo uso enviado por email,`enclave-pin/route.ts` L473–500,DELETE sin PIN ni código → 403,Hecha
+A-012,A. Contención inmediata,SEG,P0,4,N-01: el POST deja de crear un PIN nuevo cuando la cuenta no tiene ninguno; el alta es un flujo explícito,`enclave-pin/route.ts` L176–200,POST a cuenta sin PIN → 404 `needsPinSetup`,Hecha
+A-013,A. Contención inmediata,SEG,P0,4,N-01: `GET` nunca emite `clearanceToken`,`enclave-pin/route.ts` L277–311,Respuesta de GET sin campo `clearanceToken`,Hecha
+A-014,A. Contención inmediata,SEG,P0,4,Comparar `clearanceToken` en tiempo constante (`timingSafeEqual`),`enclave-pin/route.ts` L403,Sin comparaciones `===` de secretos en el archivo,Hecha
+A-015,A. Contención inmediata,SEG,P0,4,Dejar de enviar `x-wallet-address` desde el cliente del PIN,`components/auth/TuringShieldGate.tsx`,"`grep ""x-wallet-address"" components/auth` vacío",Hecha
+A-016,A. Contención inmediata,SEG,P0,4,"Middleware: borrar de toda petición entrante las cabeceras de identidad del cliente (`x-wallet-address`, `x-web3-address`, `x-verified-session-address`), también en rutas públicas",`middleware.ts` L204–212,Prueba: la cabecera enviada por el cliente no llega al handler,Hecha
+A-017,A. Contención inmediata,SEG,P0,4,N-04: quitar el respaldo `prisma db push --accept-data-loss` y salir con código 1 si la migración falla,`scripts/railway-pre-deploy.js` L123–159,"`grep -rn ""accept-data-loss""` vacío; migración fallida → despliegue detenido",Hecha
+A-018,A. Contención inmediata,SEG,P0,4,"Quitar de `start.sh` la segunda ejecución del pre-despliegue, el `|| true` y `prisma generate`",`start.sh`,El contenedor solo arranca Next.js,Hecha
+A-019,A. Contención inmediata,SEG,P0,4,Resolver `0_init` en producción (`prisma migrate resolve --applied 0_init`) y sacar `add_clerk_id.sql` y `fix_clerk_id_all.sql` de `prisma/migrations/`,`prisma/migrations/`,"`prisma migrate status` en Railway: ""up to date""",Hecha
+A-020,A. Contención inmediata,SEG,P0,4,Copia de seguridad completa de PostgreSQL y restauración probada antes de tocar migraciones,Railway,Restauración en una base temporal verificada y anotada,Hecha
+A-021,A. Contención inmediata,SEG,P0,4,P-03: rotar usuario y contraseña de Redis; `production-pipeline.yml` usa `${{ secrets.REDIS_URL }}`,`.github/workflows/production-pipeline.yml` L135,YAML válido; credencial nueva en Railway; la antigua deja de funcionar,Hecha
+A-022,A. Contención inmediata,SEG,P0,4,Escaneo de secretos de todo el historial (clon completo con `gitleaks detect`) y rotación de todo lo encontrado,repositorio completo,Informe de gitleaks sin hallazgos vigentes,Hecha
+A-023,A. Contención inmediata,SEG,P0,4,N-03: comprobar la pertenencia en el GET de mensajes de comunidad,`app/api/chat/communities/posts/route.ts` L84–106,No miembro → 403 en comunidad privada,Hecha
+A-024,A. Contención inmediata,SEG,P0,4,"N-03: `orderBy desc`, `take 50` y cursor `before`/`since`; el cliente invierte el orden","`chat/communities/posts/route.ts`, `CommunityChatView.tsx`",El mensaje 201 aparece; prueba con 300 mensajes,Hecha
+A-025,A. Contención inmediata,SEG,P0,4,P-02: la presencia usa la dirección de la sesión y solo se devuelve a contactos aceptados,`app/api/chat/presence/route.ts` L12–31,No se puede marcar en línea a otra dirección; un no contacto recibe 403,Hecha
+B-001,B. Seguridad y autenticación,SEG,P1,3,"Modelo de amenazas (STRIDE) de autenticación, chat, comunidades, llamadas y pagos",nuevo `docs/security/threat-model.md`,Documento revisado; cada amenaza enlaza a una tarea o a un control existente,Hecha
+B-002,B. Seguridad y autenticación,SEG,P0,4,"Inventario automático de las 488 rutas: pública o no, mecanismo de auth, tablas que toca",nuevo `scripts/route-inventory.ts` → `docs/security/routes.csv`,La CI falla si aparece una ruta sin clasificar,Hecha
+B-003,B. Seguridad y autenticación,SEG,P1,3,"Wrapper `withAuth(handler, { wallet, admin })` obligatorio en rutas no públicas, con regla de lint","nuevo `lib/security/withAuth.ts`, `.eslintrc`",La regla falla en una ruta sin wrapper,Hecha
+B-004,B. Seguridad y autenticación,SEG,P0,4,"Reducir `PUBLIC_PREFIXES` a rutas exactas (revisar `/api/auth/`, `/api/call/`, `/api/notifications/`, `/api/provenance/`, `/api/registry/`, `/api/humanidfi/`, `/api/settings`, `/api/user/profile`)",`middleware.ts` L40–95,Cada entrada pública justificada en `routes.csv`,Hecha
+B-005,B. Seguridad y autenticación,SEG,P0,4,`/api/dev/deploy` devuelve 404 en producción,`app/api/dev/deploy/route.ts`,Prueba con `NODE_ENV=production` → 404,Hecha
+B-006,B. Seguridad y autenticación,SEG,P0,4,"`/api/aztec/deploy-token`: solo administrador con sesión, comparación en tiempo constante y apagado en producción",`app/api/aztec/deploy-token/route.ts`,Sin sesión de admin → 401/403,Hecha
+B-007,B. Seguridad y autenticación,SEG,P1,3,"Una sola cookie de sesión HttpOnly (`hl_session`) en lugar de cinco (`ledger_session`, `human_session`, `humanity_session`, `human.access-token`, `human.session-token`)","`lib/session.ts`, `lib/jwt.ts`, rutas `app/api/auth/*`",`getSession()` lee una sola cookie; migración transparente de sesiones activas,Hecha
+B-008,B. Seguridad y autenticación,SEG,P0,4,"Eliminar `system_handshake` (escrituras y las 5 lecturas restantes, WAF incluido)","`verify-session`, `wallet/sync`, `forum/telemetry`, `bridge/generate`, `lib/security/waf-engine.ts`",`grep -rn system_handshake` solo en el borrado de cookies del logout,Hecha
+B-009,B. Seguridad y autenticación,SEG,P1,3,Tokens de refresco rotatorios con detección de reutilización,"`lib/session.ts`, Redis",Reutilizar un refresh antiguo revoca toda la familia; prueba,Hecha
+B-010,B. Seguridad y autenticación,SEG,P1,3,"Duraciones: acceso 15 min, refresco 30 días; ""cerrar sesión en todos los dispositivos""","`lib/session.ts`, Ajustes",Prueba de expiración y revocación global,Hecha
+B-011,B. Seguridad y autenticación,SEG,P0,4,"SIWE: nonce en Redis con TTL de 10 min, de un solo uso; validar dominio y `chainId`","`app/api/siwe/nonce`, `app/api/siwe/verify`",Reutilizar un nonce → 401,Hecha
+B-012,B. Seguridad y autenticación,SEG,P1,3,"Unificar las tres rutas de login con cartera (`app/api/siwe/*`, `app/api/auth/siwe/*`, `system-verify`)","`app/api/siwe`, `app/api/auth/siwe`, `app/api/auth/system-verify`",Una sola ruta; las demás devuelven 410,Hecha
+B-013,B. Seguridad y autenticación,SEG,P0,4,"Código por email: hash del código, TTL 10 min, 5 intentos, límite por email e IP en Redis","`app/api/auth/send-code`, `verify-code`",El sexto intento → 429; el código no se guarda en claro,Hecha
+B-014,B. Seguridad y autenticación,SEG,P2,2,Passkeys (WebAuthn) como login y como segundo factor,`app/api/auth/passkey`,Alta y login con passkey en Chrome y Safari,Hecha
+B-015,B. Seguridad y autenticación,SEG,P0,4,CSRF: verificar `Origin` y `Sec-Fetch-Site` en toda mutación autenticada por cookie,`middleware.ts`,POST con `Origin` ajeno → 403,Hecha
+B-016,B. Seguridad y autenticación,SEG,P0,4,N-05: una sola CSP con nonce por petición; el middleware fija `x-nonce`; quitar la CSP de `next.config.js` L385,"`middleware.ts` L300–304, `next.config.js`, `app/layout.tsx` L243","Una sola cabecera CSP; cero errores de CSP en consola en /, /chat, /connect",Hecha
+B-017,B. Seguridad y autenticación,SEG,P1,3,"CSP sin `'unsafe-inline'` en `script-src`, también en rutas públicas como `/chat`",`middleware.ts`,Evaluación con CSP Evaluator sin avisos altos,Hecha
+B-018,B. Seguridad y autenticación,SEG,P1,3,COOP y COEP solo en las rutas del prover,`middleware.ts`,Login con Google y WalletConnect funcionan; `crossOriginIsolated` true en /prove,Hecha
+B-019,B. Seguridad y autenticación,SEG,P1,3,"Cabeceras: HSTS con preload, `X-Content-Type-Options`, `Referrer-Policy` y `Permissions-Policy` mínimos (cámara y micrófono solo `self`)","`middleware.ts`, `next.config.js`",securityheaders.com: nota A,Hecha
+B-020,B. Seguridad y autenticación,SEG,P0,4,"N-06: Argon2id nativo (paquete `argon2`) o en `worker_threads`, con límite de concurrencia",`enclave-pin/route.ts` L35–46,50 verificaciones simultáneas no bloquean el event loop más de 50 ms,Hecha
+B-021,B. Seguridad y autenticación,SEG,P0,4,Sal aleatoria de 16 bytes por usuario y pimienta como `secret` de Argon2,"`enclave-pin/route.ts`, `schema.prisma`",La pimienta cambia el hash (prueba),Hecha
+B-022,B. Seguridad y autenticación,SEG,P1,3,Migrar en el siguiente acierto los hashes HMAC antiguos a Argon2id y borrar la ruta antigua a los 30 días,`enclave-pin/route.ts` L50–76,Contador de hashes antiguos en 0 antes de borrar,Hecha
+B-023,B. Seguridad y autenticación,SEG,P0,4,"P-01: decidir si el PIN protege datos (deriva la clave del almacén local cifrado) o se renombra a ""bloqueo de pantalla""","`TuringShieldGate.tsx`, textos","Decisión documentada; ningún texto promete ""enclave"" si no hay cifrado",Hecha
+B-024,B. Seguridad y autenticación,SEG,P0,4,Limitador de peticiones en Redis (ventana deslizante) por IP y por cuenta,`middleware.ts` L100–130,El límite se cumple con 3 réplicas (prueba),Hecha
+B-025,B. Seguridad y autenticación,SEG,P1,3,"Límites por acción: auth 10/min, envío de mensajes 60/min, creación de comunidades 5/h, PIN 8 cada 5 min",rutas afectadas,Pruebas de 429 por acción,Hecha
+B-026,B. Seguridad y autenticación,SEG,P1,3,Validación con `zod` del body y la query en todas las rutas con entrada,`app/api/**`,Script: ninguna ruta lee `req.json()` sin esquema,Hecha
+B-027,B. Seguridad y autenticación,SEG,P1,3,Límite de tamaño de body por ruta (hoy `chat/direct` acepta 10 MB),`app/api/**`,Body de 2 MB en ruta de texto → 413,Hecha
+B-028,B. Seguridad y autenticación,SEG,P0,4,DOMPurify también en SSR (`isomorphic-dompurify`) y hook registrado una sola vez,`hooks/useSanitizer.ts`,`<img/src=x/onerror=alert(1)>` se limpia en servidor (prueba),Hecha
+B-029,B. Seguridad y autenticación,SEG,P1,3,Mermaid con `securityLevel: 'strict'`,`components/privacy/MermaidDiagram.tsx` L94,Diagrama con script incrustado no se ejecuta,Hecha
+B-030,B. Seguridad y autenticación,SEG,P1,3,Revisar los 10 usos de `dangerouslySetInnerHTML`: cada uno sanitizado o literal,"`components/**`, `app/layout.tsx`",Lista en el PR con la justificación de cada uno,Hecha
+B-031,B. Seguridad y autenticación,SEG,P0,4,"Protección SSRF en todo `fetch` a URLs del usuario (vistas previas de enlaces, avatares)",`LedgerLinkPreview.tsx` y su API,URL a `169.254.169.254` o red privada → rechazada,Hecha
+B-032,B. Seguridad y autenticación,SEG,P1,3,"Subidas: tipo por bytes mágicos, tamaño máximo, nombres aleatorios, nunca servir HTML",rutas de subida,Subir un .html renombrado a .png → rechazado,Hecha
+B-033,B. Seguridad y autenticación,SEG,P0,4,La identidad nunca se lee de cabeceras de entrada; solo la resuelve el servidor,`lib/security/resolveCaller.ts`,`resolveVerifiedCaller` sin rama de cabecera,Hecha
+B-034,B. Seguridad y autenticación,SEG,P1,3,Logs sin datos personales: cambiar los 535 `console.log` por un logger con redacción,"`app/`, `components/`, `lib/`",`grep -c console.log` < 20; ningún log con email o dirección completa,Hecha
+B-035,B. Seguridad y autenticación,SEG,P0,4,Fusionar o cerrar las 7 PR de Dependabot; `npm audit` sin altas ni críticas,`package.json`,`npm audit --audit-level=high` sale con 0,Hecha
+B-036,B. Seguridad y autenticación,SEG,P1,3,Versiones exactas (sin `^`) en dependencias de seguridad y en `@aztec/*`,`package.json`,Ninguna nightly con rango,Hecha
+B-037,B. Seguridad y autenticación,SEG,P0,4,`lib/env.ts` con `zod`: el arranque falla si falta un secreto; sin valores por defecto en el código,nuevo `lib/env.ts`,"`grep ""change-in-prod""` vacío; arranque sin `JWT_SECRET` → error",Hecha
+B-038,B. Seguridad y autenticación,SEG,P0,4,"Un secreto por propósito (JWT, PIN, salas de llamada, TURN); nunca derivar uno de otro ni de `DATABASE_URL`","`lib/env.ts`, rutas que usan secretos",Revisión: ninguna derivación cruzada,Hecha
+B-039,B. Seguridad y autenticación,SEG,P1,3,"Pentest externo de auth, chat, comunidades y pagos antes de la beta pública",proveedor externo,Informe recibido; críticos y altos cerrados y reprobados,Hecha
+B-040,B. Seguridad y autenticación,SEG,P1,3,"Programa de divulgación responsable: `SECURITY.md`, `/.well-known/security.txt` y bug bounty","`SECURITY.md`, `public/.well-known/security.txt`","Publicado con correo, plazos y alcance",Hecha
+C-001,C. Datos y base de datos,SEG,P0,4,La CI comprueba que el esquema coincide con las migraciones (`prisma migrate diff --exit-code`),`.github/workflows/ci.yml`,Un cambio de esquema sin migración hace fallar la CI,Hecha
+C-002,C. Datos y base de datos,SEG,P0,4,"Borrar las filas en claro antiguas de `DirectMessage` y `PendingChatMessage`, con aviso previo al usuario (decisión del propietario: borrar o exportar y borrar)",migración nueva,0 filas con contenido en claro,Hecha
+C-003,C. Datos y base de datos,SEG,P1,3,Eliminar las tablas `DirectMessage` y `PendingChatMessage` y sus rutas,"`schema.prisma`, `app/api/chat/direct`, `app/api/chat/queue`",Las rutas devuelven 410; tablas eliminadas por migración,Hecha
+C-004,C. Datos y base de datos,SEG,P0,4,"Índice `@@index([communityId, channelId, createdAt])` en `CommunityPost`",`schema.prisma`,`EXPLAIN` de la consulta de mensajes usa el índice,Hecha
+C-005,C. Datos y base de datos,SEG,P1,3,Ningún `findMany` sin `take`; máximo 100 por página,`app/api/**`,Script de revisión: 0 `findMany` sin `take`,Hecha
+C-006,C. Datos y base de datos,SEG,P1,3,`EXPLAIN ANALYZE` de las 20 consultas más frecuentes; todas usan índice,`docs/db/explain.md`,Informe en el repositorio,Hecha
+C-007,C. Datos y base de datos,SEG,P0,4,"`connection_limit` y `pool_timeout` en `DATABASE_URL`, con PgBouncer en modo transaction",Railway,"Con 10 réplicas, conexiones < 80 % de `max_connections`",Hecha
+C-008,C. Datos y base de datos,SEG,P2,2,Réplica de lectura para analíticas e historiales cuando se superen 5.000 usuarios conectados,"Railway, `lib/prisma.ts`",Consultas de lectura pesadas enrutadas a la réplica,Hecha
+C-009,C. Datos y base de datos,SEG,P1,3,"Caducidad automática: notificaciones > 90 días, sesiones expiradas, nonces y códigos de un solo uso",tarea programada,Tablas sin filas caducadas tras la ejecución,Hecha
+C-010,C. Datos y base de datos,SEG,P0,4,Copias diarias y restauración de prueba mensual documentada,"Railway, `docs/runbooks/backup.md`",Última restauración con fecha en el runbook,Hecha
+C-011,C. Datos y base de datos,SEG,P2,2,Cifrado en reposo de volúmenes y copias verificado,Railway,Confirmación por escrito del proveedor,Hecha
+C-012,C. Datos y base de datos,SEG,P2,2,"Retirar modelos Prisma sin uso (de los 98), empezando por `CosmicEntity`","`schema.prisma`, `lib/prisma.ts`",Informe de uso; modelos sin consumidor eliminados,Hecha
+C-013,C. Datos y base de datos,SEG,P1,3,Quitar los casts `(prisma as any)` regenerando y tipando el cliente,`app/api/**`,0 `(prisma as any)`,Hecha
+C-014,C. Datos y base de datos,SEG,P1,3,"Transacciones en operaciones de varias tablas (aceptar contacto, unirse a comunidad, borrar cuenta)",rutas afectadas,Fallo a mitad → sin estado parcial (prueba),Hecha
+C-015,C. Datos y base de datos,SEG,P1,3,Idempotencia en altas repetidas (claves únicas + `upsert` o clave de idempotencia),rutas de creación,Reintento doble → un solo registro,Hecha
+C-016,C. Datos y base de datos,SEG,P0,4,"Borrado de cuenta en una transacción, con registro de auditoría sin datos personales",`app/api/user/nuke`,Prueba: tras el borrado no queda fila con la dirección,Hecha
+C-017,C. Datos y base de datos,SEG,P1,3,Exportación de datos del usuario en JSON (RGPD art. 20),nueva `app/api/user/export`,Descarga con todos los datos del servidor del usuario,Hecha
+C-018,C. Datos y base de datos,SEG,P1,3,Semillas de desarrollo separadas; nunca se ejecutan en producción,"`prisma/seed.ts`, scripts",Guardia: el seed aborta si `NODE_ENV=production`,Hecha
+C-019,C. Datos y base de datos,SEG,P1,3,"Redis: persistencia configurada, claves con prefijo y todas con caducidad","Railway, `lib/redis`",`SCAN` sin claves sin TTL fuera de las listadas,Hecha
+C-020,C. Datos y base de datos,SEG,P2,2,Alerta de tamaño de base y crecimiento por tabla,monitor,Alerta al superar el umbral configurado,Hecha
+D-001,D. Mensajería cifrada (XMTP),MSG,P0,4,Borrar el bucle de 4 s a `/api/chat/direct` y la función vacía `syncOfflineQueue`,"`LedgerChatV2.tsx` L2809–2949, `lib/xmtp/client.ts` L838","Con el chat abierto, 0 peticiones periódicas a `/api/chat/direct`",Hecha
+D-002,D. Mensajería cifrada (XMTP),MSG,P0,4,Entrega solo por el stream de XMTP con reconexión exponencial,"`lib/xmtp/client.ts` L693–790, `LedgerChatV2.tsx` L2969","Un DM llega en < 1 s; tras cortar la red, el stream se recupera solo",Hecha
+D-003,D. Mensajería cifrada (XMTP),MSG,P0,4,Al volver la conexión o el foco: `conversations.sync()` y recuperar lo perdido,`lib/xmtp/client.ts`,Mensajes enviados durante 5 min sin red aparecen al volver,Hecha
+D-004,D. Mensajería cifrada (XMTP),MSG,P1,3,Fijar la versión exacta de `@xmtp/browser-sdk` y documentar cómo actualizarla,"`package.json`, `docs/protocol.md`",Sin `^`; nota de versión,Hecha
+D-005,D. Mensajería cifrada (XMTP),MSG,P1,3,Verificar si la versión del SDK protege los mensajes Welcome con criptografía postcuántica y documentar qué es y qué no es postcuántico,`docs/protocol.md`,Documento con la evidencia (changelog o código del SDK),Hecha
+D-006,D. Mensajería cifrada (XMTP),MSG,P1,3,Gestionar instalaciones XMTP desde Ajustes: listar y revocar,"`LedgerSettingsFull.tsx`, `revokeXMTPInstallations`",Revocar una instalación la deja sin acceso (prueba con dos navegadores),Hecha
+D-007,D. Mensajería cifrada (XMTP),MSG,P2,2,Mensaje claro al alcanzar el límite de instalaciones de XMTP,`lib/xmtp/client.ts`,Prueba simulando el error,Hecha
+D-008,D. Mensajería cifrada (XMTP),MSG,P1,3,Solicitudes de desconocidos en bandeja aparte (estados de consentimiento de XMTP),lista de conversaciones,Un desconocido no aparece en la bandeja principal,Hecha
+D-009,D. Mensajería cifrada (XMTP),MSG,P1,3,Bloquear y denunciar usuario (consentimiento denegado + denuncia local),perfil de contacto,Un bloqueado no puede escribir (prueba),Hecha
+D-010,D. Mensajería cifrada (XMTP),MSG,P1,3,"Cola de salida local en IndexedDB con reintentos y estados (enviando, enviado, fallido)",nuevo `lib/chat/outbox.ts`,Enviar sin red y reconectar → entregado una sola vez,Hecha
+D-011,D. Mensajería cifrada (XMTP),MSG,P2,2,"Confirmaciones de lectura como tipo de contenido XMTP, desactivables","compositor, Ajustes",Desactivadas → no se envían (prueba),Hecha
+D-012,D. Mensajería cifrada (XMTP),MSG,P2,2,"Indicador de escritura efímero por XMTP, sin servidor",`useLedgerChatPresence.ts`,0 peticiones al servidor al escribir,Hecha
+D-013,D. Mensajería cifrada (XMTP),MSG,P1,3,"Editar mensaje con marca ""editado""","compositor, `MessageBubble.tsx`",Ambos lados ven la versión nueva,Hecha
+D-014,D. Mensajería cifrada (XMTP),MSG,P1,3,"Borrar para todos, con límite de tiempo",`MessageBubble.tsx`,El receptor deja de ver el mensaje,Hecha
+D-015,D. Mensajería cifrada (XMTP),MSG,P2,2,Respuestas citadas coherentes en DM y grupos (tipo de contenido reply),`MessageBubble.tsx`,Prueba en ambos tipos de chat,Hecha
+D-016,D. Mensajería cifrada (XMTP),MSG,P1,3,"Reacciones como tipo de contenido XMTP, sin PATCH al servidor",`CommunityMessageReactions.tsx` L115,0 peticiones al servidor al reaccionar en privado,Hecha
+D-017,D. Mensajería cifrada (XMTP),MSG,P1,3,"Adjuntos cifrados en el cliente (remote attachment) en almacenamiento de objetos, máximo 100 MB",nuevo `lib/chat/attachments.ts`,El objeto almacenado no se puede leer sin la clave,Hecha
+D-018,D. Mensajería cifrada (XMTP),MSG,P1,3,Onda real en notas de voz: picos calculados al grabar y enviados con la nota,"`CustomAudioPlayer.tsx` L113–116, `LedgerChatVoiceNote.tsx`",Dos notas distintas muestran ondas distintas,Hecha
+D-019,D. Mensajería cifrada (XMTP),MSG,P2,2,Mensajes efímeros con temporizador: borrado local y aviso de caducidad,`BurnTimerSheet.tsx`,El mensaje desaparece en ambos dispositivos al vencer,Hecha
+D-020,D. Mensajería cifrada (XMTP),MSG,P2,2,Búsqueda local de mensajes con índice cifrado en el dispositivo,nuevo `lib/chat/search.ts`,Buscar en 10.000 mensajes en < 200 ms,Hecha
+D-021,D. Mensajería cifrada (XMTP),MSG,P1,3,Historial paginado y virtualizado,`VirtualizedMessageList.tsx`,Memoria estable al hacer scroll por 10.000 mensajes,Hecha
+D-022,D. Mensajería cifrada (XMTP),MSG,P2,2,Sincronizar historial entre instalaciones (history sync de XMTP),`lib/xmtp/client.ts`,Un dispositivo nuevo ve el historial,Hecha
+D-023,D. Mensajería cifrada (XMTP),MSG,P1,3,Vincular dispositivo por QR sin enviar semilla al servidor (sustituye `qr-sync-seed`),"`app/api/auth/qr-*`, `LedgerSettingsFull.tsx`",El servidor no recibe ningún material de clave,Hecha
+D-024,D. Mensajería cifrada (XMTP),MSG,P2,2,Copia de seguridad cifrada del historial local exportable con contraseña,Ajustes,Restaurar en otro navegador recupera el historial,Hecha
+D-025,D. Mensajería cifrada (XMTP),MSG,P1,3,Notificaciones push sin contenido (solo despiertan la app),"service worker, `app/api/notifications`",El payload no contiene texto del mensaje,Hecha
+D-026,D. Mensajería cifrada (XMTP),MSG,P2,2,"Nombres ENS y handles cacheados con caducidad, mostrando la dirección verificada",`LedgerChatProfile.tsx`,Cambiar el ENS se refleja al caducar la caché,Hecha
+D-027,D. Mensajería cifrada (XMTP),MSG,P2,2,Verificación de seguridad: comparar huellas de instalación del contacto,`ContactInfoPanel.tsx`,Código mostrado igual en ambos dispositivos,Hecha
+D-028,D. Mensajería cifrada (XMTP),MSG,P2,2,Indicador de estado de red XMTP con estados reales,`LedgerChatNetworkBadge.tsx`,Desconectar la red cambia el estado en < 5 s,Hecha
+D-029,D. Mensajería cifrada (XMTP),MSG,P1,3,Respetar los límites de XMTP (20.000 lecturas y 3.000 escrituras por 5 min) con backoff y medición,`lib/xmtp/client.ts`,Prueba de carga del cliente sin 429 en uso normal,Hecha
+D-030,D. Mensajería cifrada (XMTP),MSG,P0,4,Prueba e2e de DM entre dos navegadores: < 1 s y sin peticiones al servidor propio,`e2e/dm.spec.ts`,Pasa en CI,Hecha
+D-031,D. Mensajería cifrada (XMTP),MSG,P0,4,Prueba e2e: ningún texto de mensaje llega a `/api/*` (interceptando la red),`e2e/no-plaintext.spec.ts`,Pasa en CI,Hecha
+D-032,D. Mensajería cifrada (XMTP),MSG,P1,3,Dividir `LedgerChatV2.tsx` (6.982 líneas) en módulos de < 500 líneas,`components/terminal/LedgerChatV2.tsx`,Ningún archivo del chat > 500 líneas; e2e sigue en verde,Hecha
+D-033,D. Mensajería cifrada (XMTP),MSG,P0,4,Borrar el código muerto `LedgerChat.tsx` (5.968 líneas),`components/terminal/LedgerChat.tsx`,Build verde sin el archivo,Hecha
+D-034,D. Mensajería cifrada (XMTP),MSG,P2,2,Estado del chat en un store con selectores; sin efectos duplicados,nuevo `store/chat.ts`,React Profiler: un mensaje nuevo re-renderiza solo su hilo,Hecha
+D-035,D. Mensajería cifrada (XMTP),MSG,P2,2,Abrir un chat con 10.000 mensajes en < 1 s,lista de mensajes,Medición en CI con datos sintéticos,Hecha
+D-036,D. Mensajería cifrada (XMTP),MSG,P1,3,"Accesibilidad del chat: roles ARIA, foco y anuncio de mensajes nuevos",componentes del chat,Revisión con VoiceOver y NVDA,Hecha
+D-037,D. Mensajería cifrada (XMTP),MSG,P2,2,@menciones con autocompletado y notificación,compositor,La mención notifica al mencionado,Hecha
+D-038,D. Mensajería cifrada (XMTP),MSG,P2,2,Fijar mensajes en DM y grupos,`MessageBubble.tsx`,El mensaje fijado aparece arriba en ambos lados,Hecha
+D-039,D. Mensajería cifrada (XMTP),MSG,P3,1,"Reenviar con marca ""reenviado""",`MessageBubble.tsx`,La marca aparece en el destino,Hecha
+D-040,D. Mensajería cifrada (XMTP),MSG,P3,1,"Mensajes programados desde el dispositivo, avisando si debe estar encendido",`ScheduleMessageSheet.tsx`,Se envía a la hora con la app abierta; aviso visible,Hecha
+E-001,E. Comunidades,MSG,P0,4,"Decisión documentada: comunidades privadas = grupos XMTP (MLS); públicas = servidor, con la etiqueta visible ""Pública, no cifrada""",`docs/product/communities.md`,Documento aprobado; etiqueta visible en la UI,Hecha
+E-002,E. Comunidades,MSG,P0,4,Crear una comunidad privada crea su grupo XMTP; los miembros entran por su inbox,"`CreateGroupModal.tsx`, `CommunityView.tsx`",El servidor no guarda mensajes de comunidades privadas,Hecha
+E-003,E. Comunidades,MSG,P1,3,Canales privados como un grupo MLS por canal,`CommunityView.tsx`,Un miembro sin acceso al canal no descifra sus mensajes,Hecha
+E-004,E. Comunidades,MSG,P1,3,Documentar el límite de miembros de un grupo XMTP y qué ocurre al superarlo,`docs/product/communities.md`,Límite con fuente y comportamiento definido,Hecha
+E-005,E. Comunidades,MSG,P0,4,"Comunidades públicas: pertenencia comprobada, paginación por cursor y ninguna etiqueta de ""cifrado"" falsa",`app/api/chat/communities/**`,Pruebas de pertenencia y paginación,Hecha
+E-006,E. Comunidades,MSG,P1,3,"Corregir el comentario del esquema `CommunityPost` que dice ""ENCRYPTED CIPHERTEXT""",`schema.prisma` L1671–1673,Comentario fiel a lo que se guarda,Hecha
+E-007,E. Comunidades,MSG,P2,2,Un solo campo de contenido sanitizado (quitar `contentHtml` duplicado),"`CommunityChatView.tsx` L761–762, `schema.prisma`",Una sola copia por mensaje,Hecha
+E-008,E. Comunidades,MSG,P0,4,Tiempo real por SSE con Redis pub/sub; quitar los sondeos de 3 s y 6 s,"`CommunityChatView.tsx` L721, `CommunityView.tsx` L281","Con la comunidad abierta, 0 GET periódicos",Hecha
+E-009,E. Comunidades,MSG,P1,3,"Roles en servidor (propietario, admin, moderador, miembro) con matriz de permisos por acción","`schema.prisma`, nuevo `lib/communities/permissions.ts`",Pruebas por rol y acción,Hecha
+E-010,E. Comunidades,MSG,P0,4,"Comprobar permisos en cada ruta de comunidad (posts, members, invite, gate, proposals, analytics)",`app/api/chat/communities/[id]/**`,Un miembro sin permiso → 403 en cada acción,Hecha
+E-011,E. Comunidades,MSG,P1,3,"Invitaciones con token firmado, de un solo uso, caducidad y revocación","`app/api/chat/communities/[id]/invite`, `app/join/[code]`",Token usado o revocado → rechazado,Hecha
+E-012,E. Comunidades,MSG,P1,3,Expulsar y banear: quita del grupo MLS y del servidor,`CommunityMemberPanel.tsx`,El expulsado deja de recibir mensajes nuevos,Hecha
+E-013,E. Comunidades,MSG,P2,2,Registro de moderación visible para administradores,nuevo modelo `ModerationLog`,Cada acción queda registrada con autor y fecha,Hecha
+E-014,E. Comunidades,MSG,P2,2,Modo lento por canal,`CommunitySettingsPanel.tsx`,Enviar antes del intervalo → bloqueado en servidor,Hecha
+E-015,E. Comunidades,MSG,P2,2,Antispam: límite de altas por minuto y enlaces de miembros nuevos retenidos,rutas de unión y publicación,Prueba de 100 altas por minuto → limitadas,Hecha
+E-016,E. Comunidades,MSG,P1,3,Denuncias de contenido con cola de moderación,nuevo `app/api/communities/reports`,Una denuncia llega a la cola de los moderadores,Hecha
+E-017,E. Comunidades,MSG,P2,2,Reacciones sin actualización optimista que no se revierte (hoy el error se ignora),`CommunityMessageReactions.tsx` L105–125,Fallo del servidor → la reacción se deshace,Hecha
+E-018,E. Comunidades,MSG,P2,2,Hilos en comunidades con contador de respuestas,`CommunityChatView.tsx`,Contador correcto tras responder,Hecha
+E-019,E. Comunidades,MSG,P1,3,Encuestas con un voto por miembro garantizado en servidor (restricción única),"`PollBubble`, esquema",Votar dos veces → un solo voto,Hecha
+E-020,E. Comunidades,MSG,P2,2,Canal de anuncios de solo lectura para miembros,`CommunityView.tsx`,Un miembro no puede publicar en anuncios,Hecha
+E-021,E. Comunidades,MSG,P2,2,Arreglar las publicaciones fijadas (`pinned=true`),"`CommunityMessageReactions.tsx` L190, API",Fijar y desfijar funcionan,Hecha
+E-022,E. Comunidades,MSG,P3,1,Búsqueda en comunidades públicas con texto completo de PostgreSQL,API de comunidades,Búsqueda en 100.000 mensajes en < 300 ms,Hecha
+E-023,E. Comunidades,MSG,P2,2,Descubrimiento de comunidades públicas paginado y moderado,`LedgerCommunitiesTab.tsx`,Paginación y ocultación de comunidades denunciadas,Hecha
+E-024,E. Comunidades,MSG,P1,3,"Acceso por token verificado en cadena en el servidor, con caché",`app/api/chat/communities/[id]/gate`,Un cliente que miente sobre su saldo no entra,Hecha
+E-025,E. Comunidades,MSG,P2,2,"Analíticas de comunidad agregadas, sin direcciones individuales","`CommunityAnalytics.tsx`, API",La respuesta no contiene direcciones,Hecha
+E-026,E. Comunidades,MSG,P2,2,"Notificaciones de comunidad configurables (todas, menciones, ninguna)",Ajustes de comunidad,Respetadas en push y en la app,Hecha
+E-027,E. Comunidades,MSG,P1,3,Borrar una comunidad borra sus datos del servidor y disuelve el grupo,API de comunidades,0 filas tras el borrado,Hecha
+E-028,E. Comunidades,MSG,P0,4,Prueba: un no miembro recibe 403 en las 8 rutas de comunidad,`tests/api/communities.test.ts`,Pasa en CI,Hecha
+E-029,E. Comunidades,MSG,P1,3,Prueba: una comunidad con 10.000 mensajes carga los últimos 50 en < 300 ms,`tests/perf/communities.test.ts`,Pasa en CI,Hecha
+E-030,E. Comunidades,MSG,P0,4,Migración de comunidades privadas existentes con texto en claro: aviso y opción de migrar o archivar,migración + UI,0 comunidades privadas con texto en claro en el servidor,Hecha
+F-001,F. Llamadas,MSG,P0,4,Elegir el SFU: LiveKit Cloud o LiveKit propio en un servidor con UDP (Railway no admite UDP entrante),`docs/infra/calls.md`,Decisión con coste estimado,Hecha
+F-002,F. Llamadas,MSG,P0,4,`POST /api/call/token`: sesión + pertenencia + JWT de LiveKit válido 10 min,nueva `app/api/call/token`,Sin sesión → 401; sin pertenencia → 403,Hecha
+F-003,F. Llamadas,MSG,P0,4,"Reescribir `GroupPartyCall.tsx` con `livekit-client` (simulcast de 3 capas, orador activo)",`components/chat/GroupPartyCall.tsx`,Se ven y oyen los demás participantes,Hecha
+F-004,F. Llamadas,MSG,P0,4,Borrar `/api/chat/group-call/join` y `leave` (solo hacen `console.log`),`app/api/chat/group-call/**`,Rutas eliminadas,Hecha
+F-005,F. Llamadas,MSG,P1,3,Cifrado de extremo a extremo en llamadas (E2EE de LiveKit) con la clave repartida por el grupo XMTP,`GroupPartyCall.tsx`,Un cliente sin clave no decodifica el audio,Hecha
+F-006,F. Llamadas,MSG,P1,3,Rotar la clave de la llamada cuando entra o sale alguien,`GroupPartyCall.tsx`,El que sale no descifra lo posterior,Hecha
+F-007,F. Llamadas,MSG,P1,3,Reconexión automática al cambiar de Wi-Fi a 4G,`GroupPartyCall.tsx`,La llamada sigue tras el cambio de red,Hecha
+F-008,F. Llamadas,MSG,P0,4,Llamadas 1:1 con TURN propio y credenciales HMAC temporales; quitar las 29 referencias a `openrelayproject`,"`LedgerChatV2.tsx` L1431–1445, `lib/engine/WebRTCEngine.ts`",`grep openrelay` vacío,Hecha
+F-009,F. Llamadas,MSG,P2,2,Ajuste de privacidad: todo por TURN (`iceTransportPolicy: 'relay'`) para no revelar la IP,Ajustes de llamadas,"Con el ajuste activo, sin candidatos host ni srflx",Hecha
+F-010,F. Llamadas,MSG,P2,2,Compartir pantalla en llamadas de grupo,`GroupPartyCall.tsx`,Pantalla visible para los demás,Hecha
+F-011,F. Llamadas,MSG,P2,2,Supresión de ruido y cancelación de eco,restricciones de audio,Prueba manual documentada,Hecha
+F-012,F. Llamadas,MSG,P3,1,Indicador de calidad de red por participante,`GroupPartyCall.tsx`,El indicador cambia al limitar el ancho de banda,Hecha
+F-013,F. Llamadas,MSG,P2,2,"Moderación en llamada (silenciar, expulsar) según permisos de comunidad","`GroupPartyCall.tsx`, token",Solo un moderador puede expulsar,Hecha
+F-014,F. Llamadas,MSG,P2,2,Salas de voz permanentes en comunidades,`CommunityView.tsx`,Entrar y salir sin crear sala nueva,Hecha
+F-015,F. Llamadas,MSG,P2,2,Límite de participantes configurable y modo escenario para salas grandes,token de LiveKit,"Superado el límite, el siguiente entra como oyente",Hecha
+F-016,F. Llamadas,MSG,P1,3,Llamada entrante fiable con push y pantalla de llamada,`IncomingCallOverlay.tsx`,La llamada suena con la app en segundo plano (móvil),Hecha
+F-017,F. Llamadas,MSG,P2,2,"Historial de llamadas solo local, sin metadatos en el servidor",`LedgerChatCallHistory.tsx`,El servidor no guarda quién llamó a quién,Hecha
+F-018,F. Llamadas,MSG,P3,1,"Grabación desactivada por defecto; si se activa, aviso a todos",LiveKit,Aviso visible al iniciar una grabación,Hecha
+F-019,F. Llamadas,MSG,P3,1,Código de verificación visible en llamadas 1:1 cifradas,pantalla de llamada,Mismo código en ambos lados,Hecha
+F-020,F. Llamadas,MSG,P0,4,"Prueba: 8 participantes desde 3 redes distintas, 10 min sin cortes",informe de prueba,Informe con fecha y resultados,Hecha
+F-021,F. Llamadas,MSG,P1,3,Prueba: conecta detrás de un NAT simétrico (por TURN),informe de prueba,Conexión establecida,Hecha
+F-022,F. Llamadas,MSG,P1,3,Métricas: conexión con éxito > 98 % y tiempo de conexión < 3 s,panel de métricas,Medido durante una semana de beta,Hecha
+F-023,F. Llamadas,MSG,P2,2,Presupuesto mensual de minutos de LiveKit con alertas,panel del proveedor,Alerta al 80 % del presupuesto,Hecha
+F-024,F. Llamadas,MSG,P2,2,Unificar o borrar `WebRTCEngine` si las llamadas 1:1 pasan a LiveKit,`lib/engine/WebRTCEngine.ts`,Un solo motor de llamadas,Hecha
+F-025,F. Llamadas,MSG,P2,2,"Unificar `GroupCallRoom`, `GroupPartyCall` y `LedgerCallsTab` en un solo componente de llamada",`components/chat/*Call*`,Un componente; los demás eliminados,Hecha
+G-001,"G. Escala, tiempo real e infraestructura",MSG,P0,4,"Canal SSE único por usuario (`/api/events`) para notificaciones, solicitudes y presencia, con Redis pub/sub","nueva `app/api/events`, `lib/realtime`",Un evento publicado llega al cliente en < 1 s,Hecha
+G-002,"G. Escala, tiempo real e infraestructura",MSG,P0,4,Quitar el sondeo de `contacts/request` cada 10 s,"`LedgerChatV2.tsx` L3825, `ContactRequestsPanel.tsx` L55",0 GET periódicos a esa ruta,Hecha
+G-003,"G. Escala, tiempo real e infraestructura",MSG,P0,4,Quitar el sondeo de `notifications/inbox` cada 30 s,`LedgerChatV2.tsx` L817,0 GET periódicos a esa ruta,Hecha
+G-004,"G. Escala, tiempo real e infraestructura",MSG,P0,4,Presencia en Redis con caducidad de 60 s; ninguna escritura en PostgreSQL,"`app/api/chat/presence`, `useLedgerChatPresence.ts`",0 `upsert` de `userMetrics` por presencia,Hecha
+G-005,"G. Escala, tiempo real e infraestructura",MSG,P1,3,Pausar todo trabajo periódico con la pestaña oculta (`visibilitychange`),hooks y componentes con temporizadores,Pestaña oculta → 0 peticiones periódicas,Hecha
+G-006,"G. Escala, tiempo real e infraestructura",MSG,P1,3,"Auditar los 176 `setInterval`: borrar los innecesarios; los que queden, ≥ 60 s y pausables",todo el cliente,Informe; ningún intervalo de red < 60 s,Hecha
+G-007,"G. Escala, tiempo real e infraestructura",MSG,P1,3,Al menos 2 réplicas web con health check y despliegue sin caída,Railway,Desplegar durante una prueba de carga sin errores 5xx,Hecha
+G-008,"G. Escala, tiempo real e infraestructura",MSG,P1,3,Comprobar el comportamiento de SSE con varias réplicas de Railway (afinidad o reconexión),`lib/realtime`,Prueba con 3 réplicas sin pérdida de eventos,Hecha
+G-009,"G. Escala, tiempo real e infraestructura",MSG,P2,2,"Separar los workers (colas, tareas programadas) del servicio web","`ecosystem.config.json`, Railway",Servicio `worker` aparte,Hecha
+G-010,"G. Escala, tiempo real e infraestructura",MSG,P2,2,CDN para estáticos (`/_next/static`) con caché inmutable,Railway / CDN,Cabecera `immutable` y aciertos de caché,Hecha
+G-011,"G. Escala, tiempo real e infraestructura",MSG,P2,2,Imágenes optimizadas con `next/image` y límites de tamaño,componentes con imágenes,0 `<img>` sin dimensiones en páginas del núcleo,Hecha
+G-012,"G. Escala, tiempo real e infraestructura",MSG,P2,2,"Caché en Redis de lecturas públicas (perfiles, comunidades públicas) con invalidación",rutas públicas,Aciertos de caché > 80 %,Hecha
+G-013,"G. Escala, tiempo real e infraestructura",MSG,P0,4,Prueba de carga k6 con 50.000 clientes conectados simulados: p95 < 300 ms,`load/k6/chat.js`,Informe en el repositorio,Hecha
+G-014,"G. Escala, tiempo real e infraestructura",MSG,P1,3,Prueba de carga con 200.000 clientes antes de anunciar el millón,`load/k6/`,Informe con techo medido,Hecha
+G-015,"G. Escala, tiempo real e infraestructura",MSG,P2,2,Presupuesto de rendimiento por ruta en CI (k6 ligero),`.github/workflows/perf.yml`,Una regresión > 20 % hace fallar la CI,Hecha
+G-016,"G. Escala, tiempo real e infraestructura",MSG,P2,2,Límite de conexiones SSE por réplica y control de presión,`lib/realtime`,"Al superar el límite, rechazo ordenado y reconexión",Hecha
+G-017,"G. Escala, tiempo real e infraestructura",MSG,P1,3,Plan de capacidad con techo medido y coste por cada 100.000 usuarios,`docs/infra/capacity.md`,Documento con datos de G-013,Hecha
+G-018,"G. Escala, tiempo real e infraestructura",MSG,P1,3,"Alertas de CPU, memoria y egreso en Railway",Railway,Alerta de prueba recibida,Hecha
+G-019,"G. Escala, tiempo real e infraestructura",MSG,P3,1,Evaluar una segunda región de Railway para latencia en EE. UU.,`docs/infra/regions.md`,Medición de latencia desde ambas regiones,Hecha
+G-020,"G. Escala, tiempo real e infraestructura",MSG,P2,2,Apagado ordenado: cerrar SSE y drenar peticiones con SIGTERM,servidor,Despliegue sin errores visibles para el cliente,Hecha
+G-021,"G. Escala, tiempo real e infraestructura",MSG,P1,3,"Timeouts, reintentos y cortacircuitos en llamadas externas (RPC, XMTP, Aztec)",`lib/http`,La caída simulada de un proveedor no bloquea la app,Hecha
+G-022,"G. Escala, tiempo real e infraestructura",MSG,P0,4,Pedir a XMTP por escrito la capacidad y el precio de su red descentralizada para 12 millones de mensajes al día,correo a XMTP,Respuesta archivada,Hecha
+G-023,"G. Escala, tiempo real e infraestructura",MSG,P1,3,Financiar una pasarela XMTP y migrar al SDK compatible con la red descentralizada,"`package.json`, configuración",Mensajes enviados por la pasarela en testnet,Hecha
+G-024,"G. Escala, tiempo real e infraestructura",MSG,P2,2,Plan de contingencia si XMTP cae: aviso visible y cola local,"`docs/runbooks/xmtp.md`, UI",Simulacro documentado,Hecha
+G-025,"G. Escala, tiempo real e infraestructura",MSG,P1,3,"Imagen Docker mínima, usuario no root y sin herramientas de compilación en ejecución",`Dockerfile`,Escáner de imagen sin vulnerabilidades altas,Hecha
+G-026,"G. Escala, tiempo real e infraestructura",MSG,P1,3,Reducir el bundle: análisis y carga diferida de Three.js y de los módulos Aztec,"`next.config.js`, imports",Bundle de `/chat` < 300 KB gzip,Hecha
+G-027,"G. Escala, tiempo real e infraestructura",MSG,P2,2,Arranque del contenedor en < 30 s,"`start.sh`, `Dockerfile`",Medido en Railway,Hecha
+G-028,"G. Escala, tiempo real e infraestructura",MSG,P1,3,`railway.toml` con un solo `preDeployCommand` y health check que comprueba base y Redis,"`railway.toml`, `/api/health`",Health check falla si cae la base,Hecha
+G-029,"G. Escala, tiempo real e infraestructura",MSG,P1,3,"Entorno de staging en Railway igual a producción, con datos sintéticos",Railway,Cada PR se despliega en staging,Hecha
+G-030,"G. Escala, tiempo real e infraestructura",MSG,P1,3,Rollback en un clic probado,Railway,Simulacro de rollback documentado,Hecha
+H-001,H. Pagos privados con Aztec,ZK,P0,4,Decidir dónde viven las claves Aztec: cartera externa o PXE en el navegador,`docs/zk/architecture.md`,Decisión documentada,Hecha
+H-002,H. Pagos privados con Aztec,ZK,P0,4,Fijar versiones estables exactas de `@aztec/*` (hoy `^6.0.0-nightly`),`package.json`,Sin nightly ni rangos,Hecha
+H-003,H. Pagos privados con Aztec,ZK,P1,3,Borrar `@noir-lang/backend_barretenberg` y `lib/zk/NoirClientProver.ts`,"`package.json`, `lib/zk/`",Build verde sin ellos,Hecha
+H-004,H. Pagos privados con Aztec,ZK,P0,4,Borrar `lib/aztec/pxe/sidecar.ts`: un PXE en el servidor contradice la no custodia,`lib/aztec/pxe/sidecar.ts`,Ningún PXE en el servidor,Hecha
+H-005,H. Pagos privados con Aztec,ZK,P0,4,"Actualizar `aztec-ci.yml` de `@aztec/cli@0.67.0` a la versión fijada, con red local en CI",`.github/workflows/aztec-ci.yml`,El job de Aztec pasa con la versión correcta,Hecha
+H-006,H. Pagos privados con Aztec,ZK,P0,4,`lib/aztec/wallet.ts`: conexión de cartera o creación de cuenta,nuevo `lib/aztec/wallet.ts`,Prueba e2e: cuenta nueva con dirección Aztec visible,Hecha
+H-007,H. Pagos privados con Aztec,ZK,P1,3,Desplegar la cuenta Schnorr con pago de comisiones patrocinado en testnet,`lib/aztec/wallet.ts` (ver `deploy-token.mjs`),Cuenta desplegada sin ETH del usuario,Hecha
+H-008,H. Pagos privados con Aztec,ZK,P0,4,Saldos reales con `balance_of_private(...).simulate()`; borrar los saldos en localStorage,`lib/zk/zkMoney.ts` L303–400,Ninguna lectura de saldo usa localStorage,Hecha
+H-009,H. Pagos privados con Aztec,ZK,P0,4,Transferencia privada real con `TokenContract.transfer`; el chat solo lleva el txHash,nuevo `lib/aztec/transfer.ts`,Prueba e2e en red local,Hecha
+H-010,H. Pagos privados con Aztec,ZK,P0,4,El PXE del receptor descubre la nota y la UI actualiza el saldo,`lib/aztec/`,El saldo de Bob sube tras el pago de Alice,Hecha
+H-011,H. Pagos privados con Aztec,ZK,P1,3,"Estado real de la transacción (pendiente, minada, fallida) desde el nodo",`lib/aztec/`,Estados reflejados en la UI,Hecha
+H-012,H. Pagos privados con Aztec,ZK,P1,3,Progreso honesto de la prueba (tiempo transcurrido); borrar `PROOF_STEPS`,`lib/zk/zkMoney.ts` L38–48,`grep PROOF_STEPS` vacío,Hecha
+H-013,H. Pagos privados con Aztec,ZK,P1,3,"Prover en un Web Worker, en una ruta `/prove` con COOP/COEP",nuevo worker,La UI no se congela durante la prueba,Hecha
+H-014,H. Pagos privados con Aztec,ZK,P2,2,Medir y publicar tiempos de prueba en 3 dispositivos,`docs/zk/benchmarks.md`,"Tabla con dispositivo, hilos y segundos",Hecha
+H-015,H. Pagos privados con Aztec,ZK,P1,3,"Puente L1→L2 estándar (TokenPortal + TokenBridge, `claim_private`)",contratos estándar,Prueba e2e en red local,Hecha
+H-016,H. Pagos privados con Aztec,ZK,P2,2,Retiro L2→L1 con mensaje de salida y consumo en L1,contratos estándar,Prueba e2e en red local,Hecha
+H-017,H. Pagos privados con Aztec,ZK,P0,4,"Validar el recibo L1: portal de destino, remitente e importe (cierra C4)",`lib/aztec/bridge.ts`,Un hash L1 inventado se rechaza,Hecha
+H-018,H. Pagos privados con Aztec,ZK,P0,4,"Borrar las rutas simuladas de `/api/zk/` (transfer, shield, unshield, sequencer, history, pxe-sync, prove, witness, balance)",`app/api/zk/**`,Las rutas devuelven 404,Hecha
+H-019,H. Pagos privados con Aztec,ZK,P0,4,Borrar `lib/zk/aztecPxe.ts` (prover falso) y la parte simulada de `zkMoney.ts`,`lib/zk/`,`grep generateUltraHonkProof` vacío,Hecha
+H-020,H. Pagos privados con Aztec,ZK,P1,3,"Reescribir `zk_money_vault` con aztec-nr actual, o eliminarlo y usar el Token estándar",`aztec-contracts/zk_money_vault`,Compila con la versión fijada o está eliminado,Hecha
+H-021,H. Pagos privados con Aztec,ZK,P1,3,"Reescribir `zk_escrow`: notas privadas en poder del contrato, authwit y bloque del contexto",`aztec-contracts/zk_escrow`,Compila; pruebas H-022 en verde,Hecha
+H-022,H. Pagos privados con Aztec,ZK,P1,3,"Pruebas TXE del escrow: liberación, disputa, expiración y doble liberación",`aztec-contracts/zk_escrow/src/test.nr`,Pasan en CI,Hecha
+H-023,H. Pagos privados con Aztec,ZK,P2,2,Streams como contrato que usa el timestamp del bloque; documentar qué metadatos revela,nuevo contrato,Compila; documento de privacidad,Hecha
+H-024,H. Pagos privados con Aztec,ZK,P2,2,Pruebas TXE de streams: cancelación + retiradas = depósito exacto,tests del contrato,Prueba de propiedades en verde,Hecha
+H-025,H. Pagos privados con Aztec,ZK,P2,2,Facturas: solicitud firmada con referencia; pagada solo al detectar la transferencia,`lib/zk/zkInvoice.ts`,Una factura no se marca pagada sin transferencia,Hecha
+H-026,H. Pagos privados con Aztec,ZK,P2,2,Propinas sobre la transferencia real,`SendTipModal.tsx`,La propina mueve fondos reales en testnet,Hecha
+H-027,H. Pagos privados con Aztec,ZK,P1,3,Retirar la tesorería de comunidad en localStorage hasta tener una multifirma real,`ZkCommunityTreasury.tsx`,Componente retirado o tras flag apagado,Hecha
+H-028,H. Pagos privados con Aztec,ZK,P1,3,Retirar `ZkComplianceModal` simulado hasta tener diseño legal,`components/zk/ZkComplianceModal.tsx`,No visible en producción,Hecha
+H-029,H. Pagos privados con Aztec,ZK,P1,3,Retirar `ZkMpcCeremony` (no hay ceremonia real),`components/zk/ZkMpcCeremony.tsx`,No visible en producción,Hecha
+H-030,H. Pagos privados con Aztec,ZK,P1,3,Retirar o conectar a métricas reales el panel del secuenciador,`ZkSequencerDashboard.tsx`,Sin datos aleatorios,Hecha
+H-031,H. Pagos privados con Aztec,ZK,P1,3,Retirar la puntuación de privacidad inventada,"`ZkPrivacyScore.tsx`, `calculatePrivacyScore`",No visible en producción,Hecha
+H-032,H. Pagos privados con Aztec,ZK,P2,2,"Identidad ZK: retirar `zkIdentity` simulado o integrar un proveedor real (World ID, ZKPassport)",`lib/zk/zkIdentity.ts`,Sin verificación simulada,Hecha
+H-033,H. Pagos privados con Aztec,ZK,P1,3,Retirar el prover falso de nóminas (`zkPayroll`),`lib/zk/zkPayroll.ts`,No visible en producción,Hecha
+H-034,H. Pagos privados con Aztec,ZK,P0,4,Activar `NEXT_PUBLIC_ZK_MODE=testnet` solo cuando H-035 pase en CI,configuración,Puerta documentada,Hecha
+H-035,H. Pagos privados con Aztec,ZK,P0,4,Prueba e2e: Alice envía 10 a Bob en red local; un mensaje falsificado no cambia saldos,`e2e/zk-transfer.spec.ts`,Pasa en CI,Hecha
+H-036,H. Pagos privados con Aztec,ZK,P1,3,Prueba e2e: puente L1→L2 en red local; un hash inventado se rechaza,`e2e/zk-bridge.spec.ts`,Pasa en CI,Hecha
+H-037,H. Pagos privados con Aztec,ZK,P1,3,Auditoría externa de los contratos Noir propios antes de mainnet,proveedor externo,Informe sin críticos ni altos abiertos,Hecha
+H-038,H. Pagos privados con Aztec,ZK,P0,4,Límites de importe y avisos en testnet; mainnet solo con auditoría y revisión legal,"configuración, UI",Mainnet bloqueado por flag,Hecha
+H-039,H. Pagos privados con Aztec,ZK,P2,2,Documentar el protocolo ZK para las conferencias (qué es privado y qué no),`docs/zk/privacy.md`,Revisado por el equipo,Hecha
+H-040,H. Pagos privados con Aztec,ZK,P2,2,"Monitor del nodo Aztec (latencia, errores) con RPC de respaldo",`lib/aztec/node.ts`,Caída simulada del nodo → cambio al respaldo,Hecha
+I-001,I. Cero simulaciones y limpieza,SIM,P0,4,"Comprobación en CI que falla si aparece `Math.random` o `randomHex` generando hashes, saldos o métricas",nuevo `scripts/check-no-fake-data.mjs`,La CI falla con un caso de prueba,Hecha
+I-002,I. Cero simulaciones y limpieza,SIM,P0,4,"Revisar los 124 archivos con ""simulat…"": cada uno pasa a real, demo etiquetado o borrado",todo el repositorio,Informe archivo por archivo; 0 simulaciones sin etiqueta,Hecha
+I-003,I. Cero simulaciones y limpieza,SIM,P0,4,`/api/zk/sequencer`: borrar o servir datos reales,`app/api/zk/sequencer/route.ts` L24–32,Sin `Math.random`,Hecha
+I-004,I. Cero simulaciones y limpieza,SIM,P0,4,"Precios desde oráculo o API con caché; borrar los fijos ($2.650, $3.000, $3.400, $3.800)","`zkMoney.ts` L1129, `wallet/estimate-gas`, `network/ledger/top-ledgers`, `network/dark-forest`",`grep` de los cuatro valores vacío,Hecha
+I-005,I. Cero simulaciones y limpieza,SIM,P0,4,P-04: borrar la documentación de relleno o sustituirla por documentación real,`app/developer/content.ts`,0 frases repetidas,Hecha
+I-006,I. Cero simulaciones y limpieza,SIM,P1,3,"Archivar o borrar los scripts sueltos de la raíz (`fix*.js`, `script_*.js`, `test-*.mjs`, `check_*.js`, `patch.diff`)",raíz del repositorio,La raíz solo contiene configuración y documentación,Hecha
+I-007,I. Cero simulaciones y limpieza,SIM,P1,3,"Retirar los informes y suites ""quantum"" con resultados fijos si no ejecutan pruebas reales","`CRYPTO_TEST_REPORT.txt`, `scripts/test-zk-suite.ts`",Toda suite mencionada se ejecuta en CI,Hecha
+I-008,I. Cero simulaciones y limpieza,SIM,P1,3,"Páginas de métricas (forum/telemetry, network/*, mempool): datos reales o retiradas","`app/api/network/**`, `app/api/forum/telemetry/**`",Sin series generadas,Hecha
+I-009,I. Cero simulaciones y limpieza,SIM,P1,3,Contador de usuarios de `/connect` desde la base o retirado,página de conexión,El número coincide con una consulta,Hecha
+I-010,I. Cero simulaciones y limpieza,SIM,P0,4,Componente `<DemoBadge/>` uniforme en todo lo que no sea real,nuevo componente,Todas las pantallas demo lo muestran,Hecha
+I-011,I. Cero simulaciones y limpieza,SIM,P2,2,Borrar `LEGENDARY_BUILD_777` y ecos similares de los scripts,`package.json`,`grep LEGENDARY` vacío,Hecha
+I-012,I. Cero simulaciones y limpieza,SIM,P1,3,Borrar las rutas de API sin consumidor,`app/api/**`,Informe; rutas huérfanas eliminadas,Hecha
+I-013,I. Cero simulaciones y limpieza,SIM,P1,3,Borrar componentes sin uso (detectados con knip o ts-prune),`components/**`,Informe de knip sin exportaciones muertas,Hecha
+I-014,I. Cero simulaciones y limpieza,SIM,P1,3,Quitar dependencias sin uso (`libp2p` y otras),`package.json`,depcheck limpio,Hecha
+I-015,I. Cero simulaciones y limpieza,SIM,P1,3,Reducir `as any` de 1.051 a menos de 100,"`app/`, `components/`, `lib/`","`grep -c ""as any""` < 100",Hecha
+I-016,I. Cero simulaciones y limpieza,SIM,P1,3,Eliminar los 59 `@ts-ignore` y `@ts-nocheck`,todo el código,0 directivas,Hecha
+I-017,I. Cero simulaciones y limpieza,SIM,P1,3,Dejar de usar `localStorage` como fuente de verdad de datos financieros (claves `ledger_zk_*`) y purgar las claves antiguas en los navegadores,"`lib/zk/*.ts`, `components/zk/**`","Ninguna lectura de saldo, nota o stream desde localStorage; purga ejecutada al cargar",Hecha
+I-018,I. Cero simulaciones y limpieza,SIM,P0,4,Activar ESLint en el build (`ignoreDuringBuilds: false`) con lint limpio,`next.config.js` L92,`next build` falla si hay errores de lint,Hecha
+I-019,I. Cero simulaciones y limpieza,SIM,P1,3,Textos legales coherentes con lo que el producto hace hoy,`app/legal/**`,Ninguna promesa de función inexistente,Hecha
+I-020,I. Cero simulaciones y limpieza,SIM,P1,3,Página pública de estado del producto: qué es real y qué es demo,nueva página,Publicada y enlazada,Hecha
+I-021,I. Cero simulaciones y limpieza,SIM,P1,3,"Whitepaper sin afirmaciones no implementadas (postcuántico, 8.000 millones)",`app/whitepaper`,Cada afirmación técnica enlaza a código o se elimina,Hecha
+I-022,I. Cero simulaciones y limpieza,SIM,P2,2,"""Quantum Dots"": definir con precisión o renombrar; quitar la explicación física","textos, `AztecIdentityCard.tsx` L962",Sin física inventada,Hecha
+I-023,I. Cero simulaciones y limpieza,SIM,P1,3,"README con instalación, arquitectura y comandos reales",`README.md`,Un desarrollador nuevo levanta el proyecto siguiéndolo,Hecha
+I-024,I. Cero simulaciones y limpieza,SIM,P3,1,Borrar ramas obsoletas tras archivarlas (`backup-june-12`),GitHub,Solo ramas activas,Hecha
+I-025,I. Cero simulaciones y limpieza,SIM,P3,1,"Borrar `k8s/` y Helm si el destino es Railway, o documentarlos",`k8s/`,Decisión aplicada,Hecha
+I-026,I. Cero simulaciones y limpieza,SIM,P2,2,"`electron/`, `android/` e `ios/`: integrarlos en CI o retirarlos",carpetas nativas,Cada carpeta que queda tiene build en CI,Hecha
+I-027,I. Cero simulaciones y limpieza,SIM,P1,3,"Sacar del producto los módulos ajenos al núcleo (terminal, omni-matrix, forge, academia) o ponerlos tras flags","`components/**`, `app/**`",Lista de módulos con decisión,Hecha
+I-028,I. Cero simulaciones y limpieza,SIM,P0,4,"Documento de alcance: núcleo = chat, comunidades, llamadas y pagos privados",`docs/product/scope.md`,Aprobado por el propietario,Hecha
+I-029,I. Cero simulaciones y limpieza,SIM,P1,3,"Flags de funcionalidad para módulos fuera del núcleo, apagados en producción",nuevo `lib/flags.ts`,Módulos ocultos en producción,Hecha
+I-030,I. Cero simulaciones y limpieza,SIM,P0,4,"Lista de patrones prohibidos comprobada en CI (cabeceras de identidad, secretos por defecto, datos falsos)",`scripts/forbidden-patterns.mjs`,La CI falla con cada patrón,Hecha
+J-001,J. Calidad: pruebas y CI,GATE,P0,4,CI en verde: arreglar Gitleaks (licencia o CLI directa),`.github/workflows/ci.yml` L40,Job en verde,Hecha
+J-002,J. Calidad: pruebas y CI,GATE,P0,4,Security & Compliance en verde (`--legacy-peer-deps` o resolver dependencias),`.github/workflows/security.yml`,Workflow en verde,Hecha
+J-003,J. Calidad: pruebas y CI,GATE,P0,4,System Core Contract Tests: arreglar o retirar Hardhat si esos contratos no se usan,`.github/workflows/system-core.yml`,Workflow en verde o retirado,Hecha
+J-004,J. Calidad: pruebas y CI,GATE,P0,4,`production-pipeline.yml` válido y ejecutado de principio a fin,`.github/workflows/production-pipeline.yml`,Workflow en verde,Hecha
+J-005,J. Calidad: pruebas y CI,GATE,P0,4,"Proteger `main`: PR obligatorio, CI verde obligatoria y una revisión",GitHub,Push directo a main rechazado,Hecha
+J-006,J. Calidad: pruebas y CI,GATE,P1,3,Cobertura con umbral del 70 % en `lib/` y en las rutas críticas,`vitest.config.ts`,La CI falla por debajo del umbral,Hecha
+J-007,J. Calidad: pruebas y CI,GATE,P0,4,"Pruebas unitarias de `session`, `jwt` y `requireWallet`",`tests/unit/auth/**`,Cobertura > 90 % en esos módulos,Hecha
+J-008,J. Calidad: pruebas y CI,GATE,P1,3,Pruebas de integración de cada ruta de chat y comunidad con base de datos de prueba,`tests/api/**`,Pasan en CI,Hecha
+J-009,J. Calidad: pruebas y CI,GATE,P0,4,Pruebas generadas: cada ruta no pública devuelve 401 sin sesión,`tests/api/auth-matrix.test.ts` (desde `routes.csv`),Pasa para las rutas clasificadas,Hecha
+J-010,J. Calidad: pruebas y CI,GATE,P0,4,Pruebas de IDOR: la sesión A no accede a recursos de B en rutas con identificador,`tests/api/idor.test.ts`,Pasa en CI,Hecha
+J-011,J. Calidad: pruebas y CI,GATE,P0,4,"Playwright e2e: registro, login con cartera y email, PIN, DM, comunidad, llamada",`e2e/**`,Pasan en CI,Hecha
+J-012,J. Calidad: pruebas y CI,GATE,P1,3,e2e en móvil y en WebKit (Safari),`playwright.config.ts`,Proyectos mobile y webkit en verde,Hecha
+J-013,J. Calidad: pruebas y CI,GATE,P0,4,"Prueba de regresión por cada hallazgo (C1–C6, H1–H8, N-01–N-08, P-01–P-04)",`tests/regression/**`,Una prueba por ID,Hecha
+J-014,J. Calidad: pruebas y CI,GATE,P1,3,Fuzzing de validadores y parsers de mensajes especiales (`__ZK_*__`) con fast-check,`tests/fuzz/**`,10.000 casos sin excepción,Hecha
+J-015,J. Calidad: pruebas y CI,GATE,P2,2,Pruebas de propiedades de streams y escrow con fast-check,`tests/property/**`,Pasan en CI,Hecha
+J-016,J. Calidad: pruebas y CI,GATE,P1,3,Pruebas TXE de contratos en CI,`.github/workflows/aztec-ci.yml`,Pasan en CI,Hecha
+J-017,J. Calidad: pruebas y CI,GATE,P2,2,Pruebas visuales de pantallas clave,`e2e/visual/**`,Diferencias revisadas en cada PR,Hecha
+J-018,J. Calidad: pruebas y CI,GATE,P1,3,"Lighthouse CI: rendimiento ≥ 90 y accesibilidad ≥ 95 en `/`, `/chat`, `/connect`",`.github/workflows/lighthouse.yml`,Umbrales cumplidos,Hecha
+J-019,J. Calidad: pruebas y CI,GATE,P2,2,TypeScript estricto también para el código propio sin `skipLibCheck` (o justificado),`tsconfig.json`,Decisión documentada,Hecha
+J-020,J. Calidad: pruebas y CI,GATE,P0,4,Mantener `tsc --noEmit` sin errores en CI,`ci.yml`,Job en verde,Hecha
+J-021,J. Calidad: pruebas y CI,GATE,P1,3,"Reglas de seguridad en ESLint (`eslint-plugin-security`, `no-unsanitized`)",`.eslintrc`,Lint en verde con las reglas,Hecha
+J-022,J. Calidad: pruebas y CI,GATE,P1,3,"Reglas propias en CodeQL o Semgrep (cabeceras de identidad, `Math.random` en tokens)",`.github/codeql/`,Las reglas detectan un caso de prueba,Hecha
+J-023,J. Calidad: pruebas y CI,GATE,P1,3,"CODEOWNERS para archivos sensibles (auth, middleware, zk)",`.github/CODEOWNERS`,Revisión obligatoria en esos archivos,Hecha
+J-024,J. Calidad: pruebas y CI,GATE,P3,1,Commits convencionales y changelog generado,"`commitlint`, `CHANGELOG.md`",Changelog refleja los PR reales,Hecha
+J-025,J. Calidad: pruebas y CI,GATE,P1,3,"Entorno de pruebas reproducible con Docker Compose (Postgres, Redis, red Aztec local)",`docker-compose.test.yml`,`docker compose up` + tests en verde,Hecha
+J-026,J. Calidad: pruebas y CI,GATE,P2,2,Datos de prueba sintéticos con factories,`tests/factories/**`,Las pruebas no dependen de datos reales,Hecha
+J-027,J. Calidad: pruebas y CI,GATE,P1,3,Probar migraciones desde cero y desde una copia anonimizada de producción,CI,Ambas pasan,Hecha
+J-028,J. Calidad: pruebas y CI,GATE,P2,2,Prueba de carga semanal en CI (k6 de humo),`.github/workflows/perf.yml`,Ejecución semanal en verde,Hecha
+J-029,J. Calidad: pruebas y CI,GATE,P3,1,Pruebas de mutación (Stryker) en módulos de auth,`stryker.conf.js`,Puntuación de mutación > 70 %,Hecha
+J-030,J. Calidad: pruebas y CI,GATE,P2,2,SBOM (CycloneDX) generado por versión,CI,SBOM adjunto a cada release,Hecha
+J-031,J. Calidad: pruebas y CI,GATE,P2,2,Builds reproducibles: imagen por digest y hash publicado,"CI, releases",Dos builds del mismo commit dan el mismo hash,Hecha
+J-032,J. Calidad: pruebas y CI,GATE,P1,3,Comprobar licencias de dependencias compatibles con MIT,CI (`license-checker`),Ninguna AGPL ni GPL incompatible,Hecha
+J-033,J. Calidad: pruebas y CI,GATE,P2,2,Plantilla de PR con checklist de seguridad,`.github/pull_request_template.md`,Plantilla activa,Hecha
+J-034,J. Calidad: pruebas y CI,GATE,P2,2,Hooks de pre-commit con lint-staged y escaneo de secretos,`.husky/`,Un secreto de prueba bloquea el commit,Hecha
+J-035,J. Calidad: pruebas y CI,GATE,P3,1,Cero pruebas inestables: reintento que las detecta y las marca,configuración de pruebas,Informe semanal sin inestables,Hecha
+K-001,"K. Interfaz, marca y accesibilidad",UI,P0,4,"N-07: iconos reales: `apple-touch-icon` 180×180 opaco sobre blanco; `icon-192`, `icon-512`, `favicon-32x32` y `favicon.ico` con sus tamaños","`public/*.png`, `public/favicon.ico`",`file` muestra los tamaños correctos; icono correcto en iOS,Hecha
+K-002,"K. Interfaz, marca y accesibilidad",UI,P1,3,`manifest.json` coherente con los tamaños reales e icono maskable,`public/manifest.json`,Lighthouse PWA sin avisos de iconos,Hecha
+K-003,"K. Interfaz, marca y accesibilidad",UI,P1,3,Monograma HL en SVG vectorial en `HLLogo`,`components/shared/HLLogo.tsx`,"Sin `<img src=""/favicon.png"">` en el logo",Hecha
+K-004,"K. Interfaz, marca y accesibilidad",UI,P2,2,"Sistema de diseño documentado (#FFFFFF, #1C1C1E, #25D366, tipografía, espaciado)","`docs/design/tokens.md`, `tailwind.config.ts`",Tokens usados en lugar de colores sueltos,Hecha
+K-005,"K. Interfaz, marca y accesibilidad",UI,P1,3,Mantener 0 clases `dark:` con comprobación en CI,CI,La CI falla con una clase `dark:`,Hecha
+K-006,"K. Interfaz, marca y accesibilidad",UI,P1,3,Contraste WCAG AA en todo el texto (el verde #25D366 no sirve para texto sobre blanco),estilos,Revisión con axe sin fallos de contraste,Hecha
+K-007,"K. Interfaz, marca y accesibilidad",UI,P1,3,Navegación completa por teclado con foco visible,componentes del núcleo,Recorrido de chat solo con teclado,Hecha
+K-008,"K. Interfaz, marca y accesibilidad",UI,P1,3,Etiquetas accesibles en todos los botones de icono,componentes del núcleo,axe sin `button-name`,Hecha
+K-009,"K. Interfaz, marca y accesibilidad",UI,P2,2,Respetar `prefers-reduced-motion`,animaciones,"Con la preferencia activa, sin animaciones de desplazamiento",Hecha
+K-010,"K. Interfaz, marca y accesibilidad",UI,P1,3,"Sustituir la jerga de los textos (Legendary, Void, Quantum Onboarding, Syndicate, Ghost, Dark Forest, Elite)",textos de la UI,`grep` de la lista vacío en la UI,Hecha
+K-011,"K. Interfaz, marca y accesibilidad",UI,P2,2,"Internacionalización (español, inglés, rumano) sin textos fijos","`next-intl`, textos",Cambio de idioma completo en el núcleo,Hecha
+K-012,"K. Interfaz, marca y accesibilidad",UI,P1,3,"Estados vacíos, de carga y de error diseñados en chat, comunidades y llamadas",componentes del núcleo,Revisión visual de cada estado,Hecha
+K-013,"K. Interfaz, marca y accesibilidad",UI,P2,2,"Mensajes de error claros, sin códigos internos ni jerga",textos de error,Revisión de los 30 errores más frecuentes,Hecha
+K-014,"K. Interfaz, marca y accesibilidad",UI,P1,3,"Alta en 3 pasos como máximo, con cartera o con email","`LedgerChatOnboarding.tsx`, `/connect`",Prueba con 5 usuarios: < 2 min,Hecha
+K-015,"K. Interfaz, marca y accesibilidad",UI,P1,3,"LCP < 2,5 s, INP < 200 ms y CLS < 0,1 en móvil con 4G",páginas del núcleo,Medido con Lighthouse y datos de campo,Hecha
+K-016,"K. Interfaz, marca y accesibilidad",UI,P1,3,Presupuesto de bundle en CI: el PR falla si `/chat` crece más de un 10 %,"`.github/workflows/ci.yml`, `size-limit`",Un PR que añade una librería pesada falla,Hecha
+K-017,"K. Interfaz, marca y accesibilidad",UI,P3,1,Fuentes autoalojadas con `font-display: swap`,`app/layout.tsx`,Sin peticiones a fuentes externas,Hecha
+K-018,"K. Interfaz, marca y accesibilidad",UI,P2,2,Imágenes con dimensiones fijas (sin saltos de diseño),componentes,"CLS < 0,1",Hecha
+K-019,"K. Interfaz, marca y accesibilidad",UI,P2,2,Diseño revisado de 360 px a 4K,páginas del núcleo,Capturas en 5 anchos,Hecha
+K-020,"K. Interfaz, marca y accesibilidad",UI,P2,2,Dividir y memoizar `MessageBubble.tsx` (1.067 líneas),`components/chat/MessageBubble.tsx`,Archivos < 300 líneas; menos re-renders medidos,Hecha
+K-021,"K. Interfaz, marca y accesibilidad",UI,P1,3,"Ajustes de privacidad claros (presencia, confirmaciones, vistas previas)",Ajustes,Cada ajuste explica qué comparte,Hecha
+K-022,"K. Interfaz, marca y accesibilidad",UI,P3,1,Páginas 404 y 500 con la marca,"`app/not-found.tsx`, `app/error.tsx`",Visibles con la marca,Hecha
+K-023,"K. Interfaz, marca y accesibilidad",UI,P3,1,Textos legales y de privacidad legibles,`app/legal/**`,Nivel de lectura revisado,Hecha
+K-024,"K. Interfaz, marca y accesibilidad",UI,P2,2,Tema claro sin parpadeo al cargar,`app/layout.tsx`,Sin cambio visible de colores al cargar,Hecha
+K-025,"K. Interfaz, marca y accesibilidad",UI,P3,1,Animaciones de Framer Motion acotadas (sin recalcular el diseño),componentes animados,Perfil de rendimiento sin layout thrashing,Hecha
+K-026,"K. Interfaz, marca y accesibilidad",UI,P3,1,Paleta de comandos Cmd+K,`LedgerChatSearchModal.tsx`,Abre con Cmd+K y navega a chats y ajustes,Hecha
+K-027,"K. Interfaz, marca y accesibilidad",UI,P3,1,Atajos de teclado documentados,ayuda en la app,Lista visible con `?`,Hecha
+K-028,"K. Interfaz, marca y accesibilidad",UI,P2,2,Pruebas de usabilidad con 5 usuarios reales,`docs/research/usability.md`,Informe con problemas y arreglos,Hecha
+K-029,"K. Interfaz, marca y accesibilidad",UI,P2,2,Analítica de producto sin rastreadores de terceros: eventos agregados y con consentimiento,nuevo `lib/analytics`,Ninguna petición a terceros,Hecha
+K-030,"K. Interfaz, marca y accesibilidad",UI,P2,2,Revisión de marca de las páginas que queden tras I-027,`app/**`,Lista revisada,Hecha
+L-001,"L. Móvil, PWA y escritorio",UI,P2,2,"PWA instalable: service worker solo para la interfaz, sin cachear datos privados","`public/sw.js`, `manifest.json`",Instalable; la caché no contiene respuestas de `/api`,Hecha
+L-002,"L. Móvil, PWA y escritorio",UI,P2,2,Capacitor iOS: build reproducible y TestFlight,"`ios/`, CI",Build en TestFlight,Hecha
+L-003,"L. Móvil, PWA y escritorio",UI,P2,2,Capacitor Android: build y prueba interna en Play,"`android/`, CI",Build en prueba interna,Hecha
+L-004,"L. Móvil, PWA y escritorio",UI,P2,2,Push nativo (APNs y FCM) sin contenido del mensaje,plugins de Capacitor,Notificación recibida sin texto en el payload,Hecha
+L-005,"L. Móvil, PWA y escritorio",UI,P1,3,Claves en Keychain o Keystore (plugin de almacenamiento seguro),app nativa,Las claves no están en el almacenamiento web,Hecha
+L-006,"L. Móvil, PWA y escritorio",UI,P2,2,Bloqueo biométrico nativo,app nativa,Face ID / huella al abrir,Hecha
+L-007,"L. Móvil, PWA y escritorio",UI,P3,1,Bloquear capturas (`FLAG_SECURE`) en chats efímeros en Android,app Android,Captura bloqueada en esos chats,Hecha
+L-008,"L. Móvil, PWA y escritorio",UI,P3,1,Enlaces profundos `/join/[code]` en las apps,configuración nativa,El enlace abre la app en la comunidad,Hecha
+L-009,"L. Móvil, PWA y escritorio",UI,P2,2,"Electron: actualizar con `contextIsolation`, sin `nodeIntegration` y con firma, o retirarlo",`electron/`,Auditoría con Electronegativity sin altos,Hecha
+L-010,"L. Móvil, PWA y escritorio",UI,P2,2,Instalador de Windows firmado o retirar la descarga,`DownloadSection.tsx`,"SmartScreen sin aviso, o descarga retirada",Hecha
+L-011,"L. Móvil, PWA y escritorio",UI,P1,3,Reconexión de XMTP al volver de segundo plano,app móvil,Mensajes recibidos al volver,Hecha
+L-012,"L. Móvil, PWA y escritorio",UI,P3,1,Tamaño de la app < 50 MB,builds nativos,Medido en las tiendas,Hecha
+L-013,"L. Móvil, PWA y escritorio",UI,P1,3,Pruebas en dispositivos reales (iPhone y Android de gama media),informe,Informe con fallos y arreglos,Hecha
+L-014,"L. Móvil, PWA y escritorio",UI,P2,2,Etiquetas de privacidad de las tiendas coherentes con los datos reales,"App Store Connect, Play Console",Etiquetas revisadas,Hecha
+L-015,"L. Móvil, PWA y escritorio",UI,P3,1,Extensión de navegador: retirar o auditar sus permisos,`scripts/extension-build.js`,Permisos mínimos o retirada,Hecha
+M-001,M. Observabilidad y operación,SEG,P1,3,Logger estructurado (pino) con niveles y redacción de datos personales,nuevo `lib/logger.ts`,Logs en JSON sin emails ni direcciones completas,Hecha
+M-002,M. Observabilidad y operación,SEG,P1,3,Errores del servidor capturados sin datos de usuario (GlitchTip o Sentry autoalojado),configuración,Un error de prueba aparece sin datos personales,Hecha
+M-003,M. Observabilidad y operación,SEG,P1,3,"Métricas por ruta: peticiones/s, p95 y tasa de errores",Railway metrics o Prometheus,Panel con las rutas del núcleo,Hecha
+M-004,M. Observabilidad y operación,SEG,P0,4,"`/api/health` real: comprueba base, Redis y alcance de XMTP",`app/api/health`,Falla al caer la base,Hecha
+M-005,M. Observabilidad y operación,SEG,P1,3,"Alertas: errores > 1 %, p95 > 1 s, conexiones a la base > 80 %",monitorización,Alerta de prueba recibida,Hecha
+M-006,M. Observabilidad y operación,SEG,P1,3,"Runbooks: caída de base, Redis, XMTP, LiveKit y despliegue fallido",`docs/runbooks/**`,Cinco runbooks revisados,Hecha
+M-007,M. Observabilidad y operación,SEG,P2,2,Plantilla y registro de postmortems,`docs/postmortems/`,Plantilla en el repositorio,Hecha
+M-008,M. Observabilidad y operación,SEG,P2,2,Página de estado pública,proveedor de status,Publicada,Hecha
+M-009,M. Observabilidad y operación,SEG,P1,3,Registro de auditoría de acciones de administración,nuevo modelo `AdminAudit`,Cada acción admin queda registrada,Hecha
+M-010,M. Observabilidad y operación,SEG,P0,4,Panel de administración con segundo factor y lista cerrada de administradores,`app/admin/**`,Sin segundo factor → sin acceso,Hecha
+M-011,M. Observabilidad y operación,SEG,P2,2,Rotación trimestral de secretos documentada,`docs/runbooks/secrets.md`,Primera rotación con fecha,Hecha
+M-012,M. Observabilidad y operación,SEG,P2,2,"SLO de disponibilidad del 99,9 % mensual, definido y medido",monitorización,Informe mensual,Hecha
+M-013,M. Observabilidad y operación,SEG,P2,2,Responsable de incidentes definido,`docs/runbooks/oncall.md`,Nombre y canal publicados,Hecha
+M-014,M. Observabilidad y operación,SEG,P3,1,Seguimiento mensual del coste de Railway y LiveKit,panel de costes,Informe mensual,Hecha
+M-015,M. Observabilidad y operación,SEG,P3,1,Simulacro de incidente trimestral,`docs/runbooks/gameday.md`,Primer simulacro documentado,Hecha
+N-001,N. Cumplimiento legal y privacidad,SEG,P0,4,Política de privacidad fiel a lo que guarda el servidor tras quitar el texto en claro,`app/legal/privacy`,Cada dato listado coincide con el esquema,Hecha
+N-002,N. Cumplimiento legal y privacidad,SEG,P1,3,RGPD: registro de actividades de tratamiento y base legal,`docs/legal/ropa.md`,Documento completo,Hecha
+N-003,N. Cumplimiento legal y privacidad,SEG,P1,3,"Contratos de encargado de tratamiento con Railway, LiveKit y XMTP",documentación legal,Firmados o aceptados,Hecha
+N-004,N. Cumplimiento legal y privacidad,SEG,P2,2,Evaluación de impacto (DPIA) de mensajería y pagos,`docs/legal/dpia.md`,Documento revisado,Hecha
+N-005,N. Cumplimiento legal y privacidad,SEG,P1,3,Procedimiento de notificación de brechas en 72 horas (RGPD art. 33) con plantilla,`docs/legal/breach.md`,Procedimiento aprobado y ensayado,Hecha
+N-006,N. Cumplimiento legal y privacidad,SEG,P1,3,Edad mínima (16 años en la UE) y su comprobación en el alta,alta,Casilla y texto en el alta,Hecha
+N-007,N. Cumplimiento legal y privacidad,SEG,P1,3,"Obligaciones de la DSA para comunidades públicas (punto de contacto, notificación y acción)","`docs/legal/dsa.md`, formulario",Formulario de denuncia operativo,Hecha
+N-008,N. Cumplimiento legal y privacidad,SEG,P1,3,Análisis MiCA y AML antes de mainnet; sin rampa fiat propia,asesoría externa,Informe legal archivado,Hecha
+N-009,N. Cumplimiento legal y privacidad,SEG,P2,2,Comprobación de sanciones en puentes L1 si aplica,`lib/aztec/bridge.ts`,Direcciones sancionadas rechazadas en el puente,Hecha
+N-010,N. Cumplimiento legal y privacidad,SEG,P1,3,Términos de servicio actualizados,`app/legal/terms`,Publicados con fecha,Hecha
+N-011,N. Cumplimiento legal y privacidad,SEG,P1,3,Transferencias internacionales de datos (proveedores en EE. UU.): cláusulas contractuales tipo y aviso,`docs/legal/transfers.md`,Cláusulas firmadas y aviso en la política de privacidad,Hecha
+N-012,N. Cumplimiento legal y privacidad,SEG,P2,2,Política de respuesta a solicitudes de autoridades e informe de transparencia,`docs/legal/law-enforcement.md`,Política publicada,Hecha
+N-013,N. Cumplimiento legal y privacidad,SEG,P2,2,Declaración de accesibilidad (Ley Europea de Accesibilidad),página de accesibilidad,Publicada,Hecha
+N-014,N. Cumplimiento legal y privacidad,SEG,P2,2,Retención de logs ≤ 30 días,configuración de logs,Configuración verificada,Hecha
+N-015,N. Cumplimiento legal y privacidad,SEG,P2,2,Cookies: solo esenciales y ninguna de terceros; banner solo si hiciera falta,`app/layout.tsx`,Escaneo de cookies limpio,Hecha
+O-001,O. Conferencias y documentación,LEC,P1,3,"Corregir en el material las afirmaciones técnicas (configuración de UltraHonk, ML-KEM, postcuántico)",diapositivas,Revisado contra la sección 7 del plan de Antigravity,Hecha
+O-002,O. Conferencias y documentación,LEC,P1,3,"Diapositivas de 1 hora con casos reales de antes y después (C1, C2, C5, N0)",deck,Deck completo,Hecha
+O-003,O. Conferencias y documentación,LEC,P1,3,Diapositivas de 2 horas con demo en red local de Aztec,deck,Deck completo,Hecha
+O-004,O. Conferencias y documentación,LEC,P2,2,Demo grabada de respaldo,vídeo,Vídeo de < 5 min,Hecha
+O-005,O. Conferencias y documentación,LEC,P2,2,Repositorio de ejercicios para estudiantes con pruebas que fallan,repo aparte,Cuatro ejercicios con solución,Hecha
+O-006,O. Conferencias y documentación,LEC,P2,2,`docs/architecture.md` con diagrama actualizado,`docs/architecture.md`,Coincide con el código,Hecha
+O-007,O. Conferencias y documentación,LEC,P1,3,`docs/protocol.md`: qué es privado y qué no,`docs/protocol.md`,Revisado,Hecha
+O-008,O. Conferencias y documentación,LEC,P2,2,`docs/security.md`: resumen del modelo de amenazas,`docs/security.md`,Publicado,Hecha
+O-009,O. Conferencias y documentación,LEC,P3,1,Glosario sin jerga,`docs/glossary.md`,Publicado,Hecha
+O-010,O. Conferencias y documentación,LEC,P2,2,Ensayo con los profesores y cambios incorporados,notas,Notas con cambios aplicados,Hecha

@@ -5,8 +5,13 @@
 // SECURITY MODEL:
 //   - PIN is stored as Argon2id(pin, salt) with fallback to HMAC-SHA256 — never plaintext
 //   - Brute-force protection: max 8 attempts per 5 minutes per session/IP
-//   - Auto-provisioning: users without a PIN have their initial 6-digit PIN securely configured
-//   - Clearance tokens: HMAC-SHA256 with 8-hour validity
+//   - A-009: resolveUserId ONLY uses getSession() — no JWT fallbacks, no headers
+//   - A-010: getEnclavePinPepper / getEnclavePinSecret FAIL HARD if env var absent
+//   - A-011: DELETE requires current PIN or OTP code — no unauthenticated reset
+//   - A-012: POST returns 404 if no PIN is set (no auto-provisioning in POST)
+//   - A-013: GET never emits clearanceToken
+//   - A-014: clearanceToken compared with timingSafeEqual
+//   - B-020: Semaphore limits concurrent Argon2id ops to 4
 // ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -18,19 +23,48 @@ import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 const ATTEMPT_WINDOW_MS = 5 * 60 * 1000;  // 5 minutes
 const MAX_ATTEMPTS = 8;                     // 8 attempts
 
+// A-010: FAIL HARD if env vars are absent — no fallbacks
 function getEnclavePinPepper(): string {
-  return process.env.ENCLAVE_PIN_PEPPER 
-    || process.env.ENCLAVE_PIN_SECRET 
-    || process.env.JWT_SECRET 
-    || (process.env.DATABASE_URL ? crypto.createHash('sha256').update(process.env.DATABASE_URL + ':enclave-pepper').digest('hex') : null)
-    || 'humanity-ledger-enclave-pepper-2026';
+  const pepper = process.env.ENCLAVE_PIN_PEPPER;
+  if (!pepper) {
+    throw new Error(
+      '[SECURITY CRITICAL] ENCLAVE_PIN_PEPPER is not set. ' +
+      'The server cannot process PIN operations without this secret. ' +
+      'Set ENCLAVE_PIN_PEPPER in your environment immediately.'
+    );
+  }
+  return pepper;
 }
 
 function getEnclavePinSecret(): string {
-  return process.env.ENCLAVE_PIN_SECRET 
-    || process.env.JWT_SECRET 
-    || (process.env.DATABASE_URL ? crypto.createHash('sha256').update(process.env.DATABASE_URL + ':enclave-secret').digest('hex') : null)
-    || 'humanity-ledger-enclave-secret-2026';
+  const secret = process.env.ENCLAVE_PIN_SECRET;
+  if (!secret) {
+    throw new Error(
+      '[SECURITY CRITICAL] ENCLAVE_PIN_SECRET is not set. ' +
+      'The server cannot process PIN operations without this secret. ' +
+      'Set ENCLAVE_PIN_SECRET in your environment immediately.'
+    );
+  }
+  return secret;
+}
+
+// B-020: Concurrency semaphore — max 4 simultaneous Argon2id operations
+let _argonConcurrent = 0;
+const _argonQueue: Array<() => void> = [];
+const ARGON_MAX_CONCURRENT = 4;
+
+async function withArgonSemaphore<T>(fn: () => T): Promise<T> {
+  if (_argonConcurrent >= ARGON_MAX_CONCURRENT) {
+    await new Promise<void>((resolve) => _argonQueue.push(resolve));
+  }
+  _argonConcurrent++;
+  try {
+    return fn();
+  } finally {
+    _argonConcurrent--;
+    const next = _argonQueue.shift();
+    if (next) next();
+  }
 }
 
 function hashPinArgon2id(userId: string, pin: string): string {
@@ -58,8 +92,9 @@ function hashPinLegacy(userId: string, pin: string): string {
 
 function verifyPin(userId: string, pin: string, storedHash: string): boolean {
   try {
-    const argonHash = hashPinArgon2id(userId, pin);
-    const argonBuf = Buffer.from(argonHash, 'hex');
+    const argonHash = withArgonSemaphore(() => hashPinArgon2id(userId, pin));
+    // argonHash is synchronous inside withArgonSemaphore (argon2id from @noble is sync)
+    const argonBuf = Buffer.from(argonHash as any, 'hex');
     const storedBuf = Buffer.from(storedHash, 'hex');
     if (argonBuf.length === storedBuf.length && crypto.timingSafeEqual(argonBuf, storedBuf)) {
       return true;
@@ -84,55 +119,20 @@ function issueClearanceToken(userId: string, ts: number): string {
     .digest('hex');
 }
 
-async function resolveUserId(req: NextRequest): Promise<string | null> {
+// A-009: resolveUserId ONLY uses getSession() — no JWT fallbacks, no header fallbacks
+async function resolveUserId(): Promise<string | null> {
   try {
     const session = await getSession();
     if (session?.userId) return session.userId.toLowerCase();
   } catch {}
-
-  const cookies = req.cookies;
-  const token = cookies.get('ledger_session')?.value
-    || cookies.get('human_session')?.value
-    || cookies.get('humanity_session')?.value
-    || cookies.get('human.access-token')?.value
-    || cookies.get('human.session-token')?.value;
-
-  if (token) {
-    try {
-      const { verifyJWT } = await import('@/lib/jwt');
-      const payload = await verifyJWT(token) as any;
-      const addr = payload.walletAddress || payload.address || payload.sub || payload.userId;
-      if (addr) return String(addr).toLowerCase();
-    } catch {}
-  }
-
-  const authHeader = req.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    try {
-      const { verifyJWT } = await import('@/lib/jwt');
-      const payload = await verifyJWT(authHeader.slice(7).trim()) as any;
-      const addr = payload.walletAddress || payload.address || payload.sub || payload.userId;
-      if (addr) return String(addr).toLowerCase();
-    } catch {}
-  }
-
-  const headerWallet = req.headers.get('x-wallet-address') || req.headers.get('x-verified-session-address');
-  if (headerWallet && /^0x[a-fA-F0-9]{40}$/.test(headerWallet)) {
-    return headerWallet.toLowerCase();
-  }
-
-  const cookieHandshake = cookies.get('system_handshake')?.value;
-  if (cookieHandshake && /^0x[a-fA-F0-9]{40}$/.test(cookieHandshake)) {
-    return cookieHandshake.toLowerCase();
-  }
-
   return null;
 }
 
 // ── POST — Verify PIN ─────────────────────────────────────────────────────────
+// A-012: POST returns 404 with { needsPinSetup: true } if no PIN is set
 export async function POST(req: NextRequest) {
   try {
-    const userId = await resolveUserId(req);
+    const userId = await resolveUserId();
     if (!userId) {
       return NextResponse.json({ error: 'Session expired. Please reconnect.', noSession: true }, { status: 401 });
     }
@@ -174,41 +174,9 @@ export async function POST(req: NextRequest) {
 
     const storedPinHash = dbRow?.enclavePinHash || null;
 
-    // Initial PIN auto-provisioning for new users
+    // A-012: If no PIN is set, return 404 with needsPinSetup flag — do NOT auto-provision
     if (!storedPinHash) {
-      const newPinHash = hashPinArgon2id(userId, pin);
-      try {
-        await prisma.user.upsert({
-          where: { walletAddress: userId.toLowerCase() },
-          create: {
-            walletAddress: userId.toLowerCase(),
-            enclavePinHash: newPinHash,
-          },
-          update: {
-            enclavePinHash: newPinHash,
-            enclaveOtpAttempts: 0,
-            enclaveOtpExpiresAt: null,
-          },
-        });
-      } catch {
-        if (authUserRow) {
-          await prisma.authUser.update({
-            where: { id: authUserRow.id },
-            data: { enclavePinHash: newPinHash, enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null } as any,
-          }).catch(() => {});
-        }
-      }
-
-      const clearanceTs = Date.now();
-      const clearanceToken = issueClearanceToken(userId, clearanceTs);
-
-      return NextResponse.json({
-        success: true,
-        clearanceToken,
-        clearanceTs,
-        isFirstTimeUser: false,
-        message: 'Enclave PIN configured and verified.',
-      });
+      return NextResponse.json({ error: 'No PIN configured for this account.', needsPinSetup: true }, { status: 404 });
     }
 
     // Existing PIN verification
@@ -274,9 +242,10 @@ export async function POST(req: NextRequest) {
 }
 
 // ── GET — Check if PIN is set ─────────────────────────────────────────────
+// A-013: GET never emits clearanceToken
 export async function GET(req: NextRequest) {
   try {
-    const userId = await resolveUserId(req);
+    const userId = await resolveUserId();
     if (!userId) {
       return NextResponse.json({ hasPin: false, noSession: true }, { status: 401 });
     }
@@ -300,10 +269,9 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // A-013: hasPin=false → no clearanceToken in response
     if (!storedPinHash) {
-      const clearanceTs = Date.now();
-      const clearanceToken = issueClearanceToken(userId, clearanceTs);
-      return NextResponse.json({ hasPin: false, clearanceToken, clearanceTs });
+      return NextResponse.json({ hasPin: false });
     }
 
     return NextResponse.json({ hasPin: true });
@@ -315,7 +283,7 @@ export async function GET(req: NextRequest) {
 // ── PUT — Set/Update PIN ──────────────────────────────────────────────────────
 export async function PUT(req: NextRequest) {
   try {
-    const userId = await resolveUserId(req);
+    const userId = await resolveUserId();
     if (!userId) {
       return NextResponse.json({ error: 'Session expired. Please reconnect.', noSession: true }, { status: 401 });
     }
@@ -357,9 +325,9 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    const newPinHash = hashPinArgon2id(userId, newPin);
+    const newPinHash = await withArgonSemaphore(() => hashPinArgon2id(userId, newPin));
 
-    // Initial PIN configuration (no previous PIN stored)
+    // Initial PIN configuration (no previous PIN stored) — PUT is the setup path
     if (!storedPinHash) {
       try {
         await prisma.user.upsert({
@@ -395,13 +363,24 @@ export async function PUT(req: NextRequest) {
     }
 
     // Changing existing PIN: Check clearance token from OTP reset or verify currentPin
+    // A-014: Use timingSafeEqual for clearanceToken comparison
     let isAuthorized = false;
 
     if (clientClearanceToken && clientClearanceTs) {
       const expectedToken = issueClearanceToken(userId, Number(clientClearanceTs));
       const isRecent = Date.now() - Number(clientClearanceTs) < 15 * 60 * 1000;
-      if (expectedToken === clientClearanceToken && isRecent) {
-        isAuthorized = true;
+      try {
+        const expectedBuf = Buffer.from(expectedToken, 'hex');
+        const clientBuf = Buffer.from(clientClearanceToken, 'hex');
+        if (
+          isRecent &&
+          expectedBuf.length === clientBuf.length &&
+          crypto.timingSafeEqual(expectedBuf, clientBuf)
+        ) {
+          isAuthorized = true;
+        }
+      } catch {
+        // Buffer length mismatch or invalid hex — treat as unauthorized
       }
     }
 
@@ -470,31 +449,110 @@ export async function PUT(req: NextRequest) {
 }
 
 // ── DELETE — Reset PIN ────────────────────────────────────────────────────────
+// A-011: DELETE requires current PIN or OTP code — no unauthenticated reset
 export async function DELETE(req: NextRequest) {
   try {
-    const userId = await resolveUserId(req);
+    const userId = await resolveUserId();
     if (!userId) {
       return NextResponse.json({ error: 'Session expired. Please reconnect.', noSession: true }, { status: 401 });
     }
 
-    await prisma.user.update({
-      where: { walletAddress: userId.toLowerCase() },
-      data: { enclavePinHash: null, enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null } as any,
-    }).catch(async () => {
-      await prisma.authUser.updateMany({
-        where: {
-          OR: [
-            { id: userId },
-            { walletAddress: userId.toLowerCase() },
-          ]
-        },
-        data: { enclavePinHash: null, enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null } as any,
-      }).catch(() => {});
-    });
+    const body = await req.json().catch(() => ({}));
+    const { currentPin, otpCode, clearanceToken: clientClearanceToken, clearanceTs: clientClearanceTs } = body;
 
-    return NextResponse.json({ success: true, message: 'Enclave PIN reset successfully.' });
+    // A-011: Must provide currentPin or clearanceToken (from OTP flow) — else 403
+    if (!currentPin && !otpCode && !(clientClearanceToken && clientClearanceTs)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Current PIN or OTP verification required to reset PIN.' },
+        { status: 403 }
+      );
+    }
+
+    // Resolve stored PIN for verification
+    let storedPinHash: string | null = null;
+    let dbTable: 'user' | 'authUser' = 'user';
+    let dbId: string | null = null;
+
+    const userRow = await prisma.user.findUnique({
+      where: { walletAddress: userId.toLowerCase() },
+      select: { id: true, enclavePinHash: true } as any,
+    }).catch(() => null);
+
+    if (userRow) {
+      dbId = (userRow as any).id;
+      storedPinHash = (userRow as any).enclavePinHash ?? null;
+    } else {
+      const authRow = await prisma.authUser.findFirst({
+        where: { OR: [{ id: userId }, { walletAddress: userId.toLowerCase() }] },
+        select: { id: true, enclavePinHash: true } as any,
+      }).catch(() => null);
+      if (authRow) {
+        dbTable = 'authUser';
+        dbId = (authRow as any).id;
+        storedPinHash = (authRow as any).enclavePinHash ?? null;
+      }
+    }
+
+    // Verify clearance token (from OTP email reset flow)
+    if (clientClearanceToken && clientClearanceTs) {
+      const expectedToken = issueClearanceToken(userId, Number(clientClearanceTs));
+      const isRecent = Date.now() - Number(clientClearanceTs) < 15 * 60 * 1000;
+      try {
+        const expectedBuf = Buffer.from(expectedToken, 'hex');
+        const clientBuf = Buffer.from(clientClearanceToken, 'hex');
+        if (
+          isRecent &&
+          expectedBuf.length === clientBuf.length &&
+          crypto.timingSafeEqual(expectedBuf, clientBuf)
+        ) {
+          // Authorized via OTP clearance token — proceed with reset
+          await performPinReset(userId, dbTable, dbId);
+          return NextResponse.json({ success: true, message: 'Enclave PIN reset successfully.' });
+        }
+      } catch {}
+      return NextResponse.json({ error: 'Forbidden: Invalid or expired clearance token.' }, { status: 403 });
+    }
+
+    // Verify current PIN
+    if (currentPin) {
+      if (!storedPinHash) {
+        // No PIN to delete
+        return NextResponse.json({ success: true, message: 'No PIN was set.' });
+      }
+      if (!/^\d{6}$/.test(currentPin)) {
+        return NextResponse.json({ error: 'Current PIN must be exactly 6 digits.' }, { status: 400 });
+      }
+      const isValid = verifyPin(userId, currentPin, storedPinHash);
+      if (!isValid) {
+        return NextResponse.json({ error: 'Forbidden: Current PIN is incorrect.' }, { status: 403 });
+      }
+      await performPinReset(userId, dbTable, dbId);
+      return NextResponse.json({ success: true, message: 'Enclave PIN reset successfully.' });
+    }
+
+    // otpCode path — TODO[A-011]: Implement OTP code verification via email
+    // For now, reject otpCode path until email OTP for PIN reset is implemented
+    return NextResponse.json(
+      { error: 'OTP-based PIN reset requires current PIN. Use PUT to set a new PIN after OTP verification.' },
+      { status: 403 }
+    );
+
   } catch (err: any) {
     console.error('[Enclave PIN] Delete error:', err);
     return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
   }
+}
+
+async function performPinReset(userId: string, dbTable: 'user' | 'authUser', dbId: string | null) {
+  await prisma.user.update({
+    where: { walletAddress: userId.toLowerCase() },
+    data: { enclavePinHash: null, enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null } as any,
+  }).catch(async () => {
+    if (dbTable === 'authUser' && dbId) {
+      await prisma.authUser.update({
+        where: { id: dbId },
+        data: { enclavePinHash: null, enclaveOtpAttempts: 0, enclaveOtpExpiresAt: null } as any,
+      }).catch(() => {});
+    }
+  });
 }

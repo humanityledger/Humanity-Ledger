@@ -1,4 +1,6 @@
-'use client';
+﻿'use client';
+
+import { isZkEnabled } from '@/lib/features/zk';
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,6 +23,7 @@ interface ZkComplianceModalProps {
 }
 
 export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalProps) {
+  if (!isZkEnabled) return null;
   const [activeTab, setActiveTab] = useState<'viewing_keys' | 'solvency' | 'clean_origin'>('viewing_keys');
   const [policies, setPolicies] = useState<ViewingKeyPolicy[]>([]);
   
@@ -59,7 +62,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
       durationDays,
     });
 
-    toast.success('Clave de visualización (Viewing Key) creada');
+    toast.success('Clave de visualizaciÃ³n (Viewing Key) creada');
     setAuditorLabel('');
     setPolicies(getViewingKeyPolicies(userAddress));
   };
@@ -73,7 +76,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
   const handleCopyKey = (keyHex: string, id: string) => {
     navigator.clipboard.writeText(keyHex);
     setCopiedKey(id);
-    toast.success('Clave de visualización copiada');
+    toast.success('Clave de visualizaciÃ³n copiada');
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
@@ -82,7 +85,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
     try {
       const res = await generateProofOfSolvency(userAddress, solvencyToken, solvencyThreshold);
       setSolvencyResult(res);
-      toast.success('Prueba ZK de Solvencia generada con éxito');
+      toast.success('Prueba ZK de Solvencia generada con Ã©xito');
     } catch {
       toast.error('Error al generar la prueba de solvencia');
     } finally {
@@ -95,9 +98,9 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
     try {
       const res = await generateProofOfCleanOrigin(userAddress);
       setOriginResult(res);
-      toast.success('Auditoría ZK de Origen Limpio completada (Riesgo: 0%)');
+      toast.success('AuditorÃ­a ZK de Origen Limpio completada (Riesgo: 0%)');
     } catch {
-      toast.error('Error al computar el análisis de origen');
+      toast.error('Error al computar el anÃ¡lisis de origen');
     } finally {
       setGeneratingOrigin(false);
     }
@@ -120,7 +123,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
             </div>
             <div>
               <h3 className="text-[18px] font-black text-[#1C1C1E]">Cumplimiento Institucional & Viewing Keys</h3>
-              <p className="text-[12px] text-black/50">Divulgación selectiva en Zero-Knowledge para auditorías y autoridades</p>
+              <p className="text-[12px] text-black/50">DivulgaciÃ³n selectiva en Zero-Knowledge para auditorÃ­as y autoridades</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center text-black/50">
@@ -137,7 +140,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
               activeTab === 'viewing_keys' ? 'bg-white shadow-sm text-[#1C1C1E]' : 'text-black/50 hover:text-black'
             }`}
           >
-            Claves de Auditoría (Viewing Keys)
+            Claves de AuditorÃ­a (Viewing Keys)
           </button>
           <button
             type="button"
@@ -155,7 +158,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
               activeTab === 'clean_origin' ? 'bg-white shadow-sm text-[#1C1C1E]' : 'text-black/50 hover:text-black'
             }`}
           >
-            Auditoría de Origen Limpio
+            AuditorÃ­a de Origen Limpio
           </button>
         </div>
 
@@ -166,7 +169,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
               <h4 className="text-[13px] font-bold text-[#1C1C1E]">Otorgar Acceso de Solo Lectura a Auditor</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold uppercase text-black/50 block mb-1">Nombre / Institución</label>
+                  <label className="text-[10px] font-bold uppercase text-black/50 block mb-1">Nombre / InstituciÃ³n</label>
                   <input
                     type="text"
                     value={auditorLabel}
@@ -184,11 +187,11 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
                   >
                     <option value="incoming_only">Solo Entradas (ivsk)</option>
                     <option value="outgoing_only">Solo Salidas (ovsk)</option>
-                    <option value="full_audit">Auditoría Completa</option>
+                    <option value="full_audit">AuditorÃ­a Completa</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold uppercase text-black/50 block mb-1">Vigencia (Días)</label>
+                  <label className="text-[10px] font-bold uppercase text-black/50 block mb-1">Vigencia (DÃ­as)</label>
                   <input
                     type="number"
                     min={1}
@@ -203,14 +206,14 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
                 type="submit"
                 className="w-full py-2.5 rounded-xl bg-[#1C1C1E] text-white font-bold text-[13px] hover:bg-[#1C1C1E] shadow transition-colors"
               >
-                Generar Viewing Key Criptográfica
+                Generar Viewing Key CriptogrÃ¡fica
               </button>
             </form>
 
             <div className="space-y-2">
-              <h4 className="text-[13px] font-bold text-[#1C1C1E]">Políticas Activas ({policies.length})</h4>
+              <h4 className="text-[13px] font-bold text-[#1C1C1E]">PolÃ­ticas Activas ({policies.length})</h4>
               {policies.length === 0 ? (
-                <p className="text-[12px] text-black/40 text-center py-4 bg-gray-50 rounded-xl">No hay claves de visualización otorgadas</p>
+                <p className="text-[12px] text-black/40 text-center py-4 bg-gray-50 rounded-xl">No hay claves de visualizaciÃ³n otorgadas</p>
               ) : (
                 policies.map(p => (
                   <div key={p.id} className="p-3 bg-white rounded-xl border border-black/10 shadow-sm flex items-center justify-between gap-3">
@@ -258,7 +261,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
             <div className="bg-[#F9F9FB] rounded-2xl p-5 border border-black/5">
               <h4 className="text-[14px] font-bold text-[#1C1C1E] mb-1">Prueba ZK de Solvencia (Range Proof)</h4>
               <p className="text-[12px] text-black/60 mb-4 leading-relaxed">
-                Demuestra criptográficamente ante un banco, broker o contraparte que posees al menos cierta cantidad de fondos protegidos en Aztec Network, <strong>sin revelar tu saldo exacto ni tus transacciones pasadas</strong>.
+                Demuestra criptogrÃ¡ficamente ante un banco, broker o contraparte que posees al menos cierta cantidad de fondos protegidos en Aztec Network, <strong>sin revelar tu saldo exacto ni tus transacciones pasadas</strong>.
               </p>
 
               <div className="grid grid-cols-2 gap-3 mb-4">
@@ -275,7 +278,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-black/50 uppercase block mb-1">Umbral Mínimo a Probar</label>
+                  <label className="text-[11px] font-bold text-black/50 uppercase block mb-1">Umbral MÃ­nimo a Probar</label>
                   <input
                     type="text"
                     value={solvencyThreshold}
@@ -294,7 +297,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
               >
                 {generatingSolvency ? (
                   <>
-                    <RefreshCw size={16} className="animate-spin" /> Computando UltraHonk Range Proof…
+                    <RefreshCw size={16} className="animate-spin" /> Computando UltraHonk Range Proofâ€¦
                   </>
                 ) : (
                   <>
@@ -308,7 +311,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
               <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-200">
                 <div className="flex items-center gap-2 text-emerald-800 font-bold text-[14px] mb-2">
                   <Check size={16} className="text-[#1C1C1E]" />
-                  Atestación ZK Verificada: {solvencyResult.isSolvent ? 'SOLVENTE' : 'FONDOS INSUFICIENTES'}
+                  AtestaciÃ³n ZK Verificada: {solvencyResult.isSolvent ? 'SOLVENTE' : 'FONDOS INSUFICIENTES'}
                 </div>
                 <p className="text-[12px] text-emerald-900 font-mono mb-2">
                   Se ha demostrado que el titular controla &ge; {solvencyResult.thresholdClaimed} zk{solvencyResult.token}.
@@ -325,9 +328,9 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
         {activeTab === 'clean_origin' && (
           <div className="space-y-4">
             <div className="bg-[#F9F9FB] rounded-2xl p-5 border border-black/5">
-              <h4 className="text-[14px] font-bold text-[#1C1C1E] mb-1">Atestación ZK de Origen Limpio</h4>
+              <h4 className="text-[14px] font-bold text-[#1C1C1E] mb-1">AtestaciÃ³n ZK de Origen Limpio</h4>
               <p className="text-[12px] text-black/60 mb-4 leading-relaxed">
-                Escanea el árbol de nullifiers de tus notas confidenciales y demuestra mediante pruebas de membresía acumulativa que tus fondos no interactuaron con direcciones sancionadas u operadores maliciosos.
+                Escanea el Ã¡rbol de nullifiers de tus notas confidenciales y demuestra mediante pruebas de membresÃ­a acumulativa que tus fondos no interactuaron con direcciones sancionadas u operadores maliciosos.
               </p>
 
               <button
@@ -338,7 +341,7 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
               >
                 {generatingOrigin ? (
                   <>
-                    <RefreshCw size={16} className="animate-spin" /> Verificando Árbol de Nullifiers SMT-32…
+                    <RefreshCw size={16} className="animate-spin" /> Verificando Ãrbol de Nullifiers SMT-32â€¦
                   </>
                 ) : (
                   <>
@@ -355,10 +358,10 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
                   Veredicto Institucional: {originResult.complianceVerdict}
                 </div>
                 <p className="text-[12px] text-emerald-900 font-semibold mb-2">
-                  Riesgo de Sanción: {originResult.sanctionRiskScore}% · Notas Auditadas: {originResult.notesScannedCount}
+                  Riesgo de SanciÃ³n: {originResult.sanctionRiskScore}% Â· Notas Auditadas: {originResult.notesScannedCount}
                 </p>
                 <div className="p-2.5 bg-white rounded-xl border border-emerald-200/60 font-mono text-[10px] text-black/60 truncate">
-                  Hash de Verificación: {originResult.zkProofHex}
+                  Hash de VerificaciÃ³n: {originResult.zkProofHex}
                 </div>
               </div>
             )}
@@ -368,3 +371,4 @@ export function ZkComplianceModal({ userAddress, onClose }: ZkComplianceModalPro
     </div>
   );
 }
+

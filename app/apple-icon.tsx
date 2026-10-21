@@ -8,7 +8,7 @@ export const contentType = 'image/png';
 export default function AppleIcon() {
   let dataUrl = '';
   try {
-    const filePath = path.join(process.cwd(), 'public', 'logo-mark-tight.png');
+    const filePath = path.join(process.cwd(), 'public', 'worldmap.png');
     const buffer = fs.readFileSync(filePath);
     dataUrl = `data:image/png;base64,${buffer.toString('base64')}`;
   } catch {}
@@ -36,14 +36,14 @@ export default function AppleIcon() {
         ) : (
           <div
             style={{
-              fontFamily: 'serif',
-              fontSize: 88,
-              fontWeight: 900,
+              fontFamily: 'sans-serif',
+              fontSize: 64,
+              fontWeight: 800,
               color: '#1C1C1E',
-              letterSpacing: -4,
+              letterSpacing: -2,
             }}
           >
-            HL
+            Humanity
           </div>
         )}
       </div>

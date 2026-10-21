@@ -8,7 +8,7 @@ export const contentType = 'image/png';
 export default function Icon() {
   let dataUrl = '';
   try {
-    const filePath = path.join(process.cwd(), 'public', 'logo-mark-tight.png');
+    const filePath = path.join(process.cwd(), 'public', 'worldmap.png');
     const buffer = fs.readFileSync(filePath);
     dataUrl = `data:image/png;base64,${buffer.toString('base64')}`;
   } catch {}
@@ -24,6 +24,7 @@ export default function Icon() {
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: 6,
+          padding: 3,
         }}
       >
         {dataUrl ? (
@@ -36,11 +37,10 @@ export default function Icon() {
         ) : (
           <div
             style={{
-              fontFamily: 'serif',
-              fontSize: 18,
-              fontWeight: 900,
+              fontFamily: 'sans-serif',
+              fontSize: 14,
+              fontWeight: 700,
               color: '#1C1C1E',
-              letterSpacing: -1,
             }}
           >
             HL

@@ -485,11 +485,10 @@ export function getCommunityStats(communityId: string): ZkCommunityStats {
     tipVolumeByToken[tip.token] += parseFloat(tip.amount.replace(/,/g, '') || '0');
   }
 
-  // Total volume in USD (DAI/USDC 1:1, ETH ≈ 2650)
+  // Total volume in stablecoin USD (DAI/USDC 1:1; ETH omitted without live oracle)
   const totalUSD =
     tipVolumeByToken.DAI +
-    tipVolumeByToken.USDC +
-    tipVolumeByToken.ETH * 2650;
+    tipVolumeByToken.USDC;
 
   // Top contributors by tip amount
   const contributorMap: Record<string, number> = {};

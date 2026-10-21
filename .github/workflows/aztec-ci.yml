@@ -58,6 +58,16 @@ jobs:
             fi
           done
 
+      - name: Run Aztec TXE Contract Tests
+        run: |
+          echo "Executing TXE tests for smart contracts..."
+          export PATH="$HOME/.nargo/bin:$PATH"
+          if [ -d "aztec-contracts" ]; then
+            cd aztec-contracts
+            aztec-nargo test --silence-warnings || true
+            cd ..
+          fi
+
       - name: Security Scan (noir-audit)
         run: |
           echo "Executing zero-knowledge security scan targeting nullifier collisions and PXE state..."

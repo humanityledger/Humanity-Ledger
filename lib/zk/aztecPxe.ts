@@ -163,46 +163,8 @@ export function registerNullifier(nullifier: string): boolean {
 
 // ─── Client Prover Engine (UltraHonk Barretenberg Architecture) ─────────────────────
 
-export async function generateUltraHonkProof(
-  circuit: 'PrivateTransfer' | 'ShieldDeposit' | 'UnshieldWithdrawal' | 'EscrowLock' | 'StreamCreate',
-  inputs: Record<string, any>,
-  onStep?: (step: string, progress: number) => void
-): Promise<UltraHonkProofPayload> {
-  const startTime = Date.now();
-
-  const steps = [
-    { name: 'Witness generation & constraint evaluation', pct: 20, delay: 280 },
-    { name: 'Polynomial interpolation over BN254 scalar field', pct: 40, delay: 350 },
-    { name: 'Permutation argument & copy constraint aggregation', pct: 60, delay: 300 },
-    { name: 'Quotient polynomial quotienting & MSM (Multi-Scalar Mult)', pct: 80, delay: 420 },
-    { name: 'UltraHonk sumcheck protocol & Fiat-Shamir transcript hash', pct: 100, delay: 250 },
-  ];
-
-  for (const step of steps) {
-    if (onStep) onStep(step.name, step.pct);
-    await new Promise(r => setTimeout(r, step.delay));
-  }
-
-  // Construct deterministic proof bytes
-  const bytes = new Uint8Array(64);
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    crypto.getRandomValues(bytes);
-  }
-  const proofHex = '0x' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-  const vkHash = '0xvk_' + Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
-
-  return {
-    circuitName: circuit,
-    publicInputs: Object.keys(inputs).map(k => `${k}:${inputs[k]}`),
-    proofHex,
-    verificationKeyHash: vkHash,
-    numConstraints: circuit === 'PrivateTransfer' ? 24512 : 31804,
-    provingTimeMs: Date.now() - startTime,
-    status: 'valid',
-  };
-}
-
-export const generateUltraPlonkProof = generateUltraHonkProof;
+// Proof generation requires real Aztec node / BB wasm runtime (H-019: fake prover removed)
+// (UltraHonkProofPayload defined above)
 
 // ─── Note Discovery Scanner (Block Decryptor) ────────────────────────────────
 

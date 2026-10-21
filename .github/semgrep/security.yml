@@ -1,0 +1,64 @@
+rules:
+  - id: no-identity-from-x-web3-address
+    patterns:
+      - pattern: $REQ.headers.get('x-web3-address')
+    message: >
+      Never read identity from x-web3-address header. Use requireWallet() from
+      lib/security/requireWallet.ts to resolve the caller from the server session only.
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: CWE-287
+
+  - id: no-identity-from-x-wallet-address
+    patterns:
+      - pattern: $REQ.headers.get('x-wallet-address')
+    message: >
+      Never read identity from x-wallet-address header. Use requireWallet() instead.
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: CWE-287
+
+  - id: no-system-handshake-cookie
+    patterns:
+      - pattern: cookies().get('system_handshake')
+      - pattern: $STORE.get('system_handshake')
+    message: >
+      system_handshake is not a valid authentication mechanism.
+      It was an unencrypted client-writable cookie that bypassed session verification.
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: CWE-287
+
+  - id: no-math-random-for-tokens
+    patterns:
+      - pattern-inside: |
+          function $F(...) { ... }
+      - pattern: Math.random()
+      - pattern-not-inside: |
+          // ... rate limit cleanup ...
+    message: >
+      Do not use Math.random() for security-sensitive values (tokens, IDs, hashes, nonces).
+      Use crypto.randomBytes() or crypto.getRandomValues() instead.
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: CWE-330
+
+  - id: no-hardcoded-enclave-secret
+    patterns:
+      - pattern: "'humanity-ledger-enclave'"
+    message: >
+      Hardcoded enclave secret detected. Use ENCLAVE_PIN_PEPPER and ENCLAVE_PIN_SECRET
+      environment variables only. No fallback values allowed.
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: CWE-798

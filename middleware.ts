@@ -64,8 +64,6 @@ const PUBLIC_PREFIXES = [
   '/api/payments/checkout',
   '/api/webhooks/stripe',
   '/api/webhooks/',
-  '/api/dev/deploy',
-  '/api/aztec/deploy-token',
   '/api/health',
   '/api/status',
   '/api/registry/',
@@ -199,17 +197,29 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     const clientIp = hops.length > 0 ? hops[hops.length - 1] : ((req as any).ip || '127.0.0.1');
     const rateLimitRes = applyRateLimit(clientIp, pathname);
     if (rateLimitRes) return rateLimitRes;
+
+    // B-015: CSRF check on API mutations
+    const method = req.method.toUpperCase();
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      const secFetchSite = req.headers.get('sec-fetch-site');
+      if (secFetchSite === 'cross-site') {
+        return NextResponse.json(
+          { error: 'Forbidden: Cross-site mutation rejected (CSRF protection)' },
+          { status: 403 }
+        );
+      }
+    }
   }
 
-  // 2. Allow all public paths through immediately (strip any client-injected verification headers)
+  // 2. Allow all public paths through immediately.
+  // A-016: ALWAYS strip client-injected identity headers — even on public paths.
   if (isPublicPath(pathname)) {
-    if (req.headers.has('x-verified-session-address') || req.headers.has('x-session-ts')) {
-      const sanitizedHeaders = new Headers(req.headers);
-      sanitizedHeaders.delete('x-verified-session-address');
-      sanitizedHeaders.delete('x-session-ts');
-      return NextResponse.next({ request: { headers: sanitizedHeaders } });
-    }
-    return NextResponse.next();
+    const sanitizedHeaders = new Headers(req.headers);
+    sanitizedHeaders.delete('x-verified-session-address');
+    sanitizedHeaders.delete('x-session-ts');
+    sanitizedHeaders.delete('x-wallet-address');
+    sanitizedHeaders.delete('x-web3-address');
+    return NextResponse.next({ request: { headers: sanitizedHeaders } });
   }
 
 
@@ -276,19 +286,26 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   }
 
   // 3. Session exists → pass the address to downstream handlers via header
-  //    [ZK-ALIGNMENT] The middleware injects verified session metadata securely.
-  //    The heavy DB identity-gate check (assertVerifiedIdentity) runs inside
-  //    each sensitive API route — not here — to keep edge latency minimal.
-  //
+  //    A-016: First STRIP all client-injected identity headers, then inject verified one.
+  //    This prevents any client-supplied header from being trusted downstream.
   //    Headers injected:
-  //      x-verified-session-address → cryptographically verified wallet address
+  //      x-verified-session-address → cryptographically verified wallet address (from JWT)
   //      x-session-ts               → timestamp for replay-attack detection in routes
   //      x-request-id               → unique request correlation ID for audit trail
   const requestHeaders = new Headers(req.headers);
+  // A-016: Strip ALL client-injected identity headers BEFORE injecting verified ones
+  requestHeaders.delete('x-web3-address');
+  requestHeaders.delete('x-wallet-address');
+  requestHeaders.delete('x-verified-session-address');
+  requestHeaders.delete('x-session-ts');
+  // Now safely inject the verified session address
   requestHeaders.set('x-verified-session-address', sessionAddress);
   requestHeaders.set('x-session-ts', String(Date.now()));
   const requestId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
   requestHeaders.set('x-request-id', requestId);
+
+  const nonce = Buffer.from(crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36)).toString('base64');
+  requestHeaders.set('x-nonce', nonce);
 
   const response = NextResponse.next({
     request: {
@@ -296,11 +313,12 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     },
   });
   response.headers.set('x-request-id', requestId);
+  response.headers.set('x-nonce', nonce);
 
-  // [SECURITY] Strict CSP: includes 'wasm-unsafe-eval' for Barretenberg UltraHonk client proving
+  // [SECURITY] B-016 / B-017: Unified strict CSP with nonce per request (N-05)
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+    `default-src 'self'; script-src 'self' 'nonce-${nonce}' 'wasm-unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:; media-src 'self' blob: mediastream:; frame-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';`
   );
 
   // [SECURITY] Cross-Origin Isolation for Barretenberg WASM Multithreading (SharedArrayBuffer)
@@ -310,6 +328,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   }
 
   // [SECURITY] Additional hardening headers
+  response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-XSS-Protection', '1; mode=block');

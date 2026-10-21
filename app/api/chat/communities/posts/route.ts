@@ -1,25 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
+import { requireWallet } from '@/lib/security/requireWallet';
 
 export const dynamic = 'force-dynamic';
 
-const ETH_ADDR_REGEX = /^0x[a-fA-F0-9]{40}$/;
-
 export async function POST(req: Request) {
   try {
-    let caller = await resolveVerifiedCaller(req as any);
-    if (!caller) {
-      const headerAddr = (req as any).headers?.get?.('x-web3-address') || (req as any).headers?.get?.('x-verified-session-address');
-      if (headerAddr && ETH_ADDR_REGEX.test(headerAddr)) {
-        caller = headerAddr.toLowerCase();
-      }
-    }
-    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireWallet(req as any);
+    if (auth.errorResponse) return auth.errorResponse;
+    const authorAddress = auth.walletAddress;
 
     const body = await req.json();
     const { communityId, channelId, title, content, contentHtml } = body;
-    const authorAddress = caller.toLowerCase();
 
     if (!communityId || !content) {
       return NextResponse.json(
@@ -66,7 +58,7 @@ export async function POST(req: Request) {
     const post = await prisma.communityPost.create({
       data: {
         communityId,
-        channelId, // Now explicitly saved in DB
+        channelId,
         authorAddress: authorAddress.toLowerCase(),
         title,
         content,
@@ -82,26 +74,67 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const communityId = searchParams.get('communityId');
-  const channelId = searchParams.get('channelId');
+  try {
+    const { searchParams } = new URL(req.url);
+    const communityId = searchParams.get('communityId');
+    const channelId = searchParams.get('channelId');
+    const before = searchParams.get('before');
+    const since = searchParams.get('since');
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10), 1), 100) : 50;
 
-  if (!communityId) {
-    return NextResponse.json({ error: 'Missing communityId' }, { status: 400 });
-  }
+    if (!communityId) {
+      return NextResponse.json({ error: 'Missing communityId' }, { status: 400 });
+    }
 
-  // Chat messages = entries WITHOUT a title.
-  // Entries WITH a title are rich posts served by /api/chat/communities/[id]/posts.
-  const posts = await prisma.communityPost.findMany({
-    where: {
+    const community = await (prisma as any).community.findUnique({
+      where: { id: communityId },
+      select: { id: true, isPrivate: true, ownerAddress: true }
+    });
+
+    if (!community) {
+      return NextResponse.json({ error: 'Community not found' }, { status: 404 });
+    }
+
+    // A-023: Check membership in private communities
+    if (community.isPrivate) {
+      const auth = await requireWallet(req as any);
+      if (auth.errorResponse) return auth.errorResponse;
+      const caller = auth.walletAddress;
+
+      const isOwner = community.ownerAddress?.toLowerCase() === caller;
+      const membership = await (prisma as any).communityMember.findFirst({
+        where: { communityId, walletAddress: caller }
+      });
+
+      if (!membership && !isOwner) {
+        return NextResponse.json({ error: 'Forbidden: Membership required for private community' }, { status: 403 });
+      }
+    }
+
+    // A-024: orderBy desc, take 50, and cursor before/since
+    const whereClause: any = {
       communityId,
       title: null,
       ...(channelId ? { channelId } : {}),
-    },
-    orderBy: { createdAt: 'asc' },
-    take: 200,
-  });
+    };
 
-  return NextResponse.json({ posts });
+    if (before) {
+      whereClause.createdAt = { ...(whereClause.createdAt || {}), lt: new Date(before) };
+    }
+    if (since) {
+      whereClause.createdAt = { ...(whereClause.createdAt || {}), gt: new Date(since) };
+    }
+
+    const posts = await prisma.communityPost.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    return NextResponse.json({ posts });
+  } catch (e: any) {
+    console.error('[community-posts GET]', e);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
 }
-

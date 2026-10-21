@@ -179,7 +179,7 @@ async function step1_provision() {
 
     await waitPortHttp(PG_PORT, 15000);
     run(`"${PG_BIN}\\createdb.exe" -U postgres -p ${PG_PORT} ${DB_NAME}`);
-    run(`npx prisma db push --accept-data-loss --skip-generate`);
+    run(`npx prisma db push --skip-generate`);
     console.log('  [PASS] QA PostgreSQL ready');
 }
 

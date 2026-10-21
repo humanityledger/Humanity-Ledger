@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
+import { requireWallet } from '@/lib/security/requireWallet';
 
 export const dynamic = 'force-dynamic';
-
-const ETH_ADDR_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -13,14 +11,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Missing community id' }, { status: 400 });
     }
 
-    // Resolve caller
-    let caller = await resolveVerifiedCaller(req);
-    if (!caller) {
-      const headerAddr = req.headers.get('x-web3-address') || req.headers.get('x-verified-session-address');
-      if (headerAddr && ETH_ADDR_REGEX.test(headerAddr)) {
-        caller = headerAddr.toLowerCase();
-      }
-    }
+    // Resolve caller securely from session
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const caller = auth.walletAddress;
 
     const community = await (prisma as any).community.findUnique({
       where: { id: communityId },
@@ -39,6 +33,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (!community) {
       return NextResponse.json({ error: 'Community not found' }, { status: 404 });
+    }
+
+    // Check membership and admin authorization
+    const isOwner = community.ownerAddress?.toLowerCase() === caller;
+    const member = community.members?.find((m: any) => m.walletAddress?.toLowerCase() === caller);
+    const isAdmin = isOwner || member?.role === 'ADMIN' || member?.role === 'OWNER';
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Forbidden: Admin access required for analytics' }, { status: 403 });
     }
 
     // 1. Native Member Count & Admin Breakdown
