@@ -1,7 +1,23 @@
 // schema.prisma
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+
+  // Neon hands out two connection strings and they are not interchangeable.
+  //
+  //   DATABASE_URL           pooled, through PgBouncer in transaction mode.
+  //                          Right for the application: many short-lived
+  //                          queries sharing a small pool.
+  //   DATABASE_URL_UNPOOLED  direct to the Postgres instance.
+  //                          Required for migrations and introspection, which
+  //                          open session-level constructs (advisory locks,
+  //                          prepared statements, CREATE TYPE) that PgBouncer
+  //                          in transaction mode cannot carry across.
+  //
+  // Pointing `url` at the pooled string without declaring `directUrl` is the
+  // classic Neon + Prisma failure: the app runs fine, then `prisma migrate`
+  // hangs on an advisory lock or reports a phantom drift.
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
   // NOTE: pg_trgm/btree_gin/unaccent extensions omitted 
   // Railway PostgreSQL does not guarantee superuser extension access.
   // Full-text search is handled at the application layer via Prisma fullTextSearchPostgres.

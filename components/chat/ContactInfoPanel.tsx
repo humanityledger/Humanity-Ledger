@@ -35,7 +35,7 @@ const Toggle = ({ value, onChange }: { value: boolean; onChange?: (v: boolean) =
     type="button"
     onClick={() => onChange?.(!value)}
     className={`w-[51px] h-[31px] rounded-full flex items-center px-[2px] transition-all duration-200 shrink-0 ${
-      value ? 'bg-[#25D366]' : 'bg-[#E5E5EA]'
+      value ? 'bg-[#2754d6]' : 'bg-[#E5E5EA]'
     }`}
     aria-pressed={value}
   >
@@ -252,7 +252,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           {/* Header Card */}
           <div className="bg-white py-8 px-4 flex flex-col items-center justify-center mb-6 shadow-sm">
             <div className="relative">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-white text-[42px] font-bold shadow-lg mb-4 overflow-hidden">
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#2754d6] to-[#128C7E] flex items-center justify-center text-white text-[42px] font-bold shadow-lg mb-4 overflow-hidden">
                 {peerProfile?.avatarUrl ? (
                   <img src={peerProfile.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
@@ -267,16 +267,16 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
             {peerProfile?.bio && <p className="text-[13px] text-[#8E8E93] mt-2 mb-4 text-center max-w-[280px]">{peerProfile.bio}</p>}
 
             <div className="flex gap-4 w-full justify-center">
-              <button onClick={onVoiceCall} className="flex flex-col items-center gap-2 text-[#25D366] hover:opacity-80 transition-opacity">
-                <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center"><Phone size={22} /></div>
+              <button onClick={onVoiceCall} className="flex flex-col items-center gap-2 text-[#2754d6] hover:opacity-80 transition-opacity">
+                <div className="w-12 h-12 rounded-2xl bg-[#2754d6]/10 flex items-center justify-center"><Phone size={22} /></div>
                 <span className="text-[13px] font-medium">Audio</span>
               </button>
-              <button onClick={onVideoCall} className="flex flex-col items-center gap-2 text-[#25D366] hover:opacity-80 transition-opacity">
-                <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center"><Video size={24} /></div>
+              <button onClick={onVideoCall} className="flex flex-col items-center gap-2 text-[#2754d6] hover:opacity-80 transition-opacity">
+                <div className="w-12 h-12 rounded-2xl bg-[#2754d6]/10 flex items-center justify-center"><Video size={24} /></div>
                 <span className="text-[13px] font-medium">Video</span>
               </button>
-              <button onClick={onSearch} className="flex flex-col items-center gap-2 text-[#25D366] hover:opacity-80 transition-opacity">
-                <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center"><Search size={22} /></div>
+              <button onClick={onSearch} className="flex flex-col items-center gap-2 text-[#2754d6] hover:opacity-80 transition-opacity">
+                <div className="w-12 h-12 rounded-2xl bg-[#2754d6]/10 flex items-center justify-center"><Search size={22} /></div>
                 <span className="text-[13px] font-medium">Search</span>
               </button>
             </div>
@@ -328,7 +328,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           <motion.div initial={{ opacity: 0, y: 50, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.9 }}
             className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-[#111B21] text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 z-[400]"
           >
-            {copied ? <Check size={16} className="text-[#25D366]" /> : <Shield size={16} className="text-[#25D366]" />}
+            {copied ? <Check size={16} className="text-[#2754d6]" /> : <Shield size={16} className="text-[#2754d6]" />}
             <span className="text-[14px] font-medium">{toast}</span>
           </motion.div>
         )}
@@ -343,10 +343,10 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
                   localStorage.setItem('ledger_disappearing_' + peerAddress, opt);
                   setModal(null);
                   showToast(`Timer set to ${opt}`);
-                }} className="flex items-center justify-between p-4 rounded-xl bg-white border border-black/[0.05] hover:border-[#25D366] transition-colors">
+                }} className="flex items-center justify-between p-4 rounded-xl bg-white border border-black/[0.05] hover:border-[#2754d6] transition-colors">
                   <span className="text-[15px] font-semibold text-[#111B21]">{opt === 'off' ? 'Off' : `${opt} timer`}</span>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${disappearing === opt ? 'border-[#25D366]' : 'border-[#D1D7DB]'}`}>
-                    {disappearing === opt && <div className="w-2.5 h-2.5 bg-[#25D366] rounded-full" />}
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${disappearing === opt ? 'border-[#2754d6]' : 'border-[#D1D7DB]'}`}>
+                    {disappearing === opt && <div className="w-2.5 h-2.5 bg-[#2754d6] rounded-full" />}
                   </div>
                 </button>
               ))}
@@ -357,10 +357,10 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
         {modal === 'encryption' && (
           <Modal title="End-to-End Encryption" onClose={() => setModal(null)}>
             <div className="flex flex-col items-center text-center gap-4 py-4">
-              <div className="w-16 h-16 bg-[#25D366]/10 text-[#25D366] rounded-full flex items-center justify-center mb-2">
+              <div className="w-16 h-16 bg-[#2754d6]/10 text-[#2754d6] rounded-full flex items-center justify-center mb-2">
                 <Lock size={32} />
               </div>
-              <p className="text-[14px] text-[#111B21] font-medium">Messages and calls are end-to-end encrypted.</p>
+              <p className="text-[14px] text-[#111B21] font-medium">Messages and calls are end to end encrypted.</p>
               <p className="text-[13px] text-[#667781] leading-relaxed">No one outside of this chat, not even Humanity Ledger, can read or listen to them.</p>
               <div className="mt-4 p-4 bg-[#F0F2F5] rounded-xl w-full">
                 <p className="text-[11px] font-mono text-[#667781] break-all tracking-wider text-center">

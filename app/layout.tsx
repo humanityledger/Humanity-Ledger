@@ -4,7 +4,12 @@ import { headers } from 'next/headers'
 
 import { Inter, IBM_Plex_Mono } from 'next/font/google'
 
-import './globals-compiled.css'
+// app/globals-compiled.css is no longer imported here. It is a Tailwind
+// build of globals.css produced by `build:railway`, so importing it next to
+// globals.css shipped the same 600 KB of CSS twice, and a stale local copy
+// brought back rules that had since been removed (a 0.6 zoom on every page
+// at desktop widths, and serif and monospace fonts on bare headings).
+// globals.css already runs through Tailwind via postcss.config.js.
 
 import './globals.css'
 
@@ -491,8 +496,6 @@ export default async function RootLayout({
 
     }
 
-      }
-    }
   }
 
   window.addEventListener('unhandledrejection', function(event) {

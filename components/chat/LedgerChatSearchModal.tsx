@@ -103,7 +103,7 @@ export function LedgerChatSearchModal({
             </button>
           )}
         </div>
-        <button onClick={onClose} className="text-[14px] font-bold text-[#25D366] hover:text-[#128C7E] shrink-0 ml-1">
+        <button onClick={onClose} className="text-[14px] font-bold text-[#2754d6] hover:text-[#128C7E] shrink-0 ml-1">
           Cancel
         </button>
       </div>
@@ -165,12 +165,12 @@ export function LedgerChatSearchModal({
               <button
                 key={msg.id}
                 onClick={() => jumpTo(msg)}
-                className={`w-full flex items-start gap-3 px-4 py-3.5 text-left transition-colors ${isActive ? 'bg-[#25D366]/8' : 'hover:bg-black/3'}`}
+                className={`w-full flex items-start gap-3 px-4 py-3.5 text-left transition-colors ${isActive ? 'bg-[#2754d6]/8' : 'hover:bg-black/3'}`}
               >
                 {/* Sender avatar */}
                 <div
                   className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-black text-white shrink-0 mt-0.5"
-                  style={{ background: isSelf ? '#25D366' : `hsl(${parseInt(msg.senderInboxId.slice(0, 6) || '0', 16) % 360},65%,45%)` }}
+                  style={{ background: isSelf ? '#2754d6' : `hsl(${parseInt(msg.senderInboxId.slice(0, 6) || '0', 16) % 360},65%,45%)` }}
                 >
                   {isSelf ? 'Me' : msg.senderInboxId.slice(0, 2).toUpperCase()}
                 </div>
@@ -190,7 +190,7 @@ export function LedgerChatSearchModal({
                 </div>
 
                 {isActive && (
-                  <div className="w-2 h-2 rounded-full bg-[#25D366] shrink-0 mt-2" />
+                  <div className="w-2 h-2 rounded-full bg-[#2754d6] shrink-0 mt-2" />
                 )}
               </button>
             );

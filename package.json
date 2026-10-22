@@ -104,6 +104,8 @@
     "@lottiefiles/dotlottie-react": "^0.19.4",
     "@lottiefiles/dotlottie-web": "^0.61.0",
     "@metamask/sdk": "^0.34.0",
+    "@neon/config": "1.9.3",
+    "@neon/env": "1.6.4",
     "@noble/curves": "1.9.7",
     "@noble/hashes": "1.8.0",
     "@noir-lang/backend_barretenberg": "0.36.0",
@@ -335,7 +337,10 @@
     "debug": "^4.4.0",
     "diff": "^7.0.0",
     "tmp": "^0.2.3",
-    "pm2": "latest"
+    "pm2": "latest",
+    "@flashbots/ethers-provider-bundle": {
+      "ethers": "$ethers"
+    }
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.0",

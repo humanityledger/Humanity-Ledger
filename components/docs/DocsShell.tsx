@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { DOC_SECTIONS, ALL_DOC_SLUGS } from "./DocsData";
+import { DocsSearch } from "./DocsSearch";
 
 // ── Sidebar component ─────────────────────────────────────────────────────────
 export function DocsSidebar({ currentSlug }: { currentSlug: string }) {
@@ -135,6 +136,109 @@ export function DocsPrevNext({ currentSlug }: { currentSlug: string }) {
   );
 }
 
+// ── On this page ──────────────────────────────────────────────────────────────
+/**
+ * The right-hand table of contents. This is the element people recognise as
+ * GitBook, and a docs page without it is not finished: on a page of any length
+ * a reader arrives looking for one section, and the sidebar only tells them
+ * which document they are in, not where they are inside it.
+ *
+ * Headings are read from the rendered article rather than passed in as props,
+ * so pages written as Markdown get a table of contents without their authors
+ * having to maintain one by hand — a hand-maintained list goes stale on the
+ * first edit somebody makes in a hurry.
+ */
+export function DocsOnThisPage() {
+  const [headings, setHeadings] = useState<{ id: string; text: string; level: number }[]>([]);
+  const [activeId, setActiveId] = useState<string>('');
+
+  useEffect(() => {
+    const article = document.querySelector('article');
+    if (!article) return;
+
+    const found = Array.from(article.querySelectorAll('h2, h3'))
+      .filter((el): el is HTMLHeadingElement => el instanceof HTMLHeadingElement)
+      .map((el) => {
+        if (!el.id) {
+          el.id = (el.textContent || '')
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .slice(0, 60);
+        }
+        return { id: el.id, text: el.textContent || '', level: el.tagName === 'H2' ? 2 : 3 };
+      })
+      .filter((h) => h.id && h.text);
+
+    setHeadings(found);
+    if (found.length === 0) return;
+
+    // Mark the section nearest the top of the viewport. The rootMargin pulls
+    // the detection line down from the header and up from the fold, so a
+    // heading counts as active while its body is being read, not only while
+    // the heading itself is on screen.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setActiveId(visible[0].target.id);
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    found.forEach((h) => {
+      const el = document.getElementById(h.id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  if (headings.length < 2) return null;
+
+  return (
+    <aside className="hidden xl:block sticky top-[64px] h-[calc(100vh-64px)] w-56 shrink-0 overflow-y-auto py-16 pl-8">
+      <h3 className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+        On this page
+      </h3>
+      <ul className="flex flex-col gap-0.5 border-l border-slate-100">
+        {headings.map((h) => (
+          <li key={h.id}>
+            <a
+              href={`#${h.id}`}
+              className={[
+                'block border-l -ml-px py-1 text-[12.5px] leading-snug transition-colors',
+                h.level === 3 ? 'pl-6' : 'pl-4',
+                activeId === h.id
+                  ? 'border-slate-900 font-medium text-slate-900'
+                  : 'border-transparent text-slate-400 hover:text-slate-700',
+              ].join(' ')}
+            >
+              {h.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  );
+}
+
+// ── Breadcrumb ────────────────────────────────────────────────────────────────
+export function DocsBreadcrumb({ currentSlug }: { currentSlug: string }) {
+  const entry = ALL_DOC_SLUGS.find((d) => d.slug === currentSlug);
+  if (!entry) return null;
+  return (
+    <nav aria-label="Breadcrumb" className="mb-6 flex items-center gap-2 font-mono text-[11px] text-slate-400">
+      <Link href="/docs/overview" className="transition-colors hover:text-slate-700">Docs</Link>
+      <span aria-hidden="true">/</span>
+      <span>{entry.group}</span>
+      <span aria-hidden="true">/</span>
+      <span className="text-slate-700">{entry.label}</span>
+    </nav>
+  );
+}
+
 // ── Doc layout shell ──────────────────────────────────────────────────────────
 export function DocsShell({
   children,
@@ -158,6 +262,11 @@ export function DocsShell({
             <span className="text-slate-300">/</span>
             <span className="text-[13px] font-medium text-slate-400">Docs</span>
           </Link>
+          {/* Search sits in the centre of the header, where every docs site
+              puts it, so a reader does not have to hunt for it. */}
+          <div className="flex min-w-0 flex-1 justify-center px-4">
+            <DocsSearch />
+          </div>
           <div className="flex items-center gap-4">
             <Link href="/developers" className="text-[12px] font-medium text-slate-400 hover:text-slate-900 transition-colors hidden sm:block">
               Developer Hub
@@ -172,15 +281,21 @@ export function DocsShell({
         </div>
       </header>
 
-      {/* Body */}
-      <div className="max-w-[1200px] mx-auto flex">
+      {/* Body — three columns at xl, two at lg, one below.
+          The content column is capped at 720px: past roughly 65 characters a
+          line of prose gets measurably harder to track back from, and a docs
+          page that fills a 1600px monitor is the most common reason one stops
+          being readable. */}
+      <div className="mx-auto flex w-full max-w-[1400px]">
         <DocsSidebar currentSlug={currentSlug} />
-        <main className="min-w-0 flex-1 px-6 md:px-12 py-16">
-          <div className="max-w-[720px] mx-auto">
+        <main className="min-w-0 flex-1 px-6 py-16 md:px-12">
+          <div className="mx-auto max-w-[720px]">
+            <DocsBreadcrumb currentSlug={currentSlug} />
             {children}
             <DocsPrevNext currentSlug={currentSlug} />
           </div>
         </main>
+        <DocsOnThisPage />
       </div>
     </div>
   );

@@ -1,14 +1,8 @@
+@import './ledger-tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');
-
-@layer utilities {
-  .font-aztec-logo {
-    font-family: 'UnifrakturMaguntia', 'Old English Text MT', serif;
-  }
-}
 
 /* 
    A11Y GLOBAL REDUCED MOTION SUPPORT (Audit A11y & Motion Compliance)
@@ -51,8 +45,15 @@
 
 /* Fix iOS Safari 100vh blank bottom space bug */
 html {
-  /* Let the browser handle global scrolling natively */
+  /* Let the browser handle global scrolling natively.
+     `clip` rather than `hidden`: with `hidden` on both html and body, body
+     becomes a scroll container that never scrolls, and every position:sticky
+     element on the site (navigation bars, docs sidebars) silently stops
+     sticking. `clip` prevents horizontal overflow the same way without
+     creating a scroll container. `hidden` stays first as the fallback for
+     browsers without `clip`. */
   overflow-x: hidden;
+  overflow-x: clip;
   /*  HARD BOUNDARY: prevents rubber-band bounce and ghost pages  */
   overscroll-behavior: none;
   background-color: #FFFFFF;
@@ -234,8 +235,10 @@ html, body {
 
     /* Prevent horizontal layout overflow  use 100% NOT 100vw.
        On Windows, 100vw includes the scrollbar width, which creates
-       phantom horizontal overflow that cuts the layout at half-screen. */
+       phantom horizontal overflow that cuts the layout at half-screen.
+       `clip` keeps position:sticky working; see the note on html above. */
     overflow-x: hidden;
+    overflow-x: clip;
     width: 100%;
     
     /* Let only the body or the master container scroll */
@@ -1471,7 +1474,7 @@ html.dark h3,
 html.dark h4,
 html.dark h5,
 html.dark h6,
-html.dark span:not([class*="text-"]):not([class*="opacity-"]),
+/* html.dark span rule removed to protect button labels */
 html.dark li,
 html.dark label,
 html.dark td,
@@ -1627,7 +1630,7 @@ html.dark h3,
 html.dark h4,
 html.dark h5,
 html.dark h6,
-html.dark span:not([class*="text-"]):not([class*="opacity-"]),
+/* html.dark span rule removed to protect button labels */
 html.dark li,
 html.dark label,
 html.dark td,

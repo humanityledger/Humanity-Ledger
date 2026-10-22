@@ -146,3 +146,4 @@ powershell.bat
 # Directorios temporales
 scratch/
 tmp_*/
+.neon

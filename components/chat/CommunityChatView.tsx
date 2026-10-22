@@ -416,7 +416,7 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     const [lat, lon] = content.replace('[LOCATION]', '').split(',');
     return (
       <a href={`https://maps.google.com/?q=${lat},${lon}`} target="_blank" rel="noopener noreferrer"
-        className={`flex items-center gap-2 text-[13px] font-semibold hover:underline ${mine ? 'text-white' : 'text-[#25D366]'}`}>
+        className={`flex items-center gap-2 text-[13px] font-semibold hover:underline ${mine ? 'text-white' : 'text-[#2754d6]'}`}>
         <MapPin size={14} /> Location shared ↗
       </a>
     );

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 
 // ─── THE APEX PREDATOR 4K STICKER COLLECTION ──────────────────────────────
 // 30 Ultra-HD, 3D-styled animated stickers divided into 6 animal groups.
@@ -21,46 +22,46 @@ export type PremiumSticker = {
 
 export const PREMIUM_STICKERS: PremiumSticker[] = [
   // 🦁 LEONES (Lions)
-  { id: 'lion-king',   code: '[PREMIUM:lion-king]',   label: 'Rey',      base: '🦁', prop: '👑', group: 'leones', aura: 'radial-gradient(circle, rgba(255,215,0,0.6) 0%, rgba(255,215,0,0) 70%)', animation: 'stk-float-slow' },
-  { id: 'lion-fire',   code: '[PREMIUM:lion-fire]',   label: 'Fuego',    base: '🦁', prop: '🔥', group: 'leones', aura: 'radial-gradient(circle, rgba(255,69,0,0.6) 0%, rgba(255,69,0,0) 70%)',  animation: 'stk-pulse-glow' },
-  { id: 'lion-wealth', code: '[PREMIUM:lion-wealth]', label: 'Riqueza',  base: '🦁', prop: '💎', group: 'leones', aura: 'radial-gradient(circle, rgba(0,255,255,0.6) 0%, rgba(0,255,255,0) 70%)', animation: 'stk-bounce-spin' },
-  { id: 'lion-roar',   code: '[PREMIUM:lion-roar]',   label: 'Rugido',   base: '🦁', prop: '⚡', group: 'leones', aura: 'radial-gradient(circle, rgba(255,255,0,0.5) 0%, rgba(255,255,0,0) 70%)', animation: 'stk-shake-hard' },
-  { id: 'lion-zen',    code: '[PREMIUM:lion-zen]',    label: 'Sabio',    base: '🦁', prop: '🧘', group: 'leones', aura: 'radial-gradient(circle, rgba(144,238,144,0.5) 0%, rgba(144,238,144,0) 70%)', animation: 'stk-levitate' },
+  { id: 'lion-king',   code: '[PREMIUM:lion-king]',   label: 'King',      base: '🦁', prop: '👑', group: 'leones', aura: 'radial-gradient(circle, rgba(255,215,0,0.6) 0%, rgba(255,215,0,0) 70%)', animation: 'stk-float-slow' },
+  { id: 'lion-fire',   code: '[PREMIUM:lion-fire]',   label: 'Fire',    base: '🦁', prop: '🔥', group: 'leones', aura: 'radial-gradient(circle, rgba(255,69,0,0.6) 0%, rgba(255,69,0,0) 70%)',  animation: 'stk-pulse-glow' },
+  { id: 'lion-wealth', code: '[PREMIUM:lion-wealth]', label: 'Wealth',  base: '🦁', prop: '💎', group: 'leones', aura: 'radial-gradient(circle, rgba(0,255,255,0.6) 0%, rgba(0,255,255,0) 70%)', animation: 'stk-bounce-spin' },
+  { id: 'lion-roar',   code: '[PREMIUM:lion-roar]',   label: 'Roar',   base: '🦁', prop: '⚡', group: 'leones', aura: 'radial-gradient(circle, rgba(255,255,0,0.5) 0%, rgba(255,255,0,0) 70%)', animation: 'stk-shake-hard' },
+  { id: 'lion-zen',    code: '[PREMIUM:lion-zen]',    label: 'Wise',    base: '🦁', prop: '🧘', group: 'leones', aura: 'radial-gradient(circle, rgba(144,238,144,0.5) 0%, rgba(144,238,144,0) 70%)', animation: 'stk-levitate' },
 
   // 🐺 LOBOS (Wolves)
-  { id: 'wolf-moon',   code: '[PREMIUM:wolf-moon]',   label: 'Luna',     base: '🐺', prop: '🌙', group: 'lobos',  aura: 'radial-gradient(circle, rgba(200,200,255,0.6) 0%, rgba(200,200,255,0) 70%)', animation: 'stk-float-slow' },
-  { id: 'wolf-pack',   code: '[PREMIUM:wolf-pack]',   label: 'Manada',   base: '🐺', prop: '🤝', group: 'lobos',  aura: 'radial-gradient(circle, rgba(100,149,237,0.6) 0%, rgba(100,149,237,0) 70%)', animation: 'stk-pulse-glow' },
-  { id: 'wolf-hunt',   code: '[PREMIUM:wolf-hunt]',   label: 'Caza',     base: '🐺', prop: '🎯', group: 'lobos',  aura: 'radial-gradient(circle, rgba(220,20,60,0.6) 0%, rgba(220,20,60,0) 70%)',   animation: 'stk-dash-forward' },
-  { id: 'wolf-alpha',  code: '[PREMIUM:wolf-alpha]',  label: 'Alfa',     base: '🐺', prop: '🥇', group: 'lobos',  aura: 'radial-gradient(circle, rgba(255,215,0,0.6) 0%, rgba(255,215,0,0) 70%)',   animation: 'stk-bounce-up' },
-  { id: 'wolf-ghost',  code: '[PREMIUM:wolf-ghost]',  label: 'Sigilo',   base: '🐺', prop: '🌫️', group: 'lobos',  aura: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 70%)', animation: 'stk-fade-in-out' },
+  { id: 'wolf-moon',   code: '[PREMIUM:wolf-moon]',   label: 'Moon',     base: '🐺', prop: '🌙', group: 'lobos',  aura: 'radial-gradient(circle, rgba(200,200,255,0.6) 0%, rgba(200,200,255,0) 70%)', animation: 'stk-float-slow' },
+  { id: 'wolf-pack',   code: '[PREMIUM:wolf-pack]',   label: 'Pack',   base: '🐺', prop: '🤝', group: 'lobos',  aura: 'radial-gradient(circle, rgba(100,149,237,0.6) 0%, rgba(100,149,237,0) 70%)', animation: 'stk-pulse-glow' },
+  { id: 'wolf-hunt',   code: '[PREMIUM:wolf-hunt]',   label: 'Hunt',     base: '🐺', prop: '🎯', group: 'lobos',  aura: 'radial-gradient(circle, rgba(220,20,60,0.6) 0%, rgba(220,20,60,0) 70%)',   animation: 'stk-dash-forward' },
+  { id: 'wolf-alpha',  code: '[PREMIUM:wolf-alpha]',  label: 'Alpha',     base: '🐺', prop: '🥇', group: 'lobos',  aura: 'radial-gradient(circle, rgba(255,215,0,0.6) 0%, rgba(255,215,0,0) 70%)',   animation: 'stk-bounce-up' },
+  { id: 'wolf-ghost',  code: '[PREMIUM:wolf-ghost]',  label: 'Stealth',   base: '🐺', prop: '🌫️', group: 'lobos',  aura: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 70%)', animation: 'stk-fade-in-out' },
 
   // 🐂 TOROS (Bulls)
-  { id: 'bull-charge', code: '[PREMIUM:bull-charge]', label: 'Carga',    base: '🐂', prop: '💨', group: 'toros',  aura: 'radial-gradient(circle, rgba(255,140,0,0.6) 0%, rgba(255,140,0,0) 70%)',   animation: 'stk-charge-hit' },
-  { id: 'bull-profit', code: '[PREMIUM:bull-profit]', label: 'Ganancia', base: '🐂', prop: '💰', group: 'toros',  aura: 'radial-gradient(circle, rgba(50,205,50,0.6) 0%, rgba(50,205,50,0) 70%)',   animation: 'stk-bounce-spin' },
-  { id: 'bull-green',  code: '[PREMIUM:bull-green]',  label: 'Alcista',  base: '🐂', prop: '📈', group: 'toros',  aura: 'radial-gradient(circle, rgba(0,255,0,0.5) 0%, rgba(0,255,0,0) 70%)',     animation: 'stk-fly-up' },
-  { id: 'bull-smash',  code: '[PREMIUM:bull-smash]',  label: 'Impacto',  base: '🐂', prop: '💥', group: 'toros',  aura: 'radial-gradient(circle, rgba(255,0,0,0.6) 0%, rgba(255,0,0,0) 70%)',     animation: 'stk-shake-hard' },
-  { id: 'bull-armor',  code: '[PREMIUM:bull-armor]',  label: 'Blindado', base: '🐂', prop: '🛡️', group: 'toros',  aura: 'radial-gradient(circle, rgba(192,192,192,0.6) 0%, rgba(192,192,192,0) 70%)', animation: 'stk-pulse-heavy' },
+  { id: 'bull-charge', code: '[PREMIUM:bull-charge]', label: 'Charge',    base: '🐂', prop: '💨', group: 'toros',  aura: 'radial-gradient(circle, rgba(255,140,0,0.6) 0%, rgba(255,140,0,0) 70%)',   animation: 'stk-charge-hit' },
+  { id: 'bull-profit', code: '[PREMIUM:bull-profit]', label: 'Profit', base: '🐂', prop: '💰', group: 'toros',  aura: 'radial-gradient(circle, rgba(50,205,50,0.6) 0%, rgba(50,205,50,0) 70%)',   animation: 'stk-bounce-spin' },
+  { id: 'bull-green',  code: '[PREMIUM:bull-green]',  label: 'Bullish',  base: '🐂', prop: '📈', group: 'toros',  aura: 'radial-gradient(circle, rgba(0,255,0,0.5) 0%, rgba(0,255,0,0) 70%)',     animation: 'stk-fly-up' },
+  { id: 'bull-smash',  code: '[PREMIUM:bull-smash]',  label: 'Impact',  base: '🐂', prop: '💥', group: 'toros',  aura: 'radial-gradient(circle, rgba(255,0,0,0.6) 0%, rgba(255,0,0,0) 70%)',     animation: 'stk-shake-hard' },
+  { id: 'bull-armor',  code: '[PREMIUM:bull-armor]',  label: 'Armoured', base: '🐂', prop: '🛡️', group: 'toros',  aura: 'radial-gradient(circle, rgba(192,192,192,0.6) 0%, rgba(192,192,192,0) 70%)', animation: 'stk-pulse-heavy' },
 
   // 🐻 OSOS (Bears)
-  { id: 'bear-market', code: '[PREMIUM:bear-market]', label: 'Bajista',  base: '🐻', prop: '📉', group: 'osos',   aura: 'radial-gradient(circle, rgba(139,0,0,0.6) 0%, rgba(139,0,0,0) 70%)',     animation: 'stk-smash-down' },
-  { id: 'bear-sleep',  code: '[PREMIUM:bear-sleep]',  label: 'Hiberna',  base: '🐻', prop: '💤', group: 'osos',   aura: 'radial-gradient(circle, rgba(135,206,235,0.6) 0%, rgba(135,206,235,0) 70%)', animation: 'stk-float-slow' },
-  { id: 'bear-angry',  code: '[PREMIUM:bear-angry]',  label: 'Feroz',    base: '🐻', prop: '💢', group: 'osos',   aura: 'radial-gradient(circle, rgba(255,69,0,0.6) 0%, rgba(255,69,0,0) 70%)',   animation: 'stk-shake-hard' },
-  { id: 'bear-trap',   code: '[PREMIUM:bear-trap]',   label: 'Trampa',   base: '🐻', prop: '🕸️', group: 'osos',   aura: 'radial-gradient(circle, rgba(128,0,128,0.6) 0%, rgba(128,0,128,0) 70%)',   animation: 'stk-pulse-glow' },
-  { id: 'bear-blood',  code: '[PREMIUM:bear-blood]',  label: 'Zarpazo',  base: '🐻', prop: '🩸', group: 'osos',   aura: 'radial-gradient(circle, rgba(255,0,0,0.7) 0%, rgba(255,0,0,0) 70%)',     animation: 'stk-slash' },
+  { id: 'bear-market', code: '[PREMIUM:bear-market]', label: 'Bearish',  base: '🐻', prop: '📉', group: 'osos',   aura: 'radial-gradient(circle, rgba(139,0,0,0.6) 0%, rgba(139,0,0,0) 70%)',     animation: 'stk-smash-down' },
+  { id: 'bear-sleep',  code: '[PREMIUM:bear-sleep]',  label: 'Hibernate',  base: '🐻', prop: '💤', group: 'osos',   aura: 'radial-gradient(circle, rgba(135,206,235,0.6) 0%, rgba(135,206,235,0) 70%)', animation: 'stk-float-slow' },
+  { id: 'bear-angry',  code: '[PREMIUM:bear-angry]',  label: 'Fierce',    base: '🐻', prop: '💢', group: 'osos',   aura: 'radial-gradient(circle, rgba(255,69,0,0.6) 0%, rgba(255,69,0,0) 70%)',   animation: 'stk-shake-hard' },
+  { id: 'bear-trap',   code: '[PREMIUM:bear-trap]',   label: 'Trap',   base: '🐻', prop: '🕸️', group: 'osos',   aura: 'radial-gradient(circle, rgba(128,0,128,0.6) 0%, rgba(128,0,128,0) 70%)',   animation: 'stk-pulse-glow' },
+  { id: 'bear-blood',  code: '[PREMIUM:bear-blood]',  label: 'Swipe',  base: '🐻', prop: '🩸', group: 'osos',   aura: 'radial-gradient(circle, rgba(255,0,0,0.7) 0%, rgba(255,0,0,0) 70%)',     animation: 'stk-slash' },
 
   // 🐋 BALLENAS (Whales)
-  { id: 'whale-splash',code: '[PREMIUM:whale-splash]',label: 'Marea',    base: '🐋', prop: '🌊', group: 'ballenas',aura: 'radial-gradient(circle, rgba(0,191,255,0.6) 0%, rgba(0,191,255,0) 70%)',  animation: 'stk-wave-big' },
-  { id: 'whale-deep',  code: '[PREMIUM:whale-deep]',  label: 'Abismo',   base: '🐋', prop: '🌌', group: 'ballenas',aura: 'radial-gradient(circle, rgba(0,0,139,0.7) 0%, rgba(0,0,139,0) 70%)',    animation: 'stk-float-slow' },
-  { id: 'whale-bag',   code: '[PREMIUM:whale-bag]',   label: 'Volumen',  base: '🐋', prop: '💼', group: 'ballenas',aura: 'radial-gradient(circle, rgba(218,165,32,0.6) 0%, rgba(218,165,32,0) 70%)',  animation: 'stk-bounce-up' },
-  { id: 'whale-move',  code: '[PREMIUM:whale-move]',  label: 'Impacto',  base: '🐋', prop: '📊', group: 'ballenas',aura: 'radial-gradient(circle, rgba(72,209,204,0.6) 0%, rgba(72,209,204,0) 70%)',  animation: 'stk-pulse-glow' },
-  { id: 'whale-crown', code: '[PREMIUM:whale-crown]', label: 'Gigante',  base: '🐋', prop: '👑', group: 'ballenas',aura: 'radial-gradient(circle, rgba(255,215,0,0.6) 0%, rgba(255,215,0,0) 70%)',  animation: 'stk-levitate' },
+  { id: 'whale-splash',code: '[PREMIUM:whale-splash]',label: 'Tide',    base: '🐋', prop: '🌊', group: 'ballenas',aura: 'radial-gradient(circle, rgba(0,191,255,0.6) 0%, rgba(0,191,255,0) 70%)',  animation: 'stk-wave-big' },
+  { id: 'whale-deep',  code: '[PREMIUM:whale-deep]',  label: 'Abyss',   base: '🐋', prop: '🌌', group: 'ballenas',aura: 'radial-gradient(circle, rgba(0,0,139,0.7) 0%, rgba(0,0,139,0) 70%)',    animation: 'stk-float-slow' },
+  { id: 'whale-bag',   code: '[PREMIUM:whale-bag]',   label: 'Volume',  base: '🐋', prop: '💼', group: 'ballenas',aura: 'radial-gradient(circle, rgba(218,165,32,0.6) 0%, rgba(218,165,32,0) 70%)',  animation: 'stk-bounce-up' },
+  { id: 'whale-move',  code: '[PREMIUM:whale-move]',  label: 'Impact',  base: '🐋', prop: '📊', group: 'ballenas',aura: 'radial-gradient(circle, rgba(72,209,204,0.6) 0%, rgba(72,209,204,0) 70%)',  animation: 'stk-pulse-glow' },
+  { id: 'whale-crown', code: '[PREMIUM:whale-crown]', label: 'Giant',  base: '🐋', prop: '👑', group: 'ballenas',aura: 'radial-gradient(circle, rgba(255,215,0,0.6) 0%, rgba(255,215,0,0) 70%)',  animation: 'stk-levitate' },
 
   // 🦅 ÁGUILAS (Eagles)
-  { id: 'eagle-vision',code: '[PREMIUM:eagle-vision]',label: 'Visión',   base: '🦅', prop: '👁️', group: 'aguilas', aura: 'radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 70%)', animation: 'stk-pulse-heavy' },
-  { id: 'eagle-strike',code: '[PREMIUM:eagle-strike]',label: 'Ataque',   base: '🦅', prop: '⚡', group: 'aguilas', aura: 'radial-gradient(circle, rgba(255,255,0,0.6) 0%, rgba(255,255,0,0) 70%)',   animation: 'stk-dive-bomb' },
-  { id: 'eagle-fly',   code: '[PREMIUM:eagle-fly]',   label: 'Vuelo',    base: '🦅', prop: '☁️', group: 'aguilas', aura: 'radial-gradient(circle, rgba(135,206,235,0.6) 0%, rgba(135,206,235,0) 70%)', animation: 'stk-fly-across' },
-  { id: 'eagle-target',code: '[PREMIUM:eagle-target]',label: 'Precisión',base: '🦅', prop: '🎯', group: 'aguilas', aura: 'radial-gradient(circle, rgba(255,0,0,0.5) 0%, rgba(255,0,0,0) 70%)',     animation: 'stk-focus' },
-  { id: 'eagle-apex',  code: '[PREMIUM:eagle-apex]',  label: 'Cima',     base: '🦅', prop: '🥇', group: 'aguilas', aura: 'radial-gradient(circle, rgba(255,215,0,0.6) 0%, rgba(255,215,0,0) 70%)',  animation: 'stk-float-slow' },
+  { id: 'eagle-vision',code: '[PREMIUM:eagle-vision]',label: 'Vision',   base: '🦅', prop: '👁️', group: 'aguilas', aura: 'radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 70%)', animation: 'stk-pulse-heavy' },
+  { id: 'eagle-strike',code: '[PREMIUM:eagle-strike]',label: 'Attack',   base: '🦅', prop: '⚡', group: 'aguilas', aura: 'radial-gradient(circle, rgba(255,255,0,0.6) 0%, rgba(255,255,0,0) 70%)',   animation: 'stk-dive-bomb' },
+  { id: 'eagle-fly',   code: '[PREMIUM:eagle-fly]',   label: 'Flight',    base: '🦅', prop: '☁️', group: 'aguilas', aura: 'radial-gradient(circle, rgba(135,206,235,0.6) 0%, rgba(135,206,235,0) 70%)', animation: 'stk-fly-across' },
+  { id: 'eagle-target',code: '[PREMIUM:eagle-target]',label: 'Precision',base: '🦅', prop: '🎯', group: 'aguilas', aura: 'radial-gradient(circle, rgba(255,0,0,0.5) 0%, rgba(255,0,0,0) 70%)',     animation: 'stk-focus' },
+  { id: 'eagle-apex',  code: '[PREMIUM:eagle-apex]',  label: 'Summit',     base: '🦅', prop: '🥇', group: 'aguilas', aura: 'radial-gradient(circle, rgba(255,215,0,0.6) 0%, rgba(255,215,0,0) 70%)',  animation: 'stk-float-slow' },
 ];
 
 // ─── 4K CSS RENDERING & ADVANCED KEYFRAMES ──────────────────────────────────
@@ -194,7 +195,7 @@ function StickerTile({ sticker, onSend }: { sticker: PremiumSticker; onSend: (co
         </span>
       </div>
 
-      <span className="absolute bottom-2 text-[10px] font-bold text-black/40 tracking-wide uppercase opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0">
+      <span className="absolute bottom-2 text-[12px] font-medium text-[#727a88] opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0">
         {sticker.label}
       </span>
     </button>
@@ -203,12 +204,12 @@ function StickerTile({ sticker, onSend }: { sticker: PremiumSticker; onSend: (co
 
 // ─── Premium Sticker Picker UI ──────────────────────────────────────────────
 const TABS: { id: StickerGroup; label: string; icon: string }[] = [
-  { id: 'leones',   label: 'Leones',   icon: '🦁' },
-  { id: 'lobos',    label: 'Lobos',    icon: '🐺' },
-  { id: 'toros',    label: 'Toros',    icon: '🐂' },
-  { id: 'osos',     label: 'Osos',     icon: '🐻' },
-  { id: 'ballenas', label: 'Ballenas', icon: '🐋' },
-  { id: 'aguilas',  label: 'Águilas',  icon: '🦅' },
+  { id: 'leones',   label: 'Lions',   icon: '🦁' },
+  { id: 'lobos',    label: 'Wolves',    icon: '🐺' },
+  { id: 'toros',    label: 'Bulls',    icon: '🐂' },
+  { id: 'osos',     label: 'Bears',     icon: '🐻' },
+  { id: 'ballenas', label: 'Whales', icon: '🐋' },
+  { id: 'aguilas',  label: 'Eagles',  icon: '🦅' },
 ];
 
 export const StickerPicker = React.memo(({ onSend, onClose }: {
@@ -232,14 +233,14 @@ export const StickerPicker = React.memo(({ onSend, onClose }: {
       >
         {/* Clean iOS-style header */}
         <div className="px-4 py-3 flex items-center justify-between border-b border-black/8">
-          <span className="text-[15px] font-semibold text-black">Stickers</span>
+          <span className="text-[15px] font-semibold text-[#15171c]">Stickers</span>
           <button
+            type="button"
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-black/5 text-black/40 hover:text-black transition-colors"
+            aria-label="Close stickers"
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#eff1f4] text-[#4a505c] hover:text-[#15171c] transition-colors"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
+            <X size={16} strokeWidth={1.9} />
           </button>
         </div>
 
@@ -254,13 +255,13 @@ export const StickerPicker = React.memo(({ onSend, onClose }: {
               }`}
             >
               <span className="text-[20px] drop-shadow-sm">{tab.icon}</span>
-              <span className={`text-[10px] font-bold uppercase tracking-wider ${activeGroup === tab.id ? 'text-black' : 'text-black'}`}>
+              <span className="text-[12px] font-medium text-[#15171c]">
                 {tab.label}
               </span>
               {activeGroup === tab.id && (
                 <motion.div
                   layoutId="active-sticker-tab"
-                  className="absolute bottom-0 left-2 right-2 h-[3px] bg-gradient-to-r from-[#FFD700] to-[#FFA500] rounded-t-full"
+                  className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#15171c] rounded-t-full"
                 />
               )}
             </button>

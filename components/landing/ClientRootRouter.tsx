@@ -1,94 +1,58 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { ImmersiveManifestoLanding } from "./ImmersiveManifestoLanding";
-import { SystemFooter } from "./SystemFooter";
-import { useSystemAccount } from "@/hooks/useSystemAccount";
+import React, { useEffect } from "react";
+import { HumanityLanding } from "./v2/Landing";
 
-// Helper: check if system_handshake cookie already exists (any valid type)
+/**
+ * ClientRootRouter — renders the public landing page at "/".
+ *
+ * Changes in this revision:
+ *  - Renders the new landing (components/landing/v2/Landing.tsx). The previous
+ *    ImmersiveManifestoLanding.tsx is left in the repository untouched so the
+ *    change can be reverted by switching this import back.
+ *  - The wrapper used to be a div with `overflow-y-auto` and a min height.
+ *    Because it never had a fixed height it never scrolled, but it still
+ *    counted as a scroll container, so every position:sticky element inside
+ *    it stopped sticking. The landing now renders directly.
+ *  - The session check that toggled `hasSession` was removed: its result was
+ *    never read, and it ran on every visibility change and storage event.
+ *
+ * The Google OAuth session heal is kept as it was.
+ */
+
 function hasValidHandshakeCookie(): boolean {
-  if (typeof document === 'undefined') return false;
+  if (typeof document === "undefined") return false;
   try {
-    return document.cookie.split('; ').some(c =>
-      c.startsWith('system_handshake=0x') ||
-      c.startsWith('system_handshake=email_')
-    );
-  } catch { return false; }
+    return document.cookie
+      .split("; ")
+      .some((c) => c.startsWith("system_handshake=0x") || c.startsWith("system_handshake=email_"));
+  } catch {
+    return false;
+  }
 }
 
 export function ClientRootRouter() {
-  const { isConnected } = useSystemAccount();
-  const [hasSession, setHasSession] = useState(false);
-
-  // ── Google OAuth Session Heal ───────────────────────────────────────────
-  // After a Google OAuth callback, NextAuth sets HttpOnly `human.session-token`
-  // but the client-side gate needs `system_handshake` (a JS-readable cookie).
-  // We call /api/auth/session-heal once on mount to bridge that gap.
+  // After a Google OAuth callback NextAuth sets an httpOnly session cookie,
+  // but the client gate reads `system_handshake`. Bridge the two once.
   useEffect(() => {
-    const heal = async () => {
-      try {
-        // If system_handshake is already present, nothing to do.
-        if (hasValidHandshakeCookie()) return;
-
-        // Check if there is a NextAuth session and heal the cookie.
-        const res = await fetch('/api/auth/session-heal', {
-          credentials: 'include',
-          cache: 'no-store',
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.healed) {
-            console.info('[ClientRootRouter] Google OAuth session healed. Reloading gate check...');
-            // The cookie is now set; force the TitaniumGate to re-evaluate by
-            // triggering a storage event (it listens to visibilitychange + storage).
-            try { window.dispatchEvent(new Event('storage')); } catch {}
+    if (hasValidHandshakeCookie()) return;
+    fetch("/api/auth/session-heal", { credentials: "include", cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.healed) {
+          try {
+            window.dispatchEvent(new Event("storage"));
+          } catch {
+            /* ignore */
           }
         }
-      } catch {
-        // Non-blocking — if heal fails, the user will be prompted to re-authenticate.
-      }
-    };
-
-    heal();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+      })
+      .catch(() => {
+        /* non-blocking */
+      });
   }, []);
 
-  useEffect(() => {
-    const check = () => {
-      const hasCookie = typeof document !== "undefined" &&
-        (document.cookie.includes("system_handshake=") ||
-         document.cookie.includes("siwe_session="));
-      
-      if (isConnected || hasCookie) {
-        setHasSession(true);
-      } else {
-        setHasSession(false);
-      }
-    };
-    
-    // Run immediately on mount
-    check();
-    
-    // [ANDROID PERF FIX] Replace 500ms setInterval with event-driven checks.
-    const onVisibility = () => { if (document.visibilityState === 'visible') check(); };
-    const onStorage = () => check();
-    
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('storage', onStorage);
-    
-    // Single delayed check: catches cookies set within 1.5s of mount (post-redirect auth)
-    const delayedCheck = setTimeout(check, 1500);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('storage', onStorage);
-      clearTimeout(delayedCheck);
-    };
-  }, [isConnected]);
-
-  return (
-    <div className="w-full bg-white flex flex-col min-h-[100dvh] overflow-y-auto overscroll-none">
-      <ImmersiveManifestoLanding />
-    </div>
-  );
+  return <HumanityLanding />;
 }
+
+export default ClientRootRouter;

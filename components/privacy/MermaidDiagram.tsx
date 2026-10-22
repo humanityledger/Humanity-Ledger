@@ -14,7 +14,7 @@ const THEME_INIT = {
     secondaryColor: '#f5f5f5',
     tertiaryColor: '#f5f5f5',
     lineColor: '#444444',
-    fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    fontFamily: 'Archivo, ui-sans-serif, system-ui, sans-serif',
     fontSize: '14px',
     nodeBorder: '#444444',
     clusterBkg: '#f5f5f5',
@@ -35,7 +35,18 @@ const THEME_INIT = {
     activationBorderColor: '#444444',
     activationBkgColor: '#eeeeee',
   },
-  flowchart: { htmlLabels: true },
+  // htmlLabels MUST stay false while securityLevel is 'strict'.
+  //
+  // With htmlLabels: true, Mermaid renders each node's text inside a
+  // <foreignObject> as HTML. Strict mode then sanitises that HTML away, so
+  // every diagram rendered with both settings came out as shapes and arrows
+  // with no labels at all — which is what Figure 7.1 in the whitepaper was
+  // doing. The scoped CSS below was written to "force text visibility",
+  // treating it as a colour problem; the text was never being emitted.
+  //
+  // false makes Mermaid emit native SVG <text>, which strict mode leaves
+  // alone. The XSS protection from B-029 is unchanged.
+  flowchart: { htmlLabels: false, curve: 'basis', padding: 16, nodeSpacing: 44, rankSpacing: 56 },
 };
 
 // Scoped CSS injected INSIDE the SVG element — wins against any external stylesheet including Tailwind preflight

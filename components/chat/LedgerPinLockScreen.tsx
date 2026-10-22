@@ -101,7 +101,7 @@ export function LedgerPinLockScreen({
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-          className="w-16 h-16 bg-[#25D366] rounded-full flex items-center justify-center mb-5 shadow-lg"
+          className="w-16 h-16 bg-[#2754d6] rounded-full flex items-center justify-center mb-5 shadow-lg"
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12"/>

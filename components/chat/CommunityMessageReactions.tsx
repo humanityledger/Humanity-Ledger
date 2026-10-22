@@ -17,7 +17,7 @@ const EMOJI_LIST = [
 
 const REACTION_COLORS: Record<string, string> = {
   '❤️': '#FF3B30', '🔥': '#FF9500', '👏': '#FFCC00', '😂': '#34C759',
-  '😮': '#128C7E', '😢': '#5856D6', '👍': '#25D366', '🚀': '#AF52DE',
+  '😮': '#128C7E', '😢': '#5856D6', '👍': '#2754d6', '🚀': '#AF52DE',
 };
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ export function MessageReactionBar({
             onClick={() => toggleReaction(r.emoji)}
             className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[12px] transition-all active:scale-90 ${
               r.mine
-                ? 'bg-[#25D366]/10 border-[#25D366]/40 text-[#25D366]'
+                ? 'bg-[#2754d6]/10 border-[#2754d6]/40 text-[#2754d6]'
                 : 'bg-white border-black/10 text-[#1C1C1E] hover:bg-[#F2F2F7]'
             } ${loading === r.emoji ? 'opacity-50' : ''}`}
           >
@@ -152,7 +152,7 @@ export function MessageReactionBar({
       <div className="relative">
         <button
           onClick={() => setShowPicker(p => !p)}
-          className="w-7 h-7 rounded-full border border-black/10 bg-white flex items-center justify-center text-black/30 hover:text-[#25D366] hover:border-[#25D366]/30 hover:bg-[#25D366]/5 transition-all text-[14px]"
+          className="w-7 h-7 rounded-full border border-black/10 bg-white flex items-center justify-center text-black/30 hover:text-[#2754d6] hover:border-[#2754d6]/30 hover:bg-[#2754d6]/5 transition-all text-[14px]"
         >
           <Smile size={13} />
         </button>
@@ -258,7 +258,7 @@ export function PinnedMessagesPanel({
         <div className="flex-1 overflow-y-auto py-3">
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <div className="w-7 h-7 border-2 border-[#25D366] border-t-transparent rounded-full animate-spin" />
+              <div className="w-7 h-7 border-2 border-[#2754d6] border-t-transparent rounded-full animate-spin" />
             </div>
           ) : pins.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center px-8">
@@ -279,7 +279,7 @@ export function PinnedMessagesPanel({
                   className="bg-[#FAFAFA] rounded-2xl p-4 border border-black/5 group relative"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#25D366]/15 flex items-center justify-center text-[10px] font-black text-[#25D366] shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-[#2754d6]/15 flex items-center justify-center text-[10px] font-black text-[#2754d6] shrink-0">
                       {(pin.authorAddress || '??').slice(2, 4).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -295,7 +295,7 @@ export function PinnedMessagesPanel({
                   <div className="flex items-center gap-2 mt-3 pt-2 border-t border-black/5">
                     <button
                       onClick={() => { onJumpTo(pin.id); onClose(); }}
-                      className="flex items-center gap-1.5 text-[12px] font-bold text-[#25D366] hover:text-[#128C7E] transition-colors"
+                      className="flex items-center gap-1.5 text-[12px] font-bold text-[#2754d6] hover:text-[#128C7E] transition-colors"
                     >
                       <ChevronRight size={13} /> Jump to message
                     </button>
@@ -413,7 +413,7 @@ export function MessageSearchPanel({
       <span>
         {start > 0 && '...'}
         {before}
-        <mark className="bg-[#25D366]/20 text-[#1C1C1E] rounded px-0.5">{match}</mark>
+        <mark className="bg-[#2754d6]/20 text-[#1C1C1E] rounded px-0.5">{match}</mark>
         {after}
         {end < plain.length && '...'}
       </span>
@@ -463,7 +463,7 @@ export function MessageSearchPanel({
         <div className="flex-1 overflow-y-auto">
           {loading && (
             <div className="flex items-center justify-center py-10">
-              <div className="w-6 h-6 border-2 border-[#25D366] border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-[#2754d6] border-t-transparent rounded-full animate-spin" />
             </div>
           )}
           {!loading && searched && results.length === 0 && (
@@ -484,7 +484,7 @@ export function MessageSearchPanel({
                   onClick={() => { onSelect(msg); onClose(); }}
                   className="w-full px-4 py-3 flex items-start gap-3 hover:bg-[#F2F2F7] transition-colors text-left border-b border-black/[0.04] last:border-0"
                 >
-                  <div className="w-8 h-8 rounded-full bg-[#25D366]/15 flex items-center justify-center text-[10px] font-black text-[#25D366] shrink-0 mt-0.5">
+                  <div className="w-8 h-8 rounded-full bg-[#2754d6]/15 flex items-center justify-center text-[10px] font-black text-[#2754d6] shrink-0 mt-0.5">
                     {(msg.authorAddress || '??').slice(2, 4).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">

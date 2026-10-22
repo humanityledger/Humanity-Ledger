@@ -165,23 +165,11 @@ const applyDOMClasses = (state: Partial<SystemSettings>) => {
     if (typeof document === 'undefined') return;
     const html = document.documentElement;
 
-    // Theme
-    if (state.theme) {
-        const resolvedDark =
-            state.theme === 'dark' ||
-            (state.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        if (resolvedDark) {
-            html.classList.add('dark');
-            html.setAttribute('data-theme', 'dark');
-            html.style.backgroundColor = '#0A0A0A';
-            html.style.color = '#F5F5F5';
-        } else {
-            html.classList.remove('dark');
-            html.setAttribute('data-theme', 'light');
-            html.style.backgroundColor = '#FFFFFF';
-            html.style.color = '#1C1917';
-        }
-    }
+    // Theme — Always enforce pure sovereign light aesthetic (no dark mode per architecture)
+    html.classList.remove('dark');
+    html.setAttribute('data-theme', 'light');
+    html.style.backgroundColor = '#FFFFFF';
+    html.style.color = '#15171c';
 
     // UI Density
     if (state.density) {

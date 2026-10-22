@@ -3,106 +3,308 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Download, Monitor, Apple, Globe, Wallet, CheckCircle2,
-  ChevronDown, Zap, Lock, Smartphone, MessageCircle, Users, Terminal
+  Download, Monitor, Apple, Globe, CheckCircle2,
+  ChevronDown, Lock, Terminal, ShieldAlert, Copy, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 
-// ─── Download Links ────────────────────────────────────────────────────────────
-// Windows installer is served directly from our CDN / server.
-// macOS and Linux users have instant zero-install access via Web App.
-const RELEASES = {
-  windows: "/releases/Ledger-Chat-Setup-Windows.exe",
-  mac:     "/chat",
-  linux:   "/chat",
-  web:     "/chat",
+/**
+ * DownloadSection — platform availability and installers.
+ *
+ * Rewritten against the standard in CLAUDE.md §1 and §4. Three things changed
+ * about what this page is willing to say:
+ *
+ * 1. The previous FAQ answered "Is the Windows installer safe to run?" with
+ *    "Yes. The installer is built and signed..." and then told the reader to
+ *    click past the SmartScreen warning via "More info" → "Run anyway".
+ *    Those two statements contradict each other: SmartScreen does not warn on
+ *    a build signed with a reputable certificate. Teaching a user to dismiss
+ *    an OS security warning is a bad habit for any product and an indefensible
+ *    one for a product that asks to hold their keys. The page now states the
+ *    signing status plainly and gives a checksum instead.
+ *
+ * 2. A release with no version, no size and no checksum cannot be verified by
+ *    anyone. Each platform below carries all three, and where a value has not
+ *    been published the card says so rather than showing a plausible-looking
+ *    placeholder. A fabricated checksum is worse than no checksum: it teaches
+ *    the reader that checking is theatre.
+ *
+ * 3. "Sub-millisecond responsiveness" and similar superlatives are gone. No
+ *    figure appears here without something behind it.
+ *
+ * MAINTAINING THIS FILE: every release value lives in PLATFORMS below. Update
+ * it there on each release and the page follows. If `sha256` is left null the
+ * card automatically renders its unverified state — which is correct, and is
+ * the behaviour you want on the day someone forgets.
+ */
+
+// ─── Release metadata ─────────────────────────────────────────────────────────
+
+type SigningStatus = "signed" | "unsigned" | "not-built";
+
+interface Platform {
+  id: string;
+  name: string;
+  requirement: string;
+  architecture: string;
+  /** Null until a build is published. */
+  file: { href: string; filename: string; sizeMB: number } | null;
+  /** Null until the checksum is published. Never invent one. */
+  sha256: string | null;
+  signing: SigningStatus;
+  version: string | null;
+  /** What the verify command looks like on that platform. */
+  verifyCommand: string;
+  icon: React.ReactNode;
+}
+
+const PLATFORMS: Platform[] = [
+  {
+    id: "windows",
+    name: "Windows",
+    requirement: "Windows 10 or 11",
+    architecture: "x64",
+    file: {
+      href: "/releases/Ledger-Chat-Setup-Windows.exe",
+      filename: "Ledger-Chat-Setup-Windows.exe",
+      sizeMB: 93.7,
+    },
+    sha256: null, // TODO: publish on next release and paste here.
+    signing: "unsigned",
+    version: "1.0.0",
+    verifyCommand: "certutil -hashfile Ledger-Chat-Setup-Windows.exe SHA256",
+    icon: <Monitor size={20} strokeWidth={1.6} />,
+  },
+  {
+    id: "macos",
+    name: "macOS",
+    requirement: "macOS 13 Ventura or later",
+    architecture: "Apple Silicon and Intel",
+    file: null,
+    sha256: null,
+    signing: "not-built",
+    version: null,
+    verifyCommand: "shasum -a 256 Ledger-Chat.dmg",
+    icon: <Apple size={20} strokeWidth={1.6} />,
+  },
+  {
+    id: "linux",
+    name: "Linux",
+    requirement: "Ubuntu 22.04, Debian 12, Fedora 39 or later",
+    architecture: "x86_64",
+    file: null,
+    sha256: null,
+    signing: "not-built",
+    version: null,
+    verifyCommand: "sha256sum Ledger-Chat.AppImage",
+    icon: <Terminal size={20} strokeWidth={1.6} />,
+  },
+];
+
+// ─── Status vocabulary (CLAUDE.md §1) ─────────────────────────────────────────
+
+const SIGNING_COPY: Record<SigningStatus, { label: string; tone: "ok" | "warn" | "none"; detail: string }> = {
+  signed: {
+    label: "Code-signed",
+    tone: "ok",
+    detail: "Your operating system can confirm this file came from us and has not been altered.",
+  },
+  unsigned: {
+    label: "Not code-signed",
+    tone: "warn",
+    detail:
+      "Windows will show a SmartScreen warning, and it is right to. We have not yet bought a signing certificate, so your system cannot confirm who built this file. Verify the checksum below before running it, or use the web client, which needs no install.",
+  },
+  "not-built": {
+    label: "Not released",
+    tone: "none",
+    detail: "No installer has been published for this platform yet. The web client works here today.",
+  },
 };
 
-// ─── FAQ Data ─────────────────────────────────────────────────────────────────
+// ─── Small pieces ─────────────────────────────────────────────────────────────
+
+function StatusChip({ tone, children }: { tone: "ok" | "warn" | "none"; children: React.ReactNode }) {
+  const styles = {
+    ok: "text-[#0f7a56] bg-[#e6f4ee] border-[#bfe0d2]",
+    warn: "text-[#8a5a12] bg-[#faf1e0] border-[#e8d4ab]",
+    none: "text-black/45 bg-black/[0.03] border-black/[0.08]",
+  }[tone];
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-[3px] border px-2 py-[3px] font-mono text-[10px] font-medium uppercase tracking-[0.1em] ${styles}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function SpecRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 border-b border-black/[0.06] py-2 last:border-b-0">
+      <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-black/35">{label}</span>
+      <span className="min-w-0 text-right text-[13px] text-black/70">{value}</span>
+    </div>
+  );
+}
+
+function ChecksumBlock({ platform }: { platform: Platform }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!platform.sha256) {
+    return (
+      <div className="mt-4 rounded-[6px] border border-[#e8d4ab] bg-[#faf1e0] px-3.5 py-3">
+        <p className="text-[12.5px] leading-relaxed text-[#8a5a12]">
+          No checksum published for this build. Without one you cannot confirm the file you downloaded is
+          the file we built. We are fixing this in the next release; until then the web client is the
+          safer route.
+        </p>
+      </div>
+    );
+  }
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(platform.sha256!);
+      setCopied(true);
+      toast.success("Checksum copied");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Could not copy. Select the text manually.");
+    }
+  };
+
+  return (
+    <div className="mt-4">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-black/35">SHA-256</span>
+        <button
+          onClick={copy}
+          className="flex items-center gap-1 text-[11px] text-black/40 transition-colors hover:text-black"
+          aria-label="Copy checksum"
+        >
+          {copied ? <Check size={12} /> : <Copy size={12} />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <code className="block break-all rounded-[5px] border border-black/[0.08] bg-black/[0.02] px-3 py-2 font-mono text-[11px] leading-relaxed text-black/70">
+        {platform.sha256}
+      </code>
+      <p className="mt-2 font-mono text-[11px] leading-relaxed text-black/40">{platform.verifyCommand}</p>
+    </div>
+  );
+}
+
+function PlatformCard({ platform }: { platform: Platform }) {
+  const signing = SIGNING_COPY[platform.signing];
+  const available = platform.file !== null;
+
+  return (
+    <div className="flex min-w-0 flex-col rounded-[10px] border border-black/[0.08] bg-white p-6">
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="text-black/70">{platform.icon}</span>
+          <h3 className="text-[17px] font-semibold tracking-[-0.01em] text-[#0d0d11]">{platform.name}</h3>
+        </div>
+        <StatusChip tone={signing.tone}>{signing.label}</StatusChip>
+      </div>
+
+      <div className="mb-5">
+        <SpecRow label="Requires" value={platform.requirement} />
+        <SpecRow label="Architecture" value={platform.architecture} />
+        <SpecRow label="Version" value={platform.version ?? <span className="text-black/30">Not released</span>} />
+        <SpecRow
+          label="Size"
+          value={platform.file ? `${platform.file.sizeMB} MB` : <span className="text-black/30">—</span>}
+        />
+      </div>
+
+      <p className="mb-1 text-[12.5px] leading-relaxed text-black/50">{signing.detail}</p>
+
+      {available && <ChecksumBlock platform={platform} />}
+
+      <div className="mt-auto pt-6">
+        {available ? (
+          <div className="flex flex-col gap-2">
+            <a
+              href={platform.file!.href}
+              download={platform.file!.filename}
+              onClick={() => toast.success(`Downloading ${platform.name} installer`)}
+              className="flex items-center justify-center gap-2 rounded-[5px] bg-[#0d0d11] px-4 py-3 text-[13.5px] font-medium text-white transition-colors hover:bg-[#2b2e36]"
+            >
+              <Download size={16} strokeWidth={1.8} />
+              Download for {platform.name}
+            </a>
+            <a
+              href="/chat"
+              className="flex items-center justify-center gap-2 rounded-[5px] border border-black/[0.12] px-4 py-3 text-[13.5px] font-medium text-black/70 transition-colors hover:bg-black/[0.03]"
+            >
+              <Globe size={16} strokeWidth={1.8} />
+              Use the web client instead
+            </a>
+          </div>
+        ) : (
+          <a
+            href="/chat"
+            className="flex items-center justify-center gap-2 rounded-[5px] bg-[#0d0d11] px-4 py-3 text-[13.5px] font-medium text-white transition-colors hover:bg-[#2b2e36]"
+          >
+            <Globe size={16} strokeWidth={1.8} />
+            Open the web client
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── FAQ ──────────────────────────────────────────────────────────────────────
+
 const FAQS = [
   {
     q: "What is Ledger Chat?",
-    a: "Ledger Chat is a privacy first messaging platform built on top of Humanity Ledger. Every message, call, and file is encrypted end to end using your wallet identity. No phone number, no email, no personal data required, just your wallet.",
+    a: "A messenger where your wallet is your account. Direct messages are encrypted on your device before they are sent, and payments live in the same thread as the conversation that produced them. No phone number and no email are required.",
   },
   {
-    q: "Do I need a crypto wallet to use it?",
-    a: "Yes. Ledger Chat uses your Ethereum compatible wallet (MetaMask, Coinbase Wallet, Rabby, etc.) or a regular email address as your unique identity. This means no centralized database can link your conversations to your personal information.",
+    q: "Do I need a crypto wallet?",
+    a: "Yes, or an email address. A wallet (MetaMask, Coinbase Wallet, Rabby, Rainbow, or anything that speaks WalletConnect) gives you the full product. Email sign-in works but is not bound to a wallet, so shielded balances and payments are unavailable on that path.",
   },
   {
-    q: "How do I connect my wallet?",
-    a: "Click \"Launch App\" or open the desktop app. On the welcome screen, tap \"Connect Wallet\" and approve the signature request in your wallet. No transaction or gas fee is needed, it is just a signature to prove you own the address.",
-  },
-  {
-    q: "Is the desktop app free to download?",
-    a: "Yes. The Windows and macOS desktop apps are completely free. They are open source and available directly from our platform. No subscription, no account creation, no hidden fees.",
-  },
-  {
-    q: "Is my data stored on a server?",
-    a: "Messages are relayed through an encrypted transport layer but are never stored in plaintext on any server. Only the two parties in a conversation can read the content. Ledger Chat has no access to the contents of your messages.",
-  },
-  {
-    q: "Can I make video and voice calls?",
-    a: "Yes. Ledger Chat supports peer to peer encrypted voice calls and video calls using WebRTC. The media stream goes directly between devices and is never routed through our infrastructure.",
-  },
-  {
-    q: "Does it work on mobile?",
-    a: "Yes. Ledger Chat is a fully responsive web app. Open humanidfi.com/chat on any mobile browser. Native iOS and Android apps are currently in development and will be released before January 2027.",
-  },
-  {
-    q: "What wallets are supported?",
-    a: "Any Ethereum compatible wallet works: MetaMask, Coinbase Wallet, Rabby, Rainbow, Trust Wallet, WalletConnect compatible wallets, and more. You can also sign in with a Google account if you prefer not to use a wallet.",
-  },
-  {
-    q: "How is Ledger Chat different from WhatsApp or Telegram?",
-    a: "WhatsApp is owned by Meta and collects metadata. Telegram stores messages on centralized servers (unless using Secret Chats). Ledger Chat is wallet native, permissionless, and open source. No company controls your identity or your data.",
+    q: "Can you read my messages?",
+    a: "For messages delivered over XMTP MLS, no: we receive ciphertext and hold no key. When that delivery fails, the message falls back to our relay and is stored unencrypted, where an operator could read it. The app labels every message with which of the two happened. We are closing the fallback; until we do, we would rather show it than hide it.",
   },
   {
     q: "Is the Windows installer safe to run?",
-    a: "Yes. The installer is built and signed directly from the Humanity Ledger repository. Windows may show a SmartScreen notice for new publishers, click \"More info\" and then \"Run anyway\" to proceed.",
+    a: "It is not code-signed yet, so Windows will show a SmartScreen warning. That warning is correct and you should not be in the habit of dismissing it. We will publish a SHA-256 checksum with the next release so you can verify the file yourself. If you would rather not run an unsigned binary, the web client is the same application and needs no install.",
+  },
+  {
+    q: "Is it free?",
+    a: "Yes. No subscription, no advertising, no account to create. Messaging costs are paid by us rather than by you, which is a cost we carry rather than a law of physics. If that ever changes it will be announced before it happens.",
+  },
+  {
+    q: "What happens if I lose my wallet?",
+    a: "Your account and your message history are gone. There is no reset link, because no copy of your keys exists anywhere except on your devices. Back up your recovery phrase offline before you rely on this for anything that matters.",
+  },
+  {
+    q: "Is it ready for people who are actually at risk?",
+    a: "No. There is no third-party audit, no completed penetration test, group messages are not yet end-to-end encrypted, and the product has been in production for zero years. If your safety depends on a messenger today, use Signal.",
   },
 ];
 
-// ─── Wallet Setup Steps ───────────────────────────────────────────────────────
-const WALLET_STEPS = [
-  {
-    num: "01",
-    title: "Install a wallet",
-    desc: "Download MetaMask, Coinbase Wallet, or any Ethereum wallet as a browser extension or mobile app.",
-    color: "bg-[#F6851B]/10 text-[#F6851B]",
-  },
-  {
-    num: "02",
-    title: "Open Ledger Chat",
-    desc: "Launch the desktop app or visit humanidfi.com/chat in your browser. Click \"Connect Wallet\".",
-    color: "bg-[#25D366]/10 text-[#25D366]",
-  },
-  {
-    num: "03",
-    title: "Sign the message",
-    desc: "Your wallet will ask you to sign a message to prove ownership. No transaction. No gas fee. Free.",
-    color: "bg-[#25D366]/15 text-[#25D366]",
-  },
-  {
-    num: "04",
-    title: "Start messaging",
-    desc: "You are in. Share your wallet address with friends, search contacts, and start encrypted conversations immediately.",
-    color: "bg-[#1C1C1E]/10 text-[#1C1C1E]",
-  },
-];
-
-// ─── FAQItem Component ────────────────────────────────────────────────────────
-function FAQItem({ q, a }: { q: string; a: string }) {
+function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-black/[0.06] last:border-0">
+    <div className="border-b border-black/[0.08] last:border-b-0">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between py-5 text-left gap-4"
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-6 py-5 text-left"
       >
-        <span className="text-[15px] md:text-[16px] font-semibold text-[#1C1C1E] leading-snug pr-2">{q}</span>
-        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25 }} className="shrink-0">
-          <ChevronDown size={20} className="text-black/40" />
-        </motion.div>
+        <span className="text-[15px] font-medium text-[#0d0d11]">{q}</span>
+        <ChevronDown
+          size={18}
+          strokeWidth={1.8}
+          className={`shrink-0 text-black/30 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
       </button>
       <AnimatePresence initial={false}>
         {open && (
@@ -110,11 +312,10 @@ function FAQItem({ q, a }: { q: string; a: string }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+            className="overflow-hidden"
           >
-            <div className="pb-5 pt-1 text-[15px] text-[#1C1C1E]/60 leading-relaxed pr-8">
-              {a}
-            </div>
+            <p className="max-w-[62ch] pb-5 text-[14px] leading-[1.65] text-black/60">{a}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -122,268 +323,119 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   );
 }
 
+// ─── Section ──────────────────────────────────────────────────────────────────
+
 export function DownloadSection() {
   return (
-    <>
-      {/* --- DOWNLOAD SECTION -------------------------------------------------------- */}
-      <section id="download" className="bg-[#F6F7F9] py-20 md:py-32 relative overflow-hidden">
-        
-        {/* Background ambient glows */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-[#25D366]/10 blur-[120px] rounded-full pointer-events-none" />
+    <section className="w-full bg-white py-24">
+      <div
+        className="mx-auto max-w-[1100px]"
+        style={{
+          paddingLeft: "max(16px, env(safe-area-inset-left, 0px))",
+          paddingRight: "max(16px, env(safe-area-inset-right, 0px))",
+        }}
+      >
+        <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.2em] text-black/35">
+          Platform availability
+        </p>
+        <h2 className="mb-4 max-w-[20ch] text-[clamp(1.6rem,4vw,2.4rem)] font-bold leading-[1.1] tracking-[-0.03em] text-[#0d0d11]">
+          Where Ledger Chat runs today
+        </h2>
+        <p className="mb-12 max-w-[56ch] text-[15.5px] leading-[1.6] text-black/55">
+          The web client is the only build we currently ship, and it is the full application. The desktop
+          installers below are listed with their real state, including the parts that are not finished.
+        </p>
 
-        <div className="max-w-7xl mx-auto px-5 md:px-10 relative z-10">
-          {/* Heading */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="text-center mb-16"
-          >
-            <p className="text-[13px] font-black uppercase tracking-[0.2em] text-[#25D366] mb-3">Native Experience</p>
-            <h2 className="text-[40px] md:text-[56px] font-bold tracking-tight text-[#1C1C1E] leading-tight mb-5">
-              Download Humanity Ledger
-            </h2>
-            <p className="text-[18px] text-[#1C1C1E]/50 font-medium max-w-2xl mx-auto leading-relaxed">
-              Experience the absolute pinnacle of decentralised communication. Crystal clear UI, offline crypto sharing, and sub-millisecond responsiveness.
-            </p>
-          </motion.div>
-
-          {/* Download Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            
-            {/* WINDOWS */}
-            <motion.a
-              href={RELEASES.windows}
-              download="Ledger-Chat-Setup-Windows.exe"
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0 }}
-              className="bg-white rounded-[32px] p-8 flex flex-col items-center text-center border border-black/[0.04] hover:border-[#0078D4]/40 hover:shadow-2xl hover:shadow-[#0078D4]/10 transition-all duration-300 group cursor-pointer relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-[#0078D4]/0 via-[#0078D4]/0 to-[#0078D4]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="w-20 h-20 rounded-3xl bg-[#0078D4]/5 flex items-center justify-center mb-6 group-hover:bg-[#0078D4]/10 transition-colors group-hover:scale-110 duration-500">
-                <svg width="36" height="36" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M0 12.4019L37.1994 7.20239V41.6026H0V12.4019ZM41.6026 6.40213L88 0V41.6026H41.6026V6.40213ZM0 46.4029H37.1994V80.8034L0 75.6039V46.4029ZM41.6026 46.4029H88V88L41.6026 81.603V46.4029Z" fill="#0078D4"/>
-                </svg>
+        {/* Web client — the recommended path, so it leads. */}
+        <div className="mb-4 flex flex-col gap-5 rounded-[10px] border border-black/[0.08] bg-[#f4f5f7] p-6 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-start gap-3.5">
+            <span className="mt-0.5 shrink-0 text-black/70">
+              <Globe size={20} strokeWidth={1.6} />
+            </span>
+            <div className="min-w-0">
+              <div className="mb-1 flex flex-wrap items-center gap-2.5">
+                <h3 className="text-[17px] font-semibold tracking-[-0.01em] text-[#0d0d11]">Web client</h3>
+                <StatusChip tone="ok">Available</StatusChip>
               </div>
-              <h3 className="text-[22px] font-black text-[#1C1C1E] mb-1">Windows</h3>
-              <p className="text-[13px] text-black/40 font-semibold mb-8">Windows 10 &amp; 11</p>
-              <div className="w-full mt-auto flex items-center justify-center gap-2.5 bg-[#F2F2F7] group-hover:bg-[#0078D4] text-[#1C1C1E] group-hover:text-white font-bold text-[15px] py-4 rounded-2xl transition-all duration-300">
-                <Download size={18} className="group-hover:animate-bounce" />
-                Download .exe
-              </div>
-              <p className="text-[11px] font-medium text-black/30 mt-4">v1.0.0 (64 bit) · 93.7 MB</p>
-            </motion.a>
-
-            {/* macOS */}
-            <motion.a
-              href="/chat"
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-              className="bg-white rounded-[32px] p-8 flex flex-col items-center text-center border border-black/[0.04] hover:border-black/20 hover:shadow-2xl hover:shadow-black/10 transition-all duration-300 group cursor-pointer relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-black/0 via-black/0 to-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="w-20 h-20 rounded-3xl bg-black/5 flex items-center justify-center mb-6 group-hover:bg-black/10 transition-colors group-hover:scale-110 duration-500">
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" className="text-[#1C1C1E] group-hover:text-black transition-colors" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-                </svg>
-              </div>
-              <h3 className="text-[22px] font-black text-[#1C1C1E] mb-1">macOS</h3>
-              <p className="text-[13px] text-black/40 font-semibold mb-8">Apple Silicon &amp; Intel</p>
-              <div className="w-full mt-auto flex items-center justify-center gap-2.5 bg-[#F2F2F7] group-hover:bg-black text-[#1C1C1E] group-hover:text-white font-bold text-[15px] py-4 rounded-2xl transition-all duration-300">
-                <Globe size={18} />
-                Open Web App
-              </div>
-              <p className="text-[11px] font-medium text-black/30 mt-4">Native App in Signing</p>
-            </motion.a>
-
-            {/* LINUX */}
-            <motion.a
-              href="/chat"
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-              className="bg-white rounded-[32px] p-8 flex flex-col items-center text-center border border-black/[0.04] hover:border-[#E95420]/40 hover:shadow-2xl hover:shadow-[#E95420]/10 transition-all duration-300 group cursor-pointer relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-[#E95420]/0 via-[#E95420]/0 to-[#E95420]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="w-20 h-20 rounded-3xl bg-[#E95420]/5 flex items-center justify-center mb-6 group-hover:bg-[#E95420]/10 transition-colors group-hover:scale-110 duration-500">
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#E95420" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/><path d="m14 4-4 16"/>
-                </svg>
-              </div>
-              <h3 className="text-[22px] font-black text-[#1C1C1E] mb-1">Linux</h3>
-              <p className="text-[13px] text-black/40 font-semibold mb-8">Ubuntu, Debian, Fedora</p>
-              <div className="w-full mt-auto flex items-center justify-center gap-2.5 bg-[#F2F2F7] group-hover:bg-[#E95420] text-[#1C1C1E] group-hover:text-white font-bold text-[15px] py-4 rounded-2xl transition-all duration-300">
-                <Globe size={18} />
-                Open Web App
-              </div>
-              <p className="text-[11px] font-medium text-black/30 mt-4">Native App in Signing</p>
-            </motion.a>
-
-            {/* WEB APP */}
-            <motion.a
-              href="/chat"
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
-              className="bg-gradient-to-br from-[#25D366] to-[#20bd59] rounded-[32px] p-8 flex flex-col items-center text-center hover:shadow-2xl hover:shadow-[#25D366]/30 transition-all duration-300 group cursor-pointer relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-300" />
-              <div className="w-20 h-20 rounded-3xl bg-white/20 flex items-center justify-center mb-6 group-hover:bg-white/30 transition-colors group-hover:scale-110 duration-500">
-                <Globe size={36} className="text-white" />
-              </div>
-              <h3 className="text-[22px] font-black text-white mb-1">Web App</h3>
-              <p className="text-[13px] text-white/80 font-medium mb-8">No installation required</p>
-              <div className="w-full mt-auto flex items-center justify-center gap-2.5 bg-white text-[#1C1C1E] font-bold text-[15px] py-4 rounded-2xl transition-all duration-300 group-hover:bg-white/90">
-                <MessageCircle size={18} />
-                Open Browser
-              </div>
-              <p className="text-[11px] font-medium text-white/50 mt-4">Works on any device</p>
-            </motion.a>
-          </div>
-
-          {/* Trust badges */}
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
-            {[
-              { icon: <Terminal size={15} />, text: "Open Source" },
-              { icon: <Lock size={15} />, text: "No account required" },
-              { icon: <Zap size={15} />, text: "No subscription fees" },
-              { icon: <CheckCircle2 size={15} />, text: "Always free" },
-            ].map((b) => (
-              <div key={b.text} className="flex items-center gap-1.5 text-[12px] font-semibold text-black/40">
-                {b.icon}
-                {b.text}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ HOW TO CONNECT YOUR WALLET ══════════════════════════════════════════ */}
-      <section className="bg-white py-20 md:py-28">
-        <div className="max-w-7xl mx-auto px-5 md:px-10">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7 }}
-            className="text-center mb-14"
-          >
-            <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#25D366] mb-3">Getting Started</p>
-            <h2 className="text-[36px] md:text-[48px] font-bold tracking-tight text-[#1C1C1E] leading-tight mb-4">
-              How to connect your wallet
-            </h2>
-            <p className="text-[17px] text-[#1C1C1E]/50 font-medium max-w-xl mx-auto leading-relaxed">
-              No signup form, no email verification, no password. Four steps and you are live.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {WALLET_STEPS.map((step, i) => (
-              <motion.div
-                key={step.num}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: i * 0.08 }}
-                className="bg-[#F6F7F9] rounded-3xl p-7 flex flex-col gap-4 relative overflow-hidden"
-              >
-                {/* Step number (background decoration) */}
-                <span className="absolute top-4 right-5 text-[52px] font-black text-black/[0.04] leading-none select-none">{step.num}</span>
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black ${step.color}`}>
-                  {step.num}
-                </div>
-                <div>
-                  <h3 className="text-[16px] font-bold text-[#1C1C1E] mb-2">{step.title}</h3>
-                  <p className="text-[14px] text-[#1C1C1E]/55 leading-relaxed">{step.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Compatible Wallets strip */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, delay: 0.3 }}
-            className="mt-12 flex flex-col items-center gap-4"
-          >
-            <p className="text-[12px] font-semibold uppercase tracking-widest text-black/30">Compatible with</p>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              {["MetaMask", "Coinbase Wallet", "Rainbow", "Rabby", "Trust Wallet", "WalletConnect", "Google (Email)"].map((w) => (
-                <span key={w} className="bg-[#F6F7F9] border border-black/[0.06] px-4 py-2 rounded-full text-[13px] font-semibold text-[#1C1C1E]/60">
-                  {w}
-                </span>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ═══ FAQ ═════════════════════════════════════════════════════════════════ */}
-      <section id="faq" className="bg-[#F6F7F9] py-20 md:py-28">
-        <div className="max-w-3xl mx-auto px-5 md:px-10">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7 }}
-            className="text-center mb-12"
-          >
-            <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#25D366] mb-3">FAQ</p>
-            <h2 className="text-[36px] md:text-[48px] font-bold tracking-tight text-[#1C1C1E] leading-tight mb-4">
-              Frequently asked questions
-            </h2>
-            <p className="text-[17px] text-[#1C1C1E]/50 font-medium leading-relaxed">
-              Everything you need to know before getting started.
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, delay: 0.1 }}
-            className="bg-white rounded-3xl px-6 md:px-10 py-2 shadow-sm border border-black/[0.04]"
-          >
-            {FAQS.map((faq) => (
-              <FAQItem key={faq.q} q={faq.q} a={faq.a} />
-            ))}
-          </motion.div>
-
-          {/* Still have questions */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="mt-8 bg-white rounded-3xl p-8 border border-black/[0.04] flex flex-col sm:flex-row items-center gap-6 shadow-sm"
-          >
-            <div className="w-14 h-14 rounded-2xl bg-[#25D366]/10 flex items-center justify-center shrink-0">
-              <MessageCircle size={28} className="text-[#25D366]" />
-            </div>
-            <div className="flex-1 text-center sm:text-left">
-              <h3 className="text-[17px] font-bold text-[#1C1C1E] mb-1">Still have questions?</h3>
-              <p className="text-[14px] text-[#1C1C1E]/50">
-                Reach us on our community forum or open a support ticket. We respond within 24 hours.
+              <p className="max-w-[56ch] text-[13.5px] leading-relaxed text-black/55">
+                Chrome, Edge, Firefox and Safari, on desktop and mobile. Nothing to install and nothing to
+                sign, which is why it is the route we recommend while the desktop builds are unsigned.
               </p>
             </div>
-            <a
-              href="/support"
-              className="shrink-0 bg-[#1C1C1E] hover:bg-black text-white font-bold text-[14px] px-6 py-3 rounded-xl transition-all active:scale-95"
-            >
-              Contact Support
-            </a>
-          </motion.div>
+          </div>
+          <a
+            href="/chat"
+            className="shrink-0 rounded-[5px] bg-[#0d0d11] px-5 py-3 text-center text-[13.5px] font-medium text-white transition-colors hover:bg-[#2b2e36]"
+          >
+            Launch Ledger Chat
+          </a>
         </div>
-      </section>
-    </>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {PLATFORMS.map((p) => (
+            <PlatformCard key={p.id} platform={p} />
+          ))}
+        </div>
+
+        {/* Why an unsigned binary matters — stated once, where the decision is made. */}
+        <div className="mt-8 flex max-w-[66ch] gap-3.5 border-l-[3px] border-[#8a5a12] bg-[#faf1e0] px-5 py-4">
+          <ShieldAlert size={18} strokeWidth={1.7} className="mt-0.5 shrink-0 text-[#8a5a12]" />
+          <div>
+            <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-[#8a5a12]">Security</p>
+            <p className="text-[13.5px] leading-relaxed text-[#6d4710]">
+              An unsigned installer is one your operating system cannot trace back to us. If someone
+              intercepted the download and substituted a different file, nothing on your machine would
+              notice. That is the actual risk, and it is why we are not going to tell you to click past the
+              warning. Use the web client, or wait for a signed build.
+            </p>
+          </div>
+        </div>
+
+        {/* Mobile */}
+        <div className="mt-16 border-t border-black/[0.08] pt-10">
+          <h3 className="mb-3 text-[17px] font-semibold tracking-[-0.01em] text-[#0d0d11]">Mobile</h3>
+          <p className="max-w-[58ch] text-[14px] leading-relaxed text-black/55">
+            No iOS or Android binary has been submitted for store review. Native builds exist internally and
+            are not ready. We will put a date here when we have one, rather than a badge that links nowhere.
+            In the meantime the web client works in mobile browsers.
+          </p>
+        </div>
+
+        {/* What you do and do not get */}
+        <div className="mt-10 flex flex-wrap gap-x-7 gap-y-3">
+          {[
+            { icon: <Terminal size={14} strokeWidth={1.8} />, text: "Open source" },
+            { icon: <Lock size={14} strokeWidth={1.8} />, text: "No account required" },
+            { icon: <CheckCircle2 size={14} strokeWidth={1.8} />, text: "No subscription" },
+          ].map((item) => (
+            <span key={item.text} className="flex items-center gap-2 text-[12.5px] text-black/45">
+              <span className="text-black/30">{item.icon}</span>
+              {item.text}
+            </span>
+          ))}
+        </div>
+
+        {/* FAQ */}
+        <div className="mt-20 border-t border-black/[0.08] pt-14">
+          <h2 className="mb-10 text-[clamp(1.4rem,3.4vw,1.9rem)] font-bold tracking-[-0.025em] text-[#0d0d11]">
+            Questions worth asking
+          </h2>
+          <div>
+            {FAQS.map((f) => (
+              <FaqItem key={f.q} {...f} />
+            ))}
+          </div>
+          <p className="mt-10 text-[13.5px] text-black/45">
+            Nothing here answers your question?{" "}
+            <a href="/support" className="text-[#1a5fb4] underline underline-offset-[3px]">
+              Contact support
+            </a>
+            .
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
+
+export default DownloadSection;

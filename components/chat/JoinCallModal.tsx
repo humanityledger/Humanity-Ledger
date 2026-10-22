@@ -209,7 +209,7 @@ export function JoinCallModal({ initialRoomId, initialPassword, onClose, onSucce
           
           <h2 className="text-2xl font-bold text-white mb-2">Join Secure Call</h2>
           <p className="text-white/50 text-xs mb-8 leading-relaxed">
-            Verify your settings before entering. The connection is peer-to-peer and end-to-end encrypted.
+            Verify your settings before entering. The connection is peer to peer and end to end encrypted.
           </p>
 
           <form onSubmit={handleJoin} className="space-y-4">

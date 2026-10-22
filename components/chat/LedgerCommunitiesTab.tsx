@@ -135,7 +135,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
     }
   };
 
-  const AVATAR_COLORS = ['#25D366', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55', '#5856D6', '#10B981'];
+  const AVATAR_COLORS = ['#2754d6', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55', '#5856D6', '#10B981'];
   const avatarColor = (id: string) => AVATAR_COLORS[parseInt(id.charCodeAt(0).toString(), 10) % AVATAR_COLORS.length];
 
   return (
@@ -163,7 +163,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
           <div className="flex gap-2">
             <button
               onClick={() => setShowCreate(true)}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#25D366] hover:bg-[#20bd59] transition-colors rounded-xl text-white font-bold text-[14px] shadow-sm"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#2754d6] hover:bg-[#20bd59] transition-colors rounded-xl text-white font-bold text-[14px] shadow-sm"
             >
               <Plus size={18} /> Create Group
             </button>
@@ -184,7 +184,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
               value={discoverSearch}
               onChange={e => setDiscoverSearch(e.target.value)}
               placeholder="Search public groups..."
-              className="w-full bg-[#F2F2F7] rounded-xl py-2.5 pl-10 pr-4 text-[14px] font-medium outline-none placeholder:text-black/40 focus:ring-2 focus:ring-[#25D366]/50"
+              className="w-full bg-[#F2F2F7] rounded-xl py-2.5 pl-10 pr-4 text-[14px] font-medium outline-none placeholder:text-black/40 focus:ring-2 focus:ring-[#2754d6]/50"
             />
           </div>
         )}
@@ -195,12 +195,12 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
         <div className="flex-1 flex flex-col">
           {isLoading ? (
             <div className="flex-1 flex items-center justify-center">
-              <span className="w-8 h-8 border-4 border-[#25D366]/20 border-t-[#25D366] rounded-full animate-spin" />
+              <span className="w-8 h-8 border-4 border-[#2754d6]/20 border-t-[#2754d6] rounded-full animate-spin" />
             </div>
           ) : communities.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 py-16">
-              <div className="w-24 h-24 rounded-full bg-[#25D366]/10 flex items-center justify-center">
-                <Users size={36} className="text-[#25D366]" />
+              <div className="w-24 h-24 rounded-full bg-[#2754d6]/10 flex items-center justify-center">
+                <Users size={36} className="text-[#2754d6]" />
               </div>
               <div className="text-center">
                 <p className="text-[19px] font-black text-[#1C1C1E] mb-2">No groups yet</p>
@@ -210,7 +210,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
               </div>
               <button
                 onClick={() => setShowCreate(true)}
-                className="px-6 py-3 bg-[#25D366] text-white font-bold rounded-xl text-[14px] hover:bg-[#20bd59] transition-colors shadow-sm"
+                className="px-6 py-3 bg-[#2754d6] text-white font-bold rounded-xl text-[14px] hover:bg-[#20bd59] transition-colors shadow-sm"
               >
                 Create your first group
               </button>
@@ -224,7 +224,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
                   className="w-full bg-white p-4 rounded-2xl shadow-sm border border-black/[0.04] flex items-center gap-4 hover:shadow-md transition-all group text-left relative overflow-hidden active:scale-[0.98]"
                 >
                   {/* Hover accent */}
-                  <div className="absolute top-0 bottom-0 left-0 w-1 bg-[#25D366] opacity-0 group-hover:opacity-100 transition-opacity rounded-l-2xl" />
+                  <div className="absolute top-0 bottom-0 left-0 w-1 bg-[#2754d6] opacity-0 group-hover:opacity-100 transition-opacity rounded-l-2xl" />
 
                   {/* Avatar */}
                   <div
@@ -242,7 +242,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
                           ? <Lock size={12} className="text-[#8E8E93] shrink-0" />
                           : <Globe size={12} className="text-[#8E8E93] shrink-0" />}
                       </div>
-                      <ChevronRight size={16} className="text-black/20 group-hover:text-[#25D366] transition-colors shrink-0" />
+                      <ChevronRight size={16} className="text-black/20 group-hover:text-[#2754d6] transition-colors shrink-0" />
                     </div>
 
                     <p className="text-[13px] text-[#8E8E93] truncate mb-2">
@@ -254,7 +254,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
                         <Users size={11} /> {c.membersCount || 1} members
                       </span>
                       {c.myRole === 'ADMIN' && (
-                        <span className="text-[11px] font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-1 rounded-md">
+                        <span className="text-[11px] font-bold text-[#2754d6] bg-[#2754d6]/10 px-2 py-1 rounded-md">
                           Admin
                         </span>
                       )}
@@ -269,9 +269,9 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
         /* DISCOVER TAB (Real Native Public Groups) */
         <div className="flex-1 flex flex-col p-4 gap-4">
           <div className="bg-gradient-to-br from-[#FAFAFA] to-white rounded-2xl p-5 text-[#1C1C1E] shadow-sm border border-black/[0.08] relative overflow-hidden">
-            <div className="absolute -right-6 -bottom-6 w-36 h-36 bg-[#25D366]/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -right-6 -bottom-6 w-36 h-36 bg-[#2754d6]/10 rounded-full blur-2xl pointer-events-none" />
             <div className="flex items-center gap-2 mb-2">
-              <Compass size={22} className="text-[#25D366]" />
+              <Compass size={22} className="text-[#2754d6]" />
               <h2 className="text-[18px] font-black leading-tight text-[#1C1C1E]">Explore Public Communities</h2>
             </div>
             <p className="text-[13px] text-[#1C1C1E]/60 font-medium leading-relaxed">
@@ -281,17 +281,17 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
 
           <div>
             <h3 className="text-[13px] font-bold text-black/50 mb-3 flex items-center gap-1.5 uppercase tracking-wider">
-              <TrendingUp size={14} className="text-[#25D366]" /> Public Spaces ({discoverCommunities.length})
+              <TrendingUp size={14} className="text-[#2754d6]" /> Public Spaces ({discoverCommunities.length})
             </h3>
 
             {discoverCommunities.length === 0 ? (
               <div className="bg-white rounded-2xl shadow-sm border border-black/5 p-8 flex flex-col items-center justify-center text-center">
-                <Globe size={32} className="text-[#25D366] mb-3" />
+                <Globe size={32} className="text-[#2754d6] mb-3" />
                 <p className="font-bold text-[15px] mb-1">No public spaces yet</p>
                 <p className="text-[13px] text-black/40 max-w-xs">Be the first to create a public space and grow your community.</p>
                 <button
                   onClick={() => { setIsPrivate(false); setShowCreate(true); }}
-                  className="mt-4 px-4 py-2 bg-[#25D366] text-white font-bold rounded-xl text-xs hover:bg-[#20bd59] transition-colors"
+                  className="mt-4 px-4 py-2 bg-[#2754d6] text-white font-bold rounded-xl text-xs hover:bg-[#20bd59] transition-colors"
                 >
                   Create Public Space
                 </button>
@@ -315,14 +315,14 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1 mb-0.5">
                           <p className="text-[15px] font-bold text-[#1C1C1E] truncate">{c.name}</p>
-                          <ChevronRight size={14} className="text-black/20 group-hover:text-[#25D366] transition-colors shrink-0" />
+                          <ChevronRight size={14} className="text-black/20 group-hover:text-[#2754d6] transition-colors shrink-0" />
                         </div>
                         <p className="text-[12px] text-[#8E8E93] truncate mb-1.5">{c.description || 'Public Sovereign Space'}</p>
                         <div className="flex items-center gap-2">
                           <span className="flex items-center gap-1 text-[10px] font-bold text-black/50 bg-black/5 px-2 py-0.5 rounded-md">
                             <Users size={10} /> {c.membersCount || 1} members
                           </span>
-                          <span className="text-[10px] font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] font-bold text-[#2754d6] bg-[#2754d6]/10 px-2 py-0.5 rounded-md">
                             Public
                           </span>
                         </div>
@@ -373,7 +373,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
                     onChange={e => setNewName(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) createCommunity(); }}
                     placeholder="e.g. Protocol Core Team"
-                    className="w-full px-4 py-3.5 rounded-xl bg-[#F2F2F7] text-[15px] font-semibold outline-none border-2 border-transparent focus:border-[#25D366] transition-colors"
+                    className="w-full px-4 py-3.5 rounded-xl bg-[#F2F2F7] text-[15px] font-semibold outline-none border-2 border-transparent focus:border-[#2754d6] transition-colors"
                     maxLength={64}
                     autoFocus
                   />
@@ -384,7 +384,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
                     value={newDesc}
                     onChange={e => setNewDesc(e.target.value)}
                     placeholder="What is this group about?"
-                    className="w-full px-4 py-3.5 rounded-xl bg-[#F2F2F7] text-[14px] outline-none border-2 border-transparent focus:border-[#25D366] transition-colors resize-none min-h-[90px]"
+                    className="w-full px-4 py-3.5 rounded-xl bg-[#F2F2F7] text-[14px] outline-none border-2 border-transparent focus:border-[#2754d6] transition-colors resize-none min-h-[90px]"
                     maxLength={256}
                   />
                 </div>
@@ -394,9 +394,9 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => setIsPrivate(false)}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${!isPrivate ? 'border-[#25D366] bg-[#25D366]/5' : 'border-black/5 hover:bg-black/5'}`}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${!isPrivate ? 'border-[#2754d6] bg-[#2754d6]/5' : 'border-black/5 hover:bg-black/5'}`}
                     >
-                      <Globe size={22} className={!isPrivate ? 'text-[#25D366]' : 'text-black/40'} />
+                      <Globe size={22} className={!isPrivate ? 'text-[#2754d6]' : 'text-black/40'} />
                       <span className={`text-[13px] font-bold ${!isPrivate ? 'text-[#1C1C1E]' : 'text-black/40'}`}>Public</span>
                     </button>
                     <button
@@ -413,7 +413,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
               <button
                 onClick={createCommunity}
                 disabled={!newName.trim() || creating}
-                className="w-full py-4 bg-[#25D366] text-white font-bold rounded-xl shadow-lg shadow-[#25D366]/20 disabled:opacity-40 disabled:shadow-none hover:bg-[#20bd59] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                className="w-full py-4 bg-[#2754d6] text-white font-bold rounded-xl shadow-lg shadow-[#2754d6]/20 disabled:opacity-40 disabled:shadow-none hover:bg-[#20bd59] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 {creating ? (
                   <>
@@ -466,7 +466,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
                 onChange={e => setJoinLink(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && joinLink.trim()) joinCommunity(); }}
                 placeholder="https://humanidfi.com/join/..."
-                className="w-full px-4 py-3.5 mb-5 rounded-xl bg-[#F2F2F7] text-[14px] font-mono outline-none border-2 border-transparent focus:border-[#25D366] transition-colors"
+                className="w-full px-4 py-3.5 mb-5 rounded-xl bg-[#F2F2F7] text-[14px] font-mono outline-none border-2 border-transparent focus:border-[#2754d6] transition-colors"
                 autoFocus
               />
 

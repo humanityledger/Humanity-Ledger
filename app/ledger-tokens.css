@@ -1,0 +1,132 @@
+/**
+ * app/ledger-tokens.css
+ *
+ * The Humanity Ledger design tokens. One light theme across the whole product:
+ * the marketing site, the documentation, /connect and /chat.
+ *
+ * Earlier revisions of this file defined a black "Void" theme for the app.
+ * That direction has been dropped. There is no dark mode anywhere, and
+ * tailwind.config.ts keeps every `dark:` variant inert on purpose.
+ *
+ * Use the --hl-* names in new code. The --ledger-* names at the bottom are
+ * kept so components written against the earlier file keep rendering, now
+ * with light values.
+ */
+
+:root {
+  /* Type. Inter is loaded once by next/font in app/layout.tsx and exposed as
+     --font-inter; the system stack is only a fallback while it loads. */
+  --hl-font: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --hl-font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, monospace;
+
+  /* Surfaces */
+  --hl-bg: #ffffff;
+  --hl-bg-subtle: #f7f8fa;
+  --hl-bg-muted: #eff1f4;
+  --hl-bg-hover: #f2f4f7;
+  --hl-bg-pressed: #e9ecf0;
+
+  /* Lines */
+  --hl-border: #e4e7ec;
+  --hl-border-strong: #d0d5dd;
+
+  /* Ink */
+  --hl-ink: #15171c;
+  --hl-ink-2: #475061;
+  --hl-ink-3: #727a88;
+  --hl-ink-4: #a3a9b4;
+  --hl-ink-inverse: #ffffff;
+
+  /* Brand. The mark is the black world map, so primary actions are ink.
+     Blue is reserved for things that belong to you (your messages, your
+     selection) and for links. */
+  --hl-primary: #15171c;
+  --hl-primary-hover: #2b2f38;
+  --hl-accent: #2754d6;
+  --hl-accent-hover: #1f46b8;
+  --hl-accent-subtle: #eef2fd;
+  --hl-focus: #2754d6;
+
+  /* Status. Used sparingly and always with words, never colour alone. */
+  --hl-success: #157347;
+  --hl-success-subtle: #ebf7f0;
+  --hl-warning: #8f5b00;
+  --hl-warning-subtle: #fdf5e6;
+  --hl-warning-border: #f1dcb0;
+  --hl-danger: #c0362c;
+  --hl-danger-subtle: #fdeeec;
+
+  /* Shape */
+  --hl-radius-sm: 6px;
+  --hl-radius: 10px;
+  --hl-radius-lg: 14px;
+  --hl-radius-xl: 20px;
+  --hl-radius-bubble: 18px;
+
+  /* Depth. Light surfaces can carry a shadow; keep it faint so borders
+     still do most of the work. */
+  --hl-shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --hl-shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.07), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --hl-shadow-md: 0 8px 24px -6px rgba(16, 24, 40, 0.12), 0 2px 6px rgba(16, 24, 40, 0.05);
+  --hl-shadow-lg: 0 24px 48px -12px rgba(16, 24, 40, 0.18);
+
+  /* Motion. Three durations only. */
+  --hl-dur-fast: 120ms;
+  --hl-dur: 200ms;
+  --hl-dur-slow: 360ms;
+  --hl-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Neutral ramp, numbered by darkness. */
+  --ledger-n-900: #15171c;
+  --ledger-n-800: #2b2f38;
+  --ledger-n-700: #475061;
+  --ledger-n-600: #5d6574;
+  --ledger-n-500: #727a88;
+  --ledger-n-400: #a3a9b4;
+  --ledger-n-300: #d0d5dd;
+  --ledger-n-200: #e4e7ec;
+  --ledger-n-100: #eff1f4;
+  --ledger-n-000: #ffffff;
+
+  /* Compatibility with components written against the earlier token file. */
+  --ledger-void: var(--hl-bg);
+  --ledger-obsidian: var(--hl-bg-subtle);
+  --ledger-surface: var(--hl-bg);
+  --ledger-surface-raised: var(--hl-bg);
+  --ledger-fg: var(--hl-ink);
+  --ledger-fg-strong: var(--hl-ink);
+  --ledger-fg-muted: var(--hl-ink-3);
+  --ledger-fg-faint: var(--hl-ink-4);
+  --ledger-edge: var(--hl-border);
+  --ledger-edge-strong: var(--hl-border-strong);
+  --ledger-glass: var(--hl-bg-subtle);
+  --ledger-glass-hover: var(--hl-bg-hover);
+  --ledger-sealed: var(--hl-success);
+  --ledger-sealed-dim: var(--hl-success-subtle);
+  --ledger-verified: var(--hl-accent);
+  --ledger-verified-dim: var(--hl-accent-subtle);
+  --ledger-unsealed: var(--hl-warning);
+  --ledger-unsealed-dim: var(--hl-warning-subtle);
+  --ledger-broken: var(--hl-danger);
+  --ledger-broken-dim: var(--hl-danger-subtle);
+  --ledger-text-xs: 0.75rem;
+  --ledger-tracking-label: 0;
+  --ledger-space-1: 0.25rem;
+  --ledger-radius-full: 999px;
+  --ledger-dur-fast: var(--hl-dur-fast);
+  --ledger-ease: var(--hl-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --hl-dur-fast: 1ms;
+    --hl-dur: 1ms;
+    --hl-dur-slow: 1ms;
+  }
+}
+
+/* One visible focus ring for the whole product. */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--hl-focus);
+  outline-offset: 2px;
+}

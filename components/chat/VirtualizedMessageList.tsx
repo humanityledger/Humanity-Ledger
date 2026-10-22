@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
+import { LoaderCircle } from 'lucide-react';
 
 interface VirtualizedMessageListProps {
   messages: any[];
@@ -9,6 +10,9 @@ interface VirtualizedMessageListProps {
   renderMessage: (msg: any, isMe: boolean) => React.ReactNode;
   onLoadMore: () => void;
   isLoadingMore: boolean;
+  isTyping?: boolean;
+  typingLabel?: string;
+  isSending?: boolean;
 }
 
 const MemoizedMessageRow = React.memo(({ 
@@ -49,30 +53,51 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
   clientInboxId,
   renderMessage,
   onLoadMore,
-  isLoadingMore
+  isLoadingMore,
+  isTyping,
+  typingLabel,
+  isSending,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
   
   const myAddressLower = useMemo(() => myAddress.toLowerCase(), [myAddress]);
   const clientInboxIdLower = useMemo(() => (clientInboxId ?? '').toLowerCase(), [clientInboxId]);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
-    if (scrollRef.current.scrollTop < 60 && !isLoadingMore) {
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 120;
+    if (scrollTop < 60 && !isLoadingMore) {
       onLoadMore();
     }
   }, [isLoadingMore, onLoadMore]);
 
-  // Scroll to bottom when messages update or peer changes
+  // Rock-solid container-only scroll to bottom — never uses scrollIntoView
+  // which can cause ancestor layout shifts or jumpy scrolling on webkit/blink.
   useEffect(() => {
-    if (messages.length > 0) {
-      const t = setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 60);
-      return () => clearTimeout(t);
+    if (!scrollRef.current) return;
+    const container = scrollRef.current;
+    const lastMsg = messages[messages.length - 1];
+    const isMe = lastMsg && (
+      lastMsg.isMe ||
+      lastMsg.senderAddress?.toLowerCase() === myAddressLower ||
+      (clientInboxIdLower && lastMsg.senderInboxId?.toLowerCase() === clientInboxIdLower)
+    );
+
+    // Auto-scroll if user is already looking at the bottom, or if this user just sent a message
+    if (isNearBottomRef.current || isMe) {
+      container.scrollTop = container.scrollHeight;
+      // Secondary RAF pass to ensure layout after media/badge paint
+      const raf = requestAnimationFrame(() => {
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      });
+      return () => cancelAnimationFrame(raf);
     }
-  }, [messages.length, activePeer]);
+  }, [messages.length, activePeer, isTyping, isSending, myAddressLower, clientInboxIdLower]);
 
   return (
     <div 
@@ -95,6 +120,26 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
           renderMessage={renderMessage} 
         />
       ))}
+
+      {/* Typing indicator inside the scroll flow to avoid compressing list height */}
+      {isTyping && (
+        <div className="flex self-start items-start mt-2 ml-1" role="status" aria-label={typingLabel || "Typing"}>
+          <div className="px-4 py-2.5 bg-white rounded-[18px] rounded-bl-[6px] border border-[#e4e7ec] flex items-center gap-1.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div className="w-1.5 h-1.5 bg-[#a3a9b4] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-1.5 h-1.5 bg-[#a3a9b4] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-1.5 h-1.5 bg-[#a3a9b4] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+        </div>
+      )}
+
+      {/* Sending micro-status inside the scroll flow */}
+      {isSending && (
+        <div className="flex self-end items-center gap-1.5 mt-1 mr-2 text-[12px] text-[#727a88]" role="status">
+          <LoaderCircle size={12} strokeWidth={2.2} className="animate-spin text-[#2754d6]" aria-hidden="true" />
+          <span>Sending</span>
+        </div>
+      )}
+
       <div ref={bottomRef} className="h-1 shrink-0" />
     </div>
   );

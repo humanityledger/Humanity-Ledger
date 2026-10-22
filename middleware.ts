@@ -45,6 +45,20 @@ const PUBLIC_PATHS = new Set([
   '/auth',
   '/connect',
   '/chat',       // LedgerChat handles its own auth internally (XMTP + MetaMask)
+  // Public documentation, company and legal pages. Anyone must be able to
+  // read the terms, the privacy policy and the docs before signing in.
+  '/docs',
+  '/developers',
+  '/status',
+  '/changelog',
+  '/blog',
+  '/contact',
+  '/company',
+  '/privacy',
+  '/terms',
+  '/whitepaper',
+  '/security/audits',
+  '/network/status',
   '/manifest.json',
   '/favicon.ico',
   '/robots.txt',
@@ -53,6 +67,11 @@ const PUBLIC_PATHS = new Set([
 
 const PUBLIC_PREFIXES = [
   '/api/auth/',
+  // Sign-in entry point. The nonce is issued before any session exists,
+  // so requiring one here deadlocks: no nonce without a session, no
+  // session without a nonce. /api/siwe/verify is the other half and must
+  // be reachable for the same reason.
+  '/api/siwe/',
   '/api/metrics/',
   '/api/chat/stories', // stories need to be public for viewing
   '/api/aztec/airdrop',
@@ -76,6 +95,8 @@ const PUBLIC_PREFIXES = [
   '/connect',
   '/legal/',
   '/docs/',
+  '/blog/',
+  '/company/',
   '/fonts/',
   '/images/',
   '/icons/',
@@ -143,7 +164,14 @@ function getEdgeSecret(): Uint8Array {
 // ── Extract session JWT from cookies ─────────────────────────────────────────
 async function extractSessionAddress(req: NextRequest): Promise<string | null> {
   // Priority 1: SIWE ledger session
-  const ledgerCookie = req.cookies.get('humanity_session')?.value
+  // `hl_session` is the designated primary cookie (B-007) — /api/siwe/verify
+  // issues it and only writes the legacy names alongside it for compatibility.
+  // It was missing from this lookup, so the perimeter was reading the
+  // compatibility cookie and ignoring the real one. Removing the legacy write
+  // would have broken every authenticated route at once, with nothing here to
+  // explain why. Primary first, legacy names after it.
+  const ledgerCookie = req.cookies.get('hl_session')?.value
+    ?? req.cookies.get('humanity_session')?.value
     ?? req.cookies.get('ledger_session')?.value
     ?? req.cookies.get('human_session')?.value;
 

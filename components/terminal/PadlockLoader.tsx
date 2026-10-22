@@ -238,7 +238,7 @@ export function PadlockLoader({
             >
               <div className="text-center">
                 <p className="text-[22px] font-bold text-[#1C1C1E] tracking-tight">Ledger Chat</p>
-                <p className="text-[14px] text-black/40 font-medium mt-1">End-to-end encrypted</p>
+                <p className="text-[14px] text-black/40 font-medium mt-1">End to end encrypted</p>
               </div>
               <motion.button
                 onClick={handleActivate}

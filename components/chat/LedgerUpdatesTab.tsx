@@ -23,7 +23,7 @@ interface LedgerUpdatesTabProps {
   onOpenChat: (address: string) => void;
 }
 
-const AVATAR_COLORS = ['#25D366','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
+const AVATAR_COLORS = ['#2754d6','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
 const avatarColor = (addr: string) => AVATAR_COLORS[parseInt(addr?.slice(2,4) || '0', 16) % AVATAR_COLORS.length];
 const shortAddr = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
 const initials = (name: string, addr: string) => name ? name.slice(0,2).toUpperCase() : addr ? addr.slice(2,4).toUpperCase() : '??';
@@ -132,7 +132,7 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
             {myStatus.length === 0 ? (
               <button
                 onClick={() => setShowComposer(true)}
-                className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#25D366] rounded-full border-2 border-white flex items-center justify-center"
+                className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#2754d6] rounded-full border-2 border-white flex items-center justify-center"
               >
                 <Plus size={14} className="text-white" />
               </button>
@@ -146,7 +146,7 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
               {myStatus.length === 0 ? 'Tap to add status update' : `${myStatus.length} update${myStatus.length !== 1 ? 's' : ''}`}
             </p>
           </div>
-          <button onClick={() => setShowComposer(true)} className="text-[#25D366] p-2">
+          <button onClick={() => setShowComposer(true)} className="text-[#2754d6] p-2">
             <Edit3 size={18} />
           </button>
         </div>
@@ -189,7 +189,7 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
             onClick={() => onOpenChat(cs.authorAddress)}
             className="w-full flex items-center gap-3 px-4 py-3 border-b border-black/[0.06] hover:bg-[#F2F2F7] text-left"
           >
-            <div className="w-[54px] h-[54px] rounded-full ring-2 ring-[#25D366] ring-offset-2 flex items-center justify-center text-white font-bold overflow-hidden" style={{ background: avatarColor(cs.authorAddress) }}>
+            <div className="w-[54px] h-[54px] rounded-full ring-2 ring-[#2754d6] ring-offset-2 flex items-center justify-center text-white font-bold overflow-hidden" style={{ background: avatarColor(cs.authorAddress) }}>
               {cs.avatarUrl ? (
                 <img src={cs.avatarUrl} alt="" className="w-full h-full object-cover" />
               ) : (
@@ -223,9 +223,9 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
               className="w-full bg-white rounded-t-3xl p-6 flex flex-col gap-4"
             >
               <div className="flex items-center justify-between">
-                <button onClick={() => setShowComposer(false)} className="text-[#25D366] text-[16px]">Cancel</button>
+                <button onClick={() => setShowComposer(false)} className="text-[#2754d6] text-[16px]">Cancel</button>
                 <h3 className="text-[17px] font-semibold">New Status</h3>
-                <button onClick={() => postStatus()} disabled={!draftText.trim()} className="text-[#25D366] text-[16px] font-semibold disabled:opacity-40">Post</button>
+                <button onClick={() => postStatus()} disabled={!draftText.trim()} className="text-[#2754d6] text-[16px] font-semibold disabled:opacity-40">Post</button>
               </div>
 
               <textarea
@@ -234,13 +234,13 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
                 onChange={e => setDraftText(e.target.value)}
                 placeholder="What's on your mind?"
                 maxLength={700}
-                className="w-full min-h-[120px] text-[16px] text-[#1C1C1E] placeholder:text-[#8E8E93] resize-none outline-none border border-black/10 rounded-xl p-3 focus:ring-2 focus:ring-[#25D366]/20"
+                className="w-full min-h-[120px] text-[16px] text-[#1C1C1E] placeholder:text-[#8E8E93] resize-none outline-none border border-black/10 rounded-xl p-3 focus:ring-2 focus:ring-[#2754d6]/20"
               />
               
               <div className="flex items-center justify-between mt-2">
                 <div className="relative">
                   <input type="file" accept="image/*,video/*" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                  <button className="flex items-center gap-2 text-[#25D366] bg-[#25D366]/10 px-4 py-2 rounded-xl">
+                  <button className="flex items-center gap-2 text-[#2754d6] bg-[#2754d6]/10 px-4 py-2 rounded-xl">
                     <Camera size={18} />
                     <span className="text-[14px] font-semibold">Photo/Video</span>
                   </button>
@@ -248,7 +248,7 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
                 
                 <button
                   onClick={() => setShowPrivacyMenu(m => !m)}
-                  className="flex items-center gap-2 text-[#25D366] bg-[#25D366]/10 px-4 py-2 rounded-xl"
+                  className="flex items-center gap-2 text-[#2754d6] bg-[#2754d6]/10 px-4 py-2 rounded-xl"
                 >
                   {draftPrivacy === 'everyone' ? <Globe size={16} /> : draftPrivacy === 'contacts' ? <Users size={16} /> : <Lock size={16} />}
                   <span className="text-[14px] font-semibold">{privacyLabel[draftPrivacy]}</span>
@@ -263,14 +263,14 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
                       className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-left ${draftPrivacy === opt ? 'bg-white' : ''}`}
                     >
                       <span className="text-[15px] text-[#1C1C1E]">{privacyLabel[opt]}</span>
-                      {draftPrivacy === opt && <Check size={16} className="text-[#25D366]" />}
+                      {draftPrivacy === opt && <Check size={16} className="text-[#2754d6]" />}
                     </button>
                   ))}
                 </div>
               )}
 
               <p className="text-[12px] text-[#8E8E93]">
-                Status updates are visible to your selected audience and disappear after 24 hours. They are end-to-end encrypted.
+                Status updates are visible to your selected audience and disappear after 24 hours. They are end to end encrypted.
               </p>
             </motion.div>
           </motion.div>

@@ -31,7 +31,6 @@ export async function checkRateLimit(
   key: string,
   opts: RateLimitOptions
 ): Promise<RateLimitResult> {
-  const redis = await getRedisClient();
   const prefix = opts.prefix ?? 'rl';
   const redisKey = `${prefix}:${key}`;
   const now = Date.now();
@@ -39,6 +38,15 @@ export async function checkRateLimit(
   const clearBefore = now - windowMs;
 
   try {
+    // getRedisClient() used to be called above this try. The catch below is
+    // documented as failing open when Redis is unavailable, but it could never
+    // see a connection failure: the throw happened before the try was entered,
+    // so the error propagated into the caller instead. Routes that call this
+    // without a try of their own — /api/siwe/nonce among them — answered 500
+    // with no Redis configured, which made sign-in impossible to complete on a
+    // fresh local setup. Acquiring the client inside the try makes the
+    // fail-open behaviour do what its comment always claimed.
+    const redis = await getRedisClient();
     const pipeline = redis.pipeline();
     // Remove entries older than the window
     pipeline.zremrangebyscore(redisKey, '-inf', clearBefore);

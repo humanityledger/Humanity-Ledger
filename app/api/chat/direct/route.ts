@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
+import { checkMessageEnvelope, withinSizeLimit } from '@/lib/security/messageEnvelope';
 
 export const dynamic = 'force-dynamic';
 
@@ -95,8 +96,16 @@ export async function POST(req: NextRequest) {
     if (typeof content !== 'string' || content.trim().length === 0) {
       return NextResponse.json({ error: 'Content cannot be empty' }, { status: 400 });
     }
-    if (content.length > 10 * 1024 * 1024) {
+    if (!withinSizeLimit(content, 10 * 1024 * 1024)) {
       return NextResponse.json({ error: 'Content too long (max 10MB)' }, { status: 400 });
+    }
+
+    // F2-02: this row is persisted to PostgreSQL. Anything readable here is
+    // readable by every operator, backup and support query. The guard refuses
+    // unsealed bodies once CHAT_REQUIRE_SEALED_ENVELOPE=true, and warns until then.
+    const envelope = checkMessageEnvelope(content, 'chat/direct');
+    if (envelope.rejection) {
+      return NextResponse.json(envelope.rejection, { status: 400 });
     }
 
     const msg = await prisma.directMessage.create({

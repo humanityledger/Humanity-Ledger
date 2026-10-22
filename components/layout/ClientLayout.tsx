@@ -14,6 +14,7 @@ import { ThemeApplier } from '@/components/layout/ThemeApplier';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
 
 import { ZoomWrapper } from './ZoomWrapper';
+import { isPublicContentPage } from '@/lib/routing/publicPages';
 import dynamic from 'next/dynamic';
 
 const UniversalEliteWallpaper = dynamic(
@@ -24,10 +25,7 @@ const UtilityPanels = dynamic(
   () => import('@/components/shared/UtilityPanels').then(m => ({ default: m.UtilityPanels })),
   { ssr: false }
 );
-const BillionLedgerNotification = dynamic(
-  () => import('@/components/shared/UtilityPanels').then(m => ({ default: m.BillionLedgerNotification })),
-  { ssr: false }
-);
+// BillionLedgerNotification removed per user request (no fake transfer alerts)
 
 const LinkedGate = dynamic(
   () => import('@/components/shared/LinkedGate').then(m => ({ default: m.LinkedGate })),
@@ -161,7 +159,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isLanding = pathname === '/';
   const isBounded = !isDashboard && BOUNDED_PREFIXES.some(p => pathname === p || (p !== '/' && pathname.startsWith(p)));
 
-  const isPublicPath = pathname === '/' || PUBLIC_PREFIXES.some(p => pathname.startsWith(p));
+  // Documentation, company and legal pages are public and must never be
+  // wrapped in LinkedGate, which redirects visitors without a session.
+  const isPublicPath = pathname === '/' || PUBLIC_PREFIXES.some(p => pathname.startsWith(p)) || isPublicContentPage(pathname);
   const content = !isPublicPath ? <LinkedGate>{children}</LinkedGate> : children;
 
   // For non-landing, non-dashboard pages: content is constrained to the left
@@ -350,7 +350,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             <div className={innerClass}>
               <div className={isChat ? 'absolute z-40 top-0 left-0 right-0 pointer-events-none' : 'relative z-40'}>
                 <UtilityPanels />
-                <BillionLedgerNotification />
+                {/* BillionLedgerNotification removed */}
               </div>
 
               <ZoomWrapper>

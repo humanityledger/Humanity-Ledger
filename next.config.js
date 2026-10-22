@@ -190,8 +190,17 @@ const nextConfig = {
             ignored: [
                 '**/node_modules/**',
                 '**/.git/**',
-                // Windows protected user folders
-                'C:/Users/*/Documents/**',
+                // Windows protected user folders. Only the legacy junctions
+                // inside Documents are ignored, never Documents itself: this
+                // repository usually lives under Documents/GitHub, and
+                // ignoring the whole folder silently switched off hot reload,
+                // so edits did not appear until the dev server was restarted.
+                'C:/Users/*/Documents/My Music/**',
+                'C:/Users/*/Documents/My Pictures/**',
+                'C:/Users/*/Documents/My Videos/**',
+                'C:/Users/*/Documents/Mi música/**',
+                'C:/Users/*/Documents/Mis imágenes/**',
+                'C:/Users/*/Documents/Mis vídeos/**',
                 'C:/Users/*/Music/**',
                 'C:/Users/*/Videos/**',
                 'C:/Users/*/Pictures/**',

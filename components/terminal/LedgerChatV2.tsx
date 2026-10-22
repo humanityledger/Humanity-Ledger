@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 "use client";
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -83,7 +83,7 @@ const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
 
 
-// NOTE: QDs state is sourced from AztecNativeContext (DB polling) â€” no local store needed.
+// NOTE: QDs state is sourced from AztecNativeContext (DB polling) — no local store needed.
 
 
 interface ConversationMeta {
@@ -98,7 +98,7 @@ export interface LedgerChatProps {
   forceAutoInit?: boolean;
 }
 
-function Avatar({ address, isMe = false }: { address: string; isMe?: boolean }) {
+function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: boolean; size?: number }) {
   const [savedAvatar, setSavedAvatar] = React.useState<string>(() => {
     if (typeof window === 'undefined') return '';
     return localStorage.getItem('ledger_avatar') || '';
@@ -128,18 +128,21 @@ function Avatar({ address, isMe = false }: { address: string; isMe?: boolean }) 
 
   if (savedAvatar) {
     return (
-      <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 ring-1 ring-black/5">
+      <div className="rounded-full overflow-hidden shrink-0 ring-1 ring-black/5" style={{ width: size, height: size }}>
         <img src={savedAvatar} alt="" className="w-full h-full object-cover" />
       </div>
     );
   }
 
-  const initials = address ? address.slice(2, 4).toUpperCase() : '??';
-  const hue = address ? parseInt(address.slice(2, 8), 16) % 360 : 0;
+  // Initials on a soft tint of a colour derived from the address, so the
+  // same person always looks the same and the text stays readable.
+  const initials = address ? address.slice(2, 4).toUpperCase() : '';
+  const hue = address ? parseInt(address.slice(2, 8), 16) % 360 : 220;
   return (
     <div
-      className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0"
-      style={{ background: `hsl(${hue},70%,45%)` }}
+      className="rounded-full flex items-center justify-center font-semibold shrink-0"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.36), background: `hsl(${hue} 55% 91%)`, color: `hsl(${hue} 42% 28%)` }}
+      aria-hidden="true"
     >
       {initials}
     </div>
@@ -164,12 +167,12 @@ export const formatMessagePreview = (content: string): string => {
 
   // Handle system messages and metadata
   if (cleanContent.startsWith('__CALL_OFFER__:')) {
-    return cleanContent.includes(':video') ? 'ðŸ“¹ Video Call' : 'ðŸ“ž Voice Call';
+    return cleanContent.includes(':video') ? '📹 Video Call' : '📞 Voice Call';
   }
-  if (cleanContent.startsWith('__AUDIO__')) return 'ðŸŽ™ï¸ Voice Note';
-  if (cleanContent.startsWith('[LOCATION]')) return 'ðŸ“ Location';
-  if (cleanContent.startsWith('[ATTACHMENT')) return 'ðŸ“Ž Attachment';
-  if (cleanContent.startsWith('[GIF]')) return 'ðŸ–¼ï¸ GIF';
+  if (cleanContent.startsWith('__AUDIO__')) return '🎙️ Voice Note';
+  if (cleanContent.startsWith('[LOCATION]')) return '📍 Location';
+  if (cleanContent.startsWith('[ATTACHMENT')) return '📎 Attachment';
+  if (cleanContent.startsWith('[GIF]')) return '🖼️ GIF';
   if (cleanContent.startsWith('__PIN__') || cleanContent.startsWith('__REVOKE__') || cleanContent.startsWith('__READ__')) {
     return 'System Message';
   }
@@ -197,6 +200,9 @@ export const parseMessageText = (text: string, isMe: boolean) => {
 
 import { playSendSound, playReceiveSound } from '../../lib/utils/sounds';
 import { MessageBubble, StickerPicker } from '../chat/MessageBubble';
+import { PinPrompt } from '@/components/chat/pin/PinPrompt';
+import { IncomingCallScreen, OutgoingCallScreen, AudioCallStage, CallControls } from '@/components/chat/call/CallScreens';
+import { Archive, ArchiveRestore, ChevronLeft, ChevronUp, ChevronDown, MessageSquare, Plus, ArrowUp, WifiOff, Pin, Check, ScanQrCode, Camera, FileText, Sticker, ListChecks, CreditCard, Receipt, Waves, Navigation, Timer, Info, LoaderCircle, Minimize2, Mail, ShieldCheck, Reply, Forward, Pencil, Flag, MessagesSquare } from 'lucide-react';
 
 
 function isMessageExpired(msgTimestamp: number, timerSetting: string | undefined) {
@@ -219,7 +225,7 @@ function scheduleBurnOnRead(msgId: string, seconds: number, onBurn: (id: string)
 
 export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const { address, isConnected, isSystemHandshake, isChecking, connector, isZkVerified, isLocalSystemWallet } = useSystemAccount();
-  // Email-authenticated users have address like 'email_user@gmail.com' â€” they have no wallet signer
+  // Email-authenticated users have address like 'email_user@gmail.com' — they have no wallet signer
   // so XMTP is not available. We detect this and route them to server-relay messaging.
   const isEmailUser = typeof address === 'string' && (address as string).startsWith('email_');
   const { signMessageAsync } = useSignMessage();
@@ -265,7 +271,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const chatBackground = ledgerSettings?.chat_background || 'default';
   const chatBackgroundCustomUrl = '';
   const bubbleStyle = ledgerSettings?.bubble_style || 'default';
-  const accentColor = ledgerSettings?.accent_color || '#25D366';
+  const accentColor = ledgerSettings?.accent_color || '#2754d6';
   // Font and size from settings (with sensible defaults)
   const chatFont = ledgerSettings?.font_family || 'inter';
   const textSize = ledgerSettings?.text_size ?? 4;
@@ -275,12 +281,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       case 'minimal': return { background: '#FFFFFF' };
       case 'dots': return { 
           backgroundColor: '#FAFAFA', 
-          backgroundImage: 'radial-gradient(rgba(37,211,102,0.15) 1px, transparent 1px)', 
+          backgroundImage: 'radial-gradient(rgba(39, 84, 214,0.15) 1px, transparent 1px)', 
           backgroundSize: '20px 20px'
         };
       case 'circuit': return {
           backgroundColor: '#F0F2F5',
-          backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(37,211,102,0.05) 25%, rgba(37,211,102,0.05) 26%, transparent 27%, transparent 74%, rgba(37,211,102,0.05) 75%, rgba(37,211,102,0.05) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(37,211,102,0.05) 25%, rgba(37,211,102,0.05) 26%, transparent 27%, transparent 74%, rgba(37,211,102,0.05) 75%, rgba(37,211,102,0.05) 76%, transparent 77%, transparent)',
+          backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(39, 84, 214,0.05) 25%, rgba(39, 84, 214,0.05) 26%, transparent 27%, transparent 74%, rgba(39, 84, 214,0.05) 75%, rgba(39, 84, 214,0.05) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(39, 84, 214,0.05) 25%, rgba(39, 84, 214,0.05) 26%, transparent 27%, transparent 74%, rgba(39, 84, 214,0.05) 75%, rgba(39, 84, 214,0.05) 76%, transparent 77%, transparent)',
           backgroundSize: '30px 30px'
         };
       case 'waves': return {
@@ -306,7 +312,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
 
   // MASTER RECOVERY: If wallet is connected but connector is missing (zombie session after mobile deep-link)
-  // Run a retry loop instead of a single instant attempt â€” the WalletConnect relay
+  // Run a retry loop instead of a single instant attempt — the WalletConnect relay
   // needs time to re-establish after the user returns from the wallet app.
   useEffect(() => {
     if (isConnected && address) {
@@ -413,7 +419,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
        window.history.replaceState({}, '', window.location.pathname);
     }
 
-    // â”€â”€ [FIX] ?join=CODE â€” auto-join a community from the public landing page â”€â”€
+    // ── [FIX] ?join=CODE — auto-join a community from the public landing page ──
     // When the user is redirected from /join/[code], we read the code here,
     // call the join API, and open the community view automatically.
     const joinCode = params.get('join');
@@ -462,10 +468,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [threadParentId, setThreadParentId] = useState<string | null>(null);
   const [showBotSuggestions, setShowBotSuggestions] = useState(false);
   const BOT_COMMANDS_LIST = [
-    { cmd: '/price', hint: '/price ETH â€” Get crypto price' },
-    { cmd: '/ens', hint: '/ens vitalik.eth â€” Resolve ENS name' },
-    { cmd: '/gas', hint: '/gas â€” Current Ethereum gas prices' },
-    { cmd: '/help', hint: '/help â€” Show all commands' },
+    { cmd: '/price', hint: '/price ETH — Get crypto price' },
+    { cmd: '/ens', hint: '/ens vitalik.eth — Resolve ENS name' },
+    { cmd: '/gas', hint: '/gas — Current Ethereum gas prices' },
+    { cmd: '/help', hint: '/help — Show all commands' },
   ];
   
   // High-End Feature States
@@ -473,7 +479,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showVoiceNote, setShowVoiceNote] = useState(false);
   const { peerStatus, broadcastTyping } = useLedgerChatPresence(address || '', activePeer);
 
-  // â”€â”€ v2: Telegram-Parity state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── v2: Telegram-Parity state ──────────────────────────────────────────
   const [callHistoryList, setCallHistoryList] = useState<CallRecord[]>([]);
   const [sidebarTab, setSidebarTab] = useState<'chats' | 'calls' | 'contacts' | 'updates' | 'communities'>('chats');
   const [showSaveContactModal, setShowSaveContactModal] = useState(false);
@@ -543,7 +549,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [peerInput, setPeerInput] = useState('');
   const [sending, setSending] = useState(false);
   const [sendAnimKey, setSendAnimKey] = useState(0);
-  // â”€â”€ [FASE 16: Rate Limiting Anti-Spam] â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── [FASE 16: Rate Limiting Anti-Spam] ───────────────────────────────
   // Prevents spam abuse: max 5 messages per 10 seconds (App Store Guideline 1.2)
   const rateLimitRef = useRef<{ timestamps: number[] }>({ timestamps: [] });
   const RATE_LIMIT_MAX = 5;
@@ -588,14 +594,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   const [contextMenu, setContextMenu] = useState<{ id: string, content: string, x: number, y: number } | null>(null);
 
-  // â”€â”€â”€ Phase 4: Ecosystem Features â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Phase 4: Ecosystem Features ─────────────────────────────────────────────
   const [archivedPeers, setArchivedPeers] = useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false); // toggle archived section
   const [sidebarMenu, setSidebarMenu] = useState<{ peer: string; x: number; y: number } | null>(null); // right-click on sidebar
   const [editingMsg, setEditingMsg] = useState<{ id: string; content: string } | null>(null); // inline edit state
   const [showClearConfirm, setShowClearConfirm] = useState(false); // clear chat confirmation
 
-  // â”€â”€â”€ v2 + Phase 5: Chat Features â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── v2 + Phase 5: Chat Features ──────────────────────────────────────────────
   const [isSecretChat, setIsSecretChat] = useState(false);
   const [showPollCreator, setShowPollCreator] = useState(false);
   const [showBurnSheet, setShowBurnSheet] = useState(false);
@@ -613,7 +619,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [transferAmount, setTransferAmount] = useState('');
   const [transferSending, setTransferSending] = useState(false);
 
-  // â”€â”€â”€ Hito 4: Search, Forward, GIF, Scheduled â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Hito 4: Search, Forward, GIF, Scheduled ──────────────────────────────
   const [searchQuery, setSearchQuery] = useState(''); // in-chat search
   const [typingPeers, setTypingPeers] = useState<Set<string>>(new Set()); // typing indicators
   const lastTypingTimeRef = useRef<number>(0);
@@ -627,14 +633,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showAppDrawer, setShowAppDrawer] = useState(false); // iMessage style + menu
   const [liveLocationWatchId, setLiveLocationWatchId] = useState<number | null>(null); // watchPosition ID for live location
   const [isLiveLocationActive, setIsLiveLocationActive] = useState(false); // whether live location is broadcasting
-  const [gifSearch, setGifSearch] = useState(''); // GIF search query â€” start empty so user types first
+  const [gifSearch, setGifSearch] = useState(''); // GIF search query — start empty so user types first
+  // A conversation the user locked: opening it asks for the PIN first.
+  const [lockedChatPeer, setLockedChatPeer] = useState<string | null>(null);
+  // The overflow menu in the conversation header.
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [gifResults, setGifResults] = useState<string[]>([]); // GIF URLs
   const [linkPreview, setLinkPreview] = useState<{ url: string, title: string, description: string, image?: string } | null>(null);
 
-  // â”€â”€â”€ WebRTC Call State Machine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // States: idle â†’ calling (outgoing) â†’ ringing (incoming) â†’ active â†’ idle
+  // ─── WebRTC Call State Machine ───────────────────────────────────────────────
+  // States: idle → calling (outgoing) → ringing (incoming) → active → idle
   const [peerInstance, setPeerInstance] = useState<Peer | null>(null);
-  // [ANDROID FIX] peerInstanceRef â€” always holds the current peer, avoids stale closures
+  // [ANDROID FIX] peerInstanceRef — always holds the current peer, avoids stale closures
   // in answerCall/startCall which are async and can capture stale state.
   const peerInstanceRef = useRef<Peer | null>(null);
   const [myPeerId, setMyPeerId] = useState<string>('');
@@ -642,7 +652,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // [WEBRTC RE-INIT FIX] peerInitKey is a counter that forces the PeerJS useEffect
   // to re-execute when the peer is destroyed (network drop, ID conflict, etc.).
   // Without this, once peerInstance is destroyed and nulled, the useEffect never
-  // re-runs because 'address' hasn't changed â€” leaving calls permanently broken.
+  // re-runs because 'address' hasn't changed — leaving calls permanently broken.
   const [peerInitKey, setPeerInitKey] = useState(0);
   const peerInitKeyRef = useRef(0); // ref for use inside peer callbacks
 
@@ -672,7 +682,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [localStream, _setLocalStream] = useState<MediaStream | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  // WeakSet to track answered PeerJS calls â€” avoids mutating MediaConnection type
+  // WeakSet to track answered PeerJS calls — avoids mutating MediaConnection type
   const answeredCallsRef = useRef<WeakSet<object>>(new WeakSet());
   const setLocalStream = useCallback((s: MediaStream | null) => {
     localStreamRef.current = s;
@@ -681,9 +691,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   
   // The PeerJS MediaConnection object (from peerInstance.call() or Peer.on('call'))
   const [activeConnection, setActiveConnection] = useState<any>(null);
-  // [ARCH-FIX] Pending PeerJS connection queued by peer.on('call') â€” used by answerCall()
+  // [ARCH-FIX] Pending PeerJS connection queued by peer.on('call') — used by answerCall()
   const pendingConnectionRef = useRef<any>(null);
-  // Caller stores the remotePeerId â€” now derived deterministically, not from XMTP
+  // Caller stores the remotePeerId — now derived deterministically, not from XMTP
   const remotePeerIdRef = useRef<string>('');
   // Caller stores the call type sent to peer
   const callTypeRef = useRef<'audio'|'video'>('audio');
@@ -699,14 +709,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [dataSaver, setDataSaver] = useState(false);
   const [showE2EE, setShowE2EE] = useState(false);
 
-  // [ARCH-FIX] Deterministic PeerID derivation â€” mirrors the logic in PeerJS initialization.
+  // [ARCH-FIX] Deterministic PeerID derivation — mirrors the logic in PeerJS initialization.
   // Both caller and receiver can compute each other's PeerID from the wallet address alone.
   // This eliminates the need for XMTP to carry the PeerID in CALL_ANSWER.
   const derivePeerId = useCallback((walletAddress: string): string => {
     return `ledger${walletAddress.slice(2, 12).toLowerCase()}`;
   }, []);
   
-  // â”€â”€ Telegram/WhatsApp Parity States â”€â”€
+  // ── Telegram/WhatsApp Parity States ──
   const [isCallMinimized, setIsCallMinimized] = useState(false);
   const [networkQuality, setNetworkQuality] = useState<'good' | 'poor' | 'disconnected'>('good');
   const [audioLevel, setAudioLevel] = useState<number>(0);
@@ -733,12 +743,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
   }, []);
 
-  // Ringtone refs â€” all three must be declared here (before the safety useEffect at ~L860)
+  // Ringtone refs — all three must be declared here (before the safety useEffect at ~L860)
   // to avoid Temporal Dead Zone (TDZ) crashes.
   const ringtoneRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ringtoneCtxRef = useRef<AudioContext | null>(null);
   const ringtoneStopped = useRef(true);
-  // â”€â”€â”€ Backward compat shims so existing JSX works unchanged â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Backward compat shims so existing JSX works unchanged ──────────────────
   const callActive = callState === 'active' || callState === 'calling' || callState === 'connecting';
   const incomingCall = callState === 'ringing';
 
@@ -840,7 +850,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setShowWalletTransfer(false);
   }, [activePeer]);
 
-  // â”€â”€â”€ Call Timer Effect â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Call Timer Effect ────────────────────────────────────────────────────────
   useEffect(() => {
     if (callState === 'active') {
       setCallDurationSeconds(0);
@@ -864,8 +874,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
   }, [callState]);
 
-  // â”€â”€â”€ Safety: stop ringtone whenever callState leaves 'ringing' â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // IMPORTANT: Cannot call stopRingtone() here â€” it's declared below with useCallback (TDZ).
+  // ─── Safety: stop ringtone whenever callState leaves 'ringing' ───────────────
+  // IMPORTANT: Cannot call stopRingtone() here — it's declared below with useCallback (TDZ).
   // Instead, directly set the shared ref flag + clear the interval ref.
   // This is safe because refs are initialized synchronously before any effects run.
   useEffect(() => {
@@ -940,7 +950,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setShowProfile(false);
   };
 
-  // Phase 4: clearChat â€” shows confirmation modal first
+  // Phase 4: clearChat — shows confirmation modal first
   const clearChat = () => {
     setShowProfile(false);
     setShowClearConfirm(true);
@@ -964,7 +974,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }));
     // Deduplication set is left intact to prevent stream from re-injecting them
     setShowClearConfirm(false);
-    toast.success('âœ… Chat cleared.');
+    toast.success('✅ Chat cleared.');
   };
 
   // Phase 4: Archive/Unarchive a conversation (persisted to localStorage)
@@ -994,7 +1004,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     toast.success('Conversation removed.');
   };
 
-  // Phase 4: Submit edited message â€” sends XMTP signal __EDIT__id__::newContent
+  // Phase 4: Submit edited message — sends XMTP signal __EDIT__id__::newContent
   const submitEditMessage = async () => {
     if (!editingMsg || !editingMsg.content.trim()) return;
     const signal = `__EDIT__${editingMsg.id}__::${editingMsg.content.trim()}`;
@@ -1013,9 +1023,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const peerToConvId = useRef<Map<string, string>>(new Map());
   const convIdToPeer = useRef<Map<string, string>>(new Map());
   // Stores the native XMTP DM convo ID (UUID) for the currently active peer.
-  // Used as fallback when inboxIdâ†’address resolution fails in the stream loop.
+  // Used as fallback when inboxId→address resolution fails in the stream loop.
   const activeXmtpDmIdRef = useRef<string | null>(null);
-  // [BUG FIX] Dedicated ref for the active peer's inboxId â€” MUST be a separate ref, NOT a
+  // [BUG FIX] Dedicated ref for the active peer's inboxId — MUST be a separate ref, NOT a
   // property on activeXmtpDmIdRef, because setting .current = null would wipe sibling props.
   const activePeerInboxIdRef = useRef<string>('');
   
@@ -1037,7 +1047,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const confirmedMsgIds = useRef<Set<string>>(new Set());
   const optimisticContentMap = useRef<Map<string, string>>(new Map()); // content -> optimisticId
   // Prune confirmedMsgIds to prevent unbounded growth in long sessions.
-  // [FIX] Raised from 500/250 to 2000/1000 â€” fetchHistorical bulk-inserts all history IDs.
+  // [FIX] Raised from 500/250 to 2000/1000 — fetchHistorical bulk-inserts all history IDs.
   // In conversations with 300-500 messages, the old threshold would prune IDs that are still
   // in view, causing the next poll to re-insert them as "new" (phantom duplicate messages).
   const pruneConfirmedIds = useCallback(() => {
@@ -1046,10 +1056,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       confirmedMsgIds.current = new Set(arr.slice(arr.length - 1000));
     }
   }, []);
-  // Prune optimisticContentMap â€” entries lingering >60s were never echoed back (failed send)
+  // Prune optimisticContentMap — entries lingering >60s were never echoed back (failed send)
   // and should be cleared to prevent unbounded growth.
   const pruneOptimisticMap = useCallback(() => {
-    // [BUG FIX] Don't clear() the entire map â€” that would destroy in-flight optimistic
+    // [BUG FIX] Don't clear() the entire map — that would destroy in-flight optimistic
     // entries for messages that haven't been echoed back yet, causing duplicates.
     // Instead, evict only the OLDEST half when the map exceeds the threshold.
     if (optimisticContentMap.current.size > 100) {
@@ -1059,7 +1069,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       optimisticContentMap.current = new Map(toKeep);
     }
   }, []);
-  // Always-fresh ref to executeSend â€” avoids stale closure in event listeners
+  // Always-fresh ref to executeSend — avoids stale closure in event listeners
   const executeSendRef = useRef<((content: string) => Promise<void>) | null>(null);
 
   // Detect physical device type (touch + narrow screen = mobile)
@@ -1085,23 +1095,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [activePeer]);
 
-  // Auto-scroll to bottom on new messages â€” ONLY if user is already near the bottom.
-  // If the user has scrolled up to read history, do NOT hijack them back to the bottom.
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      const container = messagesEndRef.current.parentElement;
-      if (container) {
-        const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-        // Only auto-scroll if within 150px of the bottom (user hasn't scrolled up)
-        if (distanceFromBottom < 150) {
-          container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-        }
-      }
-    }
-  }, [messages]);
+  // Auto-scroll handled exclusively by VirtualizedMessageList.
+  // This duplicate useEffect has been removed to prevent conflicting scroll calls
+  // that caused the layout jump when sending messages. The VirtualizedMessageList
+  // component has its own stable container.scrollTop = container.scrollHeight logic.
 
-  // MASTER-FIX: Auto-scroll on resize (keyboard open/close) to maintain stability
-  useEffect(() => {
+  // NOTE: Mobile keyboard resize scroll is handled by VirtualizedMessageList.
+  // The old useEffect here caused double-scroll conflicts; removed.
+  // eslint-disable-next-line no-constant-condition
+  if (false) useEffect(() => {
     if (typeof window === 'undefined' || !isMobile) return;
     const handleResize = () => {
       if (messagesEndRef.current) {
@@ -1200,7 +1202,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (activePeerRef.current?.toLowerCase() === senderLower) {
         setMessages(prev => {
           if (prev.some(m => m.id === msgData.id)) return prev;
-          return [...prev, msgData].sort((a, b) => a.sentAtNs - b.sentAtNs);
+          return [...prev, msgData].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
         });
       }
 
@@ -1210,7 +1212,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       const handleForceMsg = (e: any) => {
          setMessages(prev => {
            if (prev.find(m => m.id === e.detail.id)) return prev;
-           return [...prev, e.detail].sort((a,b) => a.sentAtNs - b.sentAtNs);
+           return [...prev, e.detail].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
          });
       };
       window.addEventListener('ledger_force_msg_render', handleForceMsg);
@@ -1232,11 +1234,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
 
   // Detect Offline Status & Process Queue
-  // Uses executeSendRef to avoid stale closure â€” safe for production at scale
+  // Uses executeSendRef to avoid stale closure — safe for production at scale
   useEffect(() => {
     const handleOnline = async () => {
       setIsOffline(false);
-      // Flush the outbox â€” uses ref to always get the latest executeSend fn
+      // Flush the outbox — uses ref to always get the latest executeSend fn
       if (address) {
         const outboxKey = `ledger_outbox_${address.toLowerCase()}`;
         const queueStr = localStorage.getItem(outboxKey);
@@ -1245,7 +1247,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const queue: string[] = JSON.parse(queueStr);
             if (queue.length > 0) {
               localStorage.removeItem(outboxKey);
-              toast.info(`ðŸ“¤ Back online â€” sending ${queue.length} queued message${queue.length > 1 ? 's' : ''}...`);
+              toast.info(`📤 Back online — sending ${queue.length} queued message${queue.length > 1 ? 's' : ''}...`);
               for (const item of queue) {
                 const peer = typeof item === 'string' ? null : item.peer;
                 const text = typeof item === 'string' ? item : item.content;
@@ -1261,7 +1263,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   await new Promise(r => setTimeout(r, 300));
                 }
               }
-              toast.success('âœ… All queued messages delivered.');
+              toast.success('✅ All queued messages delivered.');
             }
           } catch (e) {
             console.warn('[Outbox] Failed to flush queue:', e);
@@ -1271,7 +1273,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
     const handleOffline = () => {
       setIsOffline(true);
-      toast.warning('ðŸ“¶ No internet connection. Messages will be queued.');
+      toast.warning('📶 No internet connection. Messages will be queued.');
     };
     
     window.addEventListener('online', handleOnline);
@@ -1283,7 +1285,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       window.removeEventListener('offline', handleOffline);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address]); // address is the only real dep â€” executeSend accessed via ref
+  }, [address]); // address is the only real dep — executeSend accessed via ref
 
   
   // [4G/5G RESILIENCE] Network change handler - re-sync XMTP when connection changes
@@ -1344,7 +1346,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     } catch {}
   };
 
-  // â”€â”€â”€ Ringtone Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Ringtone Generator ──────────────────────────────────────────────────────
   // Note: ringtoneCtxRef and ringtoneStopped are declared above (hoisted)
   // to avoid TDZ with the safety useEffect. Do NOT re-declare them here.
 
@@ -1356,7 +1358,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       ringtoneCtxRef.current = ctx;
     } catch { return; }
     const playRing = () => {
-      // Check the shared ref â€” stopRingtone sets this to true immediately
+      // Check the shared ref — stopRingtone sets this to true immediately
       if (ringtoneStopped.current || !ctx) return;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -1387,11 +1389,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, []);
 
 
-  // â”€â”€â”€ PeerJS Initialisation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── PeerJS Initialisation ───────────────────────────────────────────────────
   // [WEBRTC RE-INIT FIX] This effect now depends on BOTH address AND peerInitKey.
   // When the peer dies (disconnect, error, ID conflict), we increment peerInitKey
   // to force this effect to re-run and create a fresh peer instance.
-  // Previously, only 'address' was in the dependency array â€” so a dead peer could
+  // Previously, only 'address' was in the dependency array — so a dead peer could
   // NEVER be re-created, leaving the user permanently stuck with "WebRTC not ready".
   useEffect(() => {
     if (!address) return;
@@ -1403,11 +1405,26 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
     import('peerjs').then((peerjsModule) => {
       if (destroyed) return; // component unmounted before import resolved
+
+// Normalized timestamp extractor: handles nanoseconds, microseconds, and milliseconds reliably
+function getMsgEpochMs(m: any): number {
+  if (!m) return 0;
+  const v = m.sentAtNs ?? m.sentAt ?? m.createdAt ?? m.timestamp;
+  if (typeof v === 'number') {
+    return v > 1e14 ? Math.floor(v / 1_000_000) : v;
+  }
+  if (v instanceof Date) return v.getTime();
+  if (typeof v === 'string') {
+    const t = new Date(v).getTime();
+    return isNaN(t) ? 0 : t;
+  }
+  return 0;
+}
       const Peer = (peerjsModule as any).default?.Peer || (peerjsModule as any).Peer || (peerjsModule as any).default;
 
-      // â”€â”€â”€ DETERMINISTIC PEERID â€” CRITICAL FOR REVERSE-DIAL ARCHITECTURE â”€â”€â”€
+      // ─── DETERMINISTIC PEERID — CRITICAL FOR REVERSE-DIAL ARCHITECTURE ───
       // Both peers derive each other's ID from the wallet address alone.
-      // This means: Caller computes derivePeerId(activePeer) â†’ dials the receiver.
+      // This means: Caller computes derivePeerId(activePeer) → dials the receiver.
       // No XMTP signaling of PeerID needed. Connection is instantaneous.
       const basePeerId = derivePeerId(address);
       // [FIX] For peerInitKey > 0 (i.e. this is a re-init after a failure),
@@ -1420,14 +1437,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       const peer = new Peer(stablePeerId, {
         debug: 0,
         config: {
-          iceTransportPolicy: (ledgerSettings as any)?.webrtc_ip_masking ? 'relay' : 'all',
+          iceTransportPolicy: ((ledgerSettings as any)?.webrtc_ip_masking ? 'relay' : 'all') as RTCIceTransportPolicy,
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' },
             { urls: 'stun:stun3.l.google.com:19302' },
             { urls: 'stun:stun4.l.google.com:19302' },
-            // OpenRelay TURN â€” free, reliable, no account needed
+            // OpenRelay TURN — free, reliable, no account needed
             { urls: 'stun:openrelay.metered.ca:80' },
             {
               urls: 'turn:openrelay.metered.ca:80',
@@ -1449,7 +1466,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             
           ],
           sdpSemantics: 'unified-plan',
-          iceTransportPolicy: 'all' as RTCIceTransportPolicy,
+          // iceTransportPolicy is set once, above, from the "Hide my IP address
+          // in calls" setting. A second key here used to override it to 'all',
+          // which silently disabled IP hiding.
           // [4G/5G] Pre-gather 10 ICE candidates, bundle all media on one port, require RTCP mux
           bundlePolicy: 'max-bundle',
           rtcpMuxPolicy: 'require',
@@ -1474,7 +1493,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       peer.on('open', (id: string) => {
         if (destroyed) return;
-        console.log('[Ledger Chat:PeerJS] Open â€” PeerID:', id, '(key:', thisKey, ')');
+        console.log('[Ledger Chat:PeerJS] Open — PeerID:', id, '(key:', thisKey, ')');
         // Sync both state and ref immediately so calls can start without waiting
         setMyPeerId(id);
         myPeerIdRef.current = id;
@@ -1482,7 +1501,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         peerInstanceRef.current = peer;
       });
 
-      // â”€â”€â”€ Universal Incoming Call Handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ─── Universal Incoming Call Handler ─────────────────────────────────
       // With the deterministic architecture, EITHER party can receive an incoming
       // PeerJS connection. The Caller dials the receiver directly, so the receiver
       // gets peer.on('call') in 'ringing' state BEFORE they have a localStream.
@@ -1492,7 +1511,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         console.log('[Ledger Chat:PeerJS] Incoming PeerJS connection from:', connection.peer, '| callState:', callStateRef.current);
 
         if (callStateRef.current === 'ringing' || callStateRef.current === 'idle') {
-          // Receiver gets the call before clicking Answer â€” store it for answerCall()
+          // Receiver gets the call before clicking Answer — store it for answerCall()
           // If we were idle, the WebRTC packet beat the XMTP packet. Trigger ringing.
           console.log('[Ledger Chat:PeerJS] Storing pending connection for answerCall()');
           pendingConnectionRef.current = connection;
@@ -1517,13 +1536,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           (callStateRef.current === 'calling' || callStateRef.current === 'connecting')
           && localStreamRef.current
         ) {
-          // Caller gets a reverse-dial from receiver â€” answer immediately
+          // Caller gets a reverse-dial from receiver — answer immediately
           connection.answer(localStreamRef.current!);
           setActiveConnection(connection);
           setCallState('active');
           if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
           connection.on('stream', (rStream: MediaStream) => {
-            console.log('[Ledger Chat:PeerJS] Got remote stream â€” ACTIVE');
+            console.log('[Ledger Chat:PeerJS] Got remote stream — ACTIVE');
             setRemoteStream(rStream);
             setCallState('active');
             stopRingtone();
@@ -1538,7 +1557,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           connection.on('close', () => performEndCallRef.current());
           connection.on('error', () => performEndCallRef.current());
         } else {
-          console.warn('[Call] Received peer.on(call) in unexpected state:', callStateRef.current, 'â€” rejecting.');
+          console.warn('[Call] Received peer.on(call) in unexpected state:', callStateRef.current, '— rejecting.');
           connection.close();
         }
       });
@@ -1548,11 +1567,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         if (err.type === 'unavailable-id') {
           // The ID is taken by a lingering previous session (happens when quickly
           // reconnecting). Re-init with a suffix after a short delay.
-          console.warn('[Ledger Chat:PeerJS] ID unavailable â€” re-init with session suffix');
+          console.warn('[Ledger Chat:PeerJS] ID unavailable — re-init with session suffix');
           schedulePeerReinit(1000);
         } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error' || err.type === 'socket-closed') {
-          // Network error â€” re-init with full backoff
-          console.warn('[Ledger Chat:PeerJS] Network error â€” scheduling re-init');
+          // Network error — re-init with full backoff
+          console.warn('[Ledger Chat:PeerJS] Network error — scheduling re-init');
           schedulePeerReinit(2000);
         } else if (err.type === 'peer-unavailable') {
           // Remote peer is not connected on their base PeerID.
@@ -1560,15 +1579,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           // and will reverse-dial us back via the XMTP __CALL_OFFER__ signal.
           // The 60-second caller timeout will clean up if they truly don't connect.
           if (callStateRef.current === 'calling') {
-            console.warn('[Ledger Chat:PeerJS] Peer unavailable on base ID â€” waiting for XMTP reverse-dial fallback...');
+            console.warn('[Ledger Chat:PeerJS] Peer unavailable on base ID — waiting for XMTP reverse-dial fallback...');
           }
         }
         // Other errors (e.g. 'disconnected') are handled by peer.on('disconnected')
       });
 
       peer.on('disconnected', () => {
-        console.warn('[Ledger Chat:PeerJS] Disconnected â€” destroying and scheduling re-init');
-        // [FIX] Don't call peer.reconnect() â€” it can hang indefinitely on mobile
+        console.warn('[Ledger Chat:PeerJS] Disconnected — destroying and scheduling re-init');
+        // [FIX] Don't call peer.reconnect() — it can hang indefinitely on mobile
         // (iOS WKWebView, Android WebView) if the server connection is fully lost.
         // Instead, destroy and trigger a clean re-init via peerInitKey.
         schedulePeerReinit(1500);
@@ -1607,13 +1626,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
 
 
-  // â”€â”€â”€ XMTP Signaling Listener â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── XMTP Signaling Listener ─────────────────────────────────────────────────
   // Monitors XMTP messages for call control signals.
   // Protocol:
-  //   CALL_OFFER:<callerPeerId>:<callType>   â€” caller announces intent + its PeerID
-  //   CALL_ANSWER:<receiverPeerId>           â€” receiver sends back its PeerID
-  //   CALL_DECLINE                           â€” receiver declines
-  //   CALL_HANGUP                            â€” either party ends the call
+  //   CALL_OFFER:<callerPeerId>:<callType>   — caller announces intent + its PeerID
+  //   CALL_ANSWER:<receiverPeerId>           — receiver sends back its PeerID
+  //   CALL_DECLINE                           — receiver declines
+  //   CALL_HANGUP                            — either party ends the call
   // NOTE: performEndCallRef is wired below after performEndCall is defined.
   // performEndCallRef is wired after performEndCall is defined below
   const processedSignalIds = useRef<Set<string>>(new Set());
@@ -1635,17 +1654,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (isMine) return; // ignore our own signals
     const content: string = typeof lastMsg.content === 'string' ? lastMsg.content : '';
 
-    // â”€â”€ CALL_ANSWER signal from receiver (kept for compatibility / fallback logging) â”€
+    // ── CALL_ANSWER signal from receiver (kept for compatibility / fallback logging) ─
     // [ARCH-FIX] The caller NO LONGER waits for CALL_ANSWER to dial.
     // The caller already called peerInstance.call() immediately in startCall().
     // This signal is kept for potential future use (e.g., logging, compatibility with
     // older clients) but does NOT trigger any WebRTC action in the new architecture.
     if (content.startsWith('__CALL_ANSWER__:')) {
       processedSignalIds.current.add(lastMsg.id);
-      console.log('[Ledger Chat:Signal] CALL_ANSWER (ack) received â€” WebRTC already initiated directly.');
+      console.log('[Ledger Chat:Signal] CALL_ANSWER (ack) received — WebRTC already initiated directly.');
     }
 
-    // â”€â”€ CALL_DECLINE: Callee declined â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── CALL_DECLINE: Callee declined ─────────────────────────────────────────
     if (content === '__CALL_DECLINE__') {
       processedSignalIds.current.add(lastMsg.id);
       console.log('[Ledger Chat:Signal] Decline received');
@@ -1655,7 +1674,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       }
     }
 
-    // â”€â”€ CALL_HANGUP: Remote party hung up â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── CALL_HANGUP: Remote party hung up ─────────────────────────────────────
     if (content === '__CALL_HANGUP__') {
       processedSignalIds.current.add(lastMsg.id);
       console.log('[Ledger Chat:Signal] Hangup received');
@@ -1669,7 +1688,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
-  // â”€â”€â”€ WebRTC DOM Binding for Mobile (iOS/Android) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── WebRTC DOM Binding for Mobile (iOS/Android) ───────────────────────────
   // Ensure video elements receive the stream once React actually mounts them
   useEffect(() => {
     if (myVideoRef.current && localStream && myVideoRef.current.srcObject !== localStream) {
@@ -1687,7 +1706,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [callState, remoteStream]);
 
-  // â”€â”€â”€ WebRTC Advanced Telemetry & Telegram-Parity Visuals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── WebRTC Advanced Telemetry & Telegram-Parity Visuals ─────────────────
   
   // Audio Visualizer for Audio Calls
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -1736,7 +1755,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
   }, [callState, remoteStream]);
 
-  // Network Quality Monitor (RAF-based â€” saves battery on mobile vs setInterval)
+  // Network Quality Monitor (RAF-based — saves battery on mobile vs setInterval)
   useEffect(() => {
     if (callState !== 'active' || !activeConnectionRef.current) {
       setNetworkQuality('good');
@@ -1777,7 +1796,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     return () => cancelAnimationFrame(rafId);
   }, [callState]);
 
-  // â”€â”€â”€ performEndCall: Universal cleanup â”€â”€ uses refs to avoid stale closures â”€â”€
+  // ─── performEndCall: Universal cleanup ── uses refs to avoid stale closures ──
   // AUDIT FIX: All mutable values accessed via refs, not closure captures.
   // This ensures that when called from async contexts (timeouts, PeerJS events),
   // we always clean up the CURRENT stream/connection, not a stale captured one.
@@ -1790,7 +1809,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const performEndCall = useCallback(() => {
     stopRingtone();
     if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
-    // Use refs â€” never captured closure values
+    // Use refs — never captured closure values
     const ls = localStreamRef.current;
     const rs = remoteStreamRef.current;
     const ac = activeConnectionRef.current;
@@ -1826,7 +1845,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const performEndCallRef = useRef<() => void>(performEndCall);
   useEffect(() => { performEndCallRef.current = performEndCall; }, [performEndCall]);
 
-  // â”€â”€â”€ startCall: Initiates an outgoing call â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── startCall: Initiates an outgoing call ───────────────────────────────────
   // ANDROID FIX: This function MUST be called directly from a user-gesture handler
   // (onClick). Android Chrome enforces that getUserMedia() is only callable from
   // a trusted user-gesture context. Any async indirection breaks this.
@@ -1843,12 +1862,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
     const livePeer = peerInstanceRef.current;
     if (!livePeer || livePeer.destroyed) {
-      // Peer not yet ready â€” destroy stale ref and schedule re-init via peerInitKey
-      toast.error("WebRTC is not ready. Reconnectingâ€¦ please try again in a moment.");
+      // Peer not yet ready — destroy stale ref and schedule re-init via peerInitKey
+      toast.error("WebRTC is not ready. Reconnecting… please try again in a moment.");
       peerInstanceRef.current = null;
       setPeerInstance(null);
       // [CRITICAL FIX] Incrementing peerInitKey triggers the PeerJS useEffect to re-run.
-      // Without this, the useEffect only depends on [address, peerInitKey] â€” nulling
+      // Without this, the useEffect only depends on [address, peerInitKey] — nulling
       // peerInstance state alone does NOT trigger a re-run because address hasn't changed.
       const nextKey = peerInitKeyRef.current + 1;
       peerInitKeyRef.current = nextKey;
@@ -1856,13 +1875,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       return;
     }
 
-    // [ARCH-FIX] Derive receiver PeerID deterministically â€” no XMTP round-trip needed
+    // [ARCH-FIX] Derive receiver PeerID deterministically — no XMTP round-trip needed
     const receiverPeerId = derivePeerId(targetPeer);
     console.log('[Call:ARCH-FIX] Derived receiver PeerID:', receiverPeerId, 'for address:', targetPeer);
 
     let stream: MediaStream | null = null;
     try {
-      // â”€â”€â”€ ROBUST SINGLE-CALL WEBRTC (Android Fix) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ─── ROBUST SINGLE-CALL WEBRTC (Android Fix) ─────────────────────────
       // We must NEVER use nested try-catch fallbacks for getUserMedia on Android.
       // If the first request fails, the transient user-activation token is lost,
       // and all subsequent fallbacks will automatically throw NotAllowedError.
@@ -1885,7 +1904,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       setCallState('calling');
       if (myVideoRef.current) myVideoRef.current.srcObject = stream;
 
-      // â”€â”€â”€ DETERMINISTIC CALL ARCHITECTURE (Caller Side) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ─── DETERMINISTIC CALL ARCHITECTURE (Caller Side) ────────────────────
       // With deterministic PeerIDs, the Caller dials the receiver DIRECTLY using
       // derivePeerId(activePeer). We also send CALL_OFFER via XMTP so the receiver's
       // UI shows the ringing screen. The CALL_OFFER carries the caller's stable PeerID.
@@ -1895,10 +1914,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       const myStablePeerId = myPeerIdRef.current || derivePeerId(address!);
       executeSend(`__CALL_OFFER__:${myStablePeerId}:${type}`).catch(() => {});
 
-      // Directly dial the receiver via PeerJS â€” no XMTP round-trip needed
+      // Directly dial the receiver via PeerJS — no XMTP round-trip needed
       const livePeerForStart = peerInstanceRef.current;
       if (!livePeerForStart || livePeerForStart.destroyed) {
-        toast.error('WebRTC lost connection â€” please retry.');
+        toast.error('WebRTC lost connection — please retry.');
         performEndCallRef.current();
         return;
       }
@@ -1909,7 +1928,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         if (outConn) {
           setActiveConnection(outConn);
           outConn.on('stream', (rStream: MediaStream) => {
-            console.log('[Call:PeerJS] Caller received remote stream â€” ACTIVE');
+            console.log('[Call:PeerJS] Caller received remote stream — ACTIVE');
             setRemoteStream(rStream);
             setCallState('active');
             stopRingtone();
@@ -1928,7 +1947,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       // Caller timeout: if no stream arrives in 60s, clean up
       callTimeoutRef.current = setTimeout(() => {
         if (callStateRef.current === 'calling') {
-          toast.error('No answer â€” call timed out.');
+          toast.error('No answer — call timed out.');
           performEndCallRef.current();
         }
       }, 60000);
@@ -1952,8 +1971,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   };
 
-  // â”€â”€â”€ answerCall: Receiver accepts incoming call â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // ANDROID FIX: Called directly from the "Answer" onClick â€” preserves user-gesture
+  // ─── answerCall: Receiver accepts incoming call ──────────────────────────────
+  // ANDROID FIX: Called directly from the "Answer" onClick — preserves user-gesture
   // context required by Android Chrome for getUserMedia.
   const answerCall = async () => {
     stopRingtone();
@@ -1966,7 +1985,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
     let stream: MediaStream | null = null;
     try {
-      // â”€â”€â”€ ROBUST SINGLE-CALL WEBRTC (Android Fix) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ─── ROBUST SINGLE-CALL WEBRTC (Android Fix) ─────────────────────────
       // We must NEVER use nested try-catch fallbacks for getUserMedia on Android.
       // If the first request fails, the transient user-activation token is lost,
       // and all subsequent fallbacks will automatically throw NotAllowedError.
@@ -1984,7 +2003,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       setLocalStream(stream);
       if (myVideoRef.current) myVideoRef.current.srcObject = stream;
 
-      // â”€â”€ AUDIO AUTOPLAY UNLOCK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── AUDIO AUTOPLAY UNLOCK ─────────────────────────────────────────────────
       // Browsers require a user-gesture (the 'Answer' button click) to allow autoplay.
       // Create a silent AudioContext with the gesture to unlock audio on iOS/Android.
       try {
@@ -1996,15 +2015,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         src.start(0);
         await unlockCtx.resume();
         unlockCtx.close();
-      } catch { /* ignore â€” best effort */ }
+      } catch { /* ignore — best effort */ }
 
       setCallState('connecting');
       toast.success('Answering call...');
 
-      // â”€â”€â”€ DETERMINISTIC ANSWER ARCHITECTURE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ─── DETERMINISTIC ANSWER ARCHITECTURE ────────────────────────────────
       // PRIMARY PATH: If the Caller dialed us directly (deterministic architecture),
       // peer.on('call') already stored the pending connection in pendingConnectionRef.
-      // We answer THAT connection with our stream â€” no outbound call needed.
+      // We answer THAT connection with our stream — no outbound call needed.
       //
       // FALLBACK PATH: If pendingConnectionRef is empty (e.g., old session, XMTP-only),
       // we make an outbound call to the Caller's deterministic PeerID.
@@ -2016,7 +2035,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         pendingConn.answer(stream);
         setActiveConnection(pendingConn);
         pendingConn.on('stream', (rStream: MediaStream) => {
-          console.log('[Call:PeerJS] Receiver got remote stream â€” ACTIVE');
+          console.log('[Call:PeerJS] Receiver got remote stream — ACTIVE');
           setRemoteStream(rStream);
           setCallState('active');
           stopRingtone();
@@ -2031,7 +2050,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         pendingConn.on('error', () => performEndCallRef.current());
       } else {
         // FALLBACK: Outbound call to Caller's deterministic PeerID
-        console.log('[Call:answerCall] No pending connection â€” falling back to outbound dial');
+        console.log('[Call:answerCall] No pending connection — falling back to outbound dial');
         const targetPeerId = remotePeerIdRef.current || (activePeer ? derivePeerId(activePeer) : null);
         if (!targetPeerId) {
           toast.error('Cannot answer: caller identity unknown. Please wait and retry.');
@@ -2057,7 +2076,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         
         setActiveConnection(conn);
         conn.on('stream', (rStream: MediaStream) => {
-          console.log('[Call:PeerJS] Receiver got remote stream (fallback) â€” ACTIVE');
+          console.log('[Call:PeerJS] Receiver got remote stream (fallback) — ACTIVE');
           setRemoteStream(rStream);
           setCallState('active');
           if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
@@ -2078,7 +2097,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       // Failsafe: if remote stream does not arrive within 20s, abort
       callTimeoutRef.current = setTimeout(() => {
         if (callStateRef.current === 'connecting') {
-          toast.error('Call timed out â€” no media stream received.');
+          toast.error('Call timed out — no media stream received.');
           performEndCallRef.current();
         }
       }, 30000);
@@ -2124,7 +2143,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   };
 
-  // â”€â”€â”€ declineCall: Receiver declines â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── declineCall: Receiver declines ─────────────────────────────────────────
   const declineCall = useCallback(async () => {
     try {
       if (executeSendRef.current) await executeSendRef.current('__CALL_DECLINE__');
@@ -2143,7 +2162,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [performEndCall, address, activePeer]);
 
-  // â”€â”€â”€ endCall: Either party hangs up â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── endCall: Either party hangs up ─────────────────────────────────────────
   const endCall = useCallback(async () => {
     try {
       if (executeSendRef.current) await executeSendRef.current('__CALL_HANGUP__');
@@ -2162,7 +2181,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [performEndCall, address, activePeer, callType, callDurationSeconds]);
 
-  // â”€â”€â”€ toggleMic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── toggleMic ───────────────────────────────────────────────────────────────
   const toggleMic = useCallback(() => {
     if (!localStream) return;
     const nextMuted = !isMicMuted;
@@ -2170,7 +2189,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setIsMicMuted(nextMuted);
   }, [localStream, isMicMuted]);
 
-  // â”€â”€â”€ toggleCamera â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── toggleCamera ────────────────────────────────────────────────────────────
   const toggleCamera = useCallback(() => {
     if (!localStream) return;
     const nextOff = !isCamOff;
@@ -2178,7 +2197,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setIsCamOff(nextOff);
   }, [localStream, isCamOff]);
 
-  // â”€â”€â”€ toggleVoiceIsolation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── toggleVoiceIsolation ────────────────────────────────────────────────────────
   const toggleVoiceIsolation = useCallback(async () => {
     if (!localStreamRef.current || !activeConnectionRef.current) return;
     const nextIsolation = !voiceIsolation;
@@ -2211,7 +2230,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [voiceIsolation, isMicMuted]);
 
-  // â”€â”€â”€ toggleDataSaver â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── toggleDataSaver ──────────────────────────────────────────────────────────
   const toggleDataSaver = useCallback(async () => {
     if (!localStreamRef.current || !activeConnectionRef.current || callTypeRef.current !== 'video') return;
     const nextSaver = !dataSaver;
@@ -2242,7 +2261,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [dataSaver, activeCamera, isCamOff]);
 
-  // â”€â”€â”€ Hardware Media Routing (replaceTrack) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Hardware Media Routing (replaceTrack) ──────────────────────────────────
   const switchCamera = async () => {
     if (!localStreamRef.current || !activeConnectionRef.current) return;
     const newFacingMode = activeCamera === 'user' ? 'environment' : 'user';
@@ -2415,7 +2434,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }
 
         try {
-          // Convert blob to base64 data URL â€” sent over already-encrypted XMTP channel
+          // Convert blob to base64 data URL — sent over already-encrypted XMTP channel
           const reader = new FileReader();
           reader.onloadend = async () => {
             const dataUrl = reader.result as string; // data:audio/webm;base64,...
@@ -2460,7 +2479,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     } catch (err) {
       console.warn('[Voice] Microphone access denied or unavailable:', err);
     }
-  // [BUG FIX] Added 'address' to dependency array â€” was causing stale closure where
+  // [BUG FIX] Added 'address' to dependency array — was causing stale closure where
   // audio messages were sent with null/undefined address after wallet reconnect
   }, [isRecording, activePeer, client, address]);
 
@@ -2520,7 +2539,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             }
           }
           
-          // FETCH PENDING MESSAGES (OFFLINE ROUTING) â€” works for both HL and WalletConnect users
+          // FETCH PENDING MESSAGES (OFFLINE ROUTING) — works for both HL and WalletConnect users
           // [BUG FIX] Route is /api/chat/queue (not /api/chat/pending).
           // Auth via x-web3-address header. Response shape: { messages: [...] } not { pending: [...] }.
           // Timestamp field is createdAt (PendingChatMessage schema), not timestamp.
@@ -2556,6 +2575,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                        conversationId: `dm-${peer}`,
                        status: 'delivered' as const,
                        fromPeer: p.sender.toLowerCase() !== address.toLowerCase(),
+                       // Came from the server queue, not XMTP: not end to end encrypted.
+                       viaServer: true,
                      };
 
                      await chatDB.saveMessage(address, peer, offlineMsg).catch(() => {});
@@ -2569,7 +2590,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                      if (activePeerRef.current?.toLowerCase() === peer) {
                        setMessages(prev => {
                          if (prev.some(m => m.id === offlineMsg.id)) return prev;
-                         return [...prev, offlineMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
+                         return [...prev, offlineMsg].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
                        });
                      }
                  }
@@ -2732,7 +2753,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   useEffect(() => {
     // Aggressive Auto-Init: Trigger for all connected users including mobile.
-    // Skip email users â€” they don't have a wallet signer for XMTP.
+    // Skip email users — they don't have a wallet signer for XMTP.
     if (isConnected && address && !isEmailUser && !client && !initInFlight.current && !initError) {
       initClient();
       // [SAFETY TIMEOUT] If init hasn't resolved in 45s, reset state to unblock the UI
@@ -2753,7 +2774,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (!address) return;
     localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: arr }));
     
-    // Also backup to server â€” send x-web3-address so WalletConnect users are accepted
+    // Also backup to server — send x-web3-address so WalletConnect users are accepted
     fetch('/api/chat/contacts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-web3-address': address },
@@ -2790,7 +2811,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     activePeerDmIdRef.current = `dm-${activePeer.toLowerCase()}`;
     peerToConvId.current.set(activePeer.toLowerCase(), activePeerDmIdRef.current);
     convIdToPeer.current.set(activePeerDmIdRef.current, activePeer);
-    // Reset native XMTP dm id AND peer inboxId â€” will be resolved by fetchHistorical
+    // Reset native XMTP dm id AND peer inboxId — will be resolved by fetchHistorical
     activeXmtpDmIdRef.current = null;
     activePeerInboxIdRef.current = '';
   }, [client, activePeer]);
@@ -2839,7 +2860,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   sentAtNs: dm.createdAt,
                   conversationId: `dm-${peerLower}`,
                   isMe: isMeMsg,
-                  status: 'delivered'
+                  status: 'delivered',
+                  // Delivered by our server, not XMTP: not end to end encrypted.
+                  viaServer: true,
                 };
                 
                 // CRITICAL FIX: Persist fallback DB message to IndexedDB so it survives reloads
@@ -2860,7 +2883,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 if (isFromActivePeer) {
                   setMessages(prev => {
                     if (prev.some(m => m.id === dmId)) return prev;
-                    return [...prev, msgObj].sort((a, b) => (a.sentAtNs ?? 0) - (b.sentAtNs ?? 0));
+                    return [...prev, msgObj].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
                   });
                 }
               }
@@ -2931,7 +2954,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     });
                     
                     if (toAppend.length === 0) return prev;
-                    return [...prev, ...toAppend].sort((a, b) => a.sentAtNs - b.sentAtNs);
+                    return [...prev, ...toAppend].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
                  });
               }
            } catch (pollErr) {
@@ -2948,15 +2971,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     syncGlobal();
     const globalPoll = setInterval(syncGlobal, 4000);
 
-    // â”€â”€â”€ GLOBAL XMTP STREAM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── GLOBAL XMTP STREAM ────────────────────────────────────────────────────
     // DEDUPLICATION CONTRACT:
     // 1. Every real XMTP message ID is registered in confirmedMsgIds on first sight.
-    // 2. If the ID is already registered â†’ skip (absolute deduplication).
-    // 3. If the message is from SELF â†’ look up the optimistic placeholder via
+    // 2. If the ID is already registered → skip (absolute deduplication).
+    // 3. If the message is from SELF → look up the optimistic placeholder via
     //    optimisticContentMap (content-keyed) and swap it atomically.
     //    This prevents the "sender sees message twice" bug caused by XMTP echoing
     //    the sender's own message back through the stream.
-    // 4. If no optimistic placeholder exists (e.g. opened in a second tab) â†’
+    // 4. If no optimistic placeholder exists (e.g. opened in a second tab) →
     //    insert normally, but only after confirming the ID is not already present.
     // Self-healing stream loop: if GroupInactive kills the stream, restart it with backoff.
     let activeAbortController: AbortController | null = null;
@@ -2989,7 +3012,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 resolvedPeerAddr = currentActivePeer || '';
               }
               
-              // Second fast path: check the global inboxIdâ†’address cache
+              // Second fast path: check the global inboxId→address cache
               if (!resolvedPeerAddr && fromPeer && msg.senderInboxId) {
                 const cached = await resolveSenderAddress(msg.senderInboxId, undefined as any);
                 if (cached) resolvedPeerAddr = cached.toLowerCase();
@@ -3054,21 +3077,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const msgConvPeer = resolvedPeerAddr || convoId || msg.senderInboxId || 'unknown';
             const realId = msg.id ?? `real-${sentAtNs}-${Math.random()}`;
 
-            // â”€â”€ ABSOLUTE DEDUPLICATION GATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── ABSOLUTE DEDUPLICATION GATE ──────────────────────────────────────
             // [CRITICAL FIX #3] On stream restart after a network drop, the stream
             // replays recent messages. Their IDs may be in confirmedMsgIds, but the
             // React state may have been wiped (e.g. peer switch + remount).
-            // Only skip if the ID is already IN React state â€” not just in the Set.
+            // Only skip if the ID is already IN React state — not just in the Set.
             if (confirmedMsgIds.current.has(realId)) {
               const alreadyInState = messagesRef.current?.some((m: any) => m.id === realId);
               if (alreadyInState) continue;
-              // ID was in dedup Set but NOT in state â€” re-insert (fall through).
+              // ID was in dedup Set but NOT in state — re-insert (fall through).
             } else {
               confirmedMsgIds.current.add(realId);
             }
             pruneConfirmedIds(); // keep Set bounded to last 2000 IDs
             pruneOptimisticMap(); // prune stale optimistic entries
-            // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ─────────────────────────────────────────────────────────────────────
 
             // Phase 2: Intercept Reactions
             if (typeof content === 'string' && content.startsWith('__REACT__')) {
@@ -3140,7 +3163,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 setMessages(prev => prev.map(m => {
                   if (typeof m.content === 'string' && m.content.startsWith('__POLL__')) {
                     // [CRITICAL FIX] Match by pollId extracted from the POLL payload,
-                    // not by m.id â€” because m.id changes when optimisticâ†’real swap happens.
+                    // not by m.id — because m.id changes when optimistic→real swap happens.
                     // Poll payload format: __POLL__<pollId>__::<question>__::<opts>
                     const pollPayloadId = m.content.replace('__POLL__', '').split('__::')[0];
                     if (pollPayloadId === targetPollId || m.id === targetPollId) {
@@ -3154,7 +3177,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               continue;
             }
 
-            // Phase 4: Intercept __EDIT__ â€” remote peer edited a message
+            // Phase 4: Intercept __EDIT__ — remote peer edited a message
             if (typeof content === 'string' && content.startsWith('__EDIT__')) {
               const editParts = content.replace('__EDIT__', '').split('__::');
               if (editParts.length >= 2) {
@@ -3179,7 +3202,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   setActivePeer(msgConvPeer);
                   setConversations(prev => {
                     if (!prev.find(c => c.peerAddress.toLowerCase() === msgConvPeer.toLowerCase())) {
-                      const newConv = { peerAddress: msgConvPeer, lastMessage: 'ðŸ“ž Incoming call...', lastAt: new Date() };
+                      const newConv = { peerAddress: msgConvPeer, lastMessage: '📞 Incoming call...', lastAt: new Date() };
                       const next = [newConv, ...prev];
                       persistToLocal(next);
                       return next;
@@ -3288,7 +3311,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
             if (belongsToActive) {
 
-              // â”€â”€ CATCH-ALL SIGNAL GUARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // ── CATCH-ALL SIGNAL GUARD ───────────────────────────────────────
               // Signals that were not caught by earlier phases (e.g. __CALL_DECLINE__,
               // __CALL_HANGUP__, __READ__, __VOTE__) must NOT be inserted as chat bubbles.
               // The render filter is a secondary defence; this is the primary one.
@@ -3298,7 +3321,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 mappedContent.startsWith('__VOTE__') ||
                 false /* __PAYMENT__ bubbles are rendered */
               )) {
-                // Signal consumed â€” do not insert into message list
+                // Signal consumed — do not insert into message list
                 continue;
               }
 
@@ -3319,19 +3342,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 if (prev.some(m => m.id === realId)) return prev;
 
                 if (!fromPeer) {
-                  // â”€â”€ OWN MESSAGE ECHO: atomic optimistic swap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                  // ── OWN MESSAGE ECHO: atomic optimistic swap ──────────────────
                   // Strategy 1: look up by content key in optimisticContentMap
                   const knownOptId = optimisticContentMap.current.get(content);
                   if (knownOptId) {
-                    optimisticContentMap.current.delete(content); // consume the entry â€” key is the raw echoed content
+                    optimisticContentMap.current.delete(content); // consume the entry — key is the raw echoed content
                     const idx = prev.findIndex(m => m.id === knownOptId);
                     if (idx !== -1) {
                       const next = [...prev];
                       next[idx] = mappedMsg; // replace placeholder with confirmed msg
-                      return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
+                      return next.sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
                     }
                   }
-                  // Strategy 2: fallback â€” find any optimistic with identical content
+                  // Strategy 2: fallback — find any optimistic with identical content
                   const optIdx = prev.findIndex(
                     m => m.id.startsWith('optimistic-') &&
                          m.content === content
@@ -3339,7 +3362,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   if (optIdx !== -1) {
                     const next = [...prev];
                     next[optIdx] = mappedMsg;
-                    return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
+                    return next.sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
                   }
                   // Strategy 3: check if it's a transformed message (like __BURN__)
                   const burnIdx = prev.findIndex(
@@ -3351,14 +3374,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   if (burnIdx !== -1) {
                     const next = [...prev];
                     next[burnIdx] = mappedMsg;
-                    return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
+                    return next.sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
                   }
-                  // Strategy 4: no optimistic found (e.g. second tab) â€” insert if not duplicate
+                  // Strategy 4: no optimistic found (e.g. second tab) — insert if not duplicate
                   if (prev.some(m => m.id === mappedMsg.id)) return prev;
-                  return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
+                  return [...prev, mappedMsg].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
                 }
 
-                // â”€â”€ PEER MESSAGE: straightforward insert â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                // ── PEER MESSAGE: straightforward insert ──────────────────────────
                 if (fromPeer && !content.startsWith('__')) {
                   // We are focused on this chat, so send a read receipt!
                   if (!document.hidden) {
@@ -3378,7 +3401,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   }
                 }
                 if (prev.some(m => m.id === mappedMsg.id)) return prev;
-                return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
+                return [...prev, mappedMsg].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
               });
 
               // Update conversation preview
@@ -3458,7 +3481,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             }
             try { await client.conversations.sync(); } catch {}
             await new Promise(resolve => setTimeout(resolve, backoffMs));
-            continue; // restart the while loop â†’ restart stream
+            continue; // restart the while loop → restart stream
           }
           break; // only exit if cancelled
         }
@@ -3492,7 +3515,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             setMessages(prev => {
               const existingIds = new Set(prev.map(m => m.id));
               const newMsgs = localMsgs.filter(m => !existingIds.has(m.id));
-              return [...prev, ...newMsgs].sort((a, b) => a.sentAtNs - b.sentAtNs);
+              return [...prev, ...newMsgs].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
             });
           }
         } catch (dbErr) {
@@ -3507,7 +3530,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         (window as any).__xmtp_peer = activePeer;
 
         // Capture the native XMTP conversation ID so the stream loop can
-        // route messages correctly even when inboxIdâ†’address resolution fails.
+        // route messages correctly even when inboxId→address resolution fails.
         try {
           if (raw && raw.length > 0) {
             // BEST SOURCE OF TRUTH: The actual messages fetched
@@ -3515,7 +3538,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const convoId = firstMsg.conversation?.id || firstMsg.conversationId || firstMsg.groupId;
             if (convoId) {
               activeXmtpDmIdRef.current = convoId;
-              // Cache for stream routing: convoId â†’ peer eth address
+              // Cache for stream routing: convoId → peer eth address
               convIdToPeer.current.set(convoId, activePeer.toLowerCase());
             }
             
@@ -3585,6 +3608,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    conversationId: `dm-${activePeer.toLowerCase()}`,
                    isMe: false,
                    fromPeer: true,
+                   viaServer: true,
                 }));
               
               if (pendingServer.length > 0) {
@@ -3627,7 +3651,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
              return true;
           });
 
-        const combined = [...rawMappedMsgs, ...pendingServer].sort((a, b) => a.sentAtNs - b.sentAtNs);
+        const combined = [...rawMappedMsgs, ...pendingServer].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
         const mappedMsgs: any[] = [];
         const reactions: Record<string, Record<string, string[]>> = {};
         const readReceipts = new Set<string>();
@@ -3670,9 +3694,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             latestPinnedId = content.replace('__PIN__', '');
           } else if (typeof content === 'string' && content.startsWith('__REVOKE__')) {
             revokedIds.add(content.replace('__REVOKE__', ''));
-          // [BUG FIX] Skip __VOTE__ signals from main message list â€” they are control signals only
+          // [BUG FIX] Skip __VOTE__ signals from main message list — they are control signals only
           } else if (typeof content === 'string' && content.startsWith('__VOTE__')) {
-            // Already processed above â€” skip rendering as bubble
+            // Already processed above — skip rendering as bubble
           } else if (typeof content === 'string' && !content.startsWith('__CALL_')) {
              // [CRITICAL FIX] senderInboxId is an XMTP hash, not an eth address!
              // To know if it's from the peer, check if it is NOT from us.
@@ -3722,17 +3746,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           }
         }
 
-        // â”€â”€ POLL MERGE WITH FULL DEDUPLICATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── POLL MERGE WITH FULL DEDUPLICATION ───────────────────────────────
         // Register all newly fetched real IDs in confirmedMsgIds so the stream
         // cannot double-insert them when the echo arrives after the poll.
         processedMsgs.forEach((m: any) => confirmedMsgIds.current.add(m.id));
         
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─────────────────────────────────────────────────────────────────────
         // CRITICAL FIX: PURELY ADDITIVE MERGE
-        // We NEVER replace the message list â€” we only add messages not yet present.
+        // We NEVER replace the message list — we only add messages not yet present.
         // This prevents poll failures (empty array from XMTP) from wiping optimistic
         // messages or stream-received messages that haven't been confirmed yet.
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─────────────────────────────────────────────────────────────────────
         setMessages(prev => {
           const activeId = `dm-${activePeer.toLowerCase()}`;
           
@@ -3751,10 +3775,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             newConfirmed = newConfirmed.filter((m: any) => m.sentAtNs > clearTsNs);
           }
           
-          // â”€â”€ KEY GUARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          // ── KEY GUARD ──────────────────────────────────────────────────────
           // If the poll returned NOTHING new, return prev UNCHANGED.
           // This is what prevents an empty XMTP response from wiping all messages.
-          // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          // ──────────────────────────────────────────────────────────────────
           if (newConfirmed.length === 0) return prev;
           
           // For each NEW confirmed message, find and remove its optimistic twin
@@ -3784,7 +3808,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           
           // Drop only the replaced optimistic twins, keep everything else
           const base = prev.filter(m => !optimisticToRemove.has(m.id));
-          const finalMessages = [...base, ...newConfirmed].sort((a, b) => a.sentAtNs - b.sentAtNs);
+          const finalMessages = [...base, ...newConfirmed].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
           
           // Save all new confirmed messages to IndexedDB
           if (newConfirmed.length > 0) {
@@ -3831,7 +3855,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
   }, [client, activePeer, address]);
 
-  // [BUG FIX] Separate flag for opening a new conversation â€” previously used the shared
+  // [BUG FIX] Separate flag for opening a new conversation — previously used the shared
   // 'sending' flag, which caused executeSend to silently abort the user's first message
   // because (!isSystemSignal && sending) returned true while the peer lookup was in-flight.
   const [isStartingConversation, setIsStartingConversation] = useState(false);
@@ -3943,17 +3967,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           id: `bot-cmd-${Date.now()}`,
           senderInboxId: (client as any)?.inboxId || '',
           content: content,
-          sentAtNs: Date.now(),
+          sentAtNs: Date.now() * 1_000_000,
           conversationId: `dm-${activePeer?.toLowerCase()}`
         };
         const botMsg = {
           id: `bot-${Date.now()}`,
           senderInboxId: '__bot__',
-          content: `ðŸ¤– ${botResponse}`,
+          content: `🤖 ${botResponse}`,
           sentAtNs: Date.now() + 1,
           conversationId: `dm-${activePeer?.toLowerCase()}`
         };
-        setMessages((prev: any[]) => [...prev, cmdMsg, botMsg].sort((a, b) => a.sentAtNs - b.sentAtNs));
+        setMessages((prev: any[]) => [...prev, cmdMsg, botMsg].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b)));
         setMessage('');
         setShowBotSuggestions(false);
         return; 
@@ -4001,7 +4025,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       else if (timer === '1 week') finalContent = `__BURN_604800__::${finalContent}`;
     }
 
-    // â”€â”€ Messages are 100% free â€” no QD deduction per message (Axel strategy) â”€â”€
+    // ── Messages are 100% free — no QD deduction per message (Axel strategy) ──
     // Chat must always be free. QDs are only for optional premium features.
     // Rate limiting is handled by the checkRateLimit() call above.
 
@@ -4013,7 +4037,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
     try {
       if (!isReaction) {
-        // â”€â”€â”€ OPTIMISTIC INSERT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─── OPTIMISTIC INSERT ────────────────────────────────────────────────────
         // Register the content in the map BEFORE inserting, so the stream echo
         // can find and replace this optimistic message atomically when it arrives.
         optimisticContentMap.current.set(finalContent, optimisticId); // FIX: must match what XMTP echoes back
@@ -4034,10 +4058,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           senderInboxId: client?.inboxId || '',
           content: displayContent,
           burnAtNs,
-          sentAtNs: Date.now(),
+          sentAtNs: Date.now() * 1_000_000,
           conversationId: `dm-${activePeer.toLowerCase()}`
         };
-        setMessages(prev => [...prev, optimisticMsg].sort((a, b) => a.sentAtNs - b.sentAtNs));
+        setMessages(prev => [...prev, optimisticMsg].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b)));
 
         // Clear typing indicator immediately
         stopTypingSignal();
@@ -4073,7 +4097,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         toast.info("You are offline. Message queued to outbox.");
       }
 
-      // ALWAYS send via XMTP / offline queue â€” works both online AND offline.
+      // ALWAYS send via XMTP / offline queue — works both online AND offline.
       // sendMessage() handles: XMTP retries, fallback to DB offline queue, and
       // guarantees delivery when the recipient opens Ledger Chat.
       await sendMessage(client, activePeer, finalContent, address);
@@ -4122,11 +4146,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   };
 
-  // Wire the always-fresh ref â€” this is read by the offline outbox flush event listener
+  // Wire the always-fresh ref — this is read by the offline outbox flush event listener
   // Using a ref avoids stale closures across render cycles (production-critical for scale)
   executeSendRef.current = executeSend;
 
-  // â”€â”€â”€ Hito 4: Link Preview Detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Hito 4: Link Preview Detection ─────────────────────────────────────
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   
   // Detect link in input and fetch preview metadata
@@ -4149,7 +4173,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     return () => clearTimeout(t);
   }, [inputText, detectLinkPreview]);
 
-  // â”€â”€â”€ Hito 4: GIF Search (Proxy via internal API) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Hito 4: GIF Search (Proxy via internal API) ────────────────────────────────
   const searchGifs = useCallback(async (q: string) => {
     if (!q.trim()) { setGifResults([]); return; }
     try {
@@ -4171,7 +4195,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     return () => clearTimeout(t);
   }, [gifSearch, searchGifs]);
 
-  // â”€â”€â”€ Hito 4: Scheduled Messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Hito 4: Scheduled Messages ──────────────────────────────────────────
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -4201,10 +4225,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   };
 
-  // â”€â”€â”€ Live Location: watchPosition-based real-time sharing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Live Location: watchPosition-based real time sharing ───────────────────
   const startLiveLocation = useCallback(() => {
     if (liveLocationWatchId !== null) {
-      // Already tracking â€” stop it
+      // Already tracking — stop it
       navigator.geolocation.clearWatch(liveLocationWatchId);
       setLiveLocationWatchId(null);
       setIsLiveLocationActive(false);
@@ -4236,7 +4260,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
     setLiveLocationWatchId(watchId);
     setIsLiveLocationActive(true);
-    toast.success('Live location started â€” sharing position');
+    toast.success('Live location started — sharing position');
 
     // Auto-stop after 15 minutes
     setTimeout(() => {
@@ -4251,12 +4275,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     e.preventDefault();
     if (!inputText.trim()) return;
     setSendAnimKey(k => k + 1);
-    // â”€â”€ [FASE 16: Rate-Limit Guard] â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── [FASE 16: Rate-Limit Guard] ──────────────────────────────────────
     const now = Date.now();
     const rl = rateLimitRef.current;
     rl.timestamps = rl.timestamps.filter(t => now - t < RATE_LIMIT_WINDOW_MS);
     if (rl.timestamps.length >= RATE_LIMIT_MAX) {
-      toast.warning('Slow down â€” you are sending messages too quickly.');
+      toast.warning('Slow down — you are sending messages too quickly.');
       return;
     }
     rl.timestamps.push(now);
@@ -4274,6 +4298,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
     setInputText('');
     setLinkPreview(null);
+    if (inputRef.current) (inputRef.current as any).style.height = '44px';
     if (scheduledAt) {
       const delayMs = scheduledAt.getTime() - Date.now();
       setScheduledAt(null);
@@ -4296,7 +4321,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       const TONE_MAP: Record<string, string> = { 'hate': 'strongly dislike', 'stupid': 'not optimal', 'idiot': 'mistaken', 'kill': 'stop' };
       let softened = txt;
       Object.entries(TONE_MAP).forEach(([w, r]) => softened = softened.replace(new RegExp(`\\b${w}\\b`, 'gi'), r));
-      if (softened !== txt) { txt = softened; toast('Tone softened by AI', { icon: 'ðŸ¤' }); }
+      if (softened !== txt) { txt = softened; toast('Tone softened by AI', { icon: '🤝' }); }
     }
     await executeSend(txt);
   };
@@ -4338,109 +4363,64 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, [messages.length]);
 
   if (!isBiometricallyUnlocked) {
+    // The lock screen checks the PIN with the server. It used to unlock on
+    // any key press, which made it a picture of a lock rather than a lock.
     return (
-      <div className="flex-1 flex flex-col items-center justify-center h-full bg-[#EBE5DC] text-[#1C1C1E] p-6 relative overflow-hidden">
-        <div className="z-10 flex flex-col items-center gap-6 p-8 w-full max-w-sm">
-          <div className="w-20 h-20 bg-[#25D366]/20 rounded-full flex items-center justify-center backdrop-blur-md border border-[#25D366]/30">
-            <Lock size={32} className="text-[#25D366]" />
-          </div>
-          <h2 className="text-2xl font-black tracking-tight">Ledger Locked</h2>
-          
-          {(ledgerSettings as any)?.passcode_enabled ? (
-            <div className="w-full flex flex-col items-center gap-8 mt-2">
-              <div className="flex gap-4">
-                {[0,1,2,3,4,5].map(i => (
-                  <div key={i} className="w-4 h-4 rounded-full bg-black/10" />
-                ))}
-              </div>
-              <div className="grid grid-cols-3 gap-4 w-full px-6">
-                {[1,2,3,4,5,6,7,8,9,'',0,'del'].map((key, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      if (key === 'del' || key === '') return;
-                      setIsBiometricallyUnlocked(true);
-                    }}
-                    className={"h-16 rounded-full flex items-center justify-center text-[24px] font-bold " + (key === '' ? '' : "bg-white shadow-sm hover:scale-105 active:scale-95 transition-all text-[#1C1C1E]")}
-                  >
-                    {key === 'del' ? 'X' : key}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <button 
-              onClick={() => setIsBiometricallyUnlocked(true)}
-              className="mt-4 px-8 py-4 bg-[#25D366] text-white font-bold uppercase tracking-wider text-xs rounded-full hover:bg-[#128C7E] transition-all shadow-lg"
-            >
-              Unlock Now
-            </button>
-          )}
-        </div>
-      </div>
+      <PinPrompt
+        variant="screen"
+        title="Ledger Chat is locked"
+        subtitle="Enter your PIN to open your conversations."
+        onUnlock={() => setIsBiometricallyUnlocked(true)}
+      />
     );
   }
 
   if (!isConnected) {
+    const inDesktopApp = typeof window !== 'undefined' && (window as any).electronAPI?.isElectron;
     return (
-      <div className="flex-1 flex flex-col items-center justify-start h-full bg-white p-6 pt-12 gap-6 relative overflow-hidden">
-        {/* Subtle background glow */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-black/5 blur-[100px] rounded-full pointer-events-none" />
-        
-        <h3 className="text-[28px] font-black tracking-tight text-black relative z-10">Sovereign Chat</h3>
-        <p className="text-[14px] font-medium text-[#555] text-center max-w-sm leading-relaxed relative z-10 px-4">
-          Establish an end to end encrypted connection. Your keys never leave your device.
+      <div className="flex-1 flex flex-col items-center justify-center h-full bg-white px-6 py-12 text-center">
+        <div className="w-14 h-14 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#15171c] mb-5">
+          <Wallet size={24} strokeWidth={1.8} />
+        </div>
+        <h2 className="text-[22px] font-semibold tracking-[-0.015em] text-[#15171c]">Connect your wallet</h2>
+        <p className="mt-2 text-[15px] leading-relaxed text-[#727a88] max-w-sm">
+          Ledger Chat uses your wallet as your account. Your message keys are created on this device and stay here.
         </p>
-        
-        {typeof window !== 'undefined' && (window as any).electronAPI?.isElectron && (
-          <div className="relative z-10 bg-[#F7F7F6] border border-black/10 rounded-xl p-4 max-w-sm text-center mt-2">
-            <p className="text-[12px] font-bold text-black uppercase tracking-wider mb-1">Desktop App Notice</p>
-            <p className="text-[12px] text-black/60 leading-relaxed">
-              Browser extensions cannot run inside desktop apps. Please click "Connect" and <b>scan the QR code with your mobile wallet app</b> to link your identity.
-            </p>
-          </div>
+        {inDesktopApp && (
+          <p className="mt-4 text-[14px] leading-relaxed text-[#475061] max-w-sm bg-[#f7f8fa] border border-[#e4e7ec] rounded-xl px-4 py-3 text-left">
+            Browser extensions cannot run inside the desktop app. Choose Connect and scan the code with the wallet app on your phone.
+          </p>
         )}
-
-        <button 
-          onClick={() => openAppKit()} 
-          className="relative z-10 mt-2 h-[56px] px-8 bg-black hover:bg-black/85 text-white rounded-2xl text-[14px] font-bold tracking-wide active:scale-[0.98] transition-all shadow-lg shadow-black/20 flex items-center justify-center"
+        <button
+          type="button"
+          onClick={() => openAppKit()}
+          className="mt-6 h-12 px-6 rounded-full bg-[#15171c] hover:bg-[#2b2f38] text-white text-[15px] font-medium transition-colors"
         >
-          Connect Identity
+          Connect
         </button>
       </div>
     );
   }
 
-  //  Email User â€” dedicated relay-based chat (no XMTP wallet signer needed) 
+  //  Email User — dedicated relay-based chat (no XMTP wallet signer needed) 
   if (isEmailUser) {
     const emailLabel = (address as string).replace('email_', '');
     return (
-      <div className="flex-1 flex flex-col h-full bg-white items-center justify-center p-6 gap-6 relative overflow-hidden max-w-5xl mx-auto border-x border-black/10">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-black/5 blur-[100px] rounded-full pointer-events-none" />
-        <div className="relative z-10 w-full max-w-md bg-white border border-[#EBEBEB] shadow-2xl rounded-3xl p-10 flex flex-col items-center gap-5">
-          <div className="w-16 h-16 rounded-full bg-[#f5f5f7] border border-black/10 flex items-center justify-center">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#050505" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-          </div>
-          <div className="text-center">
-            <h2 className="text-[22px] font-black tracking-tight text-black mb-2">Email Account Active</h2>
-            <p className="text-[12px] text-[#666] leading-relaxed">You are logged in as <span className="font-bold text-black">{emailLabel}</span>.</p>
-          </div>
-          <div className="w-full bg-[#f5f5f7] border border-black/10 rounded-xl p-4 text-center">
-            <p className="text-[12px] font-semibold text-[#050505] leading-relaxed">
-              Ledger Chat uses end to end encrypted wallet keys. To access encrypted messaging, connect a Web3 wallet.
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5 px-4 py-2.5 bg-[#f5f5f7] border border-black/10 rounded-xl">
-            <span className="w-2 h-2 rounded-full bg-black shadow-sm animate-pulse" />
-            <span className="text-[13px] font-mono font-bold text-[#050505]">Ledger Chat</span>
-          </div>
-          <button
-            onClick={() => openAppKit()}
-            className="w-full h-[52px] bg-black text-white rounded-2xl font-bold text-[14px] tracking-wide active:scale-[0.98] transition-all shadow-lg shadow-black/20"
-          >
-            Connect Wallet for Chat
-          </button>
+      <div className="flex-1 flex flex-col items-center justify-center h-full bg-white px-6 py-12 text-center">
+        <div className="w-14 h-14 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#15171c] mb-5">
+          <Mail size={24} strokeWidth={1.8} />
         </div>
+        <h2 className="text-[22px] font-semibold tracking-[-0.015em] text-[#15171c]">Link a wallet to start messaging</h2>
+        <p className="mt-2 text-[15px] leading-relaxed text-[#727a88] max-w-sm">
+          You are signed in as <span className="text-[#15171c] font-medium">{emailLabel}</span>. Encrypted messages are tied to a wallet, so connect one to continue.
+        </p>
+        <button
+          type="button"
+          onClick={() => openAppKit()}
+          className="mt-6 h-12 px-6 rounded-full bg-[#15171c] hover:bg-[#2b2f38] text-white text-[15px] font-medium transition-colors"
+        >
+          Connect a wallet
+        </button>
       </div>
     );
   }
@@ -4490,7 +4470,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // otherwise it briefly flickers for returning users while settings fetch.
   if (!isOnboarded) {
     if (!pxeLoaded || effectiveAddress === '0x0') {
-      return <div className="min-h-screen bg-[#F6F7F9] flex items-center justify-center font-mono text-xs text-black/30">LOADING PROTOCOL...</div>;
+      return (
+        <div className="flex-1 h-full bg-white flex flex-col items-center justify-center gap-3 text-[#727a88]" role="status">
+          <LoaderCircle size={22} strokeWidth={2} className="animate-spin" aria-hidden="true" />
+          <span className="text-[14px]">Loading your account</span>
+        </div>
+      );
     }
     return (
       <LedgerChatOnboarding 
@@ -4510,6 +4495,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           children (the two-panel layout) can resolve their height against the viewport.
           Without this, TuringShieldGate's Fragment return gives no height context. */}
       <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
+      {lockedChatPeer && (
+        <PinPrompt
+          title="This chat is locked"
+          subtitle={`Enter your PIN to open your conversation with ${getDisplayName(lockedChatPeer)}.`}
+          onCancel={() => setLockedChatPeer(null)}
+          onUnlock={() => {
+            const peer = lockedChatPeer;
+            setLockedChatPeer(null);
+            setActiveCommunity(null);
+            setActivePeer(peer);
+            setShowList(false);
+          }}
+        />
+      )}
       {/* FULL SCREEN MODALS */}
       <AnimatePresence>
         {showSettings && (
@@ -4525,10 +4524,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl relative">
             <h2 className="text-[18px] font-bold text-black mb-2">Schedule Call</h2>
             <p className="text-[13px] text-black/50 mb-6">Schedule an encrypted audio/video call. This will be added to your local sovereign calendar.</p>
-            <input type="datetime-local" className="w-full bg-[#f5f5f7] border-none rounded-xl p-4 text-[14px] font-medium text-black focus:ring-2 focus:ring-[#25D366] mb-4" />
+            <input type="datetime-local" className="w-full bg-[#f5f5f7] border-none rounded-xl p-4 text-[14px] font-medium text-black focus:ring-2 focus:ring-[#2754d6] mb-4" />
             <div className="flex gap-3">
               <button onClick={() => setShowScheduleCall(false)} className="flex-1 py-3 bg-[#f5f5f7] hover:bg-[#e5e5ea] text-black font-bold text-[14px] rounded-xl">Cancel</button>
-              <button onClick={() => { setShowScheduleCall(false); toast.success('Call scheduled locally.'); }} className="flex-1 py-3 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold text-[14px] rounded-xl">Save</button>
+              <button onClick={() => { setShowScheduleCall(false); toast.success('Call scheduled locally.'); }} className="flex-1 py-3 bg-[#2754d6] hover:bg-[#128C7E] text-white font-bold text-[14px] rounded-xl">Save</button>
             </div>
           </div>
         </div>
@@ -4551,7 +4550,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         )}
       </AnimatePresence>
 
-      {/* â”€â”€ CONTACT INFO PANEL â”€â”€ */}
+      {/* ── CONTACT INFO PANEL ── */}
       <AnimatePresence>
         {showContactInfo && activePeer && (
           <ContactInfoPanel key="contact-info-panel"
@@ -4591,7 +4590,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         )}
       </AnimatePresence>
 
-      {/* â”€â”€ FULL SETTINGS (WhatsApp parity) â”€â”€ */}
+      {/* ── FULL SETTINGS (WhatsApp parity) ── */}
       <AnimatePresence>
         {showFullSettings && (
           <LedgerSettingsFull key="ledger-settings-full"
@@ -4602,47 +4601,44 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         )}
       </AnimatePresence>
 
-    {/* â”€â”€â”€ WebRTC Ringtone Audio Element â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+    {/* ─── WebRTC Ringtone Audio Element ────────────────────────────────────── */}
     <audio ref={ringAudioRef} loop playsInline x-webkit-airplay="allow" src="/sounds/call_ringtone.mp3" style={{ display: 'none' }} />
 
-    {/* Solid white container â€” two-panel layout: sidebar (left) + chat (right) */}
+    {/* Solid white container — two-panel layout: sidebar (left) + chat (right) */}
       <div className={`relative flex flex-row flex-1 min-h-0 w-full overflow-hidden shadow-sm ${(showScanner || showMyQR || showProfile) ? 'overflow-visible' : ''}`} style={{ 
       borderRadius: isMobile ? 0 : '0',
       ...bgStyle,
       fontFamily,
     }}>
-      {/*  Sidebar: Conversation List â€” fixed width on desktop, full screen on mobile when no chat is active  */}
+      {/*  Sidebar: Conversation List — fixed width on desktop, full screen on mobile when no chat is active  */}
       <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'hidden md:flex' : 'flex') : (showList ? 'flex' : 'hidden md:flex')} w-full md:w-80 lg:w-96 flex-col border-r border-black/[0.08] bg-white shrink-0 h-full overflow-hidden`}>
 
-        {/* â”€â”€ Sidebar Header â”€â”€ */}
-        <div className="px-4 py-3 border-b border-black/[0.05] bg-[#F9F9F9] flex flex-col gap-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}>
+        {/* ── Sidebar Header ── */}
+        <div className="px-4 py-3 border-b border-[#e4e7ec] bg-white flex flex-col gap-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}>
           {/* Top row: Identity + Quick Actions */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setShowFullSettings(true)}>
-              <Avatar address={effectiveAddress} isMe={true} />
-              <div className="flex flex-col">
-                <span className="text-[15px] font-bold text-[#000000] truncate max-w-[120px]">{getDisplayName(effectiveAddress)}</span>
-                <div className="flex items-center gap-1.5 text-[10px] text-black/45 font-bold tracking-wider uppercase">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#1C1C1E]" />
-                  Humanity Ledger
-                </div>
+            <button type="button" className="flex items-center gap-2.5 min-w-0 rounded-xl -ml-1 px-1 py-1 hover:bg-[#f2f4f7] transition-colors text-left" onClick={() => setShowFullSettings(true)} aria-label="Your profile and settings">
+              <Avatar address={effectiveAddress} isMe={true} size={38} />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[15px] font-semibold text-[#15171c] truncate max-w-[140px]">{getDisplayName(effectiveAddress)}</span>
+                <span className="text-[12px] text-[#727a88] tabular-nums">{shortAddr(effectiveAddress)}</span>
               </div>
-            </div>
+            </button>
             <div className="flex items-center gap-1">
               <ZkNotificationBell />
-              <button onClick={() => setShowZkWallet(true)} className="relative w-9 h-9 rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] transition-colors" title="Shielded Aztec Wallet">
+              <button onClick={() => setShowZkWallet(true)} className="relative w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Private wallet" aria-label="Private wallet">
                 <Lock size={16} />
               </button>
-              <button onClick={() => setShowContactRequests(true)} className="relative w-9 h-9 rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] transition-colors" title="Contact Requests">
+              <button onClick={() => setShowContactRequests(true)} className="relative w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Contact requests" aria-label="Contact requests">
                 <Bell size={18} />
                 {pendingRequestCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500"></span>
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#e5484d] ring-2 ring-white" aria-label="New requests"></span>
                 )}
               </button>
-              <button onClick={() => setShowCreateGroup(true)} className="w-9 h-9 rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] transition-colors" title="New Group">
+              <button onClick={() => setShowCreateGroup(true)} className="w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="New group" aria-label="New group">
                 <Users size={18} />
               </button>
-              <button onClick={() => setShowFullSettings(true)} className="w-9 h-9 rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] transition-colors" title="Settings">
+              <button onClick={() => setShowFullSettings(true)} className="w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Settings" aria-label="Settings">
                 <Settings size={18} />
               </button>
             </div>
@@ -4651,21 +4647,22 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           {/* Search / New Chat Input */}
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center justify-center pointer-events-none">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-black/30"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <Search size={16} strokeWidth={1.9} className="text-[#a3a9b4]" aria-hidden="true" />
             </div>
             <input
               id="ledger-new-chat-input"
               type="text"
-              placeholder="Search or start new chat..."
+              placeholder="Search or start a new chat"
+              aria-label="Search or start a new chat"
               value={peerInput}
               onChange={e => setPeerInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleStartConversation()}
-              className="w-full bg-[#EFEFF0] rounded-xl pl-9 pr-3 py-2 text-[14px] text-[#000000] placeholder:text-[#8E8E93] focus:outline-none focus:ring-2 focus:ring-[#25D366]/30 transition-all"
+              className="w-full h-10 bg-[#f2f4f7] rounded-xl pl-9 pr-3 text-[15px] text-[#15171c] placeholder:text-[#a3a9b4] border border-transparent focus:outline-none focus:bg-white focus:border-[#d0d5dd] transition-colors"
             />
           </div>
         </div>
 
-        {/* â”€â”€ Crystal Glass NavBar â”€â”€ */}
+        {/* ── Crystal Glass NavBar ── */}
         <CrystalNavBar
           activeTab={(['chats','calls','contacts'].includes(sidebarTab) ? sidebarTab === 'chats' || sidebarTab === 'contacts' ? 'chats' : 'calls' : sidebarTab) as NavTab}
           onTabChange={(tab: NavTab) => {
@@ -4679,9 +4676,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           }}
         />
 
-        <div className="flex-1 overflow-y-auto flex flex-col bg-[#F2F2F7]" style={bgStyle}>
+        <div className="flex-1 overflow-y-auto flex flex-col bg-white" style={bgStyle}>
 
-          {/* â”€â”€ UPDATES TAB â”€â”€ */}
+          {/* ── UPDATES TAB ── */}
           {sidebarTab === 'updates' && (
             <LedgerUpdatesTab
               myAddress={address || ''}
@@ -4691,7 +4688,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             />
           )}
 
-          {/* â”€â”€ COMMUNITIES TAB â”€â”€ */}
+          {/* ── COMMUNITIES TAB ── */}
           {sidebarTab === 'communities' && (
             <LedgerCommunitiesTab
               myAddress={address || ''}
@@ -4703,29 +4700,33 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             />
           )}
 
-          {/* â”€â”€ CHATS TAB â”€â”€ */}
+          {/* ── CHATS TAB ── */}
           {sidebarTab === 'chats' && (
             <>
               {conversations.length > 0 && archivedPeers.size > 0 && (
                 <button
                   onClick={() => setShowArchived(!showArchived)}
-                  className="w-full text-left px-4 py-3 border-b border-black/[0.04] bg-[#F9F9F9] hover:bg-[#F2F2F7] transition-all flex items-center justify-between"
+                  className="w-full text-left px-4 h-12 border-b border-[#eff1f4] hover:bg-[#f7f8fa] transition-colors flex items-center justify-between"
+                  aria-expanded={showArchived}
                 >
-                  <div className="flex items-center gap-2 text-[#8E8E93]">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-                    <span className="text-[13px] font-semibold">Archived ({archivedPeers.size})</span>
+                  <div className="flex items-center gap-3 text-[#475061]">
+                    <Archive size={17} strokeWidth={1.8} aria-hidden="true" />
+                    <span className="text-[14px] font-medium">{showArchived ? 'Back to chats' : 'Archived'}</span>
                   </div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`text-[#8E8E93] transition-transform ${showArchived ? 'rotate-90' : ''}`}><path d="M9 18l6-6-6-6"/></svg>
+                  <span className="flex items-center gap-1 text-[13px] text-[#727a88] tabular-nums">
+                    {archivedPeers.size}
+                    <ChevronRight size={16} strokeWidth={1.9} className={`transition-transform ${showArchived ? 'rotate-90' : ''}`} aria-hidden="true" />
+                  </span>
                 </button>
               )}
               {conversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center flex-1 gap-4 p-8 text-center">
-                  <div className="w-20 h-20 rounded-full bg-[#F2F2F7] flex items-center justify-center">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#C7C7CC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  <div className="w-14 h-14 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#727a88]">
+                    <MessageSquare size={24} strokeWidth={1.7} aria-hidden="true" />
                   </div>
                   <div>
-                    <p className="text-[16px] font-bold text-[#000000] mb-1">No Conversations Yet</p>
-                    <p className="text-[13px] text-[#8E8E93] leading-relaxed">Enter a wallet address above<br/>to start your first chat.</p>
+                    <p className="text-[16px] font-semibold text-[#15171c] mb-1">No conversations yet</p>
+                    <p className="text-[14px] text-[#727a88] leading-relaxed max-w-[240px]">Search for a name or paste a wallet address above to start your first chat.</p>
                   </div>
                 </div>
               ) : (
@@ -4737,9 +4738,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               const displayLabel = contactName || shortAddr(conv.peerAddress);
               return (
                 <div key={i} className="relative w-full overflow-hidden border-b border-black/[0.04]">
-                  <div className="absolute inset-y-0 right-0 flex items-center justify-center w-20 bg-[#FF3B30] text-white text-[11px] font-semibold cursor-pointer" onClick={() => toggleArchive(conv.peerAddress)}>
+                  <div className="absolute inset-y-0 right-0 flex items-center justify-center w-20 bg-[#475061] text-white text-[12px] font-medium cursor-pointer" onClick={() => toggleArchive(conv.peerAddress)}>
                     <div className="flex flex-col items-center gap-1">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/></svg>
+                      {archivedPeers.has(conv.peerAddress.toLowerCase()) ? <ArchiveRestore size={17} strokeWidth={1.9} /> : <Archive size={17} strokeWidth={1.9} />}
                       {archivedPeers.has(conv.peerAddress.toLowerCase()) ? 'Unarchive' : 'Archive'}
                     </div>
                   </div>
@@ -4753,28 +4754,27 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   >
                     <button
                       onContextMenu={(e) => { e.preventDefault(); setSidebarMenu({ peer: conv.peerAddress, x: e.clientX, y: e.clientY }); }}
-                      onClick={() => { if (typeof window !== 'undefined' && localStorage.getItem('ledger_locked_' + conv.peerAddress.toLowerCase())) {
-                          const pin = window.prompt('This chat is locked. Enter PIN (default: 0000):');
-                          if (pin !== '0000' && pin !== '1234') {
-                            toast.error('Incorrect PIN');
-                            return;
-                          }
+                      onClick={() => {
+                        // A locked chat asks for the account PIN, checked by the server.
+                        if (typeof window !== 'undefined' && localStorage.getItem('ledger_locked_' + conv.peerAddress.toLowerCase())) {
+                          setLockedChatPeer(conv.peerAddress);
+                          return;
                         }
                         setActiveCommunity(null); setActivePeer(conv.peerAddress); setShowList(false); }}
-                      className={`w-full text-left px-4 py-3.5 transition-all ${isActive ? 'bg-[#F2F2F7]' : 'hover:bg-[#F9F9F9]'}`}
+                      className={`w-full text-left px-4 py-3 transition-colors ${isActive ? 'bg-[#f2f4f7]' : 'hover:bg-[#f7f8fa]'}`}
                     >
                       <div className="flex items-center gap-3 w-full">
                         <div className="relative shrink-0">
-                          <Avatar address={conv.peerAddress} />
+                          <Avatar address={conv.peerAddress} size={48} />
                           {peerStatus.status === 'online' && activePeer?.toLowerCase() === conv.peerAddress.toLowerCase() && (
-                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#34C759] border-2 border-white" />
+                            <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#1f9d55] border-2 border-white" aria-label="Online" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1 mb-0.5">
-                            <p className="text-[15px] font-semibold text-[#000000] truncate">{displayLabel}</p>
+                            <p className="text-[15px] font-semibold text-[#15171c] truncate">{displayLabel}</p>
                             {conv.lastMessage && (
-                              <span className="text-[12px] text-[#8E8E93] shrink-0">
+                              <span className={`text-[12px] shrink-0 tabular-nums ${conv.unreadCount ? 'text-[#1f9d55] font-medium' : 'text-[#a3a9b4]'}`}>
                                 {(() => {
                                   const t = (conv as any).lastMessageTime;
                                   if (!t) return '';
@@ -4790,10 +4790,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           </div>
                           {conv.lastMessage && (
                             <div className="flex items-center justify-between gap-2">
-                              <p className="text-[13px] text-[#8E8E93] truncate">{formatMessagePreview(conv.lastMessage)}</p>
+                              <p className="text-[14px] text-[#727a88] truncate">{formatMessagePreview(conv.lastMessage)}</p>
                               {conv.unreadCount && conv.unreadCount > 0 ? (
-                                <div className="min-w-[20px] h-5 bg-[#25D366] rounded-full flex items-center justify-center px-1.5 shrink-0">
-                                  <span className="text-[11px] font-bold text-white tabular-nums">
+                                <div className="min-w-[20px] h-5 bg-[#1f9d55] rounded-full flex items-center justify-center px-1.5 shrink-0" aria-label={`${conv.unreadCount} unread`}>
+                                  <span className="text-[11px] font-semibold text-white tabular-nums">
                                     {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                                   </span>
                                 </div>
@@ -4811,7 +4811,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             </>
           )}
 
-          {/* â”€â”€ CALLS TAB (New LedgerCallsTab) â”€â”€ */}
+          {/* ── CALLS TAB (New LedgerCallsTab) ── */}
           {sidebarTab === 'calls' && (
             <LedgerCallsTab
               callHistory={callHistoryList.map(c => ({
@@ -4835,18 +4835,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             />
           )}
 
-          {/* â”€â”€ CONTACTS TAB â”€â”€ */}
+          {/* ── CONTACTS TAB ── */}
 
           {sidebarTab === 'contacts' && (
             <div className="flex-1 overflow-y-auto">
               {localContacts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full p-8 text-center gap-4">
-                  <div className="w-20 h-20 rounded-full bg-[#F2F2F7] flex items-center justify-center">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#C7C7CC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <div className="w-14 h-14 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#727a88]">
+                    <Users size={24} strokeWidth={1.7} aria-hidden="true" />
                   </div>
                   <div>
-                    <p className="text-[16px] font-bold text-[#000000] mb-1">No Saved Contacts</p>
-                    <p className="text-[13px] text-[#8E8E93] leading-relaxed">Open a chat, then tap the<br/>person icon to save a contact.</p>
+                    <p className="text-[16px] font-semibold text-[#15171c] mb-1">No saved contacts</p>
+                    <p className="text-[14px] text-[#727a88] leading-relaxed max-w-[240px]">Open a chat and choose Save contact from its menu.</p>
                   </div>
                 </div>
               ) : localContacts.map((contact) => (
@@ -4857,10 +4857,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 >
                   <Avatar address={contact.peerAddress} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-semibold text-[#000000] truncate">{contact.name}</p>
-                    <p className="text-[13px] text-[#8E8E93] font-mono truncate">{shortAddr(contact.peerAddress)}</p>
+                    <p className="text-[15px] font-semibold text-[#15171c] truncate">{contact.name}</p>
+                    <p className="text-[13px] text-[#727a88] tabular-nums truncate">{shortAddr(contact.peerAddress)}</p>
                   </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C7C7CC" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                  <ChevronRight size={16} strokeWidth={1.9} className="text-[#a3a9b4]" aria-hidden="true" />
                 </button>
               ))}
             </div>
@@ -4882,132 +4882,103 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               }} 
             />
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center bg-[#F2F2F7] p-8 text-center">
-              <div className="w-20 h-20 rounded-3xl bg-black/5 flex items-center justify-center text-[#1C1C1E] mb-4 border border-black/[0.04]">
-                <Users size={36} />
+            <div className="flex-1 flex flex-col items-center justify-center bg-[#f7f8fa] p-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center text-[#15171c] mb-5">
+                <Users size={26} strokeWidth={1.6} aria-hidden="true" />
               </div>
-              <h3 className="text-[20px] font-bold text-[#1C1C1E]">Select a Community</h3>
-              <p className="text-[14px] text-black/40 max-w-sm mt-1">
-                Explore channels, member discussions, and the community Aztec shielded treasury.
+              <h3 className="text-[20px] font-semibold tracking-[-0.015em] text-[#15171c]">Choose a community</h3>
+              <p className="text-[15px] text-[#727a88] max-w-sm mt-1.5 leading-relaxed">
+                Pick a community on the left to see its channels, posts and members.
               </p>
             </div>
           )
         ) : activePeer ? (
           <>
-            <div className="h-[68px] px-4 border-b border-black/[0.05] flex items-center justify-between bg-white/80 backdrop-blur-xl shrink-0 z-10 shadow-[0_4px_30px_rgba(0,0,0,0.03)]">
-              <div className="flex items-center gap-3">
-                <button onClick={() => setShowList(true)} className="md:hidden p-1.5 rounded-lg hover:bg-black/5 text-black/40 text-[10px] font-black tracking-wider mr-1">
-                  â†
+            <div className="h-16 pl-2 pr-3 md:pl-4 border-b border-[#e4e7ec] flex items-center justify-between gap-2 bg-white shrink-0 z-10">
+              <div className="flex items-center gap-1 min-w-0">
+                <button type="button" onClick={() => setShowList(true)} className="md:hidden w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c]" aria-label="Back to chats">
+                  <ChevronLeft size={22} strokeWidth={1.9} />
                 </button>
-                <button onClick={() => setShowContactInfo(true)} className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity">
-                  <div className="relative">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-black text-white shadow-lg"
-                      style={{ background: `hsl(${parseInt(activePeer.slice(2, 8), 16) % 360},70%,45%)` }}
-                    >
-                      {activePeer.slice(2, 4).toUpperCase()}
-                    </div>
-                    {/* Online indicator */}
-                    <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm ${peerStatus.status === 'online' ? 'bg-black' : 'bg-gray-400'}`} />
+                <button type="button" onClick={() => setShowContactInfo(true)} className="flex items-center gap-3 min-w-0 rounded-xl px-1.5 py-1 hover:bg-[#f2f4f7] transition-colors text-left" aria-label={`Contact info for ${getDisplayName(activePeer!)}`}>
+                  <div className="relative shrink-0">
+                    <Avatar address={activePeer!} size={38} />
+                    {peerStatus.status === 'online' && (
+                      <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white bg-[#1f9d55]" aria-hidden="true" />
+                    )}
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-[13px] font-black text-[#050505] font-mono flex items-center gap-1.5">
-                      {getDisplayName(activePeer!)}
-                      {ledgerSettings?.disappearing_messages !== 'off' && (
-                        <Clock size={12} className="text-[#8E8E93] ml-1" />
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[15px] font-semibold text-[#15171c] flex items-center gap-1.5 truncate">
+                      <span className="truncate">{getDisplayName(activePeer!)}</span>
+                      {ledgerSettings?.disappearing_messages && ledgerSettings?.disappearing_messages !== 'off' && (
+                        <Timer size={13} strokeWidth={2} className="text-[#727a88] shrink-0" aria-label="Disappearing messages on" />
+                      )}
+                      {isSecretChat && (
+                        <Flame size={13} strokeWidth={2} className="text-[#c0362c] shrink-0" aria-label="Secret chat on" />
                       )}
                     </span>
-                    <span className={`text-[10px] font-semibold flex items-center gap-1 ${peerStatus.status === 'online' ? 'text-black' : 'text-black/50'}`}>
-                      {peerStatus.isTyping ? (
-                        <>
-                          <span className="w-1 h-1 rounded-full bg-black animate-pulse inline-block" />
-                          typing...
-                        </>
-                      ) : peerStatus.status === 'online' ? (
-                        <>
-                          <span className="w-1 h-1 rounded-full bg-black inline-block" />
-                          Online
-                        </>
-                      ) : (
-                        <>
-                          <span className="w-1 h-1 rounded-full bg-gray-400 inline-block" />
-                          {peerStatus.lastSeen ? (() => {
-                            const d = new Date(peerStatus.lastSeen);
-                            const now = new Date();
-                            const todayStr = now.toDateString();
-                            const yest = new Date(now); yest.setDate(yest.getDate() - 1);
-                            const t = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            if (d.toDateString() === todayStr) return `Last seen ${t}`;
-                            if (d.toDateString() === yest.toDateString()) return `Last seen yesterday ${t}`;
-                            return `Last seen ${d.toLocaleDateString([], { day: '2-digit', month: '2-digit' })} ${t}`;
-                          })() : 'Offline'}
-                        </>
-                      )}
+                    <span className={`text-[12.5px] truncate ${peerStatus.isTyping || peerStatus.status === 'online' ? 'text-[#1f9d55]' : 'text-[#727a88]'}`}>
+                      {peerStatus.isTyping ? 'Typing' : peerStatus.status === 'online' ? 'Online' : peerStatus.lastSeen ? (() => {
+                        const d = new Date(peerStatus.lastSeen);
+                        const now = new Date();
+                        const yest = new Date(now); yest.setDate(yest.getDate() - 1);
+                        const t = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        if (d.toDateString() === now.toDateString()) return `Last seen today at ${t}`;
+                        if (d.toDateString() === yest.toDateString()) return `Last seen yesterday at ${t}`;
+                        return `Last seen ${d.toLocaleDateString([], { day: 'numeric', month: 'short' })}`;
+                      })() : shortAddr(activePeer!)}
                     </span>
                   </div>
                 </button>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 bg-[#f5f5f7] border border-black/10 rounded-xl" title="Available Crypto">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white shadow-sm animate-pulse" />
-                  
-                </div>
-                {/* Phase 5: Secret Chat Toggle */}
-                <button
-                  onClick={() => setIsSecretChat(!isSecretChat)}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${isSecretChat ? 'bg-black text-white shadow-lg shadow-black/10 animate-pulse' : 'bg-[#f5f5f7] text-black/40 hover:bg-black/5 hover:text-black/60'}`}
-                  title={isSecretChat ? "Secret Chat Active (Auto-Burn 15s)" : "Start Secret Chat"}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                </button>
-                {/* Aztec Shielded Wallet Quick Button */}
-                <button
-                  onClick={() => setShowZkWallet(s => !s)}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${showZkWallet ? 'bg-[#1C1C1E] text-white shadow-sm' : 'bg-[#f5f5f7] hover:bg-[#e5e5ea] text-[#1C1C1E]'}`}
-                  title="Aztec Shielded Wallet"
-                >
-                  <Lock size={16} />
-                </button>
-                <ZkNotificationBell />
 
-                {/* v2: Save Contact Button */}
-                <button
-                  onClick={() => { setSaveContactName(getDisplayName(activePeer!)); setShowSaveContactModal(true); }}
-                  className="w-9 h-9 bg-[#f5f5f7] hover:bg-[#e5e5ea] rounded-xl flex items-center justify-center text-black/40 hover:text-black transition-colors"
-                  title="Save Contact"
-                >
-                  <UserPlus size={15} />
+              <div className="flex items-center gap-0.5 shrink-0">
+                <ZkNotificationBell />
+                <button type="button" onClick={() => handleStartCall('video')} className="w-10 h-10 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Video call" aria-label="Video call">
+                  <Video size={20} strokeWidth={1.8} />
                 </button>
-                <button
-                  onClick={() => handleStartCall('audio')}
-                  className="w-9 h-9 bg-[#f5f5f7] hover:bg-[#e5e5ea] rounded-xl flex items-center justify-center text-black transition-colors"
-                  title="Audio Call"
-                >
-                  <Phone size={16} />
+                <button type="button" onClick={() => handleStartCall('audio')} className="w-10 h-10 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Voice call" aria-label="Voice call">
+                  <Phone size={19} strokeWidth={1.8} />
                 </button>
-                <button
-                  onClick={() => handleStartCall('video')}
-                  className="w-9 h-9 bg-[#f5f5f7] hover:bg-[#e5e5ea] rounded-xl flex items-center justify-center text-black transition-colors"
-                  title="Video Call"
-                >
-                  <Video size={16} />
-                </button>
-                <button
-                  onClick={() => setShowScanner(true)}
-                  className="lg:hidden w-9 h-9 bg-[#f5f5f7] hover:bg-[#e5e5ea] rounded-xl flex items-center justify-center text-black/50 transition-colors text-[11px] font-black"
-                >
-                  QR
-                </button>
-                <button 
-                  onClick={() => { setShowSearch(s => !s); setSearchQuery(''); setSearchIndex(0); }}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${showSearch ? 'bg-black/10 text-black' : 'hover:bg-black/5 text-black/40'}`}
-                  title="Search in chat"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                </button>
-                <button onClick={() => setShowProfile(true)} className="w-9 h-9 hover:bg-black/5 rounded-xl flex items-center justify-center text-black/40 transition-colors">
-                  <MoreVertical size={16} />
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowHeaderMenu(v => !v)}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-[#15171c] transition-colors ${showHeaderMenu ? 'bg-[#eff1f4]' : 'hover:bg-[#f2f4f7]'}`}
+                    title="More"
+                    aria-label="More options"
+                    aria-haspopup="menu"
+                    aria-expanded={showHeaderMenu}
+                  >
+                    <MoreVertical size={19} strokeWidth={1.8} />
+                  </button>
+                  {showHeaderMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowHeaderMenu(false)} aria-hidden="true" />
+                      <div role="menu" className="absolute right-0 top-11 z-50 w-60 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] p-1.5">
+                        {[
+                          { label: 'Contact info', icon: <Info size={17} strokeWidth={1.8} />, onClick: () => setShowContactInfo(true) },
+                          { label: 'Search in chat', icon: <Search size={17} strokeWidth={1.8} />, onClick: () => { setShowSearch(true); setSearchQuery(''); setSearchIndex(0); } },
+                          { label: 'Save contact', icon: <UserPlus size={17} strokeWidth={1.8} />, onClick: () => { setSaveContactName(getDisplayName(activePeer!)); setShowSaveContactModal(true); } },
+                          { label: isSecretChat ? 'Turn off secret chat' : 'Secret chat', icon: <Flame size={17} strokeWidth={1.8} />, onClick: () => setIsSecretChat(!isSecretChat) },
+                          { label: 'Private wallet', icon: <ShieldCheck size={17} strokeWidth={1.8} />, onClick: () => setShowZkWallet(v => !v) },
+                          { label: 'Scan a code', icon: <ScanQrCode size={17} strokeWidth={1.8} />, onClick: () => setShowScanner(true) },
+                          { label: 'Chat options', icon: <Settings size={17} strokeWidth={1.8} />, onClick: () => setShowProfile(true) },
+                        ].map(item => (
+                          <button
+                            key={item.label}
+                            type="button"
+                            role="menuitem"
+                            onClick={() => { setShowHeaderMenu(false); item.onClick(); }}
+                            className="w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[14.5px] text-[#15171c] hover:bg-[#f2f4f7] transition-colors text-left"
+                          >
+                            <span className="text-[#475061]">{item.icon}</span>
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -5026,26 +4997,28 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 });
               };
               return (
-                <div className="bg-white/90 backdrop-blur-md border-b border-black/5 px-3 py-2 flex items-center gap-2 z-20 animate-in slide-in-from-top-2 duration-200">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-black/40 shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <div className="bg-white border-b border-[#e4e7ec] px-3 h-12 flex items-center gap-2 z-20">
+                  <Search size={16} strokeWidth={1.9} className="text-[#a3a9b4] shrink-0" aria-hidden="true" />
                   <input
                     autoFocus
                     value={searchQuery}
                     onChange={e => { setSearchQuery(e.target.value); setSearchIndex(0); }}
-                    placeholder="Search in conversation..."
-                    className="flex-1 bg-transparent text-[13px] font-mono text-gray-800 placeholder:text-black/40 outline-none"
+                    onKeyDown={e => { if (e.key === 'Escape') { setShowSearch(false); setSearchQuery(''); } if (e.key === 'Enter' && matches.length > 1) handleNavSearch(e.shiftKey ? -1 : 1); }}
+                    placeholder="Search in this chat"
+                    aria-label="Search in this chat"
+                    className="flex-1 bg-transparent text-[15px] text-[#15171c] placeholder:text-[#a3a9b4] outline-none"
                   />
-                  {matches.length > 0 && (
-                    <span className="text-[11px] font-mono text-black/50 shrink-0">{searchIndex + 1}/{matches.length}</span>
+                  {searchQuery.trim() && (
+                    <span className="text-[13px] text-[#727a88] tabular-nums shrink-0">{matches.length ? `${searchIndex + 1} of ${matches.length}` : 'No results'}</span>
                   )}
                   {matches.length > 1 && (
                     <>
-                      <button onClick={() => handleNavSearch(-1)} className="p-1 hover:bg-black/5 rounded-lg text-black/50">â†‘</button>
-                      <button onClick={() => handleNavSearch(1)} className="p-1 hover:bg-black/5 rounded-lg text-black/50">â†“</button>
+                      <button type="button" onClick={() => handleNavSearch(-1)} className="w-8 h-8 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#475061]" aria-label="Previous result"><ChevronUp size={18} strokeWidth={1.9} /></button>
+                      <button type="button" onClick={() => handleNavSearch(1)} className="w-8 h-8 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#475061]" aria-label="Next result"><ChevronDown size={18} strokeWidth={1.9} /></button>
                     </>
                   )}
-                  <button onClick={() => { setShowSearch(false); setSearchQuery(''); }} className="p-1 hover:bg-black/5 rounded-lg text-black/40">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <button type="button" onClick={() => { setShowSearch(false); setSearchQuery(''); }} className="w-8 h-8 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#475061]" aria-label="Close search">
+                    <X size={17} strokeWidth={1.9} />
                   </button>
                 </div>
               );
@@ -5053,32 +5026,34 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
             {/* Phase 3: Pinned Message Banner */}
             {pinnedMessageId && (
-              <div className="bg-white/80 backdrop-blur-md border-b border-black/5 px-4 py-2 flex items-center gap-3 cursor-pointer hover:bg-black/5 transition-colors z-20 shrink-0" onClick={() => {
+              <div className="bg-white border-b border-[#e4e7ec] pl-4 pr-2 h-12 flex items-center gap-3 cursor-pointer hover:bg-[#f7f8fa] transition-colors z-20 shrink-0" onClick={() => {
                 const el = document.getElementById(`msg-${pinnedMessageId}`);
                 el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }}>
-                <div className="w-1 h-8 bg-white rounded-full" />
+                <Pin size={16} strokeWidth={1.9} className="text-[#475061] shrink-0" aria-hidden="true" />
                 <div className="flex-1 min-w-0 flex flex-col">
-                  <span className="text-[10px] font-black text-black uppercase tracking-widest flex items-center gap-1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg> Pinned Message</span>
-                  <span className="text-[12px] font-mono font-medium text-black/70 truncate">
-                    {messages.find(m => m.id === pinnedMessageId)?.content?.replace(/__REPLY__[a-zA-Z0-9_-]+__::/, '').replace('__AUDIO__', 'ðŸŽ™ï¸ Voice Note') || 'Pinned Message'}
+                  <span className="text-[12px] font-medium text-[#727a88]">Pinned message</span>
+                  <span className="text-[14px] text-[#15171c] truncate">
+                    {formatMessagePreview(messages.find(m => m.id === pinnedMessageId)?.content?.replace(/__REPLY__[a-zA-Z0-9_-]+__::/, '') || 'Message')}
                   </span>
                 </div>
-                <button 
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    setPinnedMessageId(null); 
-                    executeSend(`__UNPIN__${pinnedMessageId}`); // For parity, though we just unset locally for now
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPinnedMessageId(null);
+                    executeSend(`__UNPIN__${pinnedMessageId}`);
                   }}
-                  className="p-1.5 hover:bg-black/10 rounded-full text-black/40 transition-colors"
+                  className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061] transition-colors"
+                  aria-label="Unpin message"
                 >
-                  X
+                  <X size={16} strokeWidth={1.9} />
                 </button>
               </div>
             )}
 
             {/* Dynamic Chat Background */}
-            <div className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#ece5dd]' : ''} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={isSecretChat ? { fontFamily, fontSize: `${fontSizePx}px` } : { backgroundColor: '#EBE5DC', backgroundImage: "url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%2325D366\' fill-opacity=\'0.07\' fill-rule=\'evenodd\'/%3E%3C/svg%3E')", backgroundAttachment: 'fixed', ...bgStyle, fontFamily, fontSize: `${fontSizePx}px` }}>
+            <div className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f7f8fa]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={{ ...bgStyle, fontFamily, fontSize: `${fontSizePx}px` }}>
               {/* Matrix Rain Effect Layer */}
               {chatBackground === 'matrix' && (
                 <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,255,0,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -5086,15 +5061,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               
               {/* Confidential Watermark Overlay */}
               <div className="ledger-watermark">
-                <span>LEDGER CHAT CONFIDENTIAL</span>
+                <span>Confidential</span>
               </div>
               
               {/* E2E Encrypted Badge */}
-              <div className="flex items-center justify-center gap-1.5 py-2 mb-1">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
-                <span className="text-[11px] text-[#8E8E93] font-medium">End-to-end encrypted Â· Secured by XMTP</span>
+              <div className="flex justify-center pt-3 pb-1 px-4">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#e4e7ec] text-[12.5px] text-[#727a88] text-center">
+                  <Lock size={12} strokeWidth={2.2} aria-hidden="true" />
+                  Messages are encrypted end to end with XMTP
+                </span>
               </div>
 
               {(() => {
@@ -5112,27 +5087,27 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   if (c.startsWith('__EDIT__')) return false;
                   if (c.startsWith('__READ__')) return false;
                   if (c.startsWith('__VOTE__')) return false;
-                  // __PAYMENT__ messages ARE rendered (as PaymentBubble) â€” do NOT filter them out
+                  // __PAYMENT__ messages ARE rendered (as PaymentBubble) — do NOT filter them out
                   if (c.startsWith('__TYPING__')) return false;
                   return true;
                 });
                 if (filteredMsgs.length === 0) {
                   if (isFetchingChat) {
                     return (
-                      <div className="flex-1 flex flex-col items-center justify-center p-6">
-                        <div className="w-8 h-8 border-4 border-black/10 border-t-[#25D366] rounded-full animate-spin"></div>
-                        <p className="mt-4 text-[12px] font-bold text-black/40 uppercase tracking-widest">Syncing History</p>
+                      <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-[#727a88]" role="status">
+                        <LoaderCircle size={22} strokeWidth={2} className="animate-spin" aria-hidden="true" />
+                        <p className="text-[14px]">Loading messages</p>
                       </div>
                     );
                   }
                   return (
                     <div className="flex-1 flex flex-col items-center justify-center p-6">
-                      <div className="bg-[#F2F2F7] rounded-2xl p-6 max-w-[280px] text-center border border-black/5">
-                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-40"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                      <div className="bg-white rounded-2xl px-6 py-7 max-w-[300px] text-center border border-[#e4e7ec]">
+                        <div className="w-12 h-12 bg-[#eff1f4] rounded-full flex items-center justify-center mx-auto mb-4 text-[#475061]">
+                          <MessageSquare size={22} strokeWidth={1.8} aria-hidden="true" />
                         </div>
-                        <p className="text-[15px] font-bold text-[#000000] mb-2">It's quiet here</p>
-                        <p className="text-[13px] text-[#8E8E93] leading-relaxed">Send a message to start this secure chat. Only you and this contact can read what's sent.</p>
+                        <p className="text-[16px] font-semibold text-[#15171c] mb-1.5">Say hello</p>
+                        <p className="text-[14px] text-[#727a88] leading-relaxed">Send the first message. It is encrypted on this device and only you and {getDisplayName(activePeer!)} can read it.</p>
                       </div>
                     </div>
                   );
@@ -5145,6 +5120,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     clientInboxId={client?.inboxId}
                     isLoadingMore={false}
                     onLoadMore={() => {}}
+                    isTyping={Boolean(peerStatus.isTyping || (activePeer && typingPeers.has(activePeer.toLowerCase())))}
+                    typingLabel={`${getDisplayName(activePeer!)} is typing`}
+                    isSending={sending}
                     renderMessage={(msg, isMe) => {
                       const sentTime = typeof msg.sentAtNs === 'number' ? new Date(msg.sentAtNs) : (msg.sent || msg.sentAt || new Date());
                       const dateStr = new Date(sentTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -5181,123 +5159,102 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   />
                 );
               })()}
-              {(peerStatus.isTyping || (activePeer && typingPeers.has(activePeer.toLowerCase()))) && (
-                  <div className="flex self-start items-start mt-2 ml-4">
-                      <div className="px-4 py-3 bg-white/70 backdrop-blur-md rounded-2xl rounded-bl-sm border border-white shadow-sm flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full" style={{ animation: 'typingBounce 1.2s ease-in-out infinite', animationDelay: '0ms', willChange: 'transform' }} />
-                        <div className="w-2 h-2 bg-gray-400 rounded-full" style={{ animation: 'typingBounce 1.2s ease-in-out infinite', animationDelay: '200ms', willChange: 'transform' }} />
-                        <div className="w-2 h-2 bg-gray-400 rounded-full" style={{ animation: 'typingBounce 1.2s ease-in-out infinite', animationDelay: '400ms', willChange: 'transform' }} />
-                      </div>
-                  </div>
-              )}
-              {sending && (
-                <div className="flex self-end items-center gap-2 mt-2 px-4 py-1.5 bg-white rounded-full shadow-sm border border-black/5">
-                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              )}
               <div ref={messagesEndRef} />
             </div>
 
             <div
-              className="relative shrink-0 bg-white/80 backdrop-blur-xl border-t border-black/10 z-10 shadow-[0_-4px_24px_rgba(0,0,0,0.02)]"
+              className="relative shrink-0 bg-white border-t border-[#e4e7ec] z-10"
               style={{ paddingBottom: `max(8px, env(safe-area-inset-bottom, 0px))` }}
             >
               {/*  Offline Banner  */}
               {isOffline && (
-                <div className="flex items-center justify-center gap-2 px-4 py-2 bg-[#F2F2F7] border-b border-black/5 text-center">
-                  <span className="flex items-center gap-2 text-[12px] font-bold text-black/60">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.6 19.3a3.5 3.5 0 0 1-5-5"></path><path d="M13.6 22.3a8.5 8.5 0 0 1-11-11"></path><path d="M1.3 1.3l22 22"></path><path d="M19.4 14.7a3.5 3.5 0 0 0-5-5"></path><path d="M22.4 11.7a8.5 8.5 0 0 0-11-11"></path></svg>
-                    Waiting for network...
-                  </span>
+                <div className="flex items-center justify-center gap-2 px-4 h-9 bg-[#fdf5e6] border-b border-[#f1dcb0] text-[13px] text-[#8f5b00]" role="status">
+                  <WifiOff size={15} strokeWidth={1.9} aria-hidden="true" />
+                  You are offline. Messages will be sent when you reconnect.
                 </div>
               )}
               {/*  Audio recording indicator  */}
               {isRecording && (
-                <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-                    <div className="flex items-center gap-1.5 bg-[#f5f5f7] text-[#050505] px-3 py-1.5 rounded-full">
-                        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                        <span className="text-[12px] font-medium">{recordingSeconds}s â€” Recording voice message</span>
+                <div className="flex items-center gap-2 px-4 pt-3 pb-1" role="status">
+                    <div className="flex items-center gap-2 bg-[#fdeeec] text-[#c0362c] px-3 py-1.5 rounded-full">
+                        <span className="w-2 h-2 rounded-full bg-[#e5484d] animate-pulse" aria-hidden="true" />
+                        <span className="text-[13px] font-medium">Recording a voice message</span>
                     </div>
                 </div>
               )}
-              {/* [BUG FIX] Secret Chat Active Banner â€” clearly visible above input */}
+              {/* [BUG FIX] Secret Chat Active Banner — clearly visible above input */}
               {isSecretChat && !isRecording && (
-                <div className="flex items-center gap-2 px-4 pt-2 pb-1 bg-black/5 border-b border-black/10 animate-in slide-in-from-top-1 duration-200">
-                  <span className="flex items-center gap-1.5 text-[11px] font-mono font-black text-[#050505] uppercase tracking-wider">
-                    <span className="w-2 h-2 rounded-full bg-white animate-pulse inline-block" />
-                    ðŸ”¥ SECRET CHAT ACTIVE â€” Messages burn in 15s
-                  </span>
+                <div className="flex items-center gap-2 px-4 h-10 bg-[#fdeeec] border-b border-[#f5d2cd]" role="status">
+                  <Flame size={15} strokeWidth={2} className="text-[#c0362c] shrink-0" aria-hidden="true" />
+                  <span className="text-[13px] text-[#8a2a22]">Secret chat is on. New messages disappear 15 seconds after they are read.</span>
                   <button
                     type="button"
                     onClick={() => setIsSecretChat(false)}
-                    className="ml-auto text-black/60 hover:text-black/80 text-[10px] font-black uppercase tracking-widest transition-colors"
+                    className="ml-auto shrink-0 px-2.5 h-7 rounded-full text-[13px] font-medium text-[#8a2a22] hover:bg-[#f9dcd7] transition-colors"
                   >
-                    Disable
+                    Turn off
                   </button>
                 </div>
               )}
               {/* Hito 4: Link Preview Card */}
               {linkPreview && !isRecording && (
-                <div className="flex items-start gap-3 px-4 pt-2 pb-1 bg-[#f5f5f7] border-t border-black/10/50 animate-in slide-in-from-bottom-2">
-                  {linkPreview.image && <img src={linkPreview.image} alt="" className="w-14 h-14 object-cover rounded-xl border border-white shadow-sm shrink-0" />}
+                <div className="flex items-start gap-3 mx-3 mt-2 p-2.5 rounded-xl bg-[#f7f8fa] border border-[#e4e7ec]">
+                  {linkPreview.image && <img src={linkPreview.image} alt="" className="w-14 h-14 object-cover rounded-lg shrink-0" />}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-bold text-black truncate">{linkPreview.title}</p>
-                    <p className="text-[11px] text-black/50 line-clamp-2">{linkPreview.description}</p>
-                    <p className="text-[10px] font-mono text-black/50 truncate mt-0.5">{linkPreview.url}</p>
+                    <p className="text-[13.5px] font-medium text-[#15171c] truncate">{linkPreview.title}</p>
+                    <p className="text-[12.5px] text-[#727a88] line-clamp-2">{linkPreview.description}</p>
+                    <p className="text-[12px] text-[#a3a9b4] truncate mt-0.5">{linkPreview.url}</p>
                   </div>
-                  <button onClick={() => setLinkPreview(null)} className="text-black/40 hover:text-gray-600 p-1 shrink-0">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <button type="button" onClick={() => setLinkPreview(null)} className="w-7 h-7 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#727a88] shrink-0" aria-label="Remove link preview">
+                    <X size={15} strokeWidth={1.9} />
                   </button>
                 </div>
               )}
               {/* Phase 4: Editing UI */}
               {editingMsg && (
-                <div className="mx-3 mt-2 px-4 py-2.5 bg-[#f5f5f7] border border-black/10 rounded-t-2xl flex items-center justify-between animate-in slide-in-from-bottom-2 duration-200">
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[11px] font-black uppercase tracking-widest text-black mb-0.5">Edit Message</span>
+                <div className="mx-3 mt-2 pl-3 pr-1.5 py-2 bg-[#f7f8fa] border border-[#e4e7ec] rounded-xl flex items-center gap-2">
+                  <div className="w-0.5 self-stretch rounded-full bg-[#15171c]" aria-hidden="true" />
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="text-[12.5px] font-medium text-[#15171c] mb-0.5">Edit message</span>
                     <input
                       type="text"
                       inputMode="text"
-                      autoCorrect="off"
-                      autoCapitalize="off"
                       autoComplete="off"
-                      spellCheck={false}
-                      className="text-[13px] bg-transparent outline-none text-[#050505] w-full font-mono placeholder:text-black/30"
+                      spellCheck={true}
+                      aria-label="Edited message"
+                      className="text-[14.5px] bg-transparent outline-none text-[#15171c] w-full placeholder:text-[#a3a9b4]"
                       value={editingMsg.content}
                       onChange={e => setEditingMsg({ ...editingMsg, content: e.target.value })}
-                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submitEditMessage(); } }}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submitEditMessage(); } if (e.key === 'Escape') setEditingMsg(null); }}
                       autoFocus
                     />
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={submitEditMessage} className="p-1.5 bg-white text-white rounded-lg hover:opacity-80 shadow-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></button>
-                    <button onClick={() => setEditingMsg(null)} className="p-1.5 text-black/50 hover:text-black"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-                  </div>
+                  <button type="button" onClick={submitEditMessage} className="w-8 h-8 rounded-full bg-[#15171c] text-white flex items-center justify-center hover:bg-[#2b2f38] shrink-0" aria-label="Save edit"><Check size={16} strokeWidth={2.2} /></button>
+                  <button type="button" onClick={() => setEditingMsg(null)} className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061] shrink-0" aria-label="Cancel edit"><X size={16} strokeWidth={1.9} /></button>
                 </div>
               )}
               {replyingTo && !editingMsg && (
-                <div className="flex items-center justify-between px-4 pt-2 pb-1 bg-[#f5f5f7] border-t border-black/5 animate-in slide-in-from-bottom-2">
-                  <div className="flex-1 pl-3 border-l-2 border-black/20 overflow-hidden">
-                    <p className="text-[11px] font-bold text-black">Replying to</p>
-                    <p className="text-[12px] text-black/50 truncate">{
+                <div className="mx-3 mt-2 pl-3 pr-1.5 py-2 bg-[#f7f8fa] border border-[#e4e7ec] rounded-xl flex items-center gap-2">
+                  <div className="w-0.5 self-stretch rounded-full bg-[#15171c]" aria-hidden="true" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12.5px] font-medium text-[#15171c]">Replying to {replyingTo.isMe || replyingTo.senderInboxId === client?.inboxId ? 'yourself' : getDisplayName(activePeer!)}</p>
+                    <p className="text-[13.5px] text-[#727a88] truncate">{
                       replyingTo.content ? formatMessagePreview(replyingTo.content) : 'Message'
                     }</p>
                   </div>
-                  <button onClick={() => setReplyingTo(null)} className="p-2 text-black/40 hover:text-black/70">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  <button type="button" onClick={() => setReplyingTo(null)} className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061] shrink-0" aria-label="Cancel reply">
+                    <X size={16} strokeWidth={1.9} />
                   </button>
                 </div>
               )}
               {/* Hito 4: Scheduled send indicator */}
               {scheduledAt && (
-                <div className="flex items-center justify-between px-4 pt-2 pb-1 bg-[#f5f5f7] border-t border-black/10 animate-in slide-in-from-bottom-2">
-                  <span className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-black/70">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
-                    Scheduled: {scheduledAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <div className="mx-3 mt-2 pl-3 pr-1.5 h-10 bg-[#f7f8fa] border border-[#e4e7ec] rounded-xl flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-[13.5px] text-[#15171c]">
+                    <Clock size={15} strokeWidth={1.9} className="text-[#475061]" aria-hidden="true" />
+                    Sends at {scheduledAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
-                  <button onClick={() => setScheduledAt(null)} className="text-black/50 hover:text-black/70 text-[10px] font-bold">Cancel</button>
+                  <button type="button" onClick={() => setScheduledAt(null)} className="px-3 h-8 rounded-full text-[13px] font-medium text-[#475061] hover:bg-[#eff1f4]">Cancel</button>
                 </div>
               )}
               {/* Sticker Picker */}
@@ -5314,96 +5271,75 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               )}
               {/* Hito 4: GIF Picker */}
               {showGifPicker && (
-                <div className="bg-white/95 backdrop-blur-md border-t border-black/5 p-3 animate-in slide-in-from-bottom-4 duration-200">
+                <div className="bg-white border-t border-[#e4e7ec] p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[12px] font-black text-gray-700 uppercase tracking-wider">GIFs</span>
-                    <input
-                      autoFocus
-                      value={gifSearch}
-                      onChange={e => setGifSearch(e.target.value)}
-                      placeholder="Search GIFs..."
-                      className="flex-1 bg-gray-100 rounded-xl px-3 py-1.5 text-[13px] outline-none text-gray-800 placeholder:text-black/40"
-                    />
-                    <button onClick={() => setShowGifPicker(false)} className="p-1.5 hover:bg-black/5 rounded-lg text-black/40">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    <div className="relative flex-1">
+                      <Search size={15} strokeWidth={1.9} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3a9b4]" aria-hidden="true" />
+                      <input
+                        autoFocus
+                        value={gifSearch}
+                        onChange={e => setGifSearch(e.target.value)}
+                        placeholder="Search GIFs"
+                        aria-label="Search GIFs"
+                        className="w-full h-9 bg-[#f2f4f7] rounded-xl pl-9 pr-3 text-[14px] outline-none text-[#15171c] placeholder:text-[#a3a9b4]"
+                      />
+                    </div>
+                    <button type="button" onClick={() => setShowGifPicker(false)} className="w-8 h-8 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#475061]" aria-label="Close GIFs">
+                      <X size={16} strokeWidth={1.9} />
                     </button>
                   </div>
                   <div className="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto">
                     {gifResults.length === 0 ? (
-                      <p className="col-span-3 text-center text-[12px] text-black/40 py-4">{gifSearch ? 'No GIFs found' : 'Search for GIFs above...'}</p>
+                      <p className="col-span-3 text-center text-[13px] text-[#727a88] py-4">{gifSearch ? 'No GIFs found' : 'Type to search for a GIF'}</p>
                     ) : gifResults.map((url, i) => (
                       <button key={i} onClick={() => {
                         executeSend(`[GIF]${url}`);
                         setShowGifPicker(false);
                         setGifSearch('');
                         setGifResults([]);
-                      }} className="aspect-video bg-gray-100 rounded-xl overflow-hidden hover:scale-105 transition-transform">
+                      }} className="aspect-video bg-[#eff1f4] rounded-lg overflow-hidden hover:opacity-90 transition-opacity">
                         <img src={url} alt="gif" className="w-full h-full object-cover" loading="lazy" />
                       </button>
                     ))}
                   </div>
-                  <p className="text-[9px] text-black/40 text-right mt-1 font-mono">Powered by Tenor</p>
+                  <p className="text-[11px] text-[#a3a9b4] text-right mt-1.5">Powered by Tenor</p>
                 </div>
               )}
               {inputText === '/' && (
-                <div className="absolute bottom-[70px] left-4 mb-2 bg-white/90 backdrop-blur-xl border border-black/10 shadow-2xl rounded-2xl w-[260px] overflow-hidden z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
-                  <div className="px-3 py-2 border-b border-black/5 bg-black/5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-black/50">Commands</span>
-                  </div>
-                  <div className="flex flex-col py-1">
-                    <button type="button" onClick={() => { setInputText(''); setShowWalletTransfer(true); }} className="px-3 py-2.5 text-left hover:bg-black/5 transition-colors flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-white text-white flex items-center justify-center shrink-0">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[13px] font-bold text-[#050505]">/pay</span>
-                        <span className="text-[10px] font-mono text-black/50">Send Crypto</span>
-                      </div>
-                    </button>
-                    <button type="button" onClick={() => { setInputText(''); setShowPollCreator(true); }} className="px-3 py-2.5 text-left hover:bg-black/5 transition-colors flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[13px] font-bold text-[#050505]">/poll</span>
-                        <span className="text-[10px] font-mono text-black/50">Create a Poll</span>
-                      </div>
-                    </button>
-                    <button type="button" onClick={() => { setInputText(''); setShowGifPicker(true); }} className="px-3 py-2.5 text-left hover:bg-black/5 transition-colors flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[13px] font-bold text-[#050505]">/gif</span>
-                        <span className="text-[10px] font-mono text-black/50">Search GIFs</span>
-                      </div>
-                    </button>
-                    <button type="button" onClick={() => { 
-                      setInputText(''); 
-                      if (navigator.geolocation) {
-                        navigator.geolocation.getCurrentPosition(pos => {
-                          executeSend(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`);
-                        });
-                      }
-                    }} className="px-3 py-2.5 text-left hover:bg-black/5 transition-colors flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0">
-                        <MapPin size={14} />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[13px] font-bold text-[#050505]">/location</span>
-                        <span className="text-[10px] font-mono text-black/50">Share Real-time Location</span>
-                      </div>
-                    </button>
+                <div className="absolute bottom-[72px] left-3 mb-2 bg-white border border-[#e4e7ec] shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] rounded-2xl w-[280px] overflow-hidden z-50" role="menu" aria-label="Commands">
+                  <p className="px-4 pt-3 pb-1.5 text-[12.5px] font-medium text-[#727a88]">Commands</p>
+                  <div className="flex flex-col px-1.5 pb-1.5">
+                    {[
+                      { cmd: '/pay', label: 'Send a payment', icon: <CreditCard size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setShowWalletTransfer(true); } },
+                      { cmd: '/poll', label: 'Create a poll', icon: <ListChecks size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setShowPollCreator(true); } },
+                      { cmd: '/gif', label: 'Search GIFs', icon: <ImageIcon size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setShowGifPicker(true); } },
+                      { cmd: '/location', label: 'Share your location', icon: <MapPin size={17} strokeWidth={1.8} />, run: () => {
+                          setInputText('');
+                          if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(pos => {
+                              executeSend(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`);
+                            });
+                          }
+                        } },
+                    ].map(c => (
+                      <button key={c.cmd} type="button" role="menuitem" onClick={c.run} className="px-2.5 h-12 text-left hover:bg-[#f2f4f7] rounded-xl transition-colors flex items-center gap-3">
+                        <span className="w-8 h-8 rounded-lg bg-[#eff1f4] text-[#15171c] flex items-center justify-center shrink-0">{c.icon}</span>
+                        <span className="flex flex-col">
+                          <span className="text-[14px] font-medium text-[#15171c]">{c.label}</span>
+                          <span className="text-[12.5px] text-[#727a88]">{c.cmd}</span>
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
                 <input type="file" ref={fileRef} className="hidden" onChange={handleFileUpload} />
-                {/* Camera capture â€” opens native camera on iOS/Android */}
+                {/* Camera capture — opens native camera on iOS/Android */}
                 <input type="file" ref={cameraRef} className="hidden" accept="image/*,video/*" capture="environment" onChange={handleFileUpload} />
-                {/* Gallery picker â€” opens photo library on iOS/Android */}
+                {/* Gallery picker — opens photo library on iOS/Android */}
                 <input type="file" ref={galleryRef} className="hidden" accept="image/*,video/*" onChange={handleFileUpload} />
                 <form onSubmit={handleSend} className="flex flex-col w-full relative">
-                  {/* â”€â”€ App Drawer (WhatsApp-style icon grid) â”€â”€ */}
+                  {/* ── App Drawer (WhatsApp-style icon grid) ── */}
                   <AnimatePresence>
                   {showAppDrawer && (
                     <>
@@ -5413,40 +5349,41 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                         transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                        className="absolute bottom-[64px] left-1 w-[270px] bg-white border border-black/[0.08] shadow-[0_8px_30px_rgba(0,0,0,0.14)] rounded-2xl z-50 py-1.5 overflow-hidden max-h-[70vh] overflow-y-auto"
+                        className="absolute bottom-[68px] left-2 w-[300px] bg-white border border-[#e4e7ec] shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] rounded-2xl z-50 p-1.5 overflow-hidden max-h-[70vh] overflow-y-auto"
+                        role="menu"
+                        aria-label="Attach"
                       >
-                        <div className="w-10 h-1.5 bg-black/10 rounded-full mx-auto mb-5" />
-                        <div className="flex flex-col py-2">
+                        <div className="flex flex-col">
                           {[
-                            // â”€â”€ Media â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                            { id: 'camera',    color: '#FF3B30', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>,  label: 'Camera',        sublabel: 'Take a photo or video', onClick: () => { cameraRef.current?.click(); setShowAppDrawer(false); } },
-                            { id: 'gallery',   color: '#5856D6', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,   label: 'Photos & Video', sublabel: 'Choose from library',   onClick: () => { galleryRef.current?.click(); setShowAppDrawer(false); } },
-                            { id: 'attach',    color: '#34C759', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>,  label: 'Document',       sublabel: 'Any file up to 1 MB',    onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
-                            { id: 'audio',     color: '#FF9500', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>,     label: 'Audio Note',     sublabel: 'Record a voice message', onClick: () => { setShowAppDrawer(false); startRecording(); } },
-                            // â”€â”€ Interactive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                            { id: 'gif',       color: '#AF52DE', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><text x="5" y="16" fontSize="9" fontWeight="bold" fill="currentColor" stroke="none">GIF</text></svg>,   label: 'GIF',            sublabel: 'Search animated GIFs',   onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
-                            { id: 'sticker',   color: '#FFCC00', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>,      label: 'Stickers',       sublabel: 'Send a sticker',         onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
-                            { id: 'poll',      color: '#10B981', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
-                            // â”€â”€ Crypto & Aztec Private Payments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                            { id: 'zkmoney',   color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>, label: 'zk.money', sublabel: 'Private Aztec Transfer', onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
-                            { id: 'zkstream',  color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>, label: 'Money Stream', sublabel: 'Continuous Aztec money stream', onClick: () => { setShowZkStreamModal(true); setShowAppDrawer(false); } },
-                            { id: 'zkinvoice', color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, label: 'Private Invoice', sublabel: 'Request shielded payment', onClick: () => { setShowZkInvoiceModal(true); setShowAppDrawer(false); } },
-                            { id: 'payment',   color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>,     label: 'Payment',        sublabel: 'Send crypto',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
-                            { id: 'tip',       color: '#1C1C1E', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, label: 'Creator Tip',  sublabel: 'Support peer with ETH/USDC', onClick: () => { setShowTipModal(true); setShowAppDrawer(false); } },
-                            // â”€â”€ Utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                            { id: 'location',  color: '#32D74B', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,    label: 'Location',       sublabel: 'Share your location',    onClick: () => { 
+                            // ── Media ──────────────────────────────────────────────
+                            { id: 'camera',    color: '#FF3B30', iconPath: <Camera size={19} strokeWidth={1.8} />,  label: 'Camera',        sublabel: 'Take a photo or video', onClick: () => { cameraRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'gallery',   color: '#5856D6', iconPath: <ImageIcon size={19} strokeWidth={1.8} />,   label: 'Photos and videos', sublabel: 'Choose from your library',   onClick: () => { galleryRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'attach',    color: '#34C759', iconPath: <FileText size={19} strokeWidth={1.8} />,  label: 'Document',       sublabel: 'Any file up to 1 MB',    onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'audio',     color: '#FF9500', iconPath: <Mic size={19} strokeWidth={1.8} />,     label: 'Voice message',  sublabel: 'Record and send', onClick: () => { setShowAppDrawer(false); startRecording(); } },
+                            // ── Interactive ──────────────────────────────────────────
+                            { id: 'gif',       color: '#AF52DE', iconPath: <ImageIcon size={19} strokeWidth={1.8} />,   label: 'GIF',            sublabel: 'Search animated images',   onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
+                            { id: 'sticker',   color: '#FFCC00', iconPath: <Sticker size={19} strokeWidth={1.8} />,      label: 'Stickers',       sublabel: 'Send a sticker',         onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
+                            { id: 'poll',      color: '#10B981', iconPath: <ListChecks size={19} strokeWidth={1.8} />,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
+                            // ── Crypto & Aztec Private Payments ──────────────────────────
+                            { id: 'zkmoney',   color: '#1C1C1E', iconPath: <ShieldCheck size={19} strokeWidth={1.8} />, label: 'Private payment', sublabel: 'Aztec demo, no funds move', onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
+                            { id: 'zkstream',  color: '#1C1C1E', iconPath: <Waves size={19} strokeWidth={1.8} />, label: 'Payment stream', sublabel: 'Demo, no funds move', onClick: () => { setShowZkStreamModal(true); setShowAppDrawer(false); } },
+                            { id: 'zkinvoice', color: '#1C1C1E', iconPath: <Receipt size={19} strokeWidth={1.8} />, label: 'Private invoice', sublabel: 'Request a private payment', onClick: () => { setShowZkInvoiceModal(true); setShowAppDrawer(false); } },
+                            { id: 'payment',   color: '#1C1C1E', iconPath: <CreditCard size={19} strokeWidth={1.8} />,     label: 'Payment',        sublabel: 'Send tokens from your wallet',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
+                            { id: 'tip',       color: '#1C1C1E', iconPath: <Heart size={19} strokeWidth={1.8} />, label: 'Tip',          sublabel: 'Send a small thank you', onClick: () => { setShowTipModal(true); setShowAppDrawer(false); } },
+                            // ── Utilities ────────────────────────────────────────────
+                            { id: 'location',  color: '#32D74B', iconPath: <MapPin size={19} strokeWidth={1.8} />,    label: 'Location',       sublabel: 'Share your location',    onClick: () => { 
                               setShowAppDrawer(false);
                               if (navigator.geolocation) {
                                 navigator.geolocation.getCurrentPosition(
                                   (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
-                                  () => toast.error('Location access denied â€” enable it in browser settings')
+                                  () => toast.error('Location access denied — enable it in browser settings')
                                 );
                               } else {
                                 toast.error('Geolocation not supported on this device');
                               }
                             } },
-                            { id: 'live-loc',  color: '#FF3B30', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>,   label: isLiveLocationActive ? 'Stop Live Location' : 'Live Location', sublabel: isLiveLocationActive ? 'Tap to stop sharing' : 'Share real-time position', onClick: () => { startLiveLocation(); setShowAppDrawer(false); } },
-                            { id: 'schedule',  color: '#636366', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,      label: 'Schedule',       sublabel: 'Send at a specific time', onClick: () => {
+                            { id: 'live-loc',  color: '#FF3B30', iconPath: <Navigation size={19} strokeWidth={1.8} />,   label: isLiveLocationActive ? 'Stop live location' : 'Live location', sublabel: isLiveLocationActive ? 'Stop sharing your position' : 'Share your position as you move', onClick: () => { startLiveLocation(); setShowAppDrawer(false); } },
+                            { id: 'schedule',  color: '#636366', iconPath: <Clock size={19} strokeWidth={1.8} />,      label: 'Schedule',       sublabel: 'Send at a later time', onClick: () => {
                                 setShowAppDrawer(false);
                                 const inp = document.createElement('input');
                                 inp.type = 'datetime-local';
@@ -5464,24 +5401,22 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                                 };
                                 inp.click();
                               } },
-                            { id: 'burn',      color: '#FF6B00', iconPath: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>,      label: burnTimer ? `Burn: ${burnTimer}s` : 'Burn After Read', sublabel: burnTimer ? 'Tap to disable' : 'Messages vanish after reading', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
+                            { id: 'burn',      color: '#FF6B00', iconPath: <Timer size={19} strokeWidth={1.8} />,      label: burnTimer ? `Disappearing after ${burnTimer} seconds` : 'Disappearing messages', sublabel: burnTimer ? 'Turn off' : 'Messages vanish after they are read', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
                           ].map((app) => (
                             <button 
                               key={app.id} 
                               type="button" 
                               onClick={app.onClick} 
-                              className="flex items-center gap-3 py-2.5 px-4 w-full hover:bg-black/5 active:bg-black/10 rounded-xl transition-colors select-none text-left"
+                              role="menuitem"
+                              className="flex items-center gap-3 h-[52px] px-2.5 w-full hover:bg-[#f2f4f7] active:bg-[#e9ecf0] rounded-xl transition-colors select-none text-left"
                             >
-                              <div 
-                                className="w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0 text-white shadow-sm"
-                                style={{ background: (app as any).color || '#8E8E93' }}
-                              >
+                              <span className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 bg-[#eff1f4] text-[#15171c]" aria-hidden="true">
                                 {(app as any).iconPath || (app as any).icon}
-                              </div>
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-[15px] font-medium text-black leading-tight">{app.label}</span>
-                                {(app as any).sublabel && <span className="text-[11px] text-black/40 font-normal truncate">{(app as any).sublabel}</span>}
-                              </div>
+                              </span>
+                              <span className="flex flex-col min-w-0">
+                                <span className="text-[14.5px] font-medium text-[#15171c] leading-tight">{app.label}</span>
+                                {(app as any).sublabel && <span className="text-[12.5px] text-[#727a88] truncate">{(app as any).sublabel}</span>}
+                              </span>
                             </button>
                           ))}
                         </div>
@@ -5492,60 +5427,63 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
                   {/* Thread and Bot UI */}
                   {threadParentId && (
-                    <div className="flex items-center justify-between px-4 py-2 bg-[#25D366]/8 border-b border-[#25D366]/20">
-                      <div className="flex items-center gap-2">
-                        <div className="w-0.5 h-4 bg-[#25D366] rounded-full" />
-                        <span className="text-[12px] font-semibold text-[#25D366]">Replying in thread</span>
-                      </div>
-                      <button onClick={() => setThreadParentId(null)} className="text-[#8E8E93] hover:text-[#1C1C1E]">
-                        <Trash2 size={14} />
+                    <div className="mx-3 mt-2 pl-3 pr-1.5 h-10 bg-[#f7f8fa] border border-[#e4e7ec] rounded-xl flex items-center justify-between">
+                      <span className="flex items-center gap-2 text-[13.5px] text-[#15171c]">
+                        <MessageSquare size={15} strokeWidth={1.9} className="text-[#475061]" aria-hidden="true" />
+                        Replying in a thread
+                      </span>
+                      <button type="button" onClick={() => setThreadParentId(null)} className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061]" aria-label="Leave thread">
+                        <X size={16} strokeWidth={1.9} />
                       </button>
                     </div>
                   )}
 
                   {showBotSuggestions && (
-                    <div className="absolute bottom-[60px] left-2 right-2 bg-white border border-[#E5E5EA] rounded-2xl shadow-lg overflow-hidden z-50">
+                    <div className="absolute bottom-[68px] left-2 right-2 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] overflow-hidden z-50 p-1.5">
                       {BOT_COMMANDS_LIST.filter(b => b.cmd.startsWith(inputText)).map(bot => (
                         <button
                           key={bot.cmd}
                           onClick={() => { setInputText(bot.cmd + ' '); setShowBotSuggestions(false); }}
-                          className="flex items-center gap-3 w-full px-4 py-3 hover:bg-[#F2F2F7] text-left transition-colors"
+                          type="button"
+                          className="flex items-center gap-3 w-full px-3 h-11 rounded-xl hover:bg-[#f2f4f7] text-left transition-colors"
                         >
-                          <span className="text-[14px] font-mono font-bold text-[#25D366]">{bot.cmd}</span>
-                          <span className="text-[12px] text-[#8E8E93]">{bot.hint.split(' â€” ')[1]}</span>
+                          <span className="text-[14px] font-medium text-[#15171c]">{bot.cmd}</span>
+                          <span className="text-[13px] text-[#727a88]">{bot.hint.split(' — ')[1]}</span>
                         </button>
                       ))}
                     </div>
                   )}
 
-                  {/* â”€â”€ Main Input Row (WhatsApp/Signal style) â”€â”€ */}
+                  {/* ── Main input row ── */}
                   <div
-                    className="flex items-end gap-2 px-2 pt-2 w-full relative z-40 bg-[#F0F2F5]"
-                    style={{ paddingBottom: 'max(14px, calc(0.75rem + env(safe-area-inset-bottom, 0px)))' }}
+                    className="flex items-end gap-2 px-3 pt-2 w-full relative z-40 bg-white"
+                    style={{ paddingBottom: 'max(12px, calc(0.5rem + env(safe-area-inset-bottom, 0px)))' }}
                   >
                     <button
                       type="button"
                       onClick={() => { setShowAppDrawer(d => !d); setShowEmojiPicker(false); }}
-                      className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all duration-200 mb-0.5 ${showAppDrawer ? 'bg-[#1C1C1E] text-white rotate-45 shadow-lg' : 'bg-white text-[#54656F] hover:bg-[#F0F2F5] shadow-sm border border-black/5'}`}
+                      className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all duration-200 mb-[3px] ${showAppDrawer ? 'bg-[#15171c] text-white rotate-45' : 'text-[#475061] hover:bg-[#f2f4f7]'}`}
+                      aria-label={showAppDrawer ? 'Close attachments' : 'Attach'}
+                      aria-expanded={showAppDrawer}
                     >
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      <Plus size={22} strokeWidth={1.9} />
                     </button>
 
                     <AnimatePresence>
                       {showEmojiPicker && (
                         <>
-                          <div 
-                            className="fixed inset-0 z-[90]" 
-                            onClick={() => setShowEmojiPicker(false)} 
+                          <div
+                            className="fixed inset-0 z-[90]"
+                            onClick={() => setShowEmojiPicker(false)}
                           />
                           <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            className="absolute bottom-[60px] left-2 z-[100] shadow-2xl rounded-[20px] overflow-hidden border border-black/10"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 8 }}
+                            className="absolute bottom-[64px] left-3 z-[100] shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] rounded-2xl overflow-hidden border border-[#e4e7ec]"
                           >
-                            <EmojiPicker 
-                              onEmojiClick={(emojiData: any) => { 
+                            <EmojiPicker
+                              onEmojiClick={(emojiData: any) => {
                                 setInputText(prev => prev + emojiData.emoji);
                               }}
                             />
@@ -5554,585 +5492,333 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       )}
                     </AnimatePresence>
 
-                    {/* WhatsApp-style gray pill container */}
-                    <div className="flex-1 bg-white rounded-[24px] flex items-center relative shadow-[0_1px_1px_rgba(11,20,26,0.1)] border border-black/[0.08] focus-within:border-[#1C1C1E]/40 min-h-[46px] max-h-[120px] transition-colors">
-                      {/* Emoji button inside pill on the left */}
-                      <button
-                        type="button"
-                        onClick={() => { setShowEmojiPicker(d => !d); setShowAppDrawer(false); }}
-                        className={`w-10 h-10 shrink-0 self-center ml-1 flex items-center justify-center transition-all ${showEmojiPicker ? 'text-[#1C1C1E]' : 'text-[#8696A0]'} hover:text-[#1C1C1E]`}
-                      >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                      </button>
-
+                    {/* The message field */}
+                    <div className="flex-1 bg-[#f2f4f7] rounded-[22px] flex items-end relative border border-transparent focus-within:bg-white focus-within:border-[#d0d5dd] min-h-[44px] max-h-[136px] transition-colors">
                       {isRecording ? (
-                        <div className="flex-1 flex items-center justify-between px-3 py-2 h-[46px]">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-[#ff3b30] animate-pulse" />
-                            <span className="text-[14px] font-mono font-medium text-[#ff3b30]">
+                        <div className="flex-1 flex items-center justify-between pl-4 pr-1.5 h-[44px]">
+                          <div className="flex items-center gap-2" role="status">
+                            <span className="w-2 h-2 rounded-full bg-[#e5484d] animate-pulse" aria-hidden="true" />
+                            <span className="text-[15px] font-medium text-[#c0362c] tabular-nums">
                               {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1">
                             <button
                               type="button"
                               onClick={cancelRecording}
-                              className="text-black/40 hover:text-black/80 font-semibold text-[13px] px-2 py-1"
+                              className="px-3 h-8 rounded-full text-[14px] font-medium text-[#475061] hover:bg-[#e9ecf0]"
                             >
                               Cancel
                             </button>
                             <button
                               type="button"
                               onClick={stopRecording}
-                              className="w-8 h-8 rounded-full bg-[#1C1C1E] flex items-center justify-center text-white shadow-sm active:scale-95"
+                              className="w-8 h-8 rounded-full bg-[#15171c] flex items-center justify-center text-white active:scale-95"
+                              aria-label="Send voice message"
                             >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="ml-0.5"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                              <ArrowUp size={17} strokeWidth={2.2} />
                             </button>
                           </div>
                         </div>
                       ) : (
-                        <textarea
-                          ref={inputRef as any}
-                          value={inputText}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setInputText(val);
-                            setShowBotSuggestions(val.startsWith('/') && val.length < 10);
-                            if (!val) {
-                              e.target.style.height = '46px';
-                            } else {
-                              e.target.style.height = 'auto';
-                              e.target.style.height = `${Math.min(Math.max(e.target.scrollHeight, 46), 120)}px`;
-                            }
-                            const now = Date.now();
-                            if (now - lastTypingTimeRef.current > 3000 && val.trim().length > 0) {
-                              lastTypingTimeRef.current = now;
-                              if (client && activePeer) {
-                                sendMessage(client, activePeer, '__TYPING__').catch(() => {});
+                        <>
+                          <textarea
+                            ref={inputRef as any}
+                            value={inputText}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setInputText(val);
+                              setShowBotSuggestions(val.startsWith('/') && val.length < 10);
+                              if (!val) {
+                                e.target.style.height = '44px';
+                              } else {
+                                // RAF: defer resize so height:auto never causes mid-paint reflow
+                                // that shifts the VirtualizedMessageList above it.
+                                const el = e.target;
+                                requestAnimationFrame(() => {
+                                  el.style.height = '44px';
+                                  el.style.height = `${Math.min(Math.max(el.scrollHeight, 44), 134)}px`;
+                                });
                               }
-                            }
-                          }}
-                          onKeyDown={e => {
-                            if (ledgerSettings?.mechanical_keyboard) playKeyClick();
-                            const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
-                            const enterToSend = ledgerSettings?.enter_to_send !== false;
-                            if (e.key === 'Enter' && !e.shiftKey && !isTouch && enterToSend) {
-                              e.preventDefault();
-                              if (inputText.trim() && !isUploading) {
-                                handleSend(e as any);
-                                (e.target as HTMLTextAreaElement).style.height = '46px';
+                              const now = Date.now();
+                              if (now - lastTypingTimeRef.current > 3000 && val.trim().length > 0) {
+                                lastTypingTimeRef.current = now;
+                                if (client && activePeer) {
+                                  sendMessage(client, activePeer, '__TYPING__').catch(() => {});
+                                }
                               }
-                            }
-                          }}
-                          disabled={isUploading}
-                          placeholder={isUploading ? "Uploading..." : "Message"}
-                          rows={1}
-                          // [CRITICAL FIX] font-size: 16px prevents iOS Safari zoom on focus
-                          className="flex-1 bg-transparent px-3 py-[11px] text-[#111B21] focus:outline-none placeholder:text-[#8696A0] disabled:opacity-50 text-[16px] resize-none max-h-[120px] scrollbar-none leading-relaxed min-h-[46px]"
-                        />
+                            }}
+                            onKeyDown={e => {
+                              if (ledgerSettings?.mechanical_keyboard) playKeyClick();
+                              const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+                              const enterToSend = ledgerSettings?.enter_to_send !== false;
+                              if (e.key === 'Enter' && !e.shiftKey && !isTouch && enterToSend) {
+                                e.preventDefault();
+                                if (inputText.trim() && !isUploading) {
+                                  handleSend(e as any);
+                                  (e.target as HTMLTextAreaElement).style.height = '44px';
+                                }
+                              }
+                            }}
+                            disabled={isUploading}
+                            placeholder={isUploading ? 'Uploading' : 'Message'}
+                            aria-label="Message"
+                            rows={1}
+                            // 16px stops iOS Safari from zooming in when the field is focused.
+                            className="flex-1 bg-transparent pl-4 pr-1 py-[10px] text-[#15171c] focus:outline-none placeholder:text-[#a3a9b4] disabled:opacity-50 text-[16px] resize-none max-h-[134px] scrollbar-none leading-[1.5] min-h-[44px]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => { setShowEmojiPicker(d => !d); setShowAppDrawer(false); }}
+                            className={`w-9 h-9 shrink-0 mb-[4px] mr-1 rounded-full flex items-center justify-center transition-colors ${showEmojiPicker ? 'text-[#15171c] bg-[#e9ecf0]' : 'text-[#727a88] hover:text-[#15171c]'}`}
+                            aria-label="Emoji"
+                            aria-expanded={showEmojiPicker}
+                          >
+                            <Smile size={21} strokeWidth={1.8} />
+                          </button>
+                        </>
                       )}
                     </div>
 
-                    {/* Send / Mic button outside the pill */}
+                    {/* Send, or record a voice message when the field is empty */}
                     {inputText.trim() ? (
                       <LottieSendButton
                         disabled={sending || isUploading}
                         data-key={sendAnimKey}
                         onTrigger={() => {}}
                       />
-                    ) : (
+                    ) : !isRecording ? (
                       <button
                         type="button"
                         onClick={startRecording}
-                        className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all bg-[#1C1C1E] text-white shadow-md active:scale-90 mb-0.5"
+                        className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-colors text-[#475061] hover:bg-[#f2f4f7] active:scale-95 mb-[2px]"
+                        aria-label="Record a voice message"
                       >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        <Mic size={21} strokeWidth={1.8} />
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 </form>
 
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center bg-[#f9f9fb] relative overflow-y-auto p-6 md:p-12 border-l border-black/10 shadow-inner">
-            {/* Ambient glows */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#25D366]/5 rounded-full blur-[120px] pointer-events-none" />
-
-            <div className="w-full max-w-xl flex flex-col items-center text-center relative z-10">
-              <div className="w-28 h-28 rounded-[36px] overflow-hidden mb-8 shadow-2xl ring-[6px] ring-black/[0.03]">
-                <div className="w-full h-full flex items-center justify-center bg-[#25D366]/10 text-[#25D366]"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+          <div className="flex-1 flex flex-col items-center justify-center bg-[#f7f8fa] relative overflow-y-auto p-6 md:p-12">
+            <div className="w-full max-w-md flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center text-[#15171c] mb-6">
+                <MessageSquare size={28} strokeWidth={1.6} aria-hidden="true" />
               </div>
-              <h1 className="text-[32px] md:text-[42px] font-bold tracking-tight text-[#1C1C1E] mb-4">Select a conversation</h1>
-              <p className="text-[16px] md:text-[18px] text-[#1C1C1E]/50 font-medium leading-relaxed max-w-sm mb-4">
-                Choose from your existing contacts, or start a new conversation by entering a wallet address.
+              <h1 className="text-[24px] md:text-[28px] font-semibold tracking-[-0.02em] text-[#15171c] mb-2">Ledger Chat</h1>
+              <p className="text-[15.5px] text-[#727a88] leading-relaxed max-w-sm">
+                Choose a conversation on the left, or start a new one by searching for a name or pasting a wallet address.
               </p>
-              <div className="bg-[#25D366]/10 border border-[#25D366]/20 text-[#25D366] rounded-xl p-4 max-w-md w-full mb-10">
-                <p className="text-[13px] font-bold text-center">
-                  Ledger Chat is currently in Public Beta. E2E Encryption is active.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
-                              {[
-                    { 
-                      icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>), 
-                      label: 'End-to-End Encrypted',
-                      color: 'text-[#25D366] bg-[#25D366]/10'
-                    },
-                    { 
-                      icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>), 
-                      label: 'Decentralized Network',
-                      color: 'text-purple-500 bg-purple-50'
-                    },
-                    { 
-                      icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>), 
-                      label: 'Burn on Read',
-                      color: 'text-orange-500 bg-orange-50'
-                    },
-                    { 
-                      icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg>), 
-                      label: 'Send Crypto',
-                      color: 'text-emerald-500 bg-emerald-50'
-                    }
-                  ].map((f) => (
-                  <div key={f.label} className="bg-white rounded-2xl p-4 border border-black/[0.06] shadow-sm flex flex-col items-center gap-2 text-center hover:shadow-md transition-shadow">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${f.color}`}>
-                      {f.icon}
-                    </div>
-                    <span className="text-[11px] font-semibold text-[#1C1C1E]/60 leading-tight">{f.label}</span>
+              <div className="mt-8 w-full grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-left">
+                {[
+                  { icon: <Lock size={17} strokeWidth={1.8} />, title: 'Encrypted', text: 'Direct messages are encrypted on your device.' },
+                  { icon: <Users size={17} strokeWidth={1.8} />, title: 'Communities', text: 'Channels, roles and invite links.' },
+                  { icon: <Wallet size={17} strokeWidth={1.8} />, title: 'Payments', text: 'Send tokens from your own wallet.' },
+                ].map(f => (
+                  <div key={f.title} className="bg-white rounded-xl p-3.5 border border-[#e4e7ec]">
+                    <span className="w-8 h-8 rounded-lg bg-[#eff1f4] text-[#15171c] flex items-center justify-center mb-2.5" aria-hidden="true">{f.icon}</span>
+                    <p className="text-[14px] font-medium text-[#15171c]">{f.title}</p>
+                    <p className="text-[13px] text-[#727a88] leading-snug mt-0.5">{f.text}</p>
                   </div>
                 ))}
               </div>
+              <p className="mt-6 text-[13px] text-[#a3a9b4]">Ledger Chat is in early access.</p>
             </div>
           </div>
         )}
 
       {/* NOTE: remoteAudioRef lives ONLY inside the active call portal below to avoid ref conflicts */}
 
-      {/* â”€â”€ Incoming Call Screen (state: ringing) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Incoming Call Screen (state: ringing) ──────────────────────────────── */}
       {callState === 'ringing' && isMounted && typeof document !== 'undefined'
         ? (createPortal(
-        <div
-          className="fixed inset-0 w-full h-full flex flex-col items-center justify-between"
-          style={{
-            zIndex: 200000,
-            touchAction: 'none',
-            background: '#EBE5DC',
-          }}
-        >
-          {/* Top label */}
-          <div className="flex flex-col items-center w-full pt-[max(56px,env(safe-area-inset-top,56px))] px-6">
-            <div className="flex items-center gap-2 mb-2">
-              {callTypeRef.current === 'video' ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="white" opacity={0.5}><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.89L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="white" opacity={0.5}><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.22 2 2 0 012 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
-              )}
-              <span className="text-white/40 text-[11px] font-semibold uppercase tracking-[0.25em]">
-                {callTypeRef.current === 'video' ? 'Incoming Video Call' : 'Incoming Voice Call'}
-              </span>
-            </div>
-            <p className="text-white/20 text-[12px] tracking-wide">Ledger Chat â€¢ End-to-end encrypted</p>
-          </div>
-
-          {/* Center â€” Avatar with animated rings */}
-          <div className="flex flex-col items-center gap-6">
-            {/* Rings */}
-            <div className="relative flex items-center justify-center">
-              {[220, 176, 140].map((size, i) => (
-                <div
-                  key={size}
-                  className="absolute rounded-full border"
-                  style={{
-                    width: size,
-                    height: size,
-                    borderColor: 'rgba(255,255,255,0.07)',
-                    animation: `ping ${2.4 - i * 0.4}s cubic-bezier(0,0,0.2,1) infinite`,
-                    animationDelay: `${i * 0.3}s`,
-                  }}
-                />
-              ))}
-              {/* Avatar */}
-              <div
-                className="w-28 h-28 rounded-full relative z-10 flex items-center justify-center border-2 border-white/10 shadow-2xl text-white text-4xl font-black"
-                style={{ background: 'linear-gradient(135deg, #2a2a40, #3a3a58)' }}
-              >
-                {activePeer ? activePeer.slice(2, 4).toUpperCase() : '??'}
-              </div>
-            </div>
-
-            {/* Name and status */}
-            <div className="flex flex-col items-center gap-1">
-              <p className="text-white text-[30px] font-bold tracking-tight">
-                {activePeer ? getDisplayName(activePeer) : 'Unknown Caller'}
-              </p>
-              <p className="text-white/40 text-[13px] font-mono">
-                {activePeer ? `${activePeer.slice(0, 6)}...${activePeer.slice(-4)}` : ''}
-              </p>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-white/40 text-[12px]">Ringing...</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom â€” Decline & Answer */}
-          <div className="w-full pb-[max(52px,env(safe-area-inset-bottom,52px))] px-16">
-            <div className="flex items-center justify-between">
-              {/* Decline */}
-              <div className="flex flex-col items-center gap-3">
-                <button
-                  onClick={declineCall}
-                  className="w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg"
-                  style={{ background: 'rgba(255,59,48,0.85)', backdropFilter: 'blur(10px)' }}
-                >
-                  <PhoneOff size={28} className="text-[#1C1C1E]" />
-                </button>
-                <span className="text-white/40 text-[11px] font-medium tracking-wider uppercase">Decline</span>
-              </div>
-
-              {/* Message quick-reply */}
-              <div className="flex flex-col items-center gap-3 opacity-50">
-                <button
-                  className="w-[52px] h-[52px] rounded-full flex items-center justify-center border border-white/10"
-                  style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(10px)' }}
-                  onClick={() => { declineCall(); }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                  </svg>
-                </button>
-                <span className="text-white/30 text-[10px] font-medium tracking-wider uppercase">Message</span>
-              </div>
-
-              {/* Answer */}
-              <div className="flex flex-col items-center gap-3">
-                <button
-                  onClick={answerCall}
-                  className="w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg"
-                  style={{ background: 'rgba(52,199,89,0.90)', backdropFilter: 'blur(10px)' }}
-                >
-                  <Phone size={28} className="text-[#1C1C1E]" />
-                </button>
-                <span className="text-white/40 text-[11px] font-medium tracking-wider uppercase">Answer</span>
-              </div>
-            </div>
-          </div>
-        </div>,
+        <IncomingCallScreen
+          peerName={activePeer ? getDisplayName(activePeer) : 'Unknown caller'}
+          peerAddress={activePeer}
+          isVideo={callTypeRef.current === 'video'}
+          onDecline={declineCall}
+          onAnswer={answerCall}
+          onMessage={() => { declineCall(); }}
+        />,
         document.body
       ) as React.ReactNode) : null}
-      {/* â”€â”€ Outgoing Call Screen (state: calling â€” waiting for answer) â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Outgoing Call Screen (state: calling — waiting for answer) ─────── */}
       {(callState === 'calling' && isMounted && typeof document !== 'undefined')
         ? (createPortal(
-        <div
-          className="fixed inset-0 w-full h-full flex flex-col items-center justify-between"
-          style={{
-            zIndex: 200000,
-            touchAction: 'none',
-            background: '#EBE5DC',
-          }}
-        >
-          {/* Top label */}
-          <div className="flex flex-col items-center w-full pt-[max(56px,env(safe-area-inset-top,56px))] px-6">
-            <div className="flex items-center gap-2 mb-2">
-              {callTypeRef.current === 'video' ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="white" opacity={0.5}><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.89L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="white" opacity={0.5}><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.22 2 2 0 012 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
-              )}
-              <span className="text-white/40 text-[11px] font-semibold uppercase tracking-[0.25em]">
-                {callTypeRef.current === 'video' ? 'Video Call' : 'Voice Call'}
-              </span>
-            </div>
-            <p className="text-white/20 text-[12px] tracking-wide">Ledger Chat â€¢ End-to-end encrypted</p>
-          </div>
-
-          {/* Center â€” Avatar with slow animated rings */}
-          <div className="flex flex-col items-center gap-6">
-            <div className="relative flex items-center justify-center">
-              {[200, 160].map((size, i) => (
-                <div
-                  key={size}
-                  className="absolute rounded-full border"
-                  style={{
-                    width: size,
-                    height: size,
-                    borderColor: 'rgba(255,255,255,0.06)',
-                    animation: `ping ${3 + i * 0.5}s cubic-bezier(0,0,0.2,1) infinite`,
-                    animationDelay: `${i * 0.5}s`,
-                  }}
-                />
-              ))}
-              <div
-                className="w-28 h-28 rounded-full relative z-10 flex items-center justify-center border-2 border-white/10 shadow-2xl text-white text-4xl font-black"
-                style={{ background: 'linear-gradient(135deg, #2a2a40, #3a3a58)' }}
-              >
-                {activePeer ? activePeer.slice(2, 4).toUpperCase() : '??'}
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-1">
-              <p className="text-white text-[30px] font-bold tracking-tight">
-                {activePeer ? getDisplayName(activePeer) : 'Unknown Peer'}
-              </p>
-              <p className="text-white/40 text-[13px] font-mono">
-                {activePeer ? `${activePeer.slice(0, 6)}...${activePeer.slice(-4)}` : ''}
-              </p>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse" />
-                <span className="text-white/40 text-[12px] animate-pulse">Calling...</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom â€” Cancel */}
-          <div className="w-full flex flex-col items-center pb-[max(52px,env(safe-area-inset-bottom,52px))]">
-            <button
-              onClick={performEndCallRef.current}
-              className="w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg"
-              style={{ background: 'rgba(255,59,48,0.85)', backdropFilter: 'blur(10px)' }}
-            >
-              <PhoneOff size={28} className="text-[#1C1C1E]" />
-            </button>
-            <span className="text-white/40 text-[11px] font-medium mt-3 uppercase tracking-wider">Cancel</span>
-          </div>
-        </div>,
+        <OutgoingCallScreen
+          peerName={activePeer ? getDisplayName(activePeer) : 'Unknown'}
+          peerAddress={activePeer}
+          isVideo={callTypeRef.current === 'video'}
+          onCancel={() => performEndCallRef.current?.()}
+        />,
         document.body
       ) as React.ReactNode) : null}
 
-      {/* â”€â”€ Active Call Overlay â€” WhatsApp/Telegram parity â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Call in progress ─────────────────────────────────────── */}
       {callState === 'active' && isMounted && (
         isCallMinimized ? createPortal(
-          /* â”€â”€ MINIMIZED VIEW (Floating Banner or Video PiP) â”€â”€ */
           callType === 'video' ? (
-             <motion.div
+            <motion.div
               drag
               dragConstraints={{ top: 0, left: 0, right: typeof window !== 'undefined' ? window.innerWidth - 120 : 0, bottom: typeof window !== 'undefined' ? window.innerHeight - 160 : 0 }}
               initial={{ x: 20, y: 80 }}
               onClick={() => setIsCallMinimized(false)}
-              className="fixed z-[100000] w-28 h-40 md:w-36 md:h-52 rounded-2xl overflow-hidden shadow-2xl bg-black cursor-pointer border-2 border-black/30"
+              role="button"
+              aria-label="Return to the call"
+              className="fixed z-[100000] w-28 h-40 md:w-36 md:h-52 rounded-2xl overflow-hidden shadow-[0_18px_40px_-12px_rgba(16,24,40,0.45)] bg-[#15171c] cursor-pointer ring-1 ring-black/10"
             >
-               <video 
-                  ref={el => { if (el && el.srcObject !== remoteStream) el.srcObject = remoteStream; }} 
-                  autoPlay playsInline muted={false} className="w-full h-full object-cover" 
-               />
-               <div className="absolute top-2 left-2 bg-black text-white text-[10px] font-mono px-2 py-0.5 rounded-full font-bold">
-                 {formatDuration(callDurationSeconds)}
-               </div>
+              <video
+                ref={el => { if (el && el.srcObject !== remoteStream) el.srcObject = remoteStream; }}
+                autoPlay playsInline muted={false} className="w-full h-full object-cover"
+              />
+              <div className="absolute top-2 left-2 bg-white/90 text-[#15171c] text-[12px] tabular-nums px-2 py-0.5 rounded-full font-medium">
+                {formatDuration(callDurationSeconds)}
+              </div>
             </motion.div>
           ) : (
-            <div 
+            <button
+              type="button"
               onClick={() => setIsCallMinimized(false)}
-              className="fixed top-0 left-0 w-full z-[100000] bg-black text-white px-4 py-2 flex items-center justify-between cursor-pointer shadow-lg animate-in slide-in-from-top"
+              className="fixed top-0 left-0 w-full z-[100000] bg-[#1f9d55] text-white px-4 py-2 flex items-center justify-between shadow-sm"
               style={{ paddingTop: 'max(8px, env(safe-area-inset-top, 8px))' }}
             >
-              <div className="flex items-center gap-2">
-                <Volume2 size={16} className="animate-pulse" />
-                <span className="text-xs font-bold font-mono">Tap to return to call</span>
-              </div>
-              <span className="text-xs font-mono font-black">{formatDuration(callDurationSeconds)}</span>
+              <span className="flex items-center gap-2 text-[14px] font-medium">
+                <Phone size={15} strokeWidth={2} aria-hidden="true" />
+                Return to call with {activePeer ? getDisplayName(activePeer) : 'your contact'}
+              </span>
+              <span className="text-[14px] font-medium tabular-nums">{formatDuration(callDurationSeconds)}</span>
               <audio ref={remoteAudioRef} autoPlay playsInline style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }} />
-            </div>
+            </button>
           ),
           document.body
         ) : (
-          /* â”€â”€ FULL SCREEN VIEW â”€â”€ */
-          <div className="fixed inset-0 w-full h-full bg-black flex flex-col" style={{ zIndex: 200000, touchAction: 'none' }}>
-            
-            {/* â”€â”€ BACKGROUND â”€â”€ */}
+          <div className={`fixed inset-0 w-full h-full flex flex-col ${callType === 'video' ? 'bg-[#0f1115]' : 'bg-[#f7f8fa]'}`} style={{ zIndex: 200000, touchAction: 'none' }}>
+
+            {/* Background: the other person's video, or their name and picture for a voice call */}
             <div className="absolute inset-0">
-              {callTypeRef.current === 'video' ? (
+              {callType === 'video' ? (
                 remoteStream ? (
-                  <video 
-                     ref={el => { if (el && el.srcObject !== remoteStream) el.srcObject = remoteStream; }} 
-                     autoPlay playsInline className="w-full h-full object-cover" 
-                     style={{ filter: networkQuality === 'poor' ? 'blur(4px)' : 'none' }} 
+                  <video
+                    ref={el => { if (el && el.srcObject !== remoteStream) el.srcObject = remoteStream; }}
+                    autoPlay playsInline className="w-full h-full object-cover"
+                    style={{ filter: networkQuality === 'poor' ? 'blur(4px)' : 'none' }}
                   />
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-[#f5f5f7]">
-                    <div className="relative">
-                      <div className="absolute inset-0 rounded-full bg-black/5 animate-ping scale-150" style={{ animationDuration: '2s' }} />
-                      <div className="w-28 h-28 rounded-full flex items-center justify-center shadow-xl relative z-10 bg-white border border-black/5">
-                        <span className="text-black text-4xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : 'ðŸ³'}</span>
-                      </div>
-                    </div>
-                    <p className="text-black/50 text-sm font-mono uppercase tracking-widest animate-pulse">Connecting video...</p>
-                  </div>
+                  <AudioCallStage
+                    peerName={activePeer ? getDisplayName(activePeer) : 'Unknown'}
+                    peerAddress={activePeer}
+                    connected={false}
+                    durationLabel={formatDuration(callDurationSeconds)}
+                  />
                 )
               ) : (
-                /* â”€â”€ AUDIO CALL - Dark cinematic background â”€â”€ */
-                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#1A1A2E] via-[#16213E] to-[#0F3460]">
-                  {/* Subtle animated background pulse */}
-                  <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#25D366]/5 blur-3xl animate-pulse" style={{ animationDuration: '3s' }} />
-                  </div>
-
-                  <div className="relative z-10 flex flex-col items-center gap-8">
-                    {/* Audio Visualizer Rings */}
-                    <div className="relative flex items-center justify-center">
-                      {remoteStream && (
-                        <>
-                          <div className="absolute rounded-full border border-white/10 transition-all duration-75" style={{ width: 160 + audioLevel * 1.5, height: 160 + audioLevel * 1.5, opacity: Math.min(0.6, audioLevel / 50 + 0.1) }} />
-                          <div className="absolute rounded-full bg-white/5 transition-all duration-75" style={{ width: 130 + audioLevel, height: 130 + audioLevel, opacity: Math.min(0.4, audioLevel / 100 + 0.1) }} />
-                        </>
-                      )}
-                      <div className="w-[120px] h-[120px] rounded-full flex items-center justify-center shadow-2xl relative z-10 bg-gradient-to-br from-[#25D366] to-[#20bd59] border-4 border-white/10 overflow-hidden">
-                        <span className="text-white text-5xl font-black">{activePeer ? activePeer.slice(2, 4).toUpperCase() : '??'}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-center">
-                      <p className="text-white text-[28px] font-bold tracking-tight mb-2 drop-shadow-lg">{activePeer ? getDisplayName(activePeer) : 'Unknown Peer'}</p>
-                      {remoteStream ? (
-                        <span className={`text-[15px] font-medium flex items-center gap-2 justify-center ${networkQuality === 'poor' ? 'text-yellow-400' : 'text-white/70'}`}>
-                          <span className={`w-2 h-2 rounded-full animate-pulse ${networkQuality === 'poor' ? 'bg-yellow-400' : 'bg-[#25D366]'}`} />
-                          {networkQuality === 'poor' ? 'Weak Connection' : formatDuration(callDurationSeconds)}
-                        </span>
-                      ) : (
-                        <span className="text-white/50 text-[15px] font-medium tracking-wide animate-pulse">Calling...</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <AudioCallStage
+                  peerName={activePeer ? getDisplayName(activePeer) : 'Unknown'}
+                  peerAddress={activePeer}
+                  connected={!!remoteStream}
+                  durationLabel={formatDuration(callDurationSeconds)}
+                  poorConnection={networkQuality === 'poor'}
+                  audioLevel={audioLevel}
+                />
               )}
             </div>
 
-            {/* â”€â”€ PiP LOCAL VIDEO â”€â”€ */}
+            {/* Your own camera, small and movable */}
             {callType === 'video' && (
               <motion.div
                 drag
                 dragConstraints={{ top: 60, left: 20, right: 20, bottom: 120 }}
                 initial={{ x: 0, y: 0 }}
-                className="absolute top-[80px] right-4 z-20 cursor-grab active:cursor-grabbing"
+                className="absolute top-[84px] right-4 z-20 cursor-grab active:cursor-grabbing"
               >
                 {!isCamOff && localStream ? (
-                  <div className="w-28 h-40 md:w-36 md:h-52 rounded-2xl overflow-hidden border-2 border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.5)] bg-black">
-                    <video 
-                       ref={el => { if (el && el.srcObject !== localStream) el.srcObject = localStream; }} 
-                       autoPlay playsInline muted className="w-full h-full object-cover" 
+                  <div className="w-28 h-40 md:w-36 md:h-52 rounded-2xl overflow-hidden ring-1 ring-white/30 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.6)] bg-[#15171c]">
+                    <video
+                      ref={el => { if (el && el.srcObject !== localStream) el.srcObject = localStream; }}
+                      autoPlay playsInline muted className="w-full h-full object-cover"
                     />
                   </div>
                 ) : (
-                  <div className="w-28 h-40 md:w-36 md:h-52 rounded-2xl bg-black/80 border-2 border-white/20 flex items-center justify-center">
-                    <VideoOff size={24} className="text-white/40" />
+                  <div className="w-28 h-40 md:w-36 md:h-52 rounded-2xl bg-[#15171c] ring-1 ring-white/15 flex flex-col items-center justify-center gap-2 text-white/70">
+                    <VideoOff size={22} strokeWidth={1.8} aria-hidden="true" />
+                    <span className="text-[12px]">Camera off</span>
                   </div>
                 )}
               </motion.div>
             )}
 
-            {/* â”€â”€ Top Gradient for Readability â”€â”€ */}
-            <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none z-20" />
+            {/* Video needs a soft shade behind the top bar and controls to stay readable */}
+            {callType === 'video' && remoteStream && (
+              <>
+                <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black/50 to-transparent pointer-events-none z-20" />
+                <div className="absolute bottom-0 inset-x-0 h-44 bg-gradient-to-t from-black/55 to-transparent pointer-events-none z-20" />
+              </>
+            )}
 
-            {/* â”€â”€ Top Bar (Sleek & Professional) â”€â”€ */}
-            <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-4 sm:px-6" style={{ paddingTop: 'max(16px, env(safe-area-inset-top, 16px))' }}>
-              <button 
-                onClick={() => setIsCallMinimized(true)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md transition-all text-white active:scale-95 border border-white/10 shadow-sm"
-              >
-                <div className="w-3 h-3 border-b-2 border-l-2 border-white transform -rotate-45 mb-1" />
-              </button>
+            {/* Top bar */}
+            {(() => {
+              const dark = callType === 'video' && !!remoteStream;
+              const btn = dark
+                ? 'w-11 h-11 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-white backdrop-blur-md transition-colors'
+                : 'w-11 h-11 flex items-center justify-center rounded-full bg-white hover:bg-[#eff1f4] text-[#15171c] border border-[#e4e7ec] shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition-colors';
+              return (
+                <div className="absolute top-0 inset-x-0 z-30 flex items-start justify-between px-4 sm:px-6" style={{ paddingTop: 'max(16px, env(safe-area-inset-top, 16px))' }}>
+                  <button type="button" onClick={() => setIsCallMinimized(true)} className={btn} aria-label="Minimise call" title="Minimise">
+                    <Minimize2 size={18} strokeWidth={1.9} />
+                  </button>
 
-              <div className="flex flex-col items-center">
-                <div className="flex items-center gap-1.5 bg-black/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-sm mb-1">
-                  <Lock size={12} className="text-[#25D366]" />
-                  <span className="text-white text-[11px] font-bold tracking-widest uppercase opacity-90">End-to-End Encrypted</span>
+                  <div className="flex flex-col items-center text-center min-w-0 px-3">
+                    <span className={`inline-flex items-center gap-1.5 text-[13px] ${dark ? 'text-white/85' : 'text-[#727a88]'}`}>
+                      <Lock size={12} strokeWidth={2} aria-hidden="true" />
+                      Encrypted call
+                    </span>
+                    {dark && (
+                      <>
+                        <p className="text-white text-[17px] font-semibold tracking-[-0.01em] mt-1 truncate max-w-[60vw]">
+                          {activePeer ? getDisplayName(activePeer) : 'Unknown'}
+                        </p>
+                        <p className="text-white/80 text-[14px] tabular-nums">{formatDuration(callDurationSeconds)}</p>
+                      </>
+                    )}
+                  </div>
+
+                  <button type="button" onClick={() => setShowCallSettings(true)} className={btn} aria-label="Call settings" title="Call settings">
+                    <Settings size={18} strokeWidth={1.9} />
+                  </button>
                 </div>
-                <h3 className="text-white text-[17px] font-bold tracking-tight shadow-black/50 drop-shadow-md">
-                  {activePeer ? getDisplayName(activePeer) : 'Unknown Peer'}
-                </h3>
-                <p className="text-white/80 text-[13px] font-mono font-medium drop-shadow-md tracking-wide">
-                  {formatDuration(callDurationSeconds)}
-                </p>
-              </div>
+              );
+            })()}
 
-              <button 
-                onClick={() => setShowCallSettings(true)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md transition-all text-white active:scale-95 border border-white/10 shadow-sm"
-              >
-                <Settings size={20} />
-              </button>
-            </div>
-
-            {/* â”€â”€ Network Alert â”€â”€ */}
+            {/* Weak connection notice, video only (voice shows it under the name) */}
             <AnimatePresence>
-              {networkQuality === 'poor' && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                  className="absolute top-[110px] left-1/2 -translate-x-1/2 bg-yellow-500/90 backdrop-blur-md text-black text-[12px] font-bold px-4 py-2 rounded-full z-20 flex items-center gap-2 shadow-lg"
+              {networkQuality === 'poor' && callType === 'video' && (
+                <motion.div
+                  initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+                  role="status"
+                  className="absolute top-[120px] left-1/2 -translate-x-1/2 bg-white text-[#15171c] text-[13px] font-medium px-3.5 py-2 rounded-full z-30 flex items-center gap-2 shadow-[0_8px_24px_-8px_rgba(16,24,40,0.35)]"
                 >
-                  <AlertTriangle size={14} /> Weak Connection
+                  <AlertTriangle size={14} strokeWidth={2} className="text-[#b7791f]" aria-hidden="true" /> Weak connection
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* â”€â”€ Bottom Gradient for Readability â”€â”€ */}
-            <div className="absolute bottom-0 inset-x-0 h-48 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none z-20" />
-
-            {/* â”€â”€ Bottom Controls (Ultra-Mature Frosted Pill) â”€â”€ */}
-            <div
-              className="absolute bottom-0 inset-x-0 z-30 flex flex-col items-center pb-8"
-              style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom, 32px))' }}
-            >
-              <div className="flex items-center gap-3 sm:gap-5 bg-black/40 backdrop-blur-2xl px-6 py-4 rounded-[2rem] border border-white/10 shadow-2xl">
-                
-                {/* Secondary Controls (Switch Cam, Screen Share) */}
-                {callType === 'video' && (
-                  <>
-                    <button 
-                      onClick={switchCamera} 
-                      className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all active:scale-90"
-                      title="Switch Camera"
-                    >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.29 7 12 12 20.71 7"></polyline><line x1="12" y1="22" x2="12" y2="12"></line></svg>
-                    </button>
-                    
-                    <button 
-                      onClick={toggleScreenShare} 
-                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 ${isScreenSharing ? 'bg-[#25D366] text-white shadow-[0_0_15px_rgba(37,211,102,0.4)]' : 'bg-white/10 hover:bg-white/20 text-white'}`}
-                      title="Screen Share"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-                    </button>
-
-                    <div className="w-px h-8 bg-white/10 mx-1" />
-                  </>
-                )}
-
-                {/* Video Toggle */}
-                {callType === 'video' ? (
-                  <button
-                    onClick={toggleCamera}
-                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg ${
-                      isCamOff
-                        ? 'bg-white text-black hover:bg-gray-200'
-                        : 'bg-white/10 text-white hover:bg-white/20 border border-white/5'
-                    }`}
-                  >
-                    {isCamOff ? <VideoOff size={24} /> : <Video size={26} />}
-                  </button>
-                ) : null}
-
-                {/* Mic Toggle */}
-                <button
-                  onClick={toggleMic}
-                  className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg ${
-                    isMicMuted
-                      ? 'bg-white text-black hover:bg-gray-200'
-                      : 'bg-white/10 text-white hover:bg-white/20 border border-white/5'
-                  }`}
-                >
-                  {isMicMuted ? <MicOff size={24} /> : <Mic size={26} />}
-                </button>
-
-                {/* End Call */}
-                <button
-                  onClick={endCall}
-                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-[22px] sm:rounded-3xl bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-all active:scale-90 shadow-[0_8px_32px_rgba(239,68,68,0.4)] ml-2"
-                  title="End Call"
-                >
-                  <PhoneOff size={28} />
-                </button>
-              </div>
+            {/* Controls */}
+            <div className="absolute bottom-0 inset-x-0 z-30 flex justify-center" style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom, 32px))' }}>
+              <CallControls
+                tone={callType === 'video' && !!remoteStream ? 'dark' : 'light'}
+                isVideo={callType === 'video'}
+                micMuted={isMicMuted}
+                cameraOff={isCamOff}
+                screenSharing={isScreenSharing}
+                onSwitchCamera={switchCamera}
+                onScreenShare={toggleScreenShare}
+                onToggleCamera={toggleCamera}
+                onToggleMic={toggleMic}
+                onEnd={endCall}
+              />
             </div>
 
             <audio ref={remoteAudioRef} autoPlay playsInline style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }} />
@@ -6144,142 +5830,75 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       {(showCallSettings && isMounted && typeof document !== 'undefined')
         ? createPortal(
-        <div className="fixed inset-0 z-[300000] bg-black/50 backdrop-blur-md flex flex-col items-center justify-center p-4" onClick={() => setShowCallSettings(false)}>
-           <div className="w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-               {/* Header */}
-               <div className="flex justify-between items-center px-6 py-5 border-b border-black/[0.06]">
-                   <div>
-                     <h3 className="text-[17px] font-black text-[#1C1C1E]">Call Settings</h3>
-                     <p className="text-[12px] text-black/40 font-medium mt-0.5">{callType === 'video' ? 'Video Call' : 'Voice Call'} in progress</p>
-                   </div>
-                   <button onClick={() => setShowCallSettings(false)} className="w-9 h-9 flex items-center justify-center hover:bg-black/5 rounded-full transition-colors text-black">
-                     <X size={20} />
-                   </button>
-               </div>
+        <div className="fixed inset-0 z-[300000] bg-[#15171c]/30 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={() => setShowCallSettings(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="call-settings-title" className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)]" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start px-5 pt-5 pb-3">
+              <div>
+                <h3 id="call-settings-title" className="text-[17px] font-semibold tracking-[-0.01em] text-[#15171c]">Call settings</h3>
+                <p className="text-[14px] text-[#727a88] mt-0.5 flex items-center gap-2"><span>{callType === 'video' ? 'Video call' : 'Voice call'}</span><span className="tabular-nums">{formatDuration(callDurationSeconds)}</span></p>
+              </div>
+              <button type="button" onClick={() => setShowCallSettings(false)} aria-label="Close" className="w-9 h-9 -mr-1 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
+                <X size={18} strokeWidth={1.9} />
+              </button>
+            </div>
 
-               <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
-                 {/* AUDIO SECTION */}
-                 <p className="text-[11px] font-black uppercase tracking-widest text-[#25D366] ml-2 mb-1">Audio</p>
+            <div className="px-3 pb-4 max-h-[70vh] overflow-y-auto">
+              {(() => {
+                const row = ({ icon, title, text, right, onClick }: { icon: React.ReactNode; title: string; text: string; right?: React.ReactNode; onClick?: () => void }) => {
+                  const inner = (
+                    <>
+                      <span className="w-9 h-9 rounded-xl bg-[#eff1f4] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">{icon}</span>
+                      <span className="flex-1 min-w-0 text-left">
+                        <span className="block text-[15px] font-medium text-[#15171c]">{title}</span>
+                        <span className="block text-[13px] text-[#727a88] mt-0.5">{text}</span>
+                      </span>
+                      {right}
+                    </>
+                  );
+                  return onClick
+                    ? <button type="button" onClick={onClick} className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-[#f7f8fa] transition-colors">{inner}</button>
+                    : <div className="w-full flex items-center gap-3 px-3 py-3">{inner}</div>;
+                };
+                const toggle = ({ on, label, onToggle }: { on: boolean; label: string; onToggle: () => void }) => (
+                  <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onToggle}
+                    className={`relative w-[46px] h-[28px] rounded-full transition-colors duration-200 shrink-0 ${on ? 'bg-[#15171c]' : 'bg-[#d4d8df]'}`}>
+                    <span className={`absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full shadow-sm transition-transform duration-200 ${on ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+                  </button>
+                );
+                return (
+                  <>
+                    <p className="px-3 pt-1 pb-1 text-[13px] font-medium text-[#727a88]">Sound</p>
+                    {row({ icon: <Mic size={17} strokeWidth={1.8} />, title: 'Noise suppression', text: 'Filters out background noise',
+                      right: toggle({ on: voiceIsolation, label: 'Noise suppression', onToggle: toggleVoiceIsolation }) })}
+                    {row({ icon: <Volume2 size={17} strokeWidth={1.8} />, title: 'Echo cancellation', text: 'Always on in Ledger Chat calls' })}
 
-                 {/* Voice Isolation / Noise Suppression */}
-                 <div className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-2xl">
-                   <div className="flex items-center gap-3">
-                     <div className="w-9 h-9 rounded-xl bg-[#25D366]/10 flex items-center justify-center">
-                       <Mic size={18} className="text-[#25D366]" />
-                     </div>
-                     <div>
-                       <h4 className="text-[14px] font-bold text-[#1C1C1E]">Noise Suppression</h4>
-                       <p className="text-[11px] text-black/40 mt-0.5">Filters background noise</p>
-                     </div>
-                   </div>
-                   <button
-                     onClick={toggleVoiceIsolation}
-                     className={`relative w-[48px] h-[28px] rounded-full transition-colors duration-300 ${voiceIsolation ? 'bg-[#25D366]' : 'bg-black/15'}`}
-                   >
-                     <div className={`absolute top-[2px] left-[2px] w-[24px] h-[24px] bg-white rounded-full shadow-md transition-transform duration-300 ${voiceIsolation ? 'translate-x-[20px]' : 'translate-x-0'}`} />
-                   </button>
-                 </div>
+                    {callType === 'video' && (
+                      <>
+                        <p className="px-3 pt-3 pb-1 text-[13px] font-medium text-[#727a88]">Video</p>
+                        {row({ icon: <Zap size={17} strokeWidth={1.8} />, title: 'Data saver', text: dataSaver ? 'Video is limited to 480p' : 'Video up to 1080p',
+                          right: toggle({ on: dataSaver, label: 'Data saver', onToggle: toggleDataSaver }) })}
+                      </>
+                    )}
 
-                 {/* Echo Cancellation */}
-                 <div className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-2xl">
-                   <div className="flex items-center gap-3">
-                     <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center">
-                       <Volume2 size={18} className="text-indigo-500" />
-                     </div>
-                     <div>
-                       <h4 className="text-[14px] font-bold text-[#1C1C1E]">Echo Cancellation</h4>
-                       <p className="text-[11px] text-black/40 mt-0.5">Removes audio echo</p>
-                     </div>
-                   </div>
-                   <div className={`relative w-[48px] h-[28px] rounded-full bg-[#25D366]`}>
-                     <div className="absolute top-[2px] right-[2px] w-[24px] h-[24px] bg-white rounded-full shadow-md" />
-                   </div>
-                 </div>
+                    <p className="px-3 pt-3 pb-1 text-[13px] font-medium text-[#727a88]">Connection</p>
+                    {row({ icon: <ShieldCheck size={17} strokeWidth={1.8} />, title: 'Encryption', text: 'How this call is protected',
+                      onClick: () => { setShowCallSettings(false); setShowE2EE(true); },
+                      right: <ChevronRight size={16} strokeWidth={1.8} className="text-[#a3a9b4]" /> })}
+                    {row({ icon: <Wifi size={17} strokeWidth={1.8} />, title: 'Network',
+                      text: networkQuality === 'poor' ? 'Weak connection, trying to recover' : 'Connection is stable' })}
 
-                 {/* VIDEO SECTION */}
-                 {callType === 'video' && (
-                   <>
-                     <p className="text-[11px] font-black uppercase tracking-widest text-[#25D366] ml-2 mb-1 pt-2">Video</p>
-
-                     {/* Data Saver / Quality */}
-                     <div className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-2xl">
-                       <div className="flex items-center gap-3">
-                         <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center">
-                           <Zap size={18} className="text-orange-500" />
-                         </div>
-                         <div>
-                           <h4 className="text-[14px] font-bold text-[#1C1C1E]">Data Saver</h4>
-                           <p className="text-[11px] text-black/40 mt-0.5">{dataSaver ? 'Quality reduced to 480p' : 'Full HD quality (1080p)'}</p>
-                         </div>
-                       </div>
-                       <button
-                         onClick={toggleDataSaver}
-                         className={`relative w-[48px] h-[28px] rounded-full transition-colors duration-300 ${dataSaver ? 'bg-orange-400' : 'bg-black/15'}`}
-                       >
-                         <div className={`absolute top-[2px] left-[2px] w-[24px] h-[24px] bg-white rounded-full shadow-md transition-transform duration-300 ${dataSaver ? 'translate-x-[20px]' : 'translate-x-0'}`} />
-                       </button>
-                     </div>
-
-                     {/* Mirror Video */}
-                     <div className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-2xl">
-                       <div className="flex items-center gap-3">
-                         <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center">
-                           <Video size={18} className="text-purple-500" />
-                         </div>
-                         <div>
-                           <h4 className="text-[14px] font-bold text-[#1C1C1E]">Mirror My Video</h4>
-                           <p className="text-[11px] text-black/40 mt-0.5">Flip local preview horizontally</p>
-                         </div>
-                       </div>
-                       <div className={`relative w-[48px] h-[28px] rounded-full bg-[#25D366]`}>
-                         <div className="absolute top-[2px] right-[2px] w-[24px] h-[24px] bg-white rounded-full shadow-md" />
-                       </div>
-                     </div>
-                   </>
-                 )}
-
-                 {/* SECURITY SECTION */}
-                 <p className="text-[11px] font-black uppercase tracking-widest text-[#25D366] ml-2 mb-1 pt-2">Security</p>
-
-                 {/* E2EE Verification */}
-                 <button
-                   onClick={() => { setShowCallSettings(false); setShowE2EE(true); }}
-                   className="w-full p-4 bg-[#F2F2F7] hover:bg-[#E5E5EA] transition-colors rounded-2xl flex items-center gap-3"
-                 >
-                   <div className="w-9 h-9 rounded-xl bg-[#25D366]/10 flex items-center justify-center shrink-0">
-                     <Lock size={18} className="text-[#25D366]" />
-                   </div>
-                   <div className="flex-1 text-left">
-                     <h4 className="text-[14px] font-bold text-[#1C1C1E]">Verify Encryption</h4>
-                     <p className="text-[11px] text-black/40 mt-0.5">Confirm this call is fully encrypted</p>
-                   </div>
-                   <ChevronRight size={16} className="text-black/30" />
-                 </button>
-
-                 {/* Network Status */}
-                 <div className="p-4 bg-[#F2F2F7] rounded-2xl">
-                   <div className="flex items-center gap-3">
-                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${networkQuality === 'poor' ? 'bg-yellow-100' : 'bg-[#25D366]/10'}`}>
-                       <Wifi size={18} className={networkQuality === 'poor' ? 'text-yellow-500' : 'text-[#25D366]'} />
-                     </div>
-                     <div>
-                       <h4 className="text-[14px] font-bold text-[#1C1C1E]">Network Status</h4>
-                       <p className={`text-[11px] font-medium mt-0.5 ${networkQuality === 'poor' ? 'text-yellow-500' : 'text-[#25D366]'}`}>
-                         {networkQuality === 'poor' ? 'Weak â€” reconnecting...' : 'Excellent connection'}
-                       </p>
-                     </div>
-                   </div>
-                 </div>
-
-                 {/* End Call - Bottom button */}
-                 <button
-                   onClick={() => { setShowCallSettings(false); endCall(); }}
-                   className="w-full py-3.5 mt-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-red-500/20"
-                 >
-                   <PhoneOff size={18} /> End Call
-                 </button>
-               </div>
-           </div>
+                    <button
+                      type="button"
+                      onClick={() => { setShowCallSettings(false); endCall(); }}
+                      className="w-[calc(100%-24px)] mx-3 mt-3 py-3 bg-[#e5484d] hover:brightness-105 text-white text-[15px] font-medium rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                    >
+                      <PhoneOff size={17} strokeWidth={2} /> End call
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
         </div>,
         document.body
       ) : null}
@@ -6287,54 +5906,56 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       {(showE2EE && isMounted && typeof document !== 'undefined')
         ? createPortal(
-        <div className="fixed inset-0 z-[200000] bg-white/95 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
-           <div className="w-full max-w-sm">
-               <div className="flex justify-between items-center mb-8">
-                   <h3 className="text-[13px] font-black uppercase tracking-[0.25em] text-[#050505]">E2EE Status</h3>
-                   <button onClick={() => setShowE2EE(false)} className="w-10 h-10 flex items-center justify-center hover:bg-black/5 rounded-full transition-colors text-[11px] font-black uppercase text-[#050505]">
-                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                   </button>
-               </div>
-               
-               <div className="flex flex-col items-center justify-center gap-4 mb-6">
-                 <div className="w-16 h-16 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[#050505]">
-                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                 </div>
-                 <h4 className="text-[18px] font-black text-black">Connection is Secure</h4>
-                 <p className="text-[12px] font-mono text-black/60 text-center px-4">
-                   Your call with <br/> <span className="font-bold text-black">{activePeer ? shortAddr(activePeer) : 'this peer'}</span> <br/> is End-to-End Encrypted.
-                 </p>
-               </div>
-
-               <div className="p-4 bg-[#f5f5f7] rounded-2xl break-all text-center">
-                 <p className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-2">Verification Hash</p>
-                 <p className="text-[11px] font-mono text-black font-bold">
-                   {activePeer ? (activePeer + address!).replace(/0x/g, '').slice(0, 32).toUpperCase().match(/.{1,4}/g)?.join(' ') : '...'}
-                 </p>
-               </div>
-           </div>
+        <div className="fixed inset-0 z-[300001] bg-[#15171c]/30 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={() => setShowE2EE(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="e2ee-title" className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)]" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-end -mt-2 -mr-2">
+              <button type="button" onClick={() => setShowE2EE(false)} aria-label="Close" className="w-9 h-9 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
+                <X size={18} strokeWidth={1.9} />
+              </button>
+            </div>
+            <div className="flex flex-col items-center text-center">
+              <span className="w-14 h-14 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#15171c] mb-4" aria-hidden="true">
+                <ShieldCheck size={26} strokeWidth={1.7} />
+              </span>
+              <h3 id="e2ee-title" className="text-[19px] font-semibold tracking-[-0.015em] text-[#15171c]">This call is encrypted</h3>
+              <p className="text-[15px] text-[#4a505c] leading-relaxed mt-2">
+                Sound and video travel directly between your device and {activePeer ? getDisplayName(activePeer) : 'your contact'}, encrypted with DTLS and SRTP, the standard protection built into every browser call.
+              </p>
+            </div>
+            <ul className="mt-5 space-y-3 text-left">
+              <li className="flex gap-3 text-[14px] text-[#4a505c] leading-relaxed">
+                <Check size={16} strokeWidth={2} className="text-[#1f9d55] mt-[3px] shrink-0" aria-hidden="true" />
+                The signalling server only helps the two devices find each other. It never receives the sound or video.
+              </li>
+              <li className="flex gap-3 text-[14px] text-[#4a505c] leading-relaxed">
+                <Info size={16} strokeWidth={2} className="text-[#727a88] mt-[3px] shrink-0" aria-hidden="true" />
+                When a direct connection is not possible, the call is relayed through a TURN server that passes on encrypted data without being able to read it.
+              </li>
+            </ul>
+            <a href="/docs/calls" target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-1 text-[14px] font-medium text-[#15171c] underline underline-offset-4 decoration-[#c9ced6] hover:decoration-[#15171c]">
+              How calls work
+            </a>
+          </div>
         </div>,
         document.body
       ) : null}
 
       {(showScanner && isMounted && typeof document !== 'undefined')
         ? createPortal(
-        <div className="fixed inset-0 z-[200000] bg-white/95 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
+        <div className="fixed inset-0 z-[200000] bg-[#f7f8fa] flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
            <div className="w-full max-w-sm">
-               <div className="flex justify-between items-center mb-8">
-                   <h3 className="text-[13px] font-black uppercase tracking-[0.25em] text-[#050505]">Scan Peer QR</h3>
-                   <button onClick={() => setShowScanner(false)} className="w-10 h-10 flex items-center justify-center hover:bg-black/5 rounded-full transition-colors text-[11px] font-black uppercase text-[#050505]">
-                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+               <div className="flex justify-between items-center mb-3">
+                   <h3 className="text-[19px] font-semibold tracking-[-0.015em] text-[#15171c]">Scan a code</h3>
+                   <button type="button" onClick={() => setShowScanner(false)} aria-label="Close" className="w-10 h-10 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
+                     <X size={18} strokeWidth={1.9} />
                    </button>
                </div>
-               <div className="mb-8">
-                 <p className="text-[10px] text-black/40 text-center font-mono leading-relaxed px-4">
-                   Scan a peer&apos;s QR identity to chat securely, or scan a Desktop Connect QR to link your session.
-                 </p>
-               </div>
+               <p className="text-[15px] text-[#727a88] leading-relaxed mb-6">
+                 Scan a contact&apos;s code to start a conversation, or the code shown on your computer to sign in there.
+               </p>
                <QrScanner mode="scan" onScanSuccess={async (text) => {
                   if (text.includes('?s=') || text.includes('?uuid=') || text.includes('humanidfi.com/connect') || text.includes('session=')) {
-                    toast.loading('Linking device...', { id: 'link-device' });
+                    toast.loading('Signing in on your computer', { id: 'link-device' });
                     const result = await completeSessionHandshake(
                       text,
                       () => address as string,
@@ -6343,11 +5964,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     );
                     toast.dismiss('link-device');
                     if (result.ok) {
-                      toast.success('Session Linked Successfully! Desktop is now connected.');
+                      toast.success('Your computer is now signed in.');
                       setShowScanner(false);
                       if (result.cleanup) result.cleanup();
                     } else {
-                      toast.error(result.message || 'Failed to link session.');
+                      toast.error(result.message || 'Could not sign in on your computer. Try a new code.');
                     }
                   } else {
                     handleStartConversationWithPeer(text);
@@ -6360,19 +5981,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       {(showMyQR && isMounted && typeof document !== 'undefined')
         ? createPortal(
-        <div className="fixed inset-0 z-[200000] bg-white/95 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
+        <div className="fixed inset-0 z-[200000] bg-[#f7f8fa] flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
            <div className="w-full max-w-sm">
-               <div className="flex justify-between items-center mb-8">
-                   <h3 className="text-[13px] font-black uppercase tracking-[0.25em] text-[#050505]">My Identity QR</h3>
-                   <button onClick={() => setShowMyQR(false)} className="w-10 h-10 flex items-center justify-center hover:bg-black/5 rounded-full transition-colors text-[11px] font-black uppercase text-[#050505]">
-                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+               <div className="flex justify-between items-center mb-6">
+                   <h3 className="text-[19px] font-semibold tracking-[-0.015em] text-[#15171c]">My code</h3>
+                   <button type="button" onClick={() => setShowMyQR(false)} aria-label="Close" className="w-10 h-10 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
+                     <X size={18} strokeWidth={1.9} />
                    </button>
                </div>
                <QrScanner 
                    mode="project" 
                    projectValue={address} 
-                   projectTitle={chatName || "KYC Identity"} 
-                   projectDescription={chatBio || "Present this code to a peer. Once scanned, you can start messaging securely."} 
+                   projectTitle={chatName || "Your Ledger Chat code"}
+                   projectDescription={chatBio || "Let someone scan this code to start a conversation with you."}
                />
            </div>
         </div>,
@@ -6380,175 +6001,100 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       ) : null}
 
        
-      {/* â”€â”€â”€ MISSING MODALS FOR APP DRAWER â”€â”€â”€ */}
-      {showGifPicker && (
-        <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm flex justify-center items-end" onClick={() => setShowGifPicker(false)}>
-          <div className="bg-white w-full max-w-md h-[50vh] rounded-t-3xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold mb-4">Send GIF (Tenor/Giphy Integration)</h3>
-            <div className="grid grid-cols-2 gap-2 overflow-y-auto">
-              {['https://media.giphy.com/media/ICOgUNjpvO0PC/giphy.gif', 'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif', 'https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif'].map((gif, i) => (
-                <img key={i} src={gif} alt="gif" className="rounded-xl w-full h-32 object-cover cursor-pointer hover:opacity-80" onClick={() => {
-                  executeSend(`![GIF](${gif})`);
-                  setShowGifPicker(false);
-                }} />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showPollCreator && (
-        <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm flex justify-center items-end sm:items-center" onClick={() => setShowPollCreator(false)}>
-          <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 flex flex-col" onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold mb-4 text-lg">Create Poll</h3>
-            <input id="poll-q" type="text" placeholder="Ask a question..." className="w-full bg-gray-100 p-3 rounded-xl mb-4 outline-none font-medium" />
-            <input id="poll-o1" type="text" placeholder="Option 1" className="w-full bg-gray-50 p-3 rounded-xl mb-2 outline-none" />
-            <input id="poll-o2" type="text" placeholder="Option 2" className="w-full bg-gray-50 p-3 rounded-xl mb-4 outline-none" />
-            <button className="w-full bg-[#25D366] text-white py-3 rounded-xl font-bold" onClick={() => {
-              const q = document.getElementById('poll-q').value;
-              const o1 = document.getElementById('poll-o1').value;
-              const o2 = document.getElementById('poll-o2').value;
-              if (q && o1 && o2) {
-                executeSend(`__POLL__${Date.now()}__::${q}__::${o1}__::${o2}`);
-                setShowPollCreator(false);
-              }
-            }}>Send Poll</button>
-          </div>
-        </div>
-      )}
-
-      {showWalletTransfer && (
-        <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm flex justify-center items-end sm:items-center" onClick={() => setShowWalletTransfer(false)}>
-          <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 flex flex-col" onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold mb-2 text-lg text-center">Transfer Crypto</h3>
-            <p className="text-gray-500 text-sm text-center mb-6">Send funds directly via L2 Aztec Network</p>
-            <div className="flex items-center justify-center gap-2 mb-6 text-4xl font-black text-gray-800">
-              $ <input id="crypto-amount" type="number" placeholder="0.00" className="w-32 bg-transparent outline-none" />
-            </div>
-            <button className="w-full bg-[#FF9500] text-white py-3 rounded-xl font-bold" onClick={() => {
-              const amt = document.getElementById('crypto-amount').value;
-              if (amt && Number(amt) > 0) {
-                executeSend(`__PAYMENT__${amt}`);
-                setShowWalletTransfer(false);
-              }
-            }}>Sign & Send</button>
-          </div>
-        </div>
-      )}
-
-       {/* Context Menu Overlay */}
+       {/* Message actions menu */}
        {(contextMenu && typeof document !== 'undefined')
          ? createPortal(
-         <div className="fixed inset-0 z-[200]" onClick={() => setContextMenu(null)}>
-           <div 
-             className="absolute bg-white  border border-black/10  rounded-2xl shadow-xl p-2 min-w-[160px] flex flex-col"
-             style={{ 
-               top: Math.min(contextMenu.y / (typeof window !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).zoom || '1') : 1), window.innerHeight - 250), 
-               left: Math.min(contextMenu.x / (typeof window !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).zoom || '1') : 1), window.innerWidth - 180) 
-             }}
-             onClick={e => e.stopPropagation()}
-           >
-             <button onClick={() => {
-                 navigator.clipboard.writeText(contextMenu.content.replace(/^\[.*?\]/, ''));
-                 setContextMenu(null);
-             }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5  text-[11px] font-mono text-[#050505]  text-left">
-                <Copy size={14} /> Copy Text
-             </button>
-             <button onClick={() => {
-                 setReplyingTo({ id: contextMenu.id, content: contextMenu.content });
-                 setContextMenu(null);
-                 setTimeout(() => inputRef.current?.focus(), 100);
-             }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg> Reply
-             </button>
-             <button onClick={() => {
-                 setThreadParentId(contextMenu.id);
-                 setContextMenu(null);
-             }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Reply in Thread
-             </button>
-             
-             {/* Only show Edit if message was sent by me */}
-             {messages.find(m => m.id === contextMenu.id)?.senderAddress?.toLowerCase() === address?.toLowerCase() && (
-               <button onClick={() => {
-                   setEditingMsg({ id: contextMenu.id, content: contextMenu.content });
-                   setContextMenu(null);
-               }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit
-               </button>
-             )}
-
-             <button onClick={() => {
-                 setForwardMsg({ id: contextMenu.id, content: contextMenu.content });
-                 setContextMenu(null);
-             }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg> Forward
-             </button>
-             <button onClick={() => {
-                 executeSend(`__PIN__${contextMenu.id}`);
-                 setContextMenu(null);
-             }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg> Pin Message
-             </button>
-             
-             {messages.find(m => m.id === contextMenu.id)?.senderAddress?.toLowerCase() === address?.toLowerCase() ? (
-               <button onClick={() => {
-                   setMessages(prev => prev.filter(m => m.id !== contextMenu.id));
-                   executeSend(`__REVOKE__${contextMenu.id}`);
-                   setContextMenu(null);
-               }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left">
-                  <Trash2 size={14} /> Unsend
-               </button>
-             ) : (
-               <button onClick={() => {
-                   reportMessage(contextMenu.id, contextMenu.content);
-               }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-red-500 text-left">
-                  ðŸš© Report Message
-               </button>
-             )}
-           </div>
+         <div className="fixed inset-0 z-[200]" onClick={() => setContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}>
+           {(() => {
+             const mine = messages.find(m => m.id === contextMenu.id)?.senderAddress?.toLowerCase() === address?.toLowerCase();
+             const item = 'flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#15171c] text-left transition-colors';
+             return (
+               <div
+                 role="menu"
+                 aria-label="Message actions"
+                 className="absolute bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)] p-1.5 min-w-[200px] flex flex-col animate-in fade-in zoom-in-95 duration-150"
+                 style={{
+                   top: Math.max(8, Math.min(contextMenu.y, window.innerHeight - 330)),
+                   left: Math.max(8, Math.min(contextMenu.x, window.innerWidth - 216)),
+                 }}
+                 onClick={e => e.stopPropagation()}
+               >
+                 <button role="menuitem" type="button" onClick={() => { setReplyingTo({ id: contextMenu.id, content: contextMenu.content }); setContextMenu(null); setTimeout(() => inputRef.current?.focus(), 100); }} className={item}>
+                   <Reply size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Reply
+                 </button>
+                 <button role="menuitem" type="button" onClick={() => { setThreadParentId(contextMenu.id); setContextMenu(null); }} className={item}>
+                   <MessagesSquare size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Reply in thread
+                 </button>
+                 <button role="menuitem" type="button" onClick={() => { navigator.clipboard.writeText(contextMenu.content.replace(/^\[.*?\]/, '')); toast.success('Copied'); setContextMenu(null); }} className={item}>
+                   <Copy size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Copy
+                 </button>
+                 <button role="menuitem" type="button" onClick={() => { setForwardMsg({ id: contextMenu.id, content: contextMenu.content }); setContextMenu(null); }} className={item}>
+                   <Forward size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Forward
+                 </button>
+                 <button role="menuitem" type="button" onClick={() => { executeSend(`__PIN__${contextMenu.id}`); setContextMenu(null); }} className={item}>
+                   <Pin size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Pin
+                 </button>
+                 {mine && (
+                   <button role="menuitem" type="button" onClick={() => { setEditingMsg({ id: contextMenu.id, content: contextMenu.content }); setContextMenu(null); }} className={item}>
+                     <Pencil size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Edit
+                   </button>
+                 )}
+                 <div className="h-px bg-[#eceef2] my-1 mx-2" />
+                 {mine ? (
+                   <button role="menuitem" type="button" onClick={() => { setMessages(prev => prev.filter(m => m.id !== contextMenu.id)); executeSend(`__REVOKE__${contextMenu.id}`); setContextMenu(null); }} className={`${item} text-[#d93036]`}>
+                     <Trash2 size={16} strokeWidth={1.8} /> Delete for everyone
+                   </button>
+                 ) : (
+                   <button role="menuitem" type="button" onClick={() => { reportMessage(contextMenu.id, contextMenu.content); }} className={`${item} text-[#d93036]`}>
+                     <Flag size={16} strokeWidth={1.8} /> Report
+                   </button>
+                 )}
+               </div>
+             );
+           })()}
          </div>,
          document.body
        ) : null}
 
-        {/* Hito 4: Forward Message Modal */}
+        {/* Forward a message */}
         {forwardMsg && (
-          <div className="fixed inset-0 z-[300] bg-black/30 backdrop-blur-sm flex items-end justify-center" onClick={() => setForwardMsg(null)}>
-            <div className="w-full max-w-md bg-white rounded-t-3xl p-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-800">Forward to...</h3>
-                <button onClick={() => setForwardMsg(null)} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#e5e5ea] text-black/40">âœ•</button>
+          <div className="fixed inset-0 z-[300] bg-[#15171c]/30 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={() => setForwardMsg(null)}>
+            <div role="dialog" aria-modal="true" aria-labelledby="forward-title" className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)] animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 id="forward-title" className="text-[17px] font-semibold tracking-[-0.01em] text-[#15171c]">Forward to</h3>
+                <button type="button" onClick={() => setForwardMsg(null)} aria-label="Close" className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#eff1f4] text-[#15171c]">
+                  <X size={18} strokeWidth={1.9} />
+                </button>
               </div>
-              <div className="bg-[#f5f5f7] rounded-xl border border-black/5 px-3 py-2 mb-3">
-                <p className="text-[11px] font-mono text-black/50 truncate">{forwardMsg.content ? formatMessagePreview(forwardMsg.content) : 'Message'}</p>
+              <div className="bg-[#f7f8fa] rounded-xl border border-[#eceef2] px-3.5 py-2.5 mb-3">
+                <p className="text-[14px] text-[#4a505c] truncate">{forwardMsg.content ? formatMessagePreview(forwardMsg.content) : 'Message'}</p>
               </div>
-              <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+              <div className="flex flex-col gap-0.5 max-h-72 overflow-y-auto -mx-1">
                 {conversations.map(conv => (
-                  <button key={conv.peerAddress} onClick={() => {
+                  <button type="button" key={conv.peerAddress} onClick={() => {
+                    if (typeof window !== 'undefined' && localStorage.getItem('ledger_locked_' + conv.peerAddress.toLowerCase())) {
+                      toast.error('That chat is locked. Open it and unlock it first.');
+                      return;
+                    }
                     const content = forwardMsg.content ? formatMessagePreview(forwardMsg.content) : 'Message';
                     const currentPeer = activePeer;
-                    if (typeof window !== 'undefined' && localStorage.getItem('ledger_locked_' + conv.peerAddress.toLowerCase())) {
-                          const pin = window.prompt('This chat is locked. Enter PIN (default: 0000):');
-                          if (pin !== '0000' && pin !== '1234') {
-                            toast.error('Incorrect PIN');
-                            return;
-                          }
-                        }
-                        setActivePeer(conv.peerAddress);
+                    setActivePeer(conv.peerAddress);
                     setTimeout(() => { executeSendRef.current?.(`[Forwarded] ${content}`); setActivePeer(currentPeer); }, 300);
                     setForwardMsg(null);
-                  }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f5f5f7] text-left">
+                    toast.success(`Forwarded to ${getDisplayName(conv.peerAddress)}`);
+                  }} className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-[#f7f8fa] text-left">
                     <Avatar address={conv.peerAddress} />
-                    <span className="text-[12px] font-mono text-gray-700 truncate">{conv.peerAddress.slice(0, 8)}...{conv.peerAddress.slice(-4)}</span>
+                    <span className="min-w-0">
+                      <span className="block text-[15px] font-medium text-[#15171c] truncate">{getDisplayName(conv.peerAddress)}</span>
+                      <span className="block text-[13px] text-[#727a88] truncate tabular-nums">{conv.peerAddress.slice(0, 6)}…{conv.peerAddress.slice(-4)}</span>
+                    </span>
                   </button>
                 ))}
                 {conversations.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-                    <div className="w-12 h-12 bg-black/5 rounded-full flex items-center justify-center mb-3">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-black/40"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                    </div>
-                    <p className="text-[14px] font-bold text-black/70 mb-1">Your inbox is empty</p>
-                    <p className="text-[12px] text-black/50 leading-relaxed">Start a secure conversation by entering a contact's address above.</p>
+                    <MessageSquare size={24} strokeWidth={1.6} className="text-[#a3a9b4] mb-3" aria-hidden="true" />
+                    <p className="text-[15px] font-medium text-[#15171c] mb-1">No conversations yet</p>
+                    <p className="text-[14px] text-[#727a88] leading-relaxed">Start a conversation first, then you can forward messages to it.</p>
                   </div>
                 )}
               </div>
@@ -6556,7 +6102,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           </div>
         )}
 
-        {/* Profile Popover Overlay â€” fixed + portal so it escapes overflow:hidden containers */}
+        {/* Profile Popover Overlay — fixed + portal so it escapes overflow:hidden containers */}
        <AnimatePresence>
         {showProfile && activePeer && (
           <LedgerChatProfile
@@ -6569,57 +6115,63 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         )}
        </AnimatePresence>
 
-       {/* Phase 2: Immersive Lightbox Modal */}
+       {/* Photo viewer */}
        {(lightboxImg && typeof document !== 'undefined')
          ? createPortal(
-        <div 
-          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/95 backdrop-blur-lg animate-in fade-in duration-200"
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo"
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#0f1115]/95 animate-in fade-in duration-200"
           onClick={() => setLightboxImg(null)}
         >
-          <button 
-            className="absolute top-6 right-6 text-white/50 hover:text-white bg-black/20 hover:bg-black/40 rounded-full p-2 transition-all"
-            onClick={(e) => { e.stopPropagation(); setLightboxImg(null); }}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          </button>
-          <img 
-            src={lightboxImg} 
-            alt="Fullscreen" 
-            className="max-w-[95vw] max-h-[90vh] object-contain shadow-2xl animate-in zoom-in-95 duration-300 select-none"
-            onClick={(e) => e.stopPropagation()} 
+          <div className="absolute top-0 inset-x-0 flex items-center justify-end gap-2 p-4" style={{ paddingTop: 'max(16px, env(safe-area-inset-top, 16px))' }}>
+            <a
+              href={lightboxImg}
+              download="ledger-chat-photo"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              aria-label="Download"
+              title="Download"
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <Download size={19} strokeWidth={1.9} />
+            </a>
+            <button
+              type="button"
+              aria-label="Close"
+              title="Close"
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+              onClick={(e) => { e.stopPropagation(); setLightboxImg(null); }}
+            >
+              <X size={20} strokeWidth={1.9} />
+            </button>
+          </div>
+          <img
+            src={lightboxImg}
+            alt=""
+            className="max-w-[94vw] max-h-[84vh] object-contain rounded-lg select-none animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
           />
-          <a 
-            href={lightboxImg} 
-            download="Ledger Chat_Media" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            onClick={e => e.stopPropagation()}
-            className="absolute bottom-8 flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-5 py-2.5 rounded-full backdrop-blur-md text-[13px] font-bold font-mono transition-all"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            Download Original
-          </a>
         </div>,
         document.body
        ) : null}
 
-       {/* Phase 4: Clear Chat Confirmation Modal */}
+       {/* Clear chat confirmation */}
        {showClearConfirm && typeof document !== 'undefined' ? createPortal(
-         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in zoom-in duration-200" style={{ zIndex: 200000 }}>
-           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center">
-             <div className="w-16 h-16 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[#050505] mb-4">
-               <Trash2 size={28} />
-             </div>
-             <h3 className="text-[18px] font-black tracking-tight text-gray-900 mb-2">Clear Chat?</h3>
-             <p className="text-[13px] text-black/50 mb-6 px-4">
-               Are you sure you want to clear this conversation? This will remove all messages from your device.
+         <div className="fixed inset-0 bg-[#15171c]/30 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-150" style={{ zIndex: 200000 }} onClick={() => setShowClearConfirm(false)}>
+           <div role="alertdialog" aria-modal="true" aria-labelledby="clear-title" aria-describedby="clear-text" className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)]" onClick={e => e.stopPropagation()}>
+             <h3 id="clear-title" className="text-[18px] font-semibold tracking-[-0.015em] text-[#15171c]">Clear this chat?</h3>
+             <p id="clear-text" className="text-[15px] text-[#4a505c] leading-relaxed mt-2">
+               All messages in this conversation will be removed from this device. The other person keeps their copy.
              </p>
-             <div className="flex items-center gap-3 w-full">
-               <button onClick={() => setShowClearConfirm(false)} className="flex-1 py-3.5 rounded-xl bg-[#f5f5f7] hover:bg-[#e5e5ea] text-[13px] font-bold text-gray-700 transition-colors">
+             <div className="flex items-center justify-end gap-2 mt-6">
+               <button type="button" onClick={() => setShowClearConfirm(false)} className="px-4 py-2.5 rounded-xl bg-[#eff1f4] hover:bg-[#e4e7ec] text-[15px] font-medium text-[#15171c] transition-colors">
                  Cancel
                </button>
-               <button onClick={executeClearChat} className="flex-1 py-3.5 rounded-xl bg-white hover:bg-white text-white text-[13px] font-bold transition-colors shadow-lg shadow-black/10">
-                 Clear Chat
+               <button type="button" onClick={executeClearChat} className="px-4 py-2.5 rounded-xl bg-[#e5484d] hover:brightness-105 text-white text-[15px] font-medium transition-all">
+                 Clear chat
                </button>
              </div>
            </div>
@@ -6627,84 +6179,96 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
          document.body
        ) : null}
 
-       {/* Phase 4: Sidebar Context Menu */}
+       {/* Conversation actions in the list */}
        {(sidebarMenu && typeof document !== 'undefined')
          ? createPortal(
          <div className="fixed inset-0 z-[200]" onClick={() => setSidebarMenu(null)} onContextMenu={(e) => { e.preventDefault(); setSidebarMenu(null); }}>
-           <div 
-             className="absolute bg-white border border-black/10 rounded-2xl shadow-xl p-2 min-w-[160px] flex flex-col animate-in fade-in zoom-in-95 duration-150"
-             style={{ 
-               top: Math.min(sidebarMenu.y, window.innerHeight - 150), 
-               left: Math.min(sidebarMenu.x, window.innerWidth - 180) 
+           <div
+             role="menu"
+             aria-label="Conversation actions"
+             className="absolute bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)] p-1.5 min-w-[190px] flex flex-col animate-in fade-in zoom-in-95 duration-150"
+             style={{
+               top: Math.max(8, Math.min(sidebarMenu.y, window.innerHeight - 120)),
+               left: Math.max(8, Math.min(sidebarMenu.x, window.innerWidth - 206)),
              }}
              onClick={e => e.stopPropagation()}
            >
-             <button onClick={() => toggleArchive(sidebarMenu.peer)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg> 
-                {archivedPeers.has(sidebarMenu.peer.toLowerCase()) ? 'Unarchive' : 'Archive'}
+             <button role="menuitem" type="button" onClick={() => toggleArchive(sidebarMenu.peer)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#15171c] text-left">
+               {archivedPeers.has(sidebarMenu.peer.toLowerCase())
+                 ? <><ArchiveRestore size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Move to inbox</>
+                 : <><Archive size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Archive</>}
              </button>
-             <button onClick={() => deleteConversation(sidebarMenu.peer)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/5 text-[11px] font-mono text-[#050505] text-left mt-1">
-                <Trash2 size={14} /> Delete Chat
+             <button role="menuitem" type="button" onClick={() => deleteConversation(sidebarMenu.peer)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#d93036] text-left">
+               <Trash2 size={16} strokeWidth={1.8} /> Delete chat
              </button>
            </div>
          </div>,
          document.body
        ) : null}
 
-       {/* Phase 5: Poll Creator Modal */}
-       {showPollCreator && (
-           <div className="fixed inset-0 z-[1000] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-             <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl flex flex-col gap-4">
+       {/* Create a poll */}
+       {showPollCreator && (() => {
+         const close = () => { setShowPollCreator(false); setPollQuestion(''); setPollOptions(['', '']); };
+         const valid = pollQuestion.trim() && pollOptions.filter(o => o.trim()).length >= 2;
+         const field = 'w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#d9dde3] text-[15px] text-[#15171c] placeholder:text-[#a3a9b4] focus:outline-none focus:border-[#15171c] focus:ring-2 focus:ring-[#15171c]/10';
+         return (
+           <div className="fixed inset-0 z-[1000] bg-[#15171c]/30 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 animate-in fade-in duration-150" onClick={close}>
+             <div role="dialog" aria-modal="true" aria-labelledby="poll-title" className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)] flex flex-col gap-4" onClick={e => e.stopPropagation()}>
                <div className="flex items-center justify-between">
-                 <h3 className="text-[16px] font-black tracking-tight text-gray-900">Create Poll</h3>
-                 <button onClick={() => { setShowPollCreator(false); setPollQuestion(''); setPollOptions(['', '']); }} className="p-2 rounded-full hover:bg-[#e5e5ea] text-black/40">âœ•</button>
+                 <h3 id="poll-title" className="text-[17px] font-semibold tracking-[-0.01em] text-[#15171c]">New poll</h3>
+                 <button type="button" onClick={close} aria-label="Close" className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#eff1f4] text-[#15171c]">
+                   <X size={18} strokeWidth={1.9} />
+                 </button>
                </div>
-               <input
-                 type="text"
-                 placeholder="Ask a question..."
-                 value={pollQuestion}
-                 onChange={e => setPollQuestion(e.target.value)}
-                 className="w-full px-4 py-2.5 rounded-xl border border-black/10 text-[13px] font-medium focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10"
-               />
+               <label className="flex flex-col gap-1.5">
+                 <span className="text-[13px] font-medium text-[#4a505c]">Question</span>
+                 <input type="text" autoFocus placeholder="What would you like to ask?" value={pollQuestion} onChange={e => setPollQuestion(e.target.value)} maxLength={200} className={field} />
+               </label>
                <div className="flex flex-col gap-2">
+                 <span className="text-[13px] font-medium text-[#4a505c]">Options</span>
                  {pollOptions.map((opt, i) => (
                    <div key={i} className="flex gap-2 items-center">
                      <input
                        type="text"
                        placeholder={`Option ${i + 1}`}
                        value={opt}
-                       onChange={e => setPollOptions(prev => prev.map((o, j) => j === i ? e.target.value : o))}
-                       className="flex-1 px-3 py-2 rounded-xl border border-black/10 text-[13px] focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10"
+                       maxLength={80}
+                       onChange={e => setPollOptions(prev => prev.map((o, j) => j === i ? e.target.value.replace(/\|/g, '') : o))}
+                       className={field}
                      />
                      {pollOptions.length > 2 && (
-                       <button onClick={() => setPollOptions(prev => prev.filter((_, j) => j !== i))} className="text-black/40 hover:text-black/60 text-[12px] font-black">âœ•</button>
+                       <button type="button" onClick={() => setPollOptions(prev => prev.filter((_, j) => j !== i))} aria-label={`Remove option ${i + 1}`} className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full hover:bg-[#eff1f4] text-[#727a88]">
+                         <X size={16} strokeWidth={1.9} />
+                       </button>
                      )}
                    </div>
                  ))}
                  {pollOptions.length < 5 && (
-                   <button onClick={() => setPollOptions(prev => [...prev, ''])} className="text-black text-[12px] font-bold hover:underline text-left">+ Add option</button>
+                   <button type="button" onClick={() => setPollOptions(prev => [...prev, ''])} className="self-start inline-flex items-center gap-1.5 text-[14px] font-medium text-[#15171c] px-1 py-1 rounded-lg hover:bg-[#f2f4f7]">
+                     <Plus size={15} strokeWidth={2} /> Add an option
+                   </button>
                  )}
                </div>
                <button
+                 type="button"
+                 disabled={!valid}
                  onClick={() => {
-                   const validOpts = pollOptions.filter(o => o.trim());
+                   const validOpts = pollOptions.map(o => o.trim()).filter(Boolean);
                    if (!pollQuestion.trim() || validOpts.length < 2) return;
                    const pollId = `poll_${Date.now()}`;
-                   const payload = `__POLL__${pollId}__::${pollQuestion.trim()}__::${validOpts.join('|')}`;
-                   executeSend(payload);
-                   setShowPollCreator(false);
-                   setPollQuestion('');
-                   setPollOptions(['', '']);
+                   executeSend(`__POLL__${pollId}__::${pollQuestion.trim()}__::${validOpts.join('|')}`);
+                   close();
                  }}
-                 className="w-full py-3.5 rounded-xl bg-[#25D366] hover:bg-[#128C7E] text-white text-[13px] font-bold shadow-sm transition-colors"
+                 className="w-full py-3 rounded-xl bg-[#15171c] hover:bg-[#2b2f38] disabled:bg-[#e4e7ec] disabled:text-[#a3a9b4] text-white text-[15px] font-medium transition-colors"
                >
-                 Send Poll
+                 Send poll
                </button>
              </div>
            </div>
-       )}
+         );
+       })()}
 
-       {/* â”€â”€ Native Crypto Send Modal (replaces QD Transfer) â”€â”€ */}
+       {/* ── Native Crypto Send Modal (replaces QD Transfer) ── */}
        {showWalletTransfer && activePeer && (
          <NativeCryptoSendModal
            isOpen={showWalletTransfer}
@@ -6721,8 +6285,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       </div>
 
-      {/* Fase 13: WebRTC Pre-Prompt â€” shown before getUserMedia is called */}
-       {/* â”€â”€ Creator Tip Modal (Phase 3 Monetization #129-130) â”€â”€ */}
+      {/* Fase 13: WebRTC Pre-Prompt — shown before getUserMedia is called */}
+       {/* ── Creator Tip Modal (Phase 3 Monetization #129-130) ── */}
        {showTipModal && activePeer && (
          <SendTipModal
            open={showTipModal}
@@ -6736,7 +6300,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
          />
        )}
 
-       {/* â”€â”€ Aztec zk.money Private Payment Modal â”€â”€ */}
+       {/* Private payment (Aztec, experimental) */}
        {showZkModal && activePeer && (
          <ZkMoneyModal
            isOpen={showZkModal}
@@ -6750,7 +6314,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
          />
        )}
 
-       {/* â”€â”€ Aztec zk.money Shielded Wallet Panel â”€â”€ */}
+       {/* ── Aztec zk.money Shielded Wallet Panel ── */}
        <AnimatePresence>
          {showZkWallet && (
            <motion.div
@@ -6769,7 +6333,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
          )}
        </AnimatePresence>
 
-       {/* â”€â”€ Aztec zk.money Payment Stream Modal â”€â”€ */}
+       {/* ── Aztec zk.money Payment Stream Modal ── */}
        {showZkStreamModal && activePeer && (
          <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setShowZkStreamModal(false)}>
            <div className="bg-white rounded-3xl shadow-2xl border border-black/10 w-full max-w-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -6780,14 +6344,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                onStreamCreated={(stream) => {
                  executeSend(encodeStreamPayload(stream));
                  setShowZkStreamModal(false);
-                 toast.success('Private payment stream launched on Aztec!');
+                 toast.success('Payment stream created');
                }}
              />
            </div>
          </div>
        )}
 
-       {/* â”€â”€ Aztec zk.money Invoice Modal â”€â”€ */}
+       {/* ── Aztec zk.money Invoice Modal ── */}
        {showZkInvoiceModal && activePeer && (
          <ZkInvoiceModal
            userAddress={address || ''}
@@ -6796,7 +6360,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
            onInvoiceCreated={(invoice) => {
              executeSend(encodeInvoicePayload(invoice));
              setShowZkInvoiceModal(false);
-             toast.success('Shielded invoice sent to chat!');
+             toast.success('Invoice sent');
            }}
          />
        )}
@@ -6818,49 +6382,48 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           )
         : null}
 
-      {/* â”€â”€ Save Contact Modal â”€â”€ */}
+      {/* Save contact */}
       {showSaveContactModal && activePeer && isMounted && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[300000] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowSaveContactModal(false)}>
-          <div
-            className="bg-white rounded-3xl shadow-2xl border border-black/5 p-6 w-80 mx-4"
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 className="text-[13px] font-black uppercase tracking-widest text-[#050505] mb-1">Save Contact</h3>
-            <p className="text-[11px] text-black/40 font-mono mb-4 break-all">{activePeer}</p>
-            <input
-              autoFocus
-              type="text"
-              value={saveContactName}
-              onChange={e => setSaveContactName(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && saveContactName.trim() && address) {
-                  saveLocalContact(address, { peerAddress: activePeer, name: saveContactName.trim() });
-                  toast.success(`Contact saved as "${saveContactName.trim()}"`);
-                  setShowSaveContactModal(false);
-                }
-              }}
-              placeholder="Enter a name..."
-              className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-[13px] text-[#050505] outline-none focus:ring-1 focus:ring-black/20 placeholder:text-black/30 font-mono mb-4"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowSaveContactModal(false)}
-                className="flex-1 py-2.5 rounded-xl bg-[#f5f5f7] text-[12px] font-bold text-black/50 hover:bg-black/5 transition-colors"
-              >Cancel</button>
-              <button
-                onClick={() => {
-                  if (saveContactName.trim() && address) {
-                    saveLocalContact(address, { peerAddress: activePeer, name: saveContactName.trim() });
-                    toast.success(`Contact saved as "${saveContactName.trim()}"`);
-                    setShowSaveContactModal(false);
-                  }
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-white text-[12px] font-bold text-white hover:opacity-80 transition-opacity disabled:opacity-30"
-                disabled={!saveContactName.trim()}
-              >Save</button>
+        (() => {
+          const save = () => {
+            if (!saveContactName.trim() || !address) return;
+            saveLocalContact(address, { peerAddress: activePeer, name: saveContactName.trim() });
+            toast.success(`Saved as ${saveContactName.trim()}`);
+            setShowSaveContactModal(false);
+          };
+          return (
+            <div className="fixed inset-0 z-[300000] flex items-end sm:items-center justify-center sm:p-4 bg-[#15171c]/30 backdrop-blur-sm" onClick={() => setShowSaveContactModal(false)}>
+              <form
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="save-contact-title"
+                className="bg-white rounded-t-3xl sm:rounded-3xl shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)] p-5 w-full sm:max-w-sm"
+                onClick={e => e.stopPropagation()}
+                onSubmit={e => { e.preventDefault(); save(); }}
+              >
+                <h3 id="save-contact-title" className="text-[17px] font-semibold tracking-[-0.01em] text-[#15171c]">Save contact</h3>
+                <p className="text-[13px] text-[#727a88] mt-1 mb-4 break-all tabular-nums">{activePeer}</p>
+                <label className="flex flex-col gap-1.5 mb-5">
+                  <span className="text-[13px] font-medium text-[#4a505c]">Name</span>
+                  <input
+                    autoFocus
+                    type="text"
+                    value={saveContactName}
+                    maxLength={60}
+                    onChange={e => setSaveContactName(e.target.value)}
+                    placeholder="How you want to see this person"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#d9dde3] text-[15px] text-[#15171c] placeholder:text-[#a3a9b4] focus:outline-none focus:border-[#15171c] focus:ring-2 focus:ring-[#15171c]/10"
+                  />
+                </label>
+                <p className="text-[13px] text-[#727a88] -mt-3 mb-5">Only you can see this name. It stays on this device.</p>
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => setShowSaveContactModal(false)} className="px-4 py-2.5 rounded-xl bg-[#eff1f4] hover:bg-[#e4e7ec] text-[15px] font-medium text-[#15171c] transition-colors">Cancel</button>
+                  <button type="submit" disabled={!saveContactName.trim()} className="px-4 py-2.5 rounded-xl bg-[#15171c] hover:bg-[#2b2f38] disabled:bg-[#e4e7ec] disabled:text-[#a3a9b4] text-white text-[15px] font-medium transition-colors">Save</button>
+                </div>
+              </form>
             </div>
-          </div>
-        </div>,
+          );
+        })(),
         document.body
       )}
 
@@ -6873,7 +6436,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             setPendingRequestCount(0); // optimistically clear badge on close
           }}
           onAccepted={(peer, nickname) => {
-            // [FIX 1] Close the modal immediately â€” no zombie overlay
+            // [FIX 1] Close the modal immediately — no zombie overlay
             setShowContactRequests(false);
             setPendingRequestCount(0);
             // [FIX 2] Persist to local contacts with the nickname the requester has
@@ -6902,60 +6465,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         document.body
       )}
 
-      {isLocked && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-[#EBE5DC]/95 backdrop-blur-3xl flex flex-col items-center justify-center">
-          <div className="flex flex-col items-center gap-6 p-8 w-full max-w-sm">
-            <div className="w-16 h-16 rounded-full bg-[#25D366]/20 flex items-center justify-center mb-2">
-              <Lock size={32} strokeWidth={2} className="text-[#25D366]" />
-            </div>
-            <h2 className="text-[24px] font-black text-[#1C1C1E]">Chat Locked</h2>
-            
-            {(ledgerSettings as any)?.passcode_enabled ? (
-              <div className="w-full flex flex-col items-center gap-8 mt-2">
-                <div className="flex gap-4">
-                  {[0,1,2,3,4,5].map(i => (
-                    <div key={i} className="w-4 h-4 rounded-full bg-black/10" />
-                  ))}
-                </div>
-                <div className="grid grid-cols-3 gap-4 w-full px-6">
-                  {[1,2,3,4,5,6,7,8,9,'',0,'del'].map((key, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        if (key === 'del' || key === '') return;
-                        setIsLocked(false);
-                        toast.success('Unlocked securely');
-                      }}
-                      className={"h-16 rounded-full flex items-center justify-center text-[24px] font-bold " + (key === '' ? '' : "bg-white shadow-sm hover:scale-105 active:scale-95 transition-all text-[#1C1C1E]")}
-                    >
-                      {key === 'del' ? 'X' : key}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  if ((ledgerSettings as any)?.biometric_lock) {
-                     toast.promise(new Promise(r => setTimeout(r, 1000)), {
-                       loading: 'Waiting for Face ID...',
-                       success: () => { setIsLocked(false); return 'Identity Verified'; },
-                       error: 'Failed'
-                     });
-                  } else {
-                     setIsLocked(false);
-                     toast.success('Identity Verified');
-                  }
-                }}
-                className="px-8 py-4 bg-[#25D366] text-white rounded-2xl font-bold text-[16px] shadow-lg hover:bg-[#128C7E] hover:scale-105 active:scale-95 transition-all mt-6 w-full max-w-[250px]"
-              >
-                { (ledgerSettings as any)?.biometric_lock ? 'Use Face ID' : 'Unlock' }
-              </button>
-            )}
-          </div>
-        </div>,
-        document.body
-      )}
       </div>{/* end h-full flex-col layout wrapper */}
     </TuringShieldGate>
   );

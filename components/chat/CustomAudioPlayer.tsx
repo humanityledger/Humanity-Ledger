@@ -88,11 +88,11 @@ export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean })
       <div className="flex items-center gap-2.5 min-w-[220px] max-w-[290px] py-1">
         <audio ref={audioRef} src={src} preload="auto" playsInline x-webkit-airplay="allow" />
         
-        {/* WhatsApp Green Play/Pause Round Button */}
-        <button 
+        <button
           type="button"
           onClick={togglePlay}
-          className="w-9 h-9 rounded-full bg-[#25D366] hover:bg-[#128C7E] text-white flex items-center justify-center shrink-0 shadow-sm transition-all active:scale-90"
+          aria-label={isPlaying ? 'Pause voice message' : 'Play voice message'}
+          className="w-9 h-9 rounded-full bg-[#15171c] hover:bg-[#2b2f38] text-white flex items-center justify-center shrink-0 transition-all active:scale-95"
         >
           {isPlaying ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
         </button>
@@ -107,6 +107,7 @@ export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean })
               step="0.05"
               value={progress}
               onChange={handleSeek}
+              aria-label="Position in voice message"
               className="absolute z-20 w-full opacity-0 cursor-pointer h-full inset-0"
             />
             {/* Generate 30 bars for the waveform */}
@@ -117,7 +118,7 @@ export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean })
                 <div 
                   key={i} 
                   className={`flex-1 rounded-full transition-colors duration-100 ${
-                    isActive ? 'bg-[#25D366]' : 'bg-black/20'
+                    isActive ? 'bg-[#15171c]' : 'bg-[#d4d8df]'
                   }`}
                   style={{ height: `${height}%` }}
                 />
@@ -125,25 +126,26 @@ export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean })
             })}
           </div>
           
-          <div className="flex items-center justify-between text-[11px] font-mono text-[#667781] leading-none px-0.5">
+          <div className="flex items-center justify-between text-[12px] tabular-nums text-[#727a88] leading-none px-0.5">
             <span>{isPlaying ? formatTime(progress) : formatTime(duration)}</span>
             {duration > 0 && <span>{formatTime(duration)}</span>}
           </div>
         </div>
 
         {/* Speed toggle pill */}
-        <button 
+        <button
           type="button"
           onClick={togglePlaybackRate}
-          className="px-1.5 py-0.5 rounded-md text-[11px] font-bold bg-black/5 hover:bg-black/10 text-[#54656f] transition-colors shrink-0 font-mono"
+          aria-label="Playback speed"
+          className="px-2 py-0.5 rounded-full text-[12px] font-medium tabular-nums bg-[#eff1f4] hover:bg-[#e4e7ec] text-[#4a505c] transition-colors shrink-0"
         >
           {playbackRate}x
         </button>
       </div>
 
       {showTranscript && (
-        <div className="px-3 py-1.5 rounded-xl text-[12px] italic bg-black/5 text-[#54656f]">
-          Transcribing audio note...
+        <div className="px-3 py-1.5 rounded-xl text-[13px] bg-[#f2f4f7] text-[#4a505c]">
+          Transcribing
         </div>
       )}
     </div>

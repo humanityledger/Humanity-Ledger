@@ -19,7 +19,7 @@ export function MediaPermissionsPrePrompt({ pendingCallType, setPendingCallType,
                 </div>
                 <h2 className="text-2xl font-black text-center mb-4 uppercase tracking-tighter">Hardware Access</h2>
                 <p className="text-[11px] font-mono uppercase tracking-widest text-black/60 text-center mb-8 leading-relaxed">
-                    Ledger Chat requires camera and microphone permissions for peer-to-peer encrypted {pendingCallType === 'video' ? 'video' : 'audio'} tunneling. No media traverses our servers.
+                    Ledger Chat requires camera and microphone permissions for peer to peer encrypted {pendingCallType === 'video' ? 'video' : 'audio'} tunneling. No media traverses our servers.
                 </p>
                 <div className="flex flex-col gap-3 w-full">
                     <button

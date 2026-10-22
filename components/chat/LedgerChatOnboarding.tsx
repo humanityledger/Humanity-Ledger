@@ -172,7 +172,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[999999] bg-[#FAFAFA] text-[#1C1C1E] overflow-y-auto font-sans flex flex-col selection:bg-[#25D366]/20">
+    <div className="fixed inset-0 z-[999999] bg-[#FAFAFA] text-[#1C1C1E] overflow-y-auto font-sans flex flex-col selection:bg-[#2754d6]/20">
       <div className="flex-1 w-full max-w-2xl mx-auto flex flex-col relative px-6 py-12 md:px-12 md:py-20 justify-center">
         
         {/* Progress Bar */}
@@ -183,7 +183,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 initial={false}
                 animate={{ width: i + 1 <= step ? '100%' : '0%' }}
                 transition={{ duration: 0.5, ease: "easeInOut" }}
-                className={`h-full ${i + 1 === step ? 'bg-[#25D366]' : 'bg-black/80'}`}
+                className={`h-full ${i + 1 === step ? 'bg-[#2754d6]' : 'bg-black/80'}`}
               />
             </div>
           ))}
@@ -208,14 +208,14 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                   transition={{ type: 'spring', damping: 20, stiffness: 200 }}
                   className="w-24 h-24 bg-gradient-to-tr from-black to-gray-800 rounded-3xl flex items-center justify-center mb-8 shadow-2xl shadow-black/10"
                 >
-                  <Shield size={40} className="text-[#25D366]" />
+                  <Shield size={40} className="text-[#2754d6]" />
                 </motion.div>
                 
                 <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-black to-gray-600">
                   Welcome to Ledger
                 </h1>
                 <p className="text-[16px] text-black/60 font-medium leading-relaxed mb-12 max-w-md mx-auto">
-                  A sovereign identity in a truly private network. End-to-end encrypted messaging powered by zero-knowledge architecture.
+                  A sovereign identity in a truly private network. End to end encrypted messaging powered by zero knowledge architecture.
                 </p>
                 
                 <button
@@ -239,7 +239,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 className="w-full max-w-sm mx-auto flex flex-col"
               >
                 <div className="mb-8 text-center">
-                  <div className="inline-flex items-center justify-center p-3 bg-[#25D366]/10 rounded-2xl mb-4 text-[#25D366]">
+                  <div className="inline-flex items-center justify-center p-3 bg-[#2754d6]/10 rounded-2xl mb-4 text-[#2754d6]">
                     <User size={24} />
                   </div>
                   <h2 className="text-3xl font-black tracking-tight mb-2">Your Identity</h2>
@@ -248,15 +248,15 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
 
                 <div className="flex flex-col items-center mb-8">
                   <div
-                    className="w-24 h-24 rounded-full bg-black/5 border-2 border-dashed border-black/20 flex flex-col items-center justify-center relative cursor-pointer hover:border-[#25D366] hover:bg-[#25D366]/5 transition-all overflow-hidden group"
+                    className="w-24 h-24 rounded-full bg-black/5 border-2 border-dashed border-black/20 flex flex-col items-center justify-center relative cursor-pointer hover:border-[#2754d6] hover:bg-[#2754d6]/5 transition-all overflow-hidden group"
                     onClick={() => fileRef.current?.click()}
                   >
                     {avatar ? (
                       <img src={avatar} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
                       <>
-                        <Camera size={28} className="text-black/30 group-hover:text-[#25D366] transition-colors mb-1" />
-                        <span className="text-[11px] font-bold text-black/40 group-hover:text-[#25D366]">Upload</span>
+                        <Camera size={28} className="text-black/30 group-hover:text-[#2754d6] transition-colors mb-1" />
+                        <span className="text-[11px] font-bold text-black/40 group-hover:text-[#2754d6]">Upload</span>
                       </>
                     )}
                     <input type="file" ref={fileRef} accept="image/*" className="hidden" onChange={handleFileChange} />
@@ -271,7 +271,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
                       placeholder="Satoshi Nakamoto"
-                      className="w-full bg-white border border-black/10 focus:border-[#25D366] focus:ring-4 focus:ring-[#25D366]/10 rounded-xl py-3.5 px-4 text-[16px] font-medium text-black outline-none transition-all placeholder:text-black/25 shadow-sm"
+                      className="w-full bg-white border border-black/10 focus:border-[#2754d6] focus:ring-4 focus:ring-[#2754d6]/10 rounded-xl py-3.5 px-4 text-[16px] font-medium text-black outline-none transition-all placeholder:text-black/25 shadow-sm"
                     />
                   </div>
                   <div>
@@ -283,7 +283,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="satoshi"
-                        className="w-full bg-white border border-black/10 focus:border-[#25D366] focus:ring-4 focus:ring-[#25D366]/10 rounded-xl py-3.5 pl-11 pr-4 text-[16px] font-medium text-black outline-none transition-all placeholder:text-black/25 shadow-sm"
+                        className="w-full bg-white border border-black/10 focus:border-[#2754d6] focus:ring-4 focus:ring-[#2754d6]/10 rounded-xl py-3.5 pl-11 pr-4 text-[16px] font-medium text-black outline-none transition-all placeholder:text-black/25 shadow-sm"
                       />
                     </div>
                   </div>
@@ -292,7 +292,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 <button
                   onClick={handleNext}
                   disabled={username.trim().length < 3}
-                  className="w-full py-4 bg-[#25D366] hover:bg-[#20bd5a] disabled:bg-black/10 disabled:text-black/40 active:scale-95 rounded-2xl text-white font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#25D366]/20 disabled:shadow-none"
+                  className="w-full py-4 bg-[#2754d6] hover:bg-[#20bd5a] disabled:bg-black/10 disabled:text-black/40 active:scale-95 rounded-2xl text-white font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#2754d6]/20 disabled:shadow-none"
                 >
                   Continue <ChevronRight size={20} />
                 </button>
@@ -310,7 +310,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 className="w-full max-w-sm mx-auto flex flex-col"
               >
                 <div className="mb-8 text-center">
-                  <div className="inline-flex items-center justify-center p-3 bg-[#25D366]/10 rounded-2xl mb-4 text-[#25D366]">
+                  <div className="inline-flex items-center justify-center p-3 bg-[#2754d6]/10 rounded-2xl mb-4 text-[#2754d6]">
                     <Globe size={24} />
                   </div>
                   <h2 className="text-3xl font-black tracking-tight mb-2">About You</h2>
@@ -325,7 +325,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                       <select
                         value={country}
                         onChange={(e) => setCountry(e.target.value)}
-                        className="w-full bg-white border border-black/10 focus:border-[#25D366] focus:ring-4 focus:ring-[#25D366]/10 rounded-xl py-3.5 pl-11 pr-10 text-[16px] font-medium text-black outline-none transition-all appearance-none cursor-pointer shadow-sm"
+                        className="w-full bg-white border border-black/10 focus:border-[#2754d6] focus:ring-4 focus:ring-[#2754d6]/10 rounded-xl py-3.5 pl-11 pr-10 text-[16px] font-medium text-black outline-none transition-all appearance-none cursor-pointer shadow-sm"
                       >
                         {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
@@ -340,7 +340,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                       onChange={(e) => setBio(e.target.value)}
                       placeholder="Building the future of finance..."
                       rows={4}
-                      className="w-full bg-white border border-black/10 focus:border-[#25D366] focus:ring-4 focus:ring-[#25D366]/10 rounded-xl p-4 text-[16px] font-medium text-black outline-none transition-all resize-none placeholder:text-black/25 shadow-sm"
+                      className="w-full bg-white border border-black/10 focus:border-[#2754d6] focus:ring-4 focus:ring-[#2754d6]/10 rounded-xl p-4 text-[16px] font-medium text-black outline-none transition-all resize-none placeholder:text-black/25 shadow-sm"
                     />
                   </div>
                 </div>
@@ -365,7 +365,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 className="w-full max-w-sm mx-auto flex flex-col"
               >
                 <div className="mb-8 text-center">
-                  <div className="inline-flex items-center justify-center p-3 bg-[#25D366]/10 rounded-2xl mb-4 text-[#25D366]">
+                  <div className="inline-flex items-center justify-center p-3 bg-[#2754d6]/10 rounded-2xl mb-4 text-[#2754d6]">
                     <Key size={24} />
                   </div>
                   <h2 className="text-3xl font-black tracking-tight mb-2">Vault Security</h2>
@@ -382,7 +382,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                       <div
                         key={i}
                         className={`w-12 h-14 rounded-xl flex items-center justify-center text-2xl font-black transition-all ${
-                          pin.length > i ? 'bg-[#25D366] text-white shadow-lg shadow-[#25D366]/30 scale-105' : 'bg-black/5 text-transparent'
+                          pin.length > i ? 'bg-[#2754d6] text-white shadow-lg shadow-[#2754d6]/30 scale-105' : 'bg-black/5 text-transparent'
                         }`}
                       >
                         {pin.length > i ? '•' : ''}
@@ -411,7 +411,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                       <select
                         value={privacyLastSeen}
                         onChange={(e) => setPrivacyLastSeen(e.target.value as any)}
-                        className="w-full bg-white border border-black/10 focus:border-[#25D366] focus:ring-4 focus:ring-[#25D366]/10 rounded-xl py-3.5 pl-4 pr-10 text-[16px] font-medium text-black outline-none transition-all appearance-none cursor-pointer shadow-sm"
+                        className="w-full bg-white border border-black/10 focus:border-[#2754d6] focus:ring-4 focus:ring-[#2754d6]/10 rounded-xl py-3.5 pl-4 pr-10 text-[16px] font-medium text-black outline-none transition-all appearance-none cursor-pointer shadow-sm"
                       >
                         <option value="everybody">Visible to Everybody</option>
                         <option value="contacts">My Contacts Only</option>
@@ -425,7 +425,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 <button
                   onClick={handleNext}
                   disabled={pin.length !== 6}
-                  className="w-full py-4 bg-[#25D366] hover:bg-[#128C7E] disabled:bg-black/10 disabled:text-black/40 active:scale-95 rounded-2xl text-white font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#25D366]/30 disabled:shadow-none"
+                  className="w-full py-4 bg-[#2754d6] hover:bg-[#128C7E] disabled:bg-black/10 disabled:text-black/40 active:scale-95 rounded-2xl text-white font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#2754d6]/30 disabled:shadow-none"
                 >
                   Secure Account <ChevronRight size={20} />
                 </button>
@@ -446,7 +446,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                   initial={{ scale: 0, rotate: -45 }}
                   animate={{ scale: 1, rotate: 0 }}
                   transition={{ type: 'spring', damping: 15, stiffness: 200, delay: 0.1 }}
-                  className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#25D366] to-[#20bd5a] flex items-center justify-center mb-6 shadow-2xl shadow-[#25D366]/30"
+                  className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#2754d6] to-[#20bd5a] flex items-center justify-center mb-6 shadow-2xl shadow-[#2754d6]/30"
                 >
                   <Check size={40} className="text-white" strokeWidth={3} />
                 </motion.div>
@@ -468,7 +468,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                   </div>
                   <button
                     onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                    className={`w-14 h-8 rounded-full relative transition-colors duration-300 ${notificationsEnabled ? 'bg-[#25D366]' : 'bg-black/15'}`}
+                    className={`w-14 h-8 rounded-full relative transition-colors duration-300 ${notificationsEnabled ? 'bg-[#2754d6]' : 'bg-black/15'}`}
                   >
                     <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-transform duration-300 shadow-sm ${notificationsEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
                   </button>

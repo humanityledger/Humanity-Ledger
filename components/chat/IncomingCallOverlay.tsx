@@ -102,7 +102,7 @@ export function IncomingCallOverlay() {
                   repeat: Infinity,
                   ease: "easeInOut"
                 }}
-                className="absolute inset-0 rounded-full bg-[#25D366]/20"
+                className="absolute inset-0 rounded-full bg-[#2754d6]/20"
                 style={{ zIndex: -1 }}
               />
               <motion.div

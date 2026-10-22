@@ -90,11 +90,28 @@ function hashPinLegacy(userId: string, pin: string): string {
     .digest('hex');
 }
 
-function verifyPin(userId: string, pin: string, storedHash: string): boolean {
+/**
+ * Verify a submitted PIN against the stored hash.
+ *
+ * This function used to be synchronous while calling `withArgonSemaphore`,
+ * which is declared `async` and therefore ALWAYS returns a Promise regardless
+ * of whether the work inside it is synchronous. `Buffer.from(promise, 'hex')`
+ * throws a TypeError, the catch below swallowed it, and the function returned
+ * false.
+ *
+ * The effect was total: a PIN could be configured (PUT awaits correctly and
+ * stores a valid Argon2id hash) and then never verified, because every check
+ * threw before reaching the comparison. The legacy HMAC branch below was
+ * unreachable for the same reason. The failure was silent — a wrong-PIN
+ * response, not an error — which is why it survived.
+ *
+ * The comment that used to sit here said "argonHash is synchronous inside
+ * withArgonSemaphore". The hash is; the wrapper is not.
+ */
+async function verifyPin(userId: string, pin: string, storedHash: string): Promise<boolean> {
   try {
-    const argonHash = withArgonSemaphore(() => hashPinArgon2id(userId, pin));
-    // argonHash is synchronous inside withArgonSemaphore (argon2id from @noble is sync)
-    const argonBuf = Buffer.from(argonHash as any, 'hex');
+    const argonHash = await withArgonSemaphore(() => hashPinArgon2id(userId, pin));
+    const argonBuf = Buffer.from(argonHash, 'hex');
     const storedBuf = Buffer.from(storedHash, 'hex');
     if (argonBuf.length === storedBuf.length && crypto.timingSafeEqual(argonBuf, storedBuf)) {
       return true;
@@ -180,7 +197,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Existing PIN verification
-    const isValid = verifyPin(userId, pin, storedPinHash);
+    const isValid = await verifyPin(userId, pin, storedPinHash);
 
     if (!isValid) {
       const now = new Date();
@@ -396,7 +413,7 @@ export async function PUT(req: NextRequest) {
         }
       }
 
-      const isCurrentValid = verifyPin(userId, currentPin, storedPinHash);
+      const isCurrentValid = await verifyPin(userId, currentPin, storedPinHash);
       if (!isCurrentValid) {
         const now = new Date();
         const isWindowExpired = !dbOtpExpiresAt || now > new Date(dbOtpExpiresAt);
@@ -522,7 +539,7 @@ export async function DELETE(req: NextRequest) {
       if (!/^\d{6}$/.test(currentPin)) {
         return NextResponse.json({ error: 'Current PIN must be exactly 6 digits.' }, { status: 400 });
       }
-      const isValid = verifyPin(userId, currentPin, storedPinHash);
+      const isValid = await verifyPin(userId, currentPin, storedPinHash);
       if (!isValid) {
         return NextResponse.json({ error: 'Forbidden: Current PIN is incorrect.' }, { status: 403 });
       }

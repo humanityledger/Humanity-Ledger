@@ -868,7 +868,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <Row
                   icon={<ShieldCheck size={18} />}
                   label="Identity Verified"
-                  sublabel="XMTP end-to-end encrypted"
+                  sublabel="XMTP end to end encrypted"
                   value="✓ Active"
                 />
                 <Row
@@ -1168,7 +1168,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <Row
                   icon={<ShieldCheck size={18} />}
                   label="ZK Obfuscation"
-                  sublabel="Hide metadata with zero-knowledge proofs"
+                  sublabel="Hide metadata with zero knowledge proofs"
                   toggle={!!settings.zkObfuscation}
                   onToggle={v => updateSetting('zkObfuscation', v)}
                 />
@@ -1458,7 +1458,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                           zk.money
                         </span>
                       </div>
-                      <p className="text-[12px] text-[#8E8E93]">Aztec Rollup · Zero-Knowledge Confidentiality</p>
+                      <p className="text-[12px] text-[#8E8E93]">Aztec Rollup · Zero Knowledge Confidentiality</p>
                     </div>
                   </div>
                   <span className="text-[11px] font-mono text-[#1C1C1E] bg-black/5 px-2.5 py-1 rounded-full border border-black/[0.08] flex items-center gap-1.5 font-semibold">
@@ -1569,7 +1569,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               </Group>
 
               {/* Aztec Privacy & PXE Architecture */}
-              <Group title="Aztec Privacy & PXE Architecture" footer="All zero-knowledge proofs are generated locally in your browser using UltraHonk through the Aztec Private Execution Environment.">
+              <Group title="Aztec Privacy & PXE Architecture" footer="All zero knowledge proofs are generated locally in your browser using UltraHonk through the Aztec Private Execution Environment.">
                 <Row
                   icon={<Lock size={18} />}
                   label="Private DAI Default"
@@ -1836,7 +1836,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
                       <div className="flex items-center gap-2 text-[12px] text-[#8E8E93] justify-center">
                         <ShieldCheck size={13} className="text-[#1C1C1E]" />
-                        Secured with end-to-end encryption. No passwords required.
+                        Secured with end to end encryption. No passwords required.
                       </div>
                     </>
                   ) : (

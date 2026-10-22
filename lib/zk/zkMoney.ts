@@ -19,7 +19,9 @@
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
-export const AZTEC_MAINNET_RPC = 'https://api.aztec.network/aztec-mainnet/api/v1';
+// Aztec has no public mainnet; points to testnet/local RPC node
+export const AZTEC_TESTNET_RPC = process.env.NEXT_PUBLIC_AZTEC_NODE_URL || 'https://api.aztec.network/aztec-testnet/api/v1';
+export const AZTEC_MAINNET_RPC = AZTEC_TESTNET_RPC; // backward compat
 export const AZTEC_EXPLORER    = 'https://aztecscan.xyz';
 export const ZK_MONEY_DOMAIN   = 'zk.money';
 export const ZK_HANDLE_REGEX   = /^zk:[a-z0-9_.-]{3,32}$/;
@@ -30,7 +32,7 @@ export const NOTE_MATURITY_BLOCKS = 2;
 // ─── Aztec Network Node, Rollup & Sequencer Operational Parameters (Oct 2026) ────
 export const AZTEC_TESTNET_IMAGE               = 'azteclabs/aztec:6.0.0-rc.3';
 export const AZTEC_TESTNET_VERSION             = 'v6.0.0-rc.3';
-export const AZTEC_MAINNET_VERSION             = 'v5.2.0';
+export const AZTEC_MAINNET_VERSION             = AZTEC_TESTNET_VERSION; // backward compat
 export const AZTEC_GOVERNANCE_PROPOSER_PAYLOAD = '0x68396cde7891ADCC65F11e8A5Cec1898AF6AD970';
 export const AZTEC_ROLLUP_DEPLOY_BLOCK         = 25428902;
 export const AZTEC_NETHERMIND_VERSION          = '2.0.0';

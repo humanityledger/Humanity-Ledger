@@ -8,6 +8,16 @@ import { useAccount } from 'wagmi';
 
 type GateState = 'INTRO' | 'AUTH' | 'APP';
 
+/**
+ * Pages anyone can open without signing in. The documentation, company and
+ * legal pages belong here: the terms and the privacy policy must be readable
+ * before someone agrees to them. Keep in step with PUBLIC_PATHS in middleware.ts.
+ */
+const PUBLIC_PAGES = [
+    '/', '/connect', '/login', '/sign-up', '/terms', '/privacy', '/developers', '/forum', '/news', '/chat', '/hub',
+    '/docs', '/blog', '/changelog', '/status', '/contact', '/company', '/whitepaper', '/security/audits', '/network/status',
+];
+
 interface GateContextType {
     state: GateState;
     hasPlayedIntro: boolean;
@@ -30,7 +40,7 @@ export function TitaniumGate({ children, requiredTier = 'PRO' }: TitaniumGatePro
     // This prevents the loader flash on /connect after disconnect.
     // NOTE: /chat and /hub handle their own auth internally — they must NEVER be
     // gated here or TitaniumGate will render null causing a blank white screen.
-    const initialIsPublicPage = ['/', '/connect', '/login', '/sign-up', '/terms', '/privacy', '/developers', '/forum', '/news', '/chat', '/hub'].some(
+    const initialIsPublicPage = PUBLIC_PAGES.some(
         path => path === pathname || (path !== '/' && pathname?.startsWith(path))
     );
 
@@ -51,7 +61,7 @@ export function TitaniumGate({ children, requiredTier = 'PRO' }: TitaniumGatePro
     
     // Strict Whitelist: connect, docs, terms, privacy, developers, chat and hub are always visible.
     // /chat and /hub handle their own auth — TitaniumGate must not gate them.
-    const isPublicPage = ['/', '/connect', '/login', '/sign-up', '/terms', '/privacy', '/developers', '/forum', '/news', '/chat', '/hub'].some(
+    const isPublicPage = PUBLIC_PAGES.some(
         path => path === pathname || (path !== '/' && pathname?.startsWith(path))
     );
 

@@ -7,6 +7,7 @@
  * so the route never crashes regardless of environment.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { checkMessageEnvelope } from '@/lib/security/messageEnvelope';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 
@@ -64,6 +65,14 @@ export async function POST(req: NextRequest) {
       !content?.trim()
     ) {
       return NextResponse.json({ error: 'Missing or invalid required fields (channelId must be alphanumeric)' }, { status: 400 });
+    }
+
+    // F2-02: this body is written to a Redis sorted set (7-day TTL), published
+    // over Redis pub/sub, held in a process-global memory store and written to
+    // prisma.pendingChatMessage — four readable copies of every message.
+    const envelope = checkMessageEnvelope(content, 'chat/send');
+    if (envelope.rejection) {
+      return NextResponse.json(envelope.rejection, { status: 400 });
     }
 
     const message = {

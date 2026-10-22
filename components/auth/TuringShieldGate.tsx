@@ -96,7 +96,7 @@ function VerifyingPulse() {
       {[0, 1, 2].map(i => (
         <motion.div
           key={i}
-          className="w-2 h-2 rounded-full bg-[#25D366]"
+          className="w-2 h-2 rounded-full bg-[#2754d6]"
           animate={{ scale: [1, 1.6, 1], opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}
         />
@@ -116,7 +116,7 @@ function RingProgress({ progress }: { progress: number }) {
       <motion.circle
         cx="36" cy="36" r={r}
         fill="none"
-        stroke="#25D366"
+        stroke="#2754d6"
         strokeWidth="3"
         strokeLinecap="round"
         strokeDasharray={c}
@@ -191,7 +191,7 @@ function PinInput({
                     : filled
                     ? 'bg-[#1C1C1E] border-[#1C1C1E]'
                     : isActive
-                    ? 'bg-white border-[#25D366] shadow-[0_0_0_3px_rgba(37,211,102,0.15)]'
+                    ? 'bg-white border-[#2754d6] shadow-[0_0_0_3px_rgba(39,84,214,0.15)]'
                     : 'bg-[#F2F2F7] border-transparent'
                   }
                 `}
@@ -208,7 +208,7 @@ function PinInput({
                   <motion.div
                     animate={{ opacity: [1, 0, 1] }}
                     transition={{ duration: 1, repeat: Infinity }}
-                    className="w-[2px] h-5 bg-[#25D366] rounded-full"
+                    className="w-[2px] h-5 bg-[#2754d6] rounded-full"
                   />
                 )}
               </motion.div>
@@ -224,7 +224,7 @@ function PinInput({
 function InfoCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
     <div className="flex items-start gap-3 text-left">
-      <div className="w-8 h-8 rounded-xl bg-[#25D366]/10 flex items-center justify-center shrink-0 mt-0.5">
+      <div className="w-8 h-8 rounded-xl bg-[#2754d6]/10 flex items-center justify-center shrink-0 mt-0.5">
         {icon}
       </div>
       <div>
@@ -591,7 +591,7 @@ export function TuringShieldGate({
             {setupStep < 3 && (
               <div className="h-1 bg-black/[0.05] w-full">
                 <motion.div
-                  className="h-full bg-[#25D366] rounded-full"
+                  className="h-full bg-[#2754d6] rounded-full"
                   animate={{ width: `${stepProgress}%` }}
                   transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 />
@@ -613,16 +613,16 @@ export function TuringShieldGate({
                   >
                     {/* Icon: clean lock mark, no shield */}
                     <div className="relative w-20 h-20 mb-6">
-                      <div className="absolute inset-0 bg-[#25D366]/10 rounded-full" />
+                      <div className="absolute inset-0 bg-[#2754d6]/10 rounded-full" />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2754d6" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="3" y="11" width="18" height="11" rx="2"/>
                           <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                          <circle cx="12" cy="16" r="1" fill="#25D366" stroke="none"/>
+                          <circle cx="12" cy="16" r="1" fill="#2754d6" stroke="none"/>
                         </svg>
                       </div>
                       <motion.div
-                        className="absolute inset-0 rounded-full border-2 border-[#25D366]/25"
+                        className="absolute inset-0 rounded-full border-2 border-[#2754d6]/25"
                         animate={{ scale: [1, 1.14, 1], opacity: [0.5, 0, 0.5] }}
                         transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
                       />
@@ -640,7 +640,7 @@ export function TuringShieldGate({
                     <div className="w-full bg-[#F9F9F9] rounded-2xl p-5 space-y-4 mb-6">
                       <InfoCard
                         icon={
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2754d6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                           </svg>
                         }
@@ -650,7 +650,7 @@ export function TuringShieldGate({
                       <div className="h-px bg-black/[0.05]" />
                       <InfoCard
                         icon={
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2754d6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.23h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l1.27-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
                           </svg>
                         }
@@ -660,7 +660,7 @@ export function TuringShieldGate({
                       <div className="h-px bg-black/[0.05]" />
                       <InfoCard
                         icon={
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2754d6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
                           </svg>
                         }
@@ -752,8 +752,8 @@ export function TuringShieldGate({
                     transition={{ duration: 0.3 }}
                     className="flex flex-col items-center"
                   >
-                    <div className="w-14 h-14 rounded-full bg-[#25D366]/10 flex items-center justify-center mb-5">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <div className="w-14 h-14 rounded-full bg-[#2754d6]/10 flex items-center justify-center mb-5">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2754d6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12"/>
                       </svg>
                     </div>
@@ -820,7 +820,7 @@ export function TuringShieldGate({
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ type: 'spring', stiffness: 300, damping: 22, delay: 0.1 }}
-                      className="w-20 h-20 rounded-full bg-[#25D366] flex items-center justify-center mb-6 shadow-[0_8px_32px_rgba(37,211,102,0.35)]"
+                      className="w-20 h-20 rounded-full bg-[#2754d6] flex items-center justify-center mb-6 shadow-[0_8px_32px_rgba(39,84,214,0.35)]"
                     >
                       <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12"/>
@@ -870,7 +870,7 @@ export function TuringShieldGate({
       style={{ WebkitOverflowScrolling: 'touch', background: 'linear-gradient(160deg, #F9F9F9 0%, #F2F2F7 100%)' }}
     >
       {/* Subtle ambient accent */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#25D366]/[0.04] blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#2754d6]/[0.04] blur-[100px] rounded-full pointer-events-none" />
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -916,7 +916,7 @@ export function TuringShieldGate({
                   className="h-[3px] bg-black/[0.04] w-full"
                 >
                   <motion.div
-                    className="h-full bg-[#25D366] rounded-full"
+                    className="h-full bg-[#2754d6] rounded-full"
                     animate={{ width: `${verifyProgress}%` }}
                     transition={{ duration: 0.3, ease: 'linear' }}
                   />

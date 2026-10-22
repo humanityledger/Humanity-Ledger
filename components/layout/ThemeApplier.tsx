@@ -32,11 +32,8 @@ export function ThemeApplier() {
         // Map PXE themes to CSS classes
         // Note: For now, if brutalist/monochrome/terminal, we can default to light mode base
         // If neon_void, we can default to dark mode base
-        if (theme === 'neon_void' || theme === 'terminal') {
-            html.classList.add('dark');
-        } else {
-            html.classList.add('light');
-        }
+        html.classList.remove('dark');
+        html.classList.add('light');
         
         // Add specific theme class
         html.classList.add(`theme-${theme}`);

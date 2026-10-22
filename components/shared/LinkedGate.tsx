@@ -54,9 +54,9 @@ function HugeAnimatedLedger() {
       onClick={handleClick}
     >
       <motion.img
-        src="/logo-mark.png"
+        src="/worldmap.png"
         className="w-full h-full object-contain relative z-10 drop-shadow-[0_20px_40px_rgba(0,0,0,0.15)] group-hover:drop-shadow-[0_40px_80px_rgba(0,0,0,0.30)] transition-all duration-500"
-        alt="Animated Ledger"
+        alt="Humanity Ledger"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         animate={{ y: [0, -20, 0] }}

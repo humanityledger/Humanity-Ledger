@@ -32,15 +32,41 @@ export async function POST(req: NextRequest) {
     const siweMessage = new SiweMessage(message);
     const domain = process.env.NEXT_PUBLIC_DOMAIN || req.headers.get('host')?.split(':')[0] || 'localhost';
     
-    const { data: fields, error: siweErr } = await siweMessage.verify({
-      signature,
-      nonce,
-      domain,
-    });
+    // `suppressExceptions` is required for the destructuring below to mean
+    // anything. Without it, siwe rejects the promise on ANY verification
+    // failure — bad signature, nonce mismatch, domain mismatch — so `siweErr`
+    // was never reached and every one of those cases fell into the catch at
+    // the bottom of this function, which answers a generic "Verification
+    // failed." with no indication of which check failed. That made a simple
+    // domain mismatch indistinguishable from a forged signature, in the logs
+    // and for the user.
+    const { data: fields, error: siweErr } = await siweMessage.verify(
+      { signature, nonce, domain },
+      { suppressExceptions: true },
+    );
+
+    if (siweErr) {
+      logger.error(
+        { type: (siweErr as any)?.type, expected: (siweErr as any)?.expected, received: (siweErr as any)?.received },
+        '[SIWE] Verification rejected',
+      );
+    }
 
     if (siweErr || !fields) {
-      logger.error({ siweErr }, '[SIWE] Signature verification failed');
-      return NextResponse.json({ ok: false, error: 'Invalid signature or nonce mismatch.' }, { status: 401 });
+      const type = (siweErr as any)?.type;
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            type === 'Domain does not match provided domain'
+              ? 'Domain mismatch between the signed message and this server.'
+              : type === 'Nonce does not match provided nonce'
+                ? 'Nonce mismatch — request a new sign-in.'
+                : 'Invalid signature.',
+          detail: type ?? 'unknown',
+        },
+        { status: 401 },
+      );
     }
     
     // Supported chains (Ethereum mainnet=1, Base=8453, Sepolia=11155111, Base Sepolia=84532)

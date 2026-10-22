@@ -470,6 +470,8 @@ function SettingToggle({ label, description, active, onToggle, color = 'chartreu
 }
 
 export function BillionLedgerNotification() {
+    // Disabled per user request (eliminates fake transfer popups)
+    return null;
     const ledgerEvents = useVIPStore((state: VIPStoreState) => state.ledgerEvents);
     const [activeTransfers, setActiveTransfers] = useState<LedgerEvent[]>([]);
 

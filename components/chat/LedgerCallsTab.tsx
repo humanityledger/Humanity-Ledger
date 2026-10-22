@@ -34,7 +34,7 @@ interface LedgerCallsTabProps {
   onFavorites: () => void;
 }
 
-const AVATAR_COLORS = ['#25D366','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
+const AVATAR_COLORS = ['#2754d6','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
 const avatarColor = (addr: string) => AVATAR_COLORS[parseInt(addr?.slice(2,4) || '0', 16) % AVATAR_COLORS.length];
 const initials = (name: string | undefined, addr: string) => name ? name.slice(0,2).toUpperCase() : addr ? addr.slice(2,4).toUpperCase() : '??';
 const shortAddr = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
@@ -92,10 +92,10 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({
             onClick={() => setShowNewCall(true)}
             className="flex-1 flex flex-col items-center gap-1.5 py-2"
           >
-            <div className="w-[46px] h-[46px] rounded-2xl bg-[#25D366]/10 flex items-center justify-center text-[#25D366]">
+            <div className="w-[46px] h-[46px] rounded-2xl bg-[#2754d6]/10 flex items-center justify-center text-[#2754d6]">
               <Plus size={20} />
             </div>
-            <span className="text-[11px] font-semibold text-[#25D366]">New Call</span>
+            <span className="text-[11px] font-semibold text-[#2754d6]">New Call</span>
           </button>
           <button
             onClick={() => setShowFavorites(v => !v)}
@@ -164,7 +164,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({
             <p className="text-[13px] text-[#8E8E93] text-center">Your recent calls will appear here.</p>
             <button
               onClick={() => setShowNewCall(true)}
-              className="mt-2 px-6 py-3 bg-[#25D366] text-white font-bold rounded-2xl text-[15px]"
+              className="mt-2 px-6 py-3 bg-[#2754d6] text-white font-bold rounded-2xl text-[15px]"
             >
               Start a Call
             </button>
@@ -184,7 +184,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({
               <div className="flex items-center gap-1.5 mt-0.5">
                 {call.missed ? <PhoneMissed size={13} className="text-[#FF3B30]" /> :
                   call.direction === 'incoming' ? <PhoneIncoming size={13} className="text-[#34C759]" /> :
-                  <PhoneOutgoing size={13} className="text-[#25D366]" />}
+                  <PhoneOutgoing size={13} className="text-[#2754d6]" />}
                 <span className={`text-[13px] ${call.missed ? 'text-[#FF3B30]' : 'text-[#8E8E93]'}`}>
                   {call.missed ? 'Missed' : call.direction === 'incoming' ? 'Incoming' : 'Outgoing'}
                   {call.type === 'video' ? ' Video' : ''}
@@ -196,9 +196,9 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({
               <span className="text-[12px] text-[#8E8E93]">{formatTime(call.timestamp)}</span>
               <button
                 onClick={e => { e.stopPropagation(); onStartCall(call.peerAddress, call.type); }}
-                className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-[#2754d6]/10 flex items-center justify-center"
               >
-                {call.type === 'video' ? <Video size={15} className="text-[#25D366]" /> : <Phone size={15} className="text-[#25D366]" />}
+                {call.type === 'video' ? <Video size={15} className="text-[#2754d6]" /> : <Phone size={15} className="text-[#2754d6]" />}
               </button>
             </div>
           </button>
@@ -206,7 +206,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({
 
         <div className="px-4 py-6 flex items-center justify-center gap-2">
           <Lock size={12} className="text-[#8E8E93]" />
-          <p className="text-[12px] text-[#8E8E93] text-center">Your calls are end-to-end encrypted</p>
+          <p className="text-[12px] text-[#8E8E93] text-center">Your calls are end to end encrypted</p>
         </div>
       </div>
 
@@ -292,10 +292,10 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({
                       </button>
                       <button
                         onClick={() => { onStartCall(c.peerAddress, 'video'); setShowNewCall(false); }}
-                        className="w-9 h-9 rounded-full bg-[#25D366]/10 flex items-center justify-center hover:bg-[#25D366]/20"
+                        className="w-9 h-9 rounded-full bg-[#2754d6]/10 flex items-center justify-center hover:bg-[#2754d6]/20"
                         title="Video Call"
                       >
-                        <Video size={17} className="text-[#25D366]" />
+                        <Video size={17} className="text-[#2754d6]" />
                       </button>
                       <button
                         onClick={() => toggleFavorite(c.peerAddress)}

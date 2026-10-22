@@ -27,14 +27,14 @@ interface CommunityMemberPanelProps {
 const truncateAddr = (a: string) => a ? `${a.slice(0, 6)}...${a.slice(-4)}` : 'Unknown';
 
 const getAvatarColor = (addr: string) => {
-  const colors = ['#25D366', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55', '#10B981'];
+  const colors = ['#2754d6', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55', '#10B981'];
   const num = parseInt(addr?.slice(2, 6) || '0', 16);
   return colors[num % colors.length];
 };
 
 const ROLE_BADGES = {
   OWNER: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Owner', icon: Crown },
-  ADMIN: { bg: 'bg-[#25D366]/15', text: 'text-[#25D366]', label: 'Admin', icon: Award },
+  ADMIN: { bg: 'bg-[#2754d6]/15', text: 'text-[#2754d6]', label: 'Admin', icon: Award },
   MODERATOR: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Mod', icon: Award },
   MEMBER: { bg: 'bg-black/5', text: 'text-black/50', label: 'Member', icon: null },
   BANNED: { bg: 'bg-red-100', text: 'text-red-700', label: 'Banned', icon: Ban },
@@ -82,7 +82,7 @@ function MemberRow({
           <span className="text-[14px] font-bold text-[#1C1C1E] font-mono truncate">
             {truncateAddr(member.address)}
           </span>
-          {isMe && <span className="bg-[#25D366]/10 text-[#25D366] text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md">You</span>}
+          {isMe && <span className="bg-[#2754d6]/10 text-[#2754d6] text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md">You</span>}
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md flex items-center gap-1 ${badge.bg} ${badge.text}`}>
@@ -126,7 +126,7 @@ function MemberRow({
                       <div className="h-px bg-black/5 my-1" />
                       {member.role === 'MEMBER' && (
                         <button onClick={() => { onAction('PROMOTE_ADMIN', member.address); setShowMenu(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#F2F2F7] transition-colors">
-                          <Award size={15} className="text-[#25D366]" />
+                          <Award size={15} className="text-[#2754d6]" />
                           <span className="text-[13px] font-semibold text-[#1C1C1E]">Promote to Admin</span>
                         </button>
                       )}
@@ -328,19 +328,19 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
           {/* Stats Row */}
           <div className="px-5 py-4 grid grid-cols-3 gap-2 border-b border-black/5 shrink-0 bg-[#FAFAFA]">
             <div className="bg-white p-3 rounded-2xl border border-black/[0.04] flex flex-col items-center justify-center text-center">
-              <Users size={18} className="text-[#25D366] mb-1" />
+              <Users size={18} className="text-[#2754d6] mb-1" />
               <span className="text-[16px] font-black text-[#1C1C1E]">{totalMembers}</span>
               <span className="text-[9px] font-bold uppercase text-black/30">Total</span>
             </div>
             <div className="bg-white p-3 rounded-2xl border border-black/[0.04] flex flex-col items-center justify-center text-center">
-              <Award size={18} className="text-[#25D366] mb-1" />
+              <Award size={18} className="text-[#2754d6] mb-1" />
               <span className="text-[16px] font-black text-[#1C1C1E]">{adminCount}</span>
               <span className="text-[9px] font-bold uppercase text-black/30">Admins</span>
             </div>
             <div className="bg-white p-3 rounded-2xl border border-black/[0.04] flex flex-col items-center justify-center text-center relative">
-              <div className="w-2 h-2 rounded-full bg-[#25D366] absolute top-3 right-3 animate-pulse" />
+              <div className="w-2 h-2 rounded-full bg-[#2754d6] absolute top-3 right-3 animate-pulse" />
               <div className="relative">
-                <Users size={18} className="text-[#25D366] mb-1" />
+                <Users size={18} className="text-[#2754d6] mb-1" />
               </div>
               <span className="text-[16px] font-black text-[#1C1C1E]">{activeToday}</span>
               <span className="text-[9px] font-bold uppercase text-black/30">Active</span>
@@ -356,7 +356,7 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
                 placeholder="Search by 0x address..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 bg-[#F2F2F7] rounded-xl text-[14px] font-medium outline-none focus:ring-2 focus:ring-[#25D366]/20 transition-all placeholder:text-black/30"
+                className="w-full pl-9 pr-4 py-2.5 bg-[#F2F2F7] rounded-xl text-[14px] font-medium outline-none focus:ring-2 focus:ring-[#2754d6]/20 transition-all placeholder:text-black/30"
               />
             </div>
           </div>
@@ -375,7 +375,7 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
               >
                 {tab.label}
                 {activeTab === tab.id && (
-                  <motion.div layoutId="memberTabIndicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#25D366]" />
+                  <motion.div layoutId="memberTabIndicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2754d6]" />
                 )}
               </button>
             ))}
@@ -416,7 +416,7 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
                 </div>
                 <button 
                   onClick={copyInvite}
-                  className="w-10 h-10 rounded-xl bg-[#25D366] text-white flex items-center justify-center hover:bg-[#128C7E] transition-colors shrink-0 shadow-sm"
+                  className="w-10 h-10 rounded-xl bg-[#2754d6] text-white flex items-center justify-center hover:bg-[#128C7E] transition-colors shrink-0 shadow-sm"
                 >
                   <Link size={16} />
                 </button>

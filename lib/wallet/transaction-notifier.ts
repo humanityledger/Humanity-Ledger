@@ -62,8 +62,8 @@ class TransactionNotifierService {
       description += ` (~$${safeToFixed(usdValue, 2)})`;
     }
 
-    // Show toast notification
-    toast.success(title, {
+    // Show toast notification — SILENCED in chat context
+    if (false) toast.success(title, {
       description,
       duration: 8000,
       action: hash ? {
@@ -73,7 +73,7 @@ class TransactionNotifierService {
     });
 
     // Optional: Play sound effect (if user enables it)
-    this.playNotificationSound();
+    // this.playNotificationSound(); — silenced
   }
 
   /**
