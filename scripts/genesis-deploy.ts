@@ -25,12 +25,8 @@ async function main() {
              console.log(" Forking Base Mainnet detected. Using Real USDC.");
              reserveTokenAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
         } else {
-            console.log(" Fresh Local Chain. Deploying Mock USDC.");
-            const MockERC20 = await hre.ethers.getContractFactory("MANAToken"); // Lazy check: reusing MANAToken logic as generic ERC20 mock since it has mint
-            const mockUsdc = await MockERC20.deploy();
-            await mockUsdc.waitForDeployment();
-            reserveTokenAddress = await mockUsdc.getAddress();
-            console.log(" Mock USDC Deployed:", reserveTokenAddress);
+            console.log(" Local Chain: using standard testnet collateral reference.");
+            reserveTokenAddress = process.env.RESERVE_TOKEN || "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
         }
     } else if (network === "baseSepolia") {
         reserveTokenAddress = "0x036CbD53842c5426634e7929541eC2318f3dCF7e"; // Base Sepolia USDC

@@ -91,9 +91,11 @@ export function LedgerSupport() {
         }
         setSubmitting(true);
         try {
-            await new Promise(r => setTimeout(r, 600));
+            const ticketId = typeof crypto !== 'undefined' && crypto.randomUUID 
+                ? crypto.randomUUID().slice(0, 8) 
+                : `TK-${Date.now().toString(36).toUpperCase()}`;
             const newTicket: Ticket = {
-                id: Math.floor(Math.random() * 100000).toString(),
+                id: ticketId,
                 subject, status: 'OPEN', priority,
                 createdAt: new Date().toISOString(),
             };

@@ -1,6 +1,6 @@
 // @ts-nocheck
 "use client";
-import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X } from 'lucide-react';
+import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { shortAddr } from '@/lib/utils';
@@ -67,7 +67,7 @@ import { ZkInvoiceModal } from '@/components/zk/ZkInvoiceModal';
 import { encodeStreamPayload } from '@/lib/zk/zkStreaming';
 import { encodeInvoicePayload } from '@/lib/zk/zkInvoice';
 import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
-import { isBotCommand, executeBotCommand } from '@/lib/bots/botInterceptor';
+import { SLASH_COMMANDS, transformClientCommand, isBotCommand, executeBotCommand } from '@/lib/bots/botInterceptor';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
 import { LedgerCommunitiesTab } from '@/components/chat/LedgerCommunitiesTab';
 import { CommunityView } from '@/components/chat/CommunityView';
@@ -76,6 +76,8 @@ import { LottieSendButton } from '@/components/chat/LottieSendButton';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
 import { chatDB } from '@/lib/chat/indexeddb';
 import { EncryptedMediaEngine } from '@/lib/chat/media';
+import { SavedMessagesModal } from '@/components/chat/SavedMessagesModal';
+import { KeyboardShortcutsModal } from '@/components/chat/KeyboardShortcutsModal';
 
 
 
@@ -474,12 +476,44 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [replyingTo, setReplyingTo] = useState<any | null>(null); // Phase 2: Message Quoting
   const [threadParentId, setThreadParentId] = useState<string | null>(null);
   const [showBotSuggestions, setShowBotSuggestions] = useState(false);
-  const BOT_COMMANDS_LIST = [
-    { cmd: '/price', hint: '/price ETH|Price of a token' },
-    { cmd: '/ens', hint: '/ens vitalik.eth|Look up an ENS name' },
-    { cmd: '/gas', hint: '/gas|Current Ethereum gas price' },
-    { cmd: '/help', hint: '/help|All commands' },
-  ];
+  const BOT_COMMANDS_LIST = SLASH_COMMANDS.map(sc => ({
+    cmd: sc.command,
+    hint: `${sc.syntax}|${sc.description}`,
+    category: sc.category,
+  }));
+  
+  // Mattermost-grade Saved Messages & Shortcuts
+  const [savedMessages, setSavedMessages] = useState<{ id: string; content: string; savedAt: number }[]>([]);
+  const [showSavedModal, setShowSavedModal] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+
+  useEffect(() => {
+    if (address) {
+      try {
+        const raw = localStorage.getItem(`ledger_saved_msgs_${address.toLowerCase()}`);
+        if (raw) setSavedMessages(JSON.parse(raw));
+      } catch {}
+    }
+  }, [address]);
+
+  const toggleSaveMessage = useCallback((msgId: string, msgContent: string) => {
+    if (!address) return;
+    setSavedMessages(prev => {
+      const exists = prev.some(m => m.id === msgId);
+      let next;
+      if (exists) {
+        next = prev.filter(m => m.id !== msgId);
+        toast.success('Removed from saved messages');
+      } else {
+        next = [{ id: msgId, content: msgContent, savedAt: Date.now() }, ...prev];
+        toast.success('Message saved to bookmarks');
+      }
+      try {
+        localStorage.setItem(`ledger_saved_msgs_${address.toLowerCase()}`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, [address]);
   
   // High-End Feature States
   const [showCallHistory, setShowCallHistory] = useState(false);
@@ -499,6 +533,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       setLocalContacts(getLocalContacts(address));
     }
   }, [address]);
+
+  useEffect(() => {
+    const handleGlobalKeys = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setShowSearch(prev => !prev);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+        e.preventDefault();
+        setShowShortcutsModal(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeys);
+    return () => window.removeEventListener('keydown', handleGlobalKeys);
+  }, []);
 
   useEffect(() => {
     loadContacts();
@@ -4074,6 +4123,28 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const isSystemSignal = content.startsWith('__CALL_') || isReaction || isVote;
     if (!isSystemSignal && sending) return;
 
+    // Native client-side slash commands (/me, /shrug, /code, /table, /urgent, /clear, /online, /away, /dnd)
+    const { transformed, isHandledLocally, action } = transformClientCommand(content, getDisplayName(address || ''));
+    if (isHandledLocally) {
+      if (action === 'clear') {
+        setMessages([]);
+        toast.success('Chat screen cleared');
+      } else if (action === 'status_online' || action === 'status_away' || action === 'status_dnd') {
+        const mode = action.replace('status_', '');
+        fetch('/api/chat/presence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address, status: mode })
+        }).catch(() => {});
+        toast.success(`Presence updated to ${mode.toUpperCase()}`);
+      }
+      setMessage('');
+      setInputText('');
+      setShowBotSuggestions(false);
+      return;
+    }
+    content = transformed;
+
     // Bot command interception
     if (isBotCommand(content)) {
       const botResponse = await executeBotCommand(content);
@@ -5068,6 +5139,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           { label: 'Private wallet', icon: <ShieldCheck size={17} strokeWidth={1.8} />, onClick: () => setShowZkWallet(v => !v) },
                           { label: 'Scan a code', icon: <ScanQrCode size={17} strokeWidth={1.8} />, onClick: () => setShowScanner(true) },
                           { label: 'Chat options', icon: <Settings size={17} strokeWidth={1.8} />, onClick: () => setShowProfile(true) },
+                          { label: 'Saved messages', icon: <Bookmark size={17} strokeWidth={1.8} />, onClick: () => setShowSavedModal(true) },
+                          { label: 'Keyboard shortcuts', icon: <Clock size={17} strokeWidth={1.8} />, onClick: () => setShowShortcutsModal(true) },
                         ].map(item => (
                           <button
                             key={item.label}
@@ -6164,6 +6237,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                  <button role="menuitem" type="button" onClick={() => { executeSend(`__PIN__${contextMenu.id}`); setContextMenu(null); }} className={item}>
                    <Pin size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Pin
                  </button>
+                 <button role="menuitem" type="button" onClick={() => { toggleSaveMessage(contextMenu.id, contextMenu.content); setContextMenu(null); }} className={item}>
+                   <Bookmark size={16} strokeWidth={1.8} className="text-[#4a505c]" /> {savedMessages.some(m => m.id === contextMenu.id) ? 'Remove saved' : 'Save message'}
+                 </button>
                  {mine && (
                    <button role="menuitem" type="button" onClick={() => { setEditingMsg({ id: contextMenu.id, content: contextMenu.content }); setContextMenu(null); }} className={item}>
                      <Pencil size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Edit
@@ -6581,6 +6657,26 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           }}
         />,
         document.body
+      )}
+
+      {showSavedModal && (
+        <SavedMessagesModal
+          isOpen={showSavedModal}
+          onClose={() => setShowSavedModal(false)}
+          savedMessages={savedMessages}
+          onRemove={(id) => toggleSaveMessage(id, '')}
+          onJumpToMessage={(id) => {
+            const el = document.getElementById(`msg-${id}`);
+            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }}
+        />
+      )}
+
+      {showShortcutsModal && (
+        <KeyboardShortcutsModal
+          isOpen={showShortcutsModal}
+          onClose={() => setShowShortcutsModal(false)}
+        />
       )}
 
       {showCreateGroup && createPortal(

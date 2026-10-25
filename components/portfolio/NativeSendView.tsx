@@ -309,7 +309,7 @@ export function NativeSendView({ onBack, initialTokenSymbol }: { onBack: () => v
                         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
                         <div className="absolute inset-0 opacity-[0.03] flex flex-wrap content-start overflow-hidden text-[8px] font-mono text-emerald-500 leading-none break-all select-none">
                             {Array.from({length: 100}).map((_, i) => (
-                                <span key={i}>0x{Math.random().toString(16).slice(2, 10)} </span>
+                                <span key={i}>0x{((i * 0x45d9f3b + 0x119) >>> 0).toString(16).padStart(8, '0')} </span>
                             ))}
                         </div>
                     </motion.div>

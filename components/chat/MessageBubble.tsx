@@ -564,6 +564,15 @@ export const MessageBubble = React.memo(({
     }
   }
 
+  let isUrgent = false;
+  if (content.startsWith('__URGENT__::')) {
+    isUrgent = true;
+    content = content.slice('__URGENT__::'.length);
+  }
+
+  const isCodeBlock = typeof content === 'string' && content.startsWith('```') && content.endsWith('```') && content.length > 6;
+  const codeContent = isCodeBlock ? content.slice(3, -3).replace(/^[a-zA-Z0-9_-]+\n/, '').trim() : null;
+
   const isCallOffer  = content.startsWith('__CALL_OFFER__:') || content === '__CALL_HANGUP__';
   const isGroupCall  = content.startsWith('__CALL_GROUP_CREATED__:');
   const isMissedCall = content.startsWith('__CALL_MISSED__:') || content === '__CALL_DECLINE__';
@@ -867,7 +876,13 @@ export const MessageBubble = React.memo(({
                 </div>
               </div>
             ) : (
-              <div className={`relative ${textBubble} ${padding}`}>
+              <div className={`relative ${textBubble} ${padding} ${isUrgent ? 'ring-2 ring-rose-500 shadow-md' : ''}`}>
+                {isUrgent && (
+                  <div className={`flex items-center gap-1.5 mb-1.5 font-mono text-[10px] font-bold uppercase tracking-wider ${isMe ? 'text-rose-300' : 'text-rose-600'}`}>
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                    <span>[URGENT] High Priority</span>
+                  </div>
+                )}
                 {replyMsg && (
                   <button
                     type="button"
@@ -883,20 +898,35 @@ export const MessageBubble = React.memo(({
                     </span>
                   </button>
                 )}
-                <p
-                  className="whitespace-pre-wrap break-words leading-[1.45] select-text"
-                  style={{ fontSize: `${fontSizePx}px`, fontFamily, WebkitUserSelect: 'text', userSelect: 'text' } as React.CSSProperties}
-                >
-                  {isBurned
-                    ? <span className={`italic ${isMe ? 'text-white/60' : 'text-[#a3a9b4]'}`}>This message was deleted</span>
-                    : content}
-                  {msg.edited && !isBurned && (
-                    <span className={`text-[12px] ml-1.5 ${isMe ? 'text-white/55' : 'text-[#a3a9b4]'}`}>edited</span>
-                  )}
-                </p>
+                {isCodeBlock ? (
+                  <div className="relative group my-1">
+                    <pre className="font-mono text-[12.5px] bg-[#0c0d0e] text-[#4ade80] p-3 rounded-xl overflow-x-auto leading-relaxed border border-white/10 select-text">
+                      <code>{codeContent}</code>
+                    </pre>
+                    <button
+                      type="button"
+                      onClick={() => { navigator.clipboard.writeText(codeContent || ''); toast.success('Code copied to clipboard'); }}
+                      className="absolute top-2 right-2 px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 text-white text-[10px] font-mono opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                ) : (
+                  <p
+                    className="whitespace-pre-wrap break-words leading-[1.45] select-text"
+                    style={{ fontSize: `${fontSizePx}px`, fontFamily, WebkitUserSelect: 'text', userSelect: 'text' } as React.CSSProperties}
+                  >
+                    {isBurned
+                      ? <span className={`italic ${isMe ? 'text-white/60' : 'text-[#a3a9b4]'}`}>This message was deleted</span>
+                      : content}
+                    {msg.edited && !isBurned && (
+                      <span className={`text-[12px] ml-1.5 ${isMe ? 'text-white/55' : 'text-[#a3a9b4]'}`}>edited</span>
+                    )}
+                  </p>
+                )}
                 {(() => {
                   const firstUrl = extractFirstUrl(content);
-                  if (!firstUrl || isBurned) return null;
+                  if (!firstUrl || isBurned || isCodeBlock) return null;
                   return <BubbleLinkPreview url={firstUrl} isMe={isMe} />;
                 })()}
               </div>

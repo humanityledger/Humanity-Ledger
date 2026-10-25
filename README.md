@@ -1,10 +1,6 @@
 # Humanity Ledger — Sovereign Privacy & Decentralized Communication Protocol
 
 <p align="center">
-  <img src="public/atom_logo.png" alt="Humanity Ledger Architecture" width="120" height="120" style="border-radius: 24px;" />
-</p>
-
-<p align="center">
   <strong>The Decentralized Communication Paradigm. Built on Aztec Zero-Knowledge Proofs & XMTP MLS Transport.</strong>
 </p>
 
@@ -15,7 +11,7 @@
   <a href="https://github.com/noir-lang/noir"><img src="https://img.shields.io/badge/ZK%20Language-Noir%20%7C%20UltraHonk-8000FF?style=flat-square" alt="Noir Language" /></a>
   <a href="https://livekit.io"><img src="https://img.shields.io/badge/Voice%2FVideo-LiveKit%20WebRTC-00E599?style=flat-square" alt="LiveKit WebRTC" /></a>
   <a href="docs/AUDIT_DOSSIER.md"><img src="https://img.shields.io/badge/Audit%20Score-100%2F100%20Verified-brightgreen?style=flat-square" alt="Audit Score" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT%20%2F%20Proprietary%20Core-yellow?style=flat-square" alt="License" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Proprietary%20%E2%80%94%20All%20Rights%20Reserved-red?style=flat-square" alt="License" /></a>
 </p>
 
 ---
@@ -247,7 +243,7 @@ We welcome contributions from cryptographers, systems engineers, and open-source
 
 ## License
 
-Core protocol libraries and open-source clients are distributed under the **MIT License**. Certain enterprise deployment components and specific zero-knowledge circuit implementations are subject to sovereign open-source licensing. See [LICENSE](LICENSE) for full details.
+This software is released under the **Proprietary Software License — All Rights Reserved**. No permission is granted to copy, modify, merge, publish, distribute, sublicense, or sell copies of the software without explicit written authorization from the Humanity Ledger project maintainers. See [LICENSE](LICENSE) for full details.
 
 ---
 

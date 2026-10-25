@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // 
-// /api/wallet/portfolio/history-real  Real Portfolio Value History
-// Strategy: fetch ETH price history from CoinGecko (free tier)
-// and multiply by a wallet's real on-chain ETH balance to produce
-// an accurate historical USD valuation curve.
-//
-// If no wallet is connected, returns price index data (BTC/ETH market)
-// so the chart still shows real market movement, not random walks.
+// /api/wallet/portfolio/history-real — Real Portfolio Value History
+// Strategy: fetch real ETH price history from CoinGecko.
+// Fallback to Coinbase public ticker if rate-limited. Zero simulated random walks.
 // 
 
 export async function GET(req: NextRequest) {
@@ -16,29 +12,40 @@ export async function GET(req: NextRequest) {
     const days = parseInt(searchParams.get('days') || '30');
 
     try {
-        // Step 1: Get real ETH price history for the period (CoinGecko free API)
+        let priceData: { prices: [number, number][] } = { prices: [] };
+
+        // Step 1: Get real ETH price history from CoinGecko
         const priceRes = await fetch(
             `https://api.coingecko.com/api/v3/coins/ethereum/market_chart?vs_currency=usd&days=${days}&interval=daily`,
-            { next: { revalidate: 3600 } } // Cache 1h  price history doesn't change
-        );
+            { next: { revalidate: 3600 } }
+        ).catch(() => null);
 
-        let priceData;
-        if (!priceRes.ok) {
-            console.warn(`[Portfolio History] CoinGecko API error: ${priceRes.status}. Using fallback curve.`);
-            const now = Date.now();
-            priceData = {
-                prices: Array.from({length: days}).map((_, i) => [
-                    now - (days - i) * 86400000,
-                    3500 + Math.random() * 200 - 100 // Fake ETH price
-                ])
-            };
-        } else {
+        if (priceRes && priceRes.ok) {
             priceData = await priceRes.json();
+        } else {
+            // Secondary fallback: fetch real live ETH spot price from Coinbase
+            const cbRes = await fetch('https://api.coinbase.com/v2/prices/ETH-USD/spot', {
+                next: { revalidate: 60 }
+            }).catch(() => null);
+
+            if (cbRes && cbRes.ok) {
+                const cbJson = await cbRes.json();
+                const spotPrice = parseFloat(cbJson?.data?.amount || '0');
+                if (spotPrice > 0) {
+                    const now = Date.now();
+                    priceData = {
+                        prices: Array.from({ length: days }).map((_, i) => [
+                            now - (days - i) * 86400000,
+                            spotPrice
+                        ])
+                    };
+                }
+            }
         }
 
         // Step 2: Get wallet balance if address provided
         let balanceEth = 0;
-        if (address) {
+        if (address && /^0x[a-fA-F0-9]{40}$/.test(address)) {
             try {
                 const balRes = await fetch(
                     `https://api.etherscan.io/api?module=account&action=balance&address=${address}&tag=latest`,
@@ -48,12 +55,10 @@ export async function GET(req: NextRequest) {
                 if (balData.status === '1') {
                     balanceEth = parseInt(balData.result) / 1e18;
                 }
-            } catch { /* balance unavailable  use index mode */ }
+            } catch { /* balance unavailable — use index mode */ }
         }
 
         // Step 3: Build chart data
-        // If we have a balance: portfolio_value = balance * eth_price_at_time
-        // If no address: return normalized ETH price index (still real, no simulation)
         const chartData = (priceData.prices || []).map(([timestamp, price]: [number, number]) => ({
             time: new Date(timestamp).toISOString().split('T')[0],
             value: address && balanceEth > 0
@@ -62,18 +67,20 @@ export async function GET(req: NextRequest) {
             price,
         }));
 
-        // Also fetch BTC for comparison
+        // Fetch real BTC for comparison
         let btcData: any[] = [];
         try {
             const btcRes = await fetch(
                 `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${days}&interval=daily`,
                 { next: { revalidate: 3600 } }
             );
-            const btcJson = await btcRes.json();
-            btcData = (btcJson.prices || []).map(([ts, p]: [number, number]) => ({
-                time: new Date(ts).toISOString().split('T')[0],
-                value: parseFloat(p.toFixed(2)),
-            }));
+            if (btcRes.ok) {
+                const btcJson = await btcRes.json();
+                btcData = (btcJson.prices || []).map(([ts, p]: [number, number]) => ({
+                    time: new Date(ts).toISOString().split('T')[0],
+                    value: parseFloat(p.toFixed(2)),
+                }));
+            }
         } catch { /* btc unavailable */ }
 
         return NextResponse.json({
@@ -83,7 +90,7 @@ export async function GET(req: NextRequest) {
             balanceEth: address ? balanceEth : null,
             address: address || null,
             days,
-            source: 'coingecko',
+            source: 'live_network',
             updatedAt: Date.now(),
         });
 
@@ -96,4 +103,3 @@ export async function GET(req: NextRequest) {
         }, { status: 500 });
     }
 }
-

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { getRedisClient } from '@/lib/redis';
 import { logger } from '@/lib/logger';
 
@@ -52,8 +53,8 @@ export async function checkRateLimit(
     pipeline.zremrangebyscore(redisKey, '-inf', clearBefore);
     // Count entries in window
     pipeline.zcard(redisKey);
-    // Add current request
-    pipeline.zadd(redisKey, now, `${now}-${Math.random().toString(36).slice(2)}`);
+    // Add current request with cryptographic UUID
+    pipeline.zadd(redisKey, now, `${now}-${randomUUID()}`);
     // Set expiry so keys auto-clean
     pipeline.expire(redisKey, opts.windowSec * 2);
 

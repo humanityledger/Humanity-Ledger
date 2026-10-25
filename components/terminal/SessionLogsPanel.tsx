@@ -32,107 +32,6 @@ const CAT_COLOUR: Record<string, string> = {
     PRIVACY:  "#EC4899",
 };
 
-// ─── Seed events that are always written to localStorage on mount ────────────
-
-function buildSeedEvents(): SessionEvent[] {
-    const now = Date.now();
-    return [
-        {
-            id: `seed-001`,
-            timestamp: new Date(now - 120_000).toISOString(),
-            action: "SESSION_INIT",
-            category: "AUTH",
-            detail: "Wagmi wallet provider handshake completed. SIWE signature verified on-chain.",
-            severity: "SECURE",
-        },
-        {
-            id: `seed-002`,
-            timestamp: new Date(now - 110_000).toISOString(),
-            action: "PXE_SYNC",
-            category: "ZK",
-            detail: "Aztec Private Execution Environment initialised. Viewing key derived locally. State tree sync begun.",
-            severity: "SECURE",
-        },
-        {
-            id: `seed-003`,
-            timestamp: new Date(now - 95_000).toISOString(),
-            action: "NOIR_WASM_LOADED",
-            category: "ZK",
-            detail: "Barretenberg WASM prover compiled and loaded into browser memory. Client-side proving active.",
-            severity: "INFO",
-        },
-        {
-            id: `seed-004`,
-            timestamp: new Date(now - 80_000).toISOString(),
-            action: "IDENTITY_ATTESTED",
-            category: "IDENTITY",
-            detail: "Zero-knowledge credential circuit executed locally. Proof dispatched to Aztec sequencer. No PII exposed.",
-            severity: "SECURE",
-        },
-        {
-            id: `seed-005`,
-            timestamp: new Date(now - 65_000).toISOString(),
-            action: "MIDDLEWARE_GATE_PASSED",
-            category: "AUTH",
-            detail: "Humanity Ledger edge middleware validated JWT. All cryptographic clearances granted.",
-            severity: "SECURE",
-        },
-        {
-            id: `seed-006`,
-            timestamp: new Date(now - 50_000).toISOString(),
-            action: "RPC_NODES_SCANNED",
-            category: "NETWORK",
-            detail: "Health check dispatched to 4 RPC endpoints. Latencies: ETH 48ms · BASE 31ms · ARB 27ms · AZTEC 62ms.",
-            severity: "INFO",
-        },
-        {
-            id: `seed-007`,
-            timestamp: new Date(now - 35_000).toISOString(),
-            action: "PRIVACY_LAYER_ACTIVE",
-            category: "PRIVACY",
-            detail: "IndexedDB audit: 0 unencrypted keys detected. All ephemeral ECDH secrets confined to session memory.",
-            severity: "SECURE",
-        },
-        {
-            id: `seed-008`,
-            timestamp: new Date(now - 20_000).toISOString(),
-            action: "ZK_PROOF_GENERATED",
-            category: "ZK",
-            detail: "UltraHonk proof constructed in 2.1s. Public inputs verified by L1 smart contract. Witness discarded.",
-            severity: "SECURE",
-        },
-        {
-            id: `seed-009`,
-            timestamp: new Date(now - 8_000).toISOString(),
-            action: "NOTE_DECRYPTED",
-            category: "ZK",
-            detail: "Incoming Aztec note decrypted using local Viewing Key. Balance updated in private state tree. Not broadcast.",
-            severity: "INFO",
-        },
-        {
-            id: `seed-010`,
-            timestamp: new Date(now).toISOString(),
-            action: "SESSION_ACTIVE",
-            category: "SYSTEM",
-            detail: "Session heartbeat confirmed. Auto-disconnect timer running. All cryptographic material in local scope.",
-            severity: "INFO",
-        },
-    ];
-}
-
-// ─── Live event templates ────────────────────────────────────────────────────
-
-const LIVE_TEMPLATES: Omit<SessionEvent, "id" | "timestamp">[] = [
-    { action: "ZK_PROOF_GENERATED",  category: "ZK",       detail: "Noir circuit executed. Proof committed to Aztec sequencer queue.", severity: "SECURE" },
-    { action: "NOTE_DECRYPTED",       category: "ZK",       detail: "Private Aztec note decrypted locally. State tree updated in memory.", severity: "INFO"   },
-    { action: "RPC_HEALTH_CHECK",     category: "NETWORK",  detail: "Sentinel watchdog pinged 4 nodes. All within nominal latency bounds.", severity: "INFO"   },
-    { action: "IDENTITY_PROOF_SENT",  category: "IDENTITY", detail: "ZK credential dispatched. No on-chain identity linkage produced.",  severity: "SECURE" },
-    { action: "PRIVACY_SCAN",         category: "PRIVACY",  detail: "IndexedDB audit complete. Zero plaintext key material detected.",    severity: "SECURE" },
-    { action: "SESSION_HEARTBEAT",    category: "SYSTEM",   detail: "Session token refreshed. JWT signed. Auto-lock timer reset.",        severity: "INFO"   },
-    { action: "PXE_NOTE_SYNC",        category: "ZK",       detail: "Trial decryption pass executed across 24 encrypted event logs.",     severity: "INFO"   },
-    { action: "MIDDLEWARE_VALIDATED", category: "AUTH",     detail: "Humanity Ledger edge layer re-validated cryptographic clearance.",     severity: "SECURE" },
-];
-
 // ─── Storage helpers ─────────────────────────────────────────────────────────
 
 const STORAGE_KEY = "wn_privacy_audit_log";
@@ -149,16 +48,9 @@ function loadStoredEvents(): SessionEvent[] {
 
 function saveEvents(events: SessionEvent[]) {
     try {
-        // Keep the latest 200 events to avoid storage bloat
         const trimmed = events.slice(-200);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
     } catch { /* quota exceeded — no-op */ }
-}
-
-function appendEvent(events: SessionEvent[], ev: SessionEvent): SessionEvent[] {
-    const updated = [...events, ev];
-    saveEvents(updated);
-    return updated;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -170,29 +62,10 @@ export function SessionLogsPanel() {
     const [isExporting, setIsExporting] = useState(false);
     const [isPurging, setIsPurging] = useState(false);
 
-    // Initialise: load stored + seed if empty
+    // Initialise: load stored local events
     useEffect(() => {
-        let stored = loadStoredEvents();
-        if (stored.length === 0) {
-            const seeds = buildSeedEvents();
-            saveEvents(seeds);
-            stored = seeds;
-        }
+        const stored = loadStoredEvents();
         setEvents(stored);
-    }, []);
-
-    // Live event generator — fires every 18 seconds
-    useEffect(() => {
-        const id = setInterval(() => {
-            const template = LIVE_TEMPLATES[Math.floor(Math.random() * LIVE_TEMPLATES.length)];
-            const ev: SessionEvent = {
-                id: `live-${Date.now()}`,
-                timestamp: new Date().toISOString(),
-                ...template,
-            };
-            setEvents(prev => appendEvent(prev, ev));
-        }, 18_000);
-        return () => clearInterval(id);
     }, []);
 
     // Filtered + sorted view
@@ -207,8 +80,8 @@ export function SessionLogsPanel() {
                 e.category.toLowerCase().includes(q)
             );
         }
-        return [...result].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    }, [events, search, filterCat]);
+        return [...result].reverse();
+    }, [events, filterCat, search]);
 
     const handleExport = useCallback(() => {
         setIsExporting(true);
@@ -238,10 +111,8 @@ export function SessionLogsPanel() {
         setIsPurging(true);
         try {
             localStorage.removeItem(STORAGE_KEY);
-            const seeds = buildSeedEvents();
-            saveEvents(seeds);
-            setEvents(seeds);
-            toast.success("Local session data purged. Environment restored to sterile state.");
+            setEvents([]);
+            toast.success("Local session audit data cleared.");
         } catch {
             toast.error("Purge failed.");
         } finally {
@@ -258,45 +129,37 @@ export function SessionLogsPanel() {
                 {/* ── Header ────────────────────────────────────────────────── */}
                 <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-1">
                     <div className="flex items-center gap-3">
-                        <span className="font-mono text-[10px] font-black text-slate-400">[LOG]</span>
-                        <h1 className="text-[13px] font-black uppercase tracking-[0.3em] text-black">Privacy Console</h1>
-                        <span className="ml-auto flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-                            <span className="font-mono text-[9px] font-black text-emerald-700 uppercase tracking-widest">Live · {events.length} events</span>
-                        </span>
+                        <span className="font-mono text-xs font-black bg-black text-white px-2 py-0.5 rounded tracking-widest uppercase">AUDIT</span>
+                        <h1 className="text-xl md:text-2xl font-black tracking-tight text-slate-900 uppercase">Cryptographic Session Audit Log</h1>
                     </div>
-                    <p className="font-mono text-[10px] text-slate-400 uppercase tracking-widest pl-7">
-                        Cryptographic Audit Trail · Client-Side Only · Never Transmitted to Any Server
+                    <p className="text-xs text-slate-500 font-mono">
+                        Real-time verification log of on-device zero-knowledge proofs, wallet handshakes, and cryptographic sessions.
                     </p>
                 </motion.div>
 
-                {/* ── Actions ───────────────────────────────────────────────── */}
-                <div className="flex flex-wrap gap-3">
-                    <button
-                        onClick={handleExport}
-                        disabled={isExporting}
-                        className="px-5 py-2.5 bg-white border border-slate-200 text-black rounded-xl font-black uppercase tracking-[0.15em] text-[10px] transition-all shadow-sm hover:shadow-md hover:bg-black/5 active:scale-95 flex items-center gap-2 disabled:opacity-50"
-                    >
-                        <span className="font-mono text-[10px] font-black">[EXP]</span>
-                        {isExporting ? "Exporting…" : "Export Audit Log"}
-                    </button>
-                    <button
-                        onClick={handlePurge}
-                        disabled={isPurging}
-                        className="px-5 py-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl font-black uppercase tracking-[0.15em] text-[10px] transition-all hover:bg-red-100 active:scale-95 flex items-center gap-2 disabled:opacity-50"
-                    >
-                        <span className="font-mono text-[10px] font-black">[PUR]</span>
-                        {isPurging ? "Purging…" : "Atomic Purge"}
-                    </button>
-                </div>
+                {/* ── Controls ──────────────────────────────────────────────── */}
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleExport}
+                            disabled={isExporting || visible.length === 0}
+                            className="px-4 py-2 bg-black hover:bg-slate-800 disabled:opacity-40 text-white font-mono text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
+                        >
+                            Export CSV
+                        </button>
+                        <button
+                            onClick={handlePurge}
+                            disabled={isPurging || events.length === 0}
+                            className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 disabled:opacity-40 font-mono text-[10px] font-black uppercase tracking-widest rounded-xl border border-rose-200 transition-all"
+                        >
+                            Purge Records
+                        </button>
+                    </div>
 
-                {/* ── Filters ───────────────────────────────────────────────── */}
-                <div className="flex flex-col md:flex-row gap-3">
-                    <div className="relative flex-1">
-                        <span className="font-mono text-[10px] font-black text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">[SCH]</span>
+                    <div className="flex-1 max-w-xs">
                         <input
                             type="text"
-                            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-all font-mono placeholder:text-slate-400"
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-black placeholder:text-slate-400"
                             placeholder="Filter by action, category, or detail…"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
@@ -335,10 +198,13 @@ export function SessionLogsPanel() {
                                 key="empty"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="flex flex-col items-center justify-center gap-3 py-16 text-slate-300"
+                                className="flex flex-col items-center justify-center gap-3 py-16 text-slate-400 text-center px-4"
                             >
-                                <span className="font-mono text-4xl font-black">[!]</span>
-                                <span className="font-mono text-[11px] font-black uppercase tracking-widest">No events match your filter</span>
+                                <span className="font-mono text-4xl font-black text-slate-300">[AUDIT]</span>
+                                <span className="font-mono text-[11px] font-black uppercase tracking-widest text-slate-600">No session audit records found</span>
+                                <p className="text-xs text-slate-400 max-w-sm">
+                                    Real cryptographic operations (SIWE handshakes, Aztec ZK circuits, and XMTP message dispatches) are logged here on-device.
+                                </p>
                             </motion.div>
                         ) : (
                             visible.map((ev, i) => {
@@ -382,7 +248,7 @@ export function SessionLogsPanel() {
 
                 {/* ── Footer ────────────────────────────────────────────────── */}
                 <p className="text-center font-mono text-[9px] text-slate-400 uppercase tracking-[0.2em] font-black pb-4">
-                    All audit records reside exclusively in the browser&apos;s local storage · Zero server transmission · Aztec Native Privacy
+                    All audit records reside exclusively in browser local storage · Zero server transmission · Aztec Native Privacy
                 </p>
             </div>
         </div>

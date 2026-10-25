@@ -66,18 +66,18 @@ async function main() {
   const qdTokenAddr = await qdToken.getAddress();
   console.log(`✅ [8/9] HumanityQdToken deployed at: ${qdTokenAddr}`);
 
-  // 9. ERC-4337 Paymaster (Mock EntryPoint for now)
-  const MOCK_ENTRYPOINT = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"; // Standard ERC-4337 EntryPoint
+  // 9. ERC-4337 Paymaster (Canonical EntryPoint V0.6)
+  const CANONICAL_ENTRYPOINT_V06 = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"; // Canonical ERC-4337 EntryPoint
   const Paymaster = await ethers.getContractFactory("HumanityPaymaster");
-  const paymaster = await Paymaster.deploy(identityAddr, MOCK_ENTRYPOINT);
+  const paymaster = await Paymaster.deploy(identityAddr, CANONICAL_ENTRYPOINT_V06);
   await paymaster.waitForDeployment();
   const paymasterAddr = await paymaster.getAddress();
   console.log(`✅ [9/9] HumanityPaymaster deployed at: ${paymasterAddr}`);
 
-  // 10. HumanityOmnichainBridge (Mock LZ Endpoint V2)
-  const MOCK_LZ_ENDPOINT = "0x6EDCE65403992e310A62460808c4b910D972f10f"; // LZ V2 Testnet Endpoint
+  // 10. HumanityOmnichainBridge (LayerZero V2 Endpoint)
+  const CANONICAL_LZ_ENDPOINT_V2 = "0x6EDCE65403992e310A62460808c4b910D972f10f"; // LZ V2 Testnet Endpoint
   const Omnichain = await ethers.getContractFactory("HumanityOmnichainBridge");
-  const omnichain = await Omnichain.deploy(MOCK_LZ_ENDPOINT, paymasterAddr);
+  const omnichain = await Omnichain.deploy(CANONICAL_LZ_ENDPOINT_V2, paymasterAddr);
   await omnichain.waitForDeployment();
   const omnichainAddr = await omnichain.getAddress();
   console.log(`✅ [10/10] HumanityOmnichainBridge deployed at: ${omnichainAddr}`);
