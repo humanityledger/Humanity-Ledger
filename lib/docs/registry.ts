@@ -12,21 +12,21 @@
 import type { Block, DocPage, NavGroup } from "./types";
 import { overview, quickstart, identity, pin } from "./pages/getting-started";
 import { messaging, routing, communities, calls, payments, devices } from "./pages/ledger-chat";
-import { architecture, cryptography, zeroKnowledge, quantumDots, whitepaper } from "./pages/protocol";
+import { architecture, cryptography, zeroKnowledge, whitepaper } from "./pages/protocol";
 import { securityModel, audits, bugBounty } from "./pages/security";
 import { developers } from "./pages/developers";
 import { about, blog, contact, status } from "./pages/company";
 import { changelog } from "./pages/changelog";
-import { terms, privacy, cookies, disclaimer } from "./pages/legal";
+import { legalNotice, terms, privacy, cookies, contentPolicy, disclaimer } from "./pages/legal";
 
 export const NAV: NavGroup[] = [
   { title: "Getting started", pages: [overview, quickstart, identity, pin] },
   { title: "Ledger Chat", pages: [messaging, routing, communities, calls, payments, devices] },
-  { title: "Protocol", pages: [architecture, cryptography, zeroKnowledge, quantumDots, whitepaper] },
+  { title: "Protocol", pages: [architecture, cryptography, zeroKnowledge, whitepaper] },
   { title: "Security", pages: [securityModel, audits, bugBounty] },
   { title: "Developers", pages: [developers] },
   { title: "Company", pages: [about, blog, changelog, status, contact] },
-  { title: "Legal", pages: [terms, privacy, cookies, disclaimer] },
+  { title: "Legal", pages: [legalNotice, terms, privacy, cookies, contentPolicy, disclaimer] },
 ];
 
 const ALL: { page: DocPage; group: string }[] = NAV.flatMap((g) => g.pages.map((page) => ({ page, group: g.title })));
@@ -43,6 +43,14 @@ export const LEGACY_SLUGS: Record<string, string> = {
   transparency: "/docs/security-model",
   "aml-kyc": "/docs/terms",
   changelog: "/changelog",
+  // Quantum Dots (QD) was a token design that never launched and is no
+  // longer part of Humanity Ledger. Old links land on the overview.
+  "quantum-dots": "/docs/overview",
+  "qd-token": "/docs/overview",
+  "legal": "/docs/legal-notice",
+  "aviso-legal": "/docs/legal-notice",
+  dmca: "/docs/content-policy",
+  copyright: "/docs/content-policy",
 };
 
 export function findByHref(href: string) {

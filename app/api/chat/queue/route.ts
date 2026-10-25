@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +42,10 @@ export async function POST(req: NextRequest) {
     const auth = await requireWallet(req);
     if (auth.errorResponse) return auth.errorResponse;
     const address = auth.walletAddress;
+
+    // Anyone signed in can write to anyone's inbox, so cap how fast.
+    const rl = await checkRateLimit(address.toLowerCase(), { max: 90, windowSec: 60, prefix: 'rl:dm' });
+    if (!rl.allowed) return NextResponse.json({ error: 'You are sending messages too fast. Wait a moment.' }, { status: 429 });
 
     const body = await req.json();
     const { recipient, content } = body;

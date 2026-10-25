@@ -70,7 +70,11 @@ export class SettingsSyncService {
       const local = this.loadFromLocalStorage();
       return local ? { settings: local } : null;
     } catch (error) {
-      console.error('Failed to load settings from server:', error);
+      // Signed-out visitors get 401 here; that is expected, not an error.
+      const msg = error instanceof Error ? error.message : String(error);
+      if (!/authentication required|unauthori[sz]ed|401/i.test(msg)) {
+        console.error('Failed to load settings from server:', error);
+      }
       // Fallback to localStorage
       const local = this.loadFromLocalStorage();
       return local ? { settings: local } : null;

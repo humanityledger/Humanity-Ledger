@@ -36,7 +36,6 @@ import { NativeSendView } from '@/components/portfolio/NativeSendView';
 import { SystemFooter } from '@/components/landing/SystemFooter';
 import { useAztecNative } from '@/context/AztecNativeContext';
 import { Zap } from 'lucide-react';
-import { formatQd } from '@/lib/qd';
 import { useSettings } from '@/src/context/SettingsContext';
 
 
@@ -487,12 +486,11 @@ function HomeView({ address, balance, balanceFiat, totalBalance, activeNetwork, 
                     </div>
 
                     {/* ── Sovereign Identity Banner (for non-connected identities) ── */}
-                    <AztecIdentityBanner onOpenAztec={() => setActiveTab('AZTEC')} />
 
                     {/* Minimalist Tabs Panel */}
                     <div className="bg-white border border-zinc-900/10 overflow-hidden flex flex-col shadow-sm rounded-sm">
                         <div className="flex border-b border-zinc-900/10 overflow-x-auto no-scrollbar snap-x">
-                            {(['TOKENS', 'ACTIVITY', 'AZTEC'] as const).map(t => (
+                            {(['TOKENS', 'ACTIVITY'] as const).map(t => (
                                 <AztecAwareTabButton
                                     key={t}
                                     tab={t}
@@ -504,7 +502,6 @@ function HomeView({ address, balance, balanceFiat, totalBalance, activeNetwork, 
                         <div className="flex-1 bg-white flex flex-col p-4 md:p-8 min-h-[400px]">
                             {activeTab === 'TOKENS' && <QuantumHoldingsEngine address={address} activeNetwork={activeNetwork} scannerBase={scannerBase} userAssets={assets} displayCurrency={displayCurrency} rate={rate} symbol={symbol} onSwapRequest={onSwap} onBridgeRequest={onBridge} onQdsTransfer={onQds} />}
                             {activeTab === 'ACTIVITY' && <TransactionHistory address={address} scannerBase={scannerBase} activeNetwork={activeNetwork} />}
-                            {activeTab === 'AZTEC' && <div className="w-full max-w-4xl mx-auto"><AztecIdentityCard /></div>}
                         </div>
                     </div>
                 </section>
@@ -531,60 +528,6 @@ function ActionBtn({ label, icon, onClick }: any) {
     );
 }
 
-/** Inline QD balance badge in the portfolio header */
-function QDBadgeInline({ onClickAztec }: { onClickAztec: () => void }) {
-    const { balance, aztecAddress } = useAztecNative();
-    if (!aztecAddress) {
-        return (
-            <button
-                onClick={onClickAztec}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-300 bg-amber-50 rounded-full text-amber-700 hover:bg-amber-100 transition-colors animate-pulse"
-            >
-                <Zap size={10} />
-                <span className="text-[9px] font-black uppercase tracking-widest">CLAIM 1000 QDs</span>
-            </button>
-        );
-    }
-    return (
-        <button
-            onClick={onClickAztec}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-900/10 bg-zinc-900/5 rounded-full hover:bg-zinc-900 hover:text-white transition-colors"
-        >
-            <Zap size={10} className="text-amber-500" />
-            <span className="text-[9px] font-black uppercase tracking-widest">{formatQd(balance)} QD</span>
-        </button>
-    );
-}
-
-/** Prominent Sovereign Identity banner shown above the tabs when identity is not connected */
-function AztecIdentityBanner({ onOpenAztec }: { onOpenAztec: () => void }) {
-    const { aztecAddress, balance } = useAztecNative();
-    if (aztecAddress) return null; // Already connected — no banner needed
-
-    return (
-        <div className="mb-6 relative overflow-hidden border border-amber-200 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            {/* Animated glow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-100/40 to-transparent animate-pulse pointer-events-none" />
-            <div className="flex items-center gap-3 flex-1 relative z-10">
-                <div className="w-10 h-10 rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center flex-shrink-0">
-                    <Zap size={18} className="text-amber-600" />
-                </div>
-                <div>
-                    <div className="font-black text-[11px] uppercase tracking-[0.2em] text-amber-800">Claim Your 10 QD Genesis Airdrop</div>
-                    <div className="text-[10px] text-amber-700/70 mt-0.5 font-mono">
-                        Connect your Sovereign Identity to unlock Chat, Studio Passports &amp; Noir Sandbox.
-                    </div>
-                </div>
-            </div>
-            <button
-                onClick={onOpenAztec}
-                className="relative z-10 flex-shrink-0 px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-            >
-                Connect Identity →
-            </button>
-        </div>
-    );
-}
 
 /** Tab button that's visually upgraded for Sovereign Identity */
 function AztecAwareTabButton({ tab, activeTab, onClick }: { tab: string; activeTab: string; onClick: () => void }) {
@@ -612,11 +555,6 @@ function AztecAwareTabButton({ tab, activeTab, onClick }: { tab: string; activeT
                 {isAztec && !hasIdentity && (
                     <span className="inline-flex items-center justify-center w-4 h-4 bg-amber-500 text-white text-[7px] font-black rounded-full animate-pulse ml-1">
                         !
-                    </span>
-                )}
-                {isAztec && hasIdentity && (
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-500/20 text-amber-700 text-[7px] font-black rounded-full ml-1">
-                        {formatQd(balance)} QD
                     </span>
                 )}
             </span>

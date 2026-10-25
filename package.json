@@ -2,7 +2,7 @@
   "name": "humanity-ledger",
   "version": "1.0.0",
   "private": true,
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "author": "Stefan Antonio Cirisanu <atfortyseven2@humanidfi.es> (https://github.com/humanityledger)",
   "scripts": {
     "dev": "next dev",
@@ -64,13 +64,21 @@
     "helm:upgrade": "helm upgrade ledger-alert k8s/helm --namespace ledger-alert --reuse-values",
     "helm:uninstall": "helm uninstall ledger-alert --namespace ledger-alert",
     "prepare": "node -e \"process.exit(0)\"",
-    "postinstall": "node -e \"process.exit(0)\""
+    "postinstall": "node -e \"process.exit(0)\"",
+    "aztec:setup": "node --conditions=browser --import ./scripts/aztec/register.mjs scripts/aztec/setup-testnet.mjs",
+    "aztec:e2e": "node --conditions=browser --import ./scripts/aztec/register.mjs scripts/aztec/e2e-testnet.mjs"
   },
   "engines": {
     "node": ">=20.0.0"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
+    "@aztec-labs/accounts": "6.0.0",
+    "@aztec-labs/aztec.js": "6.0.0",
+    "@aztec-labs/foundation": "6.0.0",
+    "@aztec-labs/noir-contracts.js": "6.0.0",
+    "@aztec-labs/stdlib": "6.0.0",
+    "@aztec-labs/wallets": "6.0.0",
     "@aztec/accounts": "^6.0.0-nightly.20260828",
     "@aztec/aztec.js": "^6.0.0-nightly.20260828",
     "@aztec/bb.js": "^6.0.0-nightly.20260831",
@@ -351,6 +359,7 @@
     "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^2.1.0",
     "concurrently": "^9.2.1",
+    "fake-indexeddb": "6.2.5",
     "puppeteer": "24.43.1",
     "terser-webpack-plugin": "5.6.1",
     "typescript": "5.5",

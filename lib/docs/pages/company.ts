@@ -11,7 +11,22 @@ export const about: DocPage = {
   blocks: [
     {
       t: "p",
-      text: "Humanity Ledger S.L. builds communication tools that people can use without handing over a phone number, and without trusting a company to keep their conversations private. Our first application is **Ledger Chat**.",
+      text: "Humanity Ledger builds communication tools that people can use without handing over a phone number, and without trusting a company to keep their conversations private. Our first application is **Ledger Chat**: a messenger where your wallet is your account, direct messages are encrypted on your device, and payments are signed in your own wallet.",
+    },
+    {
+      t: "p",
+      text: "Humanity Ledger is an independent project founded by Stefan Antonio Cirisanu and based in Spain. It is not yet incorporated as a company; the [legal notice](/docs/legal-notice) gives the details. It is not affiliated with Humanity Protocol or with Ledger SAS.",
+    },
+    { t: "h2", text: "What we build" },
+    {
+      t: "table",
+      head: ["Part", "What it is", "Status"],
+      strongFirst: true,
+      rows: [
+        ["Ledger Chat", "Direct messages encrypted with MLS through XMTP, communities, voice and video calls, and payments from your own wallet.", "Early access, in the browser."],
+        ["Private payments wallet", "Private balances on Aztec: shield, send, receive by QR code and unshield, with proofs made on your device.", "Aztec test network only, with test tokens."],
+        ["Documentation", "How every part works, what it can see, and which security findings are still open.", "[Read it](/docs/overview)."],
+      ],
     },
     { t: "h2", text: "Why we exist" },
     {
@@ -26,7 +41,7 @@ export const about: DocPage = {
         { term: "We publish our findings", text: "Security problems we find are listed on the [audits page](/docs/audits), including the ones that are still open." },
         { term: "You hold the keys", text: "We never take custody of funds or of keys that can move them." },
         { term: "No advertising", text: "We do not sell data and we do not show ads." },
-        { term: "Open source", text: "The code is on [GitHub](https://github.com/humanityledger/Humanity-Ledger), so anyone can check what it does." },
+        { term: "Source available", text: "The code is published on [GitHub](https://github.com/humanityledger/Humanity-Ledger), so anyone can check what it does. It is not open source: the licence lets you read it, not reuse it. See [Content and copyright](/docs/content-policy)." },
       ],
     },
     { t: "h2", text: "Leadership" },

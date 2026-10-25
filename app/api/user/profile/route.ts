@@ -7,7 +7,11 @@ const updateProfileSchema = z.object({
   walletAddress: z.string().min(10),
   displayName: z.string().max(50).optional(),
   chatName: z.string().max(50).optional(),
-  avatarUrl: z.string().max(500).optional().or(z.literal('')),
+  // Same rule as /api/user/register: no third-party image URLs, because a
+  // remote avatar reports the IP of everyone who views the profile.
+  avatarUrl: z.string().max(500_000)
+    .refine(v => v === '' || /^\/(?!\/)[\w\-./]{1,300}$/.test(v) || /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(v), 'The avatar must be an uploaded image.')
+    .optional(),
   bio: z.string().max(250).optional().or(z.literal('')),
   theme: z.string().optional(),
   currency: z.string().optional(),
@@ -31,8 +35,7 @@ export async function GET(req: NextRequest) {
     // Try extended schema first, fall back to base columns
     let user: any = null;
     try {
-      user = await (prisma as any).user.findUnique({
-        where: { walletAddress },
+      user = await (prisma as any).user.findFirst({ where: { walletAddress: { equals: walletAddress, mode: 'insensitive' } },
         select: { 
           id: true, walletAddress: true, displayName: true, chatName: true, avatarUrl: true, bio: true, isPro: true, tier: true,
           theme: true, currency: true, language: true, displayUnit: true, gasPreset: true, mevProtection: true, stealthMode: true,
@@ -41,8 +44,7 @@ export async function GET(req: NextRequest) {
       });
     } catch {
       // Extended columns not yet in DB  use base
-      user = await prisma.user.findUnique({
-        where: { walletAddress },
+      user = await prisma.user.findFirst({ where: { walletAddress: { equals: walletAddress, mode: 'insensitive' } },
         select: { id: true, walletAddress: true }
       });
       if (user) user = { ...user, displayName: null, chatName: null, avatarUrl: null, bio: null, isPro: false, tier: 'basic' };
@@ -52,6 +54,13 @@ export async function GET(req: NextRequest) {
 
     // Strip private fields if not owner
     if (!isOwner) {
+        // Anyone can read the public profile (name, photo, bio). Balances,
+        // plan and preferences stay private to the owner.
+        delete user.id;
+        delete user.creditsBalance;
+        delete user.isPro;
+        delete user.tier;
+        delete user.humanityScore;
         delete user.theme;
         delete user.currency;
         delete user.language;
@@ -98,10 +107,19 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ error: 'Forbidden: You can only modify your own profile.' }, { status: 403 });
     }
 
+    // Usernames are unique, case-insensitively (see /api/user/register).
+    if (chatName) {
+      const taken = await (prisma as any).user.findFirst({
+        where: { chatName: { equals: chatName, mode: 'insensitive' }, NOT: { walletAddress: { equals: walletAddress, mode: 'insensitive' } } },
+        select: { id: true },
+      }).catch(() => null);
+      if (taken) return NextResponse.json({ error: 'That username is taken.' }, { status: 409 });
+    }
+
     // Try full upsert with all profile columns
     try {
       const user = await (prisma as any).user.upsert({
-        where:  { walletAddress },
+        where:  { walletAddress: walletAddress.toLowerCase() },
         update: {
           ...(displayName !== undefined && { displayName }),
           ...(chatName !== undefined && { chatName }),
@@ -116,7 +134,7 @@ export async function PUT(req: NextRequest) {
           ...(stealthMode !== undefined && { stealthMode }),
         },
         create: {
-          walletAddress,
+          walletAddress: walletAddress.toLowerCase(),
           displayName: displayName || null,
           chatName: chatName || null,
           avatarUrl: avatarUrl === '' ? null : (avatarUrl || null),
@@ -135,9 +153,9 @@ export async function PUT(req: NextRequest) {
     } catch {
       // Extended columns don't exist yet  minimal fallback (walletAddress only)
       const fallbackUser = await prisma.user.upsert({
-        where:  { walletAddress },
+        where:  { walletAddress: walletAddress.toLowerCase() },
         update: {},
-        create: { walletAddress }
+        create: { walletAddress: walletAddress.toLowerCase() }
       });
       return NextResponse.json({ success: true, data: fallbackUser, warning: 'Profile columns not yet in DB  run /api/admin/sync-db' });
     }

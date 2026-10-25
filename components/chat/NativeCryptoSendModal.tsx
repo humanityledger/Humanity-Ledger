@@ -48,7 +48,7 @@ const TOKENS = [
     rate: 1,
     icon: (
       <div className="w-5 h-5 rounded-full bg-[#2775CA] flex items-center justify-center">
-        <span className="text-white text-[9px] font-black">$</span>
+        <span className="text-white text-[12px] font-semibold">$</span>
       </div>
     ),
   },
@@ -61,7 +61,7 @@ const TOKENS = [
     rate: 1,
     icon: (
       <div className="w-5 h-5 rounded-full bg-[#26A17B] flex items-center justify-center">
-        <span className="text-white text-[9px] font-black">₮</span>
+        <span className="text-white text-[12px] font-semibold">₮</span>
       </div>
     ),
   },
@@ -212,14 +212,14 @@ export function NativeCryptoSendModal({
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4">
               <div>
-                <h2 className="text-[20px] font-black text-[#1C1C1E] tracking-tight">Send Crypto</h2>
-                <p className="text-[12px] text-black/40 font-mono mt-0.5">
-                  To: <span className="font-bold text-[#1C1C1E]">{shortAddr(recipientAddress)}</span>
+                <h2 className="text-[20px] font-semibold text-[#15171c] tracking-tight">Send Crypto</h2>
+                <p className="text-[12px] text-black/40 tabular-nums mt-0.5">
+                  To: <span className="font-semibold text-[#15171c]">{shortAddr(recipientAddress)}</span>
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="w-9 h-9 rounded-full bg-[#F2F2F7] flex items-center justify-center hover:bg-[#E5E5EA] transition-colors"
+                className="w-9 h-9 rounded-full bg-[#f2f4f7] flex items-center justify-center hover:bg-[#e4e7ec] transition-colors"
               >
                 <X size={16} className="text-black/50" />
               </button>
@@ -231,19 +231,19 @@ export function NativeCryptoSendModal({
               <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
                 <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-[13px] font-black text-amber-900 mb-1">⚠️ Verify the address carefully</p>
-                  <p className="text-[11px] text-amber-700 leading-relaxed">
+                  <p className="text-[13px] font-semibold text-amber-900 mb-1">⚠️ Verify the address carefully</p>
+                  <p className="text-[12.5px] text-amber-700 leading-relaxed">
                     Crypto transactions are <strong>irreversible</strong>. Always double-check the recipient address before sending. We cannot recover funds sent to the wrong address.
                   </p>
                   <div className="flex items-center gap-2 mt-2 bg-white/80 rounded-xl px-3 py-2 border border-amber-200">
-                    <span className="text-[10px] font-black font-mono text-[#1C1C1E] tracking-wider break-all flex-1">
+                    <span className="text-[12px] font-semibold tabular-nums text-[#15171c] break-all flex-1">
                       {recipientAddress}
                     </span>
                     <button
                       onClick={copyAddress}
                       className="shrink-0 p-1 rounded-md hover:bg-black/[0.05] transition-colors"
                     >
-                      {copied ? <Check size={14} className="text-[#1C1C1E]" /> : <Copy size={14} className="text-black/40" />}
+                      {copied ? <Check size={14} className="text-[#15171c]" /> : <Copy size={14} className="text-black/40" />}
                     </button>
                   </div>
                 </div>
@@ -251,10 +251,10 @@ export function NativeCryptoSendModal({
 
               {/* ── CERTIFIED SECURE SEAL ─────────────────────────────────── */}
               <div className="flex items-center gap-2 bg-black/[0.04] border border-black/[0.08] rounded-2xl px-4 py-3">
-                <Lock size={16} className="text-[#1C1C1E] shrink-0" />
+                <Lock size={16} className="text-[#15171c] shrink-0" />
                 <div>
-                  <p className="text-[12px] font-bold text-[#1C1C1E]">End-to-End Secure Transaction</p>
-                  <p className="text-[10px] text-black/60 leading-relaxed">
+                  <p className="text-[12px] font-semibold text-[#15171c]">End-to-End Secure Transaction</p>
+                  <p className="text-[12px] text-black/60 leading-relaxed">
                     Signed locally in your wallet. Never exposed to Ledger Chat servers. Verified on Ethereum mainnet.
                   </p>
                 </div>
@@ -264,13 +264,13 @@ export function NativeCryptoSendModal({
               <div className="relative">
                 <button
                   onClick={() => setShowTokenPicker(!showTokenPicker)}
-                  className="w-full flex items-center justify-between gap-3 bg-[#F2F2F7] rounded-2xl px-4 py-3 hover:bg-[#E5E5EA] transition-colors"
+                  className="w-full flex items-center justify-between gap-3 bg-[#f2f4f7] rounded-2xl px-4 py-3 hover:bg-[#e4e7ec] transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     {selectedToken.icon}
                     <div className="text-left">
-                      <p className="text-[15px] font-bold text-[#1C1C1E]">{selectedToken.symbol}</p>
-                      <p className="text-[11px] text-black/40">{selectedToken.name}</p>
+                      <p className="text-[15px] font-semibold text-[#15171c]">{selectedToken.symbol}</p>
+                      <p className="text-[12.5px] text-black/40">{selectedToken.name}</p>
                     </div>
                   </div>
                   <ChevronDown size={16} className={`text-black/40 transition-transform ${showTokenPicker ? 'rotate-180' : ''}`} />
@@ -287,14 +287,14 @@ export function NativeCryptoSendModal({
                         <button
                           key={t.symbol}
                           onClick={() => { setSelectedToken(t); setShowTokenPicker(false); setAmount(''); }}
-                          className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-[#F2F2F7] transition-colors ${t.symbol === selectedToken.symbol ? 'bg-[#F2F2F7]' : ''}`}
+                          className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-[#f2f4f7] transition-colors ${t.symbol === selectedToken.symbol ? 'bg-[#f2f4f7]' : ''}`}
                         >
                           {t.icon}
                           <div className="text-left flex-1">
-                            <p className="text-[14px] font-bold text-[#1C1C1E]">{t.symbol}</p>
-                            <p className="text-[11px] text-black/40">{t.name}</p>
+                            <p className="text-[14px] font-semibold text-[#15171c]">{t.symbol}</p>
+                            <p className="text-[12.5px] text-black/40">{t.name}</p>
                           </div>
-                          {t.symbol === selectedToken.symbol && <Check size={16} className="text-[#1C1C1E]" />}
+                          {t.symbol === selectedToken.symbol && <Check size={16} className="text-[#15171c]" />}
                         </button>
                       ))}
                     </motion.div>
@@ -303,7 +303,7 @@ export function NativeCryptoSendModal({
               </div>
 
               {/* ── AMOUNT INPUT ──────────────────────────────────────────── */}
-              <div className="bg-[#F2F2F7] rounded-2xl px-4 py-4">
+              <div className="bg-[#f2f4f7] rounded-2xl px-4 py-4">
                 <div className="flex items-center gap-3">
                   <input
                     type="number"
@@ -312,9 +312,9 @@ export function NativeCryptoSendModal({
                     onChange={(e) => setAmount(e.target.value)}
                     min="0"
                     step="0.0001"
-                    className="flex-1 bg-transparent text-[28px] font-black text-[#1C1C1E] outline-none placeholder:text-black/20 w-0"
+                    className="flex-1 bg-transparent text-[28px] font-semibold text-[#15171c] outline-none placeholder:text-black/20 w-0"
                   />
-                  <span className="text-[16px] font-black text-black/40 shrink-0">{selectedToken.symbol}</span>
+                  <span className="text-[16px] font-semibold text-black/40 shrink-0">{selectedToken.symbol}</span>
                 </div>
                 {amountNum > 0 && (
                   <p className="text-[12px] text-black/40 mt-1">≈ {usdEstimate}</p>
@@ -327,7 +327,7 @@ export function NativeCryptoSendModal({
                   <button
                     key={v}
                     onClick={() => setAmount(v)}
-                    className="flex-1 py-2 rounded-xl bg-[#F2F2F7] text-[12px] font-bold text-[#1C1C1E] hover:bg-[#E5E5EA] transition-colors"
+                    className="flex-1 py-2 rounded-xl bg-[#f2f4f7] text-[12px] font-semibold text-[#15171c] hover:bg-[#e4e7ec] transition-colors"
                   >
                     {v}
                   </button>
@@ -338,7 +338,7 @@ export function NativeCryptoSendModal({
               <button
                 onClick={handleSend}
                 disabled={isPending || !amount || amountNum <= 0 || !recipientAddress}
-                className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-[#1C1C1E] hover:bg-black text-white font-black text-[15px] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-[#15171c] hover:bg-black text-white font-semibold text-[15px] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isPending ? (
                   <><Loader2 size={18} className="animate-spin" /> Confirming in wallet...</>
@@ -350,7 +350,7 @@ export function NativeCryptoSendModal({
               {/* ── OFFLINE QR SHARE ─────────────────────────────────────── */}
               <button
                 onClick={() => setShowQR(!showQR)}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#F2F2F7] text-[#1C1C1E] font-bold text-[13px] hover:bg-[#E5E5EA] transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#f2f4f7] text-[#15171c] font-semibold text-[13px] hover:bg-[#e4e7ec] transition-colors"
               >
                 <QrCode size={15} /> {showQR ? 'Hide' : 'Offline QR Share'}
               </button>
@@ -363,9 +363,9 @@ export function NativeCryptoSendModal({
                     exit={{ opacity: 0, height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="flex flex-col items-center gap-3 bg-[#F2F2F7] rounded-2xl p-5">
-                      <QRCodeSVG value={qrUri} size={160} bgColor="#F2F2F7" fgColor="#1C1C1E" level="M" />
-                      <p className="text-[11px] text-black/50 text-center leading-relaxed max-w-[240px]">
+                    <div className="flex flex-col items-center gap-3 bg-[#f2f4f7] rounded-2xl p-5">
+                      <QRCodeSVG value={qrUri} size={160} bgColor="#f2f4f7" fgColor="#15171c" level="M" />
+                      <p className="text-[12.5px] text-black/50 text-center leading-relaxed max-w-[240px]">
                         Scan with any Ethereum wallet to receive {amount || '?'} {selectedToken.symbol}. Works completely offline.
                       </p>
                     </div>

@@ -66,10 +66,32 @@ export async function checkRateLimit(
 
     return { allowed, remaining, resetAt };
   } catch (err) {
-    // Fail open if Redis is unavailable — log and allow
-    logger.error({ err }, 'Rate limiter Redis error — failing open');
-    return { allowed: true, remaining: opts.max, resetAt: Math.floor((now + windowMs) / 1000) };
+    // Redis is unavailable. This used to fail open, which meant every limit
+    // in the app (sign-in codes, PIN attempts, message sending) disappeared
+    // whenever Redis did. Fall back to a per-process window instead: weaker
+    // than a shared one across replicas, but a limit nonetheless.
+    if (!warnedNoRedis) {
+      warnedNoRedis = true;
+      logger.warn({ err }, 'Rate limiter: Redis unavailable, using per-process limits');
+    }
+    return localLimit(redisKey, opts.max, windowMs, now);
   }
+}
+
+let warnedNoRedis = false;
+const localWindows = new Map<string, number[]>();
+
+function localLimit(key: string, max: number, windowMs: number, now: number): RateLimitResult {
+  const hits = (localWindows.get(key) ?? []).filter(t => now - t < windowMs);
+  const allowed = hits.length < max;
+  if (allowed) hits.push(now);
+  localWindows.set(key, hits);
+  if (localWindows.size > 50_000) {
+    for (const [k, v] of localWindows) {
+      if (!v.length || now - v[v.length - 1] > windowMs) localWindows.delete(k);
+    }
+  }
+  return { allowed, remaining: Math.max(0, max - hits.length), resetAt: Math.floor((now + windowMs) / 1000) };
 }
 
 /**
@@ -85,13 +107,14 @@ export const RATE_LIMITS = {
 
 /**
  * Extract client IP from request (works behind Railway proxy).
+ *
+ * The FIRST X-Forwarded-For entry is whatever the client sent, so keying a
+ * limit on it lets anyone reset their limit by sending a new header. The
+ * LAST entry is the one our own proxy appended. Same rule as middleware.ts.
  */
-export function getClientIP(req: NextRequest): string {
-  return (
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    req.headers.get('x-real-ip') ??
-    'unknown'
-  );
+export function getClientIP(req: NextRequest | Request): string {
+  const hops = (req.headers.get('x-forwarded-for') || '').split(',').map(h => h.trim()).filter(Boolean);
+  return hops[hops.length - 1] || req.headers.get('x-real-ip') || 'unknown';
 }
 
 /**

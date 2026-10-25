@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { Check, CircleHelp, Clock, Lock, Mail, X } from 'lucide-react';
 
 // ─── Session clearance ────────────────────────────────────────────────────────
 // DUAL STORAGE: sessionStorage (primary) + localStorage (fallback)
@@ -96,7 +97,7 @@ function VerifyingPulse() {
       {[0, 1, 2].map(i => (
         <motion.div
           key={i}
-          className="w-2 h-2 rounded-full bg-[#2754d6]"
+          className="w-2 h-2 rounded-full bg-[#15171c]"
           animate={{ scale: [1, 1.6, 1], opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}
         />
@@ -112,11 +113,11 @@ function RingProgress({ progress }: { progress: number }) {
   const offset = c - (progress / 100) * c;
   return (
     <svg width="72" height="72" viewBox="0 0 72 72" className="absolute inset-0">
-      <circle cx="36" cy="36" r={r} fill="none" stroke="#F2F2F7" strokeWidth="3" />
+      <circle cx="36" cy="36" r={r} fill="none" stroke="#f2f4f7" strokeWidth="3" />
       <motion.circle
         cx="36" cy="36" r={r}
         fill="none"
-        stroke="#2754d6"
+        stroke="#15171c"
         strokeWidth="3"
         strokeLinecap="round"
         strokeDasharray={c}
@@ -151,7 +152,7 @@ function PinInput({
   return (
     <div className="w-full">
       {label && (
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-black/35 mb-3 text-center">
+        <p className="text-[12.5px] font-semibold tracking-[0.12em] text-black/35 mb-3 text-center">
           {label}
         </p>
       )}
@@ -189,10 +190,10 @@ function PinInput({
                   ${error
                     ? 'bg-red-50 border-red-400'
                     : filled
-                    ? 'bg-[#1C1C1E] border-[#1C1C1E]'
+                    ? 'bg-[#15171c] border-[#15171c]'
                     : isActive
-                    ? 'bg-white border-[#2754d6] shadow-[0_0_0_3px_rgba(39,84,214,0.15)]'
-                    : 'bg-[#F2F2F7] border-transparent'
+                    ? 'bg-white border-[#15171c] shadow-[0_0_0_3px_rgba(21,23,28,0.08)]'
+                    : 'bg-[#f2f4f7] border-transparent'
                   }
                 `}
                 style={{ width: 48, height: 56 }}
@@ -208,7 +209,7 @@ function PinInput({
                   <motion.div
                     animate={{ opacity: [1, 0, 1] }}
                     transition={{ duration: 1, repeat: Infinity }}
-                    className="w-[2px] h-5 bg-[#2754d6] rounded-full"
+                    className="w-[2px] h-5 bg-[#15171c] rounded-full"
                   />
                 )}
               </motion.div>
@@ -224,11 +225,11 @@ function PinInput({
 function InfoCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
     <div className="flex items-start gap-3 text-left">
-      <div className="w-8 h-8 rounded-xl bg-[#2754d6]/10 flex items-center justify-center shrink-0 mt-0.5">
+      <div className="w-8 h-8 rounded-xl bg-[#eff1f4] flex items-center justify-center shrink-0 mt-0.5">
         {icon}
       </div>
       <div>
-        <p className="text-[13px] font-bold text-[#1C1C1E] mb-0.5">{title}</p>
+        <p className="text-[13px] font-semibold text-[#15171c] mb-0.5">{title}</p>
         <p className="text-[12px] text-black/45 leading-relaxed">{body}</p>
       </div>
     </div>
@@ -396,7 +397,7 @@ export function TuringShieldGate({
         } else {
           setPinError(
             remaining !== null
-              ? `Incorrect PIN — ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining`
+              ? `Wrong PIN. ${remaining} ${remaining !== 1 ? 'attempts' : 'attempt'} left.`
               : (data.error || 'Incorrect PIN.')
           );
         }
@@ -591,7 +592,7 @@ export function TuringShieldGate({
             {setupStep < 3 && (
               <div className="h-1 bg-black/[0.05] w-full">
                 <motion.div
-                  className="h-full bg-[#2754d6] rounded-full"
+                  className="h-full bg-[#15171c] rounded-full"
                   animate={{ width: `${stepProgress}%` }}
                   transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 />
@@ -613,36 +614,30 @@ export function TuringShieldGate({
                   >
                     {/* Icon: clean lock mark, no shield */}
                     <div className="relative w-20 h-20 mb-6">
-                      <div className="absolute inset-0 bg-[#2754d6]/10 rounded-full" />
+                      <div className="absolute inset-0 bg-[#eff1f4] rounded-full" />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2754d6" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="11" width="18" height="11" rx="2"/>
-                          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                          <circle cx="12" cy="16" r="1" fill="#2754d6" stroke="none"/>
-                        </svg>
+                        <Lock size={34} strokeWidth={1.7} className="text-[#15171c]" aria-hidden="true" />
                       </div>
                       <motion.div
-                        className="absolute inset-0 rounded-full border-2 border-[#2754d6]/25"
+                        className="absolute inset-0 rounded-full border-2 border-[#15171c]"
                         animate={{ scale: [1, 1.14, 1], opacity: [0.5, 0, 0.5] }}
                         transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
                       />
                     </div>
 
-                    <h2 className="text-[22px] font-black text-[#1C1C1E] tracking-tight mb-2 text-center">
+                    <h2 className="text-[22px] font-semibold text-[#15171c] tracking-tight mb-2 text-center">
                       Welcome to Ledger Chat
                     </h2>
                     <p className="text-[13px] text-black/50 text-center leading-relaxed mb-7 px-2">
                       Before you start, set up your{' '}
-                      <span className="font-bold text-[#1C1C1E]">access PIN</span>. A 6 digit code
+                      <span className="font-semibold text-[#15171c]">access PIN</span>. A 6 digit code
                       that protects your account every time you open the app.
                     </p>
 
-                    <div className="w-full bg-[#F9F9F9] rounded-2xl p-5 space-y-4 mb-6">
+                    <div className="w-full bg-[#f7f8fa] rounded-2xl p-5 space-y-4 mb-6">
                       <InfoCard
                         icon={
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2754d6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                          </svg>
+                          <Lock size={16} strokeWidth={2} className="text-[#15171c]" aria-hidden="true" />
                         }
                         title="What is the PIN?"
                         body="Your personal access code for Ledger Chat. Without it no one can open your account, not even us."
@@ -650,9 +645,7 @@ export function TuringShieldGate({
                       <div className="h-px bg-black/[0.05]" />
                       <InfoCard
                         icon={
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2754d6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.23h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l1.27-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-                          </svg>
+                          <Mail size={16} strokeWidth={2} className="text-[#15171c]" aria-hidden="true" />
                         }
                         title="Forgot your PIN?"
                         body="Reset it anytime with a 6 digit code sent to your email. You will never be permanently locked out."
@@ -660,9 +653,7 @@ export function TuringShieldGate({
                       <div className="h-px bg-black/[0.05]" />
                       <InfoCard
                         icon={
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2754d6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
-                          </svg>
+                          <Clock size={16} strokeWidth={2} className="text-[#15171c]" aria-hidden="true" />
                         }
                         title="When do you enter it?"
                         body="Once per session, valid for 8 hours. Your account stays secure because only you know the PIN."
@@ -671,7 +662,7 @@ export function TuringShieldGate({
 
                     <button
                       onClick={() => setSetupStep(1)}
-                      className="w-full h-[52px] bg-[#1C1C1E] hover:bg-black text-white rounded-2xl font-bold text-[15px] transition-colors active:scale-[0.98]"
+                      className="w-full h-[52px] bg-[#15171c] hover:bg-black text-white rounded-2xl font-semibold text-[15px] transition-colors active:scale-[0.98]"
                     >
                       Set up my PIN
                     </button>
@@ -697,11 +688,9 @@ export function TuringShieldGate({
                     className="flex flex-col items-center"
                   >
                     <div className="w-14 h-14 rounded-full bg-black/[0.04] flex items-center justify-center mb-5">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1C1C1E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                      </svg>
+                      <Lock size={24} strokeWidth={1.8} className="text-[#15171c]" aria-hidden="true" />
                     </div>
-                    <h2 className="text-[21px] font-black text-[#1C1C1E] tracking-tight mb-2 text-center">
+                    <h2 className="text-[21px] font-semibold text-[#15171c] tracking-tight mb-2 text-center">
                       Choose your PIN
                     </h2>
                     <p className="text-[13px] text-black/45 text-center leading-relaxed mb-7">
@@ -712,7 +701,7 @@ export function TuringShieldGate({
                       <motion.p
                         initial={{ opacity: 0, y: -4 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-red-500 text-[12px] font-semibold mb-4 text-center"
+                        className="text-[#d93036] text-[12px] font-semibold mb-4 text-center"
                       >
                         {pinSetError}
                       </motion.p>
@@ -729,7 +718,7 @@ export function TuringShieldGate({
                     <button
                       onClick={() => handleSetPin()}
                       disabled={newPin.length < 6 || savingPin}
-                      className="w-full h-[52px] bg-[#1C1C1E] hover:bg-black text-white rounded-2xl font-bold text-[15px] mt-6 transition-colors disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
+                      className="w-full h-[52px] bg-[#15171c] hover:bg-black text-white rounded-2xl font-semibold text-[15px] mt-6 transition-colors disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
                     >
                       Continue
                     </button>
@@ -752,12 +741,10 @@ export function TuringShieldGate({
                     transition={{ duration: 0.3 }}
                     className="flex flex-col items-center"
                   >
-                    <div className="w-14 h-14 rounded-full bg-[#2754d6]/10 flex items-center justify-center mb-5">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2754d6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
+                    <div className="w-14 h-14 rounded-full bg-[#eff1f4] flex items-center justify-center mb-5">
+                      <Check size={24} strokeWidth={1.8} className="text-[#15171c]" aria-hidden="true" />
                     </div>
-                    <h2 className="text-[21px] font-black text-[#1C1C1E] tracking-tight mb-2 text-center">
+                    <h2 className="text-[21px] font-semibold text-[#15171c] tracking-tight mb-2 text-center">
                       Confirm your PIN
                     </h2>
                     <p className="text-[13px] text-black/45 text-center leading-relaxed mb-7">
@@ -768,7 +755,7 @@ export function TuringShieldGate({
                       <motion.p
                         initial={{ opacity: 0, y: -4 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-red-500 text-[12px] font-semibold mb-4 text-center"
+                        className="text-[#d93036] text-[12px] font-semibold mb-4 text-center"
                       >
                         {pinSetError}
                       </motion.p>
@@ -785,7 +772,7 @@ export function TuringShieldGate({
                     <button
                       onClick={() => handleSetPin()}
                       disabled={(confirmPin.length < 6) || savingPin}
-                      className="w-full h-[52px] bg-[#1C1C1E] hover:bg-black text-white rounded-2xl font-bold text-[15px] mt-6 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.98]"
+                      className="w-full h-[52px] bg-[#15171c] hover:bg-black text-white rounded-2xl font-semibold text-[15px] mt-6 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.98]"
                     >
                       {savingPin ? (
                         <>
@@ -820,13 +807,11 @@ export function TuringShieldGate({
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ type: 'spring', stiffness: 300, damping: 22, delay: 0.1 }}
-                      className="w-20 h-20 rounded-full bg-[#2754d6] flex items-center justify-center mb-6 shadow-[0_8px_32px_rgba(39,84,214,0.35)]"
+                      className="w-20 h-20 rounded-full bg-[#15171c] flex items-center justify-center mb-6 shadow-[0_8px_32px_rgba(37,211,102,0.35)]"
                     >
-                      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
+                      <Check size={34} strokeWidth={1.7} className="text-white" aria-hidden="true" />
                     </motion.div>
-                    <h2 className="text-[22px] font-black text-[#1C1C1E] tracking-tight mb-2 text-center">
+                    <h2 className="text-[22px] font-semibold text-[#15171c] tracking-tight mb-2 text-center">
                       PIN saved
                     </h2>
                     <p className="text-[13px] text-black/50 text-center leading-relaxed mb-3 px-2">
@@ -835,16 +820,16 @@ export function TuringShieldGate({
 
                     {/* Recovery reminder */}
                     <div className="w-full bg-[#FFF9E6] border border-[#F5C518]/30 rounded-2xl p-4 mb-7 text-left">
-                      <p className="text-[12px] font-bold text-[#7A5C00] mb-1">Remember your PIN</p>
-                      <p className="text-[11px] text-[#7A5C00]/80 leading-relaxed">
-                        If you ever forget it, tap <span className="font-bold">"Forgot your PIN?"</span> on the
+                      <p className="text-[12px] font-semibold text-[#7A5C00] mb-1">Remember your PIN</p>
+                      <p className="text-[12.5px] text-[#7A5C00]/80 leading-relaxed">
+                        If you ever forget it, tap <span className="font-semibold">"Forgot your PIN?"</span> on the
                         sign in screen. A reset code will be sent to your email.
                       </p>
                     </div>
 
                     <button
                       onClick={() => setSettingPin(false)}
-                      className="w-full h-[52px] bg-[#1C1C1E] hover:bg-black text-white rounded-2xl font-bold text-[15px] transition-colors active:scale-[0.98]"
+                      className="w-full h-[52px] bg-[#15171c] hover:bg-black text-white rounded-2xl font-semibold text-[15px] transition-colors active:scale-[0.98]"
                     >
                       Go to Ledger Chat
                     </button>
@@ -867,10 +852,10 @@ export function TuringShieldGate({
   return (
     <div
       className="fixed inset-0 z-[99999] overflow-y-auto flex flex-col items-center justify-center p-4"
-      style={{ WebkitOverflowScrolling: 'touch', background: 'linear-gradient(160deg, #F9F9F9 0%, #F2F2F7 100%)' }}
+      style={{ WebkitOverflowScrolling: 'touch', background: 'linear-gradient(160deg, #f7f8fa 0%, #f2f4f7 100%)' }}
     >
       {/* Subtle ambient accent */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#2754d6]/[0.04] blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#eff1f4] blur-[100px] rounded-full pointer-events-none" />
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -886,15 +871,13 @@ export function TuringShieldGate({
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white border border-black/[0.06] shadow-[0_4px_20px_rgba(0,0,0,0.07)] mb-5 p-2.5">
               {locked ? (
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
+                <Lock size={26} strokeWidth={1.8} className="text-[#d93036]" aria-hidden="true" />
               ) : (
                 <img src="/worldmap.png" alt="Humanity Ledger" className="w-full h-full object-contain" />
               )}
             </div>
-            <h1 className="text-[26px] font-black tracking-tight text-[#1C1C1E] leading-tight">
-              {locked ? 'Access suspended' : 'Ledger Chat'}
+            <h1 className="text-[26px] font-semibold tracking-tight text-[#15171c] leading-tight">
+              {locked ? 'Too many attempts' : 'Ledger Chat'}
             </h1>
             <p className="text-[13px] text-black/40 font-medium mt-1.5">
               {locked
@@ -916,7 +899,7 @@ export function TuringShieldGate({
                   className="h-[3px] bg-black/[0.04] w-full"
                 >
                   <motion.div
-                    className="h-full bg-[#2754d6] rounded-full"
+                    className="h-full bg-[#15171c] rounded-full"
                     animate={{ width: `${verifyProgress}%` }}
                     transition={{ duration: 0.3, ease: 'linear' }}
                   />
@@ -947,7 +930,7 @@ export function TuringShieldGate({
                         onComplete={handleSubmit}
                         disabled={verifying}
                         error={!!pinError}
-                        label={verifying ? 'Verifying...' : 'Enter your PIN'}
+                        label={verifying ? 'Checking' : 'Enter your PIN'}
                       />
                     </motion.div>
 
@@ -961,17 +944,15 @@ export function TuringShieldGate({
                           className="flex items-center gap-2 mb-4 mt-2"
                         >
                           <div className="w-4 h-4 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="3">
-                              <path d="M18 6L6 18M6 6l12 12"/>
-                            </svg>
+                            <X size={9} strokeWidth={3} className="text-[#d93036]" aria-hidden="true" />
                           </div>
-                          <p className="text-red-500 text-[12px] font-semibold">{pinError}</p>
+                          <p className="text-[#d93036] text-[12px] font-semibold">{pinError}</p>
                         </motion.div>
                       )}
                     </AnimatePresence>
 
                     {attemptsRemaining !== null && attemptsRemaining <= 2 && !locked && (
-                      <p className="text-orange-500 text-[11px] font-semibold mb-3 text-center">
+                      <p className="text-orange-500 text-[12.5px] font-semibold mb-3 text-center">
                         {attemptsRemaining} attempt{attemptsRemaining !== 1 ? 's' : ''} remaining before temporary lockout
                       </p>
                     )}
@@ -980,13 +961,13 @@ export function TuringShieldGate({
                     {verifying ? (
                       <div className="w-full h-[52px] flex items-center justify-center gap-3 mb-4">
                         <VerifyingPulse />
-                        <span className="text-[13px] font-semibold text-black/40">Checking PIN...</span>
+                        <span className="text-[13px] font-medium text-black/45">Checking your PIN</span>
                       </div>
                     ) : (
                       <button
                         onClick={() => handleSubmit(pin)}
                         disabled={pin.length < 6}
-                        className="w-full h-[52px] bg-[#1C1C1E] hover:bg-black text-white rounded-2xl font-bold text-[15px] transition-all active:scale-[0.97] disabled:opacity-25 disabled:cursor-not-allowed mb-4 mt-2"
+                        className="w-full h-[52px] bg-[#15171c] hover:bg-black text-white rounded-2xl font-semibold text-[15px] transition-all active:scale-[0.97] disabled:opacity-25 disabled:cursor-not-allowed mb-4 mt-2"
                       >
                         Unlock
                       </button>
@@ -997,17 +978,15 @@ export function TuringShieldGate({
                       <button
                         onClick={handleRequestOtp}
                         disabled={resetFlowState === 'requesting'}
-                        className="text-[12px] font-medium text-black/40 hover:text-[#1C1C1E] transition-colors disabled:opacity-50"
+                        className="text-[12px] font-medium text-black/40 hover:text-[#15171c] transition-colors disabled:opacity-50"
                       >
-                        {resetFlowState === 'requesting' ? 'Sending...' : 'Forgot PIN?'}
+                        {resetFlowState === 'requesting' ? 'Sending a code' : 'Forgot your PIN?'}
                       </button>
                       <button
                         onClick={() => setShowHelp(v => !v)}
-                        className="text-[12px] font-medium text-black/40 hover:text-[#1C1C1E] transition-colors flex items-center gap-1"
+                        className="text-[12px] font-medium text-black/40 hover:text-[#15171c] transition-colors flex items-center gap-1"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>
-                        </svg>
+                        <CircleHelp size={12} strokeWidth={2.2} aria-hidden="true" />
                         What is this?
                       </button>
                     </div>
@@ -1021,16 +1000,16 @@ export function TuringShieldGate({
                           exit={{ height: 0, opacity: 0 }}
                           className="w-full overflow-hidden"
                         >
-                          <div className="bg-[#F9F9F9] rounded-2xl p-4 mt-4 space-y-3">
-                            <p className="text-[12px] font-bold text-[#1C1C1E]">About this PIN</p>
-                            <p className="text-[11px] text-black/50 leading-relaxed">
-                              Your Ledger Chat access PIN protects your messages and wallet connections.
-                              It was set when you created your account. It resets each session (when you close the tab).
+                          <div className="bg-[#f7f8fa] rounded-2xl p-4 mt-4 space-y-3">
+                            <p className="text-[12px] font-semibold text-[#15171c]">About this PIN</p>
+                            <p className="text-[12.5px] text-black/50 leading-relaxed">
+                              Your Ledger Chat PIN is a second lock on top of your wallet. You chose it the first
+                              time you opened Ledger Chat. After you enter it, this device stays unlocked for up to 8 hours.
                             </p>
                             <div className="h-px bg-black/[0.06]" />
-                            <p className="text-[12px] font-bold text-[#1C1C1E]">How to recover access</p>
-                            <p className="text-[11px] text-black/50 leading-relaxed">
-                              Tap <span className="font-bold text-[#1C1C1E]">"Forgot PIN?"</span> above.
+                            <p className="text-[12px] font-semibold text-[#15171c]">How to recover access</p>
+                            <p className="text-[12.5px] text-black/50 leading-relaxed">
+                              Tap <span className="font-semibold text-[#15171c]">"Forgot PIN?"</span> above.
                               We will send a 6 digit code to your registered email. Enter it to reset your PIN immediately.
                               No waiting, no support needed.
                             </p>
@@ -1051,12 +1030,12 @@ export function TuringShieldGate({
                     className="flex flex-col items-center py-2"
                   >
                     <div className="w-full bg-red-50 rounded-2xl p-5 mb-5 text-center">
-                      <p className="text-[13px] font-bold text-red-600 mb-1">Access temporarily suspended</p>
-                      <p className="text-[11px] text-red-500/80 leading-relaxed">
+                      <p className="text-[13px] font-semibold text-red-600 mb-1">Access temporarily suspended</p>
+                      <p className="text-[12.5px] text-[#d93036]/80 leading-relaxed">
                         Too many incorrect PINs. For your protection, access is paused for 15 minutes.
                       </p>
                       {lockoutCountdown > 0 && (
-                        <p className="text-[22px] font-black text-red-500 mt-3 font-mono">
+                        <p className="text-[22px] font-semibold text-[#d93036] mt-3 tabular-nums">
                           {Math.floor(lockoutCountdown / 60)}:{String(lockoutCountdown % 60).padStart(2, '0')}
                         </p>
                       )}
@@ -1064,7 +1043,7 @@ export function TuringShieldGate({
                     {lockoutCountdown === 0 && (
                       <button
                         onClick={() => { setLocked(false); setPinError(null); setPin(''); }}
-                        className="w-full h-[50px] bg-[#1C1C1E] text-white rounded-2xl font-bold text-[14px] hover:bg-black transition-colors mb-3"
+                        className="w-full h-[50px] bg-[#15171c] text-white rounded-2xl font-semibold text-[14px] hover:bg-black transition-colors mb-3"
                       >
                         Try again
                       </button>
@@ -1072,7 +1051,7 @@ export function TuringShieldGate({
                     <button
                       onClick={handleRequestOtp}
                       disabled={resetFlowState === 'requesting'}
-                      className="text-[12px] font-medium text-black/40 hover:text-[#1C1C1E] transition-colors"
+                      className="text-[12px] font-medium text-black/40 hover:text-[#15171c] transition-colors"
                     >
                       Reset PIN via email
                     </button>
@@ -1088,15 +1067,13 @@ export function TuringShieldGate({
                     exit={{ opacity: 0, x: -10 }}
                     className="flex flex-col items-center"
                   >
-                    <div className="w-12 h-12 rounded-full bg-[#1C1C1E]/[0.05] flex items-center justify-center mb-4">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C1C1E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
-                      </svg>
+                    <div className="w-12 h-12 rounded-full bg-[#15171c]/[0.05] flex items-center justify-center mb-4">
+                      <Mail size={20} strokeWidth={1.8} className="text-[#15171c]" aria-hidden="true" />
                     </div>
-                    <h3 className="text-[19px] font-black text-[#1C1C1E] mb-2 text-center">Check your email</h3>
+                    <h3 className="text-[19px] font-semibold text-[#15171c] mb-2 text-center">Check your email</h3>
                     <p className="text-[12px] text-black/45 text-center leading-relaxed mb-6">
                       We sent a 6-digit code to{' '}
-                      <span className="font-bold text-[#1C1C1E]">{resetEmail}</span>.
+                      <span className="font-semibold text-[#15171c]">{resetEmail}</span>.
                       Enter it below. Expires in 10 minutes.
                     </p>
 
@@ -1110,7 +1087,7 @@ export function TuringShieldGate({
                     />
 
                     {resetOtpError && (
-                      <p className="text-red-500 text-[12px] font-semibold mt-3 text-center">
+                      <p className="text-[#d93036] text-[12px] font-semibold mt-3 text-center">
                         {resetOtpError}
                         {resetAttemptsLeft !== null && resetAttemptsLeft > 0 && (
                           <span className="text-orange-500 ml-1">({resetAttemptsLeft} left)</span>
@@ -1122,14 +1099,14 @@ export function TuringShieldGate({
                       <button
                         onClick={() => { setResetFlowState('idle'); setResetOtp(''); setResetOtpError(null); }}
                         disabled={resetFlowState === 'verifying_otp'}
-                        className="flex-1 h-[48px] border border-black/10 rounded-2xl text-[13px] font-semibold text-[#1C1C1E] hover:bg-black/[0.03] transition-colors disabled:opacity-50"
+                        className="flex-1 h-[48px] border border-black/10 rounded-2xl text-[13px] font-semibold text-[#15171c] hover:bg-black/[0.03] transition-colors disabled:opacity-50"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={() => handleVerifyOtp(resetOtp)}
                         disabled={resetOtp.length < 6 || resetFlowState === 'verifying_otp'}
-                        className="flex-1 h-[48px] bg-[#1C1C1E] text-white rounded-2xl text-[13px] font-semibold hover:bg-black transition-colors disabled:opacity-30 flex items-center justify-center gap-2"
+                        className="flex-1 h-[48px] bg-[#15171c] text-white rounded-2xl text-[13px] font-semibold hover:bg-black transition-colors disabled:opacity-30 flex items-center justify-center gap-2"
                       >
                         {resetFlowState === 'verifying_otp' ? (
                           <>
@@ -1146,7 +1123,7 @@ export function TuringShieldGate({
                     <button
                       onClick={handleRequestOtp}
                       disabled={resetFlowState === 'verifying_otp'}
-                      className="w-full text-center text-[11px] text-black/35 hover:text-black/60 transition-colors mt-4 disabled:opacity-40"
+                      className="w-full text-center text-[12.5px] text-black/35 hover:text-black/60 transition-colors mt-4 disabled:opacity-40"
                     >
                       Send a new code
                     </button>
@@ -1163,7 +1140,7 @@ export function TuringShieldGate({
                     className="flex flex-col items-center"
                   >
                     <div className="w-full bg-[#FFF4F4] border border-red-100 rounded-2xl p-5 mb-5 text-left">
-                      <p className="text-[13px] font-black text-red-700 mb-2">No email linked</p>
+                      <p className="text-[13px] font-semibold text-red-700 mb-2">No email linked</p>
                       <p className="text-[12px] text-red-600/80 leading-relaxed">
                         This account has no email address. To reset your PIN, you need to re-connect
                         your wallet. This verifies ownership and clears the PIN so you can set a new one.
@@ -1173,7 +1150,7 @@ export function TuringShieldGate({
                       <button
                         onClick={() => setConfirmReset(false)}
                         disabled={resetting}
-                        className="flex-1 h-[48px] border border-black/10 rounded-2xl text-[13px] font-semibold text-[#1C1C1E] hover:bg-black/[0.03] transition-colors"
+                        className="flex-1 h-[48px] border border-black/10 rounded-2xl text-[13px] font-semibold text-[#15171c] hover:bg-black/[0.03] transition-colors"
                       >
                         Cancel
                       </button>
@@ -1190,7 +1167,7 @@ export function TuringShieldGate({
                         disabled={resetting}
                         className="flex-1 h-[48px] bg-red-600 text-white rounded-2xl text-[13px] font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
                       >
-                        {resetting ? 'Please wait...' : 'Log out & reconnect'}
+                        {resetting ? 'Signing out' : 'Sign out and reconnect'}
                       </button>
                     </div>
                   </motion.div>
@@ -1201,8 +1178,8 @@ export function TuringShieldGate({
           </div>
 
           {/* Footer */}
-          <p className="text-center text-[11px] text-black/25 mt-5 font-medium">
-            Humanity Ledger · Fully encrypted
+          <p className="text-center text-[12.5px] text-black/25 mt-5 font-medium">
+            Humanity Ledger
           </p>
         </motion.div>
       </AnimatePresence>

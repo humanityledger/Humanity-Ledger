@@ -31,7 +31,14 @@ export async function GET(req: NextRequest) {
         const payload = await verifyJWT(primaryJwt);
         const address = (payload.walletAddress || payload.address || payload.sub) as string;
         if (address) {
-          const newJwt = await mintJWT({ walletAddress: address.toLowerCase(), tier: payload.tier ?? 'FREE' });
+          // A heal re-issues the session for another 7 days. Without a bound
+          // that made a stolen cookie valid forever. authTime is when the
+          // person last actually signed in; after 30 days they sign in again.
+          const authTime = Number((payload as any).authTime ?? payload.iat ?? 0);
+          if (!authTime || Date.now() / 1000 - authTime > 30 * 24 * 3600) {
+            return NextResponse.json({ healed: false, reason: 'reauth_required' });
+          }
+          const newJwt = await mintJWT({ walletAddress: address.toLowerCase(), tier: payload.tier ?? 'FREE', authTime });
           const res = NextResponse.json({ healed: true, type: 'jwt', address });
           res.cookies.set('ledger_session', newJwt, { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 604800, path: '/', domain: cookieDomain });
           res.cookies.set('human_session', newJwt, { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 604800, path: '/', domain: cookieDomain });

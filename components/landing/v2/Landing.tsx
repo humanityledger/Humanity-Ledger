@@ -26,6 +26,7 @@ import { HLLogo } from "@/components/shared/HLLogo";
 import { RemoteLottie } from "@/components/ui/RemoteLottie";
 import { HeroMap } from "./HeroMap";
 import { SiteFooter } from "./SiteFooter";
+import { PhoneShowcase, phoneShowcaseStyles } from "./PhoneShowcase";
 import s from "./Landing.module.css";
 
 /**
@@ -474,6 +475,20 @@ export function HumanityLanding() {
           </div>
         </section>
 
+        {/* Ledger Chat in your hand */}
+        <section id="in-your-hand" className={`${s.card} ${phoneShowcaseStyles.showcase}`} aria-labelledby="hand-title">
+          <div className={s.sectionHead}>
+            <p className={s.eyebrow}>Ledger Chat in your hand</p>
+            <h2 id="hand-title" className={s.h2}>
+              Messages, calls and payments. One private place.
+            </h2>
+            <p className={s.lead}>
+              A conversation, a voice call, a video call and a payment, the way they look on your phone. Keep scrolling
+              to watch each one happen.
+            </p>
+          </div>
+          <PhoneShowcase />
+        </section>
         {/* How it works */}
         <section id="how-it-works" className={`${s.card} ${s.reveal}`} aria-labelledby="steps-title">
           <div className={s.sectionHead}>

@@ -93,7 +93,7 @@ export function isOwner(evmAddress: string, aztecAddress: string): boolean {
  * @returns       Hex HMAC string
  */
 export function hashIpAddress(rawIp: string): string {
-  const secret = process.env.JWT_SECRET || 'ledger-oracle-secret';
+  const secret = (() => { const s = process.env.JWT_SECRET; if (!s) throw new Error('JWT_SECRET is not set.'); return s; })();
   // Take only the first IP from x-forwarded-for proxy chains
   const cleanIp = (rawIp || '127.0.0.1').split(',')[0].trim();
   return crypto

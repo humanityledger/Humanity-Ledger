@@ -44,9 +44,10 @@ export async function POST(
     const validRoles = ['MEMBER', 'VIP', 'CONTRIBUTOR', 'MODERATOR'];
     const chosenRole = validRoles.includes(role) ? role : 'MEMBER';
 
-    const expiresAt = durationHours > 0 
-      ? Date.now() + durationHours * 60 * 60 * 1000 
-      : 0;
+    // Duration is a number of hours between 1 and 30 days. Invites that never
+    // expire are not issued, because a leaked link would stay valid forever.
+    const hours = Math.min(Math.max(Number(durationHours) || 24, 1), 24 * 30);
+    const expiresAt = Date.now() + hours * 60 * 60 * 1000;
 
     const invite = generateCryptographicInvite({
       communityId,

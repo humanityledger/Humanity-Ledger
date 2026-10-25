@@ -130,7 +130,7 @@ const _rawEncKey = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET;
 if (!_rawEncKey) {
   console.error('[SECURITY CRITICAL] ENCRYPTION_KEY is not set. CSRF tokens are insecurely signed!');
 }
-const ENCRYPTION_KEY = _rawEncKey ?? 'INSECURE_FALLBACK_SET_ENV_VAR';
+const ENCRYPTION_KEY = _rawEncKey ?? require('crypto').randomBytes(32).toString('hex');
 
 export function generateCSRFToken(userId: string): string {
   const timestamp = Date.now();

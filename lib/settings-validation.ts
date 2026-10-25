@@ -122,22 +122,67 @@ export function getDefaultUserSettings(): UserSettings {
 // --- Validation helpers used by SettingsSyncService --------------------------
 
 export type ValidationResult<T> =
-  | { success: true; data: T; errors?: undefined }
+  | { success: true; data: T; errors?: undefined; repaired?: string[] }
   | { success: false; data?: undefined; errors: string[] };
+
+type Issue = { path: PropertyKey[]; message: string };
+
+/** zod 4 exposes `issues`; zod 3 also had `errors`. Read whichever exists. */
+function issuesOf(error: unknown): Issue[] {
+  const e = error as { issues?: Issue[]; errors?: Issue[] } | undefined;
+  return e?.issues ?? e?.errors ?? [];
+}
+
+function describe(issues: Issue[]): string[] {
+  return issues.map((i) => `${(i.path ?? []).map(String).join('.') || '(root)'}: ${i.message}`);
+}
+
+const NESTED = new Set(['analyticsConfig', 'executionConfig', 'uiConfig']);
+
+/**
+ * Removes only the values that failed validation, so one stale or corrupt
+ * field (from an older version of the app, for example) falls back to its
+ * default instead of discarding every saved preference.
+ */
+function dropInvalid(raw: Record<string, unknown>, issues: Issue[]): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...raw };
+  const badContacts = new Set<number>();
+  for (const { path } of issues) {
+    const [top, second] = path ?? [];
+    if (typeof top !== 'string') continue;
+    if (NESTED.has(top) && typeof second === 'string' && out[top] && typeof out[top] === 'object') {
+      const nested = { ...(out[top] as Record<string, unknown>) };
+      delete nested[second];
+      out[top] = nested;
+    } else if (top === 'contacts' && typeof second === 'number' && Array.isArray(out.contacts)) {
+      badContacts.add(second);
+    } else {
+      delete out[top];
+    }
+  }
+  if (badContacts.size && Array.isArray(out.contacts)) {
+    out.contacts = (out.contacts as unknown[]).filter((_, i) => !badContacts.has(i));
+  }
+  return out;
+}
 
 /**
  * Validates a full UserSettings object against the schema.
- * Returns typed success/error result instead of throwing.
+ * Invalid fields are reset to their defaults; the result only fails when the
+ * input is not an object at all. Never throws.
  */
 export function validateUserSettings(raw: unknown): ValidationResult<UserSettings> {
-  const result = UserSettingsSchema.safeParse(raw);
-  if (result.success) {
-    return { success: true, data: result.data };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { success: false, errors: ['(root): settings must be an object'] };
   }
-  return {
-    success: false,
-    errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
-  };
+  const first = UserSettingsSchema.safeParse(raw);
+  if (first.success) return { success: true, data: first.data };
+
+  const issues = issuesOf(first.error);
+  const second = UserSettingsSchema.safeParse(dropInvalid(raw as Record<string, unknown>, issues));
+  if (second.success) return { success: true, data: second.data, repaired: describe(issues) };
+
+  return { success: false, errors: describe(issuesOf(second.error)) };
 }
 
 /**
@@ -154,7 +199,6 @@ export function validatePartialSettings(raw: unknown): ValidationResult<PartialU
   }
   return {
     success: false,
-    errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
+    errors: describe(issuesOf(result.error)),
   };
 }
-

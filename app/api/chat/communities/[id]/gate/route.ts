@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyTokenGate, TokenGateConfig } from '@/lib/gating/TokenGateEngine';
+import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,9 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid community identifier' }, { status: 400 });
     }
 
+    const caller = await resolveVerifiedCaller(req);
+    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const community = await prisma.community.findUnique({
       where: { id: communityId },
       include: { channels: true }
@@ -24,6 +28,14 @@ export async function GET(
 
     if (!community) {
       return NextResponse.json({ error: 'Community not found' }, { status: 404 });
+    }
+
+    // Channel lists of private communities are for members only.
+    if (community.isPrivate) {
+      const member = await (prisma as any).communityMember.findFirst({ where: { communityId, walletAddress: caller } });
+      if (!member && community.ownerAddress?.toLowerCase() !== caller) {
+        return NextResponse.json({ error: 'Community not found' }, { status: 404 });
+      }
     }
 
     return NextResponse.json({
@@ -56,6 +68,14 @@ export async function POST(
 
       if (!ETH_ADDR_REGEX.test(walletAddress)) {
         return NextResponse.json({ error: 'Invalid user wallet address' }, { status: 400 });
+      }
+
+      // Only a signed in wallet can run the check, and only for itself. This
+      // endpoint makes on chain calls, so it must not be an open proxy.
+      const caller = await resolveVerifiedCaller(req);
+      if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      if (walletAddress.toLowerCase() !== caller) {
+        return NextResponse.json({ error: 'You can only verify your own wallet' }, { status: 403 });
       }
 
       if (!gateConfig.contractAddress || !ETH_ADDR_REGEX.test(gateConfig.contractAddress)) {

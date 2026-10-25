@@ -15,6 +15,7 @@ import { ZkMoneyModal } from './ZkMoneyModal';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { AnimatePresence, motion } from 'framer-motion';
 import DOMPurify from 'dompurify';
+import { sanitizeRichText } from '@/lib/security/sanitizeRichText';
 import { parseZkPaymentPayload, parseEscrowPayload } from '@/lib/zk/zkMoney';
 import { parseTipPayload, parseBountyPayload } from '@/lib/zk/zkCommunityPayments';
 import { parseStreamPayload, encodeStreamPayload, ZkPaymentStream } from '@/lib/zk/zkStreaming';
@@ -26,13 +27,10 @@ import { ZkStreamManager } from '@/components/zk/ZkStreamManager';
 import { ZkInvoiceModal } from '@/components/zk/ZkInvoiceModal';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+// Shared sanitizer: no class/style, no remote images, safe links.
+// See lib/security/sanitizeRichText.ts.
 function safeHtml(raw: string): string {
-  if (typeof window === 'undefined') return raw;
-  return DOMPurify.sanitize(raw, {
-    ALLOWED_TAGS: ['b','i','u','s','em','strong','a','p','br','ul','ol','li',
-      'blockquote','code','pre','h1','h2','h3','img','mark','span'],
-    ALLOWED_ATTR: ['href','src','alt','class','target','rel'],
-  });
+  return sanitizeRichText(raw);
 }
 const addr = (a: string) => `${(a||'0x??').slice(0,6)}...${(a||'').slice(-4)}`;
 const fmt2 = (s: number) =>
@@ -719,7 +717,17 @@ export function CommunityChatView({
   useEffect(() => {
     fetchMessages(false);
     setTimeout(() => scrollToBottom(false), 150);
-    pollIntervalRef.current = setInterval(() => fetchMessages(true), 3000);
+    // A tab in the background polls every 30 s instead of every few seconds.
+    // Background tabs are most of the open tabs at any moment, and at the
+    // foreground rate each one cost the database the same as an active user.
+    let lastHiddenFetch = 0;
+    pollIntervalRef.current = setInterval(() => {
+      if (document.visibilityState === 'hidden') {
+        if (Date.now() - lastHiddenFetch < 30_000) return;
+        lastHiddenFetch = Date.now();
+      }
+      fetchMessages(true);
+    }, 3000);
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
@@ -954,10 +962,10 @@ export function CommunityChatView({
                 <Send size={24} className="text-[#1C1C1E]" />
               </div>
               <p className="text-[16px] font-bold text-[#111b21]">
-                {searchQuery ? 'No messages found' : 'Comienza la conversación'}
+                {searchQuery ? 'No messages found' : 'Start the conversation'}
               </p>
               <p className="text-[13px] text-[#667781] mt-1">
-                {searchQuery ? 'Prueba con otro término de búsqueda' : 'Sé el primero en enviar un mensaje en este canal'}
+                {searchQuery ? 'Try another search term' : 'Be the first to send a message in this channel'}
               </p>
             </div>
           )}
@@ -1190,11 +1198,11 @@ export function CommunityChatView({
                 {[
                   { icon: Lock, label: 'zk.money', color: 'bg-[#1C1C1E]', fn: () => setShowZkModal(true) },
                   { icon: Zap, label: 'ZK Stream', color: 'bg-[#1C1C1E]', fn: () => setShowZkStreamModal(true) },
-                  { icon: FileText, label: 'ZK Factura', color: 'bg-[#1C1C1E]', fn: () => setShowZkInvoiceModal(true) },
-                  { icon: ImgIcon, label: 'Foto/Video', color: 'bg-[#FF9500]', fn: () => fileInputRef.current?.click() },
+                  { icon: FileText, label: 'ZK Invoice', color: 'bg-[#1C1C1E]', fn: () => setShowZkInvoiceModal(true) },
+                  { icon: ImgIcon, label: 'Photo/Video', color: 'bg-[#FF9500]', fn: () => fileInputRef.current?.click() },
                   { icon: CircleDollarSign, label: 'Crypto Send', color: 'bg-[#1C1C1E]', fn: () => { setCryptoRecipient(''); setShowRecipientSheet(true); } },
-                  { icon: MapPin, label: 'Ubicación', color: 'bg-[#3A3A3C]', fn: sendLocation },
-                  { icon: BarChart2, label: 'Encuesta', color: 'bg-purple-500', fn: () => setShowPollCreator(true) },
+                  { icon: MapPin, label: 'Location', color: 'bg-[#3A3A3C]', fn: sendLocation },
+                  { icon: BarChart2, label: 'Poll', color: 'bg-purple-500', fn: () => setShowPollCreator(true) },
                   { icon: Smile, label: 'Sticker', color: 'bg-orange-500', fn: () => executeSend('[STICKER]:fire') },
                 ].map(({ icon: Icon, label, color, fn }) => (
                   <button key={label} onClick={() => { fn(); setShowAppDrawer(false); }}

@@ -86,12 +86,6 @@ export const DOC_SECTIONS: DocSection[] = [
         summary: "Shielded transfers on Aztec: what stays private and what does not.",
         keywords: ["zk", "zero knowledge", "aztec", "shielded", "private", "proof", "noir", "payments"],
       },
-      {
-        slug: "quantum-dots",
-        label: "Quantum Dots (QD Token)",
-        summary: "The token, its role in the network, and its current status.",
-        keywords: ["token", "qd", "quantum dots", "economics", "supply"],
-      },
     ],
   },
   {

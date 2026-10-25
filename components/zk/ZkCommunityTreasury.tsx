@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { isZkEnabled } from '@/lib/features/zk';
 
@@ -7,7 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, TrendingUp, ArrowUpRight, ArrowDownLeft,
   Gift, Award, Briefcase, ChevronDown, ChevronUp,
-  ExternalLink, Plus, X, CheckCircle,
+  ExternalLink, Plus, X, CheckCircle, Lock, Coins,
+  Clock, Check
 } from 'lucide-react';
 import {
   getCommunityTreasury, addToTreasury, withdrawFromTreasury,
@@ -19,7 +20,7 @@ import {
   getCommunityStats, ZkCommunityStats,
 } from '@/lib/zk/zkCommunityPayments';
 
-// â”€â”€â”€ Props â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Props ───────────────────────────────────────────────────────────────────
 
 interface ZkCommunityTreasuryProps {
   communityId: string;
@@ -28,7 +29,7 @@ interface ZkCommunityTreasuryProps {
   currentUserAddress?: string;
 }
 
-// â”€â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Toast ───────────────────────────────────────────────────────────────────
 
 function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   useEffect(() => {
@@ -41,48 +42,53 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 24 }}
-      className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2 bg-gray-900 text-white text-[13px] font-semibold px-4 py-3 rounded-2xl shadow-2xl"
+      className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2 bg-[#15171c] text-white text-[13px] font-semibold px-4 py-3 rounded-2xl shadow-2xl border border-white/10"
     >
-      <CheckCircle size={14} className="text-[#1C1C1E]" />
+      <Check size={14} className="text-white" />
       {message}
     </motion.div>
   );
 }
 
-// â”€â”€â”€ Bounty Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Bounty Card ─────────────────────────────────────────────────────────────
 
-function BountyCard({ bounty, onClaim }: { key?: React.Key; bounty: ZkBounty; onClaim: () => void }) {
+function BountyCard({ bounty, onClaim }: { bounty: ZkBounty; onClaim: () => void }) {
   const msLeft = bounty.expiresAt - Date.now();
   const daysLeft = Math.max(0, Math.floor(msLeft / 86_400_000));
 
   return (
-    <div className="bg-white rounded-2xl border border-black/[0.06] p-4 space-y-3">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h4 className="font-bold text-gray-900 text-[14px]">{bounty.title}</h4>
-          <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{bounty.description}</p>
+    <div className="bg-white rounded-2xl border border-black/[0.06] p-5 shadow-sm space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h4 className="font-semibold text-[#15171c] text-[15px] leading-snug">{bounty.title}</h4>
+          {bounty.description && (
+            <p className="text-[13px] text-[#727a88] mt-1 leading-relaxed">{bounty.description}</p>
+          )}
         </div>
-        <div className="flex-shrink-0 bg-[#1C1C1E]/10 text-[#1C1C1E] font-bold text-[13px] px-3 py-1.5 rounded-xl text-center">
-          {bounty.reward}<br />
-          <span className="text-[9px] font-medium">{bounty.token}</span>
+        <div className="shrink-0 bg-[#f2f4f7] text-[#15171c] border border-black/[0.04] font-mono font-bold text-[14px] px-3.5 py-2 rounded-xl text-center">
+          {bounty.reward} <span className="text-[11px] font-semibold text-[#727a88]">{bounty.token}</span>
         </div>
       </div>
+
       {bounty.skills && bounty.skills.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {bounty.skills.map(s => (
-            <span key={s} className="text-[10px] font-medium bg-[#f0f2f5] text-gray-600 px-2 py-0.5 rounded-full">{s}</span>
+            <span key={s} className="text-[11px] font-medium bg-[#f2f4f7] text-[#15171c] px-2.5 py-0.5 rounded-full border border-black/[0.03]">
+              {s}
+            </span>
           ))}
         </div>
       )}
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-gray-400">
-          {daysLeft > 0 ? `Expires in ${daysLeft}d` : 'Expired'}
+
+      <div className="flex items-center justify-between pt-2 border-t border-black/[0.04]">
+        <span className="text-[12px] font-medium text-[#727a88] flex items-center gap-1.5">
+          <Clock size={12} />
+          {daysLeft > 0 ? `${daysLeft} days remaining` : 'Expired'}
         </span>
         <button
           onClick={onClaim}
           disabled={daysLeft === 0}
-          className="py-1.5 px-4 rounded-xl text-[12px] font-bold text-white disabled:opacity-40"
-          style={{ background: '#1C1C1E' }}
+          className="py-2 px-4 rounded-xl text-[12px] font-semibold text-white bg-[#15171c] hover:bg-black disabled:opacity-40 transition-all active:scale-95"
         >
           Claim Bounty
         </button>
@@ -91,7 +97,7 @@ function BountyCard({ bounty, onClaim }: { key?: React.Key; bounty: ZkBounty; on
   );
 }
 
-// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main Component ──────────────────────────────────────────────────────────
 
 export function ZkCommunityTreasury({
   communityId,
@@ -100,32 +106,32 @@ export function ZkCommunityTreasury({
   currentUserAddress = '',
 }: ZkCommunityTreasuryProps) {
   if (!isZkEnabled) return null;
-  const [treasury,   setTreasury]   = useState<ZkCommunityTreasuryModel>(getCommunityTreasury(communityId));
-  const [stats,      setStats]      = useState<ZkCommunityStats>(getCommunityStats(communityId));
-  const [tips,       setTips]       = useState<ZkTip[]>(getCommunityTips(communityId).slice(0, 10));
-  const [bounties,   setBounties]   = useState<ZkBounty[]>(getOpenBounties(communityId));
-  const [toast,      setToast]      = useState('');
+  const [treasury, setTreasury] = useState<ZkCommunityTreasuryModel>(getCommunityTreasury(communityId));
+  const [stats, setStats] = useState<ZkCommunityStats>(getCommunityStats(communityId));
+  const [tips, setTips] = useState<ZkTip[]>(getCommunityTips(communityId).slice(0, 10));
+  const [bounties, setBounties] = useState<ZkBounty[]>(getOpenBounties(communityId));
+  const [toast, setToast] = useState('');
 
   // Deposit form
   const [depAmount, setDepAmount] = useState('');
-  const [depToken,  setDepToken]  = useState<SupportedToken>('DAI');
+  const [depToken, setDepToken] = useState<SupportedToken>('DAI');
 
   // Withdraw form
   const [wdAmount, setWdAmount] = useState('');
-  const [wdToken,  setWdToken]  = useState<SupportedToken>('DAI');
-  const [wdNote,   setWdNote]   = useState('');
+  const [wdToken, setWdToken] = useState<SupportedToken>('DAI');
+  const [wdNote, setWdNote] = useState('');
 
   // Bounty creation
   const [showBountyForm, setShowBountyForm] = useState(false);
-  const [bTitle,  setBTitle]  = useState('');
-  const [bDesc,   setBDesc]   = useState('');
+  const [bTitle, setBTitle] = useState('');
+  const [bDesc, setBDesc] = useState('');
   const [bReward, setBReward] = useState('');
-  const [bToken,  setBToken]  = useState<SupportedToken>('DAI');
+  const [bToken, setBToken] = useState<SupportedToken>('DAI');
   const [bSkills, setBSkills] = useState('');
 
   // Section toggles
   const [showWithdraw, setShowWithdraw] = useState(false);
-  const [showTippers,  setShowTippers]  = useState(false);
+  const [showTippers, setShowTippers] = useState(false);
 
   const refresh = () => {
     setTreasury(getCommunityTreasury(communityId));
@@ -154,7 +160,7 @@ export function ZkCommunityTreasury({
     if (!amt || amt <= 0) return;
     addToTreasury(communityId, amt, depToken);
     setDepAmount('');
-    setToast(`Deposited ${amt} zk${depToken} to treasury!`);
+    setToast(`Deposited ${amt} zk${depToken} to treasury`);
     refresh();
   };
 
@@ -171,7 +177,7 @@ export function ZkCommunityTreasury({
   const handleClaimBounty = (bountyId: string) => {
     if (!currentUserAddress) return;
     claimBounty(bountyId, currentUserAddress);
-    setToast('Bounty claimed! Await payment from poster.');
+    setToast('Bounty claimed! Awaiting poster verification.');
     refresh();
   };
 
@@ -188,269 +194,369 @@ export function ZkCommunityTreasury({
     });
     setBTitle(''); setBDesc(''); setBReward(''); setBSkills('');
     setShowBountyForm(false);
-    setToast(`Bounty "${bTitle}" posted!`);
+    setToast(`Bounty "${bTitle}" posted`);
     refresh();
   };
 
   const TOKENS: SupportedToken[] = ['DAI', 'USDC', 'ETH'];
 
   return (
-    <div
-      className="bg-[#f0f2f5] rounded-3xl overflow-hidden"
-      style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
-    >
-      {/* Header */}
-      <div className="bg-white px-5 py-4 border-b border-black/[0.06]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ background: '#1C1C1E' }}>
-            <Shield size={18} className="text-white" strokeWidth={2} />
+    <div className="space-y-5">
+      {/* ── HEADER CARD ── */}
+      <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/[0.06] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#15171c] text-white flex items-center justify-center shrink-0 shadow-sm">
+            <Lock size={20} strokeWidth={2} />
           </div>
           <div>
-            <h2 className="font-bold text-gray-900 text-[16px]">Community Treasury</h2>
-            <span className="text-[11px] font-semibold text-[#1C1C1E] bg-[#1C1C1E]/10 px-2 py-0.5 rounded-full">
-              {communityName}
-            </span>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#727a88] bg-[#f2f4f7] px-2.5 py-0.5 rounded-full">
+                Shielded Vault
+              </span>
+              <span className="text-[11px] font-semibold text-[#15171c] bg-black/5 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                <Shield size={11} /> Aztec Alpha
+              </span>
+            </div>
+            <h2 className="text-xl md:text-2xl font-bold text-[#15171c] tracking-tight">
+              {communityName} Treasury
+            </h2>
+            <p className="text-[13px] text-[#727a88] mt-0.5">
+              Zero-knowledge vault for communal balances, grants, and confidential bounties.
+            </p>
           </div>
         </div>
+
+        {isAdmin && (
+          <button
+            onClick={() => setShowWithdraw(v => !v)}
+            className="px-4 py-2.5 bg-[#f2f4f7] hover:bg-[#e6eaee] text-[#15171c] text-xs font-semibold rounded-xl border border-black/[0.05] transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
+          >
+            <ArrowUpRight size={14} />
+            <span>Manage Withdrawals</span>
+          </button>
+        )}
       </div>
 
-      <div className="p-4 space-y-3">
+      {/* ── BALANCES GRID ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {[
+          { symbol: 'DAI', val: treasury.balance.dai, label: 'zkDAI Note' },
+          { symbol: 'USDC', val: treasury.balance.usdc, label: 'zkUSDC Note' },
+          { symbol: 'ETH', val: treasury.balance.eth, label: 'zkETH Note' },
+        ].map(({ symbol, val, label }) => (
+          <div key={symbol} className="bg-white rounded-2xl p-5 border border-black/[0.06] shadow-sm text-center">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#727a88] block mb-1">
+              {label}
+            </span>
+            <div className="text-2xl font-bold font-mono text-[#15171c] tracking-tight">
+              {typeof val === 'number' ? val.toFixed(symbol === 'ETH' ? 4 : 2) : val}
+            </div>
+            <span className="text-[11px] font-medium text-[#727a88] block mt-1">
+              {symbol}
+            </span>
+          </div>
+        ))}
+      </div>
 
-        {/* Balance Cards */}
-        <div className="grid grid-cols-3 gap-2">
-          {([
-            { symbol: 'DAI',  val: treasury.balance.dai,  emoji: 'â—ˆ' },
-            { symbol: 'USDC', val: treasury.balance.usdc, emoji: '$' },
-            { symbol: 'ETH',  val: treasury.balance.eth,  emoji: 'Îž' },
-          ] as const).map(({ symbol, val, emoji }) => (
-            <div key={symbol} className="bg-white rounded-2xl p-3 text-center shadow-sm border border-black/[0.04]">
-              <div className="text-xl mb-1">{emoji}</div>
-              <div className="text-[13px] font-bold text-gray-900">{val}</div>
-              <div className="text-[9px] text-gray-400 font-semibold uppercase">zk{symbol}</div>
+      {/* ── STATS ROW ── */}
+      <div className="bg-white rounded-2xl shadow-sm border border-black/[0.06] p-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: 'Total Inflow', value: `${treasury.totalInflow.toFixed(2)} DAI` },
+            { label: 'Total Outflow', value: `${treasury.totalOutflow.toFixed(2)} DAI` },
+            { label: 'Active Bounties', value: String(stats.activeBounties) },
+            { label: 'Tip Volume', value: `$${stats.totalVolume} USD` },
+          ].map(({ label, value }) => (
+            <div key={label} className="space-y-0.5">
+              <span className="text-[11px] font-medium text-[#727a88] block">{label}</span>
+              <span className="text-[16px] font-bold font-mono text-[#15171c] block">{value}</span>
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Stats row */}
-        <div className="bg-white rounded-2xl shadow-sm border border-black/[0.04] px-4 py-3">
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'Total Inflow',   value: `${treasury.totalInflow.toFixed(2)} DAI` },
-              { label: 'Total Outflow',  value: `${treasury.totalOutflow.toFixed(2)} DAI` },
-              { label: 'Active Bounties', value: String(stats.activeBounties) },
-              { label: 'Tip Volume',     value: `$${stats.totalVolume}` },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <div className="text-[10px] text-gray-400 font-medium">{label}</div>
-                <div className="text-[13px] font-bold text-gray-900">{value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Deposit */}
-        <div className="bg-white rounded-2xl shadow-sm border border-black/[0.04] p-4 space-y-3">
+      {/* ── DEPOSIT CARD ── */}
+      <div className="bg-white rounded-2xl shadow-sm border border-black/[0.06] p-5 space-y-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ArrowDownLeft size={15} className="text-[#1C1C1E]" strokeWidth={2} />
-            <span className="font-semibold text-gray-800 text-[14px]">Deposit to Treasury</span>
+            <ArrowDownLeft size={16} className="text-[#15171c]" strokeWidth={2} />
+            <h3 className="font-semibold text-[#15171c] text-[15px]">Deposit to Treasury</h3>
           </div>
-          <div className="flex gap-1.5">
-            {TOKENS.map(t => (
-              <button key={t} onClick={() => setDepToken(t)}
-                className="flex-1 py-1.5 rounded-xl text-[11px] font-semibold transition-all"
-                style={{ background: depToken === t ? '#1C1C1E' : '#f0f2f5', color: depToken === t ? '#fff' : '#6B7280' }}>
-                {t}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="number" min="0" step="any" placeholder="Amount"
-              value={depAmount} onChange={e => setDepAmount(e.target.value)}
-              className="flex-1 bg-[#f0f2f5] rounded-xl px-3 py-2.5 text-[14px] font-bold text-gray-900 outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors"
-            />
-            <button onClick={handleDeposit}
-              disabled={!depAmount || parseFloat(depAmount) <= 0}
-              className="px-4 py-2.5 rounded-xl font-bold text-[13px] text-white disabled:opacity-50"
-              style={{ background: '#1C1C1E' }}>
-              Deposit
-            </button>
-          </div>
+          <span className="text-[11px] font-semibold text-[#727a88]">No public link to your wallet</span>
         </div>
 
-        {/* Withdraw (admin only) */}
-        {isAdmin && (
-          <div className="bg-white rounded-2xl shadow-sm border border-black/[0.04] overflow-hidden">
+        <div className="flex gap-2">
+          {TOKENS.map(t => (
             <button
-              onClick={() => setShowWithdraw(v => !v)}
-              className="w-full flex items-center gap-2 px-4 py-3"
+              key={t}
+              onClick={() => setDepToken(t)}
+              className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all ${
+                depToken === t
+                  ? 'bg-[#15171c] text-white shadow-sm'
+                  : 'bg-[#f2f4f7] text-[#727a88] hover:text-[#15171c] hover:bg-[#e7ebef]'
+              }`}
             >
-              <ArrowUpRight size={15} className="text-orange-500" strokeWidth={2} />
-              <span className="font-semibold text-gray-800 text-[14px] flex-1 text-left">Withdraw (Admin)</span>
-              {showWithdraw ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+              {t}
             </button>
-            <AnimatePresence>
-              {showWithdraw && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="px-4 pb-4 space-y-2.5">
-                    <div className="flex gap-1.5">
-                      {TOKENS.map(t => (
-                        <button key={t} onClick={() => setWdToken(t)}
-                          className="flex-1 py-1.5 rounded-xl text-[11px] font-semibold"
-                          style={{ background: wdToken === t ? '#FF9500' : '#f0f2f5', color: wdToken === t ? '#fff' : '#6B7280' }}>
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                    <input
-                      type="number" min="0" placeholder="Amount"
-                      value={wdAmount} onChange={e => setWdAmount(e.target.value)}
-                      className="w-full bg-[#f0f2f5] rounded-xl px-3 py-2.5 text-[14px] font-bold outline-none border-2 border-transparent focus:border-orange-400 transition-colors"
-                    />
-                    <input
-                      type="text" placeholder="Reason / note (optional)"
-                      value={wdNote} onChange={e => setWdNote(e.target.value)}
-                      className="w-full bg-[#f0f2f5] rounded-xl px-3 py-2.5 text-[13px] outline-none border-2 border-transparent focus:border-orange-400 transition-colors"
-                    />
-                    <button onClick={handleWithdraw}
-                      disabled={!wdAmount || parseFloat(wdAmount) <= 0}
-                      className="w-full py-2.5 rounded-xl font-bold text-[13px] text-white disabled:opacity-50 bg-orange-500">
-                      Withdraw from Treasury
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
+          ))}
+        </div>
 
-        {/* Top Tippers */}
-        {tips.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-black/[0.04] overflow-hidden">
-            <button onClick={() => setShowTippers(v => !v)} className="w-full flex items-center gap-2 px-4 py-3">
-              <Gift size={15} className="text-[#1C1C1E]" strokeWidth={2} />
-              <span className="font-semibold text-gray-800 text-[14px] flex-1 text-left">Top Tippers</span>
-              <span className="text-[10px] text-gray-400">{tips.length} tips</span>
-              {showTippers ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
-            </button>
-            <AnimatePresence>
-              {showTippers && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="divide-y divide-black/[0.04]">
-                    {stats.topContributors.slice(0, 5).map((c, i) => (
-                      <div key={c.zkHandle + i} className="flex items-center gap-3 px-4 py-2.5">
-                        <span className="text-[11px] font-bold text-gray-400 w-4">#{i + 1}</span>
-                        <span className="font-medium text-gray-800 text-[13px] flex-1 truncate">{c.zkHandle}</span>
-                        <span className="text-[12px] font-bold text-[#1C1C1E]">{c.amount} {c.token}</span>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <input
+            type="number"
+            min="0"
+            step="any"
+            placeholder="0.00"
+            value={depAmount}
+            onChange={e => setDepAmount(e.target.value)}
+            className="flex-1 bg-[#f2f4f7] rounded-xl px-4 py-3 text-[15px] font-mono font-bold text-[#15171c] outline-none border border-transparent focus:border-[#15171c] focus:bg-white transition-all placeholder:text-[#a3a9b4]"
+          />
+          <button
+            onClick={handleDeposit}
+            disabled={!depAmount || parseFloat(depAmount) <= 0}
+            className="px-6 py-3 rounded-xl font-semibold text-sm text-white bg-[#15171c] hover:bg-black disabled:opacity-40 transition-all active:scale-95 shadow-sm shrink-0"
+          >
+            Deposit
+          </button>
+        </div>
+      </div>
 
-        {/* Bounties */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2">
-              <Briefcase size={14} className="text-[#1C1C1E]" strokeWidth={2} />
-              <span className="font-semibold text-gray-800 text-[14px]">Open Bounties ({bounties.length})</span>
+      {/* ── WITHDRAW (ADMIN ONLY) ── */}
+      {isAdmin && (
+        <div className="bg-white rounded-2xl shadow-sm border border-black/[0.06] overflow-hidden">
+          <button
+            onClick={() => setShowWithdraw(v => !v)}
+            className="w-full flex items-center justify-between p-5 hover:bg-[#f2f4f7]/50 transition-colors text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <ArrowUpRight size={16} className="text-[#15171c]" strokeWidth={2} />
+              <span className="font-semibold text-[#15171c] text-[15px]">Withdraw Funds (Admin)</span>
             </div>
-            {isAdmin && (
-              <button
-                onClick={() => setShowBountyForm(v => !v)}
-                className="flex items-center gap-1 text-[11px] font-semibold text-[#1C1C1E] bg-[#1C1C1E]/10 px-3 py-1.5 rounded-full"
-              >
-                <Plus size={11} /> New Bounty
-              </button>
-            )}
-          </div>
+            {showWithdraw ? <ChevronUp size={16} className="text-[#727a88]" /> : <ChevronDown size={16} className="text-[#727a88]" />}
+          </button>
 
-          {/* Bounty creation form */}
           <AnimatePresence>
-            {showBountyForm && (
+            {showWithdraw && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                className="overflow-hidden"
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden border-t border-black/[0.04]"
               >
-                <div className="bg-white rounded-2xl border border-black/[0.06] p-4 space-y-2.5">
-                  <input type="text" placeholder="Bounty title *" value={bTitle} onChange={e => setBTitle(e.target.value)}
-                    className="w-full bg-[#f0f2f5] rounded-xl px-3 py-2.5 text-[13px] font-medium outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors" />
-                  <textarea placeholder="Description" value={bDesc} onChange={e => setBDesc(e.target.value)} rows={2}
-                    className="w-full bg-[#f0f2f5] rounded-xl px-3 py-2 text-[12px] outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors resize-none" />
+                <div className="p-5 space-y-3 bg-[#f7f8fa]">
                   <div className="flex gap-2">
-                    <input type="number" placeholder="Reward *" value={bReward} onChange={e => setBReward(e.target.value)}
-                      className="flex-1 bg-[#f0f2f5] rounded-xl px-3 py-2.5 text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors" />
                     {TOKENS.map(t => (
-                      <button key={t} onClick={() => setBToken(t)}
-                        className="px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all"
-                        style={{ background: bToken === t ? '#1C1C1E' : '#f0f2f5', color: bToken === t ? '#fff' : '#6B7280' }}>
+                      <button
+                        key={t}
+                        onClick={() => setWdToken(t)}
+                        className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all ${
+                          wdToken === t
+                            ? 'bg-[#15171c] text-white shadow-sm'
+                            : 'bg-white text-[#727a88] hover:text-[#15171c] border border-black/[0.04]'
+                        }`}
+                      >
                         {t}
                       </button>
                     ))}
                   </div>
-                  <input type="text" placeholder="Skills (comma separated, optional)" value={bSkills} onChange={e => setBSkills(e.target.value)}
-                    className="w-full bg-[#f0f2f5] rounded-xl px-3 py-2 text-[12px] outline-none border-2 border-transparent focus:border-[#1C1C1E] transition-colors" />
-                  <div className="flex gap-2">
-                    <button onClick={() => setShowBountyForm(false)}
-                      className="flex-1 py-2.5 rounded-xl font-semibold text-[12px] bg-[#f0f2f5] text-gray-600">
-                      Cancel
-                    </button>
-                    <button onClick={handleCreateBounty}
-                      disabled={!bTitle || !bReward}
-                      className="flex-1 py-2.5 rounded-xl font-bold text-[12px] text-white disabled:opacity-50"
-                      style={{ background: '#1C1C1E' }}>
-                      Post Bounty
-                    </button>
-                  </div>
+
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Amount to withdraw"
+                    value={wdAmount}
+                    onChange={e => setWdAmount(e.target.value)}
+                    className="w-full bg-white rounded-xl px-4 py-3 text-[14px] font-mono font-bold text-[#15171c] outline-none border border-black/[0.06] focus:border-[#15171c] transition-all"
+                  />
+
+                  <input
+                    type="text"
+                    placeholder="Reason or proposal reference (optional)"
+                    value={wdNote}
+                    onChange={e => setWdNote(e.target.value)}
+                    className="w-full bg-white rounded-xl px-4 py-3 text-[13px] text-[#15171c] outline-none border border-black/[0.06] focus:border-[#15171c] transition-all"
+                  />
+
+                  <button
+                    onClick={handleWithdraw}
+                    disabled={!wdAmount || parseFloat(wdAmount) <= 0}
+                    className="w-full py-3 rounded-xl font-semibold text-sm text-white bg-[#15171c] hover:bg-black disabled:opacity-40 transition-all active:scale-95 shadow-sm"
+                  >
+                    Confirm Withdrawal
+                  </button>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
+        </div>
+      )}
 
-          {bounties.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-black/[0.06] py-8 flex flex-col items-center gap-2 text-gray-400">
-              <Briefcase size={24} strokeWidth={1.5} className="text-gray-300" />
-              <span className="text-[12px]">No open bounties</span>
+      {/* ── TOP TIPPERS ACCORDION ── */}
+      {tips.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-black/[0.06] overflow-hidden">
+          <button
+            onClick={() => setShowTippers(v => !v)}
+            className="w-full flex items-center justify-between p-5 hover:bg-[#f2f4f7]/50 transition-colors text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <Gift size={16} className="text-[#15171c]" strokeWidth={2} />
+              <span className="font-semibold text-[#15171c] text-[15px]">Top Supporters</span>
+              <span className="text-[11px] font-semibold bg-[#f2f4f7] text-[#727a88] px-2.5 py-0.5 rounded-full">
+                {tips.length} tips
+              </span>
             </div>
-          ) : (
-            <div className="space-y-2">
-              {bounties.map(b => (
-                <BountyCard
-                  key={b.id}
-                  bounty={b}
-                  onClaim={() => handleClaimBounty(b.id)}
-                />
-              ))}
-            </div>
+            {showTippers ? <ChevronUp size={16} className="text-[#727a88]" /> : <ChevronDown size={16} className="text-[#727a88]" />}
+          </button>
+
+          <AnimatePresence>
+            {showTippers && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden border-t border-black/[0.04]"
+              >
+                <div className="divide-y divide-black/[0.04]">
+                  {stats.topContributors.slice(0, 5).map((c, i) => (
+                    <div key={c.zkHandle + i} className="flex items-center justify-between px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="w-5 h-5 rounded-full bg-[#f2f4f7] flex items-center justify-center text-[11px] font-mono font-bold text-[#727a88]">
+                          {i + 1}
+                        </span>
+                        <span className="font-mono text-[13px] font-semibold text-[#15171c]">{c.zkHandle}</span>
+                      </div>
+                      <span className="text-[13px] font-mono font-bold text-[#15171c]">{c.amount} {c.token}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* ── BOUNTIES SECTION ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Briefcase size={16} className="text-[#15171c]" strokeWidth={2} />
+            <h3 className="font-semibold text-[#15171c] text-[15px]">
+              Open Bounties ({bounties.length})
+            </h3>
+          </div>
+          {isAdmin && (
+            <button
+              onClick={() => setShowBountyForm(v => !v)}
+              className="flex items-center gap-1.5 text-xs font-semibold bg-[#15171c] hover:bg-black text-white px-3.5 py-2 rounded-xl transition-all active:scale-95 shadow-sm"
+            >
+              <Plus size={14} /> New Bounty
+            </button>
           )}
         </div>
 
-        {/* Aztec attribution */}
-        <div className="flex items-center justify-center gap-1.5 py-1">
-          <Shield size={10} className="text-gray-300" />
-          <span className="text-[10px] text-gray-400">
-            Shielded by <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" className="text-[#1C1C1E] font-medium">Aztec Network</a>
-          </span>
-        </div>
+        {/* Bounty creation form */}
+        <AnimatePresence>
+          {showBountyForm && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-white rounded-2xl border border-black/[0.06] p-5 shadow-sm space-y-3">
+                <input
+                  type="text"
+                  placeholder="Bounty title (e.g. Audit smart contract, Create landing illustration)"
+                  value={bTitle}
+                  onChange={e => setBTitle(e.target.value)}
+                  className="w-full bg-[#f2f4f7] rounded-xl px-4 py-2.5 text-[14px] font-semibold text-[#15171c] outline-none border border-transparent focus:border-[#15171c] focus:bg-white transition-all placeholder:text-[#a3a9b4]"
+                />
+                <textarea
+                  placeholder="Full scope and specifications..."
+                  value={bDesc}
+                  onChange={e => setBDesc(e.target.value)}
+                  rows={3}
+                  className="w-full bg-[#f2f4f7] rounded-xl px-4 py-2.5 text-[13px] text-[#15171c] outline-none border border-transparent focus:border-[#15171c] focus:bg-white transition-all resize-none placeholder:text-[#a3a9b4]"
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="Reward amount"
+                    value={bReward}
+                    onChange={e => setBReward(e.target.value)}
+                    className="flex-1 bg-[#f2f4f7] rounded-xl px-4 py-2.5 text-[14px] font-mono font-bold text-[#15171c] outline-none border border-transparent focus:border-[#15171c] focus:bg-white transition-all placeholder:text-[#a3a9b4]"
+                  />
+                  {TOKENS.map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setBToken(t)}
+                      className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                        bToken === t
+                          ? 'bg-[#15171c] text-white shadow-sm'
+                          : 'bg-[#f2f4f7] text-[#727a88] hover:text-[#15171c]'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  placeholder="Required skills (e.g. TypeScript, Solidity, Noir) — comma separated"
+                  value={bSkills}
+                  onChange={e => setBSkills(e.target.value)}
+                  className="w-full bg-[#f2f4f7] rounded-xl px-4 py-2 text-[12px] text-[#15171c] outline-none border border-transparent focus:border-[#15171c] focus:bg-white transition-all placeholder:text-[#a3a9b4]"
+                />
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    onClick={() => setShowBountyForm(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-[#727a88] hover:bg-black/5"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateBounty}
+                    disabled={!bTitle || !bReward}
+                    className="px-5 py-2 rounded-xl font-semibold text-xs text-white bg-[#15171c] hover:bg-black disabled:opacity-40 transition-all active:scale-95 shadow-sm"
+                  >
+                    Publish Bounty
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {bounties.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-black/[0.06] py-12 flex flex-col items-center justify-center gap-2 text-center p-6 shadow-sm">
+            <div className="w-12 h-12 rounded-2xl bg-[#f2f4f7] flex items-center justify-center mb-1 text-[#15171c]">
+              <Briefcase size={22} strokeWidth={1.75} />
+            </div>
+            <h4 className="text-[15px] font-semibold text-[#15171c]">No active bounties</h4>
+            <p className="text-[13px] text-[#727a88] max-w-xs">
+              Community bounties allow members to fund and earn from tasks privately.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {bounties.map(b => (
+              <BountyCard
+                key={b.id}
+                bounty={b}
+                onClaim={() => handleClaimBounty(b.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── FOOTER PROTOCOL NOTICE ── */}
+      <div className="flex items-center justify-center gap-2 py-3 text-[12px] text-[#727a88]">
+        <Shield size={13} className="text-[#15171c]" />
+        <span>Confidential balances powered by Aztec Network zero-knowledge proofs.</span>
       </div>
 
       {/* Toast */}
@@ -460,4 +566,3 @@ export function ZkCommunityTreasury({
     </div>
   );
 }
-

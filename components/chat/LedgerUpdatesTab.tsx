@@ -1,19 +1,25 @@
 'use client';
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ArrowLeft, Plus, Camera, Edit3, Eye, Clock, Users, Globe,
-  Lock, ChevronRight, Check, Trash2
-} from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { CircleDot, Plus, Trash2, Info } from 'lucide-react';
+import { toast } from 'sonner';
+import { PeerAvatar, SectionLabel, EmptyState, PrimaryButton, SecondaryButton, IconButton, Sheet, shortAddr } from './ui/kit';
 
-interface StatusUpdate {
+/*
+ * Updates: short text statuses that last 24 hours.
+ *
+ * Server rules live in app/api/chat/stories/route.ts: you see your own
+ * statuses and those of people who saved you as a contact. Statuses are
+ * stored as plain text on our server, so the composer says they are not end
+ * to end encrypted.
+ */
+
+interface Story {
   id: string;
-  text: string;
-  emoji?: string;
-  avatarUrl?: string;
-  createdAt: number;
-  expiresAt: number;
-  privacy: 'everyone' | 'contacts' | 'except';
+  authorAddress: string;
+  contentUrl: string;
+  mediaType: string;
+  createdAt: string | number;
+  expiresAt: string | number;
 }
 
 interface LedgerUpdatesTabProps {
@@ -23,260 +29,190 @@ interface LedgerUpdatesTabProps {
   onOpenChat: (address: string) => void;
 }
 
-const AVATAR_COLORS = ['#2754d6','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55'];
-const avatarColor = (addr: string) => AVATAR_COLORS[parseInt(addr?.slice(2,4) || '0', 16) % AVATAR_COLORS.length];
-const shortAddr = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
-const initials = (name: string, addr: string) => name ? name.slice(0,2).toUpperCase() : addr ? addr.slice(2,4).toUpperCase() : '??';
+const MAX = 700;
+
+const ago = (ts: string | number) => {
+  const diff = Date.now() - new Date(ts).getTime();
+  if (diff < 60_000) return 'Just now';
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min ago`;
+  return `${Math.floor(diff / 3_600_000)} h ago`;
+};
 
 export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, myName, contacts, onOpenChat }) => {
-  const [myStatus, setMyStatus] = useState<StatusUpdate[]>([]);
-  const [contactStatuses, setContactStatuses] = useState<StatusUpdate[]>([]);
-  const [showComposer, setShowComposer] = useState(false);
-  const [draftText, setDraftText] = useState('');
-  const [draftPrivacy, setDraftPrivacy] = useState<'everyone' | 'contacts' | 'except'>('contacts');
-  const [showPrivacyMenu, setShowPrivacyMenu] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [mine, setMine] = useState<Story[]>([]);
+  const [others, setOthers] = useState<Story[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [composer, setComposer] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [posting, setPosting] = useState(false);
 
-  React.useEffect(() => {
-    fetchUpdates();
-  }, [myAddress]);
+  const nameOf = (addr: string) => contacts.find(c => c.peerAddress.toLowerCase() === addr.toLowerCase())?.name || shortAddr(addr);
 
-  const fetchUpdates = async () => {
-    setIsLoading(true);
+  const load = useCallback(async () => {
+    if (!myAddress) return;
+    setLoading(true);
     try {
-      const res = await fetch('/api/chat/stories', { headers: { 'x-web3-address': myAddress }});
+      const res = await fetch('/api/chat/stories', { credentials: 'include', cache: 'no-store' });
       if (res.ok) {
         const { stories } = await res.json();
-        const mine = stories.filter((u: any) => u.authorAddress?.toLowerCase() === myAddress.toLowerCase());
-        const others = stories.filter((u: any) => u.authorAddress?.toLowerCase() !== myAddress.toLowerCase());
-        setMyStatus(mine);
-        setContactStatuses(others);
+        const me = myAddress.toLowerCase();
+        setMine((stories || []).filter((s: Story) => s.authorAddress?.toLowerCase() === me));
+        setOthers((stories || []).filter((s: Story) => s.authorAddress?.toLowerCase() !== me));
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
+      /* the empty state covers it */
     }
-    setIsLoading(false);
-  };
+    setLoading(false);
+  }, [myAddress]);
 
-  const postStatus = async (contentUrl?: string, mediaType?: string) => {
-    if (!contentUrl && !draftText.trim()) return;
+  useEffect(() => { load(); }, [load]);
+
+  const post = async () => {
+    const text = draft.trim();
+    if (!text || posting) return;
+    setPosting(true);
     try {
       const res = await fetch('/api/chat/stories', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
-        body: JSON.stringify({
-          contentUrl: contentUrl || draftText.trim(),
-          mediaType: mediaType || 'text',
-          privacy: draftPrivacy
-        })
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contentUrl: text, mediaType: 'text' }),
       });
-      if (res.ok) {
-        const { story } = await res.json();
-        setMyStatus(prev => [story, ...prev]);
-        setDraftText('');
-        setShowComposer(false);
-      }
-    } catch (e) {
-      console.error(e);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Could not post');
+      setMine(prev => [data.story, ...prev]);
+      setDraft('');
+      setComposer(false);
+      toast.success('Status posted');
+    } catch (e: any) {
+      toast.error(e?.message === 'Too many active statuses' ? 'You have 30 active statuses. Delete one first.' : 'Could not post your status. Try again.');
+    }
+    setPosting(false);
+  };
+
+  const remove = async (id: string) => {
+    const before = mine;
+    setMine(prev => prev.filter(s => s.id !== id));
+    try {
+      const res = await fetch(`/api/chat/stories?id=${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'include' });
+      if (!res.ok) throw new Error();
+    } catch {
+      setMine(before);
+      toast.error('Could not delete the status');
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const isVideo = file.type.startsWith('video/');
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const dataUrl = ev.target?.result as string;
-      await postStatus(dataUrl, isVideo ? 'video' : 'image');
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const formatTime = (tsStr: string | number) => {
-    const ts = new Date(tsStr).getTime();
-    const diff = Date.now() - ts;
-    if (diff < 60000) return 'Just now';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-    return 'Yesterday';
-  };
-
-  const privacyLabel = {
-    everyone: 'Everyone',
-    contacts: 'My Contacts',
-    except: 'Contacts Except...'
-  };
+  // Group other people's statuses by author, newest first.
+  const byAuthor = others.reduce<Record<string, Story[]>>((acc, s) => {
+    const k = s.authorAddress.toLowerCase();
+    (acc[k] ||= []).push(s);
+    return acc;
+  }, {});
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F2F2F7]">
-      {/* My Status */}
-      <div className="bg-white mb-6">
-        <div className="px-4 py-2">
-          <p className="text-[13px] font-semibold uppercase tracking-wider text-[#6D6D72]">My Status</p>
-        </div>
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-black/[0.06]">
-          {/* Avatar with + button */}
-          <div className="relative shrink-0">
-            <div
-              className="w-[54px] h-[54px] rounded-full flex items-center justify-center text-white font-bold text-xl overflow-hidden"
-              style={{ background: avatarColor(myAddress) }}
+    <div className="flex-1 overflow-y-auto flex flex-col bg-white">
+      <div className="px-2 pt-3">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-xl">
+          <span className="relative">
+            <PeerAvatar address={myAddress} name={myName} size={48} />
+            <button
+              type="button"
+              onClick={() => setComposer(true)}
+              aria-label="New status"
+              className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#15171c] text-white ring-2 ring-white flex items-center justify-center"
             >
-              {myStatus.length > 0 && myStatus[0].avatarUrl ? (
-                <img src={myStatus[0].avatarUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                initials(myName, myAddress)
-              )}
-            </div>
-            {myStatus.length === 0 ? (
-              <button
-                onClick={() => setShowComposer(true)}
-                className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#2754d6] rounded-full border-2 border-white flex items-center justify-center"
-              >
-                <Plus size={14} className="text-white" />
-              </button>
-            ) : (
-              <div className="absolute inset-0 rounded-full ring-2 ring-[#34C759] ring-offset-2" />
-            )}
-          </div>
-          <div className="flex-1">
-            <p className="text-[16px] font-semibold text-[#1C1C1E]">My Status</p>
-            <p className="text-[13px] text-[#8E8E93]">
-              {myStatus.length === 0 ? 'Tap to add status update' : `${myStatus.length} update${myStatus.length !== 1 ? 's' : ''}`}
-            </p>
-          </div>
-          <button onClick={() => setShowComposer(true)} className="text-[#2754d6] p-2">
-            <Edit3 size={18} />
-          </button>
-        </div>
-
-        {/* My status list */}
-        {myStatus.map(s => (
-          <div key={s.id} className="flex items-start gap-3 px-4 py-3 border-b border-black/[0.06]">
-            <div className="w-1 h-1 rounded-full bg-[#34C759] mt-2.5 shrink-0" />
-            <div className="flex-1">
-              <p className="text-[15px] text-[#1C1C1E]">{s.text}</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                <Clock size={11} className="text-[#8E8E93]" />
-                <p className="text-[12px] text-[#8E8E93]">{formatTime(s.createdAt)}</p>
-                {s.privacy === 'everyone' ? <Globe size={11} className="text-[#8E8E93]" /> : s.privacy === 'contacts' ? <Users size={11} className="text-[#8E8E93]" /> : <Lock size={11} className="text-[#8E8E93]" />}
-              </div>
-            </div>
-            <button onClick={() => setMyStatus(prev => prev.filter(x => x.id !== s.id))} className="p-1 text-[#FF3B30]">
-              <Trash2 size={15} />
+              <Plus size={12} strokeWidth={2.4} />
             </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Recent Updates */}
-      <div className="bg-white">
-        <div className="px-4 py-2">
-          <p className="text-[13px] font-semibold uppercase tracking-wider text-[#6D6D72]">Recent Updates</p>
-        </div>
-        {contactStatuses.length === 0 ? (
-          <div className="py-12 flex flex-col items-center gap-3 px-8">
-            <div className="w-16 h-16 rounded-full bg-[#F2F2F7] flex items-center justify-center">
-              <Eye size={28} className="text-[#8E8E93]" />
-            </div>
-            <p className="text-[15px] font-semibold text-[#1C1C1E] text-center">No Recent Updates</p>
-            <p className="text-[13px] text-[#8E8E93] text-center">Status updates from your contacts will appear here. They disappear after 24 hours.</p>
-          </div>
-        ) : contactStatuses.map((cs: any) => (
-          <button
-            key={cs.id}
-            onClick={() => onOpenChat(cs.authorAddress)}
-            className="w-full flex items-center gap-3 px-4 py-3 border-b border-black/[0.06] hover:bg-[#F2F2F7] text-left"
-          >
-            <div className="w-[54px] h-[54px] rounded-full ring-2 ring-[#2754d6] ring-offset-2 flex items-center justify-center text-white font-bold overflow-hidden" style={{ background: avatarColor(cs.authorAddress) }}>
-              {cs.avatarUrl ? (
-                <img src={cs.avatarUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                initials('', cs.authorAddress)
-              )}
-            </div>
-            <div className="flex-1">
-              <p className="text-[16px] font-semibold text-[#1C1C1E]">{shortAddr(cs.authorAddress)}</p>
-              <p className="text-[13px] text-[#8E8E93] truncate">{cs.mediaType === 'image' || cs.mediaType === 'video' ? '📷 Media' : cs.contentUrl}</p>
-            </div>
-            <span className="text-[12px] text-[#8E8E93]">{formatTime(cs.createdAt)}</span>
+          </span>
+          <button type="button" onClick={() => setComposer(true)} className="flex-1 min-w-0 text-left">
+            <span className="block text-[15.5px] font-medium text-[#15171c]">My status</span>
+            <span className="block text-[13.5px] text-[#727a88]">
+              {mine.length === 0 ? 'Share a short update for 24 hours' : `${mine.length} active ${mine.length === 1 ? 'update' : 'updates'}`}
+            </span>
           </button>
-        ))}
+        </div>
+        {mine.length > 0 && (
+          <ul className="pl-[68px] pr-2 pb-1">
+            {mine.map(s => (
+              <li key={s.id} className="flex items-start gap-2 py-2 border-t border-[#eceef2] first:border-t-0">
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[14.5px] text-[#15171c] whitespace-pre-wrap break-words">{s.contentUrl}</span>
+                  <span className="block text-[12.5px] text-[#a3a9b4] mt-0.5">{ago(s.createdAt)}</span>
+                </span>
+                <IconButton label="Delete status" onClick={() => remove(s.id)} className="text-[#727a88] hover:text-[#d93036]">
+                  <Trash2 size={16} strokeWidth={1.8} />
+                </IconButton>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
-      {/* Status Composer Modal */}
-      <AnimatePresence>
-        {showComposer && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end"
-            onClick={(e) => { if (e.target === e.currentTarget) setShowComposer(false); }}
-          >
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="w-full bg-white rounded-t-3xl p-6 flex flex-col gap-4"
-            >
-              <div className="flex items-center justify-between">
-                <button onClick={() => setShowComposer(false)} className="text-[#2754d6] text-[16px]">Cancel</button>
-                <h3 className="text-[17px] font-semibold">New Status</h3>
-                <button onClick={() => postStatus()} disabled={!draftText.trim()} className="text-[#2754d6] text-[16px] font-semibold disabled:opacity-40">Post</button>
-              </div>
+      <SectionLabel>Recent</SectionLabel>
+      {loading ? (
+        <p className="px-4 py-6 text-[14px] text-[#a3a9b4]">Loading</p>
+      ) : Object.keys(byAuthor).length === 0 ? (
+        <EmptyState
+          icon={<CircleDot size={20} strokeWidth={1.8} />}
+          title="No updates yet"
+          text="When people who saved you as a contact share a status, it shows up here for 24 hours."
+        />
+      ) : (
+        <ul className="px-2">
+          {Object.entries(byAuthor).map(([author, list]) => (
+            <li key={author}>
+              <button
+                type="button"
+                onClick={() => onOpenChat(author)}
+                className="w-full flex items-start gap-3 px-2 py-2.5 rounded-xl hover:bg-[#f7f8fa] text-left transition-colors"
+              >
+                <span className="rounded-full p-[2px] ring-2 ring-[#15171c] shrink-0">
+                  <PeerAvatar address={author} name={nameOf(author)} size={42} />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="text-[15.5px] font-medium text-[#15171c] truncate">{nameOf(author)}</span>
+                    <span className="text-[12.5px] text-[#a3a9b4] shrink-0">{ago(list[0].createdAt)}</span>
+                  </span>
+                  <span className="block text-[14px] text-[#4a505c] mt-0.5 line-clamp-2">
+                    {list[0].mediaType === 'text' ? list[0].contentUrl : list[0].mediaType === 'video' ? 'Video' : 'Photo'}
+                  </span>
+                  {list.length > 1 && <span className="block text-[12.5px] text-[#a3a9b4] mt-0.5">and {list.length - 1} more</span>}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
-              <textarea
-                autoFocus
-                value={draftText}
-                onChange={e => setDraftText(e.target.value)}
-                placeholder="What's on your mind?"
-                maxLength={700}
-                className="w-full min-h-[120px] text-[16px] text-[#1C1C1E] placeholder:text-[#8E8E93] resize-none outline-none border border-black/10 rounded-xl p-3 focus:ring-2 focus:ring-[#2754d6]/20"
-              />
-              
-              <div className="flex items-center justify-between mt-2">
-                <div className="relative">
-                  <input type="file" accept="image/*,video/*" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                  <button className="flex items-center gap-2 text-[#2754d6] bg-[#2754d6]/10 px-4 py-2 rounded-xl">
-                    <Camera size={18} />
-                    <span className="text-[14px] font-semibold">Photo/Video</span>
-                  </button>
-                </div>
-                
-                <button
-                  onClick={() => setShowPrivacyMenu(m => !m)}
-                  className="flex items-center gap-2 text-[#2754d6] bg-[#2754d6]/10 px-4 py-2 rounded-xl"
-                >
-                  {draftPrivacy === 'everyone' ? <Globe size={16} /> : draftPrivacy === 'contacts' ? <Users size={16} /> : <Lock size={16} />}
-                  <span className="text-[14px] font-semibold">{privacyLabel[draftPrivacy]}</span>
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-
-              {showPrivacyMenu && (
-                <div className="flex flex-col gap-1 bg-[#F2F2F7] rounded-xl p-2">
-                  {(['everyone', 'contacts', 'except'] as const).map(opt => (
-                    <button key={opt} onClick={() => { setDraftPrivacy(opt); setShowPrivacyMenu(false); }}
-                      className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-left ${draftPrivacy === opt ? 'bg-white' : ''}`}
-                    >
-                      <span className="text-[15px] text-[#1C1C1E]">{privacyLabel[opt]}</span>
-                      {draftPrivacy === opt && <Check size={16} className="text-[#2754d6]" />}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <p className="text-[12px] text-[#8E8E93]">
-                Status updates are visible to your selected audience and disappear after 24 hours. They are end to end encrypted.
-              </p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Sheet
+        open={composer}
+        onClose={() => setComposer(false)}
+        title="New status"
+        subtitle="Visible for 24 hours"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <SecondaryButton onClick={() => setComposer(false)}>Cancel</SecondaryButton>
+            <PrimaryButton onClick={post} disabled={!draft.trim() || posting}>{posting ? 'Posting' : 'Post'}</PrimaryButton>
+          </div>
+        }
+      >
+        <div className="px-5 pb-4">
+          <textarea
+            autoFocus
+            value={draft}
+            onChange={e => setDraft(e.target.value.slice(0, MAX))}
+            placeholder="What would you like to share?"
+            rows={5}
+            className="w-full text-[15.5px] text-[#15171c] placeholder:text-[#a3a9b4] resize-none outline-none border border-[#d9dde3] rounded-xl p-3 focus:border-[#15171c] focus:ring-2 focus:ring-[#15171c]/10"
+          />
+          <p className="text-[12.5px] text-[#a3a9b4] text-right tabular-nums mt-1">{draft.length} / {MAX}</p>
+          <p className="mt-3 flex items-start gap-2 text-[13.5px] text-[#4a505c] leading-relaxed">
+            <Info size={15} strokeWidth={1.9} className="mt-[2px] shrink-0 text-[#727a88]" aria-hidden="true" />
+            People who saved you as a contact can see it. Statuses are stored on our server and are not end to end encrypted.
+          </p>
+        </div>
+      </Sheet>
     </div>
   );
 };
-

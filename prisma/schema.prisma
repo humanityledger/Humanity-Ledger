@@ -1635,10 +1635,57 @@ model Community {
   members     CommunityMember[]
   channels    CommunityChannel[]
   permissions CommunityPermission?
+  apps        CommunityApp[]
   // messages CommunityMessage[]
 
   @@index([joinCode])
   @@index([ownerAddress])
+}
+
+// Community apps: small tools a community runs inside its own space (a poll,
+// a sign-up sheet, a shared list). Each app is one HTML document served from
+// /api/chat/communities/[id]/apps/[appId]/frame into a sandboxed iframe with
+// no network access. Its only memory is CommunityAppEntry, through the bridge
+// in lib/community-apps/sdk.ts. Both tables are readable by the server: the
+// interface says so.
+model CommunityApp {
+  id             String   @id @default(cuid())
+  communityId    String
+  creatorAddress String
+  title          String
+  summary        String   @default("")
+  prompt         String   @default("") @db.Text
+  html           String   @db.Text
+  status         String   @default("draft") // draft | published
+  version        Int      @default(1)
+  source         String   @default("model") // model | template
+  templateId     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  community Community          @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  entries   CommunityAppEntry[]
+
+  @@index([communityId, status])
+  @@index([creatorAddress])
+}
+
+// scope is "shared" (any member may write) or a member's lowercase address
+// (only that member may write). A null value is a deletion; rows are kept as
+// tombstones so a client that syncs with ?since= also learns about deletions.
+model CommunityAppEntry {
+  id        String   @id @default(cuid())
+  appId     String
+  scope     String
+  key       String
+  value     Json?
+  updatedBy String   // lowercase address of the last writer, set by the server
+  updatedAt DateTime @updatedAt
+
+  app CommunityApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@unique([appId, scope, key])
+  @@index([appId, updatedAt])
 }
 
 model CommunityMember {
@@ -1690,6 +1737,7 @@ model CommunityPost {
   
   @@index([communityId])
   @@index([authorAddress])
+  @@index([communityId, createdAt])
 }
 
 
@@ -1780,6 +1828,8 @@ model DirectMessage {
 
   @@index([recipient, delivered])
   @@index([sender])
+  @@index([recipient, createdAt])
+  @@index([sender, createdAt])
 }
 
 

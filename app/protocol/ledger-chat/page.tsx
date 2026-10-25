@@ -3,72 +3,78 @@ import { AztecDocPage } from '@/components/landing/AztecDocPage';
 export default function LedgerChatPage() {
   return (
     <AztecDocPage
-      eyebrow="Protocol · Ledger Chat"
-      title="Sovereign Decentralized Messaging"
-      subtitle="Ledger Chat is the application layer of the Humanity Ledger protocol, built as a terminal interface for sovereign, uninterceptable communications and zero-knowledge asset transfers."
+      eyebrow="Protocol, Ledger Chat"
+      title="How Ledger Chat protects your messages"
+      subtitle="Ledger Chat is a private messenger where your wallet is your account. This page says exactly what is protected, how, and what is not."
       sections={[
         {
           id: 'architecture',
-          title: 'The Dual-Network Architecture',
+          title: 'Accounts and transport',
           paragraphs: [
-            'Ledger Chat operates fundamentally differently from traditional messaging applications like Signal or Telegram. It leverages a dual-network architecture: XMTP (Extensible Message Transport Protocol) for ephemeral, high-throughput message routing, and the Aztec L2 rollup for zero-knowledge state settlement and financial operations.',
-            'This segregation of concerns allows Ledger Chat to provide instant, decentralized peer-to-peer communication without congesting the blockchain, while ensuring that all identity assertions and Quantum Dot transfers benefit from the absolute security and finality of Ethereum L1 via the Aztec prover network.',
+            'Your account is your Ethereum wallet. You sign in by signing a message with it, so there is no phone number and no password to leak.',
+            'Direct messages travel over XMTP, a decentralized messaging network. Each device that signs in gets its own XMTP installation, which is why using another device means signing in with the same wallet there.',
           ],
         },
         {
           id: 'encryption',
-          title: 'Cryptographic Forward Secrecy',
+          title: 'Message encryption',
           paragraphs: [
-            'Every conversation established in Ledger Chat utilizes the Double Ratchet Algorithm implemented over X25519 elliptic curves, providing perfect forward secrecy and post-compromise security. The key derivation function (KDF) rotates the symmetric keys for every single message sent.',
-            'Because the application is entirely client-side, the private keys necessary to decrypt the conversation exist only in the volatile memory of the local device. The decentralised relay network (XMTP) acts purely as a blind packet router, incapable of inspecting metadata, payloads, or the social graph of interacting peers.',
+            'XMTP encrypts direct messages with MLS, Messaging Layer Security (RFC 9420), using the cipher suite MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519. MLS gives forward secrecy and post compromise security. Only the people in the conversation hold the keys.',
+            'Every chat shows an encryption notice. Tap it to see the protocol and a safety number that both people can compare to confirm they are talking to the right person.',
           ],
           bullets: [
-            'X25519 Ephemeral Handshakes: Secure peer discovery without trusting a central authority.',
-            'Double Ratchet Ratcheting: Continuous key rotation guarantees forward secrecy.',
-            'Metadata Obfuscation: Sender/receiver pairings are shielded at the network layer.',
+            'Message content is end to end encrypted when it goes over XMTP.',
+            'If XMTP cannot deliver a message, it can go through our server instead. Those messages are not end to end encrypted and are marked in the chat.',
+            'Metadata is not hidden. The network can see that an account is active and when.',
           ],
           diagram: {
-            caption: "Figure 1: E2EE Messaging Architecture",
+            caption: 'Figure 1: How a direct message travels',
             chart: `graph TD
-    A[Alice's Device] -->|1. Generate ECDH Key| B(Local IndexedDB)
-    A -->|2. Encrypt Payload| C[XMTP Decentralized Network]
-    C -->|3. Route Ciphertext| D[Bob's Device]
-    D -->|4. Decrypt via Double Ratchet| E(Local IndexedDB)
-    
+    A[Alice's device] -->|1. Encrypt with MLS| C[XMTP network]
+    C -->|2. Deliver ciphertext| D[Bob's device]
+    D -->|3. Decrypt with MLS keys| E[Bob reads the message]
+
     style A fill:#ffffff,stroke:#000000,stroke-width:2px
     style D fill:#ffffff,stroke:#000000,stroke-width:2px
-    style C fill:#f0f0f0,stroke:#666666,stroke-dasharray: 5 5`
+    style C fill:#f0f0f0,stroke:#666666,stroke-dasharray: 5 5`,
           },
         },
         {
           id: 'zk-transfers',
-          title: 'In-Band Quantum Dot Transfers',
+          title: 'Private payments are a demo',
           paragraphs: [
-            'Ledger Chat integrates seamlessly with the Humanity Ledger Registry smart contracts on Aztec. Users can transfer Quantum Dots (QDs) directly within the chat interface. These transactions are compiled into zero-knowledge proofs locally using the Noir domain-specific language.',
-            'When a transfer occurs, the recipient receives a cryptographic commitment representing the new UTXO (Unspent Transaction Output) balance. The sender generates a nullifier to destroy their spent UTXO. Because these operations occur inside the chat terminal, the user experience is identical to sending a text message, yet the underlying settlement provides cryptographic privacy guarantees that not even the protocol operators can breach.',
+            'Shielded payments in the chat use a demo of the Aztec zero knowledge flow. Balances are simulated on your device and no real funds move. Every payment message in the chat says so.',
+            'We are building towards real private transfers on Aztec. Until that works end to end, we label it as a demo and do not describe it as live.',
           ],
         },
         {
           id: 'webrtc',
-          title: 'Decentralized Voice & Video (WebRTC)',
+          title: 'Voice and video calls',
           paragraphs: [
-            'Ledger Chat supports sovereign peer-to-peer voice and video calls. The connection establishment completely circumvents centralized signaling servers by utilizing the XMTP relay to exchange WebRTC Session Description Protocol (SDP) offers, answers, and ICE candidates.',
-            'Once the ICE negotiation concludes, the media stream is routed directly between the communicating devices over an encrypted DTLS/SRTP channel. This guarantees that real-time communications are physically uninterceptable by any intermediary infrastructure.',
+            'Calls use WebRTC. Media is encrypted between the two devices with DTLS SRTP. A signaling server helps the two devices find each other, and it never sees the audio or video.',
+            'With IP masking on, media goes through a relay server so the other person does not see your IP address. The media stays encrypted on that path.',
           ],
           diagram: {
-            caption: "Figure 2: Decentralized WebRTC Signaling",
+            caption: 'Figure 2: How a call connects',
             chart: `sequenceDiagram
-    participant A as Peer A (Caller)
-    participant X as XMTP Network (E2EE)
-    participant B as Peer B (Receiver)
+    participant A as Caller
+    participant S as Signaling server
+    participant B as Receiver
 
-    A->>X: Send __CALL_OFFER__ (SDP)
-    X->>B: Deliver Encrypted Offer
-    B->>X: Send __CALL_ANSWER__ (SDP)
-    X->>A: Deliver Encrypted Answer
-    A<-->>B: Direct P2P Media Stream (DTLS/SRTP)
-    Note over A,B: XMTP is bypassed once media connects`
-          }
+    A->>S: Offer (connection details only)
+    S->>B: Offer
+    B->>S: Answer
+    S->>A: Answer
+    A<-->>B: Audio and video, encrypted with DTLS SRTP
+    Note over A,B: The signaling server never carries media`,
+          },
+        },
+        {
+          id: 'limits',
+          title: 'What is not covered yet',
+          paragraphs: [
+            'Community posts are stored on our server and are not end to end encrypted. Group and voice room calls are not available yet.',
+          ],
         },
       ]}
     />

@@ -27,6 +27,10 @@ export const RELEASES: Release[] = [
     title: "Not yet released",
     note: "In the repository, waiting for the next deployment.",
     changes: [
+      { kind: "new", text: "A legal notice, and a content and copyright page explaining how to report illegal content and how our code is licensed." },
+      { kind: "improved", text: "Terms, Privacy Policy, Cookie Policy and risk disclosure rewritten to match the code: who provides the service, every cookie we set, and what the private payments wallet can and cannot do." },
+      { kind: "improved", text: "Older pages that described a token, open source licensing or guarantees the product does not offer now lead to the matching documentation page." },
+      { kind: "security", text: "Every route that sold, credited, airdropped or transferred Quantum Dots (QD) now refuses all requests. Humanity Ledger has no token, and the in app screen that took ETH for QD has been removed." },
       { kind: "new", text: "A redesigned home page, sign in page and documentation site, with search across every page." },
       { kind: "new", text: "Documentation rewritten to describe the product as it works today, including the findings that are still open." },
       { kind: "security", text: "Signing in now follows EIP-4361 throughout, with a nonce issued and checked by the server." },

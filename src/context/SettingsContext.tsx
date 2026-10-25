@@ -259,8 +259,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
                 try {
                     const local = localStorage.getItem('humanid_settings_v3');
                     if (local) {
-                        const parsed = JSON.parse(local);
-                        applySettings(parsed);
+                        // Validate first: an old or corrupt copy must not reach the UI.
+                        const { validateUserSettings } = await import('@/lib/settings-validation');
+                        const checked = validateUserSettings(JSON.parse(local));
+                        if (checked.success) applySettings(checked.data);
                     }
                 } catch (e) {
                     console.error('[Legendary-Sync] Local fallback failed:', e);

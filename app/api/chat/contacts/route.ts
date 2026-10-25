@@ -51,11 +51,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden: Cannot modify contacts for another address' }, { status: 403 });
     }
 
+    // One request used to upsert any number of rows, with any string as an
+    // address. Bound it and keep only real addresses.
+    const clean: string[] = Array.from(new Set<string>(
+      peers.filter((p: unknown): p is string => typeof p === 'string' && /^0x[0-9a-fA-F]{40}$/.test(p))
+        .map((p: string) => p.toLowerCase())
+        .filter((p: string) => p !== callerAddress),
+    )).slice(0, 200);
+    if (clean.length === 0) return NextResponse.json({ success: true });
+
     const owner = callerAddress;
 
     await prisma.$transaction(
-      peers.map((peerAddr: string) => {
-        const peer = peerAddr.toLowerCase();
+      clean.map((peer: string) => {
         return prisma.chatContact.upsert({
           where: { owner_peer: { owner, peer } },
           update: { updatedAt: new Date() },

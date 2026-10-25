@@ -491,8 +491,8 @@ const EVENT_TYPE_META: Record<string, { label: string; color: string; icon: stri
   PORTFOLIO_ACCESS:{ label: "Portfolio Accessed", color: "#8b5cf6", icon: "📊" },
   STUDIO_ACCESS:  { label: "Studio Provenance",   color: "#ec4899", icon: "🎨" },
   ANCHOR:         { label: "Passport Anchored",   color: "#14b8a6", icon: "⚓" },
-  SEND:           { label: "QDs Transfer",         color: "#f97316", icon: "→"  },
-  RECEIVE:        { label: "QDs Received",         color: "#22c55e", icon: "←"  },
+  SEND:           { label: "Transfer sent",        color: "#f97316", icon: "→"  },
+  RECEIVE:        { label: "Transfer received",    color: "#22c55e", icon: "←"  },
   REBALANCE:      { label: "Rebalance",            color: "#64748b", icon: "⇄"  },
 };
 

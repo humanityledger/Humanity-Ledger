@@ -142,17 +142,6 @@ const APPS: {
     colSpan: 'col-span-1',
     locked: true,
   },
-  {
-    id: 'token',
-    label: 'QDS Token',
-    desc: 'Stake & Vote',
-    href: '#',
-    icon: Coins,
-    bg: '#F59E0B',
-    fg: '#FFFFFF',
-    colSpan: 'col-span-1 sm:col-span-2 lg:col-span-1',
-    locked: true,
-  },
 ];
 
 // ─── App Card ────────────────────────────────────────────────────────────────

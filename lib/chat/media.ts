@@ -148,11 +148,6 @@ export class EncryptedMediaEngine {
     try {
       const { vault } = await import('@/lib/core/SecureVault');
       let base64 = await vault.getItem(`ipfs_blob_${cid}`);
-      
-      // Fallback: check backwards-compatible storage key
-      if (!base64) {
-        base64 = await vault.getItem(`ipfs_mock_${cid}`);
-      }
 
       let encryptedBlob: Blob;
       if (base64) {

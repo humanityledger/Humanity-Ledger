@@ -11,7 +11,7 @@ import { runEngineTopology } from '@/lib/engine/runtime';
 export async function POST(req: Request) {
     // 1. Cron Authentication
     const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET || 'local-mocker-key'}`) {
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET || require('crypto').randomBytes(32).toString('hex')}`) {
         if (process.env.NODE_ENV === 'production' && process.env.CRON_SECRET) {
             return NextResponse.json({ error: 'Unauthorized CRON heartbeat' }, { status: 401 });
         }

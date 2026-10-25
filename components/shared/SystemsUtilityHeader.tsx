@@ -102,40 +102,6 @@ export function SystemsUtilityHeader() {
                 {/* Removed Ivory Dropdown in favor of Global Settings drawer */}
             </div>
 
-            {/* QD Balance Pill — visible only when wallet is connected */}
-            {isConnected && (
-                <Link
-                    href="/portfolio"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all hover:shadow-md group"
-                    style={{
-                        background: aztecAddress ? 'rgba(0,0,0,0.05)' : 'rgba(255,165,0,0.08)',
-                        borderColor: aztecAddress ? 'rgba(0,0,0,0.1)' : 'rgba(255,140,0,0.25)',
-                    }}
-                    title={aztecAddress ? `${balance.toFixed(2)} QDs available` : 'Claim your QDs → Sovereign Identity'}
-                >
-                    <Zap
-                        size={10}
-                        className="transition-colors"
-                        style={{ color: aztecAddress ? '#f59e0b' : '#f97316' }}
-                    />
-                    {aztecAddress ? (
-                        <span
-                            className="font-mono text-[9px] font-black uppercase tracking-widest"
-                            style={{ color: 'rgba(0,0,0,0.7)' }}
-                        >
-                            {balance.toFixed(2)} QD
-                        </span>
-                    ) : (
-                        <span
-                            className="font-mono text-[9px] font-black uppercase tracking-widest animate-pulse"
-                            style={{ color: '#f97316' }}
-                        >
-                            CLAIM QDs
-                        </span>
-                    )}
-                </Link>
-            )}
-
             {isConnected && (
                 <button
                     onClick={(e) => {

@@ -27,10 +27,10 @@ function formatBytes(bytes: number, decimals = 2) {
 }
 
 function getFileIcon(type: string) {
-  if (type.startsWith('image/')) return <ImageIcon size={24} className="text-[#25D366]" />;
+  if (type.startsWith('image/')) return <ImageIcon size={24} className="text-[#15171c]" />;
   if (type.startsWith('audio/')) return <Music size={24} className="text-[#30d158]" />;
   if (type.includes('pdf') || type.includes('document')) return <FileText size={24} className="text-[#ff9500]" />;
-  if (type.includes('zip') || type.includes('compressed')) return <FileArchive size={24} className="text-[#ff3b30]" />;
+  if (type.includes('zip') || type.includes('compressed')) return <FileArchive size={24} className="text-[#d93036]" />;
   return <Folder size={24} className="text-black/40" />;
 }
 
@@ -122,10 +122,10 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-black/5 bg-[#f5f5f7]">
+        <div className="flex items-center justify-between p-6 border-b border-black/5 bg-[#f2f4f7]">
           <div>
-            <h2 className="text-[20px] font-black text-black flex items-center gap-2">
-              <Lock size={20} className="text-[#25D366]" />
+            <h2 className="text-[20px] font-semibold text-black flex items-center gap-2">
+              <Lock size={20} className="text-[#15171c]" />
               Secure Vault
             </h2>
             <p className="text-[13px] font-medium text-black/50 mt-1">
@@ -147,7 +147,7 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-1.5 rounded-full text-[12px] font-bold capitalize transition-colors ${
+                className={`px-4 py-1.5 rounded-full text-[12px] font-semibold capitalize transition-colors ${
                   activeTab === tab ? 'bg-black text-white' : 'bg-black/5 text-black/60 hover:bg-black/10'
                 }`}
               >
@@ -164,18 +164,18 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
                 exit={{ opacity: 0, x: 20 }}
                 className="flex items-center gap-2"
               >
-                <span className="text-[12px] font-bold text-[#25D366] mr-2">
+                <span className="text-[12px] font-semibold text-[#15171c] mr-2">
                   {selectedFiles.size} selected
                 </span>
                 <button
                   onClick={handleDownloadSelected}
-                  className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center text-[#25D366] hover:bg-[#25D366]/20 transition-colors"
+                  className="w-8 h-8 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#15171c] hover:bg-[#eff1f4] transition-colors"
                 >
                   <Download size={14} />
                 </button>
                 <button
                   onClick={handleDeleteSelected}
-                  className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 hover:bg-red-500/20 transition-colors"
+                  className="w-8 h-8 rounded-full bg-[#e5484d]/10 flex items-center justify-center text-[#d93036] hover:bg-[#e5484d]/20 transition-colors"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -188,8 +188,8 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
         <div className="flex-1 overflow-y-auto p-4 bg-white min-h-[300px]">
           {loading ? (
             <div className="h-full flex flex-col items-center justify-center gap-3">
-              <div className="w-8 h-8 border-4 border-[#25D366]/30 border-t-[#25D366] rounded-full animate-spin" />
-              <p className="text-[13px] font-mono text-black/40">Decrypting vault manifest...</p>
+              <div className="w-8 h-8 border-4 border-[#15171c] border-t-[#25D366] rounded-full animate-spin" />
+              <p className="text-[13px] tabular-nums text-black/40">Decrypting vault manifest...</p>
             </div>
           ) : filteredFiles.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-black/30">
@@ -205,16 +205,16 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
                     key={file.id}
                     onClick={() => toggleSelect(file.id)}
                     className={`flex items-center gap-4 p-3 rounded-2xl cursor-pointer transition-all border ${
-                      isSelected ? 'bg-[#25D366]/5 border-[#25D366]/30' : 'bg-white border-transparent hover:bg-black/5'
+                      isSelected ? 'bg-[#eff1f4] border-[#15171c]' : 'bg-white border-transparent hover:bg-black/5'
                     }`}
                   >
-                    <div className="w-12 h-12 rounded-xl bg-[#f5f5f7] flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 rounded-xl bg-[#f2f4f7] flex items-center justify-center shrink-0">
                       {getFileIcon(file.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-[14px] font-bold text-black truncate">{file.name}</h4>
+                      <h4 className="text-[14px] font-semibold text-black truncate">{file.name}</h4>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[12px] font-mono text-black/50">{formatBytes(file.size)}</span>
+                        <span className="text-[12px] tabular-nums text-black/50">{formatBytes(file.size)}</span>
                         <span className="w-1 h-1 rounded-full bg-black/20" />
                         <span className="text-[12px] text-black/50">
                           {new Date(file.createdAt).toLocaleDateString()}
@@ -229,7 +229,7 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
                     </div>
                     
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
-                      isSelected ? 'border-[#25D366] bg-[#25D366]' : 'border-black/20 bg-transparent'
+                      isSelected ? 'border-[#15171c] bg-[#15171c]' : 'border-black/20 bg-transparent'
                     }`}>
                       {isSelected && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-2.5 h-2.5 bg-white rounded-full" />}
                     </div>
@@ -241,9 +241,9 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
         </div>
         
         {/* Footer info */}
-        <div className="p-4 bg-[#f5f5f7] border-t border-black/5 flex items-center justify-center gap-2">
+        <div className="p-4 bg-[#f2f4f7] border-t border-black/5 flex items-center justify-center gap-2">
             <Lock size={12} className="text-black/40" />
-            <span className="text-[11px] font-mono font-bold text-black/40 uppercase tracking-widest">AES-256-GCM Encrypted Storage</span>
+            <span className="text-[12.5px] tabular-nums font-semibold text-black/40">AES-256-GCM Encrypted Storage</span>
         </div>
       </motion.div>
     </motion.div>

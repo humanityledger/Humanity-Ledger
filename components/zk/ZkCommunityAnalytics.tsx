@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Lock, TrendingUp, TrendingDown, Activity, Users, Globe,
-  Zap, Clock, ExternalLink, BarChart3, ArrowUpRight, Waves,
-  FileText, CheckCircle, AlertTriangle, RefreshCw
+  Lock, TrendingUp, Activity, Users, Globe,
+  Zap, Clock, ExternalLink, BarChart3, ArrowUpRight,
+  RefreshCw, CheckCircle, Shield
 } from 'lucide-react';
 import { getShieldedBalances, getZkTransactionHistory, calculatePrivacyScore } from '@/lib/zk/zkMoney';
 import { getCommunityTips, getOpenBounties, getCommunityStats } from '@/lib/zk/zkCommunityPayments';
@@ -54,139 +54,150 @@ export function ZkCommunityAnalytics({ communityId, communityName = 'Community',
 
   return (
     <div className={`space-y-5 ${className}`}>
-      {/* Aztec shielded treasury banner */}
-      <div className="bg-gradient-to-r from-[#1C1C1E] to-[#2C2C2E] rounded-3xl p-5 text-white">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-[#1C1C1E]/20 flex items-center justify-center">
-              <Lock size={18} className="text-[#1C1C1E]" strokeWidth={2.5} />
+      {/* ── Aztec Shielded Banner ── */}
+      <div className="bg-[#15171c] rounded-3xl p-6 text-white border border-black/10 shadow-sm">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center">
+              <Lock size={18} className="text-white" strokeWidth={2} />
             </div>
             <div>
-              <div className="text-[14px] font-black text-white">Aztec Shielded Treasury</div>
-              <div className="text-[10px] text-white/50">{communityName} · Powered by zk.money</div>
+              <div className="text-[15px] font-bold text-white leading-tight">Aztec Shielded Vault Analytics</div>
+              <div className="text-[11px] text-white/50">{communityName} · Powered by zk.money</div>
             </div>
           </div>
           <button
             onClick={() => setRefreshKey(k => k + 1)}
-            className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition"
+            className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all text-white/70 hover:text-white"
+            title="Refresh Vault Metrics"
           >
-            <RefreshCw size={12} className="text-white/60" />
+            <RefreshCw size={13} />
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
-            { token: 'zkDAI', amount: (treasury.balance as any).dai || (treasury.balance as any).DAI || '0', icon: '🟡' },
-            { token: 'zkUSDC', amount: (treasury.balance as any).usdc || (treasury.balance as any).USDC || '0', icon: '🔵' },
-            { token: 'zkETH', amount: (treasury.balance as any).eth || (treasury.balance as any).ETH || '0', icon: '💎' },
-          ].map(({ token, amount, icon }) => (
-            <div key={token} className="bg-white/[0.07] rounded-2xl p-3">
-              <div className="text-[10px] text-white/50 font-semibold flex items-center gap-1">
+            { token: 'zkDAI', amount: (treasury.balance as any).dai || (treasury.balance as any).DAI || '0' },
+            { token: 'zkUSDC', amount: (treasury.balance as any).usdc || (treasury.balance as any).USDC || '0' },
+            { token: 'zkETH', amount: (treasury.balance as any).eth || (treasury.balance as any).ETH || '0' },
+          ].map(({ token, amount }) => (
+            <div key={token} className="bg-white/5 border border-white/10 rounded-2xl p-4">
+              <div className="text-[10px] text-white/50 font-semibold uppercase tracking-wider flex items-center gap-1">
                 <Lock size={9} /> {token}
               </div>
-              <div className="text-[16px] font-black font-mono text-white mt-1">
+              <div className="text-[20px] font-bold font-mono text-white mt-1">
                 {parseFloat(String(amount || '0')).toFixed(token === 'zkETH' ? 4 : 2)}
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-3 pt-3 border-t border-white/[0.08] grid grid-cols-2 gap-3 text-[11px] font-mono">
+        <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 gap-4 text-xs font-mono">
           <div>
             <span className="text-white/40">Total Inflow:</span>
-            <span className="text-[#1C1C1E] font-bold ml-1">{parseFloat(String(treasury.totalInflow || '0')).toFixed(2)} DAI</span>
+            <span className="text-white font-bold ml-1.5">{parseFloat(String(treasury.totalInflow || '0')).toFixed(2)} DAI</span>
           </div>
           <div>
             <span className="text-white/40">Total Outflow:</span>
-            <span className="text-red-400 font-bold ml-1">{parseFloat(String(treasury.totalOutflow || '0')).toFixed(2)} DAI</span>
+            <span className="text-white/90 font-bold ml-1.5">{parseFloat(String(treasury.totalOutflow || '0')).toFixed(2)} DAI</span>
           </div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-3">
+      {/* ── KPI Cards ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Private Tips', value: tips.length, sub: `${uniqueTippers} tippers`, color: '#1C1C1E', icon: <Activity size={14} /> },
-          { label: 'Tip Volume', value: totalTipVolume.toFixed(0), sub: 'DAI equivalent', color: '#3A3A3C', icon: <TrendingUp size={14} /> },
-          { label: 'Open Bounties', value: bounties.length, sub: 'Unclaimed', color: '#F59E0B', icon: <Zap size={14} /> },
-          { label: 'Contributors', value: stats.topContributors.length, sub: 'Active members', color: '#8B5CF6', icon: <Users size={14} /> },
-        ].map(({ label, value, sub, color, icon }) => (
-          <div key={label} className="bg-white border border-black/[0.06] rounded-2xl p-4 shadow-xs">
-            <div className="flex items-center gap-1.5 mb-2" style={{ color }}>
+          { label: 'Private Tips', value: tips.length, sub: `${uniqueTippers} tippers`, icon: <Activity size={14} /> },
+          { label: 'Tip Volume', value: `$${totalTipVolume.toFixed(0)}`, sub: 'DAI equivalent', icon: <TrendingUp size={14} /> },
+          { label: 'Open Bounties', value: bounties.length, sub: 'Unclaimed', icon: <Zap size={14} /> },
+          { label: 'Contributors', value: stats.topContributors.length, sub: 'Active members', icon: <Users size={14} /> },
+        ].map(({ label, value, sub, icon }) => (
+          <div key={label} className="bg-white border border-black/[0.06] rounded-2xl p-4 shadow-sm space-y-1">
+            <div className="flex items-center gap-1.5 text-[#15171c]">
               {icon}
-              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: `${color}` }}>{label}</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#727a88]">{label}</span>
             </div>
-            <div className="text-[22px] font-black text-gray-900">{value}</div>
-            <div className="text-[10px] text-gray-400 mt-0.5">{sub}</div>
+            <div className="text-[22px] font-bold font-mono text-[#15171c]">{value}</div>
+            <div className="text-[11px] text-[#727a88]">{sub}</div>
           </div>
         ))}
       </div>
 
-      {/* 7-Day Tip Volume Bar Chart */}
-      <div className="bg-white border border-black/[0.06] rounded-2xl p-4 shadow-xs">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart3 size={15} className="text-[#1C1C1E]" />
-          <h3 className="text-[13px] font-bold text-gray-900">7-Day Private Tip Volume</h3>
-          <span className="ml-auto text-[10px] text-gray-400 font-semibold bg-[#1C1C1E]/10 text-[#1C1C1E] px-2 py-0.5 rounded-full">zk.money Protected</span>
+      {/* ── 7-Day Tip Volume Bar Chart ── */}
+      <div className="bg-white border border-black/[0.06] rounded-3xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <BarChart3 size={16} className="text-[#15171c]" />
+            <h3 className="text-[14px] font-bold text-[#15171c]">7-Day Private Tip Volume</h3>
+          </div>
+          <span className="text-[11px] text-[#15171c] font-semibold bg-[#f2f4f7] px-2.5 py-0.5 rounded-full border border-black/[0.04]">
+            zk.money Protected
+          </span>
         </div>
 
-        <div className="flex items-end gap-2 h-[80px]">
+        <div className="flex items-end gap-2.5 h-[90px] pt-2 border-b border-black/[0.04] pb-2">
           {last7Days.map(({ day, volume, count }) => (
-            <div key={day} className="flex-1 flex flex-col items-center gap-1">
+            <div key={day} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group">
               <div
-                className="w-full rounded-t-lg bg-[#1C1C1E] min-h-[4px] transition-all duration-700 relative group"
-                style={{ height: `${Math.max(8, (volume / maxVol) * 72)}px` }}
+                className="w-full rounded-t-lg bg-[#15171c] min-h-[4px] transition-all duration-500 hover:bg-black"
+                style={{ height: `${Math.max(8, (volume / maxVol) * 76)}px` }}
                 title={`${volume.toFixed(2)} DAI · ${count} tips`}
               />
-              <span className="text-[9px] text-gray-400 font-semibold">{day}</span>
+              <span className="text-[10px] text-[#727a88] font-mono font-semibold">{day}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Top Contributors */}
+      {/* ── Top Contributors ── */}
       {stats.topContributors.length > 0 && (
-        <div className="bg-white border border-black/[0.06] rounded-2xl p-4 shadow-xs">
-          <div className="flex items-center gap-2 mb-3">
-            <Lock size={14} className="text-[#1C1C1E]" />
-            <h3 className="text-[13px] font-bold text-gray-900">Anonymous Top Contributors</h3>
-            <span className="ml-auto text-[10px] text-gray-400">Amounts hidden on-chain</span>
+        <div className="bg-white border border-black/[0.06] rounded-3xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Lock size={15} className="text-[#15171c]" />
+              <h3 className="text-[14px] font-bold text-[#15171c]">Anonymous Top Contributors</h3>
+            </div>
+            <span className="text-[11px] text-[#727a88]">Shielded on Aztec</span>
           </div>
           <div className="space-y-2">
             {stats.topContributors.slice(0, 5).map((c, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-[#f0f2f5] flex items-center justify-center text-[11px] font-black text-gray-500">
-                  {i + 1}
+              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[#f2f4f7] border border-black/[0.03]">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-[11px] font-mono font-bold text-[#15171c] border border-black/[0.04]">
+                    {i + 1}
+                  </div>
+                  <span className="text-[12px] font-mono font-semibold text-[#15171c]">
+                    {c.zkHandle ? `${c.zkHandle.slice(0, 8)}...${c.zkHandle.slice(-4)}` : 'zk:anon'}
+                  </span>
                 </div>
-                <div className="flex-1 text-[12px] font-mono text-gray-700">
-                  {c.zkHandle ? `${c.zkHandle.slice(0, 8)}...${c.zkHandle.slice(-4)}` : 'zk:anon'}
-                </div>
-                <div className="text-[12px] font-bold text-[#1C1C1E] font-mono">{parseFloat(c.amount || '0').toFixed(2)} DAI</div>
+                <div className="text-[12px] font-bold font-mono text-[#15171c]">{parseFloat(c.amount || '0').toFixed(2)} DAI</div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Open Bounties */}
+      {/* ── Open Bounties ── */}
       {bounties.length > 0 && (
-        <div className="bg-white border border-black/[0.06] rounded-2xl p-4 shadow-xs">
-          <div className="flex items-center gap-2 mb-3">
-            <Zap size={14} className="text-amber-500" />
-            <h3 className="text-[13px] font-bold text-gray-900">Open Community Bounties</h3>
+        <div className="bg-white border border-black/[0.06] rounded-3xl p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Zap size={15} className="text-[#15171c]" />
+            <h3 className="text-[14px] font-bold text-[#15171c]">Open Community Bounties</h3>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {bounties.map(b => {
               const daysLeft = Math.max(0, Math.floor((b.expiresAt - Date.now()) / 86_400_000));
               return (
-                <div key={b.id} className="flex items-center justify-between bg-[#FAFAFA] border border-black/[0.05] rounded-xl px-3 py-2">
+                <div key={b.id} className="flex items-center justify-between bg-[#f2f4f7] border border-black/[0.03] rounded-2xl px-4 py-3">
                   <div>
-                    <div className="text-[12px] font-bold text-gray-900">{b.title}</div>
-                    <div className="text-[10px] text-gray-400 flex items-center gap-1">
-                      <Clock size={9} /> {daysLeft}d remaining
+                    <div className="text-[13px] font-bold text-[#15171c]">{b.title}</div>
+                    <div className="text-[11px] text-[#727a88] flex items-center gap-1 mt-0.5 font-medium">
+                      <Clock size={11} /> {daysLeft}d remaining
                     </div>
                   </div>
-                  <div className="text-[13px] font-black text-[#1C1C1E] font-mono">{b.reward} {b.token}</div>
+                  <div className="text-[13px] font-bold text-[#15171c] font-mono bg-white px-3 py-1.5 rounded-xl border border-black/[0.04]">
+                    {b.reward} {b.token}
+                  </div>
                 </div>
               );
             })}
@@ -194,13 +205,10 @@ export function ZkCommunityAnalytics({ communityId, communityName = 'Community',
         </div>
       )}
 
-      {/* Privacy badge */}
-      <div className="flex items-center justify-center gap-2 py-2">
-        <Lock size={12} className="text-[#1C1C1E]" />
-        <span className="text-[11px] text-gray-400 font-semibold">All community payments are end-to-end private via Aztec Network zk.money</span>
-        <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" className="text-[11px] text-[#1C1C1E] hover:underline flex items-center gap-0.5">
-          Aztec Docs <ExternalLink size={10} />
-        </a>
+      {/* ── Privacy badge ── */}
+      <div className="flex items-center justify-center gap-2 py-2 text-[12px] text-[#727a88]">
+        <Shield size={13} className="text-[#15171c]" />
+        <span>End-to-end privacy via Aztec Network zk.money</span>
       </div>
     </div>
   );

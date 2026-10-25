@@ -244,8 +244,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // 6. Build the entry
   const entry: RelayEntry = {
-    id:        String(body.id ?? userId).slice(0, 64),
-    publicKey: { jwk: body.publicKey.jwk },
+    // The relay id is the caller's own identity. It used to come from the
+    // body, so anyone could overwrite another user's relay entry with their
+    // own key and URL and sit in the middle of that user's onion route.
+    id:        String(userId).toLowerCase().slice(0, 64),
+    publicKey: { jwk: { kty: 'EC', crv: 'P-256', x: safeJwk.x, y: safeJwk.y } },
     relayUrl:  relayUrl.toString(),
     lastSeen:  Date.now(),
   };
@@ -265,11 +268,11 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
   }
 
-  getRegistry().delete(userId);
+  getRegistry().delete(String(userId).toLowerCase());
 
   try {
     const redis = getUpstash();
-    if (redis) await redis.hdel(RELAY_KEY, userId);
+    if (redis) await redis.hdel(RELAY_KEY, String(userId).toLowerCase());
   } catch { /* non-critical */ }
 
   return NextResponse.json({ ok: true, deregistered: userId });

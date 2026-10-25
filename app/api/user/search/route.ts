@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     const users = await prisma.user.findMany({
       where: {
         OR: [
-          { walletAddress: { startsWith: q } },
+          { walletAddress: { startsWith: q, mode: 'insensitive' } },
           { displayName: { contains: q, mode: 'insensitive' } },
           { chatName: { contains: q, mode: 'insensitive' } },
         ]

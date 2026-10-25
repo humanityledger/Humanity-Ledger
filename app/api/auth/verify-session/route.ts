@@ -17,10 +17,11 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(request: NextRequest) {
     try {
+        const hlSession = request.cookies.get('hl_session')?.value;
         const ledgerSession = request.cookies.get('ledger_session')?.value;
         const humanSession = request.cookies.get('human_session')?.value;
         const humanitySession = request.cookies.get('humanity_session')?.value;
-        const primaryJwt   = ledgerSession || humanSession || humanitySession;
+        const primaryJwt   = hlSession || ledgerSession || humanSession || humanitySession;
 
         const isProd      = process.env.NODE_ENV === 'production';
         const appUrl      = process.env.NEXT_PUBLIC_APP_URL || '';

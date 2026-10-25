@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireWallet } from '@/lib/security/requireWallet';
 
 /**
  * /api/zk/identity — Register and resolve zk.money identity records.
@@ -68,6 +69,13 @@ export async function POST(req: NextRequest) {
   }
 
   const { address, zkHandle, ensName, displayName } = body;
+  // The wallet used to be taken from the body as-is: anyone signed in could
+  // change this for any other wallet. It must be the caller's own.
+  const __auth = await requireWallet(req);
+  if (__auth.errorResponse) return __auth.errorResponse;
+  if (typeof address !== 'string' || address.toLowerCase() !== __auth.walletAddress) {
+    return NextResponse.json({ error: 'You can only change this for your own wallet.' }, { status: 403 });
+  }
 
   if (!address || !zkHandle) {
     return NextResponse.json({ error: 'address and zkHandle are required' }, { status: 400 });
@@ -111,6 +119,13 @@ export async function PATCH(req: NextRequest) {
   }
 
   const { address, ...updates } = body;
+  // The wallet used to be taken from the body as-is: anyone signed in could
+  // change this for any other wallet. It must be the caller's own.
+  const __auth = await requireWallet(req);
+  if (__auth.errorResponse) return __auth.errorResponse;
+  if (typeof address !== 'string' || address.toLowerCase() !== __auth.walletAddress) {
+    return NextResponse.json({ error: 'You can only change this for your own wallet.' }, { status: 403 });
+  }
   if (!address) return NextResponse.json({ error: 'address required' }, { status: 400 });
 
   const existing = registry.get(address.toLowerCase());

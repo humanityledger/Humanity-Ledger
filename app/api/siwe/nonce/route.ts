@@ -1,16 +1,17 @@
 import { generateNonce } from 'siwe';
 import { NextRequest, NextResponse } from 'next/server';
 import { getRedisClient } from '@/lib/redis';
-import { checkRateLimit } from '@/lib/security/rateLimiter';
+import { checkRateLimit, getClientIP } from '@/lib/security/rateLimiter';
+import { sealNonce, NONCE_TTL_SEC } from '@/lib/security/siweNonce';
 import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+  const ip = getClientIP(req);
   
   // Rate limit: max 10 nonces per minute per IP
-  const rate = await checkRateLimit(ip, { max: 10, windowSec: 60, prefix: 'rl:siwe_nonce' });
+  const rate = await checkRateLimit(ip, { max: 30, windowSec: 60, prefix: 'rl:siwe_nonce' });
   if (!rate.allowed) {
     return new NextResponse('Too Many Requests', { status: 429 });
   }
@@ -30,12 +31,12 @@ export async function GET(req: NextRequest) {
     headers: { 'Content-Type': 'text/plain' },
   });
 
-  res.cookies.set('siwe-nonce', nonce, {
+  res.cookies.set('siwe-nonce', sealNonce(nonce), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 600, // 10 minutes TTL
+    maxAge: NONCE_TTL_SEC, // 10 minutes TTL
   });
 
   return res;

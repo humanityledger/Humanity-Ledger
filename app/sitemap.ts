@@ -1,35 +1,40 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from "next";
+import { NAV } from "@/lib/docs/registry";
+import { BLOG_POSTS } from "@/lib/docs/pages/company";
+
+/**
+ * The sitemap lists only pages that exist and that describe the product as it
+ * is today: the landing page, the sign in page and every page in the
+ * documentation registry. It is generated from lib/docs/registry.ts so a page
+ * added there appears here without anyone having to remember.
+ *
+ * The previous version listed routes that never existed (/qd-token,
+ * /sovereign-identity, /aztec-sequencer) and superseded legal pages.
+ */
+
+const BASE = "https://humanidfi.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://humanidfi.com'
-  const now = new Date().toISOString()
+  const docs = NAV.flatMap((group) =>
+    group.pages.map((page) => ({
+      url: `${BASE}${page.href}`,
+      lastModified: page.updated,
+      changeFrequency: "monthly" as const,
+      priority: group.title === "Legal" ? 0.5 : 0.7,
+    })),
+  );
 
-  const routes = [
-    { path: '',                          priority: 1.0,  frequency: 'daily'   },
-    { path: '/about',                    priority: 0.95, frequency: 'weekly'  },
-    { path: '/ledger-chat',              priority: 0.95, frequency: 'daily'   },
-    { path: '/sovereign-identity',       priority: 0.92, frequency: 'weekly'  },
-    { path: '/qd-token',                 priority: 0.92, frequency: 'weekly'  },
-    { path: '/studio-provenance',        priority: 0.90, frequency: 'weekly'  },
-    { path: '/aztec-sequencer',          priority: 0.90, frequency: 'weekly'  },
-    { path: '/status',                   priority: 0.88, frequency: 'always'  },
-    { path: '/network',                  priority: 0.85, frequency: 'daily'   },
-    { path: '/developers/api-docs',      priority: 0.85, frequency: 'weekly'  },
-    { path: '/developers/sdk',           priority: 0.82, frequency: 'weekly'  },
-    { path: '/developers/contracts',     priority: 0.80, frequency: 'monthly' },
-    { path: '/legal/privacy',            priority: 0.75, frequency: 'monthly' },
-    { path: '/legal/terms',              priority: 0.75, frequency: 'monthly' },
-    { path: '/legal/security',           priority: 0.75, frequency: 'monthly' },
-    { path: '/legal/ownership',          priority: 0.82, frequency: 'monthly' },
-    { path: '/legal/dmca',               priority: 0.80, frequency: 'monthly' },
-    { path: '/community',                priority: 0.70, frequency: 'weekly'  },
-    { path: '/registry',                 priority: 0.65, frequency: 'weekly'  },
-  ] as const;
+  const posts = BLOG_POSTS.map((post) => ({
+    url: `${BASE}/blog/${post.slug}`,
+    lastModified: post.date,
+    changeFrequency: "yearly" as const,
+    priority: 0.5,
+  }));
 
-  return routes.map((route) => ({
-    url: `${baseUrl}${route.path}`,
-    lastModified: now,
-    changeFrequency: route.frequency as MetadataRoute.Sitemap[number]['changeFrequency'],
-    priority: route.priority,
-  }))
+  return [
+    { url: `${BASE}/`, changeFrequency: "weekly", priority: 1 },
+    { url: `${BASE}/connect`, changeFrequency: "monthly", priority: 0.8 },
+    ...docs,
+    ...posts,
+  ];
 }

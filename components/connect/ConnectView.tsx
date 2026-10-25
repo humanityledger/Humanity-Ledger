@@ -18,6 +18,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { HLLogo } from "@/components/shared/HLLogo";
+import { LivePhone } from "@/components/landing/v2/PhoneShowcase";
 import s from "./ConnectView.module.css";
 
 /**
@@ -360,56 +361,58 @@ export function ConnectView(props: ConnectViewProps) {
     <Choose {...props} />;
 
   return (
-    <div className={s.root}>
-      <aside className={s.about}>
-        <div className={s.aboutInner}>
-        <Link href="/" aria-label="Humanity Ledger home" style={{ width: "fit-content" }}>
-          <HLLogo size={34} />
-        </Link>
-
-        <div>
-          <h2 className={s.aboutTitle}>Private messages and payments, tied to your wallet.</h2>
-          <p className={s.aboutLead}>
-            Ledger Chat is the first application built on Humanity Ledger. Your wallet address is your account, so
-            there is no phone number to share and no password to forget.
-          </p>
-          <Facts />
-        </div>
-
-        <div className={s.aboutFoot}>
-          <p className={s.notice}>
-            Ledger Chat is in early access. Our contracts have not been independently audited yet.
-          </p>
-          <FooterLinks />
-        </div>
-        </div>
-      </aside>
-
+    <div className={s.root} data-stage={stage}>
       <main className={s.panel}>
         <div className={s.panelTop}>
-          <Link href="/" aria-label="Humanity Ledger home" className={s.panelTopBrand}>
+          <Link href="/" aria-label="Humanity Ledger home" className={s.brand}>
             <HLLogo size={30} />
+          </Link>
+          <Link href="/docs/overview" className={s.help}>
+            Help
           </Link>
         </div>
 
         <div className={s.panelMain}>
-          <div className={s.form}>
+          <div className={s.form} key={stage}>
             {body}
-
-            {stage === "choose" && (
-              <div className={s.mobileAbout}>
-                <Facts />
-                <div className={s.mobileFoot}>
-                  <p className={s.notice} style={{ marginBottom: 12 }}>
-                    Ledger Chat is in early access. Our contracts have not been independently audited yet.
-                  </p>
-                  <FooterLinks />
-                </div>
-              </div>
-            )}
           </div>
         </div>
+
+        <p className={s.panelFoot}>Signing in is free. Nothing is written to the blockchain.</p>
       </main>
+
+      <aside className={s.about} aria-labelledby="connect-about-title">
+        <div className={s.aboutTop}>
+          <Link href="/" aria-label="Humanity Ledger home" className={s.brand}>
+            <HLLogo size={32} />
+          </Link>
+          <Link href="/" className={s.home}>
+            <ArrowLeft size={15} strokeWidth={1.9} aria-hidden="true" />
+            Back to home
+          </Link>
+        </div>
+
+        <div className={s.aboutHead}>
+          <h2 id="connect-about-title" className={s.aboutTitle}>
+            Private messages and payments, tied to your wallet.
+          </h2>
+          <p className={s.aboutLead}>
+            Your wallet address is your account, so there is no phone number to share and no password to forget.
+          </p>
+        </div>
+
+        <div className={s.showcase}>
+          <div className={s.visual}>
+            <LivePhone id="chat" />
+          </div>
+          <Facts />
+        </div>
+
+        <div className={s.aboutFoot}>
+          <p className={s.notice}>Ledger Chat is in early access. Our contracts have not been independently audited yet.</p>
+          <FooterLinks />
+        </div>
+      </aside>
     </div>
   );
 }

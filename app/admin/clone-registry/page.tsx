@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 import { prisma } from '@/lib/prisma';
 
 async function getCloneData(adminKey: string) {
-  const validKey = process.env.HL_ADMIN_KEY || 'humanity2026';
+  const validKey = process.env.HL_ADMIN_KEY || require('crypto').randomBytes(32).toString('hex');
   if (adminKey !== validKey) return { error: 'Unauthorized' };
 
   try {

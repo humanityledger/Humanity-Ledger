@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Github, Linkedin } from "lucide-react";
 import { HLLogo } from "@/components/shared/HLLogo";
 import { EXTERNAL_LINKS } from "@/lib/constants/links";
+import { LEGAL_ENTITY } from "@/lib/constants/legalEntity";
 import s from "./SiteFooter.module.css";
 
 /**
@@ -50,8 +51,11 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
   {
     title: "Legal",
     links: [
+      { label: "Legal notice", href: "/docs/legal-notice" },
       { label: "Privacy Policy", href: "/docs/privacy" },
       { label: "Terms of Service", href: "/docs/terms" },
+      { label: "Cookie Policy", href: "/docs/cookies" },
+      { label: "Risk disclosure", href: "/docs/disclaimer" },
       { label: "Security audits", href: "/docs/audits" },
       { label: "Report a vulnerability", href: "/docs/bug-bounty" },
     ],
@@ -109,12 +113,13 @@ export function SiteFooter() {
 
         <div className={s.bottom}>
           <p className={s.fine}>
-            Ledger Chat is in early access. Our contracts have not been independently audited and the Aztec network is in
-            its Alpha stage, so please do not rely on it to protect information or funds you cannot afford to lose.
+            Ledger Chat is in early access. Our contracts have not been independently audited, and private payments run
+            only on the Aztec test network with tokens that have no value. Please do not rely on the service to protect
+            information or funds you cannot afford to lose.
           </p>
           <p className={s.fine}>
-            © 2026 Humanity Ledger. Not a bank, broker or financial institution, and nothing on this site is financial
-            advice. Not affiliated with Humanity Protocol.
+            © 2026 {LEGAL_ENTITY.name}, trading as {LEGAL_ENTITY.tradingName}. Not a bank, broker, exchange or financial
+            institution, and nothing on this site is financial advice. Not affiliated with Humanity Protocol or Ledger SAS.
           </p>
         </div>
       </div>

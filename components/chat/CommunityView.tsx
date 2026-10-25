@@ -4,10 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft, Lock, Globe, Settings, Hash, Edit, Heart, Users,
   Pin, Search, X, Bell, BellOff, Share2, MoreVertical, RefreshCw,
-  MessageSquare, FileText, BarChart2, Vote, Video, PhoneCall, Shield
+  MessageSquare, FileText, BarChart2, Vote, Video, PhoneCall, Shield,
+  LayoutGrid, Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DOMPurify from 'dompurify';
+import { sanitizeRichText } from '@/lib/security/sanitizeRichText';
 
 import { CommunityChatView } from './CommunityChatView';
 import { RichPostEditorModal } from './RichPostEditor';
@@ -18,6 +20,7 @@ import CommunityAnalytics from './CommunityAnalytics';
 import { CommunityGovernanceView } from './CommunityGovernanceModal';
 import { ZkCommunityTreasury } from '@/components/zk/ZkCommunityTreasury';
 import { GroupPartyCall } from './GroupPartyCall';
+import { CommunityApps } from './community-apps/CommunityApps';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -29,15 +32,13 @@ interface CommunityViewProps {
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
-const AVATAR_COLORS = ['#1C1C1E','#3A3A3C','#636366','#FF9500','#FF3B30','#AF52DE','#FF2D55','#5856D6'];
+const AVATAR_COLORS = ['#15171c','#3A3A3C','#636366','#FF9500','#FF3B30','#AF52DE','#FF2D55','#5856D6'];
 const getAvatarColor = (id: string) => AVATAR_COLORS[(id?.charCodeAt(0) || 0) % AVATAR_COLORS.length];
 
+// Shared sanitizer: no class/style, no remote images, safe links.
+// See lib/security/sanitizeRichText.ts.
 function safeHtml(raw: string): string {
-  if (typeof window === 'undefined' || !raw) return raw || '';
-  return DOMPurify.sanitize(raw, {
-    ALLOWED_TAGS: ['b','i','u','s','em','strong','a','p','br','ul','ol','li','blockquote','code','pre','h1','h2','h3','img','mark','span'],
-    ALLOWED_ATTR: ['href','src','alt','class','style'],
-  });
+  return sanitizeRichText(raw);
 }
 
 function truncateAddr(addr: string): string {
@@ -74,26 +75,26 @@ function PostCard({ post, myAddress, onEdit, onLike, localLikes }: PostCardProps
       {/* Header */}
       <div className="px-6 pt-5 pb-3">
         {post.title && (
-          <h2 className="text-[20px] font-black leading-snug text-[#1C1C1E] mb-3">{post.title}</h2>
+          <h2 className="text-[20px] font-semibold leading-snug text-[#15171c] mb-3">{post.title}</h2>
         )}
         <div
-          className="prose prose-sm max-w-none text-[14px] leading-relaxed text-[#1C1C1E]/80 line-clamp-6 whitespace-pre-wrap break-words"
+          className="prose prose-sm max-w-none text-[14px] leading-relaxed text-[#15171c]/80 line-clamp-6 whitespace-pre-wrap break-words"
           dangerouslySetInnerHTML={{ __html: safeHtml(post.contentHtml || post.content || '') }}
         />
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-3 bg-[#FAFAFA] border-t border-black/[0.04] flex items-center gap-3">
+      <div className="px-6 py-3 bg-[#f7f8fa] border-t border-black/[0.04] flex items-center gap-3">
         {/* Author avatar */}
         <div
-          className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-black shrink-0"
+          className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[12px] font-semibold shrink-0"
           style={{ backgroundColor: getAvatarColor(post.authorAddress || '0x') }}
         >
           {(post.authorAddress || '0x??').slice(2,4).toUpperCase()}
         </div>
-        <span className="text-[12px] font-mono font-bold text-black/40 truncate">{truncateAddr(post.authorAddress)}</span>
-        <span className="text-black/20 text-[10px]">·</span>
-        <span className="text-[11px] text-black/30">
+        <span className="text-[12px] tabular-nums font-semibold text-black/40 truncate">{truncateAddr(post.authorAddress)}</span>
+        <span className="text-black/20 text-[12px]">·</span>
+        <span className="text-[12.5px] text-black/30">
           {new Date(post.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </span>
 
@@ -109,11 +110,11 @@ function PostCard({ post, myAddress, onEdit, onLike, localLikes }: PostCardProps
           <button
             onClick={() => onLike?.(post.id)}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all active:scale-90 ${
-              liked ? 'bg-red-50 text-red-500' : 'text-black/30 hover:text-red-400 hover:bg-red-50'
+              liked ? 'bg-red-50 text-[#d93036]' : 'text-black/30 hover:text-red-400 hover:bg-red-50'
             }`}
           >
             <Heart size={14} fill={liked ? 'currentColor' : 'none'} />
-            <span className="text-[12px] font-bold">{likeCount}</span>
+            <span className="text-[12px] font-semibold">{likeCount}</span>
           </button>
         </div>
       </div>
@@ -125,7 +126,7 @@ function PostCard({ post, myAddress, onEdit, onLike, localLikes }: PostCardProps
 
 export function CommunityView({ communityId, myAddress, onBack }: CommunityViewProps) {
   // Tab state
-  const [activeTab, setActiveTab] = useState<'posts' | 'chat' | 'treasury' | 'governance' | 'analytics' | 'settings'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'chat' | 'apps' | 'treasury' | 'governance' | 'analytics' | 'settings'>('posts');
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
 
   // Community data
@@ -144,6 +145,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
   const [showPinnedPanel, setShowPinnedPanel] = useState(false);
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [muted, setMuted] = useState(false);
 
   // Party Call state
@@ -215,7 +217,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
   // ── Handle Inline Quick Post ───────────────────────────────────────────────
   const handlePublishInline = async () => {
     if (!inlineBody.trim()) {
-      toast.error('Escribe algo para publicar');
+      toast.error('Write something to publish');
       return;
     }
     setIsPostingInline(true);
@@ -256,16 +258,16 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
       });
       if (res.ok) {
         const d = await res.json();
-        toast.success('¡Publicado con éxito!');
+        toast.success('Published successfully!');
         if (d.post) {
           setPosts(prev => [d.post, ...prev.filter(p => p.id !== optPost.id)]);
         }
       } else {
-        toast.error('Error al publicar');
+        toast.error('Failed to publish');
         setPosts(prev => prev.filter(p => p.id !== optPost.id));
       }
     } catch {
-      toast.error('Error de conexión');
+      toast.error('Connection error');
       setPosts(prev => prev.filter(p => p.id !== optPost.id));
     } finally {
       setIsPostingInline(false);
@@ -278,7 +280,8 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
   useEffect(() => {
     fetchCommunity();
     fetchPosts();
-    refreshRef.current = setInterval(fetchPosts, 6000);
+    // Posts change rarely; only refresh while the tab is visible.
+    refreshRef.current = setInterval(() => { if (document.visibilityState === 'visible') fetchPosts(); }, 6000);
     return () => {
       if (refreshRef.current) clearInterval(refreshRef.current);
     };
@@ -306,16 +309,16 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
     }, 400);
   };
 
-  const avatarColor = community?.id ? getAvatarColor(community.id) : '#1C1C1E';
+  const avatarColor = '#15171c';
   const isAdmin = community?.ownerAddress?.toLowerCase() === myAddress?.toLowerCase()
     || community?.members?.some((m: any) => m.walletAddress?.toLowerCase() === myAddress?.toLowerCase() && (m.role === 'ADMIN' || m.role === 'MODERATOR'));
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#F2F2F7] overflow-hidden min-h-0">
+    <div className="flex-1 flex flex-col h-full bg-[#f2f4f7] overflow-hidden min-h-0">
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <div className="h-[64px] px-3 md:px-5 border-b border-black/[0.07] flex items-center justify-between bg-white shrink-0 sticky top-0 z-30 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
-        {/* Left: back + identity */}
+        {/* Left: back + identity (tapping name/avatar opens info panel) */}
         <div className="flex items-center gap-2.5">
           <button
             onClick={onBack}
@@ -324,99 +327,63 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
             <ChevronLeft size={22} />
           </button>
 
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0"
-            style={{ backgroundColor: avatarColor }}
+          <button
+            type="button"
+            onClick={() => setShowInfoPanel(true)}
+            className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
+            title="View group info"
           >
-            {community?.name?.slice(0,2).toUpperCase() || 'C'}
-          </div>
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-sm shadow-sm shrink-0"
+              style={{ backgroundColor: avatarColor }}
+            >
+              {community?.name?.slice(0,2).toUpperCase() || 'C'}
+            </div>
 
-          <div className="min-w-0">
-            {loadingCommunity ? (
-              <div className="h-4 w-28 bg-black/8 rounded-lg animate-pulse mb-1" />
-            ) : (
-              <p className="text-[15px] font-bold text-[#1C1C1E] leading-tight flex items-center gap-1.5 truncate max-w-[180px]">
-                {community?.name || 'Community'}
-                {community?.isPrivate
-                  ? <Lock size={11} className="text-black/25 shrink-0" />
-                  : <Globe size={11} className="text-black/25 shrink-0" />
-                }
+            <div className="min-w-0 text-left">
+              {loadingCommunity ? (
+                <div className="h-4 w-28 bg-black/8 rounded-lg animate-pulse mb-1" />
+              ) : (
+                <p className="text-[15px] font-semibold text-[#15171c] leading-tight flex items-center gap-1.5 truncate max-w-[180px]">
+                  {community?.name || 'Community'}
+                  {community?.isPrivate
+                    ? <Lock size={11} className="text-black/25 shrink-0" />
+                    : <Globe size={11} className="text-black/25 shrink-0" />
+                  }
+                </p>
+              )}
+              <p className="text-[12.5px] text-black/35 font-medium">
+                {community?.membersCount || community?.members?.length || 1} members
               </p>
-            )}
-            <p className="text-[11px] text-black/35 font-medium">
-              {community?.membersCount || community?.members?.length || 1} members
-            </p>
-          </div>
+            </div>
+          </button>
         </div>
 
-        {/* Right: tabs + actions */}
+        {/* Right: 3 primary tab pills + ··· menu */}
         <div className="flex items-center gap-1">
-          {/* Tab pills */}
-          <div className="hidden sm:flex items-center gap-0.5 bg-[#F2F2F7] rounded-xl p-0.5 mr-1">
-            {(['posts','chat','treasury','governance','analytics','settings'] as const).map(tab => (
+          {/* Primary 3 tabs — visible on desktop */}
+          <div className="hidden sm:flex items-center gap-0.5 bg-[#f2f4f7] rounded-xl p-0.5 mr-1">
+            {(['posts','chat','apps'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all ${
                   activeTab === tab
-                    ? 'bg-white text-[#1C1C1E] shadow-sm'
+                    ? 'bg-white text-[#15171c] shadow-sm'
                     : 'text-black/40 hover:text-black/60'
                 }`}
               >
-                {tab === 'posts' ? 'Posts' : tab === 'chat' ? 'Chat' : tab === 'treasury' ? (
-                  <span className="flex items-center gap-1">
-                    <Lock size={12} className="text-[#1C1C1E]" /> Treasury
-                  </span>
-                ) : tab === 'governance' ? 'Gov' : tab === 'analytics' ? <BarChart2 size={13} /> : <Settings size={13} />}
+                {tab === 'posts' ? 'Posts' : tab === 'chat' ? 'Chat' : 'Apps'}
               </button>
             ))}
           </div>
 
-          {/* Action icons */}
-          <button
-            onClick={() => {
-              const roomId = `party-${communityId}-${Date.now()}`;
-              setPartyCallRoomId(roomId);
-              setPartyCallMode('voice');
-              setPartyCallActive(true);
-              setPartyCallParticipants([myAddress]);
-              toast.success('Party call started — members can join from the header');
-            }}
-            className="p-2 rounded-xl hover:bg-black/5 text-black/30 hover:text-[#1C1C1E] transition-colors"
-            title="Start party call"
-          >
-            <PhoneCall size={17} />
-          </button>
-
-          <button
-            onClick={() => setShowSearchPanel(true)}
-            className="p-2 rounded-xl hover:bg-black/5 text-black/30 hover:text-black transition-colors"
-            title="Search messages"
-          >
-            <Search size={17} />
-          </button>
-
-          <button
-            onClick={() => setShowPinnedPanel(true)}
-            className="p-2 rounded-xl hover:bg-black/5 text-black/30 hover:text-black transition-colors"
-            title="Pinned messages"
-          >
-            <Pin size={17} />
-          </button>
-
-          <button
-            onClick={() => setShowMembersPanel(true)}
-            className="p-2 rounded-xl hover:bg-black/5 text-black/30 hover:text-black transition-colors"
-            title="Members"
-          >
-            <Users size={17} />
-          </button>
-
-          {/* More menu */}
+          {/* ··· context menu */}
           <div className="relative">
             <button
               onClick={() => setShowMoreMenu(p => !p)}
               className="p-2 rounded-xl hover:bg-black/5 text-black/30 hover:text-black transition-colors"
+              title="More options"
             >
               <MoreVertical size={17} />
             </button>
@@ -428,16 +395,46 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                     initial={{ opacity: 0, scale: 0.9, y: -4 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    className="absolute right-0 top-full mt-1 w-48 bg-white rounded-2xl shadow-2xl border border-black/5 py-1.5 z-50"
+                    className="absolute right-0 top-full mt-1 w-56 bg-white rounded-2xl shadow-2xl border border-black/5 py-1.5 z-50"
                   >
+                    {/* Basic actions */}
                     {[
-                      { icon: muted ? Bell : BellOff, label: muted ? 'Unmute' : 'Mute', fn: () => { setMuted(m=>!m); toast.success(muted ? 'Unmuted' : 'Muted'); setShowMoreMenu(false); } },
-                      { icon: Share2, label: 'Share Invite', fn: () => { navigator.clipboard.writeText(`https://humanidfi.com/join/${community?.joinCode}`); toast.success('Invite link copied!'); setShowMoreMenu(false); } },
-                      { icon: RefreshCw, label: 'Refresh', fn: () => { fetchPosts(); fetchCommunity(); setShowMoreMenu(false); toast.success('Refreshed'); } },
-                    ].map(({ icon: Icon, label, fn }) => (
-                      <button key={label} onClick={fn} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#F2F2F7] transition-colors text-left">
-                        <Icon size={15} className="text-black/40" />
-                        <span className="text-[13px] font-medium text-[#1C1C1E]">{label}</span>
+                      { label: 'View members', fn: () => { setShowMembersPanel(true); setShowMoreMenu(false); } },
+                      { label: 'Search messages', fn: () => { setShowSearchPanel(true); setShowMoreMenu(false); } },
+                      { label: 'Pinned messages', fn: () => { setShowPinnedPanel(true); setShowMoreMenu(false); } },
+                      { label: 'Party call', fn: () => { const roomId = `party-${communityId}-${Date.now()}`; setPartyCallRoomId(roomId); setPartyCallMode('voice'); setPartyCallActive(true); setPartyCallParticipants([myAddress]); setShowMoreMenu(false); toast.success('Party call started'); } },
+                    ].map(({ label, fn }) => (
+                      <button key={label} onClick={fn} className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[#f2f4f7] transition-colors text-left">
+                        <span className="text-[13px] font-medium text-[#15171c]">{label}</span>
+                      </button>
+                    ))}
+
+                    {/* Separator */}
+                    <div className="my-1 border-t border-black/[0.05]" />
+
+                    {/* Advanced sections */}
+                    {[
+                      { label: 'Group Treasury', tab: 'treasury' as const },
+                      { label: 'Governance & Votes', tab: 'governance' as const },
+                      { label: 'Analytics & Activity', tab: 'analytics' as const },
+                    ].map(({ label, tab }) => (
+                      <button key={tab} onClick={() => { setActiveTab(tab); setShowMoreMenu(false); }} className={`w-full flex items-center justify-between px-4 py-2.5 hover:bg-[#f2f4f7] transition-colors text-left ${activeTab === tab ? 'bg-[#f2f4f7] font-semibold' : ''}`}>
+                        <span className="text-[13px] font-medium text-[#15171c]">{label}</span>
+                      </button>
+                    ))}
+
+                    {/* Separator */}
+                    <div className="my-1 border-t border-black/[0.05]" />
+
+                    {/* Settings & utilities */}
+                    {[
+                      { label: 'Group Settings', fn: () => { setActiveTab('settings'); setShowMoreMenu(false); } },
+                      { label: muted ? 'Unmute' : 'Mute notifications', fn: () => { setMuted(m=>!m); toast.success(muted ? 'Unmuted' : 'Muted'); setShowMoreMenu(false); } },
+                      { label: 'Copy invite link', fn: () => { navigator.clipboard.writeText(`https://humanidfi.com/join/${community?.joinCode}`); toast.success('Invite link copied!'); setShowMoreMenu(false); } },
+                      { label: 'Refresh', fn: () => { fetchPosts(); fetchCommunity(); setShowMoreMenu(false); toast.success('Refreshed'); } },
+                    ].map(({ label, fn }) => (
+                      <button key={label} onClick={fn} className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[#f2f4f7] transition-colors text-left">
+                        <span className="text-[13px] font-medium text-[#15171c]">{label}</span>
                       </button>
                     ))}
                   </motion.div>
@@ -448,26 +445,26 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
         </div>
       </div>
 
-      {/* ── MOBILE TAB BAR ─────────────────────────────────────────────────── */}
-      <div className="sm:hidden flex items-center border-b border-black/5 bg-white shrink-0">
-        {([
-          { id: 'posts', icon: FileText, label: 'Posts' },
-          { id: 'chat', icon: MessageSquare, label: 'Chat' },
-          { id: 'governance', icon: Vote, label: 'Gov' },
-          { id: 'analytics', icon: BarChart2, label: 'Stats' },
-          { id: 'settings', icon: Settings, label: 'Settings' },
-        ] as const).map(tab => (
+      {/* ── MOBILE TAB BAR (3 primary tabs only — Pure Typography) ───────────── */}
+      <div className="relative sm:hidden flex items-center border-b border-black/5 bg-white shrink-0">
+        {(['posts', 'chat', 'apps'] as const).map(tab => (
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors ${
-              activeTab === tab.id ? 'text-[#1C1C1E]' : 'text-black/30'
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`flex-1 flex flex-col items-center justify-center py-3 px-2 transition-colors ${
+              activeTab === tab ? 'text-[#15171c] font-semibold' : 'text-black/35 font-medium'
             }`}
           >
-            <tab.icon size={18} />
-            <span className="text-[10px] font-bold">{tab.label}</span>
+            <span className="text-[13px] capitalize">{tab}</span>
+            {activeTab === tab && (
+              <span className="absolute bottom-0 w-8 h-[2px] bg-[#15171c] rounded-full" />
+            )}
           </button>
         ))}
+        {/* Advanced tab indicator strip — shown when on treasury/gov/analytics/settings */}
+        {['treasury','governance','analytics','settings'].includes(activeTab) && (
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black/10 rounded-full" />
+        )}
       </div>
 
       {/* ── MAIN CONTENT ───────────────────────────────────────────────────── */}
@@ -489,38 +486,38 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                   {!showInlineForm ? (
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm"
-                        style={{ backgroundColor: myAddress ? getAvatarColor(myAddress) : '#1C1C1E' }}
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 shadow-sm"
+                        style={{ backgroundColor: myAddress ? getAvatarColor(myAddress) : '#15171c' }}
                       >
                         {(myAddress || '0x??').slice(2, 4).toUpperCase()}
                       </div>
                       <button
                         type="button"
                         onClick={() => setShowInlineForm(true)}
-                        className="flex-1 bg-[#f0f2f5] hover:bg-[#e9edef] text-left px-4 py-2.5 rounded-full text-[14px] text-[#54656f] transition-all border border-black/[0.04]"
+                        className="flex-1 bg-[#f2f4f7] hover:bg-[#e9edef] text-left px-4 py-2.5 rounded-full text-[14px] text-[#727a88] transition-all border border-black/[0.04]"
                       >
-                        ¿Qué quieres compartir con la comunidad?
+                        Share an update with the community...
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowInlineForm(true)}
-                        className="px-4 py-2 bg-[#1C1C1E] hover:bg-black text-white rounded-full text-[13px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
+                        className="px-4 py-2 bg-[#15171c] hover:bg-black text-white rounded-full text-[13px] font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
                       >
                         <Edit size={14} />
-                        <span className="hidden sm:inline">Publicar</span>
+                        <span className="hidden sm:inline">Post</span>
                       </button>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-black/[0.05] pb-2">
-                        <span className="text-[13px] font-bold text-[#1C1C1E]">Nuevo Post</span>
+                        <span className="text-[13px] font-semibold text-[#15171c]">New Post</span>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => { setShowInlineForm(false); setShowEditor(true); }}
-                            className="text-[11px] font-semibold text-[#1C1C1E] hover:underline"
+                            className="text-[12.5px] font-semibold text-[#15171c] hover:underline"
                           >
-                            Editor completo →
+                            Full editor →
                           </button>
                           <button
                             type="button"
@@ -533,17 +530,17 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                       </div>
                       <input
                         type="text"
-                        placeholder="Título del post (opcional)..."
+                        placeholder="Post title (optional)..."
                         value={inlineTitle}
                         onChange={e => setInlineTitle(e.target.value)}
-                        className="w-full bg-[#f0f2f5] rounded-xl px-3.5 py-2 text-[14px] font-semibold text-[#1C1C1E] outline-none placeholder:text-[#8E8E93]"
+                        className="w-full bg-[#f2f4f7] rounded-xl px-3.5 py-2 text-[14px] font-semibold text-[#15171c] outline-none placeholder:text-[#727a88]"
                       />
                       <textarea
                         rows={3}
-                        placeholder="Escribe tu mensaje o anuncio aquí..."
+                        placeholder="Write your announcement or thoughts here..."
                         value={inlineBody}
                         onChange={e => setInlineBody(e.target.value)}
-                        className="w-full bg-[#f0f2f5] rounded-xl px-3.5 py-2.5 text-[14px] text-[#1C1C1E] outline-none resize-none placeholder:text-[#8E8E93]"
+                        className="w-full bg-[#f2f4f7] rounded-xl px-3.5 py-2.5 text-[14px] text-[#15171c] outline-none resize-none placeholder:text-[#727a88]"
                       />
                       <div className="flex justify-end gap-2 pt-1">
                         <button
@@ -551,15 +548,15 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                           onClick={() => setShowInlineForm(false)}
                           className="px-4 py-2 rounded-xl text-[13px] font-medium text-black/40 hover:bg-black/5"
                         >
-                          Cancelar
+                          Cancel
                         </button>
                         <button
                           type="button"
                           disabled={isPostingInline || !inlineBody.trim()}
                           onClick={handlePublishInline}
-                          className="px-5 py-2 bg-[#1C1C1E] hover:bg-black disabled:opacity-50 text-white rounded-xl text-[13px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
+                          className="px-5 py-2 bg-[#15171c] hover:bg-black disabled:opacity-50 text-white rounded-xl text-[13px] font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
                         >
-                          {isPostingInline ? 'Publicando…' : 'Publicar Ahora'}
+                          {isPostingInline ? 'Posting…' : 'Publish Now'}
                         </button>
                       </div>
                     </div>
@@ -581,15 +578,15 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                 ) : posts.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 text-center">
                     <div className="w-20 h-20 rounded-3xl bg-black/5 flex items-center justify-center mb-5">
-                      <FileText size={36} className="text-[#1C1C1E]" />
+                      <FileText size={36} className="text-[#15171c]" />
                     </div>
-                    <h3 className="text-[20px] font-black text-[#1C1C1E] mb-2">No posts yet</h3>
+                    <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">No posts yet</h3>
                     <p className="text-[14px] text-black/40 max-w-xs">
                       Be the first to write a post in this community.
                     </p>
                     <button
                       onClick={() => { setEditingPost(null); setShowEditor(true); }}
-                      className="mt-6 px-6 py-3 bg-[#1C1C1E] text-white font-bold rounded-2xl hover:bg-black transition-colors"
+                      className="mt-6 px-6 py-3 bg-[#15171c] text-white font-semibold rounded-2xl hover:bg-black transition-colors"
                     >
                       Write the first post
                     </button>
@@ -615,7 +612,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                 whileHover={{ scale: 1.06 }}
                 whileTap={{ scale: 0.94 }}
                 onClick={() => { setEditingPost(null); setShowEditor(true); }}
-                className="fixed bottom-6 right-6 w-14 h-14 bg-[#1C1C1E] text-white rounded-full flex items-center justify-center shadow-2xl shadow-black/30 z-20 hover:bg-black"
+                className="fixed bottom-6 right-6 w-14 h-14 bg-[#15171c] text-white rounded-full flex items-center justify-center shadow-2xl shadow-black/30 z-20 hover:bg-black"
               >
                 <Edit size={22} />
               </motion.button>
@@ -634,21 +631,21 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               {/* Channel sidebar — only show if community has multiple channels */}
               {community?.channels && community.channels.length > 1 && (
                 <div className="hidden md:flex w-[200px] shrink-0 bg-white border-r border-black/5 flex-col py-3 overflow-y-auto">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-black/25 px-4 mb-2">Channels</p>
+                  <p className="text-[12px] font-semibold text-black/25 px-4 mb-2">Channels</p>
                   {community.channels.map((ch: any) => (
                     <button
                       key={ch.id}
                       onClick={() => setActiveChannelId(ch.id)}
                       className={`flex items-center gap-2.5 px-4 py-2.5 text-left transition-all group ${
                         activeChannelId === ch.id
-                          ? 'bg-black/5 text-[#1C1C1E]'
+                          ? 'bg-black/5 text-[#15171c]'
                           : 'text-black/40 hover:bg-black/[0.03] hover:text-black/70'
                       }`}
                     >
                       {ch.isPaid ? <Lock size={13} className="shrink-0" /> : <Hash size={13} className="shrink-0" />}
                       <span className="text-[13px] font-semibold truncate">{ch.name}</span>
                       {ch.isPaid && (
-                        <span className="ml-auto text-[9px] font-black bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-md uppercase">Paid</span>
+                        <span className="ml-auto text-[12px] font-semibold bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-md">Paid</span>
                       )}
                     </button>
                   ))}
@@ -666,6 +663,22 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
             </motion.div>
           )}
 
+          {/* APPS TAB */}
+          {activeTab === 'apps' && (
+            <motion.div
+              key="apps"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 w-full overflow-hidden flex min-h-0"
+            >
+              <CommunityApps
+                communityId={communityId}
+                communityName={community?.name || 'this community'}
+              />
+            </motion.div>
+          )}
+
           {/* TREASURY TAB */}
           {activeTab === 'treasury' && (
             <motion.div
@@ -673,14 +686,16 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto w-full"
+              className="flex-1 overflow-y-auto"
             >
-              <ZkCommunityTreasury
-                communityId={communityId}
-                communityName={community?.name || 'Community'}
-                isAdmin={isAdmin}
-                currentUserAddress={myAddress}
-              />
+              <div className="max-w-3xl mx-auto px-4 py-5 pb-28">
+                <ZkCommunityTreasury
+                  communityId={communityId}
+                  communityName={community?.name || 'Community'}
+                  isAdmin={isAdmin}
+                  currentUserAddress={myAddress}
+                />
+              </div>
             </motion.div>
           )}
 
@@ -813,6 +828,101 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
             }}
             isActive={partyCallActive}
           />
+        )}
+      </AnimatePresence>
+
+      {/* ── GROUP INFO PANEL (tap avatar/name) ──────────────────────────────── */}
+      <AnimatePresence>
+        {showInfoPanel && community && (
+          <>
+            <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm" onClick={() => setShowInfoPanel(false)} />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', stiffness: 340, damping: 36 }}
+              className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-[#f2f4f7] flex flex-col shadow-2xl"
+            >
+              {/* Header */}
+              <div className="h-[64px] px-4 border-b border-black/[0.07] flex items-center gap-3 bg-white shrink-0">
+                <button onClick={() => setShowInfoPanel(false)} className="p-2 rounded-xl hover:bg-black/5 text-black/40 transition-colors">
+                  <ChevronLeft size={22} />
+                </button>
+                <span className="text-[17px] font-semibold text-[#15171c]">Group Info</span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                {/* Avatar + Name block */}
+                <div className="bg-white px-6 pt-8 pb-6 flex flex-col items-center gap-3 border-b border-black/[0.05]">
+                  <div
+                    className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-sm"
+                    style={{ backgroundColor: avatarColor }}
+                  >
+                    {community.name?.slice(0,2).toUpperCase() || 'C'}
+                  </div>
+                  <div className="text-center">
+                    <h2 className="text-[20px] font-semibold text-[#15171c] leading-tight">{community.name}</h2>
+                    <p className="text-[13px] text-black/40 mt-0.5">
+                      {community.membersCount || community.members?.length || 1} members · {community.isPrivate ? 'Private' : 'Public'}
+                    </p>
+                  </div>
+                  {community.description && (
+                    <p className="text-[14px] text-[#727a88] text-center leading-relaxed max-w-[260px]">{community.description}</p>
+                  )}
+
+                  {/* Quick actions (Pure Typography) */}
+                  <div className="flex items-center gap-2 mt-2">
+                    {[
+                      { label: 'Message', fn: () => { setActiveTab('chat'); setShowInfoPanel(false); } },
+                      { label: 'Call', fn: () => { const roomId = `party-${communityId}-${Date.now()}`; setPartyCallRoomId(roomId); setPartyCallMode('voice'); setPartyCallActive(true); setPartyCallParticipants([myAddress]); setShowInfoPanel(false); } },
+                      { label: muted ? 'Unmute' : 'Mute', fn: () => { setMuted(m=>!m); toast.success(muted ? 'Unmuted' : 'Muted'); } },
+                      { label: 'Search', fn: () => { setShowInfoPanel(false); setShowSearchPanel(true); } },
+                    ].map(({ label, fn }) => (
+                      <button
+                        key={label}
+                        onClick={fn}
+                        className="px-3.5 py-2 bg-[#f2f4f7] rounded-xl text-[13px] font-semibold text-[#15171c] hover:bg-[#e9edef] transition-colors"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Info rows (Pure Typography) */}
+                <div className="px-4 py-3 space-y-1">
+                  {[
+                    { label: 'Members', value: `${community.membersCount || community.members?.length || 1}`, fn: () => { setShowInfoPanel(false); setShowMembersPanel(true); } },
+                    { label: 'Pinned messages', value: '', fn: () => { setShowInfoPanel(false); setShowPinnedPanel(true); } },
+                    { label: 'Group Settings', value: '', fn: () => { setActiveTab('settings'); setShowInfoPanel(false); } },
+                    { label: 'Copy invite link', value: '', fn: () => { navigator.clipboard.writeText(`https://humanidfi.com/join/${community.joinCode}`); toast.success('Invite link copied!'); } },
+                  ].map(({ label, value, fn }) => (
+                    <button key={label} onClick={fn} className="w-full flex items-center justify-between px-4 py-3.5 bg-white rounded-2xl hover:bg-[#f7f8fa] transition-colors text-left">
+                      <span className="flex-1 text-[15px] font-medium text-[#15171c]">{label}</span>
+                      {value && <span className="text-[14px] text-[#727a88] mr-2">{value}</span>}
+                      <ChevronLeft size={16} className="text-black/20 rotate-180" />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Leave group */}
+                <div className="px-4 pb-8">
+                  <button
+                    onClick={() => {
+                      if (confirm('Leave this group? You will lose access to future messages.')) {
+                        toast.success('You left the group');
+                        setShowInfoPanel(false);
+                        onBack?.();
+                      }
+                    }}
+                    className="w-full py-3.5 bg-white rounded-2xl text-[#d93036] font-semibold text-[15px] hover:bg-red-50 transition-colors"
+                  >
+                    Leave Group
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

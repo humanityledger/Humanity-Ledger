@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     // In real env, we dispatch this key to the isolated PXE sidecar here and get a PXE session token.
     // For this frontend flow, we issue a session JWT that represents this binding.
-    const pxeToken = jwt.sign({ evmAddress, pxeActive: true }, process.env.JWT_SECRET || 'secret', { expiresIn: '15m' });
+    const pxeToken = jwt.sign({ evmAddress, pxeActive: true }, (() => { const s = process.env.JWT_SECRET; if (!s) throw new Error('JWT_SECRET is not set.'); return s; })(), { expiresIn: '15m' });
 
     return NextResponse.json({ success: true, pxeToken });
   } catch (error: any) {

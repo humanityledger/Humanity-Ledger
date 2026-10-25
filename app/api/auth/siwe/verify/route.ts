@@ -1,25 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { POST as canonicalPost } from '@/app/api/siwe/verify/route';
 
 /**
- * B-012: Deprecated SIWE route.
- * Unified into canonical route: POST /api/siwe/verify
+ * Compatibility bridge: forwards legacy /api/auth/siwe/verify calls
+ * to the canonical /api/siwe/verify handler.
  */
-export async function POST() {
-  return NextResponse.json(
-    {
-      error: 'Gone: This endpoint has been unified. Please use /api/siwe/verify.',
-      canonicalEndpoint: '/api/siwe/verify',
-    },
-    { status: 410 }
-  );
+export async function POST(req: NextRequest) {
+  return canonicalPost(req);
 }
 
-export async function GET() {
-  return NextResponse.json(
-    {
-      error: 'Gone: This endpoint has been unified. Please use /api/siwe/verify.',
-      canonicalEndpoint: '/api/siwe/verify',
-    },
-    { status: 410 }
-  );
+export async function GET(req: NextRequest) {
+  return canonicalPost(req);
 }

@@ -45,6 +45,7 @@ import { moderateContent, sanitizeFilename, isAllowedMimeType, checkRateLimit } 
 import { ledgerAnalytics, trackMessageSent, trackCallStarted, trackCallAnswered, trackAttachmentSent, trackFeatureUsed } from '@/lib/utils/ledgerAnalytics';
 import { notificationEngine } from '@/lib/wallet/NotificationEngine';
 import { Search, Phone as PhoneIcon, Clock as ClockIcon } from 'lucide-react';
+import { EncryptionInfoSheet } from '@/components/chat/EncryptionInfoSheet';
 
 import { LedgerChatSettings, useLedgerSettings } from './LedgerChatSettings';
 import { useSettingsEffect, playMessageSound, playKeyboardClick, getChatBgStyle } from '@/lib/hooks/useSettingsEffect';
@@ -115,14 +116,20 @@ function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: 
 
   React.useEffect(() => {
     if (!isMe && address && typeof window !== 'undefined') {
-      const cached = localStorage.getItem('peer_avatar_' + address);
-      if (cached) { setSavedAvatar(cached); return; }
-      fetch(`/api/user/search?q=${address}`).then(res => res.json()).then(data => {
-        if (data.users && data.users.length > 0 && data.users[0].avatarUrl) {
-          setSavedAvatar(data.users[0].avatarUrl);
-          localStorage.setItem('peer_avatar_' + address, data.users[0].avatarUrl);
-        }
-      }).catch(e => console.error(e));
+      // Show the saved photo at once, then refresh it so a new photo appears.
+      const cacheKey = 'peer_avatar_' + address.toLowerCase();
+      let cached = '';
+      try { cached = localStorage.getItem(cacheKey) || ''; } catch {}
+      if (cached) setSavedAvatar(cached);
+      let live = true;
+      fetch(`/api/user/search?q=${encodeURIComponent(address)}`).then(res => res.json()).then(data => {
+        if (!live) return;
+        const me = (data.users || []).find((u: any) => (u.address || '').toLowerCase() === address.toLowerCase());
+        const url = me?.avatarUrl || '';
+        setSavedAvatar(url);
+        try { url ? localStorage.setItem(cacheKey, url) : localStorage.removeItem(cacheKey); } catch {}
+      }).catch(() => {});
+      return () => { live = false; };
     }
   }, [address, isMe]);
 
@@ -202,7 +209,7 @@ import { playSendSound, playReceiveSound } from '../../lib/utils/sounds';
 import { MessageBubble, StickerPicker } from '../chat/MessageBubble';
 import { PinPrompt } from '@/components/chat/pin/PinPrompt';
 import { IncomingCallScreen, OutgoingCallScreen, AudioCallStage, CallControls } from '@/components/chat/call/CallScreens';
-import { Archive, ArchiveRestore, ChevronLeft, ChevronUp, ChevronDown, MessageSquare, Plus, ArrowUp, WifiOff, Pin, Check, ScanQrCode, Camera, FileText, Sticker, ListChecks, CreditCard, Receipt, Waves, Navigation, Timer, Info, LoaderCircle, Minimize2, Mail, ShieldCheck, Reply, Forward, Pencil, Flag, MessagesSquare } from 'lucide-react';
+import { Archive, ArchiveRestore, ChevronLeft, ChevronUp, ChevronDown, MessageSquare, Plus, ArrowUp, WifiOff, Pin, Check, ScanQrCode, Camera, FileText, Sticker, ListChecks, CreditCard, Receipt, Waves, Navigation, Timer, Info, LoaderCircle, Minimize2, Mail, ShieldCheck, Reply, Forward, Pencil, Flag, MessagesSquare, Globe } from 'lucide-react';
 
 
 function isMessageExpired(msgTimestamp: number, timerSetting: string | undefined) {
@@ -271,30 +278,30 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const chatBackground = ledgerSettings?.chat_background || 'default';
   const chatBackgroundCustomUrl = '';
   const bubbleStyle = ledgerSettings?.bubble_style || 'default';
-  const accentColor = ledgerSettings?.accent_color || '#2754d6';
+  const accentColor = ledgerSettings?.accent_color || '#15171c';
   // Font and size from settings (with sensible defaults)
   const chatFont = ledgerSettings?.font_family || 'inter';
   const textSize = ledgerSettings?.text_size ?? 4;
 
+  // Conversation wallpaper. Every option stays light and quiet so messages
+  // keep their contrast; the default is the app's neutral background.
   const bgStyle = React.useMemo((): React.CSSProperties => {
     switch (chatBackground) {
-      case 'minimal': return { background: '#FFFFFF' };
-      case 'dots': return { 
-          backgroundColor: '#FAFAFA', 
-          backgroundImage: 'radial-gradient(rgba(39, 84, 214,0.15) 1px, transparent 1px)', 
-          backgroundSize: '20px 20px'
+      case 'minimal': return { background: '#ffffff' };
+      case 'dots': return {
+          backgroundColor: '#f7f8fa',
+          backgroundImage: 'radial-gradient(rgba(21,23,28,0.07) 1px, transparent 1px)',
+          backgroundSize: '18px 18px'
         };
       case 'circuit': return {
-          backgroundColor: '#F0F2F5',
-          backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(39, 84, 214,0.05) 25%, rgba(39, 84, 214,0.05) 26%, transparent 27%, transparent 74%, rgba(39, 84, 214,0.05) 75%, rgba(39, 84, 214,0.05) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(39, 84, 214,0.05) 25%, rgba(39, 84, 214,0.05) 26%, transparent 27%, transparent 74%, rgba(39, 84, 214,0.05) 75%, rgba(39, 84, 214,0.05) 76%, transparent 77%, transparent)',
-          backgroundSize: '30px 30px'
+          backgroundColor: '#f7f8fa',
+          backgroundImage: 'linear-gradient(rgba(21,23,28,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(21,23,28,0.035) 1px, transparent 1px)',
+          backgroundSize: '28px 28px'
         };
-      case 'waves': return {
-          background: 'linear-gradient(135deg, #FFFFFF 0%, #EBE5DC 100%)'
-      };
+      case 'waves': return { background: 'linear-gradient(180deg, #ffffff 0%, #eef1f5 100%)' };
       case 'default':
-      default: 
-          return { backgroundColor: '#EBE5DC' };
+      default:
+          return { backgroundColor: '#f7f8fa' };
     }
   }, [chatBackground, chatBackgroundCustomUrl]);
 
@@ -405,7 +412,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
              if (data.users && data.users.length > 0) {
                peerAddr = data.users[0].address;
              } else {
-               toast.error('User not found: ' + to);
+               toast.error(`No one found for ${to}`);
                return;
              }
            } catch {
@@ -440,7 +447,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             if (data.status === 'ALREADY_MEMBER') {
               toast.success(`Opened ${data.community.name}`);
             } else {
-              toast.success(`You joined ${data.community.name}!`);
+              toast.success(`You joined ${data.community.name}`);
             }
           } else if (data.code === 'GROUP_CLOSED') {
             toast.error('This group is private. Ask an admin to add you directly.');
@@ -450,7 +457,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             toast.error(data.error || 'Could not join this community.');
           }
         } catch {
-          toast.error('Connection error while joining community. Try again.');
+          toast.error('Could not join. Check your connection and try again.');
         }
       };
       doJoin();
@@ -468,10 +475,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [threadParentId, setThreadParentId] = useState<string | null>(null);
   const [showBotSuggestions, setShowBotSuggestions] = useState(false);
   const BOT_COMMANDS_LIST = [
-    { cmd: '/price', hint: '/price ETH — Get crypto price' },
-    { cmd: '/ens', hint: '/ens vitalik.eth — Resolve ENS name' },
-    { cmd: '/gas', hint: '/gas — Current Ethereum gas prices' },
-    { cmd: '/help', hint: '/help — Show all commands' },
+    { cmd: '/price', hint: '/price ETH|Price of a token' },
+    { cmd: '/ens', hint: '/ens vitalik.eth|Look up an ENS name' },
+    { cmd: '/gas', hint: '/gas|Current Ethereum gas price' },
+    { cmd: '/help', hint: '/help|All commands' },
   ];
   
   // High-End Feature States
@@ -603,6 +610,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   // ─── v2 + Phase 5: Chat Features ──────────────────────────────────────────────
   const [isSecretChat, setIsSecretChat] = useState(false);
+  const [showEncryptionInfo, setShowEncryptionInfo] = useState(false);
   const [showPollCreator, setShowPollCreator] = useState(false);
   const [showBurnSheet, setShowBurnSheet] = useState(false);
   const [showScheduleSheet, setShowScheduleSheet] = useState(false);
@@ -719,6 +727,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // ── Telegram/WhatsApp Parity States ──
   const [isCallMinimized, setIsCallMinimized] = useState(false);
   const [networkQuality, setNetworkQuality] = useState<'good' | 'poor' | 'disconnected'>('good');
+  const [callRoute, setCallRoute] = useState<{ kind: 'direct' | 'relay' | 'unknown'; rttMs: number | null }>({ kind: 'unknown', rttMs: null });
   const [audioLevel, setAudioLevel] = useState<number>(0);
 
   const myVideoRef = useRef<HTMLVideoElement>(null);
@@ -907,7 +916,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       else next.add(peer.toLowerCase());
       
       vault.setItem('ledger_blocked', JSON.stringify(Array.from(next)));
-      toast.success(isBlocked ? "User unblocked." : "User blocked. They can no longer message you.");
+      toast.success(isBlocked ? "Unblocked" : "Blocked. They can no longer message you.");
       return next;
     });
   };
@@ -915,7 +924,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const reportMessage = async (msgId: string, content: string) => {
     setMessages(prev => prev.filter(m => m.id !== msgId));
     setContextMenu(null);
-    toast.success("Message reported. Thank you.");
+    toast.success("Reported. Thank you.");
     
     try {
       const msgHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(content))))
@@ -974,7 +983,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }));
     // Deduplication set is left intact to prevent stream from re-injecting them
     setShowClearConfirm(false);
-    toast.success('✅ Chat cleared.');
+    toast.success('Chat cleared');
   };
 
   // Phase 4: Archive/Unarchive a conversation (persisted to localStorage)
@@ -983,10 +992,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       const next = new Set(prev);
       if (next.has(peer.toLowerCase())) {
         next.delete(peer.toLowerCase());
-        toast.success('Chat unarchived.');
+        toast.success('Moved to your inbox');
       } else {
         next.add(peer.toLowerCase());
-        toast.success('Chat archived.');
+        toast.success('Archived');
       }
       try { localStorage.setItem(`ledger_archived_${address}`, JSON.stringify([...next])); } catch {}
       return next;
@@ -1001,7 +1010,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setMessages(prev => prev.filter(m => m.conversationId !== dmId));
     if (activePeer?.toLowerCase() === peer.toLowerCase()) setActivePeer(null);
     setSidebarMenu(null);
-    toast.success('Conversation removed.');
+    toast.success('Chat deleted');
   };
 
   // Phase 4: Submit edited message — sends XMTP signal __EDIT__id__::newContent
@@ -1095,15 +1104,23 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [activePeer]);
 
-  // Auto-scroll handled exclusively by VirtualizedMessageList.
-  // This duplicate useEffect has been removed to prevent conflicting scroll calls
-  // that caused the layout jump when sending messages. The VirtualizedMessageList
-  // component has its own stable container.scrollTop = container.scrollHeight logic.
+  // Auto-scroll to bottom on new messages — ONLY if user is already near the bottom.
+  // If the user has scrolled up to read history, do NOT hijack them back to the bottom.
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      const container = messagesEndRef.current.parentElement;
+      if (container) {
+        const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        // Only auto-scroll if within 150px of the bottom (user hasn't scrolled up)
+        if (distanceFromBottom < 150) {
+          container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        }
+      }
+    }
+  }, [messages]);
 
-  // NOTE: Mobile keyboard resize scroll is handled by VirtualizedMessageList.
-  // The old useEffect here caused double-scroll conflicts; removed.
-  // eslint-disable-next-line no-constant-condition
-  if (false) useEffect(() => {
+  // MASTER-FIX: Auto-scroll on resize (keyboard open/close) to maintain stability
+  useEffect(() => {
     if (typeof window === 'undefined' || !isMobile) return;
     const handleResize = () => {
       if (messagesEndRef.current) {
@@ -1202,7 +1219,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (activePeerRef.current?.toLowerCase() === senderLower) {
         setMessages(prev => {
           if (prev.some(m => m.id === msgData.id)) return prev;
-          return [...prev, msgData].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
+          return [...prev, msgData].sort((a, b) => a.sentAtNs - b.sentAtNs);
         });
       }
 
@@ -1212,7 +1229,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       const handleForceMsg = (e: any) => {
          setMessages(prev => {
            if (prev.find(m => m.id === e.detail.id)) return prev;
-           return [...prev, e.detail].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
+           return [...prev, e.detail].sort((a,b) => a.sentAtNs - b.sentAtNs);
          });
       };
       window.addEventListener('ledger_force_msg_render', handleForceMsg);
@@ -1247,7 +1264,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const queue: string[] = JSON.parse(queueStr);
             if (queue.length > 0) {
               localStorage.removeItem(outboxKey);
-              toast.info(`📤 Back online — sending ${queue.length} queued message${queue.length > 1 ? 's' : ''}...`);
+              toast.info(`Back online. Sending ${queue.length} waiting message${queue.length > 1 ? 's' : ''}.`);
               for (const item of queue) {
                 const peer = typeof item === 'string' ? null : item.peer;
                 const text = typeof item === 'string' ? item : item.content;
@@ -1263,7 +1280,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   await new Promise(r => setTimeout(r, 300));
                 }
               }
-              toast.success('✅ All queued messages delivered.');
+              toast.success('All waiting messages were sent');
             }
           } catch (e) {
             console.warn('[Outbox] Failed to flush queue:', e);
@@ -1273,7 +1290,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     };
     const handleOffline = () => {
       setIsOffline(true);
-      toast.warning('📶 No internet connection. Messages will be queued.');
+      toast.warning('You are offline. Messages will be sent when you reconnect.');
     };
     
     window.addEventListener('online', handleOnline);
@@ -1405,21 +1422,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
     import('peerjs').then((peerjsModule) => {
       if (destroyed) return; // component unmounted before import resolved
-
-// Normalized timestamp extractor: handles nanoseconds, microseconds, and milliseconds reliably
-function getMsgEpochMs(m: any): number {
-  if (!m) return 0;
-  const v = m.sentAtNs ?? m.sentAt ?? m.createdAt ?? m.timestamp;
-  if (typeof v === 'number') {
-    return v > 1e14 ? Math.floor(v / 1_000_000) : v;
-  }
-  if (v instanceof Date) return v.getTime();
-  if (typeof v === 'string') {
-    const t = new Date(v).getTime();
-    return isNaN(t) ? 0 : t;
-  }
-  return 0;
-}
       const Peer = (peerjsModule as any).default?.Peer || (peerjsModule as any).Peer || (peerjsModule as any).default;
 
       // ─── DETERMINISTIC PEERID — CRITICAL FOR REVERSE-DIAL ARCHITECTURE ───
@@ -1636,6 +1638,7 @@ function getMsgEpochMs(m: any): number {
   // NOTE: performEndCallRef is wired below after performEndCall is defined.
   // performEndCallRef is wired after performEndCall is defined below
   const processedSignalIds = useRef<Set<string>>(new Set());
+  const processedCallOfferIds = useRef<Set<string>>(new Set());
   // AUDIT FIX: Prune processedSignalIds set to avoid unbounded memory growth.
   // Keep only the last 200 IDs to prevent memory leak over long sessions.
   const pruneSignalIds = useCallback(() => {
@@ -1670,7 +1673,7 @@ function getMsgEpochMs(m: any): number {
       console.log('[Ledger Chat:Signal] Decline received');
       if (callStateRef.current !== 'idle') {
         performEndCallRef.current();
-        toast('Call was declined.');
+        toast('Call declined');
       }
     }
 
@@ -1680,7 +1683,7 @@ function getMsgEpochMs(m: any): number {
       console.log('[Ledger Chat:Signal] Hangup received');
       if (callStateRef.current !== 'idle') {
         performEndCallRef.current();
-        toast('Call ended by peer.');
+        toast('Call ended');
       }
     }
     // AUDIT FIX: Prune signal IDs to prevent memory leak
@@ -1759,6 +1762,7 @@ function getMsgEpochMs(m: any): number {
   useEffect(() => {
     if (callState !== 'active' || !activeConnectionRef.current) {
       setNetworkQuality('good');
+      setCallRoute({ kind: 'unknown', rttMs: null });
       return;
     }
 
@@ -1774,7 +1778,11 @@ function getMsgEpochMs(m: any): number {
           if (peerConn) {
             const stats = await peerConn.getStats();
             let isPoor = false;
+            const candidates: Record<string, any> = {};
+            let selectedPair: any = null;
             stats.forEach((report: any) => {
+              if (report.type === 'local-candidate' || report.type === 'remote-candidate') candidates[report.id] = report;
+              if (report.type === 'candidate-pair' && report.state === 'succeeded' && (report.nominated || report.selected)) selectedPair = report;
               if (report.type === 'candidate-pair' && report.state === 'succeeded') {
                 if (report.currentRoundTripTime > 0.4) isPoor = true;
               }
@@ -1786,6 +1794,15 @@ function getMsgEpochMs(m: any): number {
               }
             });
             setNetworkQuality(isPoor ? 'poor' : 'good');
+            if (selectedPair) {
+              const l = candidates[selectedPair.localCandidateId];
+              const r = candidates[selectedPair.remoteCandidateId];
+              const relayed = l?.candidateType === 'relay' || r?.candidateType === 'relay';
+              setCallRoute({
+                kind: l || r ? (relayed ? 'relay' : 'direct') : 'unknown',
+                rttMs: typeof selectedPair.currentRoundTripTime === 'number' ? Math.round(selectedPair.currentRoundTripTime * 1000) : null,
+              });
+            }
           }
         } catch {}
       }
@@ -1863,7 +1880,7 @@ function getMsgEpochMs(m: any): number {
     const livePeer = peerInstanceRef.current;
     if (!livePeer || livePeer.destroyed) {
       // Peer not yet ready — destroy stale ref and schedule re-init via peerInitKey
-      toast.error("WebRTC is not ready. Reconnecting… please try again in a moment.");
+      toast.error("Calling is reconnecting. Try again in a moment.");
       peerInstanceRef.current = null;
       setPeerInstance(null);
       // [CRITICAL FIX] Incrementing peerInitKey triggers the PeerJS useEffect to re-run.
@@ -1917,7 +1934,7 @@ function getMsgEpochMs(m: any): number {
       // Directly dial the receiver via PeerJS — no XMTP round-trip needed
       const livePeerForStart = peerInstanceRef.current;
       if (!livePeerForStart || livePeerForStart.destroyed) {
-        toast.error('WebRTC lost connection — please retry.');
+        toast.error('The call lost its connection. Please try again.');
         performEndCallRef.current();
         return;
       }
@@ -1942,15 +1959,24 @@ function getMsgEpochMs(m: any): number {
           outConn.on('close', () => performEndCallRef.current());
           outConn.on('error', () => performEndCallRef.current());
         }
-      toast.success('Ringing...');
+      toast.success('Ringing');
 
-      // Caller timeout: if no stream arrives in 60s, clean up
+      // Caller timeout: if no stream arrives in 45s, clean up
       callTimeoutRef.current = setTimeout(() => {
         if (callStateRef.current === 'calling') {
-          toast.error('No answer — call timed out.');
+          if (address && targetPeer) {
+            saveCallRecord(address, {
+              peerAddress: targetPeer,
+              type: type,
+              direction: isCallerRef.current ? 'outgoing' : 'incoming',
+              status: 'missed',
+              durationSeconds: 0,
+            });
+          }
+          toast.error('No answer.');
           performEndCallRef.current();
         }
-      }, 60000);
+      }, 45000);
 
     } catch (e: any) {
       if (stream) { try { stream.getTracks().forEach(t => t.stop()); } catch {} }
@@ -1959,13 +1985,13 @@ function getMsgEpochMs(m: any): number {
       isCallerRef.current = false;
       const errName = e?.name || '';
       if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
-        toast.error('Mic/Camera access denied. If allowed in OS, check Chrome Site Settings or open outside of in-app browsers (Telegram/Twitter).', { duration: 6000 });
+        toast.error('Microphone or camera access is blocked. Allow it in your browser settings, or open this page in your normal browser instead of an in-app one.', { duration: 6000 });
       } else if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
-        toast.error('No microphone or camera found on this device.');
+        toast.error('No microphone or camera was found');
       } else if (errName === 'NotReadableError' || errName === 'TrackStartError') {
-        toast.error('Camera/Microphone is in use by another app. Please close it.', { duration: 6000 });
+        toast.error('Another app is using your microphone or camera. Close it and try again.', { duration: 6000 });
       } else {
-        toast.error(`Call failed: ${e?.message || 'Unknown error'}`);
+        toast.error('The call could not start. Please try again.');
       }
       console.error('[Call] getUserMedia error:', e);
     }
@@ -1979,7 +2005,7 @@ function getMsgEpochMs(m: any): number {
     // [ANDROID FIX] Use callStateRef.current instead of the stale React state closure.
     if (callStateRef.current !== 'ringing') return;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      toast.error('Your browser does not support media access. Please use Chrome.');
+      toast.error('This browser cannot use your microphone or camera. Try a current version of Chrome, Edge, Firefox or Safari.');
       return;
     }
 
@@ -2018,7 +2044,7 @@ function getMsgEpochMs(m: any): number {
       } catch { /* ignore — best effort */ }
 
       setCallState('connecting');
-      toast.success('Answering call...');
+      toast.success('Connecting');
 
       // ─── DETERMINISTIC ANSWER ARCHITECTURE ────────────────────────────────
       // PRIMARY PATH: If the Caller dialed us directly (deterministic architecture),
@@ -2053,14 +2079,14 @@ function getMsgEpochMs(m: any): number {
         console.log('[Call:answerCall] No pending connection — falling back to outbound dial');
         const targetPeerId = remotePeerIdRef.current || (activePeer ? derivePeerId(activePeer) : null);
         if (!targetPeerId) {
-          toast.error('Cannot answer: caller identity unknown. Please wait and retry.');
+          toast.error('Could not identify the caller. Wait a moment and try again.');
           performEndCallRef.current();
           return;
         }
         
         const livePeer = peerInstanceRef.current;
         if (!livePeer || livePeer.destroyed) {
-          toast.error('WebRTC: Peer connection not ready. Please refresh.');
+          toast.error('Calling is not ready yet. Refresh the page and try again.');
           performEndCallRef.current();
           return;
         }
@@ -2069,7 +2095,7 @@ function getMsgEpochMs(m: any): number {
           metadata: { callType: callTypeRef.current }
         });
         if (!conn) {
-          toast.error('WebRTC: Failed to initiate connection.');
+          toast.error('Could not start the call. Please try again.');
           performEndCallRef.current();
           return;
         }
@@ -2097,7 +2123,7 @@ function getMsgEpochMs(m: any): number {
       // Failsafe: if remote stream does not arrive within 20s, abort
       callTimeoutRef.current = setTimeout(() => {
         if (callStateRef.current === 'connecting') {
-          toast.error('Call timed out — no media stream received.');
+          toast.error('The call could not connect. Please try again.');
           performEndCallRef.current();
         }
       }, 30000);
@@ -2112,13 +2138,13 @@ function getMsgEpochMs(m: any): number {
 
       const errName = e?.name || '';
       if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
-        toast.error('Mic/Camera access denied. If allowed in OS, check Chrome Site Settings or open outside of in-app browsers (Telegram/Twitter).', { duration: 6000 });
+        toast.error('Microphone or camera access is blocked. Allow it in your browser settings, or open this page in your normal browser instead of an in-app one.', { duration: 6000 });
       } else if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
-        toast.error('No microphone or camera found on this device.');
+        toast.error('No microphone or camera was found');
       } else if (errName === 'NotReadableError' || errName === 'TrackStartError') {
-        toast.error('Camera/Microphone is in use by another app. Please close it.', { duration: 6000 });
+        toast.error('Another app is using your microphone or camera. Close it and try again.', { duration: 6000 });
       } else {
-        toast.error(`Failed to answer call: ${e?.message || 'Unknown error'}`);
+        toast.error('Could not answer the call. Please try again.');
       }
       console.error('[Call] answerCall error:', e);
     }
@@ -2172,7 +2198,7 @@ function getMsgEpochMs(m: any): number {
       saveCallRecord(address, {
         peerAddress: activePeer,
         type: callType || 'audio',
-        direction: 'outgoing',
+        direction: isCallerRef.current ? 'outgoing' : 'incoming',
         status: 'answered',
         durationSeconds: callDurationSeconds,
       });
@@ -2226,7 +2252,7 @@ function getMsgEpochMs(m: any): number {
       }
     } catch (e) {
       try { newAudioTrack?.stop(); } catch {} // prevent track leak
-      toast.error('Failed to change voice isolation settings.');
+      toast.error('Could not change noise suppression');
     }
   }, [voiceIsolation, isMicMuted]);
 
@@ -2257,7 +2283,7 @@ function getMsgEpochMs(m: any): number {
       }
     } catch (e) {
       try { newVideoTrack?.stop(); } catch {} // prevent track leak
-      toast.error('Failed to apply data saver mode.');
+      toast.error('Could not change data saver');
     }
   }, [dataSaver, activeCamera, isCamOff]);
 
@@ -2288,7 +2314,7 @@ function getMsgEpochMs(m: any): number {
       }
     } catch (e) {
       try { newVideoTrack?.stop(); } catch {}
-      toast.error('Rear camera not found or access denied.');
+      toast.error('Could not switch camera');
       // Fallback if exact fails
       try {
          const newStream = await navigator.mediaDevices.getUserMedia({
@@ -2332,7 +2358,7 @@ function getMsgEpochMs(m: any): number {
       } else {
         // Start screen share
         if (!navigator.mediaDevices.getDisplayMedia) {
-          toast.error('Screen sharing is not supported on this device/browser.');
+          toast.error('Screen sharing is not available on this device');
           return;
         }
         const newStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
@@ -2370,7 +2396,7 @@ function getMsgEpochMs(m: any): number {
         }
       }
     } catch (e) {
-      toast.error('Screen sharing cancelled or unsupported.');
+      toast.error('Screen sharing stopped');
     }
   };
 
@@ -2458,13 +2484,13 @@ function getMsgEpochMs(m: any): number {
                 setInitError('Failed to transmit secure voice message. Check your connection.');
             }
           } else {
-            toast.error('Select a contact first to send the voice message.');
+            toast.error('Open a conversation first');
           }
           };
           reader.readAsDataURL(blob);
         } catch (error) {
           console.error('[Voice] Audio send failed:', error);
-          toast.error('Failed to send voice message.');
+          toast.error('Could not send the voice message');
         }
 
         setRecordingSeconds(0);
@@ -2590,7 +2616,7 @@ function getMsgEpochMs(m: any): number {
                      if (activePeerRef.current?.toLowerCase() === peer) {
                        setMessages(prev => {
                          if (prev.some(m => m.id === offlineMsg.id)) return prev;
-                         return [...prev, offlineMsg].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
+                         return [...prev, offlineMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
                        });
                      }
                  }
@@ -2872,10 +2898,10 @@ function getMsgEpochMs(m: any): number {
                 }
                 
                 setConversations(prev => {
-                  const existing = prev.find(c => c.peerAddress.toLowerCase() === peerLower);
+                  const existing = prev.find(c => c.peerAddress?.toLowerCase() === peerLower);
                   const newEntry = { peerAddress: peerAddress, lastMessage: dm.content, lastAt: new Date(dm.createdAt) };
                   if (existing) {
-                    return [newEntry, ...prev.filter(c => c.peerAddress.toLowerCase() !== peerLower)];
+                    return [newEntry, ...prev.filter(c => c.peerAddress?.toLowerCase() !== peerLower)];
                   }
                   return [newEntry, ...prev];
                 });
@@ -2883,7 +2909,7 @@ function getMsgEpochMs(m: any): number {
                 if (isFromActivePeer) {
                   setMessages(prev => {
                     if (prev.some(m => m.id === dmId)) return prev;
-                    return [...prev, msgObj].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
+                    return [...prev, msgObj].sort((a, b) => (a.sentAtNs ?? 0) - (b.sentAtNs ?? 0));
                   });
                 }
               }
@@ -2898,7 +2924,7 @@ function getMsgEpochMs(m: any): number {
 
         if (newPeerAddrs.length > 0 && !cancelled) {
           setConversations(prev => {
-            const prevSet = new Set(prev.map(c => c.peerAddress.toLowerCase()));
+            const prevSet = new Set(prev.map(c => (c.peerAddress || '').toLowerCase()));
             const toAdd: ConversationMeta[] = newPeerAddrs
               .filter(a => !prevSet.has(a.toLowerCase()))
               .filter(a => a.toLowerCase() !== address?.toLowerCase()) // never add self
@@ -2930,6 +2956,8 @@ function getMsgEpochMs(m: any): number {
                         return !cStr.includes('initiatedByInboxId') && !cStr.includes('addedInboxes') && !cStr.includes('group is inactive');
                       });
                     if (newRaw.length === 0) return prev;
+                    const peerNow = activePeerRef.current;
+                    if (!peerNow) return prev; // chat was closed while the poll was running
                     
                     const selfId = (client as any).inboxId ?? "";
                     const mapped = newRaw.map((m: any) => {
@@ -2938,10 +2966,10 @@ function getMsgEpochMs(m: any): number {
                        return {
                           id: m.id,
                           content: content,
-                          senderAddress: isFromPeer ? activePeerRef.current! : (address || ''),
+                          senderAddress: isFromPeer ? peerNow : (address || ''),
                           sentAtNs: nsToDate(m.sentAtNs ?? m.sentAt).getTime(),
                           status: 'delivered',
-                          conversationId: `dm-${activePeerRef.current!.toLowerCase()}`
+                          conversationId: `dm-${peerNow.toLowerCase()}`
                        };
                     });
                     
@@ -2954,7 +2982,7 @@ function getMsgEpochMs(m: any): number {
                     });
                     
                     if (toAppend.length === 0) return prev;
-                    return [...prev, ...toAppend].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
+                    return [...prev, ...toAppend].sort((a, b) => a.sentAtNs - b.sentAtNs);
                  });
               }
            } catch (pollErr) {
@@ -2969,7 +2997,17 @@ function getMsgEpochMs(m: any): number {
     };
 
     syncGlobal();
-    const globalPoll = setInterval(syncGlobal, 4000);
+    // A tab in the background polls every 30 s instead of every few seconds.
+    // Background tabs are most of the open tabs at any moment, and at the
+    // foreground rate each one cost the database the same as an active user.
+    let lastHiddenSync = 0;
+    const globalPoll = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        if (Date.now() - lastHiddenSync < 30_000) return;
+        lastHiddenSync = Date.now();
+      }
+      syncGlobal();
+    }, 4000);
 
     // ─── GLOBAL XMTP STREAM ────────────────────────────────────────────────────
     // DEDUPLICATION CONTRACT:
@@ -3196,13 +3234,23 @@ function getMsgEpochMs(m: any): number {
               const callerPeerId = parts[1];
               const offerCallType: 'audio'|'video' = (parts[2] as any) || 'audio';
               if (callerPeerId) remotePeerIdRef.current = callerPeerId;
+
+              const callAge = Date.now() - sentAtNs;
+              const isFreshCall = callAge >= 0 && callAge < 35000;
+              const offerId = msg.id || `${callerPeerId}-${sentAtNs}`;
+
+              // Prevent historical replay and duplicate ringing storms
+              if (!isFreshCall || processedCallOfferIds.current.has(offerId)) {
+                continue;
+              }
+              processedCallOfferIds.current.add(offerId);
               
-              if (callStateRef.current === 'idle' || callStateRef.current === 'ringing') {
+              if (callStateRef.current === 'idle') {
                 if (msgConvPeer && msgConvPeer.toLowerCase() !== activePeerRef.current?.toLowerCase()) {
                   setActivePeer(msgConvPeer);
                   setConversations(prev => {
                     if (!prev.find(c => c.peerAddress.toLowerCase() === msgConvPeer.toLowerCase())) {
-                      const newConv = { peerAddress: msgConvPeer, lastMessage: '📞 Incoming call...', lastAt: new Date() };
+                      const newConv = { peerAddress: msgConvPeer, lastMessage: 'Incoming call...', lastAt: new Date() };
                       const next = [newConv, ...prev];
                       persistToLocal(next);
                       return next;
@@ -3219,12 +3267,78 @@ function getMsgEpochMs(m: any): number {
                 if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
                 callTimeoutRef.current = setTimeout(() => {
                   if (callStateRef.current === 'ringing') {
+                    if (address && msgConvPeer) {
+                      saveCallRecord(address, {
+                        peerAddress: msgConvPeer,
+                        type: offerCallType,
+                        direction: 'incoming',
+                        status: 'missed',
+                        durationSeconds: 0,
+                      });
+                    }
                     toast.error('Missed call.');
                     performEndCallRef.current();
                   }
-                }, 45000);
+                }, 35000);
               }
               continue; // Do not render signal in chat
+            }
+
+            // Phase 4.6: Intercept CALL_HANGUP and CALL_DECLINE in realtime stream
+            if (typeof content === 'string' && content === '__CALL_HANGUP__') {
+              const hangupId = msg.id || `hangup-${sentAtNs}`;
+              if (!processedSignalIds.current.has(hangupId)) {
+                processedSignalIds.current.add(hangupId);
+                if (callStateRef.current === 'ringing') {
+                  // Remote party cancelled/hung up before answer
+                  if (address && msgConvPeer) {
+                    saveCallRecord(address, {
+                      peerAddress: msgConvPeer,
+                      type: callTypeRef.current || 'audio',
+                      direction: 'incoming',
+                      status: 'missed',
+                      durationSeconds: 0,
+                    });
+                  }
+                  performEndCallRef.current();
+                  toast('Missed call');
+                } else if (callStateRef.current === 'active') {
+                  // Remote party ended the active call
+                  if (address && msgConvPeer) {
+                    saveCallRecord(address, {
+                      peerAddress: msgConvPeer,
+                      type: callTypeRef.current || 'audio',
+                      direction: 'incoming',
+                      status: 'answered',
+                      durationSeconds: callDurationSeconds,
+                    });
+                  }
+                  performEndCallRef.current();
+                  toast('Call ended');
+                }
+              }
+              continue;
+            }
+
+            if (typeof content === 'string' && content === '__CALL_DECLINE__') {
+              const declineId = msg.id || `decline-${sentAtNs}`;
+              if (!processedSignalIds.current.has(declineId)) {
+                processedSignalIds.current.add(declineId);
+                if (callStateRef.current === 'calling') {
+                  if (address && msgConvPeer) {
+                    saveCallRecord(address, {
+                      peerAddress: msgConvPeer,
+                      type: callTypeRef.current || 'audio',
+                      direction: 'outgoing',
+                      status: 'declined',
+                      durationSeconds: 0,
+                    });
+                  }
+                  performEndCallRef.current();
+                  toast('Call declined');
+                }
+              }
+              continue;
             }
 
             let mappedContent = content || msg.fallback || 'Encrypted Data';
@@ -3351,7 +3465,7 @@ function getMsgEpochMs(m: any): number {
                     if (idx !== -1) {
                       const next = [...prev];
                       next[idx] = mappedMsg; // replace placeholder with confirmed msg
-                      return next.sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
+                      return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
                     }
                   }
                   // Strategy 2: fallback — find any optimistic with identical content
@@ -3362,7 +3476,7 @@ function getMsgEpochMs(m: any): number {
                   if (optIdx !== -1) {
                     const next = [...prev];
                     next[optIdx] = mappedMsg;
-                    return next.sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
+                    return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
                   }
                   // Strategy 3: check if it's a transformed message (like __BURN__)
                   const burnIdx = prev.findIndex(
@@ -3374,11 +3488,11 @@ function getMsgEpochMs(m: any): number {
                   if (burnIdx !== -1) {
                     const next = [...prev];
                     next[burnIdx] = mappedMsg;
-                    return next.sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
+                    return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
                   }
                   // Strategy 4: no optimistic found (e.g. second tab) — insert if not duplicate
                   if (prev.some(m => m.id === mappedMsg.id)) return prev;
-                  return [...prev, mappedMsg].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
+                  return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
                 }
 
                 // ── PEER MESSAGE: straightforward insert ──────────────────────────
@@ -3401,7 +3515,7 @@ function getMsgEpochMs(m: any): number {
                   }
                 }
                 if (prev.some(m => m.id === mappedMsg.id)) return prev;
-                return [...prev, mappedMsg].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
+                return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
               });
 
               // Update conversation preview
@@ -3419,7 +3533,8 @@ function getMsgEpochMs(m: any): number {
               if (fromPeer && !content.startsWith('__')) {
                 const dnd = (ledgerSettings as any)?.do_not_disturb;
                 const notifEnabled = ledgerSettings?.notifications_private !== false;
-                if (!dnd && notifEnabled && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                const mutedPeer = (() => { try { return !!localStorage.getItem('ledger_muted_' + String(msgConvPeer || '').toLowerCase()); } catch { return false; } })();
+                if (!dnd && !mutedPeer && notifEnabled && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
                   const showPreview = !(ledgerSettings as any)?.hide_notification_content;
                   new Notification(`Ledger Chat: ${shortAddr(msgConvPeer || 'Unknown')}`, {
                     body: showPreview ? formatMessagePreview(content) : 'New message',
@@ -3515,7 +3630,7 @@ function getMsgEpochMs(m: any): number {
             setMessages(prev => {
               const existingIds = new Set(prev.map(m => m.id));
               const newMsgs = localMsgs.filter(m => !existingIds.has(m.id));
-              return [...prev, ...newMsgs].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
+              return [...prev, ...newMsgs].sort((a, b) => a.sentAtNs - b.sentAtNs);
             });
           }
         } catch (dbErr) {
@@ -3651,7 +3766,7 @@ function getMsgEpochMs(m: any): number {
              return true;
           });
 
-        const combined = [...rawMappedMsgs, ...pendingServer].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
+        const combined = [...rawMappedMsgs, ...pendingServer].sort((a, b) => a.sentAtNs - b.sentAtNs);
         const mappedMsgs: any[] = [];
         const reactions: Record<string, Record<string, string[]>> = {};
         const readReceipts = new Set<string>();
@@ -3808,7 +3923,7 @@ function getMsgEpochMs(m: any): number {
           
           // Drop only the replaced optimistic twins, keep everything else
           const base = prev.filter(m => !optimisticToRemove.has(m.id));
-          const finalMessages = [...base, ...newConfirmed].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b));
+          const finalMessages = [...base, ...newConfirmed].sort((a, b) => a.sentAtNs - b.sentAtNs);
           
           // Save all new confirmed messages to IndexedDB
           if (newConfirmed.length > 0) {
@@ -3877,12 +3992,12 @@ function getMsgEpochMs(m: any): number {
             if (data.users && data.users.length > 0) {
               peer = data.users[0].address;
             } else {
-              toast.error(`User not found: ${peer}`);
+              toast.error(`No one found for ${peer}`);
               setIsStartingConversation(false);
               return;
             }
           } catch {
-            toast.error('User search unavailable. Please enter a 0x wallet address.');
+            toast.error('Search is unavailable right now. Paste a wallet address instead.');
             setIsStartingConversation(false);
             return;
           }
@@ -3890,7 +4005,7 @@ function getMsgEpochMs(m: any): number {
 
         // Accept both EVM (42 chars: 0x + 40) and Aztec (66 chars: 0x + 64) addresses
         if (!/^0x[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$/.test(peer)) {
-            toast.error('Invalid address format. Use a wallet address or @username.');
+            toast.error('Enter a wallet address that starts with 0x, or a @username.');
             setIsStartingConversation(false);
             return;
         }
@@ -3902,7 +4017,7 @@ function getMsgEpochMs(m: any): number {
                 if (canMsg) canReceiveCache.current.set(peer.toLowerCase(), true);
             }
             if (!canMsg) {
-                toast.info(`Offline: This contact isn't fully registered yet. Your messages will be securely held and delivered when they connect.`);
+                toast.info(`This person has not set up Ledger Chat yet. Messages will wait until they do.`);
             }
         }
 
@@ -3942,7 +4057,7 @@ function getMsgEpochMs(m: any): number {
   const executeSend = async (content: string) => {
     // 1. App Store Compliance: Content Moderation & Rate Limiting
     if (!checkRateLimit(address || 'anon', 60, 60000)) {
-      toast.error('You are sending messages too fast. Please wait.');
+      toast.error('You are sending messages too quickly. Wait a moment.');
       return;
     }
     const moderationFlag = moderateContent(content);
@@ -3967,7 +4082,7 @@ function getMsgEpochMs(m: any): number {
           id: `bot-cmd-${Date.now()}`,
           senderInboxId: (client as any)?.inboxId || '',
           content: content,
-          sentAtNs: Date.now() * 1_000_000,
+          sentAtNs: Date.now(),
           conversationId: `dm-${activePeer?.toLowerCase()}`
         };
         const botMsg = {
@@ -3977,7 +4092,7 @@ function getMsgEpochMs(m: any): number {
           sentAtNs: Date.now() + 1,
           conversationId: `dm-${activePeer?.toLowerCase()}`
         };
-        setMessages((prev: any[]) => [...prev, cmdMsg, botMsg].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b)));
+        setMessages((prev: any[]) => [...prev, cmdMsg, botMsg].sort((a, b) => a.sentAtNs - b.sentAtNs));
         setMessage('');
         setShowBotSuggestions(false);
         return; 
@@ -4017,12 +4132,17 @@ function getMsgEpochMs(m: any): number {
         .replace(/\bidiot|moron|stupid\b/gi, 'someone with a different view');
     }
 
-    // Auto-Delete
-    if ((ledgerSettings as any)?.auto_delete_timer && !isSystemSignal) {
-      const timer = (ledgerSettings as any).auto_delete_timer;
-      if (timer === '1 hour') finalContent = `__BURN_3600__::${finalContent}`;
-      else if (timer === '1 day') finalContent = `__BURN_86400__::${finalContent}`;
-      else if (timer === '1 week') finalContent = `__BURN_604800__::${finalContent}`;
+    // Disappearing messages: a timer set for this chat wins over the global one.
+    if (!isSystemSignal) {
+      let chatTimer = 'off';
+      try { chatTimer = localStorage.getItem('ledger_disappearing_' + activePeer.toLowerCase()) || 'off'; } catch {}
+      const globalTimer = (ledgerSettings as any)?.auto_delete_timer || 'off';
+      const SECONDS: Record<string, number> = {
+        '1 hour': 3600, '24 hours': 86400, '1 day': 86400, '1 week': 604800, '1 month': 2592000, '1 year': 31536000,
+        '24h': 86400, '7d': 604800, '90d': 7776000,
+      };
+      const secs = chatTimer !== 'off' ? SECONDS[chatTimer] : SECONDS[globalTimer];
+      if (secs) finalContent = `__BURN_${secs}__::${finalContent}`;
     }
 
     // ── Messages are 100% free — no QD deduction per message (Axel strategy) ──
@@ -4058,10 +4178,10 @@ function getMsgEpochMs(m: any): number {
           senderInboxId: client?.inboxId || '',
           content: displayContent,
           burnAtNs,
-          sentAtNs: Date.now() * 1_000_000,
+          sentAtNs: Date.now(),
           conversationId: `dm-${activePeer.toLowerCase()}`
         };
-        setMessages(prev => [...prev, optimisticMsg].sort((a, b) => getMsgEpochMs(a) - getMsgEpochMs(b)));
+        setMessages(prev => [...prev, optimisticMsg].sort((a, b) => a.sentAtNs - b.sentAtNs));
 
         // Clear typing indicator immediately
         stopTypingSignal();
@@ -4094,7 +4214,7 @@ function getMsgEpochMs(m: any): number {
         const existing = JSON.parse(localStorage.getItem(outboxKey) || '[]');
         existing.push({ peer: activePeer, content: finalContent });
         localStorage.setItem(outboxKey, JSON.stringify(existing));
-        toast.info("You are offline. Message queued to outbox.");
+        toast.info("You are offline. This message will be sent when you reconnect.");
       }
 
       // ALWAYS send via XMTP / offline queue — works both online AND offline.
@@ -4202,7 +4322,7 @@ function getMsgEpochMs(m: any): number {
     
     // Check size limit (~1MB safe for XMTP encoded as Base64)
     if (file.size > 1024 * 1024) {
-      toast.error('File exceeds 1MB limit for P2P messaging.');
+      toast.error('Files can be up to 1 MB');
       if (fileRef.current) fileRef.current.value = '';
       return;
     }
@@ -4220,12 +4340,12 @@ function getMsgEpochMs(m: any): number {
       reader.readAsDataURL(file);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to attach file.');
+      toast.error('Could not attach the file');
       setIsUploading(false);
     }
   };
 
-  // ─── Live Location: watchPosition-based real time sharing ───────────────────
+  // ─── Live Location: watchPosition-based real-time sharing ───────────────────
   const startLiveLocation = useCallback(() => {
     if (liveLocationWatchId !== null) {
       // Already tracking — stop it
@@ -4237,7 +4357,7 @@ function getMsgEpochMs(m: any): number {
     }
 
     if (!navigator.geolocation) {
-      toast.error('Geolocation not supported by this browser');
+      toast.error('This browser cannot share your location');
       return;
     }
 
@@ -4246,7 +4366,7 @@ function getMsgEpochMs(m: any): number {
       (pos) => {
         executeSendRef.current?.(`[LIVELOCATION]${pos.coords.latitude},${pos.coords.longitude}`);
       },
-      () => toast.error('Location permission denied')
+      () => toast.error('Location access is blocked. Allow it in your browser settings.')
     );
 
     // Watch for continuous updates (~10s cadence via maximumAge)
@@ -4260,14 +4380,14 @@ function getMsgEpochMs(m: any): number {
 
     setLiveLocationWatchId(watchId);
     setIsLiveLocationActive(true);
-    toast.success('Live location started — sharing position');
+    toast.success('Sharing your live location');
 
     // Auto-stop after 15 minutes
     setTimeout(() => {
       navigator.geolocation.clearWatch(watchId);
       setLiveLocationWatchId(null);
       setIsLiveLocationActive(false);
-      toast.info('Live location expired after 15 minutes');
+      toast.info('Live location ended after 15 minutes');
     }, 15 * 60 * 1000);
   }, [liveLocationWatchId]);
 
@@ -4280,7 +4400,7 @@ function getMsgEpochMs(m: any): number {
     const rl = rateLimitRef.current;
     rl.timestamps = rl.timestamps.filter(t => now - t < RATE_LIMIT_WINDOW_MS);
     if (rl.timestamps.length >= RATE_LIMIT_MAX) {
-      toast.warning('Slow down — you are sending messages too quickly.');
+      toast.warning('You are sending messages too quickly. Wait a moment.');
       return;
     }
     rl.timestamps.push(now);
@@ -4298,7 +4418,6 @@ function getMsgEpochMs(m: any): number {
     }
     setInputText('');
     setLinkPreview(null);
-    if (inputRef.current) (inputRef.current as any).style.height = '44px';
     if (scheduledAt) {
       const delayMs = scheduledAt.getTime() - Date.now();
       setScheduledAt(null);
@@ -4321,7 +4440,7 @@ function getMsgEpochMs(m: any): number {
       const TONE_MAP: Record<string, string> = { 'hate': 'strongly dislike', 'stupid': 'not optimal', 'idiot': 'mistaken', 'kill': 'stop' };
       let softened = txt;
       Object.entries(TONE_MAP).forEach(([w, r]) => softened = softened.replace(new RegExp(`\\b${w}\\b`, 'gi'), r));
-      if (softened !== txt) { txt = softened; toast('Tone softened by AI', { icon: '🤝' }); }
+      if (softened !== txt) { txt = softened; toast('Some words were softened before sending'); }
     }
     await executeSend(txt);
   };
@@ -4519,20 +4638,6 @@ function getMsgEpochMs(m: any): number {
         )}
         
         
-      {showScheduleCall && (
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl relative">
-            <h2 className="text-[18px] font-bold text-black mb-2">Schedule Call</h2>
-            <p className="text-[13px] text-black/50 mb-6">Schedule an encrypted audio/video call. This will be added to your local sovereign calendar.</p>
-            <input type="datetime-local" className="w-full bg-[#f5f5f7] border-none rounded-xl p-4 text-[14px] font-medium text-black focus:ring-2 focus:ring-[#2754d6] mb-4" />
-            <div className="flex gap-3">
-              <button onClick={() => setShowScheduleCall(false)} className="flex-1 py-3 bg-[#f5f5f7] hover:bg-[#e5e5ea] text-black font-bold text-[14px] rounded-xl">Cancel</button>
-              <button onClick={() => { setShowScheduleCall(false); toast.success('Call scheduled locally.'); }} className="flex-1 py-3 bg-[#2754d6] hover:bg-[#128C7E] text-white font-bold text-[14px] rounded-xl">Save</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {showVault && (
           <LedgerChatVaultManager onClose={() => setShowVault(false)} />
         )}
@@ -4584,7 +4689,7 @@ function getMsgEpochMs(m: any): number {
                 return next;
               });
               setActivePeer(null);
-              toast.error(`${getDisplayName(activePeer)} has been blocked.`);
+              toast.success(`${getDisplayName(activePeer)} is blocked`);
             }}
           />
         )}
@@ -4606,8 +4711,8 @@ function getMsgEpochMs(m: any): number {
 
     {/* Solid white container — two-panel layout: sidebar (left) + chat (right) */}
       <div className={`relative flex flex-row flex-1 min-h-0 w-full overflow-hidden shadow-sm ${(showScanner || showMyQR || showProfile) ? 'overflow-visible' : ''}`} style={{ 
-      borderRadius: isMobile ? 0 : '0',
-      ...bgStyle,
+      borderRadius: 0,
+      background: '#ffffff',
       fontFamily,
     }}>
       {/*  Sidebar: Conversation List — fixed width on desktop, full screen on mobile when no chat is active  */}
@@ -4676,7 +4781,7 @@ function getMsgEpochMs(m: any): number {
           }}
         />
 
-        <div className="flex-1 overflow-y-auto flex flex-col bg-white" style={bgStyle}>
+        <div className="flex-1 overflow-y-auto flex flex-col bg-white">
 
           {/* ── UPDATES TAB ── */}
           {sidebarTab === 'updates' && (
@@ -4820,7 +4925,7 @@ function getMsgEpochMs(m: any): number {
                 peerName: getDisplayName(c.peerAddress),
                 type: c.type,
                 direction: c.direction,
-                missed: c.durationSeconds === 0 && c.direction === 'incoming',
+                missed: c.status === 'missed' || c.status === 'declined' || (c.durationSeconds === 0 && c.direction === 'incoming'),
                 duration: c.durationSeconds,
                 timestamp: c.timestamp
               }))}
@@ -5052,8 +5157,17 @@ function getMsgEpochMs(m: any): number {
               </div>
             )}
 
+            <EncryptionInfoSheet
+              open={showEncryptionInfo}
+              onClose={() => setShowEncryptionInfo(false)}
+              peerName={getDisplayName(activePeer!)}
+              myAddress={address || ''}
+              peerAddress={activePeer || ''}
+              serverCount={messages.filter(m => m.conversationId?.toLowerCase() === `dm-${(activePeer || '').toLowerCase()}` && m.viaServer).length}
+            />
+
             {/* Dynamic Chat Background */}
-            <div className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f7f8fa]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={{ ...bgStyle, fontFamily, fontSize: `${fontSizePx}px` }}>
+            <div className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f7f8fa]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={{ ...(isSecretChat ? {} : bgStyle), fontFamily, fontSize: `${fontSizePx}px` }}>
               {/* Matrix Rain Effect Layer */}
               {chatBackground === 'matrix' && (
                 <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,255,0,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -5066,10 +5180,10 @@ function getMsgEpochMs(m: any): number {
               
               {/* E2E Encrypted Badge */}
               <div className="flex justify-center pt-3 pb-1 px-4">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#e4e7ec] text-[12.5px] text-[#727a88] text-center">
+                <button type="button" onClick={() => setShowEncryptionInfo(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#e4e7ec] text-[12.5px] text-[#727a88] text-center hover:bg-[#f2f4f7] transition-colors">
                   <Lock size={12} strokeWidth={2.2} aria-hidden="true" />
-                  Messages are encrypted end to end with XMTP
-                </span>
+                  Messages are end to end encrypted. Tap for details
+                </button>
               </div>
 
               {(() => {
@@ -5120,9 +5234,6 @@ function getMsgEpochMs(m: any): number {
                     clientInboxId={client?.inboxId}
                     isLoadingMore={false}
                     onLoadMore={() => {}}
-                    isTyping={Boolean(peerStatus.isTyping || (activePeer && typingPeers.has(activePeer.toLowerCase())))}
-                    typingLabel={`${getDisplayName(activePeer!)} is typing`}
-                    isSending={sending}
                     renderMessage={(msg, isMe) => {
                       const sentTime = typeof msg.sentAtNs === 'number' ? new Date(msg.sentAtNs) : (msg.sent || msg.sentAt || new Date());
                       const dateStr = new Date(sentTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -5159,6 +5270,21 @@ function getMsgEpochMs(m: any): number {
                   />
                 );
               })()}
+              {(peerStatus.isTyping || (activePeer && typingPeers.has(activePeer.toLowerCase()))) && (
+                  <div className="flex self-start items-start mt-2 ml-4">
+                      <div className="px-4 py-3 bg-white rounded-[18px] rounded-bl-[6px] border border-[#e4e7ec] flex items-center gap-1.5" role="status" aria-label={`${getDisplayName(activePeer!)} is typing`}>
+                        <div className="w-1.5 h-1.5 bg-[#a3a9b4] rounded-full" style={{ animation: 'typingBounce 1.2s ease-in-out infinite', animationDelay: '0ms', willChange: 'transform' }} />
+                        <div className="w-1.5 h-1.5 bg-[#a3a9b4] rounded-full" style={{ animation: 'typingBounce 1.2s ease-in-out infinite', animationDelay: '200ms', willChange: 'transform' }} />
+                        <div className="w-1.5 h-1.5 bg-[#a3a9b4] rounded-full" style={{ animation: 'typingBounce 1.2s ease-in-out infinite', animationDelay: '400ms', willChange: 'transform' }} />
+                      </div>
+                  </div>
+              )}
+              {sending && (
+                <div className="flex self-end items-center gap-2 mt-1 mr-4 text-[12.5px] text-[#727a88]" role="status">
+                  <LoaderCircle size={13} strokeWidth={2} className="animate-spin" aria-hidden="true" />
+                  Sending
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
 
@@ -5365,7 +5491,7 @@ function getMsgEpochMs(m: any): number {
                             { id: 'sticker',   color: '#FFCC00', iconPath: <Sticker size={19} strokeWidth={1.8} />,      label: 'Stickers',       sublabel: 'Send a sticker',         onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
                             { id: 'poll',      color: '#10B981', iconPath: <ListChecks size={19} strokeWidth={1.8} />,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
                             // ── Crypto & Aztec Private Payments ──────────────────────────
-                            { id: 'zkmoney',   color: '#1C1C1E', iconPath: <ShieldCheck size={19} strokeWidth={1.8} />, label: 'Private payment', sublabel: 'Aztec demo, no funds move', onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
+                            { id: 'zkmoney',   color: '#1C1C1E', iconPath: <ShieldCheck size={19} strokeWidth={1.8} />, label: 'Private payment', sublabel: 'Aztec test network', onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
                             { id: 'zkstream',  color: '#1C1C1E', iconPath: <Waves size={19} strokeWidth={1.8} />, label: 'Payment stream', sublabel: 'Demo, no funds move', onClick: () => { setShowZkStreamModal(true); setShowAppDrawer(false); } },
                             { id: 'zkinvoice', color: '#1C1C1E', iconPath: <Receipt size={19} strokeWidth={1.8} />, label: 'Private invoice', sublabel: 'Request a private payment', onClick: () => { setShowZkInvoiceModal(true); setShowAppDrawer(false); } },
                             { id: 'payment',   color: '#1C1C1E', iconPath: <CreditCard size={19} strokeWidth={1.8} />,     label: 'Payment',        sublabel: 'Send tokens from your wallet',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
@@ -5376,10 +5502,10 @@ function getMsgEpochMs(m: any): number {
                               if (navigator.geolocation) {
                                 navigator.geolocation.getCurrentPosition(
                                   (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
-                                  () => toast.error('Location access denied — enable it in browser settings')
+                                  () => toast.error('Location access is blocked. Allow it in your browser settings.')
                                 );
                               } else {
-                                toast.error('Geolocation not supported on this device');
+                                toast.error('This device cannot share your location');
                               }
                             } },
                             { id: 'live-loc',  color: '#FF3B30', iconPath: <Navigation size={19} strokeWidth={1.8} />,   label: isLiveLocationActive ? 'Stop live location' : 'Live location', sublabel: isLiveLocationActive ? 'Stop sharing your position' : 'Share your position as you move', onClick: () => { startLiveLocation(); setShowAppDrawer(false); } },
@@ -5448,7 +5574,7 @@ function getMsgEpochMs(m: any): number {
                           className="flex items-center gap-3 w-full px-3 h-11 rounded-xl hover:bg-[#f2f4f7] text-left transition-colors"
                         >
                           <span className="text-[14px] font-medium text-[#15171c]">{bot.cmd}</span>
-                          <span className="text-[13px] text-[#727a88]">{bot.hint.split(' — ')[1]}</span>
+                          <span className="text-[13px] text-[#727a88]">{bot.hint.split('|')[1]}</span>
                         </button>
                       ))}
                     </div>
@@ -5532,13 +5658,8 @@ function getMsgEpochMs(m: any): number {
                               if (!val) {
                                 e.target.style.height = '44px';
                               } else {
-                                // RAF: defer resize so height:auto never causes mid-paint reflow
-                                // that shifts the VirtualizedMessageList above it.
-                                const el = e.target;
-                                requestAnimationFrame(() => {
-                                  el.style.height = '44px';
-                                  el.style.height = `${Math.min(Math.max(el.scrollHeight, 44), 134)}px`;
-                                });
+                                e.target.style.height = 'auto';
+                                e.target.style.height = `${Math.min(Math.max(e.target.scrollHeight, 44), 134)}px`;
                               }
                               const now = Date.now();
                               if (now - lastTypingTimeRef.current > 3000 && val.trim().length > 0) {
@@ -5885,7 +6006,16 @@ function getMsgEpochMs(m: any): number {
                       onClick: () => { setShowCallSettings(false); setShowE2EE(true); },
                       right: <ChevronRight size={16} strokeWidth={1.8} className="text-[#a3a9b4]" /> })}
                     {row({ icon: <Wifi size={17} strokeWidth={1.8} />, title: 'Network',
-                      text: networkQuality === 'poor' ? 'Weak connection, trying to recover' : 'Connection is stable' })}
+                      text: networkQuality === 'poor' ? 'Weak connection, trying to recover' : 'Connection is stable',
+                      right: callRoute.rttMs !== null ? <span className="text-[13px] text-[#727a88] tabular-nums">{callRoute.rttMs} ms</span> : undefined })}
+                    {row({ icon: <Globe size={17} strokeWidth={1.8} />, title: 'Route',
+                      text: callRoute.kind === 'relay'
+                        ? 'Through a relay server. Your IP address stays hidden and the media is still encrypted.'
+                        : callRoute.kind === 'direct'
+                          ? 'Direct between your devices. Your IP address is visible to the other person.'
+                          : 'Checking the connection' })}
+                    {row({ icon: <Phone size={17} strokeWidth={1.8} />, title: 'With',
+                      text: `${activePeer ? getDisplayName(activePeer) : 'Unknown'}${activePeer ? ' (' + activePeer.slice(0, 6) + '…' + activePeer.slice(-4) + ')' : ''}` })}
 
                     <button
                       type="button"

@@ -29,12 +29,19 @@ export async function POST(req: NextRequest) {
       const normalizedPeer = peerAddress.toLowerCase();
 
       // Verify contact relationship
-      const isContact = await prisma.chatContact.findUnique({
-        where: { owner_peer: { owner: callerAddress, peer: normalizedPeer } },
-        select: { owner: true },
-      }).catch(() => null);
+      // Both sides must have the other as a contact. A one-sided check let
+      // anyone add any address to their own list (POST /api/chat/contacts
+      // needs no consent) and then watch when that person is online.
+      const mutual = await prisma.chatContact.count({
+        where: {
+          OR: [
+            { owner: callerAddress, peer: normalizedPeer },
+            { owner: normalizedPeer, peer: callerAddress },
+          ],
+        },
+      }).catch(() => 0);
 
-      if (!isContact) {
+      if (mutual < 2) {
         return NextResponse.json(
           { error: 'Forbidden: Can only check presence of accepted contacts' },
           { status: 403 }

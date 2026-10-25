@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +56,22 @@ export async function POST(req: Request) {
       }
     }
 
+    // Limits that did not exist: size, speed, and a channel that belongs to
+    // this community.
+    if (typeof content !== 'string' || content.length > 20_000 || (contentHtml && (typeof contentHtml !== 'string' || contentHtml.length > 40_000))) {
+      return NextResponse.json({ error: 'The message is too long.' }, { status: 413 });
+    }
+    if (title !== undefined && title !== null && (typeof title !== 'string' || title.length > 140)) {
+      return NextResponse.json({ error: 'Invalid title.' }, { status: 400 });
+    }
+    const rl = await checkRateLimit(authorAddress, { max: 60, windowSec: 60, prefix: 'rl:community-msg' });
+    if (!rl.allowed) return NextResponse.json({ error: 'You are sending messages too fast. Wait a moment.' }, { status: 429 });
+    if (channelId !== undefined && channelId !== null) {
+      const ch = typeof channelId === 'string'
+        ? await (prisma as any).communityChannel.findFirst({ where: { id: channelId, communityId }, select: { id: true } })
+        : null;
+      if (!ch) return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
+    }
     const post = await prisma.communityPost.create({
       data: {
         communityId,

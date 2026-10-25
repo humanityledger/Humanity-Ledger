@@ -27,11 +27,23 @@ export const getCallHistory = (walletAddress: string): CallRecord[] => {
 
 export const saveCallRecord = (walletAddress: string, call: Omit<CallRecord, 'id' | 'timestamp'>): CallRecord => {
   const history = getCallHistory(walletAddress);
-  
+  const now = Date.now();
+
+  // Deduplication guard: prevent identical duplicate records from rapid signaling or stream re-runs
+  const recentDuplicate = history.find(c =>
+    c.peerAddress.toLowerCase() === call.peerAddress.toLowerCase() &&
+    c.status === call.status &&
+    c.direction === call.direction &&
+    Math.abs(now - c.timestamp) < 5000
+  );
+  if (recentDuplicate) {
+    return recentDuplicate;
+  }
+
   const newCall: CallRecord = {
     ...call,
-    id: crypto.randomUUID(),
-    timestamp: Date.now(),
+    id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `call-${now}-${Math.random().toString(36).slice(2, 7)}`,
+    timestamp: now,
   };
 
   // Prepend to keep newest first

@@ -57,7 +57,7 @@ export default function OpenLetterPage() {
             </li>
             <li className="flex items-start">
               <span className="text-[#0088cc] mr-3 font-bold">2.</span>
-              <span><strong>QDs (Quantum Dots / Core Dots):</strong> A natively private ERC-20 token running on the Ethereum L1 mainnet. Balances can be securely verified; only the total supply of 21M is immutable.</span>
+              <span><strong>Private payments:</strong> Zero knowledge transfers between people inside the chat. This is a demo today and no real funds move yet.</span>
             </li>
             <li className="flex items-start">
               <span className="text-[#0088cc] mr-3 font-bold">3.</span>

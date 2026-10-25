@@ -11,6 +11,7 @@ import { requireWallet } from '@/lib/security/requireWallet';
 export async function POST(req: NextRequest) {
   try {
     const caller = await requireWallet(req);
+    if (caller.errorResponse) return caller.errorResponse;
 
     const { communityId, roomName } = await req.json();
     if (!communityId || !roomName) {

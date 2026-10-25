@@ -73,3 +73,17 @@ Los tests e2e levantan el servidor solos: `playwright.config.ts` tiene `webServe
 ## Lo que todavía no está comprobado
 
 Esta guía se escribió leyendo `docker-compose.yml`, `package.json` y `middleware.ts`, no ejecutándolos. No se ha arrancado la aplicación ni una sola vez desde la sesión que la escribió.
+
+## Community apps (optional)
+
+The Apps tab of a community works without any extra setup for the four ready-made apps (poll, sign-up, shared list, "when can we meet"). Writing an app from a description needs a language model on the server, set in `.env.local`:
+
+```
+ANTHROPIC_API_KEY=...            # Anthropic Messages API (default model: claude-sonnet-5-5)
+# or any OpenAI-compatible server, including a local one:
+OPENAI_API_KEY=...
+OPENAI_BASE_URL=http://localhost:11434/v1
+COMMUNITY_APPS_MODEL=...         # required with OPENAI_API_KEY; overrides the Anthropic default otherwise
+```
+
+Only the member's description (and, when revising, the app's current code) is sent to the provider. The tables are `CommunityApp` and `CommunityAppEntry` (migration `20261023190000_community_apps`). How the sandbox works: `lib/community-apps/framePolicy.ts`.

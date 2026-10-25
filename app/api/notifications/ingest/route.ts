@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     try {
         // [SOVEREIGN HARDENING]: Authentication mandatory for ingestion
         const authKey = request.headers.get('X-Ingest-Key');
-        const internalKey = process.env.INTERNAL_INGEST_KEY || 'ledger_ingest_institutional_v1';
+        const internalKey = process.env.INTERNAL_INGEST_KEY || require('crypto').randomBytes(32).toString('hex');
         
         if (!authKey || authKey !== internalKey) {
             console.warn(`[INGEST:Unauthorized] Access denied from IP: ${request.headers.get('x-forwarded-for')}`);

@@ -7,6 +7,10 @@ import { test, expect } from '@playwright/test';
  * `session?.userId || queryAddress`, so an unauthenticated request carrying
  * `?address=0x…` returned the shielded balance of an arbitrary wallet. These
  * tests run with no cookies at all and assert the endpoint refuses.
+ *
+ * Since 23 October 2026 the route is retired (410): balances are read by the
+ * PXE in the browser and never by the server. Either refusal is acceptable;
+ * serving a balance is not.
  */
 
 const VICTIM = '0x1111111111111111111111111111111111111111';
@@ -14,7 +18,7 @@ const VICTIM = '0x1111111111111111111111111111111111111111';
 test.describe('GET /api/zk/balance without a session', () => {
   test('refuses an arbitrary address passed as a query parameter', async ({ request }) => {
     const res = await request.get(`/api/zk/balance?address=${VICTIM}`);
-    expect(res.status()).toBe(401);
+    expect([401, 410]).toContain(res.status());
 
     const body = await res.json();
     // The refusal must not leak the balance it declined to serve.
@@ -24,7 +28,7 @@ test.describe('GET /api/zk/balance without a session', () => {
 
   test('refuses with no parameters at all', async ({ request }) => {
     const res = await request.get('/api/zk/balance');
-    expect(res.status()).toBe(401);
+    expect([401, 410]).toContain(res.status());
   });
 
   test('refuses POST the same way', async ({ request }) => {
@@ -32,12 +36,12 @@ test.describe('GET /api/zk/balance without a session', () => {
       data: { address: VICTIM },
       headers: { 'sec-fetch-site': 'same-origin' },
     });
-    expect(res.status()).toBe(401);
+    expect([401, 410]).toContain(res.status());
   });
 
   test('does not serve the balance under a case-varied parameter', async ({ request }) => {
     const res = await request.get(`/api/zk/balance?Address=${VICTIM}&userId=${VICTIM}`);
-    expect(res.status()).toBe(401);
+    expect([401, 410]).toContain(res.status());
   });
 
   test('marks its response as not cacheable', async ({ request }) => {

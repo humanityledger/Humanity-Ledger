@@ -2,11 +2,17 @@ import { createCipheriv, createDecipheriv, randomBytes, scrypt } from 'crypto';
 import { promisify } from 'util';
 
 const ALGORITHM = 'aes-256-gcm';
-const SECRET = process.env.ENCRYPTION_SECRET || 'fallback-secret-key-CHANGE-IN-PROD-32chars!!';
+// Read when used, not at import: a missing secret fails the request that
+// needs it instead of every route that happens to import this file.
+function secret(): string {
+    const s = process.env.ENCRYPTION_SECRET;
+    if (!s) throw new Error('ENCRYPTION_SECRET is not set.');
+    return s;
+}
 
 // Ensure key is 32 bytes
 const getKey = async () => {
-    return (await promisify(scrypt)(SECRET, 'salt', 32)) as Buffer;
+    return (await promisify(scrypt)(secret(), 'salt', 32)) as Buffer;
 };
 
 export async function encrypt(text: string): Promise<string> {

@@ -161,7 +161,7 @@ export function NetworkMapPanel() {
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
               <span>
                 <strong className="text-emerald-400 uppercase tracking-widest mr-2">Local Node Detected:</strong>
-                Para máxima privacidad y resistencia a la censura, recomendamos ejecutar este nodo local sobre la red <strong className="text-white">Tor</strong> o <strong className="text-white">I2P</strong>.
+                For maximum privacy and censorship resistance, we recommend running this local node over the <strong className="text-white">Tor</strong> or <strong className="text-white">I2P</strong> network.
               </span>
             </motion.div>
           )}

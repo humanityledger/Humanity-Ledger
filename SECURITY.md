@@ -22,7 +22,7 @@ Documentación de qué sucede si se compromete cada componente del sistema:
   - *Mitigación*: El backend no posee claves privadas de usuarios. Los mensajes en tránsito usan HTTPS y los payloads de chat van cifrados (XMTP). No hay acceso a fondos de usuarios (Account Abstraction previene esto sin firmas del cliente).
 - **Compromiso de Base de Datos (PostgreSQL)**:
   - *Impacto*: Filtración de metadatos (quién habla con quién, timestamps), configuración de perfiles, nombres de usuarios.
-  - *Mitigación*: No hay mensajes en texto claro en DB. Las contraseñas (en caso de existir para auth legacy) están hasheadas (Argon2/bcrypt). La DB es un *Indexador*, no la fuente única de verdad para el asentamiento final.
+  - *Mitigación*: Los mensajes directos entregados por XMTP no llegan a la DB. EXCEPCION ABIERTA (F2-02): los mensajes de la ruta de respaldo (`/api/chat/direct`, `/api/chat/send`), las publicaciones de comunidades y los adjuntos se guardan legibles; ver /docs/audits. Las contraseñas (en caso de existir para auth legacy) están hasheadas (Argon2/bcrypt). La DB es un *Indexador*, no la fuente única de verdad para el asentamiento final.
 - **Compromiso de Redis**:
   - *Impacto*: Bypass temporal de rate limits, manipulación de colas de eventos (workers).
   - *Mitigación*: No usar Redis como única fuente de almacenamiento de datos críticos o validación final.

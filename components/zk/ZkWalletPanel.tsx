@@ -1,36 +1,38 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+/**
+ * ZkWalletPanel: the private payments wallet in Ledger Chat.
+ *
+ * Every number on this panel is read from the Aztec test network through the
+ * PXE running in the browser (lib/aztec/wallet/client.ts), and every button
+ * sends a real transaction proven on this device. There is no demo mode and
+ * no balance kept anywhere else.
+ *
+ * Shield and Unshield move tokens between the public and the private balance
+ * on Aztec. There is no bridge from Ethereum yet, so the labels say "Public"
+ * and "Private", not "L1" and "ZK".
+ *
+ * The parent's onShield / onUnshield / onSend callbacks are accepted for
+ * compatibility and ignored: the panel always uses its own flows, so a parent
+ * can no longer route a button to an older simulated modal.
+ */
+
+import React, { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Lock, ArrowDownToLine, ArrowUpFromLine, Send, QrCode, RefreshCw, X,
-  ExternalLink, TrendingUp, Clock, ChevronDown, ChevronUp, Wifi, WifiOff,
-  AlertCircle, CheckCircle, Copy, Check, Sparkles, Layers
-} from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import {
-  getShieldedBalances,
-  getZkTransactionHistory,
-  calculatePrivacyScore,
-  getNotesByAddress,
-  syncBalanceFromAztec,
-  resolveZkTag,
-  formatAmount,
-  formatUSDValue,
-  relativeTime,
-  ZkShieldedBalance,
-  ZkTransactionRecord,
-  ZkNote,
-  ZkPrivacyAnalysis,
-  AZTEC_EXPLORER,
-  SupportedToken,
-} from '@/lib/zk/zkMoney';
-import { getIdentity, resolveDisplayName, getAvatarColor, getInitials } from '@/lib/zk/zkIdentity';
-import { ZkShieldModal } from './ZkShieldModal';
-import { ZkMoneyModal } from '../chat/ZkMoneyModal';
+  ArrowDownToLine, ArrowUpFromLine, Send, QrCode, RefreshCw, X, ExternalLink, Copy, Check,
+  Droplets, Lock, Loader2, AlertTriangle, ScanLine, UserPlus, ChevronDown, ChevronUp, Layers, Clock,
+} from 'lucide-react';
+import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
+import { decodePaymentRequest, encodePaymentRequest, humanError, type TokenBalance } from '@/lib/aztec/wallet/client';
+import { AZTEC_WALLET_CONFIG, FAUCET_AMOUNT, explorerTxUrl, isWalletConfigured, type TokenKey } from '@/lib/aztec/wallet/config';
+import { formatUnits } from '@/lib/aztec/wallet/amounts';
+import type { Activity } from '@/lib/aztec/wallet/history';
 
-// ─── Props ─────────────────────────────────────────────────────────────────────
+const QrScanner = dynamic(() => import('@/components/terminal/QrScanner').then((m) => m.QrScanner), { ssr: false });
 
 interface ZkWalletPanelProps {
   address: string;
@@ -39,648 +41,733 @@ interface ZkWalletPanelProps {
   onUnshield?: () => void;
   onSend?: () => void;
   className?: string;
+  /** Opens the send sheet straight away, for "pay this person" from a chat. */
+  initialSheet?: Sheet;
+  /** Called after a private payment is confirmed, with its transaction hash. */
+  onPaymentSent?: (info: { txHash: string; token: TokenKey }) => void;
 }
 
-// ─── Sub-components ────────────────────────────────────────────────────────────
+type Sheet = 'shield' | 'unshield' | 'send' | 'receive' | null;
 
-function TokenCard({
-  symbol,
-  balance,
-  usdValue,
-  emoji,
-  delay,
-}: {
-  symbol: string;
-  balance: string;
-  usdValue: string;
-  emoji: string;
-  delay: number;
-}) {
+const INK = '#15171c';
+const short = (s?: string, n = 6) => (s ? `${s.slice(0, n + 2)}…${s.slice(-n)}` : '');
+
+/* -------------------------------------------------------------------------- */
+
+export function ZkWalletPanel({ address, onClose, className, initialSheet = null, onPaymentSent }: ZkWalletPanelProps) {
+  const { state, wallet, open, walletConnected, sameAccount } = useAztecWallet(address);
+  const [sheet, setSheet] = useState<Sheet>(initialSheet);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const ready = state.phase === 'ready';
+
+  const handleOpen = async () => {
+    try {
+      await open();
+      toast.success('Private wallet open');
+    } catch (err) {
+      toast.error(humanError(err));
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (!wallet || !ready) return;
+    setRefreshing(true);
+    try {
+      await wallet.refresh();
+    } catch (err) {
+      toast.error(humanError(err));
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Refresh every 30 seconds while open, to pick up incoming payments.
+  useEffect(() => {
+    if (!ready || !wallet) return;
+    const t = setInterval(() => {
+      if (!wallet.state.busy) wallet.refresh().catch(() => {});
+    }, 30_000);
+    return () => clearInterval(t);
+  }, [ready, wallet]);
+
+  const notes = useMemo(
+    () => state.activity.filter((a) => (a.kind === 'receive' || a.kind === 'shield') && a.status === 'settled'),
+    [state.activity],
+  );
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.3 }}
-      className="bg-white rounded-2xl p-4 shadow-sm border border-black/[0.06] flex items-center gap-3.5"
+      initial={{ opacity: 0, x: 40 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 40 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+      className={`relative flex flex-col h-full bg-[#F4F5F7] text-[#15171c] ${className ?? ''}`}
     >
-      <div
-        className="w-11 h-11 rounded-full flex items-center justify-center text-lg font-bold shadow-inner"
-        style={{ background: '#F2F2F7', color: '#1C1C1E' }}
-      >
-        {emoji}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-[#1C1C1E] tracking-wide">zk{symbol}</span>
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-black/60 bg-black/5 px-2 py-0.5 rounded-full">
-            Shielded
-          </span>
+      {/* Header */}
+      <div className="flex-shrink-0 bg-white px-5 pt-5 pb-4 border-b border-black/[0.06]">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[16px] font-semibold tracking-tight">Private wallet</div>
+            <div className="mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-black/45">
+              Aztec test network · tokens have no value
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 transition-colors"
+          >
+            <X size={16} />
+          </button>
         </div>
-        <div className="text-[17px] font-extrabold text-[#1C1C1E] leading-tight mt-0.5 font-mono">
-          {balance}
-        </div>
-        <div className="text-[11px] text-black/40 font-medium mt-0.5">{usdValue}</div>
+
+        {ready && state.aztecAddress && (
+          <div className="mt-4 rounded-2xl border border-black/[0.08] p-4">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-[12px] font-semibold text-black/50">
+                <Lock size={12} strokeWidth={2.4} /> Private balance
+              </span>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={refreshing || state.busy}
+                className="flex items-center gap-1.5 text-[12px] font-semibold text-black/70 bg-black/5 hover:bg-black/10 px-3 py-1 rounded-full transition-colors disabled:opacity-50"
+              >
+                <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
+                {refreshing ? 'Syncing' : 'Sync'}
+              </button>
+            </div>
+            <div className="mt-2 space-y-1.5">
+              {state.balances.map((b) => (
+                <BalanceRow key={b.key} b={b} />
+              ))}
+            </div>
+            <CopyLine label="Your Aztec address" value={state.aztecAddress} />
+          </div>
+        )}
       </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4">
+        {!ready ? (
+          <Gate
+            phase={state.phase}
+            step={state.step}
+            error={state.error}
+            configured={isWalletConfigured()}
+            walletConnected={walletConnected}
+            sameAccount={sameAccount}
+            hasAddress={/^0x[0-9a-fA-F]{40}$/.test(address)}
+            onOpen={handleOpen}
+          />
+        ) : (
+          <>
+            <div className="grid grid-cols-4 gap-2">
+              <ActionButton icon={ArrowDownToLine} label="Shield" sub="Public → private" onClick={() => setSheet('shield')} />
+              <ActionButton icon={ArrowUpFromLine} label="Unshield" sub="Private → public" onClick={() => setSheet('unshield')} />
+              <ActionButton icon={Send} label="Send" sub="Private" onClick={() => setSheet('send')} />
+              <ActionButton icon={QrCode} label="Receive" sub="QR code" onClick={() => setSheet('receive')} />
+            </div>
+
+            {AZTEC_WALLET_CONFIG.faucet && <Faucet disabled={state.busy} />}
+
+            <ActivityList items={state.activity} />
+
+            <div className="bg-white rounded-2xl border border-black/[0.05] overflow-hidden">
+              <button
+                type="button"
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-left"
+                onClick={() => setShowNotes((v) => !v)}
+              >
+                <Layers size={16} className="text-black/60" strokeWidth={2.2} />
+                <span className="font-semibold text-[14px] flex-1">Shielded notes ({notes.length})</span>
+                {showNotes ? <ChevronUp size={16} className="text-black/40" /> : <ChevronDown size={16} className="text-black/40" />}
+              </button>
+              {showNotes && (
+                <div className="border-t border-black/[0.05]">
+                  <p className="px-4 pt-3 text-[12px] leading-relaxed text-black/50">
+                    Private notes this wallet has received or created by shielding. Only your browser can read them. Notes
+                    you have since spent still appear here; your balance above is always the current total.
+                  </p>
+                  {notes.length === 0 ? (
+                    <div className="px-4 py-3 text-[12px] text-black/40">No notes yet.</div>
+                  ) : (
+                    <ul className="divide-y divide-black/[0.04]">
+                      {notes.map((n) => (
+                        <li key={n.id} className="flex items-center gap-3 px-4 py-2.5 text-[12.5px] tabular-nums">
+                          <span className="font-semibold">{fmt(n)}</span>
+                          <span className="text-black/45">{n.kind === 'shield' ? 'from shielding' : `from ${short(n.counterparty)}`}</span>
+                          {n.blockNumber && <span className="ml-auto text-black/35">block {n.blockNumber}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <p className="px-1 pb-2 text-center text-[11.5px] leading-relaxed text-black/40">
+              Proofs are made on this device and sent to the Aztec test network. Our server never sees your keys, your
+              balances or who you pay.{' '}
+              <a href="/docs/zero-knowledge" className="underline underline-offset-2">
+                How it works
+              </a>
+            </p>
+          </>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {sheet && ready && (
+          <SheetFrame key={sheet} title={SHEET_TITLE[sheet]} onClose={() => setSheet(null)}>
+            {sheet === 'shield' && <ShieldForm mode="shield" onDone={() => setSheet(null)} />}
+            {sheet === 'unshield' && <ShieldForm mode="unshield" onDone={() => setSheet(null)} />}
+            {sheet === 'send' && <SendForm onDone={() => setSheet(null)} onPaymentSent={onPaymentSent} />}
+            {sheet === 'receive' && <ReceiveView aztecAddress={state.aztecAddress!} />}
+          </SheetFrame>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
 
-function ActionButton({
-  icon: Icon,
-  label,
-  sublabel,
-  onClick,
-}: {
-  icon: any;
-  label: string;
-  sublabel?: string;
-  onClick?: () => void;
-}) {
+export default ZkWalletPanel;
+
+const SHEET_TITLE: Record<Exclude<Sheet, null>, string> = {
+  shield: 'Shield',
+  unshield: 'Unshield',
+  send: 'Send privately',
+  receive: 'Receive',
+};
+
+function fmt(a: Activity) {
+  if (!a.amount || !a.token) return '';
+  const t = AZTEC_WALLET_CONFIG.tokens.find((x) => x.key === a.token);
+  return `${formatUnits(BigInt(a.amount), t?.decimals ?? 18)} ${t?.symbol ?? a.token}`;
+}
+
+/* --------------------------------------------------------------- pieces */
+
+function BalanceRow({ b }: { b: TokenBalance }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="text-[13px] font-semibold text-black/70">{b.symbol}</span>
+      <span className="text-right">
+        <span className="block text-[18px] font-semibold tabular-nums tracking-tight">{formatUnits(b.privateUnits, b.decimals)}</span>
+        {b.publicUnits > 0n && (
+          <span className="block text-[11.5px] tabular-nums text-black/45">
+            {formatUnits(b.publicUnits, b.decimals)} public, not yet shielded
+          </span>
+        )}
+      </span>
+    </div>
+  );
+}
+
+function CopyLine({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
   return (
     <button
-      onClick={onClick}
       type="button"
-      className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl active:scale-95 transition-all duration-200 bg-white border border-black/[0.06] shadow-sm hover:border-black/20"
+      onClick={() => {
+        navigator.clipboard?.writeText(value);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      }}
+      className="mt-3 w-full flex items-center justify-between gap-2 rounded-xl bg-black/[0.035] px-3 py-2 text-left hover:bg-black/[0.06] transition-colors"
     >
-      <div className="w-10 h-10 rounded-full flex items-center justify-center text-white bg-[#1C1C1E] shadow-sm">
-        <Icon size={18} strokeWidth={2.2} />
-      </div>
-      <span className="text-[12px] font-bold text-[#1C1C1E] leading-tight">{label}</span>
-      {sublabel && (
-        <span className="text-[9px] text-black/40 font-medium leading-none">{sublabel}</span>
-      )}
+      <span className="min-w-0">
+        <span className="block text-[10.5px] font-mono uppercase tracking-[0.12em] text-black/45">{label}</span>
+        <span className="block truncate font-mono text-[12px] text-black/75">{value}</span>
+      </span>
+      {copied ? <Check size={14} /> : <Copy size={14} className="text-black/50" />}
     </button>
   );
 }
 
-function PrivacyRing({ score }: { score: number }) {
-  const deg = Math.round((score / 100) * 360);
+function ActionButton({ icon: Icon, label, sub, onClick }: { icon: any; label: string; sub: string; onClick: () => void }) {
   return (
-    <div className="relative w-12 h-12 flex items-center justify-center">
-      <div
-        className="absolute inset-0 rounded-full"
-        style={{
-          background: `conic-gradient(#1C1C1E 0deg, #1C1C1E ${deg}deg, #E5E5EA ${deg}deg, #E5E5EA 360deg)`,
-        }}
-      />
-      <div className="absolute inset-1 rounded-full bg-white flex items-center justify-center shadow-inner">
-        <span className="text-[11px] font-black font-mono text-[#1C1C1E]">{score}</span>
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl bg-white border border-black/[0.06] hover:border-black/20 active:scale-95 transition-all"
+    >
+      <span className="w-10 h-10 rounded-full flex items-center justify-center text-white" style={{ background: INK }}>
+        <Icon size={18} strokeWidth={2.2} />
+      </span>
+      <span className="text-[12px] font-semibold leading-tight">{label}</span>
+      <span className="text-[10.5px] text-black/45 leading-none text-center">{sub}</span>
+    </button>
+  );
+}
+
+function Gate(props: {
+  phase: string;
+  step?: string;
+  error?: string;
+  configured: boolean;
+  walletConnected: boolean;
+  sameAccount: boolean;
+  hasAddress: boolean;
+  onOpen: () => void;
+}) {
+  const working = props.phase === 'signing' || props.phase === 'starting' || props.phase === 'deploying';
+  let body: React.ReactNode;
+  if (!props.configured) {
+    body = <p>The private wallet has not been set up on this server yet.</p>;
+  } else if (!props.hasAddress) {
+    body = <p>The private wallet needs an Ethereum wallet. You signed in with email; link a wallet to use it.</p>;
+  } else if (!props.walletConnected) {
+    body = <p>Connect the wallet you signed in with. Its signature creates the keys of your private wallet.</p>;
+  } else if (!props.sameAccount) {
+    body = <p>The connected wallet is a different account from the one you signed in with. Switch accounts in your wallet.</p>;
+  } else {
+    body = (
+      <>
+        <p>
+          Your wallet will ask you to sign a message. It is free and sends no transaction. The signature creates the keys
+          of your private wallet in this browser; we never receive them.
+        </p>
+        <p className="mt-2">The first time, your private account is also created on the Aztec test network. That takes about a minute.</p>
+      </>
+    );
+  }
+  const canOpen = props.configured && props.hasAddress && props.walletConnected && props.sameAccount;
+  return (
+    <div className="bg-white rounded-2xl border border-black/[0.06] p-5">
+      <div className="text-[14px] font-semibold">Open your private wallet</div>
+      <div className="mt-2 text-[13px] leading-relaxed text-black/60">{body}</div>
+      {props.error && props.phase === 'error' && (
+        <div className="mt-3 flex gap-2 rounded-xl bg-[#fdeeec] px-3 py-2.5 text-[12.5px] text-[#c0362c]">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+          <span>{props.error}</span>
+        </div>
+      )}
+      {working ? (
+        <div className="mt-4 flex items-center gap-2.5 rounded-xl bg-black/[0.04] px-3 py-3 text-[12.5px] text-black/70" aria-live="polite">
+          <Loader2 size={15} className="animate-spin shrink-0" />
+          <span>{props.step}</span>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={props.onOpen}
+          disabled={!canOpen}
+          className="mt-4 w-full h-11 rounded-xl text-white text-[14px] font-semibold disabled:opacity-40 transition-colors"
+          style={{ background: INK }}
+        >
+          {props.phase === 'error' ? 'Try again' : 'Open private wallet'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Faucet({ disabled }: { disabled: boolean }) {
+  const { wallet } = useAztecWallet('');
+  const [busy, setBusy] = useState<TokenKey | null>(null);
+  const run = async (key: TokenKey) => {
+    if (!wallet) return;
+    setBusy(key);
+    const id = toast.loading(`Minting ${FAUCET_AMOUNT[key]} test ${key}. The proof is made on this device.`);
+    try {
+      await wallet.faucet(key);
+      toast.success(`${FAUCET_AMOUNT[key]} test ${key} added to your public balance. Shield it to make it private.`, { id });
+    } catch (err) {
+      toast.error(humanError(err), { id });
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <div className="bg-white rounded-2xl border border-black/[0.05] p-4">
+      <div className="flex items-center gap-2 text-[13px] font-semibold">
+        <Droplets size={15} className="text-black/60" /> Get test tokens
+      </div>
+      <p className="mt-1 text-[12px] leading-relaxed text-black/50">
+        Free test tokens for the Aztec test network. They have no value and cannot be exchanged.
+      </p>
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {AZTEC_WALLET_CONFIG.tokens.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            disabled={disabled || !!busy}
+            onClick={() => run(t.key)}
+            className="h-9 rounded-xl border border-black/10 text-[12px] font-semibold hover:bg-black/[0.04] disabled:opacity-40 flex items-center justify-center gap-1.5"
+          >
+            {busy === t.key && <Loader2 size={12} className="animate-spin" />}+{FAUCET_AMOUNT[t.key]} {t.symbol}
+          </button>
+        ))}
       </div>
     </div>
   );
 }
 
-function NoteStatusBadge({ status }: { status: ZkNote['status'] }) {
-  const map: Record<ZkNote['status'], { label: string }> = {
-    pending:   { label: 'Pending' },
-    settled:   { label: 'Settled' },
-    spent:     { label: 'Spent' },
-    nullified: { label: 'Nullified' },
-  };
-  const { label } = map[status] || { label: status };
+const KIND_LABEL: Record<Activity['kind'], string> = {
+  shield: 'Shielded',
+  unshield: 'Unshielded',
+  send: 'Sent',
+  receive: 'Received',
+  faucet: 'Test tokens',
+  deploy: 'Private account created',
+};
+
+const STATUS_LABEL: Record<Activity['status'], string> = {
+  proving: 'Proving on this device',
+  pending: 'Waiting for the network',
+  settled: 'Settled',
+  failed: 'Failed',
+};
+
+function ActivityList({ items }: { items: Activity[] }) {
   return (
-    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/5 text-black/70">
-      {label}
-    </span>
+    <div className="bg-white rounded-2xl border border-black/[0.05] overflow-hidden">
+      <div className="px-4 py-3.5 border-b border-black/[0.05] flex items-center justify-between">
+        <span className="font-semibold text-[14px]">Recent transactions</span>
+        <span className="text-[12px] text-black/40">{items.length}</span>
+      </div>
+      {items.length === 0 ? (
+        <div className="py-8 flex flex-col items-center gap-2 text-black/45">
+          <Clock size={20} />
+          <span className="text-[13px] font-semibold text-black/70">No transactions yet</span>
+          <span className="text-[12px] text-center max-w-[220px]">Get test tokens, shield them, then send a private payment.</span>
+        </div>
+      ) : (
+        <ul className="divide-y divide-black/[0.04]">
+          {items.slice(0, 40).map((a) => {
+            const inbound = a.kind === 'receive' || a.kind === 'faucet';
+            return (
+              <li key={a.id} className="flex items-center gap-3 px-4 py-3">
+                <span className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center shrink-0">
+                  {a.status === 'proving' || a.status === 'pending' ? (
+                    <Loader2 size={14} className="animate-spin text-black/60" />
+                  ) : a.status === 'failed' ? (
+                    <AlertTriangle size={14} className="text-[#c0362c]" />
+                  ) : inbound ? (
+                    <ArrowDownToLine size={14} className="text-black/70" />
+                  ) : (
+                    <ArrowUpFromLine size={14} className="text-black/70" />
+                  )}
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[13px] font-semibold truncate">
+                    {KIND_LABEL[a.kind]}
+                    {a.counterparty && (a.kind === 'send' || a.kind === 'receive' || a.kind === 'unshield') && (
+                      <span className="font-normal text-black/50"> {a.kind === 'receive' ? 'from' : 'to'} {short(a.counterparty)}</span>
+                    )}
+                  </span>
+                  <span className={`block text-[11.5px] ${a.status === 'failed' ? 'text-[#c0362c]' : 'text-black/45'}`}>
+                    {a.status === 'failed' && a.error ? a.error : STATUS_LABEL[a.status]}
+                    {a.blockNumber ? ` · block ${a.blockNumber}` : ''}
+                  </span>
+                </span>
+                <span className="flex flex-col items-end gap-0.5 shrink-0">
+                  {a.amount && (
+                    <span className="text-[13px] font-semibold tabular-nums">
+                      {inbound || a.kind === 'shield' ? '+' : '−'}
+                      {fmt(a)}
+                    </span>
+                  )}
+                  {a.txHash && (
+                    <a
+                      href={explorerTxUrl(a.txHash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-black/45 hover:text-black flex items-center gap-0.5"
+                    >
+                      <ExternalLink size={9} /> Explorer
+                    </a>
+                  )}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+/* --------------------------------------------------------------- sheets */
 
-export function ZkWalletPanel({
-  address,
-  onClose,
-  onShield,
-  onUnshield,
-  onSend,
-  className
-}: ZkWalletPanelProps) {
-  const [balance, setBalance] = useState<ZkShieldedBalance>(() => getShieldedBalances(address));
-  const [history, setHistory] = useState<ZkTransactionRecord[]>([]);
-  const [notes, setNotes] = useState<ZkNote[]>([]);
-  const [privacy, setPrivacy] = useState<ZkPrivacyAnalysis | null>(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncOk, setSyncOk] = useState<boolean | null>(null);
-  const [showNotes, setShowNotes] = useState(false);
-  const [showPrivacy, setShowPrivacy] = useState(false);
-  const [copiedHandle, setCopiedHandle] = useState(false);
-  const [copiedAddress, setCopiedAddress] = useState(false);
+function SheetFrame({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <motion.div className="absolute inset-0 z-10 flex flex-col justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <button type="button" aria-label="Close" className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <motion.div
+        role="dialog"
+        aria-label={title}
+        initial={{ y: 40 }}
+        animate={{ y: 0 }}
+        exit={{ y: 40 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+        className="relative max-h-[88%] overflow-y-auto rounded-t-3xl bg-white px-5 pt-4 pb-6"
+      >
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-black/10" />
+        <div className="mb-4 flex items-center justify-between">
+          <span className="text-[16px] font-semibold">{title}</span>
+          <button type="button" onClick={onClose} aria-label="Close" className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center">
+            <X size={15} />
+          </button>
+        </div>
+        {children}
+      </motion.div>
+    </motion.div>
+  );
+}
 
-  // Native self-contained modal states
-  const [activeInternalModal, setActiveInternalModal] = useState<'shield' | 'unshield' | 'send' | 'receive' | null>(null);
+function TokenPicker({ value, onChange }: { value: TokenKey; onChange: (k: TokenKey) => void }) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {AZTEC_WALLET_CONFIG.tokens.map((t) => (
+        <button
+          key={t.key}
+          type="button"
+          onClick={() => onChange(t.key)}
+          className={`h-9 rounded-xl border text-[12.5px] font-semibold transition-colors ${
+            value === t.key ? 'border-[#15171c] bg-[#15171c] text-white' : 'border-black/10 hover:bg-black/[0.04]'
+          }`}
+        >
+          {t.symbol}
+        </button>
+      ))}
+    </div>
+  );
+}
 
-  const identity = getIdentity(address);
-  const handle = resolveZkTag(address);
-  const displayName = resolveDisplayName(address);
-  const avatarColor = getAvatarColor(address);
-  const initials = identity ? getInitials(identity) : handle.slice(3, 5).toUpperCase();
+function AmountField({ value, onChange, max, decimals, symbol }: { value: string; onChange: (v: string) => void; max: bigint; decimals: number; symbol: string }) {
+  return (
+    <label className="block">
+      <span className="flex items-center justify-between text-[12px] text-black/50">
+        <span>Amount</span>
+        <button type="button" onClick={() => onChange(formatUnits(max, decimals, decimals).replace(/,/g, ''))} className="font-semibold text-black/70 hover:text-black">
+          Available {formatUnits(max, decimals)} {symbol}
+        </button>
+      </span>
+      <input
+        inputMode="decimal"
+        autoComplete="off"
+        placeholder="0.00"
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(/[^\d.]/g, ''))}
+        className="mt-1.5 w-full h-12 rounded-xl border border-black/10 px-3.5 text-[18px] font-semibold tabular-nums outline-none focus:border-[#15171c]"
+      />
+    </label>
+  );
+}
 
-  // Total USD value computed from real shielded balances
-  const totalUSD = (() => {
-    const dai  = parseFloat(balance.dai.replace(/,/g, ''))  || 0;
-    const usdc = parseFloat(balance.usdc.replace(/,/g, '')) || 0;
-    const eth  = parseFloat(balance.eth.replace(/,/g, ''))  || 0;
-    return (dai + usdc + eth * 2650).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  })();
+function SubmitButton({ busy, children, disabled }: { busy: boolean; children: React.ReactNode; disabled?: boolean }) {
+  return (
+    <button
+      type="submit"
+      disabled={busy || disabled}
+      className="w-full h-12 rounded-xl text-white text-[14.5px] font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+      style={{ background: INK }}
+    >
+      {busy && <Loader2 size={16} className="animate-spin" />}
+      {children}
+    </button>
+  );
+}
 
-  const refresh = useCallback(() => {
-    setBalance(getShieldedBalances(address));
-    setHistory(getZkTransactionHistory(address).slice(0, 20));
-    setNotes(getNotesByAddress(address).slice(0, 20));
+function ShieldForm({ mode, onDone }: { mode: 'shield' | 'unshield'; onDone: () => void }) {
+  const { state, wallet } = useAztecWallet('');
+  const [token, setToken] = useState<TokenKey>('USDC');
+  const [amount, setAmount] = useState('');
+  const [busy, setBusy] = useState(false);
+  const bal = state.balances.find((b) => b.key === token);
+  const max = mode === 'shield' ? bal?.publicUnits ?? 0n : bal?.privateUnits ?? 0n;
 
-    const lastTx = getZkTransactionHistory(address)[0];
-    if (lastTx) {
-      setPrivacy(calculatePrivacyScore(lastTx));
-    }
-  }, [address]);
-
-  useEffect(() => {
-    refresh();
-    const handler = () => refresh();
-    window.addEventListener('ledger_zk_balance_updated', handler);
-    window.addEventListener('ledger_zk_payment_sent', handler);
-    window.addEventListener('ledger_zk_note_settled', handler);
-    return () => {
-      window.removeEventListener('ledger_zk_balance_updated', handler);
-      window.removeEventListener('ledger_zk_payment_sent', handler);
-      window.removeEventListener('ledger_zk_note_settled', handler);
-    };
-  }, [refresh]);
-
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncOk(null);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!wallet) return;
+    setBusy(true);
+    const id = toast.loading('Making the proof on this device. This can take up to a minute.');
     try {
-      const synced = await syncBalanceFromAztec(address);
-      setBalance(synced);
-      setSyncOk(true);
-      toast.success('Shielded balance synchronized with Aztec network');
-    } catch {
-      setSyncOk(false);
-      toast.error('Could not reach Aztec sequencer; using secure local PXE state');
+      if (mode === 'shield') await wallet.shield(token, amount);
+      else await wallet.unshield(token, amount);
+      toast.success(mode === 'shield' ? 'Shielded. The amount is now private.' : 'Unshielded to your public balance.', { id });
+      onDone();
+    } catch (err) {
+      toast.error(humanError(err), { id });
     } finally {
-      setSyncing(false);
-      setTimeout(() => setSyncOk(null), 3000);
+      setBusy(false);
     }
-  };
-
-  const copyToClipboard = (text: string, type: 'handle' | 'address') => {
-    if (!text) return;
-    navigator.clipboard?.writeText(text);
-    if (type === 'handle') {
-      setCopiedHandle(true);
-      setTimeout(() => setCopiedHandle(false), 2000);
-      toast.success('Zk handle copied to clipboard');
-    } else {
-      setCopiedAddress(true);
-      setTimeout(() => setCopiedAddress(false), 2000);
-      toast.success('EVM address copied to clipboard');
-    }
-  };
-
-  // Button actions trigger parent handlers if provided, or open native modal directly
-  const handleShieldClick = () => {
-    if (onShield) onShield();
-    else setActiveInternalModal('shield');
-  };
-
-  const handleUnshieldClick = () => {
-    if (onUnshield) onUnshield();
-    else setActiveInternalModal('unshield');
-  };
-
-  const handleSendClick = () => {
-    if (onSend) onSend();
-    else setActiveInternalModal('send');
-  };
-
-  const handleReceiveClick = () => {
-    setActiveInternalModal('receive');
   };
 
   return (
-    <>
-      <motion.div
-        initial={{ opacity: 0, x: 40 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 40 }}
-        transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-        className={`flex flex-col h-full bg-[#F4F4F6] text-gray-900 ${className ?? ''}`}
-        style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}
-      >
-        {/* ── Header ── */}
-        <div className="flex-shrink-0 bg-white px-5 pt-5 pb-4 border-b border-black/[0.06] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              {/* Avatar */}
-              <div
-                className="w-11 h-11 rounded-full flex items-center justify-center text-white font-extrabold text-sm shadow-sm"
-                style={{ background: avatarColor }}
-              >
-                {initials}
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-gray-900 text-[15px]">{displayName}</span>
-                  {identity?.verified && (
-                    <CheckCircle size={13} className="text-[#1C1C1E]" strokeWidth={2.5} />
-                  )}
-                </div>
-                <div className="text-[12px] text-gray-400 font-mono font-medium">{handle}</div>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              type="button"
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 transition-colors"
-            >
-              <X size={16} className="text-gray-600" />
-            </button>
-          </div>
+    <form onSubmit={submit} className="space-y-4">
+      <p className="text-[12.5px] leading-relaxed text-black/55">
+        {mode === 'shield'
+          ? 'Moves tokens from your public Aztec balance into private notes. The amount you shield is visible on the network; what you do with it afterwards is not.'
+          : 'Moves tokens from your private notes to your public Aztec balance. The amount becomes visible on the network.'}
+      </p>
+      <TokenPicker value={token} onChange={setToken} />
+      <AmountField value={amount} onChange={setAmount} max={max} decimals={bal?.decimals ?? 18} symbol={bal?.symbol ?? token} />
+      <SubmitButton busy={busy} disabled={!amount || max === 0n}>
+        {mode === 'shield' ? 'Shield' : 'Unshield'}
+      </SubmitButton>
+    </form>
+  );
+}
 
-          {/* Total balance card (Swiss clean financial architecture — pure executive white) */}
-          <div className="bg-white rounded-2xl p-5 text-[#1C1C1E] border border-black/[0.08] shadow-sm">
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-black/50 uppercase tracking-wider">
-                <Lock size={12} strokeWidth={2.5} />
-                <span>Total Shielded Balance</span>
-              </div>
-              <button
-                onClick={handleSync}
-                disabled={syncing}
-                type="button"
-                className="flex items-center gap-1.5 text-[11px] font-bold text-black/70 bg-black/5 hover:bg-black/10 px-3 py-1 rounded-full transition-colors disabled:opacity-50"
-              >
-                <RefreshCw size={11} className={syncing ? 'animate-spin' : ''} />
-                <span>{syncing ? 'Syncing…' : 'Sync'}</span>
-              </button>
-            </div>
-            <div className="text-[28px] font-black tracking-tight font-mono text-[#1C1C1E] mt-1">
-              ${totalUSD}
-            </div>
-            <div className="text-[12px] text-black/50 mt-1 flex items-center gap-1.5 font-medium">
-              <Lock size={11} className="text-black/40" />
-              Client-side UltraHonk Protected · Zero Knowledge
-            </div>
-          </div>
+function SendForm({ onDone, onPaymentSent }: { onDone: () => void; onPaymentSent?: (info: { txHash: string; token: TokenKey }) => void }) {
+  const { state, wallet } = useAztecWallet('');
+  const [token, setToken] = useState<TokenKey>('USDC');
+  const [amount, setAmount] = useState('');
+  const [to, setTo] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const bal = state.balances.find((b) => b.key === token);
 
-          {syncOk === true && (
-            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-black/70 font-semibold">
-              <Wifi size={12} /> Synced from Aztec Mainnet Sequencer
-            </div>
-          )}
-          {syncOk === false && (
-            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-black/60 font-semibold">
-              <WifiOff size={12} /> Offline cache active — Local PXE secure
-            </div>
-          )}
-        </div>
+  const applyScan = (text: string) => {
+    const req = decodePaymentRequest(text);
+    if (!req) {
+      toast.error('That QR code is not an Aztec payment request.');
+      return;
+    }
+    setTo(req.address);
+    if (req.token) setToken(req.token);
+    if (req.amount) setAmount(req.amount);
+    setScanning(false);
+  };
 
-        {/* ── Scrollable content ── */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4">
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!wallet) return;
+    setBusy(true);
+    const id = toast.loading('Making the proof on this device. This can take up to a minute.');
+    try {
+      const receipt: any = await wallet.send(token, amount, to);
+      toast.success('Payment sent. Only the recipient can see the amount and who sent it.', { id });
+      onPaymentSent?.({ txHash: String(receipt?.txHash ?? ''), token });
+      onDone();
+    } catch (err) {
+      toast.error(humanError(err), { id });
+    } finally {
+      setBusy(false);
+    }
+  };
 
-          {/* Token balances */}
-          <div className="space-y-2.5">
-            <TokenCard symbol="DAI"  balance={balance.dai}  usdValue={`≈ $${balance.dai}`}  emoji="◈" delay={0.05} />
-            <TokenCard symbol="USDC" balance={balance.usdc} usdValue={`≈ $${balance.usdc}`} emoji="$" delay={0.10} />
-            <TokenCard symbol="ETH"  balance={balance.eth}  usdValue={formatUSDValue(balance.eth, 'ETH')} emoji="Ξ" delay={0.15} />
-          </div>
-
-          {/* Action buttons (Executive Swiss UI — clean functional icons) */}
-          <div className="grid grid-cols-4 gap-2">
-            <ActionButton
-              icon={ArrowDownToLine}
-              label="Shield"
-              sublabel="L1→ZK"
-              onClick={handleShieldClick}
-            />
-            <ActionButton
-              icon={ArrowUpFromLine}
-              label="Unshield"
-              sublabel="ZK→L1"
-              onClick={handleUnshieldClick}
-            />
-            <ActionButton
-              icon={Send}
-              label="Send"
-              sublabel="Private"
-              onClick={handleSendClick}
-            />
-            <ActionButton
-              icon={QrCode}
-              label="Receive"
-              sublabel="QR / Tag"
-              onClick={handleReceiveClick}
-            />
-          </div>
-
-          {/* Privacy Score */}
-          {privacy && (
-            <div className="bg-white rounded-2xl shadow-sm border border-black/[0.04] overflow-hidden">
-              <button
-                type="button"
-                className="w-full flex items-center gap-3 px-4 py-3 text-left"
-                onClick={() => setShowPrivacy(v => !v)}
-              >
-                <Lock size={16} className="text-black/60" strokeWidth={2.2} />
-                <span className="font-bold text-[#1C1C1E] text-[14px] flex-1">Privacy Score</span>
-                <PrivacyRing score={privacy.score} />
-                {showPrivacy ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-              </button>
-              <AnimatePresence>
-                {showPrivacy && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-4 pb-4 space-y-3">
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        {[
-                          { label: 'Privacy Score', value: `${privacy.score}/100` },
-                          { label: 'Grade',         value: privacy.grade ?? 'Pending' },
-                          { label: 'Status',        value: privacy.score === 0 ? 'Testnet Required' : 'Active' },
-                        ].map(({ label, value }) => (
-                          <div key={label} className="bg-[#F4F4F6] rounded-xl p-2.5">
-                            <div className="text-[10px] text-gray-400 font-semibold uppercase">{label}</div>
-                            <div className="text-[12px] font-extrabold text-gray-800 mt-0.5">{value}</div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex items-start gap-2 text-[11px] text-gray-600">
-                          <AlertCircle size={12} className="mt-0.5 text-black/50 flex-shrink-0" />
-                          <span>{privacy.recommendation ?? 'Connect Aztec testnet to compute real privacy score.'}</span>
-                        </div>
-                      </div>
-                      <a
-                        href="https://aztec.network"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-[10px] text-black/60 hover:text-black font-bold"
-                      >
-                        <ExternalLink size={10} /> Powered by Aztec Network
-                      </a>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
-
-          {/* Transaction History */}
-          <div className="bg-white rounded-2xl shadow-sm border border-black/[0.04] overflow-hidden">
-            <div className="px-4 py-3.5 border-b border-black/[0.04] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp size={16} className="text-black/60" strokeWidth={2.2} />
-                <span className="font-bold text-gray-900 text-[14px]">Recent Transactions</span>
-              </div>
-              <span className="text-[11px] text-gray-400 font-semibold">{history.length} records</span>
-            </div>
-
-            {history.length === 0 ? (
-              <div className="py-8 flex flex-col items-center gap-2 text-gray-400">
-                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                  <Clock size={20} strokeWidth={2} className="text-gray-400" />
-                </div>
-                <span className="text-[13px] font-bold text-gray-700">No shielded transactions yet</span>
-                <span className="text-[11px] text-center text-gray-400 max-w-[200px]">
-                  All private transfers made via zk.money will appear here
-                </span>
-              </div>
-            ) : (
-              <div className="divide-y divide-black/[0.04]">
-                {history.map((tx, i) => {
-                  const isSent = tx.direction === 'sent';
-                  return (
-                    <div key={tx.txHash + i} className="flex items-center gap-3 px-4 py-3">
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-black/5"
-                      >
-                        {isSent ? (
-                          <ArrowUpFromLine size={14} className="text-black/70" />
-                        ) : (
-                          <ArrowDownToLine size={14} className="text-black/70" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[13px] font-bold text-gray-800 truncate">
-                          {isSent ? `To ${tx.recipientTag}` : `From ${tx.senderTag}`}
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <Clock size={10} className="text-gray-300" />
-                          <span className="text-[10px] text-gray-400 font-medium">{relativeTime(tx.timestamp)}</span>
-                          <span className="text-gray-200">·</span>
-                          <span className="text-[10px] text-black/60 font-semibold">Score: {tx.privacyScore}</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <span
-                          className="text-[13px] font-extrabold font-mono text-[#1C1C1E]"
-                        >
-                          {isSent ? '-' : '+'}{tx.amount} {tx.token}
-                        </span>
-                        <a
-                          href={tx.aztecExplorerUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          className="text-[9px] text-black/50 font-semibold flex items-center gap-0.5 hover:underline"
-                        >
-                          <ExternalLink size={8} /> AztecScan
-                        </a>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Shielded Notes (UTXO) */}
-          <div className="bg-white rounded-2xl shadow-sm border border-black/[0.04] overflow-hidden">
-            <button
-              type="button"
-              className="w-full flex items-center gap-2.5 px-4 py-3 text-left"
-              onClick={() => setShowNotes(v => !v)}
-            >
-              <Layers size={16} className="text-black/60" strokeWidth={2.2} />
-              <span className="font-bold text-gray-800 text-[14px] flex-1">
-                Shielded Notes ({notes.length})
-              </span>
-              {showNotes ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-            </button>
-            <AnimatePresence>
-              {showNotes && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  {notes.length === 0 ? (
-                    <div className="px-4 pb-4 text-[12px] text-gray-400 font-medium">No active notes</div>
-                  ) : (
-                    <div className="divide-y divide-black/[0.04]">
-                      {notes.map(note => (
-                        <div key={note.id} className="flex items-center gap-3 px-4 py-2.5 font-mono">
-                          <span className="text-[12px] font-bold text-gray-800">{note.amount} {note.token}</span>
-                          <NoteStatusBadge status={note.status} />
-                          <span className="ml-auto text-[10px] text-gray-400">{relativeTime(note.timestamp)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Receive section with REAL interactive QR Code */}
-          <div className="bg-white rounded-2xl shadow-sm border border-black/[0.04] p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <QrCode size={16} className="text-black/60" strokeWidth={2.2} />
-              <span className="font-bold text-gray-900 text-[14px]">Receive Shielded Payment</span>
-            </div>
-            <div className="border border-gray-100 bg-[#FAFAFA] rounded-2xl p-5 flex flex-col items-center gap-3.5">
-              <div className="bg-white p-3 rounded-2xl shadow-sm border border-black/[0.06]">
-                <QRCodeSVG value={handle} size={110} level="M" />
-              </div>
-              <div className="text-center">
-                <div className="text-[14px] font-extrabold text-gray-900 font-mono tracking-wide">{handle}</div>
-                <div className="text-[11px] text-gray-400 mt-0.5">Share your zk handle to receive private payments</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => copyToClipboard(handle, 'handle')}
-                className="flex items-center gap-1.5 text-[11px] font-bold text-white bg-[#1C1C1E] hover:bg-black px-4 py-2 rounded-full transition-colors shadow-sm"
-              >
-                {copiedHandle ? <Check size={13} /> : <Copy size={13} />}
-                <span>{copiedHandle ? 'Handle Copied!' : 'Copy Handle'}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-center gap-2 py-2">
-            <Lock size={12} className="text-gray-400" />
-            <span className="text-[11px] text-gray-400 font-medium">
-              Powered by{' '}
-              <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" className="text-black/70 font-bold hover:underline">
-                Aztec Network
-              </a>
-              {' · '}
-              <a href="https://aztecscan.xyz" target="_blank" rel="noopener noreferrer" className="text-black/70 font-bold hover:underline">
-                AztecScan
-              </a>
-            </span>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* ── Internal Modals: Shield / Unshield ── */}
-      <AnimatePresence>
-        {(activeInternalModal === 'shield' || activeInternalModal === 'unshield') && (
-          <ZkShieldModal
-            address={address}
-            mode={activeInternalModal}
-            onClose={() => setActiveInternalModal(null)}
-            onSuccess={() => {
-              setActiveInternalModal(null);
-              refresh();
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <label className="block">
+        <span className="text-[12px] text-black/50">Recipient's Aztec address</span>
+        <div className="mt-1.5 flex gap-2">
+          <input
+            value={to}
+            onChange={(e) => setTo(e.target.value.trim())}
+            onBlur={() => {
+              const req = decodePaymentRequest(to);
+              if (req) applyScan(to);
             }}
+            placeholder="0x… (64 characters)"
+            spellCheck={false}
+            className="min-w-0 flex-1 h-11 rounded-xl border border-black/10 px-3 font-mono text-[12px] outline-none focus:border-[#15171c]"
           />
-        )}
-      </AnimatePresence>
+          <button
+            type="button"
+            onClick={() => setScanning((v) => !v)}
+            aria-label="Scan a QR code"
+            className="h-11 w-11 shrink-0 rounded-xl border border-black/10 flex items-center justify-center hover:bg-black/[0.04]"
+          >
+            <ScanLine size={17} />
+          </button>
+        </div>
+      </label>
+      {scanning && (
+        <div className="overflow-hidden rounded-2xl border border-black/10">
+          <QrScanner onScanSuccess={applyScan} />
+        </div>
+      )}
+      <TokenPicker value={token} onChange={setToken} />
+      <AmountField value={amount} onChange={setAmount} max={bal?.privateUnits ?? 0n} decimals={bal?.decimals ?? 18} symbol={bal?.symbol ?? token} />
+      <p className="text-[12px] leading-relaxed text-black/50">
+        Paid from your private balance. The network sees that a transaction happened, not the amount, you or the recipient.
+        Check the address: a payment cannot be reversed.
+      </p>
+      <SubmitButton busy={busy} disabled={!amount || !to}>
+        Send privately
+      </SubmitButton>
+    </form>
+  );
+}
 
-      {/* ── Internal Modal: Send ── */}
-      <AnimatePresence>
-        {activeInternalModal === 'send' && (
-          <ZkMoneyModal
-            isOpen={true}
-            onClose={() => setActiveInternalModal(null)}
-            myAddress={address}
-            onSuccess={() => {
-              setActiveInternalModal(null);
-              refresh();
-            }}
+function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
+  const { wallet } = useAztecWallet('');
+  const [token, setToken] = useState<TokenKey>('USDC');
+  const [amount, setAmount] = useState('');
+  const [sender, setSender] = useState('');
+  const [adding, setAdding] = useState(false);
+  const request = encodePaymentRequest(aztecAddress, token, /^\d+(\.\d+)?$/.test(amount) ? amount : undefined);
+
+  const addSender = async () => {
+    if (!wallet) return;
+    setAdding(true);
+    try {
+      await wallet.addSender(sender);
+      toast.success('Sender added. Payments from this address will now appear.');
+      setSender('');
+    } catch (err) {
+      toast.error(humanError(err));
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col items-center gap-3 rounded-2xl bg-[#F4F5F7] p-5">
+        <div className="rounded-2xl bg-white p-3 border border-black/[0.06]">
+          <QRCodeSVG value={request} size={176} level="M" includeMargin={false} />
+        </div>
+        <span className="text-center text-[12px] text-black/55 max-w-[260px]">
+          Show this code to the person paying you. It contains your Aztec address{amount ? ', the token and the amount' : ''}.
+        </span>
+      </div>
+      <TokenPicker value={token} onChange={setToken} />
+      <label className="block">
+        <span className="text-[12px] text-black/50">Amount to request (optional)</span>
+        <input
+          inputMode="decimal"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))}
+          placeholder="Any amount"
+          className="mt-1.5 w-full h-11 rounded-xl border border-black/10 px-3 text-[15px] tabular-nums outline-none focus:border-[#15171c]"
+        />
+      </label>
+      <CopyLine label="Your Aztec address" value={aztecAddress} />
+
+      <div className="rounded-2xl border border-black/[0.08] p-4">
+        <div className="flex items-center gap-2 text-[13px] font-semibold">
+          <UserPlus size={15} className="text-black/60" /> Not seeing a payment?
+        </div>
+        <p className="mt-1 text-[12px] leading-relaxed text-black/50">
+          Aztec wallets find incoming payments through tags shared with the sender. If a payment from someone new does not
+          appear after a sync, add their Aztec address here.
+        </p>
+        <div className="mt-3 flex gap-2">
+          <input
+            value={sender}
+            onChange={(e) => setSender(e.target.value.trim())}
+            placeholder="Sender's Aztec address"
+            spellCheck={false}
+            className="min-w-0 flex-1 h-10 rounded-xl border border-black/10 px-3 font-mono text-[12px] outline-none focus:border-[#15171c]"
           />
-        )}
-      </AnimatePresence>
-
-      {/* ── Internal Modal: Dedicated Receive Modal ── */}
-      <AnimatePresence>
-        {activeInternalModal === 'receive' && (
-          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className="bg-white rounded-3xl shadow-2xl border border-black/[0.08] w-full max-w-sm overflow-hidden p-6 text-gray-900"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center">
-                    <QrCode size={18} className="text-[#1C1C1E]" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-extrabold text-[#1C1C1E]">Receive Shielded Payment</h3>
-                    <p className="text-[11px] text-gray-400 font-medium">Aztec Sovereign Zero-Knowledge Note</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveInternalModal(null)}
-                  className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-                >
-                  <X size={15} className="text-gray-600" />
-                </button>
-              </div>
-
-              <div className="flex flex-col items-center gap-4 my-2">
-                <div className="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-100">
-                  <QRCodeSVG value={handle} size={160} level="H" includeMargin={true} />
-                </div>
-
-                <div className="w-full bg-[#F4F4F6] rounded-2xl p-3.5 text-center">
-                  <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Your ZK Handle</div>
-                  <div className="text-base font-extrabold text-gray-900 font-mono mt-0.5">{handle}</div>
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(handle, 'handle')}
-                    className="mt-2.5 w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#1C1C1E] hover:bg-black text-white text-xs font-bold transition-colors shadow-sm"
-                  >
-                    {copiedHandle ? <Check size={14} /> : <Copy size={14} />}
-                    <span>{copiedHandle ? 'Copied to Clipboard!' : 'Copy Handle'}</span>
-                  </button>
-                </div>
-
-                {address && (
-                  <div className="w-full bg-[#F4F4F6] rounded-2xl p-3 text-center">
-                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">EVM Address</div>
-                    <div className="text-xs font-mono text-gray-700 truncate mt-0.5">{address}</div>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(address, 'address')}
-                      className="mt-2 text-[11px] font-bold text-black/70 hover:text-black hover:underline flex items-center justify-center gap-1 mx-auto"
-                    >
-                      {copiedAddress ? <Check size={12} /> : <Copy size={12} />}
-                      <span>{copiedAddress ? 'Address Copied' : 'Copy Address'}</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-gray-100 text-center text-[11px] text-gray-400">
-                Incoming shielded payments generate private UltraHonk commitments settled directly on Aztec Network.
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </>
+          <button
+            type="button"
+            onClick={addSender}
+            disabled={!sender || adding}
+            className="h-10 px-3.5 rounded-xl text-white text-[12.5px] font-semibold disabled:opacity-40"
+            style={{ background: INK }}
+          >
+            {adding ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

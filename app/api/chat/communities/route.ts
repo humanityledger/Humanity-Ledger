@@ -4,9 +4,17 @@ import { requireWallet } from '@/lib/security/requireWallet';
 
 export const dynamic = 'force-dynamic';
 
+import { randomBytes } from 'crypto';
+
+// Invite codes are secrets for private communities, so they come from the
+// system CSPRNG (Math.random is predictable). 10 bytes = 80 bits.
 function generateJoinCode() {
-  return Math.random().toString(36).substring(2, 10).toUpperCase();
+  return randomBytes(10).toString('hex').toUpperCase();
 }
+
+const MAX_NAME = 60;
+const MAX_DESCRIPTION = 280;
+const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
 export async function GET(req: NextRequest) {
   try {
@@ -71,16 +79,19 @@ export async function POST(req: NextRequest) {
     if (auth.errorResponse) return auth.errorResponse;
     const caller = auth.walletAddress;
 
-    const { name, description, isPrivate } = await req.json();
-    if (!name || typeof name !== 'string') return NextResponse.json({ error: 'Name required' }, { status: 400 });
+    const body = await req.json().catch(() => ({}));
+    const name = clean(body?.name, MAX_NAME);
+    if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 });
+    const description = clean(body?.description, MAX_DESCRIPTION);
 
     const joinCode = generateJoinCode();
 
     const community = await (prisma as any).community.create({
       data: {
         name,
-        description: description || '',
-        isPrivate: isPrivate || false,
+        description,
+        // Private unless the creator explicitly chose public.
+        isPrivate: body?.isPrivate !== false,
         ownerAddress: caller,
         joinCode,
         members: {
@@ -142,12 +153,16 @@ export async function PATCH(req: NextRequest) {
 
     if (action === 'UPDATE_INFO') {
       const { name, description, avatarUrl } = body;
+      const safeAvatar =
+        typeof avatarUrl === 'string' && /^(https:\/\/|data:image\/(png|jpeg|webp|gif);base64,)/i.test(avatarUrl) && avatarUrl.length <= 400_000
+          ? avatarUrl
+          : null;
       const updated = await (prisma as any).community.update({
         where: { id: communityId },
-        data: { 
-          ...(name ? { name } : {}),
-          ...(description !== undefined ? { description } : {}),
-          ...(avatarUrl !== undefined ? { avatarUrl } : {})
+        data: {
+          ...(clean(name, MAX_NAME) ? { name: clean(name, MAX_NAME) } : {}),
+          ...(description !== undefined ? { description: clean(description, MAX_DESCRIPTION) } : {}),
+          ...(avatarUrl !== undefined ? { avatarUrl: safeAvatar } : {})
         }
       });
       return NextResponse.json({ ok: true, community: updated });
@@ -155,15 +170,22 @@ export async function PATCH(req: NextRequest) {
 
     if (action === 'CREATE_CHANNEL') {
       const { name, description, isPaid, price, currency } = body;
+      const channelName = clean(name, 40);
+      if (!channelName) return NextResponse.json({ error: 'Channel name required' }, { status: 400 });
+      const parsedPrice = price ? Number(price) : null;
+      if (parsedPrice !== null && (!Number.isFinite(parsedPrice) || parsedPrice < 0 || parsedPrice > 1_000_000)) {
+        return NextResponse.json({ error: 'Invalid price' }, { status: 400 });
+      }
       const count = await (prisma as any).communityChannel.count({ where: { communityId } });
+      if (count >= 50) return NextResponse.json({ error: 'A community can have up to 50 channels' }, { status: 400 });
       const channel = await (prisma as any).communityChannel.create({
         data: {
           communityId,
-          name,
-          description: description || '',
+          name: channelName,
+          description: clean(description, MAX_DESCRIPTION),
           isPaid: Boolean(isPaid),
-          price: price ? parseFloat(price) : null,
-          currency: currency || null,
+          price: parsedPrice,
+          currency: typeof currency === 'string' ? currency.slice(0, 12) : null,
           position: count
         }
       });
@@ -172,15 +194,24 @@ export async function PATCH(req: NextRequest) {
 
     if (action === 'UPDATE_CHANNEL') {
       const { channelId, name, description, isPaid, price, currency, position } = body;
+      if (!channelId || typeof channelId !== 'string') return NextResponse.json({ error: 'Invalid channelId' }, { status: 400 });
+      // The channel must belong to the community the caller administers.
+      // Without this scope an admin of any community could edit any channel.
+      const owned = await (prisma as any).communityChannel.findFirst({ where: { id: channelId, communityId } });
+      if (!owned) return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
+      const parsedPrice = price === undefined ? undefined : price === null ? null : Number(price);
+      if (parsedPrice !== undefined && parsedPrice !== null && (!Number.isFinite(parsedPrice) || parsedPrice < 0 || parsedPrice > 1_000_000)) {
+        return NextResponse.json({ error: 'Invalid price' }, { status: 400 });
+      }
       const channel = await (prisma as any).communityChannel.update({
         where: { id: channelId },
         data: {
-          ...(name !== undefined && { name }),
-          ...(description !== undefined && { description }),
-          ...(isPaid !== undefined && { isPaid }),
-          ...(price !== undefined && { price: price === null ? null : parseFloat(price) }),
-          ...(currency !== undefined && { currency }),
-          ...(position !== undefined && { position })
+          ...(name !== undefined && clean(name, 40) && { name: clean(name, 40) }),
+          ...(description !== undefined && { description: clean(description, MAX_DESCRIPTION) }),
+          ...(isPaid !== undefined && { isPaid: Boolean(isPaid) }),
+          ...(parsedPrice !== undefined && { price: parsedPrice }),
+          ...(typeof currency === 'string' && { currency: currency.slice(0, 12) }),
+          ...(Number.isInteger(position) && position >= 0 && position < 1000 && { position })
         }
       });
       return NextResponse.json({ ok: true, channel });
@@ -188,16 +219,26 @@ export async function PATCH(req: NextRequest) {
     
     if (action === 'DELETE_CHANNEL') {
       const { channelId } = body;
-      await (prisma as any).communityChannel.delete({ where: { id: channelId } });
+      if (!channelId || typeof channelId !== 'string') return NextResponse.json({ error: 'Invalid channelId' }, { status: 400 });
+      // Scoped to the administered community (see UPDATE_CHANNEL).
+      const removed = await (prisma as any).communityChannel.deleteMany({ where: { id: channelId, communityId } });
+      if (!removed?.count) return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
       return NextResponse.json({ ok: true });
     }
 
     if (action === 'UPDATE_PERMISSIONS') {
-      const { permissions } = body;
+      // Only boolean flags are accepted, and never identity or relation fields,
+      // so a request cannot repoint the row at another community.
+      const flags: Record<string, boolean> = {};
+      if (body.permissions && typeof body.permissions === 'object') {
+        for (const [k, v] of Object.entries(body.permissions as Record<string, unknown>)) {
+          if (typeof v === 'boolean' && !['id', 'communityId'].includes(k) && /^[A-Za-z]{1,40}$/.test(k)) flags[k] = v;
+        }
+      }
       const updated = await (prisma as any).communityPermission.upsert({
         where: { communityId },
-        create: { communityId, ...permissions },
-        update: { ...permissions }
+        create: { communityId, ...flags },
+        update: { ...flags }
       });
       return NextResponse.json({ ok: true, permissions: updated });
     }

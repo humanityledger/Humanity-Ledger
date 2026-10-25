@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
           });
           const userTransactions = await prisma.transaction.findMany({
             where: { fromAddress: walletAddress.toLowerCase(), type: 'SUBSCRIPTION_PAYMENT' },
-            orderBy: { timestamp: 'desc' }
+            orderBy: { timestamp: 'desc' },
+            take: 20
           });
           return NextResponse.json(serializeData({
             authenticated: true,

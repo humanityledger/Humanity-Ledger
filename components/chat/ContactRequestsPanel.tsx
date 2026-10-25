@@ -117,11 +117,11 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
         {/* Header */}
         <div className="p-5 border-b border-black/5 bg-[#f9f9fb] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bell size={20} className="text-[#2754d6]" />
+            <Bell size={20} className="text-[#15171c]" />
             <div>
-              <h2 className="text-[17px] font-black text-black">Contact Requests</h2>
+              <h2 className="text-[17px] font-semibold text-black">Contact Requests</h2>
               {requests.length > 0 && (
-                <p className="text-[11px] text-black/40 mt-0.5">
+                <p className="text-[12.5px] text-black/40 mt-0.5">
                   {requests.length} pending request{requests.length !== 1 ? 's' : ''}
                 </p>
               )}
@@ -137,7 +137,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
           <AnimatePresence mode="popLayout">
             {loading ? (
               <div className="flex items-center justify-center p-12">
-                <div className="w-7 h-7 border-4 border-[#2754d6]/20 border-t-[#2754d6] rounded-full animate-spin" />
+                <div className="w-7 h-7 border-4 border-[#15171c] border-t-[#25D366] rounded-full animate-spin" />
               </div>
             ) : requests.length === 0 ? (
               <motion.div
@@ -167,7 +167,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
                   >
                     {/* Avatar */}
                     <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-[15px] shrink-0"
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-[15px] shrink-0"
                       style={{ background: `hsl(${hue},60%,48%)` }}
                     >
                       {initials}
@@ -176,11 +176,11 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
-                        <span className="text-[14px] font-bold text-black truncate">{req.user.nickname}</span>
+                        <span className="text-[14px] font-semibold text-black truncate">{req.user.nickname}</span>
                         {req.user.isVerified && <ShieldCheck size={12} className="text-[#30d158] shrink-0" />}
                       </div>
-                      <p className="text-[11px] text-black/40 mt-0.5 truncate">{req.user.address.slice(0,8)}…{req.user.address.slice(-6)}</p>
-                      <p className="text-[11px] text-black/30 mt-0.5">wants to connect with you</p>
+                      <p className="text-[12.5px] text-black/40 mt-0.5 truncate">{req.user.address.slice(0,8)}…{req.user.address.slice(-6)}</p>
+                      <p className="text-[12.5px] text-black/30 mt-0.5">wants to connect with you</p>
                     </div>
 
                     {/* Action buttons */}
@@ -188,7 +188,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
                       <button
                         onClick={() => handleAction(req, 'accept')}
                         disabled={isProcessing}
-                        className="w-9 h-9 bg-[#2754d6] hover:bg-[#1fae52] text-white rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+                        className="w-9 h-9 bg-[#15171c] hover:bg-[#1fae52] text-white rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
                         title="Accept"
                       >
                         {isProcessing ? (
@@ -200,7 +200,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
                       <button
                         onClick={() => handleAction(req, 'reject')}
                         disabled={isProcessing}
-                        className="w-9 h-9 bg-zinc-100 hover:bg-red-50 hover:text-red-500 text-zinc-500 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+                        className="w-9 h-9 bg-zinc-100 hover:bg-red-50 hover:text-[#d93036] text-zinc-500 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
                         title="Decline"
                       >
                         <UserX size={15} />

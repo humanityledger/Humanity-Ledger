@@ -1,43 +1,28 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
-  const address = req.nextUrl.searchParams.get('address');
-  const now = Date.now();
+/**
+ * Retired on 23 October 2026.
+ *
+ * This route returned simulated Aztec data: invented transaction hashes,
+ * fixed tree roots or balances that did not come from the network. The private
+ * wallet now runs in the browser (lib/aztec/wallet/client.ts): balances are read
+ * from the token contracts through the user's own PXE and every action is a
+ * real transaction on the Aztec test network. The server takes no part in it,
+ * so this route answers 410 and returns nothing that could be mistaken for a
+ * result.
+ */
 
-  // Simulated Aztec Rollup state
-  const rollupBlockHeight = 14824;
-  const currentEpoch = 463;
-
-  return NextResponse.json({
-    network: 'aztec-mainnet',
-    rollupBlockHeight,
-    currentEpoch,
-    roots: {
-      noteHashTreeRoot: '0x18ab4c9e83017f8a7bc65293da2e19b88523c9ff0910e527a92b2384a861fbc1',
-      nullifierTreeRoot: '0x29cc7312f45819e64e10b10695123d4a652391bde4c379201582e0854619bfae',
-      publicDataTreeRoot: '0x09da41527abecf9810293481231fbe61823749acbd01928374aefb10928374ae',
-      l1ToL2MessageTreeRoot: '0x7182938471928374192837491827394819283749182739481928374918273948',
-    },
-    syncStatus: {
-      isSynced: true,
-      pendingRollupBatches: 2,
-      estimatedTimeNextBlockMs: 8500,
-    },
-    address: address || null,
-    timestamp: now,
-  });
+function gone() {
+  return NextResponse.json(
+    { error: "Gone", code: "AZTEC_SERVER_ROUTE_RETIRED", detail: "The private wallet runs in your browser. See /docs/zero-knowledge." },
+    { status: 410, headers: { "Cache-Control": "no-store" } },
+  );
 }
 
-export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null);
-  if (!body?.noteCommitment && !body?.nullifier) {
-    return NextResponse.json({ error: 'noteCommitment or nullifier required' }, { status: 400 });
-  }
+export function GET() {
+  return gone();
+}
 
-  return NextResponse.json({
-    status: 'included_in_mempool',
-    txHash: '0x' + Math.random().toString(36).substring(2, 18),
-    estimatedBlock: 14825,
-    timestamp: Date.now(),
-  });
+export function POST() {
+  return gone();
 }

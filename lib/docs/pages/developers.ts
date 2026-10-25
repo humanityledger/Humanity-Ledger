@@ -11,7 +11,7 @@ export const developers: DocPage = {
   blocks: [
     {
       t: "p",
-      text: "Humanity Ledger is open source. If you want to know what the product does, the [repository](https://github.com/humanityledger/Humanity-Ledger) is a better answer than any page we write, including this one.",
+      text: "The Humanity Ledger source code is public. If you want to know what the product does, the [repository](https://github.com/humanityledger/Humanity-Ledger) is a better answer than any page we write, including this one. It is source available rather than open source: the licence allows reading and reporting problems, not redistribution. Security reports are welcome under [Report a vulnerability](/docs/bug-bounty).",
     },
     {
       t: "cards",

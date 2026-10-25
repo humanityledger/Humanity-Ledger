@@ -1,13 +1,9 @@
-import { AztecDocPage } from '@/components/landing/AztecDocPage';
-import { SECURITY_SECTIONS } from '@/lib/content/footerPagesAztec';
+import { redirect } from "next/navigation";
 
-export default function SecurityPage() {
-  return (
-    <AztecDocPage
-      eyebrow="Protocol · Security Policy"
-      title="Security Policy"
-      subtitle="Zero-trust architecture, formal threat modeling, continuous vulnerability disclosure, and cryptographic guarantees underpinning all Humanity Ledger infrastructure."
-      sections={SECURITY_SECTIONS}
-    />
-  );
+/**
+ * Superseded. This page contained a second, contradictory version of a legal
+ * text. The single current version lives in the documentation site.
+ */
+export default function Moved() {
+  redirect("/docs/security-model");
 }

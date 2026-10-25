@@ -214,7 +214,8 @@ const nextConfig = {
         if (isServer) {
             config.externals = [...(config.externals || []),
                 'three', '@react-three/fiber', '@react-three/drei',
-                '@react-three/postprocessing', 'postprocessing'
+                '@react-three/postprocessing', 'postprocessing',
+                'pino-pretty', 'lokijs', 'encoding'
             ];
         }
 
@@ -286,6 +287,15 @@ const nextConfig = {
 
         // ─────────────────────────────────────────────────────────────────────
 
+        // [AZTEC V6 WALLET] The browser build of @aztec-labs/* loads WebAssembly
+        // (Barretenberg, ACVM, SQLite) and uses top-level await in its workers.
+        if (!isServer) {
+            config.experiments = {
+                ...config.experiments,
+                asyncWebAssembly: true,
+                topLevelAwait: true,
+            };
+        }
 
         return config;
     },
@@ -319,10 +329,10 @@ const nextConfig = {
     },
 
     // Moved from experimental in Next.js 15
-    // [AZTEC SERVER GUARD] All @aztec packages are ESM-only and must never be
-    // bundled by Webpack. serverExternalPackages tells Next.js to load them via
-    // native Node.js require() at runtime, bypassing the Webpack bundler entirely.
-    // This is the canonical fix for "j is not a function" and missing export errors.
+    // [AZTEC & REOWN SERVER GUARD] ESM-only and native packages must never be
+    // bundled by Webpack on the server. serverExternalPackages tells Next.js to load
+    // them via native Node.js require() at runtime, bypassing the Webpack bundler entirely.
+    // This prevents vendor-chunk missing errors (e.g. ./vendor-chunks/@reown.js).
     serverExternalPackages: [
         '@prisma/client',
         'prisma',
@@ -330,6 +340,20 @@ const nextConfig = {
         'neo4j-driver',
         'snarkjs',
         'pino',
+        'pino-pretty',
+        'lokijs',
+        'encoding',
+        '@reown',
+        '@reown/appkit',
+        '@reown/appkit-adapter-wagmi',
+        '@reown/appkit-siwe',
+        '@walletconnect',
+        '@walletconnect/ethereum-provider',
+        '@walletconnect/universal-provider',
+        '@walletconnect/sign-client',
+        '@walletconnect/utils',
+        '@walletconnect/core',
+        '@walletconnect/web3wallet',
         '@aztec/aztec.js',
         '@aztec/foundation',
         '@aztec/stdlib',
@@ -338,6 +362,20 @@ const nextConfig = {
         '@aztec/wallets',
         '@aztec/noir-contracts.js',
         '@aztec/bb.js',
+        // Aztec v6 SDK (the private payments wallet). It only ever runs in the
+        // browser (lib/aztec/wallet/client.ts loads it with dynamic imports);
+        // the server must never bundle or execute it.
+        '@aztec-labs/aztec.js',
+        '@aztec-labs/wallets',
+        '@aztec-labs/accounts',
+        '@aztec-labs/pxe',
+        '@aztec-labs/stdlib',
+        '@aztec-labs/foundation',
+        '@aztec-labs/noir-contracts.js',
+        '@aztec-labs/kv-store',
+        '@aztec-labs/bb-prover',
+        '@aztec-labs/simulator',
+        '@aztec-labs/native',
     ],
 
     experimental: {

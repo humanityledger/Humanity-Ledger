@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, SquarePen } from "lucide-react";
 import type { DocPage } from "@/lib/docs/types";
 import { findByHref, neighbours, tocFor, type TocItem } from "@/lib/docs/registry";
 import { EXTERNAL_LINKS } from "@/lib/constants/links";
+import { LEGAL_ENTITY } from "@/lib/constants/legalEntity";
 import { DocsHeader } from "./DocsHeader";
 import { DocsNav } from "./DocsNav";
 import { Toc } from "./Toc";
@@ -130,7 +131,11 @@ export function DocsLayout({ current, page, group, before, after, extraToc, meta
               )}
 
               <div className={s.siteFoot}>
-                © 2026 Humanity Ledger S.L. Ledger Chat is in early access.{" "}
+                © 2026 {LEGAL_ENTITY.name}, trading as {LEGAL_ENTITY.tradingName}. Ledger Chat is in early access.{" "}
+                <Link href="/docs/legal-notice" className={s.link}>
+                  Legal notice
+                </Link>
+                ,{" "}
                 <Link href="/docs/terms" className={s.link}>
                   Terms
                 </Link>{" "}

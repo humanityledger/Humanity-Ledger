@@ -146,7 +146,7 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
         <div className="p-6 border-b border-black/5 bg-[#f9f9fb] flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-black text-black">Find People</h2>
+              <h2 className="text-xl font-semibold text-black">Find People</h2>
               <p className="text-[12px] text-black/40 mt-0.5">Search by @username or 0x wallet address</p>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors">
@@ -155,14 +155,14 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
           </div>
 
           <div className="relative">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#25D366]" />
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#15171c]" />
             <input
               ref={inputRef}
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="@username or 0x address..."
-              className="w-full bg-white border-2 border-[#25D366]/20 focus:border-[#25D366] rounded-2xl py-3.5 pl-11 pr-4 text-[16px] font-semibold text-black outline-none transition-all shadow-sm placeholder:font-normal placeholder:text-black/35"
+              className="w-full bg-white border-2 border-[#15171c] focus:border-[#15171c] rounded-2xl py-3.5 pl-11 pr-4 text-[16px] font-semibold text-black outline-none transition-all shadow-sm placeholder:font-normal placeholder:text-black/35"
             />
             {query.length > 0 && (
               <button
@@ -184,9 +184,9 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="h-full flex flex-col items-center justify-center gap-4 text-[#25D366] p-8"
+                className="h-full flex flex-col items-center justify-center gap-4 text-[#15171c] p-8"
               >
-                <div className="w-8 h-8 border-4 border-[#25D366]/20 border-t-[#25D366] rounded-full animate-spin" />
+                <div className="w-8 h-8 border-4 border-[#15171c] border-t-[#25D366] rounded-full animate-spin" />
                 <p className="text-[13px] font-semibold text-black/40">Searching network...</p>
               </motion.div>
             ) : error ? (
@@ -198,7 +198,7 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                 className="h-full flex flex-col items-center justify-center gap-3 p-8 text-center"
               >
                 <span className="text-3xl">⚠️</span>
-                <p className="text-[13px] font-medium text-red-500">{error}</p>
+                <p className="text-[13px] font-medium text-[#d93036]">{error}</p>
               </motion.div>
             ) : query.length === 0 ? (
               <motion.div
@@ -242,19 +242,19 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                   return (
                     <div
                       key={user.address}
-                      className="flex items-center justify-between p-4 rounded-2xl border border-black/[0.06] hover:border-[#25D366]/30 hover:bg-[#25D366]/[0.03] transition-all group"
+                      className="flex items-center justify-between p-4 rounded-2xl border border-black/[0.06] hover:border-[#15171c] hover:bg-[#eff1f4] transition-all group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {/* Avatar */}
                         <div
-                          className="w-11 h-11 rounded-full flex items-center justify-center text-white font-black text-[15px] shadow-sm shrink-0"
+                          className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-[15px] shadow-sm shrink-0"
                           style={{ background: `hsl(${hue},60%,48%)` }}
                         >
                           {initials}
                         </div>
                         <div className="flex flex-col min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[15px] font-bold text-black truncate">{user.nickname}</span>
+                            <span className="text-[15px] font-semibold text-black truncate">{user.nickname}</span>
                             {user.isVerified && (
                               <div title="ZK Verified">
                                 <ShieldCheck size={13} className="text-[#30d158] shrink-0" />
@@ -263,12 +263,12 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                           </div>
                           <div className="flex items-center gap-2 mt-0.5">
                             {user.country && user.country !== 'Unknown' && (
-                              <span className="flex items-center gap-0.5 text-[11px] text-black/40">
+                              <span className="flex items-center gap-0.5 text-[12.5px] text-black/40">
                                 <MapPin size={9} />
                                 {user.country}
                               </span>
                             )}
-                            <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${tier.color}`}>
+                            <span className={`text-[12px] font-semibold px-1.5 py-0.5 rounded border ${tier.color}`}>
                               {tier.label}
                             </span>
                           </div>
@@ -279,25 +279,25 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                       {reqStatus === 'accepted' ? (
                         <button
                           onClick={() => { onAddContact(user.address); onClose(); }}
-                          className="flex items-center gap-1.5 px-3.5 py-2 bg-[#30d158] text-white rounded-full font-bold text-[12px] shadow-sm shrink-0 ml-2"
+                          className="flex items-center gap-1.5 px-3.5 py-2 bg-[#30d158] text-white rounded-full font-semibold text-[12px] shadow-sm shrink-0 ml-2"
                         >
                           <MessageCircle size={14} />
                           <span>Message</span>
                         </button>
                       ) : reqStatus === 'pending' ? (
-                        <div className="flex items-center gap-1.5 px-3.5 py-2 bg-zinc-100 text-zinc-500 rounded-full font-bold text-[12px] shrink-0 ml-2">
+                        <div className="flex items-center gap-1.5 px-3.5 py-2 bg-zinc-100 text-zinc-500 rounded-full font-semibold text-[12px] shrink-0 ml-2">
                           <Clock size={14} />
                           <span>Pending</span>
                         </div>
                       ) : reqStatus === 'sending' ? (
-                        <div className="flex items-center gap-1.5 px-3.5 py-2 bg-[#25D366]/10 text-[#25D366] rounded-full font-bold text-[12px] shrink-0 ml-2">
-                          <div className="w-3 h-3 border-2 border-[#25D366]/30 border-t-[#25D366] rounded-full animate-spin" />
+                        <div className="flex items-center gap-1.5 px-3.5 py-2 bg-[#eff1f4] text-[#15171c] rounded-full font-semibold text-[12px] shrink-0 ml-2">
+                          <div className="w-3 h-3 border-2 border-[#15171c] border-t-[#25D366] rounded-full animate-spin" />
                           <span>Sending...</span>
                         </div>
                       ) : (
                         <button
                           onClick={() => handleSendRequest(user)}
-                          className="flex items-center gap-1.5 px-3.5 py-2 bg-[#25D366] hover:bg-emerald-600 text-white rounded-full font-bold text-[12px] transition-colors shadow-sm shrink-0 ml-2"
+                          className="flex items-center gap-1.5 px-3.5 py-2 bg-[#15171c] hover:bg-emerald-600 text-white rounded-full font-semibold text-[12px] transition-colors shadow-sm shrink-0 ml-2"
                         >
                           <UserPlus size={14} />
                           <span>Connect</span>

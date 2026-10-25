@@ -207,7 +207,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 16 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full max-w-[420px] bg-white border border-black/10 shadow-2xl rounded-2xl relative z-10 max-h-[90vh] overflow-y-auto overflow-x-hidden my-auto"
+            className="w-full max-w-[420px] bg-white border border-black/[0.06] shadow-[0_40px_100px_-30px_rgba(16,24,40,0.45)] rounded-[28px] [font-family:var(--hl-font)] antialiased relative z-10 max-h-[90vh] overflow-y-auto overflow-x-hidden my-auto"
             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -217,16 +217,16 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                     <div className="pr-2 min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-2.5">
                         <HLMark size={22} />
-                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-black/50 truncate">
+                        <span className="text-[14px] font-semibold text-black/45 truncate">
                           Humanity Ledger
                         </span>
                       </div>
-                    <h2 className="text-[20px] sm:text-[22px] font-black tracking-tight text-black leading-tight">
-                      {step === "email" && "Sign in with Email"}
+                    <h2 className="text-[24px] font-semibold tracking-[-0.028em] text-black leading-tight">
+                      {step === "email" && "Sign in with email"}
                       {step === "code" && "Check your inbox"}
                       {step === "success" && "You are in"}
                     </h2>
-                    <p className="text-[13px] text-black/55 font-medium mt-1.5 break-words max-w-full">
+                    <p className="text-[15px] text-black/55 mt-2 leading-relaxed break-words max-w-full">
                       {step === "email" && "No password needed. We will send you a secure 6 digit code."}
                       {step === "code" && (
                         <span className="block break-words">
@@ -264,8 +264,8 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                       className="flex flex-col gap-4"
                     >
                       <div>
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-2">
-                          Email Address
+                        <label className="block text-[13.5px] font-semibold text-black/65 mb-2">
+                          Email address
                         </label>
                         <input
                           type="email"
@@ -274,7 +274,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                           placeholder="you@example.com"
                           autoFocus
                           required
-                          className="w-full px-4 py-3 border border-black/15 text-[15px] font-medium text-black placeholder-black/30 focus:outline-none focus:border-black/50 transition-colors bg-white rounded-xl"
+                          className="w-full h-[52px] px-4 border border-black/[0.14] text-[15.5px] text-black placeholder-black/30 focus:outline-none focus:border-black focus:ring-4 focus:ring-black/[0.06] transition bg-white rounded-2xl"
                         />
                       </div>
 
@@ -285,7 +285,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3.5 bg-black text-white text-[14px] font-bold tracking-wide hover:bg-black/85 active:scale-[0.99] transition-all disabled:opacity-50 flex items-center justify-center gap-2 rounded-xl"
+                        className="w-full py-3.5 bg-black text-white text-[15.5px] font-semibold hover:bg-[#26282e] active:scale-[0.99] transition-all disabled:opacity-50 flex items-center justify-center gap-2 rounded-full"
                       >
                         {loading ? (
                           <>
@@ -302,9 +302,9 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
 
                       <p className="text-[12px] text-black/40 font-medium text-center leading-relaxed">
                         By continuing, you agree to our{" "}
-                        <a href="/legal/terms" className="underline hover:text-black/70 transition-colors">Terms</a>
+                        <a href="/docs/terms" className="underline hover:text-black/70 transition-colors">Terms</a>
                         {" "}and{" "}
-                        <a href="/legal/privacy" className="underline hover:text-black/70 transition-colors">Privacy Policy</a>.
+                        <a href="/docs/privacy" className="underline hover:text-black/70 transition-colors">Privacy Policy</a>.
                       </p>
                     </motion.form>
                   )}
@@ -322,7 +322,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                     >
                       {/* 6 digit boxes */}
                       <div className="w-full">
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-3 text-center sm:text-left">
+                        <label className="block text-[13.5px] font-semibold text-black/65 mb-3 text-center sm:text-left">
                           Verification Code
                         </label>
                         <div className="flex gap-1.5 sm:gap-2 w-full justify-between items-center max-w-full">
@@ -338,7 +338,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                               onChange={(e) => handleCodeInput(i, e.target.value)}
                               onKeyDown={(e) => handleCodeKeyDown(i, e)}
                               onPaste={i === 0 ? handleCodePaste : undefined}
-                              className="w-10 sm:w-12 h-12 sm:h-14 min-w-0 flex-1 max-w-[50px] aspect-square text-center text-[20px] sm:text-[22px] font-black text-black border border-black/15 focus:border-black focus:ring-2 focus:ring-black/5 focus:outline-none transition-all bg-white tabular-nums rounded-xl"
+                              className="w-10 sm:w-12 h-12 sm:h-14 min-w-0 flex-1 max-w-[50px] aspect-square text-center text-[20px] sm:text-[22px] font-semibold text-black border border-black/[0.14] focus:border-black focus:ring-4 focus:ring-black/[0.06] focus:outline-none transition-all bg-white tabular-nums rounded-2xl"
                             />
                           ))}
                         </div>
@@ -351,7 +351,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                       <button
                         type="submit"
                         disabled={loading || code.join("").length < 6}
-                        className="w-full py-3.5 bg-black text-white text-[14px] font-bold tracking-wide hover:bg-black/85 active:scale-[0.99] transition-all disabled:opacity-40 flex items-center justify-center gap-2 rounded-xl"
+                        className="w-full py-3.5 bg-black text-white text-[15.5px] font-semibold hover:bg-[#26282e] active:scale-[0.99] transition-all disabled:opacity-40 flex items-center justify-center gap-2 rounded-full"
                       >
                         {loading ? (
                           <>
@@ -397,7 +397,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                         initial={{ scale: 0.5, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ type: "spring", stiffness: 200, damping: 14 }}
-                        className="w-14 h-14 border-2 border-black flex items-center justify-center"
+                        className="w-14 h-14 rounded-full bg-[#f2f3f5] flex items-center justify-center"
                       >
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />

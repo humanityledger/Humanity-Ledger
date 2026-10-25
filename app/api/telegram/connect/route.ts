@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireWallet } from '@/lib/security/requireWallet';
 import { prisma } from '@/lib/prisma';
 import rateLimit from '@/lib/rate-limit';
 /**
@@ -58,6 +59,13 @@ export async function POST(req: NextRequest) {
 
         const body = await req.json();
         const { wallet, chatId, minApy = 20, evSignals = true } = body;
+        // The wallet used to be taken from the body as-is: anyone signed in could
+        // change this for any other wallet. It must be the caller's own.
+        const __auth = await requireWallet(req);
+        if (__auth.errorResponse) return __auth.errorResponse;
+        if (typeof wallet !== 'string' || wallet.toLowerCase() !== __auth.walletAddress) {
+          return NextResponse.json({ error: 'You can only change this for your own wallet.' }, { status: 403 });
+        }
 
         if (!wallet || !chatId) {
             return NextResponse.json({ error: 'wallet y chatId son requeridos' }, { status: 400 });
@@ -117,6 +125,13 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
     try {
         const { wallet } = await req.json();
+        // The wallet used to be taken from the body as-is: anyone signed in could
+        // change this for any other wallet. It must be the caller's own.
+        const __auth = await requireWallet(req);
+        if (__auth.errorResponse) return __auth.errorResponse;
+        if (typeof wallet !== 'string' || wallet.toLowerCase() !== __auth.walletAddress) {
+          return NextResponse.json({ error: 'You can only change this for your own wallet.' }, { status: 403 });
+        }
         if (!wallet) return NextResponse.json({ error: 'wallet requerido' }, { status: 400 });
 
         await (prisma as any).telegramAlert.deleteMany({

@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
 import {
   Forward, MapPin, Clock, Phone, PhoneMissed, Video, Check, CheckCheck, Lock, LockOpen, ExternalLink,
-  Heart, Waves, FileText, BarChart3, Wallet, KeyRound, Bot, Download, MessagesSquare, Users, Info,
+  Heart, Waves, FileText, BarChart3, Wallet, Bot, Download, MessagesSquare, Users, Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseZkPaymentPayload, parseEscrowPayload, ZkPaymentResult, ZkEscrowState } from '@/lib/zk/zkMoney';
@@ -451,41 +451,21 @@ const MissedCallBubble = React.memo(({ isMe }: { content: string; isMe: boolean 
 ));
 MissedCallBubble.displayName = 'MissedCallBubble';
 
-const GroupCallBubble = React.memo(({ content, isMe, onJoinGroupCall }: { content: string; isMe: boolean; onJoinGroupCall?: (roomId: string, pwd: string) => void }) => {
-  const parts = content.split('::');
-  const roomId = parts[1] || '';
-  const pwd = parts[2] || '';
-  const isPrivate = pwd.length > 0;
-  return (
-    <div className={`${CARD} flex flex-col gap-3 p-3.5 min-w-[240px] max-w-[300px]`}>
-      <div className="flex items-center gap-3">
-        <span className="w-9 h-9 rounded-full bg-[#eff1f4] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
-          <Users size={16} strokeWidth={1.9} />
-        </span>
-        <span className="flex flex-col min-w-0">
-          <span className="text-[14.5px] font-medium text-[#15171c]">{isPrivate ? 'Private group call' : 'Group call'}</span>
-          <span className="text-[13px] text-[#727a88] truncate tabular-nums">Room {roomId}</span>
-        </span>
-      </div>
-      {isPrivate && (
-        <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-[#f7f8fa] border border-[#eceef2]">
-          <KeyRound size={14} strokeWidth={1.9} className="text-[#4a505c] shrink-0" aria-hidden="true" />
-          <span className="flex flex-col min-w-0">
-            <span className="text-[12px] text-[#727a88]">Password</span>
-            <span className="text-[14px] font-medium text-[#15171c] tabular-nums break-all">{pwd}</span>
-          </span>
-        </div>
-      )}
-      <button
-        type="button"
-        onClick={() => onJoinGroupCall ? onJoinGroupCall(roomId, pwd) : (window.location.href = `/chat?joinRoom=${encodeURIComponent(roomId)}&pwd=${encodeURIComponent(pwd)}`)}
-        className="w-full py-2.5 rounded-xl text-[14.5px] font-medium bg-[#15171c] text-white hover:bg-[#2b2f38] active:scale-[0.99] transition-all"
-      >
-        {isMe ? 'Open call' : 'Join call'}
-      </button>
-    </div>
-  );
-});
+// Group calls are not built yet: nothing in Ledger Chat creates or joins a
+// room, so an old invite must not offer a button that leads nowhere.
+const GroupCallBubble = React.memo(({ isMe }: { content: string; isMe: boolean; onJoinGroupCall?: (roomId: string, pwd: string) => void }) => (
+  <div className={`${CARD} flex items-center gap-3 p-3.5 min-w-[240px] max-w-[300px]`}>
+    <span className="w-9 h-9 rounded-full bg-[#eff1f4] text-[#4a505c] flex items-center justify-center shrink-0" aria-hidden="true">
+      <Users size={16} strokeWidth={1.9} />
+    </span>
+    <span className="flex flex-col min-w-0">
+      <span className="text-[14.5px] font-medium text-[#15171c]">Group call invite</span>
+      <span className="text-[13px] text-[#727a88]">
+        {isMe ? 'Group calls are not available yet.' : 'Group calls are not available yet. Ask them to call you directly.'}
+      </span>
+    </span>
+  </div>
+));
 GroupCallBubble.displayName = 'GroupCallBubble';
 
 // ─── Sticker ─────────────────────────────────────────────────────────────────
@@ -811,7 +791,15 @@ export const MessageBubble = React.memo(({
                 <img src={gifUrl} alt="" className="max-w-[240px] max-h-[220px] object-cover block" loading="lazy" />
               </button>
             ) : isPremium ? (
-              <RenderPremiumSticker code={content.replace('__STICKER__', '')} size="96px" />
+              <RenderPremiumSticker
+                code={content.replace('__STICKER__', '')}
+                size="96px"
+                fresh={(() => {
+                  const raw: any = typeof msg.sentAtNs === 'number' ? (msg.sentAtNs > 1e15 ? msg.sentAtNs / 1e6 : msg.sentAtNs) : (msg.sent || msg.sentAt || Date.now());
+                  const t = new Date(raw).getTime();
+                  return Number.isFinite(t) && Math.abs(Date.now() - t) < 8000;
+                })()}
+              />
             ) : isAudio && audioSrc ? (
               <div className={`${CARD} px-3 py-2 ${isMe ? 'rounded-br-[6px]' : 'rounded-bl-[6px]'}`}>
                 <CustomAudioPlayer src={audioSrc} isMe={isMe} />

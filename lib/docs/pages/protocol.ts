@@ -103,7 +103,8 @@ export const cryptography: DocPage = {
         ["Sessions", "JWT signed with HMAC-SHA256", "The algorithm is fixed on the server, so a token cannot downgrade it."],
         ["Your PIN", "Argon2id ([RFC 9106](https://www.rfc-editor.org/rfc/rfc9106))", "With a salt per account and a secret held only by the server."],
         ["Community invite links", "HMAC-SHA256", "So a link cannot be forged or altered."],
-        ["Private payments", "Zero knowledge proofs on Aztec, written in Noir", "Experimental. See [Private payments on Aztec](/docs/zero-knowledge)."],
+        ["Private payments wallet key", "HKDF-SHA256 over an EIP-712 wallet signature", "Computed in your browser. The derived secret is never sent to our servers."],
+        ["Private payments", "Zero knowledge proofs on Aztec, written in Noir", "Aztec test network only. See [Private payments on Aztec](/docs/zero-knowledge)."],
       ],
     },
     { t: "h2", text: "Where encryption does not apply yet" },
@@ -132,78 +133,82 @@ export const zeroKnowledge: DocPage = {
   slug: "zero-knowledge",
   href: "/docs/zero-knowledge",
   label: "Private payments on Aztec",
-  summary: "How private payments on Aztec work, what they hide, and why they are still experimental.",
-  keywords: ["zk", "zero knowledge", "aztec", "shielded", "private payment", "proof", "noir", "notes", "nullifier", "zk.money", "shield", "unshield", "privacy"],
-  updated: "2026-10-21",
+  summary: "How the private payments wallet works, what it hides, what it does not, and why it runs on a test network.",
+  keywords: ["zk", "zero knowledge", "aztec", "shielded", "private payment", "proof", "noir", "notes", "nullifier", "shield", "unshield", "send", "receive", "qr", "testnet", "privacy", "wallet"],
+  updated: "2026-10-23",
   blocks: [
     {
       t: "hint",
       tone: "warning",
-      title: "Experimental",
-      text: "Our Aztec integration is built on a release candidate of Aztec V6, and our contracts have not been reviewed by an independent auditor. Do not use private payments with funds you cannot afford to lose.",
+      title: "Test network only",
+      text: "The private payments wallet runs on the Aztec test network (version 6.0.0, settled on Ethereum Sepolia). Its tokens have no value. It will not be connected to a network with real value until our contracts have been reviewed by an independent auditor.",
     },
     {
       t: "p",
-      text: "A normal blockchain payment is public: anyone can see who paid whom and how much. [Aztec](https://aztec.network) is an Ethereum layer 2 network with private state, where a payment can be valid without revealing those details.",
+      text: "A normal blockchain payment is public: anyone can see who paid whom and how much. [Aztec](https://aztec.network) is an Ethereum layer 2 network with private state, where a payment can be valid without revealing those details. The private payments wallet in Ledger Chat uses it to hold private balances and to send them.",
     },
-    { t: "h2", text: "How it works" },
+    { t: "h2", text: "Your private wallet" },
+    {
+      t: "steps",
+      items: [
+        { title: "Your wallet signs a statement", text: "The first time you open the private wallet, your Ethereum wallet asks you to sign a typed message that names Humanity Ledger and the Aztec test network. Signing is free and sends no transaction." },
+        { title: "Your browser derives the keys", text: "The signature is turned into the secret of an Aztec account with HKDF-SHA256, inside your browser. The same wallet always produces the same account, so you can open it on any device, and nothing that can spend it is ever sent to us." },
+        { title: "Your browser runs a private node", text: "A Private eXecution Environment (PXE) runs in your browser, stores your notes in its local database, decrypts them and produces the proofs for your transactions." },
+        { title: "The account is deployed", text: "Your Aztec account contract is deployed on the test network the first time it is needed. Fees on the test network are covered by Aztec's sponsored fee contract, so you do not need any tokens to start." },
+      ],
+    },
+    { t: "h2", text: "The four actions" },
+    {
+      t: "table",
+      head: ["Action", "What it does", "What is public"],
+      strongFirst: true,
+      rows: [
+        ["Shield", "Moves tokens from your public Aztec balance into private notes.", "Your Aztec address and the amount, because the tokens leave a public balance."],
+        ["Send", "Spends some of your notes and creates new ones that only the recipient can read.", "That a transaction happened. Not the amount, the sender or the recipient."],
+        ["Receive", "Shows your Aztec address as a QR code, optionally with a token and an amount, so someone can send to you.", "Nothing. Your address is shared only with the people you show it to. Our server never stores it."],
+        ["Unshield", "Moves tokens from your private notes back to a public Aztec balance.", "The receiving address and the amount."],
+      ],
+    },
+    {
+      t: "p",
+      text: "Timing can still leak information. If you shield an amount and an identical amount is unshielded shortly afterwards, an observer may connect the two. Shield and unshield round amounts, and leave time in between.",
+    },
+    { t: "h2", text: "How privacy is achieved" },
     {
       t: "defs",
       items: [
-        { term: "Private notes", text: "A private balance is a set of encrypted notes that only the owner can read. Sending a payment spends some notes and creates new ones for the recipient." },
-        { term: "Proofs made on your device", text: "Your browser produces a zero knowledge proof that the payment follows the rules, for example that you own the notes and are not creating money. The network checks the proof without learning the amounts." },
+        { term: "Private notes", text: "A private balance is a set of encrypted notes that only the owner can read. Sending spends some notes and creates new ones for the recipient and, if there is change, for you." },
+        { term: "Proofs made on your device", text: "Your browser proves that the transaction follows the rules of the token contract, for example that you own the notes and are not creating tokens. The network checks the proof without learning the amounts. The first proof on a device downloads several megabytes of proving data and can take a minute or more." },
         { term: "Nullifiers", text: "When a note is spent, a nullifier is published. It stops the same note being spent twice, without revealing which note it was." },
       ],
     },
-    { t: "h2", text: "What stays private and what does not" },
+    { t: "h2", text: "History" },
     {
-      t: "table",
-      head: ["Action", "What is public"],
-      strongFirst: true,
-      rows: [
-        ["Moving funds into a private balance", "Your Ethereum address and the amount, because the funds leave a public account."],
-        ["Paying someone privately", "That a private transaction happened. Not the amount, the sender or the recipient."],
-        ["Moving funds back to a public address", "The receiving address and the amount."],
-      ],
+      t: "p",
+      text: "**Recent transactions** and **shielded notes** are assembled in your browser. Payments you receive are found by the PXE, which decrypts the notes and events addressed to you, so they appear on any device you open the wallet on. Payments you send, and your own shield and unshield operations, are recorded by the device that sends them and appear there. Our server never sees any of it.",
     },
     {
       t: "p",
-      text: "Timing can still leak information. If you move a sum in and an identical sum comes out shortly afterwards, an observer may connect the two.",
+      text: "Each action is a real transaction: your browser makes the proof, then the network includes it in a block. On a recent laptop that takes about a minute from pressing the button to the balance changing. The list shows each step as it happens: proving on this device, waiting for the network, settled.",
+    },
+    { t: "h2", text: "Test tokens" },
+    {
+      t: "p",
+      text: "The wallet shows three test tokens, zkUSDC, zkDAI and zkETH. They are instances of Aztec's standard token contract that we deployed on the test network, and they have no relation to the real USDC, DAI or ETH. A faucet in the wallet mints a small public amount so you can try shielding and sending. The faucet's key is published on purpose so that anyone can mint, which is one more reason the tokens have no value.",
+    },
+    { t: "h2", text: "What is not built yet" },
+    {
+      t: "status",
+      items: [
+        { label: "Private balances, send and receive", state: "partial", text: "Working on the Aztec test network. Contracts not independently audited." },
+        { label: "Bridge from Ethereum", state: "development", text: "Moving real tokens from Ethereum into Aztec and back needs a bridge contract on each side. It is not built." },
+        { label: "Aztec mainnet", state: "unavailable", text: "Mainnet runs version 5.2.0, which our wallet does not support, and is described by Aztec as alpha." },
+      ],
     },
     { t: "h2", text: "Status of the Aztec network" },
     {
       t: "p",
-      text: "Aztec describes its network as being in alpha. In August 2026 its contributors reported a critical vulnerability in the proving system of Alpha V5, asked teams to pause V5 deployments, and announced a fix for V6. See the [Aztec announcement](https://aztec.network/blog/introducing-alpha-v5).",
-    },
-    {
-      t: "p",
-      text: "Our integration is built on the V6 release candidate rather than on V5. Our own contracts have not been reviewed by an independent auditor yet. Until both the network and our contracts have matured, treat private payments as an experiment.",
-    },
-  ],
-};
-
-export const quantumDots: DocPage = {
-  slug: "quantum-dots",
-  href: "/docs/quantum-dots",
-  label: "Quantum Dots",
-  title: "Quantum Dots (QD)",
-  summary: "The status of the QD token: it is not live, and Ledger Chat does not use it.",
-  keywords: ["token", "qd", "quantum dots", "airdrop", "economics", "supply", "coin", "buy", "price"],
-  updated: "2026-10-21",
-  blocks: [
-    {
-      t: "p",
-      text: "Quantum Dots, or QD, is the name of a token that was designed for the Humanity Ledger network. **It is not live.** There is no QD token you can buy, sell, receive in an airdrop or withdraw, and Ledger Chat does not charge or pay anything in QD.",
-    },
-    {
-      t: "p",
-      text: "Earlier versions of this page described monthly airdrops, message fees and staking in QD. Those plans are not active, and the page has been rewritten so that nobody acts on them.",
-    },
-    {
-      t: "hint",
-      tone: "danger",
-      title: "Anyone selling QD is not us",
-      text: "If someone offers you QD, a QD presale or a QD airdrop that requires a payment or a signature, it is not from Humanity Ledger. Any real announcement will appear on this page and in the [changelog](/changelog) first.",
+      text: "Aztec describes its mainnet as alpha, where bugs, including critical ones, are expected. In August 2026 its contributors reported a critical vulnerability in the proving system of Alpha V5 and announced a fix in version 6. The test network runs version 6.0.0. See the [Aztec network page](https://docs.aztec.network/networks) for the current versions.",
     },
   ],
 };
@@ -287,7 +292,11 @@ export const whitepaper: DocPage = {
     { t: "h2", text: "7. Private payments", id: "private-payments" },
     {
       t: "p",
-      text: "An experimental integration with Aztec allows tokens to be moved into a private balance, transferred privately and moved out again. Proofs are generated on the client. Deposits and withdrawals are public by construction; private transfers reveal only that a transaction occurred. The integration is built on a release candidate of Aztec V6, the release announced to fix the critical vulnerability reported in Alpha V5 in August 2026. Its contracts have not been independently audited.",
+      text: "A private payments wallet runs on the Aztec test network, version 6.0.0, which settles on Ethereum Sepolia. The client derives the secret of a Schnorr account contract from an EIP-712 signature by the user's wallet using HKDF-SHA256, so the same wallet always recovers the same account and the server never holds a spending key. A Private eXecution Environment runs in the browser with IndexedDB storage, decrypts the user's notes and generates proofs locally. Account deployment and transaction fees are paid by Aztec's sponsored fee payment contract.",
+    },
+    {
+      t: "p",
+      text: "Balances are held in instances of Aztec's standard token contract. Shielding calls `transfer_to_private`, unshielding calls `transfer_to_public`, and a private payment calls `transfer_private_to_private`. Shielding and unshielding reveal the address and the amount by construction; a private payment reveals only that a transaction occurred. Transaction history is assembled by the client from its own notes and receipts. A bridge to Ethereum is not built, the tokens are test tokens without value, and the contracts have not been independently audited.",
     },
     { t: "h2", text: "8. Device protection", id: "pin" },
     {

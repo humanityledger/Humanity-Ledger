@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { motion } from 'framer-motion';
+import { MessageCircle, Phone, CircleDot, Users } from 'lucide-react';
 
 export type NavTab = 'updates' | 'calls' | 'communities' | 'chats';
 
@@ -10,115 +11,48 @@ interface CrystalNavBarProps {
   unreadCounts?: Partial<Record<NavTab, number>>;
 }
 
-/* Design system tokens (app/ledger-tokens.css):
-   active  → --hl-accent  #2754d6
-   inactive → --hl-ink-4  #a3a9b4
-   badge    → --hl-danger  #c0362c  */
-const ACTIVE  = '#2754d6';
-const PASSIVE = '#a3a9b4';
-
-const tabs: { id: NavTab; label: string; icon: (active: boolean) => React.ReactNode }[] = [
-  {
-    id: 'updates',
-    label: 'Updates',
-    icon: (active) => (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" stroke={active ? ACTIVE : PASSIVE} strokeWidth="1.8" />
-        <circle cx="12" cy="12" r="4" fill={active ? ACTIVE : PASSIVE} />
-        <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.64 5.64l1.41 1.41M16.95 16.95l1.41 1.41M5.64 18.36l1.41-1.41M16.95 7.05l1.41-1.41"
-          stroke={active ? ACTIVE : PASSIVE} strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    )
-  },
-  {
-    id: 'calls',
-    label: 'Calls',
-    icon: (active) => (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.6 4.35 2 2 0 0 1 3.57 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.1 6.1l.9-.9a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"
-          fill={active ? `${ACTIVE}22` : 'none'} stroke={active ? ACTIVE : PASSIVE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    )
-  },
-  {
-    id: 'communities',
-    label: 'Communities',
-    icon: (active) => (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={active ? ACTIVE : PASSIVE} strokeWidth="1.8" strokeLinecap="round" />
-        <circle cx="9" cy="7" r="4" stroke={active ? ACTIVE : PASSIVE} strokeWidth="1.8" fill={active ? `${ACTIVE}18` : 'none'} />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke={active ? ACTIVE : PASSIVE} strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    )
-  },
-  {
-    id: 'chats',
-    label: 'Chats',
-    icon: (active) => (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-          fill={active ? `${ACTIVE}18` : 'none'} stroke={active ? ACTIVE : PASSIVE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    )
-  }
+const TABS: { id: NavTab; label: string; Icon: React.ComponentType<{ size?: number; strokeWidth?: number }> }[] = [
+  { id: 'chats', label: 'Chats', Icon: MessageCircle },
+  { id: 'calls', label: 'Calls', Icon: Phone },
+  { id: 'updates', label: 'Updates', Icon: CircleDot },
+  { id: 'communities', label: 'Communities', Icon: Users },
 ];
 
+/** The four sections of Ledger Chat, shown as tabs above the list. */
 export const CrystalNavBar: React.FC<CrystalNavBarProps> = ({ activeTab, onTabChange, unreadCounts = {} }) => {
   return (
-    <nav
-      className="relative z-50 shrink-0"
-      aria-label="Main navigation"
-      style={{
-        background: 'rgba(255,255,255,0.88)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        borderTop: '1px solid rgba(0,0,0,0.08)',
-      }}
-    >
-      <div className="flex items-end pb-safe">
-        {tabs.map(tab => {
-          const isActive = activeTab === tab.id;
-          const unread = unreadCounts[tab.id] ?? 0;
-
+    <nav aria-label="Sections" className="relative z-10 shrink-0 bg-white border-b border-[#eceef2] px-2">
+      <div className="flex" role="tablist">
+        {TABS.map(({ id, label, Icon }) => {
+          const active = activeTab === id;
+          const unread = unreadCounts[id] ?? 0;
           return (
             <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              aria-label={tab.label}
-              aria-current={isActive ? 'page' : undefined}
-              className="flex-1 flex flex-col items-center gap-0.5 py-2.5 relative"
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => onTabChange(id)}
+              className={`relative flex-1 min-w-0 flex flex-col items-center justify-center gap-1 h-[54px] text-[12px] font-medium transition-colors ${
+                active ? 'text-[#15171c]' : 'text-[#727a88] hover:text-[#15171c]'
+              }`}
             >
-              {/* Active indicator pill — slides with spring physics */}
-              {isActive && (
-                <motion.div
-                  layoutId="nav-indicator"
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full"
-                  style={{ background: ACTIVE }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                />
-              )}
-
-              {/* Icon + unread badge */}
-              <div className="relative">
-                {tab.icon(isActive)}
+              <span className="relative shrink-0">
+                <Icon size={18} strokeWidth={active ? 2.1 : 1.8} />
                 {unread > 0 && (
-                  <span
-                    className="absolute -top-1 -right-2 min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-bold flex items-center justify-center leading-none border-2 border-white"
-                    style={{ background: '#c0362c' }}
-                    aria-label={`${unread} unread`}
-                  >
+                  <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 bg-[#15171c] rounded-full text-white text-[10.5px] font-semibold tabular-nums flex items-center justify-center leading-none ring-2 ring-white">
                     {unread > 99 ? '99+' : unread}
                   </span>
                 )}
-              </div>
-
-              {/* Label */}
-              <span
-                className="text-[10px] font-semibold tracking-wide"
-                style={{ color: isActive ? ACTIVE : PASSIVE }}
-              >
-                {tab.label}
               </span>
+              <span className="truncate max-w-full">{label}</span>
+              {active && (
+                <motion.span
+                  layoutId="nav-indicator"
+                  className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-[#15171c]"
+                  transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+                />
+              )}
             </button>
           );
         })}

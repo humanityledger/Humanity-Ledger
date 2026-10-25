@@ -109,9 +109,9 @@ export function SendTipModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[#25D366]">
+          <div className="flex items-center gap-2 text-[#15171c]">
             <Sparkles size={18} />
-            <span className="text-xs font-bold uppercase tracking-wider">Creator Tip</span>
+            <span className="text-xs font-semibold">Creator Tip</span>
           </div>
           <button
             onClick={onClose}
@@ -122,15 +122,15 @@ export function SendTipModal({
         </div>
 
         {/* Recipient Profile */}
-        <div className="flex items-center gap-3 p-3 bg-[#F2F2F7] rounded-2xl">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#25D366] to-emerald-400 flex items-center justify-center text-white font-black text-sm">
+        <div className="flex items-center gap-3 p-3 bg-[#f2f4f7] rounded-2xl">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#15171c] to-emerald-400 flex items-center justify-center text-white font-semibold text-sm">
             {recipientName ? recipientName.slice(0, 2).toUpperCase() : 'W'}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-[#1C1C1E] truncate">
+            <p className="text-sm font-semibold text-[#15171c] truncate">
               {recipientName || 'Creator'}
             </p>
-            <p className="text-[11px] font-mono text-black/40 truncate">
+            <p className="text-[12.5px] tabular-nums text-black/40 truncate">
               {recipientAddress}
             </p>
           </div>
@@ -141,10 +141,10 @@ export function SendTipModal({
           <button
             type="button"
             onClick={() => setToken('USDC')}
-            className={`py-2.5 rounded-xl text-xs font-bold transition-all border ${
+            className={`py-2.5 rounded-xl text-xs font-semibold transition-all border ${
               token === 'USDC'
-                ? 'bg-[#25D366]/10 text-[#25D366] border-[#25D366]'
-                : 'bg-[#F2F2F7] text-black/60 border-transparent hover:bg-black/5'
+                ? 'bg-[#eff1f4] text-[#15171c] border-[#15171c]'
+                : 'bg-[#f2f4f7] text-black/60 border-transparent hover:bg-black/5'
             }`}
           >
             USDC (Stable)
@@ -152,10 +152,10 @@ export function SendTipModal({
           <button
             type="button"
             onClick={() => setToken('ETH')}
-            className={`py-2.5 rounded-xl text-xs font-bold transition-all border ${
+            className={`py-2.5 rounded-xl text-xs font-semibold transition-all border ${
               token === 'ETH'
-                ? 'bg-[#25D366]/10 text-[#25D366] border-[#25D366]'
-                : 'bg-[#F2F2F7] text-black/60 border-transparent hover:bg-black/5'
+                ? 'bg-[#eff1f4] text-[#15171c] border-[#15171c]'
+                : 'bg-[#f2f4f7] text-black/60 border-transparent hover:bg-black/5'
             }`}
           >
             ETH (Native)
@@ -169,10 +169,10 @@ export function SendTipModal({
               key={p}
               type="button"
               onClick={() => setAmount(p)}
-              className={`py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`py-2 rounded-xl text-xs font-semibold transition-all ${
                 amount === p
                   ? 'bg-black text-white'
-                  : 'bg-[#F2F2F7] text-black/60 hover:bg-black/5'
+                  : 'bg-[#f2f4f7] text-black/60 hover:bg-black/5'
               }`}
             >
               ${p}
@@ -182,7 +182,7 @@ export function SendTipModal({
 
         {/* Amount Input */}
         <div>
-          <label className="text-[11px] font-bold uppercase tracking-wider text-black/40 block mb-1">
+          <label className="text-[12.5px] font-semibold text-black/40 block mb-1">
             Custom Amount ({token})
           </label>
           <input
@@ -191,7 +191,7 @@ export function SendTipModal({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="w-full px-4 py-3 bg-[#F2F2F7] rounded-xl outline-none text-base font-bold text-[#1C1C1E] focus:ring-2 focus:ring-[#25D366]"
+            className="w-full px-4 py-3 bg-[#f2f4f7] rounded-xl outline-none text-base font-semibold text-[#15171c] focus:ring-2 focus:ring-[#15171c]/15"
           />
         </div>
 
@@ -200,7 +200,7 @@ export function SendTipModal({
           type="button"
           onClick={handleSendTip}
           disabled={isSending}
-          className="w-full py-3.5 bg-[#25D366] hover:bg-[#20bd59] text-white font-bold rounded-2xl text-sm transition-transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-[#25D366]/20 disabled:opacity-50"
+          className="w-full py-3.5 bg-[#15171c] hover:bg-[#15171c] text-white font-semibold rounded-2xl text-sm transition-transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-black/5 disabled:opacity-50"
         >
           {isSending ? (
             <>

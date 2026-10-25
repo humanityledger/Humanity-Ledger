@@ -35,6 +35,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
+import { APP_FRAME_CSP, isAppFramePath } from './lib/community-apps/framePolicy';
+import { isRetiredApiRoute } from './lib/security/retiredRoutes';
 
 // ── Public routes: accessible to EVERYONE (no auth required) ──────────────────
 const PUBLIC_PATHS = new Set([
@@ -112,18 +114,26 @@ const PUBLIC_PREFIXES = [
 
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
-  return PUBLIC_PREFIXES.some(prefix => pathname.startsWith(prefix));
+  return PUBLIC_PREFIXES.some(prefix => matchesPrefix(pathname, prefix));
+}
+
+/**
+ * A prefix ending in "/" covers everything under it. Any other prefix covers
+ * itself and its sub-paths only: '/api/settings' must not make
+ * '/api/settings-export' public. Plain startsWith did exactly that.
+ */
+function matchesPrefix(pathname: string, prefix: string): boolean {
+  if (prefix.endsWith('/')) return pathname.startsWith(prefix);
+  return pathname === prefix || pathname.startsWith(prefix + '/');
 }
 
 // ── Rate Limiting (Edge Memory) ──────────────────────────────────────────────
 const rateLimitMap = new Map<string, { count: number, resetTime: number }>();
-function applyRateLimit(ip: string, pathname: string): NextResponse | null {
+function applyRateLimit(key: string, LIMIT: number): NextResponse | null {
   // Allow 150 requests per minute per IP for API routes
-  const LIMIT = 150;
   const WINDOW_MS = 60 * 1000;
   
   const now = Date.now();
-  const key = `${ip}`; // global IP limit across all routes
 
   let record = rateLimitMap.get(key);
   if (!record || now > record.resetTime) {
@@ -215,6 +225,7 @@ async function extractSessionAddress(req: NextRequest): Promise<string | null> {
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
+  let earlySession: string | null | undefined;
 
   // 1. Edge Rate Limiting for ALL API Routes
   if (pathname.startsWith('/api/')) {
@@ -223,7 +234,19 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     const forwardedFor = req.headers.get('x-forwarded-for') || '';
     const hops = forwardedFor.split(',').map(h => h.trim()).filter(Boolean);
     const clientIp = hops.length > 0 ? hops[hops.length - 1] : ((req as any).ip || '127.0.0.1');
-    const rateLimitRes = applyRateLimit(clientIp, pathname);
+    // Retired routes answer 410 before anything else runs (lib/security/retiredRoutes.ts).
+    if (isRetiredApiRoute(pathname)) {
+      return NextResponse.json({ error: 'Gone', message: 'This endpoint has been retired.' }, { status: 410 });
+    }
+
+    // Signed-in requests are limited per account, everyone else per IP.
+    // Keying everyone on IP alone throttled whole offices, universities and
+    // mobile carriers (many people behind one carrier-grade NAT address) at
+    // 150 requests a minute between them, and a chat tab alone makes ~30.
+    earlySession = await extractSessionAddress(req);
+    const rateLimitRes = earlySession
+      ? applyRateLimit('u:' + earlySession, 600)
+      : applyRateLimit('ip:' + clientIp, 150);
     if (rateLimitRes) return rateLimitRes;
 
     // B-015: CSRF check on API mutations
@@ -291,7 +314,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   }
 
   // 3. Check for a valid session JWT
-  const sessionAddress = await extractSessionAddress(req);
+  const sessionAddress = earlySession !== undefined ? earlySession : await extractSessionAddress(req);
 
   if (!sessionAddress) {
     // No session at all → redirect to sign-in (for pages) or 401 (for API)
@@ -362,6 +385,16 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self)');
+
+  // Community apps are untrusted code. Their document gets its own, stricter
+  // policy (opaque-origin sandbox, no network) and may only be framed by us.
+  // See lib/community-apps/framePolicy.ts.
+  if (isAppFramePath(pathname)) {
+    response.headers.set('Content-Security-Policy', APP_FRAME_CSP);
+    response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), clipboard-read=()');
+    response.headers.set('Referrer-Policy', 'no-referrer');
+  }
 
   return response;
 }

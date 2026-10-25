@@ -22,21 +22,6 @@ import {
 } from '@/lib/wallet/SettingsEnginePXE';
 import { useAppKit } from '@reown/appkit/react';
 import { useWalletStore } from '@/lib/store/wallet-store';
-import { useAccount, useSendTransaction } from 'wagmi';
-import { parseEther } from 'viem';
-
-// Treasury wallet for QD Tokens purchases
-// Treasury wallet for QD Tokens purchases — must match server-side validation in /api/aztec/purchase-qd
-const TREASURY_WALLET = '0x78831C25c86eA2a78A6127fC2Ccb95E612D87b4a' as `0x${string}`;
-
-// QD Tokens purchase packages
-const QD_PACKAGES = [
-  { index: 0, qd: 100,  price: '$1.99',  ethValue: '0.001' },
-  { index: 1, qd: 500,  price: '$7.99',  ethValue: '0.004' },
-  { index: 2, qd: 1200, price: '$14.99', ethValue: '0.008' },
-  { index: 3, qd: 3000, price: '$29.99', ethValue: '0.015' },
-  { index: 4, qd: 7500, price: '$59.99', ethValue: '0.030' },
-] as const;
 
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
@@ -121,8 +106,6 @@ export function LedgerChatSettings({ onClose, address }: LedgerChatSettingsProps
     : view === 'ghost_mode' ? 'AI ASSISTANT'
     : view === 'defi_tools' ? 'TOOLS'
     : view === 'network' ? 'NETWORK'
-    : view === 'premium' ? 'LEDGER NETWORK PRO'
-    : view === 'stars' ? 'QD TOKENS'
     : view.toUpperCase().replace(/_/g, ' ');
 
   return (
@@ -167,8 +150,6 @@ export function LedgerChatSettings({ onClose, address }: LedgerChatSettingsProps
               {view === 'ghost_mode' && <GhostModeView s={settings} update={updateSetting} />}
               {view === 'defi_tools' && <DefiToolsView s={settings} update={updateSetting} />}
               {view === 'network' && <NetworkView s={settings} update={updateSetting} />}
-              {view === 'premium' && <PremiumView />}
-              {view === 'stars' && <StarsView />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -221,26 +202,6 @@ function RootView({ onNavigate, address, s }: any) {
             <BItem icon={<Bot size={16}/>} label="AI Ghost Mode" onClick={() => onNavigate('ghost_mode')} />
             <BItem icon={<Activity size={16}/>} label="Ledger Intelligence Tools" onClick={() => onNavigate('defi_tools')} noBorder />
           </BBlock>
-        </div>
-
-        <div className="mt-10 flex flex-col gap-3">
-          <button onClick={() => onNavigate('premium')} className="w-full border border-black/10 bg-black text-white p-5 flex items-center gap-4 hover:bg-black/90 transition-colors text-left">
-            <Crown size={20} className="text-white shrink-0" />
-            <div className="flex flex-col">
-              <span className="text-[14px] font-bold uppercase tracking-wide">Ledger Network Pro</span>
-              <span className="text-[11px] text-white/50 font-mono">Unlock maximum protocol capacity</span>
-            </div>
-            <ChevronRight size={14} className="ml-auto text-white/30" />
-          </button>
-
-          <button onClick={() => onNavigate('stars')} className="w-full border border-black/10 bg-[#F8F8F8] p-5 flex items-center gap-4 hover:bg-black/5 transition-colors text-left">
-            <Star size={20} className="text-black shrink-0" />
-            <div className="flex flex-col">
-              <span className="text-[14px] font-bold uppercase tracking-wide text-black">QD Tokens</span>
-              <span className="text-[11px] text-black/40 font-mono">1,250 QD Balance</span>
-            </div>
-            <ChevronRight size={14} className="ml-auto text-black/20" />
-          </button>
         </div>
 
         {/* Sticky profile footer */}
@@ -1012,18 +973,15 @@ function DefiToolsView({ s, update }: any) {
 
 
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-//  PREMIUM & QD VIEWS
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
 function NetworkView({ s, update }: any) {
   return (
     <div className="p-4 space-y-4 pb-20">
       <SH title="Protocol Routing" />
       <BBlock>
-        <TRow label="WebRTC IP Masking" checked={s.webrtc_ip_masking} onChange={(v: boolean) => update('webrtc_ip_masking', v)} />
-        <TRow label="MEV Protection" checked={s.mev_protection} onChange={(v: boolean) => update('mev_protection', v)} />
-        <TRow label="Tor Onion Routing" checked={s.tor_routing} onChange={(v: boolean) => update('tor_routing', v)} noBorder />
+        {/* "MEV Protection" and "Tor Onion Routing" were removed on 23 October 2026:
+            they were stored but changed nothing, so whoever switched them on believed
+            they had a protection they did not have. */}
+        <TRow label="Hide my IP address in calls" checked={s.webrtc_ip_masking} onChange={(v: boolean) => update('webrtc_ip_masking', v)} noBorder />
       </BBlock>
       <SH title="Custom RPC" />
       <BBlock>
@@ -1037,194 +995,6 @@ function NetworkView({ s, update }: any) {
           />
         </div>
       </BBlock>
-    </div>
-  );
-}
-
-
-function PremiumView() {
-  const [isPaying, setIsPaying] = useState(false);
-
-  const handlePayment = async (planLabel: string, qdAmount: number) => {
-    setIsPaying(true);
-    try {
-      toast.info('Purchasing Pro with QD...', { duration: 3000 });
-      await new Promise(r => setTimeout(r, 1500));
-      toast.success('Ledger Pro activated! Welcome to the future.', { duration: 5000 });
-    } catch (e: any) {
-      toast.error(e?.message || 'Payment failed');
-    } finally {
-      setIsPaying(false);
-    }
-  };
-
-  return (
-    <div className="p-4 pb-20 flex flex-col items-center">
-      <div className="w-32 h-32 border-[4px] border-[#2754d6] bg-black flex items-center justify-center shadow-[10px_10px_0_0_#2754d6] mb-8">
-        <Crown size={48} className="text-[#2754d6]" />
-      </div>
-      <h1 className="text-3xl font-black uppercase text-center mb-2">Ledger Pro</h1>
-      <p className="text-sm font-bold text-zinc-600 text-center mb-6 max-w-xs">Unlimited limits. Autonomous tooling. Complete sovereignty.</p>
-
-      <div className="w-full bg-black border-[3px] border-[#2754d6] p-3 mb-4 flex items-center gap-2 shadow-[4px_4px_0_0_#2754d6]">
-        <span className="text-[10px] font-black text-[#2754d6] uppercase tracking-widest">? Paid with QD Tokens Ã¯Â¿Â½ Decentralized & On-chain</span>
-      </div>
-      
-      <div className="w-full flex gap-4 mb-8">
-        <div className="flex-1 border-[3px] border-black bg-white p-4 flex flex-col shadow-[4px_4px_0_0_#000]">
-          <span className="font-black">MONTHLY</span>
-          <span className="font-black text-[#2754d6] text-xl mt-2">4,500 QD</span>
-          <button
-            onClick={() => handlePayment('monthly', 4500)}
-            disabled={isPaying}
-            className="mt-3 py-2 bg-[#2754d6] text-white font-black text-[11px] uppercase border-2 border-black disabled:opacity-50"
-          >
-            {isPaying ? 'PROCESSING...' : 'SELECT'}
-          </button>
-        </div>
-        <div className="flex-1 border-[3px] border-[#2754d6] bg-black text-white p-4 flex flex-col shadow-[4px_4px_0_0_#2754d6]">
-          <span className="text-[10px] bg-[#2754d6] px-1 py-0.5 w-fit font-black mb-1">-35%</span>
-          <span className="font-black">ANNUAL</span>
-          <span className="font-black text-[#2754d6] text-xl mt-2">2,800 QD<span className="text-sm text-zinc-400">/mo</span></span>
-          <button
-            onClick={() => handlePayment('annual', 33600)}
-            disabled={isPaying}
-            className="mt-3 py-2 bg-[#2754d6] text-white font-black text-[11px] uppercase border-2 border-[#2754d6] disabled:opacity-50"
-          >
-            {isPaying ? 'PROCESSING...' : 'SELECT'}
-          </button>
-        </div>
-      </div>
-      <p className="text-[10px] font-bold text-zinc-400 text-center mt-3 max-w-xs">
-        Payment is processed via QD Tokens on Humanity Ledger Appchain. No bank data. No KYC.
-      </p>
-    </div>
-  );
-}
-function StarsView() {
-  const { open } = useAppKit();
-  const { address, isConnected } = useAccount();
-  const { sendTransactionAsync } = useSendTransaction();
-  const [buying, setBuying] = useState<number | null>(null);
-
-  const handlePurchase = async (pkg: typeof QD_PACKAGES[0]) => {
-    if (!isConnected || !address) {
-      toast.error('Please connect your wallet first.');
-      open();
-      return;
-    }
-    
-    setBuying(pkg.index);
-    const toastId = toast.loading(`Requesting ${pkg.price} payment for ${pkg.qd} QD...`);
-    
-    try {
-      // 1. Send Ethereum Transaction to Treasury
-      const txHash = await sendTransactionAsync({
-        to: TREASURY_WALLET,
-        value: parseEther(pkg.ethValue),
-      });
-      
-      toast.loading(`Payment sent! Waiting for confirmation... (Tx: ${txHash.slice(0,8)}...)`, { id: toastId });
-      
-      // Simulate waiting for confirmation (could use useWaitForTransactionReceipt)
-      await new Promise(r => setTimeout(r, 4000));
-      
-      // 2. Call API to credit the QD Tokens
-      const res = await fetch('/api/aztec/purchase-qd', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          aztecAddress: address, // Using ETH address for QD balance for now
-          txHash: txHash,
-          packageIndex: pkg.index,
-        }),
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok) {
-        toast.error(data.error || 'Payment confirmed but QD minting failed.', { id: toastId });
-        return;
-      }
-      
-      toast.success(`Ã¢Å“â€¦ ${pkg.qd} QD Tokens credited securely!`, { id: toastId, duration: 6000 });
-      
-      if (typeof window !== 'undefined') {
-         window.dispatchEvent(new CustomEvent('ledger_qd_balance_update', { detail: data.balance }));
-      }
-      
-    } catch (e: any) {
-      if (e.message?.includes('User rejected')) {
-        toast.error('Transaction cancelled by user.', { id: toastId });
-      } else {
-        toast.error(e?.message || 'Transaction failed.', { id: toastId });
-      }
-    } finally {
-      setBuying(null);
-    }
-  };
-
-  return (
-    <div className="p-4 pb-20 flex flex-col items-center">
-      <div className="w-32 h-32 border-[4px] border-black bg-yellow-400 flex items-center justify-center shadow-[10px_10px_0_0_#000] mb-8">
-        <Star size={64} className="fill-black text-black" />
-      </div>
-      <h1 className="text-3xl font-black uppercase text-center mb-2">QD Tokens</h1>
-      <p className="text-sm font-bold text-zinc-600 text-center mb-4 max-w-xs">Fuel your economy. Trade, tip, and power decentralized protocols.</p>
-
-      {/* Ethereum Wallet Banner */}
-      <div className="w-full bg-black border-[3px] border-yellow-400 p-4 mb-4 flex items-center gap-3 shadow-[4px_4px_0_0_#000]">
-        <div className="w-10 h-10 rounded border-2 border-yellow-400 shrink-0 bg-zinc-800 flex items-center justify-center">
-          <Globe size={20} className="text-yellow-400" />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-yellow-400 font-black text-[13px] uppercase tracking-widest">Ethereum Network</span>
-          <span className="text-zinc-400 text-[10px] font-bold">Native ETH Payments</span>
-        </div>
-        <button
-          onClick={() => !isConnected && open()}
-          className="ml-auto bg-yellow-400 text-black px-3 py-1 font-black text-[11px] uppercase border-2 border-yellow-400 hover:bg-yellow-300 transition-colors shrink-0"
-        >
-          {isConnected ? 'CONNECTED' : 'CONNECT'}
-        </button>
-      </div>
-
-      <div className="w-full bg-black border-[3px] border-yellow-400 p-3 mb-4 flex items-center gap-2 shadow-[4px_4px_0_0_#000]">
-        <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Ã¢Å¡Â¡ Buy with Ethereum Ã¢â‚¬â€ Sent directly to Treasury</span>
-      </div>
-      <div className="flex flex-col items-center mb-6">
-        <span className="text-[12px] font-black uppercase tracking-widest text-zinc-500 mb-1">YOUR WALLET</span>
-        {isConnected && address ? (
-          <span className="text-[13px] font-mono font-bold text-zinc-700">{address.slice(0,6)}...{address.slice(-4)}</span>
-        ) : (
-          <span className="text-[11px] text-red-500 font-bold mt-1">Connect your wallet to purchase QD Tokens</span>
-        )}
-      </div>
-
-      <div className="w-full flex flex-col gap-3">
-        {QD_PACKAGES.map((pkg) => (
-          <div
-            key={pkg.index}
-            onClick={() => !buying && handlePurchase(pkg as any)}
-            className={`w-full bg-white border-[3px] border-black p-4 flex items-center justify-between shadow-[4px_4px_0_0_#000] cursor-pointer transition-transform ${buying === pkg.index ? 'translate-y-1 opacity-60' : 'active:translate-y-1'}`}
-          >
-            <div className="flex items-center gap-3">
-              <Star size={18} className="fill-yellow-400 text-black" />
-              <div className="flex flex-col">
-                <span className="font-black text-xl">{pkg.qd.toLocaleString()} QD</span>
-                <span className="text-[10px] font-bold text-zinc-400">QD Tokens</span>
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <div className="bg-black text-yellow-400 px-4 py-2 font-black border-2 border-black text-sm">{pkg.price}</div>
-              {buying === pkg.index && <span className="text-[10px] font-bold text-zinc-500">Opening wallet...</span>}
-            </div>
-          </div>
-        ))}
-      </div>
-      <p className="text-[10px] font-bold text-zinc-400 text-center mt-4 max-w-xs">
-        Payments are processed via Ethereum mainnet and sent directly to the Humanity Ledger treasury. QD Tokens are credited after on-chain confirmation.
-      </p>
     </div>
   );
 }

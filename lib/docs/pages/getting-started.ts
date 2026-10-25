@@ -42,7 +42,7 @@ export const overview: DocPage = {
         { label: "Communities", state: "available", text: "Channels, roles, posts and invite links. Community posts are not yet encrypted end to end." },
         { label: "Voice and video calls", state: "available", text: "Direct browser to browser calls, encrypted by WebRTC." },
         { label: "Payments in chat", state: "available", text: "Send tokens from your own wallet to the person you are talking to." },
-        { label: "Private payments on Aztec", state: "development", text: "Experimental. Built on a release candidate of Aztec V6, without an independent audit yet." },
+        { label: "Private payments on Aztec", state: "partial", text: "Shield, send, receive by QR code and unshield work on the Aztec test network, with test tokens that have no value. No bridge from Ethereum and no independent audit yet." },
         { label: "Attachments", state: "partial", text: "Files are uploaded to our storage provider and are not yet encrypted end to end." },
         { label: "Windows app", state: "partial", text: "An unsigned preview build. The web app is the supported client." },
         { label: "iPhone and Android apps", state: "development", text: "Not yet submitted to the App Store or Google Play." },

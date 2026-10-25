@@ -16,9 +16,10 @@ const limiter = rateLimit({
  */
 export async function GET(req: Request) {
     try {
-        const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+        const hops = (req.headers.get('x-forwarded-for') || '').split(',').map(h => h.trim()).filter(Boolean);
+        const ip = hops[hops.length - 1] || '127.0.0.1';
         try {
-            await limiter.check(100, ip); // Max 100 requests per minute (increased to prevent lockout during reloads)
+            await limiter.check(20, ip); // Max 100 requests per minute (increased to prevent lockout during reloads)
         } catch {
             return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 });
         }

@@ -19,7 +19,7 @@ export interface VerificationResult {
 const usedInviteNonces = new Set<string>();
 
 function getSecretKey(): string {
-  return process.env.INVITE_SECRET_KEY || process.env.JWT_SECRET || 'hl_quantum_invite_entropy_secret_9941_secure';
+  return process.env.INVITE_SECRET_KEY || (() => { const s = process.env.JWT_SECRET; if (!s) throw new Error('INVITE_SECRET_KEY or JWT_SECRET must be set.'); return s; })();
 }
 
 /**

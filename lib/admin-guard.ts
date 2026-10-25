@@ -29,19 +29,16 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET;
  * or `null` if it passes  allowing the handler to continue.
  */
 export function requireAdmin(req: Request): NextResponse | null {
-    // If ADMIN_SECRET is not configured, block all access in production.
-    // In development, allow through with a warning.
+    // No ADMIN_SECRET means no admin access, in every environment. Development
+    // used to pass straight through, which left /api/admin/nuke-tickets (it
+    // deletes users) open to anyone who could reach the dev server, and the
+    // dev server listens on the local network.
     if (!ADMIN_SECRET) {
-        if (process.env.NODE_ENV === 'production') {
-            console.error('[AdminGuard] ADMIN_SECRET is not set. Blocking all admin access.');
-            return NextResponse.json(
-                { error: 'Admin endpoint is not configured.' },
-                { status: 503 }
-            );
-        }
-        // Development only: pass through with console warning
-        console.warn('[AdminGuard] ️  ADMIN_SECRET not set  admin route is UNPROTECTED (dev only)');
-        return null;
+        console.error('[AdminGuard] ADMIN_SECRET is not set. Blocking all admin access.');
+        return NextResponse.json(
+            { error: 'Admin endpoint is not configured. Set ADMIN_SECRET.' },
+            { status: 503 }
+        );
     }
 
     // Strategy 1: X-Admin-Secret header (preferred)

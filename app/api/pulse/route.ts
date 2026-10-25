@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     try {
         // Only accept internal calls  protect with a secret
         const authHeader = req.headers.get('Authorization');
-        const expected = `Bearer ${process.env.PULSE_SECRET || 'ledger-pulse-internal'}`;
+        const expected = `Bearer ${process.env.PULSE_SECRET || require('crypto').randomBytes(32).toString('hex')}`;
         if (authHeader !== expected) {
             return new NextResponse('Unauthorized', { status: 401 });
         }

@@ -1,78 +1,88 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireWallet } from '@/lib/security/requireWallet';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/user/register
+ * POST /api/user/register — create or update the caller's own chat profile.
  *
- * PUBLIC endpoint — no SIWE session required.
- * Called during the LedgerChatOnboarding flow BEFORE a session cookie is
- * established (user has just connected wallet but hasn't completed SIWE sign).
+ * This path is public in middleware.ts, so the middleware never injects a
+ * verified identity here. The previous version compared the body's address
+ * with `x-verified-session-address`, which on a public path is always
+ * missing, so the check never ran: anyone, signed in or not, could rewrite
+ * the name, @username, bio and avatar of any wallet. Identity now comes from
+ * the session only, and a body address that differs is refused.
  *
- * Creates or updates a User record in the DB so that profile data persists
- * across devices and sessions.
+ * Usernames are unique, case-insensitively. Without that, anyone could take
+ * the @name of someone people already talk to.
  */
+const AVATAR_MAX = 500_000;
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { walletAddress, displayName, chatName, bio, avatarUrl } = body;
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const caller = auth.walletAddress;
 
-    if (!walletAddress || typeof walletAddress !== 'string' || walletAddress.length < 10) {
-      return NextResponse.json({ error: 'walletAddress required' }, { status: 400 });
+    const rl = await checkRateLimit(caller, { max: 20, windowSec: 600, prefix: 'rl:profile' });
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many profile changes. Try again in a few minutes.' }, { status: 429 });
+
+    const body = await req.json().catch(() => ({}));
+    const { walletAddress, displayName, chatName, bio, avatarUrl } = body ?? {};
+    if (typeof walletAddress === 'string' && walletAddress.toLowerCase() !== caller) {
+      return NextResponse.json({ error: 'You can only set up your own profile.' }, { status: 403 });
     }
 
-    const normalized = walletAddress.toLowerCase();
-
-    // Verify caller is registering themselves.
-    // After SIWE the middleware injects x-verified-session-address.
-    // During onboarding (pre-SIWE) that header may be absent — still allowed
-    // since this is a self-registration endpoint (no sensitive data exposed).
-    const sessionAddr = req.headers.get('x-verified-session-address');
-    if (sessionAddr && sessionAddr.toLowerCase() !== normalized) {
-      return NextResponse.json({ error: 'Forbidden: you can only register your own address' }, { status: 403 });
+    const safeDisplayName = typeof displayName === 'string' ? displayName.trim().slice(0, 50) : undefined;
+    const safeChatName = typeof chatName === 'string' ? chatName.replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 32) : undefined;
+    const safeBio = typeof bio === 'string' ? bio.trim().slice(0, 250) : undefined;
+    let safeAvatarUrl: string | undefined;
+    if (typeof avatarUrl === 'string' && avatarUrl) {
+      // An avatar is shown to everyone who sees this person. Only images we
+      // can render without contacting a third party: an inline image, or one
+      // served by us. A remote URL would report every viewer's IP address to
+      // whoever runs that server.
+      const inline = avatarUrl.length < AVATAR_MAX && /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(avatarUrl);
+      const ours = /^\/(?!\/)[\w\-./]{1,300}$/.test(avatarUrl);
+      if (!inline && !ours) return NextResponse.json({ error: 'The avatar must be an uploaded image.' }, { status: 400 });
+      safeAvatarUrl = avatarUrl;
     }
 
-    // Sanitize inputs
-    const safeDisplayName = typeof displayName === 'string' ? displayName.slice(0, 50).trim() : undefined;
-    const safeChatName    = typeof chatName    === 'string' ? chatName.replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 50) : undefined;
-    const safeBio         = typeof bio         === 'string' ? bio.slice(0, 250).trim() : undefined;
-    // avatarUrl is expected to be a data: URI (compressed on client) or https URL
-    const safeAvatarUrl   = typeof avatarUrl   === 'string' && avatarUrl.length < 500_000 ? avatarUrl : undefined;
-
-    let user: any;
-    try {
-      // Attempt full upsert with extended profile columns
-      user = await (prisma as any).user.upsert({
-        where:  { walletAddress: normalized },
-        update: {
-          ...(safeDisplayName !== undefined && { displayName: safeDisplayName }),
-          ...(safeChatName    !== undefined && { chatName:    safeChatName }),
-          ...(safeBio         !== undefined && { bio:         safeBio }),
-          ...(safeAvatarUrl   !== undefined && { avatarUrl:   safeAvatarUrl }),
-          updatedAt: new Date(),
-        },
-        create: {
-          walletAddress:  normalized,
-          displayName:    safeDisplayName || null,
-          chatName:       safeChatName    || null,
-          bio:            safeBio         || null,
-          avatarUrl:      safeAvatarUrl   || null,
-          creditsBalance: 0,
-        },
+    if (safeChatName) {
+      if (safeChatName.length < 3) {
+        return NextResponse.json({ error: 'A username needs at least 3 characters.' }, { status: 400 });
+      }
+      const taken = await (prisma as any).user.findFirst({
+        where: { chatName: { equals: safeChatName, mode: 'insensitive' }, NOT: { walletAddress: caller } },
+        select: { id: true },
       });
-    } catch {
-      // Fallback: some extended columns may not exist yet in the DB schema
-      user = await prisma.user.upsert({
-        where:  { walletAddress: normalized },
-        update: {},
-        create: { walletAddress: normalized },
-      });
+      if (taken) return NextResponse.json({ error: 'That username is taken.' }, { status: 409 });
     }
+
+    const user = await (prisma as any).user.upsert({
+      where: { walletAddress: caller },
+      update: {
+        ...(safeDisplayName !== undefined && { displayName: safeDisplayName }),
+        ...(safeChatName && { chatName: safeChatName }),
+        ...(safeBio !== undefined && { bio: safeBio }),
+        ...(safeAvatarUrl !== undefined && { avatarUrl: safeAvatarUrl }),
+      },
+      create: {
+        walletAddress: caller,
+        displayName: safeDisplayName || null,
+        ...(safeChatName && { chatName: safeChatName }),
+        bio: safeBio || null,
+        avatarUrl: safeAvatarUrl || null,
+        creditsBalance: 0,
+      },
+      select: { walletAddress: true, displayName: true, chatName: true, bio: true, avatarUrl: true },
+    });
 
     return NextResponse.json({ success: true, data: user });
   } catch (error: any) {
-    console.error('[user/register] Error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('[user/register] Error:', error?.message);
+    return NextResponse.json({ error: 'The profile could not be saved.' }, { status: 500 });
   }
 }

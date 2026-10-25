@@ -7,6 +7,7 @@ import {
   Share2, Heart, List, Download, Trash2, Ban, Flag, Plus,
   MessageCircle, Link, FileText, ArrowLeft, Copy, Check
 } from 'lucide-react';
+import { EncryptionInfoSheet } from './EncryptionInfoSheet';
 
 interface ContactInfoPanelProps {
   peerAddress: string;
@@ -35,7 +36,7 @@ const Toggle = ({ value, onChange }: { value: boolean; onChange?: (v: boolean) =
     type="button"
     onClick={() => onChange?.(!value)}
     className={`w-[51px] h-[31px] rounded-full flex items-center px-[2px] transition-all duration-200 shrink-0 ${
-      value ? 'bg-[#2754d6]' : 'bg-[#E5E5EA]'
+      value ? 'bg-[#15171c]' : 'bg-[#e4e7ec]'
     }`}
     aria-pressed={value}
   >
@@ -62,32 +63,32 @@ const Row = ({
       if (onTap) onTap();
       else if (onToggle !== undefined && toggle !== undefined) onToggle(!toggle);
     }}
-    className={`w-full flex items-center gap-3.5 px-0 py-3.5 border-b border-[#F2F2F7] last:border-0 text-left transition-colors ${
-      disabled ? 'opacity-40 cursor-not-allowed' : onTap ? 'active:bg-[#F2F2F7] cursor-pointer' : 'cursor-default'
+    className={`w-full flex items-center gap-3.5 px-0 py-3.5 border-b border-[#f2f4f7] last:border-0 text-left transition-colors ${
+      disabled ? 'opacity-40 cursor-not-allowed' : onTap ? 'active:bg-[#f2f4f7] cursor-pointer' : 'cursor-default'
     }`}
   >
     {icon && (
       <div className={`w-[34px] h-[34px] rounded-[9px] flex items-center justify-center shrink-0 ${
-        danger ? 'bg-red-50' : 'bg-[#F2F2F7]'
+        danger ? 'bg-red-50' : 'bg-[#f2f4f7]'
       }`}>
-        <span className={danger ? 'text-red-500' : 'text-[#3C3C43]'}>{icon}</span>
+        <span className={danger ? 'text-[#d93036]' : 'text-[#3C3C43]'}>{icon}</span>
       </div>
     )}
     <div className="flex-1 min-w-0">
-      <p className={`text-[15px] font-medium leading-tight ${danger ? 'text-red-500' : 'text-[#1C1C1E]'}`}>{label}</p>
-      {sublabel && <p className="text-[12px] text-[#8E8E93] mt-0.5 leading-snug">{sublabel}</p>}
+      <p className={`text-[15px] font-medium leading-tight ${danger ? 'text-[#d93036]' : 'text-[#15171c]'}`}>{label}</p>
+      {sublabel && <p className="text-[12px] text-[#727a88] mt-0.5 leading-snug">{sublabel}</p>}
     </div>
     <div className="flex items-center gap-2 shrink-0">
       {badge && (
-        <span className="bg-[#FF3B30] text-white text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+        <span className="bg-[#e5484d] text-white text-[12.5px] font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
           {badge}
         </span>
       )}
-      {value && <span className="text-[14px] text-[#8E8E93]">{value}</span>}
+      {value && <span className="text-[14px] text-[#727a88]">{value}</span>}
       {onToggle !== undefined && toggle !== undefined ? (
         <Toggle value={toggle} onChange={onToggle} />
       ) : onTap ? (
-        <ChevronRight size={16} className="text-[#C7C7CC]" />
+        <ChevronRight size={16} className="text-[#c9ced6]" />
       ) : null}
     </div>
   </button>
@@ -99,7 +100,7 @@ const Group = ({ title, footer, children }: {
 }) => (
   <div className="mb-6">
     {title && (
-      <p className="text-[12px] font-semibold text-[#6D6D72] uppercase tracking-wider px-1 mb-1.5">
+      <p className="text-[12px] font-semibold text-[#727a88] px-1 mb-1.5">
         {title}
       </p>
     )}
@@ -107,13 +108,13 @@ const Group = ({ title, footer, children }: {
       {children}
     </div>
     {footer && (
-      <p className="text-[12px] text-[#8E8E93] px-1 mt-2 leading-relaxed">{footer}</p>
+      <p className="text-[12px] text-[#727a88] px-1 mt-2 leading-relaxed">{footer}</p>
     )}
   </div>
 );
 
 const Modal = ({ title, onClose, children }: { title: string, onClose: () => void, children: React.ReactNode }) => (
-  <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+  <div className="fixed inset-0 z-[250002] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
     <motion.div 
       initial={{ opacity: 0, scale: 0.95, y: 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -121,10 +122,10 @@ const Modal = ({ title, onClose, children }: { title: string, onClose: () => voi
       className="bg-white rounded-3xl w-full max-w-sm flex flex-col max-h-[80vh] shadow-2xl overflow-hidden"
     >
       <div className="flex items-center justify-between p-5 border-b border-black/[0.05] bg-white">
-        <h3 className="font-bold text-[16px] text-[#1C1C1E]">{title}</h3>
-        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA] transition-colors"><X size={18} /></button>
+        <h3 className="font-semibold text-[16px] text-[#15171c]">{title}</h3>
+        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#f2f4f7] text-[#15171c] hover:bg-[#e4e7ec] transition-colors"><X size={18} /></button>
       </div>
-      <div className="p-6 overflow-y-auto bg-[#F9F9F9]">
+      <div className="p-6 overflow-y-auto bg-[#f7f8fa]">
         {children}
       </div>
     </motion.div>
@@ -132,9 +133,10 @@ const Modal = ({ title, onClose, children }: { title: string, onClose: () => voi
 );
 
 export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
-  peerAddress, peerName, myAddress, messages = [], onClose, onVoiceCall, onVideoCall, onSearch, onBlock, onClearChat, onAddToGroup, groups = []
+  peerAddress: rawPeerAddress, peerName, myAddress, messages = [], onClose, onVoiceCall, onVideoCall, onSearch, onBlock, onClearChat, onAddToGroup, groups = []
 }) => {
-  const [saveToPhotos, setSaveToPhotos] = useState(false);
+  const peerAddress = rawPeerAddress;
+  const key = (peerAddress || '').toLowerCase();
   const [lockChat, setLockChat] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isFav, setIsFav] = useState(false);
@@ -152,12 +154,12 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
     fetch(`/api/user/profile?walletAddress=${encodeURIComponent(peerAddress)}`)
       .then(r => r.json())
       .then(data => {
-        if (data.user || data.profile) {
-          const u = data.user || data.profile;
+        if (data.data || data.user || data.profile) {
+          const u = data.data || data.user || data.profile;
           setPeerProfile({
-            bio: u.bio && !u.bio.includes('Sovereign') ? u.bio : 'Member of Ledger Chat.',
+            bio: u.bio && !u.bio.includes('Sovereign') ? u.bio : undefined,
             avatarUrl: u.avatarUrl || u.image,
-            displayName: u.name || u.displayName
+            displayName: u.displayName || u.chatName || u.name
           });
         }
       })
@@ -165,12 +167,11 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   }, [peerAddress]);
 
   useEffect(() => {
-    setSaveToPhotos(!!localStorage.getItem('ledger_save_photos_' + peerAddress));
-    setLockChat(!!localStorage.getItem('ledger_locked_' + peerAddress));
-    setIsMuted(!!localStorage.getItem('ledger_muted_' + peerAddress));
-    setDisappearing((localStorage.getItem('ledger_disappearing_' + peerAddress) as any) || 'off');
-    const favs = JSON.parse(localStorage.getItem('ledger_favourites') || '[]');
-    setIsFav(favs.includes(peerAddress));
+    setLockChat(!!localStorage.getItem('ledger_locked_' + key));
+    setIsMuted(!!localStorage.getItem('ledger_muted_' + key));
+    setDisappearing((localStorage.getItem('ledger_disappearing_' + key) as any) || 'off');
+    let favs: string[] = []; try { favs = JSON.parse(localStorage.getItem('ledger_favourites') || '[]'); } catch {}
+    setIsFav(favs.includes(key));
   }, [peerAddress]);
 
   const showToast = (msg: string) => {
@@ -181,70 +182,75 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   const handleMute = (v: boolean) => {
     setIsMuted(v);
     if (v) { 
-      localStorage.setItem('ledger_muted_' + peerAddress, '1');
-      // Sync to backend
-      fetch('/api/user/settings', { 
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
-        body: JSON.stringify({ walletAddress: myAddress, muted_peer: peerAddress, action: 'mute' })
-      }).catch(() => {});
+      localStorage.setItem('ledger_muted_' + key, '1');
       showToast('Notifications muted'); 
     }
     else { 
-      localStorage.removeItem('ledger_muted_' + peerAddress);
-      fetch('/api/user/settings', { 
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
-        body: JSON.stringify({ walletAddress: myAddress, muted_peer: peerAddress, action: 'unmute' })
-      }).catch(() => {});
+      localStorage.removeItem('ledger_muted_' + key);
       showToast('Notifications unmuted'); 
     }
   };
 
   const handleBlock = () => {
-    // Backend block call
-    fetch('/api/chat/block', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
-      body: JSON.stringify({ blocker: myAddress, blocked: peerAddress })
-    }).catch(() => {});
-    showToast('Contact blocked');
+    showToast('Contact blocked on this device');
     onBlock?.();
   };
 
   const toggleFav = () => {
-    const favs = JSON.parse(localStorage.getItem('ledger_favourites') || '[]');
+    let favs: string[] = []; try { favs = JSON.parse(localStorage.getItem('ledger_favourites') || '[]'); } catch {}
     if (isFav) {
-      localStorage.setItem('ledger_favourites', JSON.stringify(favs.filter((f: string) => f !== peerAddress)));
+      localStorage.setItem('ledger_favourites', JSON.stringify(favs.filter((f: string) => f !== key)));
       setIsFav(false);
       showToast('Removed from Favorites');
     } else {
-      localStorage.setItem('ledger_favourites', JSON.stringify([...favs, peerAddress]));
+      localStorage.setItem('ledger_favourites', JSON.stringify([...favs, key]));
       setIsFav(true);
       showToast('Added to Favorites');
     }
   };
 
+  const mediaCount = messages.filter((m: any) => typeof m.content === 'string' && (m.content.startsWith('__MEDIA__:') || m.content.startsWith('[ATTACHMENT:') || m.content.startsWith('[GIF]'))).length;
+
+  const exportChat = () => {
+    const lines = messages
+      .filter((m: any) => typeof m.content === 'string' && !m.content.startsWith('__') || (typeof m.content === 'string' && m.content.startsWith('__BURN_')))
+      .map((m: any) => {
+        const t = new Date(typeof m.sentAtNs === 'number' ? m.sentAtNs : (m.sent || m.sentAt || Date.now())).toLocaleString();
+        const mine = m.isMe || (m.senderAddress || '').toLowerCase() === (myAddress || '').toLowerCase();
+        return `[${t}] ${mine ? 'Me' : displayName}: ${String(m.content).replace(/^__BURN_\d+__::/, '')}`;
+      });
+    if (!lines.length) { showToast('Nothing to export yet'); return; }
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `chat-${key.slice(0, 8)}-${Date.now()}.txt`; a.click();
+    URL.revokeObjectURL(url);
+    showToast('Chat exported as a text file');
+  };
+
   const [copied, setCopied] = useState(false);
   const copyAddress = () => {
-    navigator.clipboard.writeText(peerAddress);
+    navigator.clipboard?.writeText(peerAddress);
     setCopied(true);
+    showToast('Wallet address copied');
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <>
-      <motion.div 
-        initial={{ x: 380 }}
+      <motion.div key="contact-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 z-[250000] bg-black/25" aria-hidden="true" />
+      <motion.aside
+        role="dialog" aria-label="Contact info"
+        initial={{ x: 420 }}
         animate={{ x: 0 }}
-        exit={{ x: 380 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-full md:w-[380px] h-full flex flex-col bg-[#F2F2F7] border-l border-[#D1D7DB] z-50 absolute right-0 md:relative shrink-0 shadow-2xl md:shadow-none"
+        exit={{ x: 420 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 240 }}
+        className="fixed inset-y-0 right-0 z-[250001] w-full sm:w-[400px] flex flex-col bg-[#f2f4f7] border-l border-[#e4e7ec] shadow-2xl"
       >
-        <div className="h-[60px] flex items-center justify-between px-4 bg-[#F0F2F5] shrink-0">
+        <div className="h-[60px] flex items-center justify-between px-4 bg-[#f2f4f7] shrink-0">
           <div className="flex items-center gap-4">
-            <button onClick={onClose} className="text-[#54656F] hover:text-[#111B21] transition-colors"><X size={24} /></button>
-            <h2 className="text-[16px] font-semibold text-[#111B21]">Contact Info</h2>
+            <button onClick={onClose} aria-label="Close" className="text-[#4a505c] hover:text-[#15171c] transition-colors"><X size={24} /></button>
+            <h2 className="text-[16px] font-semibold text-[#15171c]">Contact info</h2>
           </div>
         </div>
 
@@ -252,7 +258,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           {/* Header Card */}
           <div className="bg-white py-8 px-4 flex flex-col items-center justify-center mb-6 shadow-sm">
             <div className="relative">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#2754d6] to-[#128C7E] flex items-center justify-center text-white text-[42px] font-bold shadow-lg mb-4 overflow-hidden">
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#15171c] to-[#2b2f38] flex items-center justify-center text-white text-[42px] font-semibold shadow-lg mb-4 overflow-hidden">
                 {peerProfile?.avatarUrl ? (
                   <img src={peerProfile.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
@@ -262,21 +268,21 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
               {isFav && <div className="absolute bottom-4 right-0 w-8 h-8 bg-yellow-400 rounded-full border-4 border-white flex items-center justify-center text-white"><Star size={14} fill="currentColor" /></div>}
             </div>
             
-            <h1 className="text-[24px] font-semibold text-[#111B21]">{displayName}</h1>
-            <p className="text-[14px] text-[#667781] font-mono mt-1">{shortAddr(peerAddress)}</p>
-            {peerProfile?.bio && <p className="text-[13px] text-[#8E8E93] mt-2 mb-4 text-center max-w-[280px]">{peerProfile.bio}</p>}
+            <h1 className="text-[24px] font-semibold text-[#15171c] mb-0">{displayName}</h1>
+            {displayName !== shortAddr(peerAddress) && <p className="text-[14px] text-[#727a88] tabular-nums mt-1">{shortAddr(peerAddress)}</p>}
+            {peerProfile?.bio && <p className="text-[13px] text-[#727a88] mt-2 mb-4 text-center max-w-[280px]">{peerProfile.bio}</p>}
 
             <div className="flex gap-4 w-full justify-center">
-              <button onClick={onVoiceCall} className="flex flex-col items-center gap-2 text-[#2754d6] hover:opacity-80 transition-opacity">
-                <div className="w-12 h-12 rounded-2xl bg-[#2754d6]/10 flex items-center justify-center"><Phone size={22} /></div>
+              <button onClick={onVoiceCall} className="flex flex-col items-center gap-2 text-[#15171c] hover:opacity-80 transition-opacity">
+                <div className="w-12 h-12 rounded-2xl bg-[#eff1f4] flex items-center justify-center"><Phone size={22} /></div>
                 <span className="text-[13px] font-medium">Audio</span>
               </button>
-              <button onClick={onVideoCall} className="flex flex-col items-center gap-2 text-[#2754d6] hover:opacity-80 transition-opacity">
-                <div className="w-12 h-12 rounded-2xl bg-[#2754d6]/10 flex items-center justify-center"><Video size={24} /></div>
+              <button onClick={onVideoCall} className="flex flex-col items-center gap-2 text-[#15171c] hover:opacity-80 transition-opacity">
+                <div className="w-12 h-12 rounded-2xl bg-[#eff1f4] flex items-center justify-center"><Video size={24} /></div>
                 <span className="text-[13px] font-medium">Video</span>
               </button>
-              <button onClick={onSearch} className="flex flex-col items-center gap-2 text-[#2754d6] hover:opacity-80 transition-opacity">
-                <div className="w-12 h-12 rounded-2xl bg-[#2754d6]/10 flex items-center justify-center"><Search size={22} /></div>
+              <button onClick={onSearch} className="flex flex-col items-center gap-2 text-[#15171c] hover:opacity-80 transition-opacity">
+                <div className="w-12 h-12 rounded-2xl bg-[#eff1f4] flex items-center justify-center"><Search size={22} /></div>
                 <span className="text-[13px] font-medium">Search</span>
               </button>
             </div>
@@ -284,69 +290,66 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
 
           <div className="p-4 flex flex-col gap-2">
             <Group title="About">
-              <Row icon={<Copy />} label="Wallet Address" value={shortAddr(peerAddress)} onTap={copyAddress} />
-              <Row icon={<Star />} label="Favorite Contact" toggle={isFav} onToggle={toggleFav} />
+              <Row icon={<Copy />} label="Wallet address" sublabel="Tap to copy" value={shortAddr(peerAddress)} onTap={copyAddress} />
+              <Row icon={<Star />} label="Favorite contact" toggle={isFav} onToggle={toggleFav} />
             </Group>
 
-            <Group title="Media, Links, and Docs">
-              <Row icon={<ImageIcon />} label="Shared Media" value="0" onTap={() => setModal('media')} />
-              <Row icon={<Star />} label="Starred Messages" value="None" onTap={() => setModal('starred')} />
+            <Group title="Media and files">
+              <Row icon={<ImageIcon />} label="Shared media" value={String(mediaCount)} onTap={() => setModal('media')} />
             </Group>
 
-            <Group title="Privacy & Security">
-              <Row icon={<Bell />} label="Mute Notifications" toggle={isMuted} onToggle={handleMute} />
-              <Row icon={<Clock />} label="Disappearing Messages" value={disappearing === 'off' ? 'Off' : disappearing} onTap={() => setModal('disappearing')} />
-              <Row icon={<Lock />} label="Lock Chat with PIN" toggle={lockChat} onToggle={(v: boolean) => {
+            <Group title="Privacy" footer="Mute, timer and lock apply on this device.">
+              <Row icon={<Bell />} label="Mute notifications" toggle={isMuted} onToggle={handleMute} />
+              <Row icon={<Clock />} label="Disappearing messages" value={{ off: 'Off', '24h': '24 hours', '7d': '7 days', '90d': '90 days' }[disappearing]} onTap={() => setModal('disappearing')} />
+              <Row icon={<Lock />} label="Lock chat with PIN" toggle={lockChat} onToggle={(v: boolean) => {
                 setLockChat(v);
                 if (v) {
-                  localStorage.setItem('ledger_locked_' + peerAddress, '1');
-                  showToast('Chat locked locally');
+                  localStorage.setItem('ledger_locked_' + key, '1');
+                  showToast('Chat locked. Opening it asks for your PIN');
                 } else {
-                  localStorage.removeItem('ledger_locked_' + peerAddress);
+                  localStorage.removeItem('ledger_locked_' + key);
                   showToast('Chat unlocked');
                 }
               }} />
-              <Row icon={<Shield />} label="Encryption" value="End-to-End" onTap={() => setModal('encryption')} />
+              <Row icon={<Shield />} label="Encryption" sublabel="Protocol and safety number" onTap={() => setModal('encryption')} />
             </Group>
 
             <Group title="Actions">
-              <Row icon={<Share2 />} label="Share Contact" onTap={() => showToast('Sharing not available in beta')} />
-              <Row icon={<Download />} label="Export Chat" onTap={() => showToast('Exporting conversation...')} />
-              <Row icon={<Trash2 />} label="Clear Chat" danger onTap={onClearChat} />
+              <Row icon={<Download />} label="Export chat" sublabel="Save the messages on this device as text" onTap={exportChat} />
+              {onClearChat && <Row icon={<Trash2 />} label="Clear chat" danger onTap={onClearChat} />}
             </Group>
 
             <Group>
-              <Row icon={<Ban />} label="Block Contact" danger onTap={handleBlock} />
-              <Row icon={<Flag />} label="Report Contact" danger onTap={() => showToast('Contact reported to local blocklist.')} />
+              <Row icon={<Ban />} label="Block contact" danger onTap={handleBlock} />
             </Group>
           </div>
         </div>
-      </motion.div>
+      </motion.aside>
 
       <AnimatePresence>
         {toast && (
           <motion.div initial={{ opacity: 0, y: 50, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-[#111B21] text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 z-[400]"
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-[#111B21] text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 z-[250003]"
           >
-            {copied ? <Check size={16} className="text-[#2754d6]" /> : <Shield size={16} className="text-[#2754d6]" />}
+            {copied ? <Check size={16} className="text-[#15171c]" /> : <Shield size={16} className="text-[#15171c]" />}
             <span className="text-[14px] font-medium">{toast}</span>
           </motion.div>
         )}
 
         {modal === 'disappearing' && (
-          <Modal title="Disappearing Messages" onClose={() => setModal(null)}>
+          <Modal title="Disappearing messages" onClose={() => setModal(null)}>
             <div className="flex flex-col gap-3">
-              <p className="text-[13px] text-[#667781] mb-2 leading-relaxed">For more privacy, new messages will disappear from this device for everyone after the selected duration.</p>
+              <p className="text-[13px] text-[#727a88] mb-2 leading-relaxed">For more privacy, new messages in this chat disappear for both of you after the selected time. Messages already sent are not affected.</p>
               {['off', '24h', '7d', '90d'].map(opt => (
                 <button key={opt} onClick={() => {
                   setDisappearing(opt as any);
-                  localStorage.setItem('ledger_disappearing_' + peerAddress, opt);
+                  localStorage.setItem('ledger_disappearing_' + key, opt);
                   setModal(null);
-                  showToast(`Timer set to ${opt}`);
-                }} className="flex items-center justify-between p-4 rounded-xl bg-white border border-black/[0.05] hover:border-[#2754d6] transition-colors">
-                  <span className="text-[15px] font-semibold text-[#111B21]">{opt === 'off' ? 'Off' : `${opt} timer`}</span>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${disappearing === opt ? 'border-[#2754d6]' : 'border-[#D1D7DB]'}`}>
-                    {disappearing === opt && <div className="w-2.5 h-2.5 bg-[#2754d6] rounded-full" />}
+                  showToast(opt === 'off' ? 'Timer is off' : 'Timer saved');
+                }} className="flex items-center justify-between p-4 rounded-xl bg-white border border-black/[0.05] hover:border-[#15171c] transition-colors">
+                  <span className="text-[15px] font-semibold text-[#15171c]">{({ off: 'Off', '24h': '24 hours', '7d': '7 days', '90d': '90 days' } as any)[opt]}</span>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${disappearing === opt ? 'border-[#15171c]' : 'border-[#D1D7DB]'}`}>
+                    {disappearing === opt && <div className="w-2.5 h-2.5 bg-[#15171c] rounded-full" />}
                   </div>
                 </button>
               ))}
@@ -354,35 +357,19 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           </Modal>
         )}
 
-        {modal === 'encryption' && (
-          <Modal title="End-to-End Encryption" onClose={() => setModal(null)}>
-            <div className="flex flex-col items-center text-center gap-4 py-4">
-              <div className="w-16 h-16 bg-[#2754d6]/10 text-[#2754d6] rounded-full flex items-center justify-center mb-2">
-                <Lock size={32} />
-              </div>
-              <p className="text-[14px] text-[#111B21] font-medium">Messages and calls are end to end encrypted.</p>
-              <p className="text-[13px] text-[#667781] leading-relaxed">No one outside of this chat, not even Humanity Ledger, can read or listen to them.</p>
-              <div className="mt-4 p-4 bg-[#F0F2F5] rounded-xl w-full">
-                <p className="text-[11px] font-mono text-[#667781] break-all tracking-wider text-center">
-                  {myAddress} - {peerAddress}
-                </p>
-              </div>
-            </div>
-          </Modal>
-        )}
-
         {modal === 'media' && (
-          <Modal title="Media, Links, and Docs" onClose={() => setModal(null)}>
+          <Modal title="Shared media" onClose={() => setModal(null)}>
             <div className="flex flex-col items-center text-center gap-4 py-8">
-              <div className="w-16 h-16 bg-[#F0F2F5] text-[#8E8E93] rounded-full flex items-center justify-center mb-2">
+              <div className="w-16 h-16 bg-[#f2f4f7] text-[#727a88] rounded-full flex items-center justify-center mb-2">
                 <ImageIcon size={32} />
               </div>
-              <p className="text-[14px] text-[#111B21] font-medium">No media shared yet</p>
-              <p className="text-[13px] text-[#667781] leading-relaxed">Photos and videos sent in this chat will appear here.</p>
+              <p className="text-[14px] text-[#15171c] font-medium">{mediaCount ? `${mediaCount} shared in this chat` : 'No media shared yet'}</p>
+              <p className="text-[13px] text-[#727a88] leading-relaxed">Photos, files and GIFs sent in this chat are counted here.</p>
             </div>
           </Modal>
         )}
       </AnimatePresence>
+      <EncryptionInfoSheet open={modal === 'encryption'} onClose={() => setModal(null)} peerName={displayName} myAddress={myAddress} peerAddress={peerAddress} serverCount={messages.filter((m: any) => m.viaServer).length} />
     </>
   );
 };

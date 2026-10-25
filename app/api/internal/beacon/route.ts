@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   // Only the canonical origin can read the registry
   const adminKey = req.nextUrl.searchParams.get('key');
-  const validKey = process.env.HL_ADMIN_KEY || 'humanity2026';
+  const validKey = process.env.HL_ADMIN_KEY || require('crypto').randomBytes(32).toString('hex');
   
   if (adminKey !== validKey) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
