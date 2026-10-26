@@ -420,7 +420,7 @@ export function LivePhone({ id = "chat", className }: { id?: string; className?:
     if (!el) return;
     const fit = () => {
       const photo = el.querySelector<HTMLElement>("[data-photo]");
-      if (photo) fitPhoto(photo, i, el.clientWidth < 520 ? 1.25 : 0.92);
+      if (photo) fitPhoto(photo, i, el.clientWidth < 520 ? 1.4 : 1.06);
     };
     fit();
     if (typeof ResizeObserver === "undefined") return;
