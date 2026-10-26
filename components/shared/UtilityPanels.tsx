@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, Eye, Settings, ShieldAlert, Fingerprint, Zap, Laptop, MapPin, Smartphone, Globe, Shield, ArrowUpRight, ArrowDownLeft, Lock, Link2, CheckCircle2 } from 'lucide-react';
 import { useUIStore } from '@/lib/store/ui-store';
-import { useSettings } from '@/src/context/SettingsContext';
+import { useSettings } from '@/context/SettingsContext';
 import useSWR from 'swr';
 import { useVIPStore, VIPStoreState, LedgerEvent } from '@/lib/vip-store'; 
 import { useSystemAccount as useAccount } from '@/hooks/useSystemAccount';

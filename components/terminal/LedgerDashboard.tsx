@@ -56,7 +56,7 @@ interface RouteRendererProps {
 const PANEL_STYLE = "flex-1 w-full h-full min-h-0 flex flex-col";
 
 const RouteRenderer = React.memo(({ route, reconciliationKey, mutateRoute }: RouteRendererProps) => {
-    const ComponentMap: Record<string, JSX.Element> = {
+    const ComponentMap: Record<string, React.ReactNode> = {
         'gold': <GoldTicketPanel />,
         'zk-identity': <GoldTicketPanel />,
         'chat': <Registry.LedgerChat />,

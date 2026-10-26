@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { headers } from 'next/headers';
+import crypto from 'crypto';
 
 export const metadata: Metadata = {
   title: 'Clone Registry & Deployment Monitor | Humanity Ledger Admin',
@@ -19,26 +20,24 @@ export const metadata: Metadata = {
 import { prisma } from '@/lib/prisma';
 
 async function getCloneData(adminKey: string) {
-  const validKey = process.env.HL_ADMIN_KEY || require('crypto').randomBytes(32).toString('hex');
+  const validKey = process.env.HL_ADMIN_KEY || crypto.randomBytes(32).toString('hex');
   if (adminKey !== validKey) return { error: 'Unauthorized' };
 
   try {
-    // Auto-heal: Ensure table exists before querying
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "CloneBeacon" (
-        "fingerprint" TEXT NOT NULL,
-        "origin" TEXT NOT NULL,
-        "host" TEXT NOT NULL,
-        "ip" TEXT NOT NULL,
-        "deployEnv" TEXT NOT NULL,
-        "userAgent" TEXT NOT NULL,
-        "isClone" BOOLEAN NOT NULL DEFAULT false,
-        "hitCount" INTEGER NOT NULL DEFAULT 1,
-        "commercialData" TEXT,
-        "seenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "CloneBeacon_pkey" PRIMARY KEY ("fingerprint")
-      );
-    `).catch(() => {});
+    // Auto-heal: Ensure table exists before querying (static DDL, no user input)
+    await prisma.$executeRaw`CREATE TABLE IF NOT EXISTS "CloneBeacon" (
+      "fingerprint" TEXT NOT NULL,
+      "origin" TEXT NOT NULL,
+      "host" TEXT NOT NULL,
+      "ip" TEXT NOT NULL,
+      "deployEnv" TEXT NOT NULL,
+      "userAgent" TEXT NOT NULL,
+      "isClone" BOOLEAN NOT NULL DEFAULT false,
+      "hitCount" INTEGER NOT NULL DEFAULT 1,
+      "commercialData" TEXT,
+      "seenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "CloneBeacon_pkey" PRIMARY KEY ("fingerprint")
+    )`.catch(() => {});
 
     const beacons = await prisma.$queryRaw<any[]>`
       SELECT * FROM "CloneBeacon" ORDER BY "seenAt" DESC LIMIT 500

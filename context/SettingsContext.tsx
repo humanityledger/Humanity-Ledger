@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { useAccount } from 'wagmi';
-import { dictionary } from '@/src/lib/dictionary';
+import { dictionary } from '@/lib/dictionary';
 import { toast } from 'sonner';
 import { 
     AnalyticsConfig, ExecutionConfig, UiConfig, 

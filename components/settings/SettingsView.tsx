@@ -4,7 +4,7 @@
 import { useCallback } from 'react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSettings } from '@/src/context/SettingsContext';
+import { useSettings } from '@/context/SettingsContext';
 import { useUIStore } from '@/lib/store/ui-store';
 import { useWalletStore } from '@/lib/store/wallet-store';
 import { toast } from 'sonner';

@@ -4,13 +4,15 @@ import { cookies } from 'next/headers';
 import { verifyRoomPassword, generateJoinToken } from '@/lib/utils/roomCrypto';
 import { getSession } from '@/lib/session';
 
+import crypto from 'crypto';
+
 function getCallRoomSecret(): string {
   const secret = process.env.CALL_ROOM_SECRET;
   if (!secret) {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('CALL_ROOM_SECRET environment variable is strictly required in production');
     }
-    return 'dev-call-room-secret-local-only';
+    return crypto.randomBytes(32).toString('hex');
   }
   return secret;
 }

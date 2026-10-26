@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createRequire } from 'module';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,8 +30,8 @@ export async function POST(req: NextRequest) {
 
     let webpush: any;
     try {
-      const dynamicReq = eval('require');
-      webpush = dynamicReq('web-push');
+      const _require = createRequire(import.meta.url);
+      webpush = _require('web-push');
     } catch {
       return NextResponse.json({ skipped: true, reason: 'web-push module not available' });
     }

@@ -14,25 +14,23 @@ async function resolveCaller(req: NextRequest) {
 }
 
 const ALLOWED_PRIVACY = new Set(['everyone', 'contacts', 'nobody']);
-const DDL_CREATE_STATUS = `
-  CREATE TABLE IF NOT EXISTS "StatusUpdate" (
-    "id" TEXT NOT NULL,
-    "ownerAddress" TEXT NOT NULL,
-    "text" TEXT NOT NULL,
-    "emoji" TEXT,
-    "privacy" TEXT NOT NULL DEFAULT 'contacts',
-    "expiresAt" TIMESTAMP(3) NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "StatusUpdate_pkey" PRIMARY KEY ("id")
-  );
-`;
 
 export async function GET(req: NextRequest) {
   try {
     const caller = await resolveCaller(req);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    await prisma.$executeRawUnsafe(DDL_CREATE_STATUS).catch(() => {});
+    // DDL_CREATE_STATUS is a static constant with no user input — safe to use $executeRaw
+    await prisma.$executeRaw`CREATE TABLE IF NOT EXISTS "StatusUpdate" (
+      "id" TEXT NOT NULL,
+      "ownerAddress" TEXT NOT NULL,
+      "text" TEXT NOT NULL,
+      "emoji" TEXT,
+      "privacy" TEXT NOT NULL DEFAULT 'contacts',
+      "expiresAt" TIMESTAMP(3) NOT NULL,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "StatusUpdate_pkey" PRIMARY KEY ("id")
+    )`.catch(() => {});
 
     const contacts = await (prisma as any).chatContact.findMany({
       where: { owner: caller },
@@ -75,7 +73,17 @@ export async function POST(req: NextRequest) {
 
     const privacySanitized = ALLOWED_PRIVACY.has(privacy) ? privacy : 'contacts';
 
-    await prisma.$executeRawUnsafe(DDL_CREATE_STATUS).catch(() => {});
+    // DDL_CREATE_STATUS is a static constant with no user input — safe to use $executeRaw
+    await prisma.$executeRaw`CREATE TABLE IF NOT EXISTS "StatusUpdate" (
+      "id" TEXT NOT NULL,
+      "ownerAddress" TEXT NOT NULL,
+      "text" TEXT NOT NULL,
+      "emoji" TEXT,
+      "privacy" TEXT NOT NULL DEFAULT 'contacts',
+      "expiresAt" TIMESTAMP(3) NOT NULL,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "StatusUpdate_pkey" PRIMARY KEY ("id")
+    )`.catch(() => {});
 
     const id = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);

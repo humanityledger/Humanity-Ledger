@@ -24,8 +24,8 @@ export async function GET(req: NextRequest) {
     const caller = await resolveCaller(req);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // 1. Auto-heal: Ensure QDCreditLedger table exists (bypassing Prisma Client sync issues)
-    await prisma.$executeRawUnsafe(`
+    // 1. Auto-heal: Ensure QDCreditLedger table exists (static DDL)
+    await prisma.$executeRaw`
       CREATE TABLE IF NOT EXISTS "QDCreditLedger" (
         "id" TEXT NOT NULL,
         "address" TEXT NOT NULL,
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "QDCreditLedger_pkey" PRIMARY KEY ("id")
       );
-    `).catch(() => {});
+    `.catch(() => {});
 
     // 2. Calculate balance dynamically from the ledger — parameterized (no SQL injection)
     const result = await prisma.$queryRaw`SELECT COALESCE(SUM(CASE WHEN direction = 'IN' THEN delta ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN direction = 'OUT' THEN delta ELSE 0 END), 0) as available, COUNT(*) as version FROM "QDCreditLedger" WHERE "address" = ${caller}` as any[];

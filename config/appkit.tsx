@@ -22,24 +22,24 @@ if (!process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID && typeof window !== 'unde
 }
 
 // 2. Interstellar Node Override
+// NOTE: These env vars intentionally have no NEXT_PUBLIC_ prefix.
+// In the client bundle they resolve to undefined (safe), falling back to the
+// public RPC URLs listed below. Premium RPC keys are only used server-side.
 const dedicatedBase = {
     ...base,
     rpcUrls: {
         ...base.rpcUrls,
-        default: { http: [process.env.GETBLOCK_BASE_RPC || 'https://base.drpc.org'] },
-        public: { http: [process.env.GETBLOCK_BASE_RPC || 'https://base.drpc.org'] }
+        default: { http: [process.env.NEXT_PUBLIC_GETBLOCK_BASE_RPC || 'https://base.drpc.org'] },
+        public: { http: [process.env.NEXT_PUBLIC_GETBLOCK_BASE_RPC || 'https://base.drpc.org'] }
     }
 };
-
-// Infura key  server-side only, never expose in client bundle
-const infuraKey = process.env.INFURA_API_KEY ?? '';
 
 const dedicatedMainnet = {
     ...mainnet,
     rpcUrls: {
         ...mainnet.rpcUrls,
-        default: { http: [process.env.ETH_RPC_URL || 'https://cloudflare-eth.com'] },
-        public: { http: [process.env.ETH_RPC_URL || 'https://cloudflare-eth.com'] }
+        default: { http: [process.env.NEXT_PUBLIC_ETH_RPC_URL || 'https://cloudflare-eth.com'] },
+        public: { http: [process.env.NEXT_PUBLIC_ETH_RPC_URL || 'https://cloudflare-eth.com'] }
     }
 };
 
@@ -47,8 +47,8 @@ const dedicatedBsc = {
     ...bsc,
     rpcUrls: {
         ...bsc.rpcUrls,
-        default: { http: [process.env.BNB_RPC_URL || 'https://bsc.publicnode.com'] },
-        public: { http: [process.env.BNB_RPC_URL || 'https://bsc.publicnode.com'] }
+        default: { http: [process.env.NEXT_PUBLIC_BNB_RPC_URL || 'https://bsc.publicnode.com'] },
+        public: { http: [process.env.NEXT_PUBLIC_BNB_RPC_URL || 'https://bsc.publicnode.com'] }
     }
 };
 

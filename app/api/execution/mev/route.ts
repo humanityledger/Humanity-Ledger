@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { mevAgent } from '@/services/execution/hft-mev-agent';
+import { mevAgent } from '@/lib/services/execution/hft-mev-agent';
 import { getSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';

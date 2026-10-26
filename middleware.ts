@@ -352,10 +352,15 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   // Now safely inject the verified session address
   requestHeaders.set('x-verified-session-address', sessionAddress);
   requestHeaders.set('x-session-ts', String(Date.now()));
-  const requestId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+  const requestId = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
   requestHeaders.set('x-request-id', requestId);
 
-  const nonce = Buffer.from(crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36)).toString('base64');
+  const nonceBytes = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+  const nonce = Buffer.from(nonceBytes).toString('base64');
   requestHeaders.set('x-nonce', nonce);
 
   const response = NextResponse.next({

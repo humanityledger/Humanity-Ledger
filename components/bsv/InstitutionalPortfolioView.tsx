@@ -36,7 +36,7 @@ import { NativeSendView } from '@/components/portfolio/NativeSendView';
 import { SystemFooter } from '@/components/landing/SystemFooter';
 import { useAztecNative } from '@/context/AztecNativeContext';
 import { Zap } from 'lucide-react';
-import { useSettings } from '@/src/context/SettingsContext';
+import { useSettings } from '@/context/SettingsContext';
 
 
 // AUDIT FIX #6: Live ECB exchange rates — replaces the hardcoded 0.92 "video demo" rate.

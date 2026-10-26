@@ -18,6 +18,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 
 // This is the CANONICAL origin — any other origin is a potential clone
@@ -45,8 +46,8 @@ export async function POST(req: NextRequest) {
     const isClone     = !isCanonical;
     const commercialState = body.commercialState ? JSON.stringify(body.commercialState) : '{}';
 
-    // Auto-heal: Ensure table exists
-    await prisma.$executeRawUnsafe(`
+    // Auto-heal: Ensure table exists (static DDL)
+    await prisma.$executeRaw`
       CREATE TABLE IF NOT EXISTS "CloneBeacon" (
         "fingerprint" TEXT NOT NULL,
         "origin" TEXT NOT NULL,
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
         "seenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "CloneBeacon_pkey" PRIMARY KEY ("fingerprint")
       );
-    `).catch(() => {});
+    `.catch(() => {});
 
     // [SECURITY FIX] Replaced string-interpolated $executeRawUnsafe with parameterized query.
     // HTTP headers are attacker-controlled and could contain SQL injection payloads.
@@ -106,7 +107,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   // Only the canonical origin can read the registry
   const adminKey = req.nextUrl.searchParams.get('key');
-  const validKey = process.env.HL_ADMIN_KEY || require('crypto').randomBytes(32).toString('hex');
+  const validKey = process.env.HL_ADMIN_KEY || crypto.randomBytes(32).toString('hex');
   
   if (adminKey !== validKey) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

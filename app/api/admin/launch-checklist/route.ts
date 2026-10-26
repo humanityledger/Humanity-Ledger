@@ -1,12 +1,18 @@
 // @ts-nocheck
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkRedisHealth } from '@/lib/redis/client';
 
 export const dynamic = 'force-dynamic';
 
 /** GET /api/admin/launch-checklist — Run all pre-launch checks */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // [SECURITY] Require admin secret header
+  const adminKey = req.headers.get('x-admin-key');
+  if (!adminKey || adminKey !== process.env.ADMIN_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const checks = [];
 
   // 1. DB connectivity

@@ -14,7 +14,7 @@ import { NativeSwapView } from '@/components/portfolio/NativeSwapView';
 import { NativeBridgeView } from '@/components/portfolio/NativeBridgeView';
 import { NativeSendView } from '@/components/portfolio/NativeSendView';
 import ReceiveHub from '@/components/wallet/ReceiveHub';
-import { useSettings } from '@/src/context/SettingsContext';
+import { useSettings } from '@/context/SettingsContext';
 import { TokenLogo } from '@/components/ui/TokenLogo';
 
 function ModalView({ title, onBack, children }: any) {

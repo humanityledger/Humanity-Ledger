@@ -249,7 +249,7 @@ export function ZkCommunityTreasury({
               {label}
             </span>
             <div className="text-2xl font-bold font-mono text-[#15171c] tracking-tight">
-              {typeof val === 'number' ? val.toFixed(symbol === 'ETH' ? 4 : 2) : val}
+              {val || '0.00'}
             </div>
             <span className="text-[11px] font-medium text-[#727a88] block mt-1">
               {symbol}

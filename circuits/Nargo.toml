@@ -1,8 +1,0 @@
-[package]
-name = "humanity_ledger_auth"
-type = "lib"
-authors = ["Humanity Ledger Team"]
-compiler_version = ">=0.22.0"
-
-[dependencies]
-std = { tag = "v0.22.0", git = "https://github.com/noir-lang/noir_stdlib" }

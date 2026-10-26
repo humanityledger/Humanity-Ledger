@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import rateLimit from '@/lib/rate-limit';
-import { withCache, CacheTTL } from '@/src/lib/cache/redis-cache';
+import { withCache, CacheTTL } from '@/lib/cache/redis-cache';
 import { fetchRealLedgerTransfers } from '@/lib/blockchain/LedgerFlowService';
 
 /**

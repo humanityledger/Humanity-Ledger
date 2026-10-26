@@ -2,7 +2,7 @@ import { useBalance, useReadContract, useChains, useChainId } from 'wagmi';
 import { parseAbi, formatEther } from 'viem';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { matchNewsToMarket } from '@/utils/news-matcher';
+import { matchNewsToMarket } from '@/lib/utils/news-matcher';
 import { Asset, NewsItem, Position, Transaction } from '@/types/wallet';
 import { useAuth } from '@/hooks/useAuth';
 import { useWalletStore } from '@/lib/store/wallet-store';

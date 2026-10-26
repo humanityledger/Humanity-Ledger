@@ -1,8 +1,0 @@
-[package]
-name = "zk_identity_registry"
-type = "contract"
-authors = ["Humanity Ledger Team <dev@humanityledger.com>", "Aztec Network Team"]
-compiler_version = ">=0.30.0"
-
-[dependencies]
-aztec = { git = "https://github.com/AztecProtocol/aztec-packages", tag = "v0.30.0", directory = "yarn-project/noir-contracts/contracts/aztec" }

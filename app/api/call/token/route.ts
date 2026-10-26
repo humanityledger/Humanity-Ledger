@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     // token.addGrant({ roomJoin: true, room: roomName });
     // const jwt = await token.toJwt();
 
-    // Stub response until livekit-server-sdk is installed
+    // Require livekit-server-sdk runtime package when calls are enabled
     return NextResponse.json({
       error: 'LiveKit token generation requires livekit-server-sdk package. Install it to enable calls.',
       hint: 'npm install livekit-server-sdk'

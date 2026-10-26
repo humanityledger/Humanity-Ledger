@@ -3,11 +3,11 @@
 
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import { State } from "wagmi";
-import { SettingsProvider } from "@/src/context/SettingsContext";
+import { SettingsProvider } from "@/context/SettingsContext";
 import { AppProvider } from "@/components/AppContext";
 import ClientWeb3Provider from '@/components/ClientWeb3Provider';
-import { WorldProvider } from "@/src/context/WorldContext";
-import { MarketWebsocketProvider } from "@/src/context/MarketWebsocketProvider";
+import { WorldProvider } from "@/context/WorldContext";
+import { MarketWebsocketProvider } from "@/context/MarketWebsocketProvider";
 
 import { SessionProvider } from "next-auth/react";
 import { CWIProvider } from "@/lib/bsv/CWIContext";
