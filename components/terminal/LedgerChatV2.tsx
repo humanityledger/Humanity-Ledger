@@ -5393,7 +5393,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   </div>
               )}
               {sending && (
-                <div className="flex self-end items-center gap-2 mt-1 mr-4 text-[12.5px] text-[#727a88]" role="status">
+                <div className="flex self-end items-center gap-2 my-2 mr-4 py-1 px-3 bg-black/[0.04] rounded-full text-[12px] font-medium text-[#727a88]" role="status">
                   <LoaderCircle size={13} strokeWidth={2} className="animate-spin" aria-hidden="true" />
                   Sending
                 </div>

@@ -316,18 +316,18 @@
 .h1 {
   margin: 0;
   font-size: clamp(40px, 6.2vw, 72px);
-  line-height: 1.02;
+  line-height: 1.14;
   font-weight: 650;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.028em;
   text-wrap: balance;
 }
 
 .h2 {
   margin: 0;
   font-size: clamp(30px, 4.2vw, 48px);
-  line-height: 1.08;
+  line-height: 1.18;
   font-weight: 650;
-  letter-spacing: -0.032em;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
@@ -449,7 +449,7 @@
     left: auto;
     bottom: auto;
     width: 100%;
-    margin-top: -8px;
+    margin-top: 8px;
   }
 }
 
@@ -474,6 +474,11 @@
   background: var(--hl-bg-subtle);
   border: 1px solid var(--hl-border);
   box-shadow: 0 -8px 24px -18px rgba(16, 24, 40, 0.18);
+  /* Prevent content from bleeding through sticky cards stacked above */
+  overflow: hidden;
+  isolation: isolate;
+  z-index: calc(var(--i, 0) + 2);
+  background: #ffffff;
 }
 
 @media (min-width: 900px) {
@@ -627,9 +632,15 @@
 .sigRow {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 12px;
   padding: 10px 14px;
   font-size: 13px;
+  min-width: 0;
+}
+
+.sigRow span:first-child {
+  flex-shrink: 0;
 }
 
 .sigRow + .sigRow {
@@ -637,6 +648,7 @@
 }
 
 .sigRow span:first-child {
+  flex-shrink: 0;
   color: var(--hl-ink-3);
 }
 
@@ -645,6 +657,9 @@
   font-size: 12.5px;
   color: var(--hl-ink);
   text-align: right;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  min-width: 0;
 }
 
 .sigBtns {
@@ -718,7 +733,7 @@
   background: repeating-linear-gradient(90deg, var(--hl-ink-4) 0 6px, transparent 6px 10px);
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .route {
     grid-template-columns: 1fr;
     gap: 6px;
@@ -781,6 +796,14 @@
   .step {
     border-bottom: 1px solid var(--hl-border);
     padding-bottom: 28px;
+  }
+}
+
+
+@media (min-width: 700px) and (max-width: 1099px) {
+  .step:nth-child(even) {
+    padding-left: 28px;
+    border-left: 1px solid var(--hl-border);
   }
 }
 
@@ -965,10 +988,24 @@
 .receiptRow {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 12px;
   padding: 11px 0;
   font-size: 14px;
   border-bottom: 1px solid var(--hl-border);
+  min-width: 0;
+}
+
+.receiptRow span:first-child {
+  color: var(--hl-ink-3);
+  flex-shrink: 0;
+  max-width: 52%;
+}
+
+.receiptRow span:last-child {
+  text-align: right;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .receiptRow span:first-child {

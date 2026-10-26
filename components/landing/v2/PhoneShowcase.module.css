@@ -32,9 +32,10 @@
   height: calc(100vh - 104px);
   min-height: 560px;
   display: grid;
-  grid-template-columns: minmax(280px, 0.78fr) 1.62fr;
-  gap: 32px;
+  grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.62fr);
+  gap: 24px;
   align-items: center;
+  overflow: hidden;
 }
 
 .captions {
@@ -47,6 +48,8 @@
   display: flex;
   flex-direction: column;
   gap: 28px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .counter {
@@ -132,6 +135,8 @@
   letter-spacing: -0.018em;
   color: var(--hl-ink-3);
   transition: color 0.4s var(--hl-ease, ease);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .stepBody {
@@ -151,11 +156,13 @@
 .stepText {
   display: block;
   padding-top: 10px;
-  max-width: 380px;
+  max-width: 320px;
   font-size: 16px;
   line-height: 1.6;
   color: var(--hl-ink-2);
   text-wrap: pretty;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .stepOn::after {
@@ -304,12 +311,19 @@
 .track[data-mode="stack"] .deck {
   display: flex;
   flex-direction: column;
-  gap: 44px;
+  gap: 48px;
+}
+
+.track[data-mode="stack"] .tile {
+  width: 100%;
+  max-width: 460px;
+  margin-inline: auto;
 }
 
 .track[data-mode="stack"] .figcap {
   display: block;
-  padding: 22px 4px 0;
+  padding: 20px 8px 0;
+  text-align: center;
 }
 
 .figNum {
@@ -342,6 +356,8 @@
   line-height: 1.6;
   color: var(--hl-ink-2);
   text-wrap: pretty;
+  max-width: 400px;
+  margin-inline: auto;
 }
 
 @supports (animation-timeline: view()) {

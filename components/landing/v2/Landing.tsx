@@ -120,7 +120,7 @@ function SignatureVignette() {
     <div className={s.vignette}>
       <div className={s.sig}>
         <div className={s.sigTitle}>Signature request</div>
-        <div className={s.small} style={{ marginTop: -8 }}>
+        <div className={s.small}>
           humanidfi.com wants you to sign in with your Ethereum account.
         </div>
         <div className={s.sigRows}>
