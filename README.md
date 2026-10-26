@@ -1,4 +1,4 @@
-# Humanity Ledger — Sovereign Privacy & Decentralized Communication Protocol
+# Ledger Chat
 
 <p align="center">
   <strong>The Decentralized Communication Paradigm. Built on Aztec Zero-Knowledge Proofs & XMTP MLS Transport.</strong>
