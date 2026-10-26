@@ -2587,27 +2587,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           reader.onloadend = async () => {
             const dataUrl = reader.result as string; // data:audio/webm;base64,...
             const audioMsg = `__AUDIO__${dataUrl}`;
-            
-            if (client && activePeer) {
-              const optimisticId = `optimistic-${Date.now()}`;
-              setMessages(prev => [...prev, {
-                id: optimisticId,
-                senderInboxId: client?.inboxId || '',
-                content: audioMsg,
-                sentAtNs: Date.now(),
-                conversationId: `dm-${activePeer.toLowerCase()}`
-              }]);
-              try { 
-                  await sendMessage(client, activePeer, audioMsg, address); 
-                  // Voice: P2P Audio transmission successful.
-            } catch (sendErr: any) {
-                console.error('[Voice] P2P Send Failed:', sendErr?.message);
-                setMessages(prev => prev.filter(m => m.id !== optimisticId));
-                setInitError('Failed to transmit secure voice message. Check your connection.');
+            if (executeSendRef.current) {
+              await executeSendRef.current(audioMsg);
+            } else {
+              toast.error('Open a conversation first');
             }
-          } else {
-            toast.error('Open a conversation first');
-          }
           };
           reader.readAsDataURL(blob);
         } catch (error) {
