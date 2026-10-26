@@ -151,27 +151,36 @@ type SystemPrismaClient = PrismaClient & {
   verificationCode: VerificationCodeDelegate;
 };
 
-function getProductionUrl(): string | undefined {
+function getSanitizedDatabaseUrl(): string | undefined {
     const rawUrl = process.env.DATABASE_URL;
     if (!rawUrl) return undefined;
 
     try {
         const urlObj = new URL(rawUrl);
         
-        //  Fallback: If we detect the public proxy domain, rewrite it to use the private internal domain 
+        // Fallback: If we detect the public proxy domain on Railway, rewrite to internal domain
         if (urlObj.hostname.includes('proxy.rlwy.net')) {
             urlObj.hostname = 'postgres.railway.internal';
             urlObj.port = '5432';
         }
 
         if (urlObj.protocol === 'postgresql:' || urlObj.protocol === 'postgres:') {
-            // Force PgBouncer
-            urlObj.searchParams.set('pgbouncer', 'true');
-            // [QUANTUM HARDENING] Enforce connection limits to prevent DB exhaustion during DDoS
-            urlObj.searchParams.set('connection_limit', '50');
-            // Removed connect_timeout, pool_timeout, and statement_timeout as they cause Prisma to throw
-            // "PANIC: timer has gone away" in serverless/edge environments and occasionally Node instances
-            // when the Tokio runtime drops its internal timer handles.
+            // Force PgBouncer whenever a pooler is detected or in production (prevents 'Closed, cause: None' prepared statement errors)
+            const isPooler = urlObj.hostname.includes('-pooler') || urlObj.hostname.includes('pooler') || urlObj.port === '6543';
+            if (isPooler || process.env.NODE_ENV === 'production') {
+                urlObj.searchParams.set('pgbouncer', 'true');
+            }
+
+            // Connection limit: keep sane limits to avoid exhausting Neon / Railway serverless pools
+            const maxLimit = process.env.NODE_ENV === 'production' ? '20' : '10';
+            if (!urlObj.searchParams.has('connection_limit')) {
+                urlObj.searchParams.set('connection_limit', maxLimit);
+            }
+
+            // Connection timeout: gives Neon compute 15s to wake from scale-to-zero suspend without socket closure
+            if (!urlObj.searchParams.has('connect_timeout')) {
+                urlObj.searchParams.set('connect_timeout', '15');
+            }
         }
         return urlObj.toString();
     } catch {
@@ -180,13 +189,13 @@ function getProductionUrl(): string | undefined {
 }
 
 function createPrismaClient(): PrismaClient {
-    const url = process.env.NODE_ENV === 'production' ? getProductionUrl() : undefined;
+    const url = getSanitizedDatabaseUrl();
 
     const client = new PrismaClient({
         datasources: url ? { db: { url } } : undefined,
         log: process.env.NODE_ENV === 'production' 
             ? [{ level: 'error', emit: 'event' }] 
-            : ['query', 'error', 'warn'],
+            : ['error', 'warn'],
     });
 
     // System error filter: suppress P1009 (table not in DB yet) which floods logs
