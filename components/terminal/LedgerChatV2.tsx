@@ -28,7 +28,6 @@ import { useAztecNative } from '@/context/AztecNativeContext';
 import { toast } from 'sonner';
 import { vault } from '@/lib/core/SecureVault';
 import { ChatCommunityGate } from '@/components/chat/ChatCommunityGate';
-import { MediaPermissionsPrePrompt } from '@/components/chat/MediaPermissionsPrePrompt';
 import { getLocalContacts, saveLocalContact, resolveContactName, LocalContact } from '@/lib/wallet/localAddressBook';
 import { getCallHistory, saveCallRecord, CallRecord } from '@/lib/wallet/callHistory';
 import { LedgerChatProfile } from '@/components/chat/LedgerChatProfile';
@@ -863,7 +862,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [effectiveAddress]);
   const [hasMediaPermission, setHasMediaPermission] = useState(false);
-  const [pendingCallType, setPendingCallType] = useState<'audio' | 'video' | 'answer' | null>(null);
 
 
   useEffect(() => {
@@ -2239,22 +2237,57 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   };
 
-  const handleStartCall = (type: 'audio' | 'video', targetPeerOverride?: string) => {
+  const handleStartCall = async (type: 'audio' | 'video', targetPeerOverride?: string) => {
+    if (targetPeerOverride && activePeer !== targetPeerOverride) {
+      setActivePeer(targetPeerOverride);
+    }
     if (hasMediaPermission) {
       startCall(type, targetPeerOverride);
-    } else {
-      if (targetPeerOverride && activePeer !== targetPeerOverride) {
-        setActivePeer(targetPeerOverride); // Ensure UI updates
+      return;
+    }
+    // Request browser permission directly — no intermediary modal
+    try {
+      const constraints = type === 'video' ? { audio: true, video: true } : { audio: true, video: false };
+      await navigator.mediaDevices.getUserMedia(constraints);
+      vault.setItem('ledger_media_perm', 'true');
+      setHasMediaPermission(true);
+      startCall(type, targetPeerOverride);
+    } catch (e: any) {
+      const errName = e?.name || '';
+      if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
+        toast.error('Microphone or camera access is blocked. Allow it in your browser settings.', { duration: 6000 });
+      } else if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
+        toast.error('No microphone or camera was found');
+      } else if (errName === 'NotReadableError' || errName === 'TrackStartError') {
+        toast.error('Another app is using your microphone or camera. Close it and try again.', { duration: 6000 });
+      } else {
+        toast.error('Could not start call. Please try again.');
       }
-      setPendingCallType(type);
     }
   };
 
-  const handleAnswerCall = () => {
+  const handleAnswerCall = async () => {
     if (hasMediaPermission) {
       answerCall();
-    } else {
-      setPendingCallType('answer');
+      return;
+    }
+    // Request browser permission directly — no intermediary modal
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      vault.setItem('ledger_media_perm', 'true');
+      setHasMediaPermission(true);
+      answerCall();
+    } catch (e: any) {
+      const errName = e?.name || '';
+      if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
+        toast.error('Microphone or camera access is blocked. Allow it in your browser settings.', { duration: 6000 });
+      } else if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
+        toast.error('No microphone or camera was found');
+      } else if (errName === 'NotReadableError' || errName === 'TrackStartError') {
+        toast.error('Another app is using your microphone or camera. Close it and try again.', { duration: 6000 });
+      } else {
+        toast.error('Could not answer the call. Please try again.');
+      }
     }
   };
 
@@ -6615,22 +6648,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
          />
        )}
 
-      {pendingCallType && isMounted && typeof document !== 'undefined'
-        ? createPortal(
-            <MediaPermissionsPrePrompt
-              pendingCallType={pendingCallType}
-              setPendingCallType={setPendingCallType}
-              onGrant={(type) => {
-                vault.setItem('ledger_media_perm', 'true');
-                setHasMediaPermission(true);
-                setPendingCallType(null);
-                if (type === 'audio' || type === 'video') startCall(type);
-                else if (type === 'answer') answerCall();
-              }}
-            />,
-            document.body
-          )
-        : null}
 
       {/* Save contact */}
       {showSaveContactModal && activePeer && isMounted && typeof document !== 'undefined' && createPortal(
