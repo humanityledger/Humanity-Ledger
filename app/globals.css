@@ -1855,3 +1855,13 @@ html.watermark-active body::after {
   }
 }
 
+/* ============================================================
+   50% ZOOM-OUT SYSTEM FOR LANDING PAGE AND /CONNECT
+   Renders at 50% scale at 100% default Chrome zoom on desktop
+   ============================================================ */
+@media screen and (min-width: 640px) {
+  html:has(.hl-zoom-50-target),
+  html.hl-zoom-50 {
+    zoom: 0.5;
+  }
+}

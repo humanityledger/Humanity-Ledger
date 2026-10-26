@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export default function Home() {
   return (
-    <div className="w-full flex-1 flex flex-col">
+    <div className="w-full flex-1 flex flex-col hl-zoom-50-target">
       <ClientRootRouter />
     </div>
   );
