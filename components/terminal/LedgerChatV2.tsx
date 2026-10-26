@@ -4266,23 +4266,23 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
     const optimisticId = `optimistic-${Date.now()}`;
 
+    let displayContent = finalContent;
+    let burnAtNs: number | undefined = undefined;
+    if (finalContent.startsWith('__BURN_')) {
+      const parts = finalContent.split('__::');
+      if (parts.length >= 2) {
+        const seconds = parseInt(parts[0].replace('__BURN_', ''), 10);
+        displayContent = parts.slice(1).join('__::');
+        burnAtNs = Date.now() + (seconds * 1000);
+      }
+    }
+
     try {
       if (!isReaction) {
         // ─── OPTIMISTIC INSERT ────────────────────────────────────────────────────
         // Register the content in the map BEFORE inserting, so the stream echo
         // can find and replace this optimistic message atomically when it arrives.
         optimisticContentMap.current.set(finalContent, optimisticId); // FIX: must match what XMTP echoes back
-
-        let displayContent = finalContent;
-        let burnAtNs: number | undefined = undefined;
-        if (finalContent.startsWith('__BURN_')) {
-          const parts = finalContent.split('__::');
-          if (parts.length >= 2) {
-            const seconds = parseInt(parts[0].replace('__BURN_', ''), 10);
-            displayContent = parts.slice(1).join('__::');
-            burnAtNs = Date.now() + (seconds * 1000);
-          }
-        }
 
         const optimisticMsg = {
           id: optimisticId,
