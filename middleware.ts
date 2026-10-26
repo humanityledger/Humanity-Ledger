@@ -93,6 +93,9 @@ const PUBLIC_PREFIXES = [
   '/api/call/',          // Group call room API
   '/api/provenance/',    // Provenance log API called on XMTP connect
   '/api/chat/users/search',
+  '/api/chat/presence',  // Safe chat presence heartbeat / query
+  '/api/gif/',           // GIF search proxy and fallback catalog
+  '/api/link-preview',   // Safe SSRF-guarded OpenGraph link preview
   '/_next/',
   '/connect',
   '/legal/',
@@ -112,19 +115,69 @@ const PUBLIC_PREFIXES = [
   '/api/settings',       // Public: settings load/save on first visit
 ];
 
-function isPublicPath(pathname: string): boolean {
+export function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
   return PUBLIC_PREFIXES.some(prefix => matchesPrefix(pathname, prefix));
 }
 
 /**
- * A prefix ending in "/" covers everything under it. Any other prefix covers
- * itself and its sub-paths only: '/api/settings' must not make
- * '/api/settings-export' public. Plain startsWith did exactly that.
+ * A prefix ending in "/" covers itself and all its subpaths.
+ * Matches must occur at path segment boundaries so that e.g. '/api/settings'
+ * does not inadvertently match '/api/settings-export'.
  */
-function matchesPrefix(pathname: string, prefix: string): boolean {
-  if (prefix.endsWith('/')) return pathname.startsWith(prefix);
-  return pathname === prefix || pathname.startsWith(prefix + '/');
+export function matchesPrefix(pathname: string, prefix: string): boolean {
+  const normalizedPrefix = prefix.endsWith('/') ? prefix.slice(0, -1) : prefix;
+  return pathname === normalizedPrefix || pathname.startsWith(normalizedPrefix + '/');
+}
+
+/**
+ * checkCsrf — Fails closed on state-changing API mutations (POST, PUT, PATCH, DELETE).
+ * Verifies Fetch Metadata (Sec-Fetch-Site) or allowed Origin header.
+ */
+export function checkCsrf(req: NextRequest): NextResponse | null {
+  const method = req.method.toUpperCase();
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    return null;
+  }
+
+  const secFetchSite = req.headers.get('sec-fetch-site');
+  if (secFetchSite) {
+    if (secFetchSite === 'same-origin' || secFetchSite === 'same-site') {
+      return null;
+    }
+    return NextResponse.json(
+      { error: 'Forbidden: Cross-site mutation rejected (CSRF protection)' },
+      { status: 403 }
+    );
+  }
+
+  // Fallback when Sec-Fetch-Site is not provided (older browsers, webviews, non-fetch callers)
+  const origin = req.headers.get('origin');
+  if (origin) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const allowed = new Set(['capacitor://localhost', 'ionic://localhost']);
+    if (appUrl) {
+      try {
+        allowed.add(new URL(appUrl).origin);
+      } catch {
+        allowed.add(appUrl);
+      }
+    }
+    allowed.add('http://localhost:3000');
+    allowed.add('http://localhost:3005');
+    allowed.add('http://127.0.0.1:3000');
+    allowed.add('http://127.0.0.1:3005');
+
+    if (allowed.has(origin) || allowed.has(origin.replace(/\/$/, ''))) {
+      return null;
+    }
+  }
+
+  // Neither trusted Sec-Fetch-Site nor allowed Origin present -> Fail closed
+  return NextResponse.json(
+    { error: 'Forbidden: Untrusted mutation source (CSRF protection)' },
+    { status: 403 }
+  );
 }
 
 // ── Rate Limiting (Edge Memory) ──────────────────────────────────────────────
@@ -249,16 +302,10 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       : applyRateLimit('ip:' + clientIp, 150);
     if (rateLimitRes) return rateLimitRes;
 
-    // B-015: CSRF check on API mutations
-    const method = req.method.toUpperCase();
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-      const secFetchSite = req.headers.get('sec-fetch-site');
-      if (secFetchSite === 'cross-site') {
-        return NextResponse.json(
-          { error: 'Forbidden: Cross-site mutation rejected (CSRF protection)' },
-          { status: 403 }
-        );
-      }
+    // B-015: Strict CSRF check on API mutations (webhooks excluded as machine-to-machine)
+    if (!pathname.startsWith('/api/webhooks/')) {
+      const csrfRes = checkCsrf(req);
+      if (csrfRes) return csrfRes;
     }
   }
 
