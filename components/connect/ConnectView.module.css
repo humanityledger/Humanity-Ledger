@@ -779,13 +779,17 @@
 
 @media (min-width: 1024px) {
   .visual {
-    /* Force portrait shape so the phone photo never gets squished into a
-       landscape container when CSS zoom: 0.67 is active on <html>.
-       align-self: center overrides the parent showcase grid's align-items: stretch. */
-    aspect-ratio: 3 / 4;
+    /* The phone photo (p1.webp) is 1600x1067 landscape.
+       fitPhoto() uses max(W/ph.w, H/ph.h)*zoom to scale-to-cover the container,
+       then centres the phone. For this to work the container must be LANDSCAPE too.
+       We fix the height to 300px and let aspect-ratio 4/3 give us ~400px width —
+       those are the values that mathematically centre the phone correctly.
+       height is explicit so CSS zoom:0.67 on <html> cannot squish this element. */
+    aspect-ratio: 4 / 3;
+    height: 300px;
+    width: auto;
     align-self: center;
-    max-height: 100%;
-    min-height: 220px;
+    margin: 0 auto;
   }
 }
 
