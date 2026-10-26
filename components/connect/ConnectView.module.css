@@ -779,8 +779,13 @@
 
 @media (min-width: 1024px) {
   .visual {
-    aspect-ratio: auto;
-    min-height: 300px;
+    /* Portrait framing so the iPhone photo shows without vertical cropping. */
+    aspect-ratio: 3 / 5;
+    min-height: 380px;
+    max-width: 320px;
+    width: 100%;
+    margin: 0 auto;
+    align-self: center;
   }
 }
 
