@@ -28,25 +28,10 @@ interface PadlockLoaderProps {
   onClearError: () => void;
 }
 
-const R = 56;
-const TICKS = [0, 90, 180, 270];
-
 function Emblem({ state }: { state: 'idle' | 'working' | 'error' }) {
   const cls = [s.emblem, state === 'working' ? s.breathing : '', state === 'error' ? s.error : ''].join(' ');
   return (
     <div className={cls} aria-hidden="true">
-      <svg className={s.dial} viewBox="0 0 120 120">
-        <circle className={s.track} cx="60" cy="60" r={R} />
-        {TICKS.map((deg) => {
-          const rad = (deg * Math.PI) / 180;
-          const x1 = 60 + Math.cos(rad) * (R - 5);
-          const y1 = 60 + Math.sin(rad) * (R - 5);
-          const x2 = 60 + Math.cos(rad) * (R - 2);
-          const y2 = 60 + Math.sin(rad) * (R - 2);
-          return <line key={deg} className={s.tick} x1={x1} y1={y1} x2={x2} y2={y2} />;
-        })}
-        {state === 'working' && <circle className={s.arc} cx="60" cy="60" r={R} />}
-      </svg>
       <span className={s.mark}>
         <img src="/worldmap.png" alt="" draggable={false} />
       </span>

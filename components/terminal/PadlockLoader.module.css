@@ -24,66 +24,26 @@
 
 .emblem {
   position: relative;
-  width: 120px;
-  height: 120px;
-  margin-bottom: 36px;
-}
-
-.dial {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.track {
-  fill: none;
-  stroke: var(--hl-border, #e4e7ec);
-  stroke-width: 1;
-}
-
-.tick {
-  stroke: var(--hl-ink-4, #a3a9b4);
-  stroke-width: 1;
-  stroke-linecap: round;
-}
-
-.arc {
-  fill: none;
-  stroke: var(--hl-ink, #15171c);
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  /* circumference of r=56 is ~351.86; the visible arc is about a sixth of it */
-  stroke-dasharray: 58 294;
-  transform-origin: 60px 60px;
-  animation: sweep 1.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
-}
-
-.arcDone {
-  stroke-dasharray: 352 0;
-  animation: none;
-  transition: stroke-dasharray var(--hl-dur-slow, 360ms) var(--hl-ease, ease);
-}
-
-.error .track {
-  stroke: var(--hl-danger, #c0362c);
-}
-
-.mark {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 68px;
-  height: 68px;
-  transform: translate(-50%, -50%);
-  border-radius: 999px;
-  overflow: hidden;
-  background: #ffffff;
-  box-shadow: 0 0 0 1px var(--hl-border, #e4e7ec), var(--hl-shadow-sm, 0 1px 3px rgba(16, 24, 40, 0.07));
+  width: 76px;
+  height: 76px;
+  margin-bottom: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.mark {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px var(--hl-border, #e4e7ec), var(--hl-shadow-sm, 0 2px 8px rgba(16, 24, 40, 0.08));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--hl-dur-normal, 200ms) var(--hl-ease, ease);
 }
 
 .mark img {
