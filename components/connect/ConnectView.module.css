@@ -779,8 +779,13 @@
 
 @media (min-width: 1024px) {
   .visual {
-    aspect-ratio: auto;
-    min-height: 300px;
+    /* Force portrait shape so the phone photo never gets squished into a
+       landscape container when CSS zoom: 0.67 is active on <html>.
+       align-self: center overrides the parent showcase grid's align-items: stretch. */
+    aspect-ratio: 3 / 4;
+    align-self: center;
+    max-height: 100%;
+    min-height: 220px;
   }
 }
 
