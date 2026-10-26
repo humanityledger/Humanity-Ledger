@@ -61,7 +61,7 @@ const PHONES: Phone[] = [
     w: 1600,
     h: 1066,
     m: [0.863255842, 0, 0, 0, 0, 0.847210299, 0, 0, 0, 0, 1, 0, 612.0, 86.400001526, 0, 1],
-    f: { x: 610, y: 423, w: 21, h: 296 },
+    f: { x: 610, y: 423, w: 0, h: 0 },
     Screen: VoiceCallScreen,
   },
   {
@@ -77,7 +77,7 @@ const PHONES: Phone[] = [
       0.824615639, 0.012275579, 0, 1.3135e-5, 0.054036733, 0.778028224, 0, -2.125e-6, 0, 0, 1, 0, 532.960021973,
       79.919998169, 0, 1,
     ],
-    f: { x: 552, y: 374, w: 39, h: 271 },
+    f: { x: 552, y: 374, w: 0, h: 0 },
     Screen: VideoCallScreen,
   },
   {
@@ -178,15 +178,17 @@ function PhonePhoto({ ph, i, progress, active }: { ph: Phone; i: number; progres
           </div>
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          className={s.fingers}
-          src={ph.fingers}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          draggable={false}
-          style={{ left: ph.f.x, top: ph.f.y, width: ph.f.w, height: ph.f.h }}
-        />
+        {ph.f.w > 0 && (
+          <img
+            className={s.fingers}
+            src={ph.fingers}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            style={{ left: ph.f.x, top: ph.f.y, width: ph.f.w, height: ph.f.h }}
+          />
+        )}
       </div>
     </div>
   );

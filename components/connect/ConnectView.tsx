@@ -224,9 +224,9 @@ function QrStage(p: ConnectViewProps) {
       </div>
 
       <ol className={s.qrSteps}>
-        <li>On your phone, open humanidfi.com/connect.</li>
-        <li>Tap Link another device.</li>
-        <li>Point the camera at this code. It expires after four minutes.</li>
+        <li>On your phone, open <strong>humanidfi.com/connect</strong> in a mobile browser.</li>
+        <li>Sign in with your wallet on that page.</li>
+        <li>Tap <strong>Scan a code from your computer</strong> and point the camera at this code.</li>
       </ol>
     </>
   );

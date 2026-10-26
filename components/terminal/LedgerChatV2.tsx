@@ -163,14 +163,40 @@ const shortAddr = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-
 export const formatMessagePreview = (content: string): string => {
   if (typeof content !== 'string') return 'Message';
   let cleanContent = content;
+  let isBurn = false;
   
-  // Recursively unwrap replies
-  while (cleanContent.startsWith('__REPLY__')) {
-    const parts = cleanContent.split('__::');
-    if (parts.length >= 2) {
-      cleanContent = parts.slice(1).join('__::');
-    } else {
-      break;
+  // Recursively unwrap replies, burn/self-destruct, thread, forward wrappers
+  let unwrapped = true;
+  while (unwrapped) {
+    unwrapped = false;
+    if (cleanContent.startsWith('__REPLY__')) {
+      const parts = cleanContent.split('__::');
+      if (parts.length >= 2) {
+        cleanContent = parts.slice(1).join('__::');
+        unwrapped = true;
+      }
+    }
+    if (cleanContent.startsWith('__BURN_')) {
+      const parts = cleanContent.split('__::');
+      if (parts.length >= 2) {
+        cleanContent = parts.slice(1).join('__::');
+        isBurn = true;
+        unwrapped = true;
+      }
+    }
+    if (cleanContent.startsWith('__THREAD__')) {
+      const parts = cleanContent.split('__::');
+      if (parts.length >= 2) {
+        cleanContent = parts.slice(1).join('__::');
+        unwrapped = true;
+      }
+    }
+    if (cleanContent.startsWith('__FORWARD__')) {
+      const parts = cleanContent.split('__::');
+      if (parts.length >= 2) {
+        cleanContent = parts.slice(1).join('__::');
+        unwrapped = true;
+      }
     }
   }
 
@@ -182,11 +208,13 @@ export const formatMessagePreview = (content: string): string => {
   if (cleanContent.startsWith('[LOCATION]')) return '📍 Location';
   if (cleanContent.startsWith('[ATTACHMENT')) return '📎 Attachment';
   if (cleanContent.startsWith('[GIF]')) return '🖼️ GIF';
-  if (cleanContent.startsWith('__PIN__') || cleanContent.startsWith('__REVOKE__') || cleanContent.startsWith('__READ__')) {
+  if (cleanContent.startsWith('__POLL__')) return '📊 Poll';
+  if (cleanContent.startsWith('__PAYMENT__')) return '💸 Payment';
+  if (cleanContent.startsWith('__PIN__') || cleanContent.startsWith('__REVOKE__') || cleanContent.startsWith('__READ__') || cleanContent.startsWith('__TYPING__')) {
     return 'System Message';
   }
 
-  return cleanContent;
+  return isBurn ? `🔥 ${cleanContent}` : cleanContent;
 };
 
 export const parseMessageText = (text: string, isMe: boolean) => {
@@ -600,10 +628,22 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
-  
+
   const [inputText, setInputText] = useState('');
   const [peerInput, setPeerInput] = useState('');
   const [sending, setSending] = useState(false);
+
+  // Safety net: if 'sending' stays true for more than 30 s (XMTP stall /
+  // unhandled rejection), auto-reset so the user is never permanently locked out.
+  const sendingWatchdogRef = useRef(false);
+  useEffect(() => {
+    sendingWatchdogRef.current = sending;
+    if (!sending) return;
+    const t = setTimeout(() => {
+      if (sendingWatchdogRef.current) setSending(false);
+    }, 30_000);
+    return () => clearTimeout(t);
+  }, [sending]);
   const [sendAnimKey, setSendAnimKey] = useState(0);
   // ── [FASE 16: Rate Limiting Anti-Spam] ───────────────────────────────
   // Prevents spam abuse: max 5 messages per 10 seconds (App Store Guideline 1.2)
@@ -4312,8 +4352,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         // UPDATE LOCAL ADDRESS BOOK
         setConversations(prev => {
           const updated = prev.find(c => c.peerAddress.toLowerCase() === activePeer.toLowerCase())
-            ? prev.map(c => c.peerAddress.toLowerCase() === activePeer.toLowerCase() ? { ...c, lastMessage: finalContent, lastAt: new Date() } : c)
-            : [{ peerAddress: activePeer, lastMessage: finalContent, lastAt: new Date() }, ...prev];
+            ? prev.map(c => c.peerAddress.toLowerCase() === activePeer.toLowerCase() ? { ...c, lastMessage: displayContent, lastAt: new Date() } : c)
+            : [{ peerAddress: activePeer, lastMessage: displayContent, lastAt: new Date() }, ...prev];
           persistToLocal(updated);
           return updated;
         });

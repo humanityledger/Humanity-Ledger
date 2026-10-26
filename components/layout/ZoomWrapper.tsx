@@ -12,7 +12,12 @@ export function ZoomWrapper({ children }: { children: React.ReactNode }) {
             viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover');
         }
 
-        const isZoomTarget = pathname === '/' || pathname === '/connect' || pathname?.startsWith('/connect');
+        const isZoomTarget =
+            pathname === '/' ||
+            pathname === '/connect' ||
+            pathname?.startsWith('/connect') ||
+            pathname === '/chat' ||
+            pathname?.startsWith('/chat');
 
         const updateZoom = () => {
             // Apply 50% scale on screens 640px and wider (desktop and tablets)

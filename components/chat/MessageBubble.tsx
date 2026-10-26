@@ -527,6 +527,19 @@ export const MessageBubble = React.memo(({
   const isBurning = !!msg.burnAtNs;
   const secondsLeft = isBurning ? Math.max(0, Math.ceil((msg.burnAtNs - Date.now()) / 1000)) : null;
 
+  /** Format remaining burn time as a compact human-readable string (e.g. "24h", "1h 30m", "5m", "30s"). */
+  const formatBurnRemaining = (secs: number): string => {
+    if (secs <= 0) return '0s';
+    const d = Math.floor(secs / 86400);
+    const h = Math.floor((secs % 86400) / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    if (d >= 1) return h > 0 ? `${d}d ${h}h` : `${d}d`;
+    if (h >= 1) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    if (m >= 1) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+    return `${s}s`;
+  };
+
   // ── What kind of message is this ──
   let content = typeof msg.content === 'string' ? msg.content : (msg.fallback || 'Message could not be shown');
 
@@ -963,7 +976,15 @@ export const MessageBubble = React.memo(({
                 <LockOpen size={11} strokeWidth={2} aria-hidden="true" /> Not end to end encrypted
               </span>
             )}
-            {isBurning && <span className="text-[12px] tabular-nums text-[#d93036]">{secondsLeft}s</span>}
+            {isBurning && secondsLeft !== null && (
+              <span
+                className={`text-[12px] tabular-nums font-medium ${secondsLeft < 60 ? 'text-[#d93036]' : secondsLeft < 3600 ? 'text-[#e07b1b]' : 'text-[#727a88]'}`}
+                title={`This message disappears in ${formatBurnRemaining(secondsLeft)}`}
+                aria-label={`Disappears in ${formatBurnRemaining(secondsLeft)}`}
+              >
+                🔥 {formatBurnRemaining(secondsLeft)}
+              </span>
+            )}
             <span className="text-[12px] tabular-nums text-[#a3a9b4]">
               {new Date(sentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>

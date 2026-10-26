@@ -319,6 +319,8 @@ export function destroyXMTPClient(address: string): void {
   // [AUDIT FIX] Clear the inbox-id→address cache on client destroy so stale entries
   // from the previous wallet don't pollute a new session (e.g. after wallet switch).
   inboxIdToAddressCache.clear();
+  registeredAddressCache.clear();
+  activeDmCache.clear();
 }
 
 /**
@@ -407,11 +409,18 @@ export async function getDmId(client: Client, peerAddress: string): Promise<stri
  * After sending, syncs the conversation to confirm delivery.
  */
 
+// Cache for verified registered address casing to avoid redundant network calls
+const registeredAddressCache = new Map<string, string>();
+// Cache for active DM conversation objects by inboxId:peerAddress to avoid re-creating MLS sessions per message
+const activeDmCache = new Map<string, any>();
+
 /**
  * Resolves the EXACT casing of the peer's Ethereum address that is registered on XMTP.
  * Sending to the wrong casing on XMTP v5.3.0 creates a ghost DM.
  */
 export async function getRegisteredAddress(address: string): Promise<string> {
+  const cached = registeredAddressCache.get(address.toLowerCase());
+  if (cached) return cached;
   try {
     const identifier = { identifier: address, identifierKind: 'Ethereum' };
     const result = await Client.canMessage([identifier as any], XMTP_ENV);
@@ -420,6 +429,7 @@ export async function getRegisteredAddress(address: string): Promise<string> {
       const lower = address.toLowerCase();
       for (const [key, val] of result.entries()) {
         if (key.toLowerCase() === lower && val === true) {
+          registeredAddressCache.set(lower, key);
           return key; // Return EXACT registered casing
         }
       }
@@ -427,6 +437,7 @@ export async function getRegisteredAddress(address: string): Promise<string> {
       const lower = address.toLowerCase();
       for (const key of Object.keys(result)) {
         if (key.toLowerCase() === lower && (result as any)[key] === true) {
+          registeredAddressCache.set(lower, key);
           return key;
         }
       }
@@ -465,26 +476,49 @@ export async function sendMessage(
     identifierKind: 'Ethereum',
   };
 
+  const cacheKey = `${client.inboxId || ''}:${finalTo.toLowerCase()}`;
   let lastError: any = null;
+
+  // FAST PATH: If we already have a cached DM conversation handle, attempt instant transmission
+  const cachedDm = activeDmCache.get(cacheKey);
+  if (cachedDm) {
+    try {
+      const sendTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('send timeout')), 6000));
+      await Promise.race([cachedDm.send(content), sendTimeout]);
+      // Non-blocking sync in background so UI returns immediately (< 300ms)
+      cachedDm.sync().catch(() => {});
+      console.log(`[XMTP] Ultra-fast cached delivery succeeded for ${toAddress}`);
+      return;
+    } catch (cachedErr) {
+      console.warn(`[XMTP] Cached DM handle failed, falling back to full discovery:`, cachedErr);
+      activeDmCache.delete(cacheKey);
+    }
+  }
+
   for (let i = 0; i < 3; i++) {
     try {
       const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 8000));
       const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
 
       try {
-        const syncTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('sync timeout')), 4000));
+        const syncTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('sync timeout')), 3000));
         await Promise.race([dm.sync(), syncTimeout]);
       } catch {}
 
-      const sendTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('send timeout')), 10000));
+      const sendTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('send timeout')), 8000));
       await Promise.race([dm.send(content), sendTimeout]);
-      try { await dm.sync(); } catch {}
+      
+      // Store in memory cache for subsequent instant messages
+      activeDmCache.set(cacheKey, dm);
+      // Run final sync asynchronously in background without delaying user UI
+      dm.sync().catch(() => {});
       console.log(`[XMTP] Native encrypted delivery succeeded for ${toAddress}`);
       return;
     } catch (sendErr: any) {
       lastError = sendErr;
+      activeDmCache.delete(cacheKey);
       console.warn(`[XMTP] Attempt ${i + 1} for ${toAddress} did not complete:`, sendErr?.message || sendErr);
-      if (i < 2) await new Promise(r => setTimeout(r, 400));
+      if (i < 2) await new Promise(r => setTimeout(r, 300));
     }
   }
 
