@@ -4350,10 +4350,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       if (!isReaction) {
         // UPDATE LOCAL ADDRESS BOOK
+        // Capture stable copies before setState to avoid stale-closure
+        // ReferenceError when React replays the updater function.
+        const _lastMessage = displayContent;
+        const _peerAddr = activePeer;
         setConversations(prev => {
-          const updated = prev.find(c => c.peerAddress.toLowerCase() === activePeer.toLowerCase())
-            ? prev.map(c => c.peerAddress.toLowerCase() === activePeer.toLowerCase() ? { ...c, lastMessage: displayContent, lastAt: new Date() } : c)
-            : [{ peerAddress: activePeer, lastMessage: displayContent, lastAt: new Date() }, ...prev];
+          const updated = prev.find(c => c.peerAddress.toLowerCase() === _peerAddr.toLowerCase())
+            ? prev.map(c => c.peerAddress.toLowerCase() === _peerAddr.toLowerCase() ? { ...c, lastMessage: _lastMessage, lastAt: new Date() } : c)
+            : [{ peerAddress: _peerAddr, lastMessage: _lastMessage, lastAt: new Date() }, ...prev];
           persistToLocal(updated);
           return updated;
         });
