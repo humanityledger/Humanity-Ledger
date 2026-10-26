@@ -4,14 +4,14 @@ import crypto from 'crypto';
 
 export const metadata: Metadata = {
   title: 'Clone Registry & Deployment Monitor | Humanity Ledger Admin',
-  description: 'Private admin panel — Stefan Antonio Cirisanu — Humanity Ledger clone detection registry.',
+  description: 'Private admin panel — Humanity Ledger clone detection registry.',
   robots: { index: false, follow: false },
 };
 
 /**
  * Clone Registry Admin Dashboard
  * ============================================================
- * Copyright (c) 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.
+ * Copyright (c) 2024-2026 Humanity Ledger. All Rights Reserved.
  * Access: Only with valid HL_ADMIN_KEY query param.
  *
  * Shows all deployments of the Humanity Ledger codebase that have
@@ -81,7 +81,7 @@ export default async function CloneRegistryPage({
           Clone Detection Registry
         </h1>
         <p className="text-[#8E8E93] text-[15px] mt-2">
-          Owner: Stefan Antonio Cirisanu · legal@humanidfi.com
+          Humanity Ledger Security · security@humanidfi.com
         </p>
       </header>
 
@@ -268,7 +268,7 @@ export default async function CloneRegistryPage({
 
       <footer className="mt-12 border-t border-black/10 pt-6">
         <p className="text-[12px] text-[#8E8E93] text-center">
-          Copyright (c) 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.<br />
+          Copyright (c) 2024-2026 Humanity Ledger. All Rights Reserved.<br />
           Humanity Ledger · humanidfi.com · This page is not indexed by search engines.
         </p>
       </footer>

@@ -1,8 +1,8 @@
 # ============================================================
 # Humanity Ledger — robots.txt
-# Owner: Stefan Antonio Cirisanu
+# Owner: Humanity Ledger
 # Website: https://humanidfi.com
-# Copyright (c) 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.
+# Copyright (c) 2024-2026 Humanity Ledger. All Rights Reserved.
 # ============================================================
 
 User-agent: Googlebot

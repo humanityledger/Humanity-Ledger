@@ -18,7 +18,7 @@ const RECENT_CONTACTS_KEY  = 'ledger_zk_recent_contacts';
 
 export interface ZkIdentity {
   address: string;               // EVM wallet address (lowercase)
-  zkHandle: string;              // e.g. "zk:stefan"
+  zkHandle: string;              // e.g. "zk:alice"
   aztecSpendingKeyHash: string;  // deterministic hash from address
   aztecAddress: string;          // derived Aztec protocol address
   publicKey: string;             // encoded public key for note encryption

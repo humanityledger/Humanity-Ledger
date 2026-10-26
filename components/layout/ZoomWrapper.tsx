@@ -20,14 +20,14 @@ export function ZoomWrapper({ children }: { children: React.ReactNode }) {
             pathname?.startsWith('/chat');
 
         const updateZoom = () => {
-            // Apply 50% scale on screens 640px and wider (desktop and tablets)
+            // Apply 67% scale on screens 640px and wider (desktop and tablets)
             // On narrow mobile devices (<640px), retain natural touch scale
             if (isZoomTarget && window.innerWidth >= 640) {
-                document.documentElement.style.zoom = '0.5';
-                document.documentElement.classList.add('hl-zoom-50');
+                document.documentElement.style.zoom = '0.67';
+                document.documentElement.classList.add('hl-zoom-67');
             } else {
                 document.documentElement.style.zoom = '';
-                document.documentElement.classList.remove('hl-zoom-50');
+                document.documentElement.classList.remove('hl-zoom-67');
             }
         };
 
@@ -37,7 +37,7 @@ export function ZoomWrapper({ children }: { children: React.ReactNode }) {
         return () => {
             window.removeEventListener('resize', updateZoom);
             document.documentElement.style.zoom = '';
-            document.documentElement.classList.remove('hl-zoom-50');
+            document.documentElement.classList.remove('hl-zoom-67');
         };
     }, [pathname]);
 

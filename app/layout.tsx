@@ -81,13 +81,13 @@ export const metadata = {
 
   keywords: [
 
-    'Humanity Ledger', 'Ledger Chat', 'Stefan Antonio Cirisanu',
+    'Humanity Ledger', 'Ledger Chat', 'humanidfi',
     'wallet messenger', 'encrypted messaging', 'XMTP', 'MLS', 'Sign in with Ethereum',
     'Aztec', 'private payments', 'zero knowledge', 'humanidfi'
 
   ],
 
-  authors: [{ name: 'Stefan Antonio Cirisanu', url: 'https://humanidfi.com' }],
+  authors: [{ name: 'Humanity Ledger', url: 'https://humanidfi.com' }],
   icons: {
     icon: [
       { url: '/favicon.png', type: 'image/png', sizes: '32x32' },
@@ -106,20 +106,20 @@ export const metadata = {
     statusBarStyle: 'default',
   },
 
-  creator: 'Stefan Antonio Cirisanu',
+  creator: 'Humanity Ledger',
 
-  publisher: 'Humanity Ledger — Stefan Antonio Cirisanu',
+  publisher: 'Humanity Ledger',
 
   category: 'Technology',
 
   other: {
-    'copyright': 'Copyright 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.',
-    'author': 'Stefan Antonio Cirisanu',
-    'owner': 'Stefan Antonio Cirisanu',
+    'copyright': 'Copyright 2024-2026 Humanity Ledger. All Rights Reserved.',
+    'author': 'Humanity Ledger',
+    'owner': 'Humanity Ledger',
     'reply-to': 'humanityledger@icloud.com',
-    'dc.creator': 'Stefan Antonio Cirisanu',
+    'dc.creator': 'Humanity Ledger',
     'dc.publisher': 'Humanity Ledger',
-    'dc.rights': 'Copyright 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.',
+    'dc.rights': 'Copyright 2024-2026 Humanity Ledger. All Rights Reserved.',
     'dc.language': 'en',
     'dc.subject': 'Encrypted messaging, wallet based identity, private payments',
   },
@@ -255,28 +255,14 @@ export default async function RootLayout({
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": "Person",
-        "@id": "https://humanidfi.com/#founder",
-        "name": "Stefan Antonio Cirisanu",
-        "alternateName": "Stefan Cirisanu",
-        "jobTitle": "Founder",
-        "description": "Founder of Humanity Ledger and Ledger Chat.",
-        "url": "https://humanidfi.com/company",
-        "sameAs": [
-          "https://www.linkedin.com/in/stefan-antonio-cirisanu-40116140b/",
-          "https://github.com/humanityledger"
-        ]
-      },
-      {
         "@type": "Organization",
         "@id": "https://humanidfi.com/#organization",
         "name": "Humanity Ledger",
-        "description": "Humanity Ledger builds Ledger Chat, a messenger where your Ethereum wallet is your account. Direct messages are encrypted on your device with MLS through XMTP, and payments are signed in your own wallet.",
+        "description": "Humanity Ledger builds Ledger Chat, a private messenger where your Ethereum wallet is your account. Direct messages are encrypted on your device with MLS through XMTP, and payments are signed in your own wallet.",
         "url": "https://humanidfi.com",
         "logo": "https://humanidfi.com/logo-mark.png",
-        "email": "humanityledger@icloud.com",
+        "email": "contact@humanidfi.com",
         "foundingDate": "2024",
-        "founder": { "@id": "https://humanidfi.com/#founder" },
         "sameAs": [
           "https://es.linkedin.com/company/humanity-ledger",
           "https://github.com/humanityledger/Humanity-Ledger"
@@ -297,7 +283,7 @@ export default async function RootLayout({
         "operatingSystem": "Web browser",
         "url": "https://humanidfi.com/chat",
         "publisher": { "@id": "https://humanidfi.com/#organization" },
-        "description": "A messenger where your wallet is your account. Early access.",
+        "description": "The private messenger where your wallet is your account. Early access.",
         "featureList": [
           "Sign in with Ethereum (EIP-4361)",
           "Direct messages encrypted with MLS through XMTP",
@@ -313,8 +299,8 @@ export default async function RootLayout({
         "name": "Humanity Ledger source code",
         "codeRepository": "https://github.com/humanityledger/Humanity-Ledger",
         "programmingLanguage": ["TypeScript", "Noir", "Solidity"],
-        "author": { "@id": "https://humanidfi.com/#founder" },
-        "copyrightHolder": { "@id": "https://humanidfi.com/#founder" },
+        "author": { "@id": "https://humanidfi.com/#organization" },
+        "copyrightHolder": { "@id": "https://humanidfi.com/#organization" },
         "license": "https://humanidfi.com/docs/content-policy",
         "description": "Source available under a proprietary licence: published so it can be read and checked, not redistributed."
       }

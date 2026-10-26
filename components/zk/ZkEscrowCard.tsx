@@ -17,7 +17,7 @@ import {
 
 interface ZkEscrowCardProps {
   escrow: ZkEscrowState;
-  currentUserTag: string;   // e.g. "zk:stefan"
+  currentUserTag: string;   // e.g. "zk:alice"
   onUpdate?: (updated: ZkEscrowState) => void;
   className?: string;
 }

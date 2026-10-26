@@ -26,7 +26,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3 px-2">
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-400 to-[#25D366]"></div>
             <div>
-              <p className="text-xs font-bold">Stefan's Vault</p>
+              <p className="text-xs font-bold">Primary Vault</p>
               <p className="text-[10px] text-black/40">Secured by TuringShield</p>
             </div>
           </div>

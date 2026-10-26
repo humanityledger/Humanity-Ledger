@@ -6,7 +6,7 @@ export const about: DocPage = {
   label: "About",
   title: "About Humanity Ledger",
   summary: "Who we are, what we are building and how we work.",
-  keywords: ["about", "company", "team", "founder", "mission", "who", "humanity ledger s.l.", "ceo"],
+  keywords: ["about", "company", "team", "protocol", "mission", "humanity ledger", "ledger chat"],
   updated: "2026-10-21",
   blocks: [
     {
@@ -15,7 +15,7 @@ export const about: DocPage = {
     },
     {
       t: "p",
-      text: "Humanity Ledger is an independent project founded by Stefan Antonio Cirisanu and based in Spain. It is not yet incorporated as a company; the [legal notice](/docs/legal-notice) gives the details. It is not affiliated with Humanity Protocol or with Ledger SAS.",
+      text: "Humanity Ledger is an independent decentralized communication and identity protocol. It is not yet incorporated as a company; the [legal notice](/docs/legal-notice) gives the details. It is not affiliated with Humanity Protocol or with Ledger SAS.",
     },
     { t: "h2", text: "What we build" },
     {

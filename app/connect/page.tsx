@@ -44,7 +44,7 @@ const ConnectPage = dynamic(() => import('@/components/landing/ConnectPage'), {
 
 export default function Page() {
   return (
-    <div className="w-full flex-1 flex flex-col hl-zoom-50-target">
+    <div className="w-full flex-1 flex flex-col hl-zoom-67-target">
       <Suspense fallback={<ConnectLoading />}>
         <ConnectPage />
       </Suspense>

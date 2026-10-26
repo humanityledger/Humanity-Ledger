@@ -6,7 +6,7 @@ This file summarises the public documentation at https://humanidfi.com/docs. Whe
 
 ## Who provides it
 
-- Humanity Ledger is the trading name of a project run by Stefan Antonio Cirisanu, a private individual in Spain. No company has been incorporated.
+- Humanity Ledger builds sovereign identity and encrypted messaging protocols. Its flagship application is Ledger Chat.
 - It is not affiliated with Humanity Protocol, Ledger SAS, Aztec Labs or XMTP.
 - Contact: humanityledger@icloud.com
 - Source code: https://github.com/humanityledger/Humanity-Ledger (source available under a proprietary licence; not open source)
