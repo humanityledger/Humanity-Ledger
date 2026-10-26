@@ -25,22 +25,23 @@ import {
 interface ZkStreamManagerProps {
   userAddress: string;
   userTag?: string;
+  defaultRecipient?: string;
   onClose?: () => void;
   onStreamCreated?: (stream: any) => void;
   className?: string;
 }
 
-export function ZkStreamManager({ userAddress, userTag, onClose, onStreamCreated, className = '' }: ZkStreamManagerProps) {
+export function ZkStreamManager({ userAddress, userTag, defaultRecipient, onClose, onStreamCreated, className = '' }: ZkStreamManagerProps) {
   const [tab, setTab] = useState<'incoming' | 'outgoing'>('outgoing');
   const [streams, setStreams] = useState<{ outgoing: ZkPaymentStream[]; incoming: ZkPaymentStream[] }>({
     outgoing: [],
     incoming: [],
   });
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(Boolean(defaultRecipient));
   const [ticker, setTicker] = useState(0);
 
   // Form State for new stream
-  const [recipientTag, setRecipientTag] = useState('');
+  const [recipientTag, setRecipientTag] = useState(defaultRecipient || '');
   const [depositAmount, setDepositAmount] = useState('50');
   const [token, setToken] = useState<'DAI' | 'USDC' | 'ETH'>('DAI');
   const [durationDays, setDurationDays] = useState(7);

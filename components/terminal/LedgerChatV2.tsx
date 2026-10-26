@@ -2626,6 +2626,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
     } catch (err) {
       console.warn('[Voice] Microphone access denied or unavailable:', err);
+      toast.error('Microphone access is blocked or unavailable. Check browser settings.');
     }
   // [BUG FIX] Added 'address' to dependency array — was causing stale closure where
   // audio messages were sent with null/undefined address after wallet reconnect
@@ -4471,7 +4472,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // Check size limit (~1MB safe for XMTP encoded as Base64)
     if (file.size > 1024 * 1024) {
       toast.error('Files can be up to 1 MB');
+      try { e.target.value = ''; } catch {}
       if (fileRef.current) fileRef.current.value = '';
+      if (cameraRef.current) cameraRef.current.value = '';
+      if (galleryRef.current) galleryRef.current.value = '';
       return;
     }
     
@@ -4483,13 +4487,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         const msg = `[ATTACHMENT:${file.type || 'application/octet-stream'}]${base64data}|${file.name}`;
         executeSend(msg);
         setIsUploading(false);
+        try { e.target.value = ''; } catch {}
         if (fileRef.current) fileRef.current.value = '';
+        if (cameraRef.current) cameraRef.current.value = '';
+        if (galleryRef.current) galleryRef.current.value = '';
       };
       reader.readAsDataURL(file);
     } catch (err) {
       console.error(err);
       toast.error('Could not attach the file');
       setIsUploading(false);
+      try { e.target.value = ''; } catch {}
+      if (fileRef.current) fileRef.current.value = '';
+      if (cameraRef.current) cameraRef.current.value = '';
+      if (galleryRef.current) galleryRef.current.value = '';
     }
   };
 
@@ -5533,6 +5544,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   <button type="button" onClick={() => setScheduledAt(null)} className="px-3 h-8 rounded-full text-[13px] font-medium text-[#475061] hover:bg-[#eff1f4]">Cancel</button>
                 </div>
               )}
+              {/* Disappearing messages indicator */}
+              {burnTimer && !isSecretChat && (
+                <div className="mx-3 mt-2 pl-3 pr-1.5 h-10 bg-[#fff5f5] border border-[#fed7d7] rounded-xl flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-[13.5px] text-[#c53030]">
+                    <Timer size={15} strokeWidth={1.9} className="text-[#e53e3e]" aria-hidden="true" />
+                    Disappearing message ({burnTimer >= 60 ? `${Math.floor(burnTimer/60)}m` : `${burnTimer}s`})
+                  </span>
+                  <button type="button" onClick={() => setBurnTimer(null)} className="px-3 h-8 rounded-full text-[13px] font-medium text-[#c53030] hover:bg-[#fed7d7]">Turn off</button>
+                </div>
+              )}
               {/* Sticker Picker */}
               {showStickerPicker && (
                 <div className="relative px-3 pb-0">
@@ -5637,7 +5658,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             { id: 'attach',    color: '#34C759', iconPath: <FileText size={19} strokeWidth={1.8} />,  label: 'Document',       sublabel: 'Any file up to 1 MB',    onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
                             { id: 'audio',     color: '#FF9500', iconPath: <Mic size={19} strokeWidth={1.8} />,     label: 'Voice message',  sublabel: 'Record and send', onClick: () => { setShowAppDrawer(false); startRecording(); } },
                             // ── Interactive ──────────────────────────────────────────
-                            { id: 'gif',       color: '#AF52DE', iconPath: <ImageIcon size={19} strokeWidth={1.8} />,   label: 'GIF',            sublabel: 'Search animated images',   onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); } },
+                            { id: 'gif',       color: '#AF52DE', iconPath: <ImageIcon size={19} strokeWidth={1.8} />,   label: 'GIF',            sublabel: 'Search animated images',   onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); searchGifs(gifSearch); } },
                             { id: 'sticker',   color: '#FFCC00', iconPath: <Sticker size={19} strokeWidth={1.8} />,      label: 'Stickers',       sublabel: 'Send a sticker',         onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
                             { id: 'poll',      color: '#10B981', iconPath: <ListChecks size={19} strokeWidth={1.8} />,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
                             // ── Crypto & Aztec Private Payments ──────────────────────────
@@ -5661,23 +5682,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             { id: 'live-loc',  color: '#FF3B30', iconPath: <Navigation size={19} strokeWidth={1.8} />,   label: isLiveLocationActive ? 'Stop live location' : 'Live location', sublabel: isLiveLocationActive ? 'Stop sharing your position' : 'Share your position as you move', onClick: () => { startLiveLocation(); setShowAppDrawer(false); } },
                             { id: 'schedule',  color: '#636366', iconPath: <Clock size={19} strokeWidth={1.8} />,      label: 'Schedule',       sublabel: 'Send at a later time', onClick: () => {
                                 setShowAppDrawer(false);
-                                const inp = document.createElement('input');
-                                inp.type = 'datetime-local';
-                                const minDate = new Date(Date.now() + 60000);
-                                inp.min = minDate.toISOString().slice(0, 16);
-                                inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
-                                document.body.appendChild(inp);
-                                inp.onchange = () => {
-                                  const picked = new Date(inp.value);
-                                  if (!isNaN(picked.getTime()) && picked > new Date()) {
-                                    setScheduledAt(picked);
-                                    toast.success(`Scheduled for ${picked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
-                                  }
-                                  document.body.removeChild(inp);
-                                };
-                                inp.click();
+                                setShowScheduleSheet(true);
                               } },
-                            { id: 'burn',      color: '#FF6B00', iconPath: <Timer size={19} strokeWidth={1.8} />,      label: burnTimer ? `Disappearing after ${burnTimer} seconds` : 'Disappearing messages', sublabel: burnTimer ? 'Turn off' : 'Messages vanish after they are read', onClick: () => { setBurnTimer(burnTimer ? null : 60); setShowAppDrawer(false); } },
+                            { id: 'burn',      color: '#FF6B00', iconPath: <Timer size={19} strokeWidth={1.8} />,      label: burnTimer ? `Disappearing after ${burnTimer >= 60 ? `${Math.floor(burnTimer/60)}m` : `${burnTimer}s`}` : 'Disappearing messages', sublabel: burnTimer ? 'Tap to change duration' : 'Messages vanish after they are read', onClick: () => { setShowBurnSheet(true); setShowAppDrawer(false); } },
                           ].map((app) => (
                             <button 
                               key={app.id} 
@@ -6636,17 +6643,47 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
        {/* ── Aztec zk.money Invoice Modal ── */}
        {showZkInvoiceModal && activePeer && (
-         <ZkInvoiceModal
-           userAddress={address || ''}
-           defaultClientAddress={activePeer}
-           onClose={() => setShowZkInvoiceModal(false)}
-           onInvoiceCreated={(invoice) => {
-             executeSend(encodeInvoicePayload(invoice));
-             setShowZkInvoiceModal(false);
-             toast.success('Invoice sent');
-           }}
-         />
-       )}
+          <ZkInvoiceModal
+            userAddress={address || ''}
+            recipientAddress={activePeer}
+            recipientTag={getDisplayName(activePeer)}
+            onClose={() => setShowZkInvoiceModal(false)}
+            onInvoiceCreated={(invoice) => {
+              executeSend(encodeInvoicePayload(invoice));
+              setShowZkInvoiceModal(false);
+              toast.success('Invoice sent');
+            }}
+          />
+        )}
+
+        {/* ── Scheduled Message Picker Sheet ── */}
+        {showScheduleSheet && (
+          <ScheduleMessageSheet
+            isOpen={showScheduleSheet}
+            onClose={() => setShowScheduleSheet(false)}
+            onSchedule={(date) => {
+              setScheduledAt(date);
+              toast.success(`Scheduled for ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+            }}
+          />
+        )}
+
+        {/* ── Disappearing Messages Timer Sheet ── */}
+        {showBurnSheet && (
+          <BurnTimerSheet
+            isOpen={showBurnSheet}
+            currentTimer={burnTimer}
+            onClose={() => setShowBurnSheet(false)}
+            onSelect={(sec) => {
+              setBurnTimer(sec);
+              if (sec) {
+                toast.success(`Messages will disappear after ${sec >= 60 ? `${Math.floor(sec/60)}m` : `${sec}s`}`);
+              } else {
+                toast.info('Disappearing messages turned off');
+              }
+            }}
+          />
+        )}
 
 
       {/* Save contact */}
