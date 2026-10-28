@@ -127,6 +127,14 @@ export const chatRequestSchema = z.object({
     id: z.string().max(64), name: z.string().max(80), description: z.string().max(500),
     instructions: z.string().max(12_000), tools: z.enum(['readonly', 'edit']), model: z.string().max(64).optional(),
   })).max(20).optional(),
+  /**
+   * Permission rules (globs on workspace paths, like Claude Code's allow/deny
+   * rules). deny always wins, in every mode; allow skips the approval in "ask".
+   */
+  rules: z.object({
+    allow: z.array(z.string().max(200)).max(50).optional(),
+    deny: z.array(z.string().max(200)).max(50).optional(),
+  }).optional(),
   /** Continue a turn that stopped for an approval, a plan or a question. */
   resume: z.object({
     results: z.array(z.object({
@@ -160,7 +168,7 @@ export type StudioEvent =
   | { type: 'citation'; url: string; title?: string; citedText?: string }
   | { type: 'artifact'; artifact: { id: string; title: string; type: string; language?: string; content: string }; created: boolean }
   | { type: 'messages'; messages: { role: 'assistant' | 'user'; content: unknown[] }[] }
-  | { type: 'usage'; inputTokens: number; outputTokens: number; costUsd: number; webSearches: number; remainingTodayUsd: number }
+  | { type: 'usage'; inputTokens: number; outputTokens: number; costUsd: number; webSearches: number; remainingTodayUsd: number; contextTokens?: number }
   | { type: 'error'; code: string; message: string }
   /** Why an answer ended early: cut off by length, refused, budget, time or step limit. */
   | { type: 'notice'; code: 'MAX_TOKENS' | 'REFUSAL' | 'BUDGET' | 'TIME_LIMIT' | 'STEP_LIMIT' | 'SYNC_FAILED' }

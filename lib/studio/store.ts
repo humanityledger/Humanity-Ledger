@@ -144,6 +144,8 @@ export interface Conversation {
   pending?: PendingInteraction | null;
   /** When the API history was last summarized (earlier checkpoints cannot rewind the conversation). */
   compactedAt?: number;
+  /** Tokens in the context after the last turn (for the context meter). */
+  contextTokens?: number;
 }
 
 /** Where a chat's files live: shared by every chat of a project, or the chat's own. */
@@ -191,7 +193,14 @@ export interface StudioPrefs {
   customCommands: CustomCommand[];
   customAgents: CustomAgent[];
   acceptedSandboxNotice: boolean;
+  /** Path globs Studio may change without asking (allow) or may never change (deny). */
+  rules: { allow: string[]; deny: string[] };
+  /** Show a browser notification when a turn ends while the tab is in the background. */
+  notify: boolean;
 }
+
+/** Secrets and keys stay untouched unless the user removes these. */
+export const DEFAULT_DENY_RULES = ['.env', '.env.*', '**/.env', '**/.env.*', '**/*.pem', '**/*.key', '**/id_rsa*'];
 
 export const DEFAULT_PREFS: StudioPrefs = {
   personalization: { style: 'balanced', responseLanguage: 'auto' },
@@ -210,6 +219,8 @@ export const DEFAULT_PREFS: StudioPrefs = {
   customCommands: [],
   customAgents: [],
   acceptedSandboxNotice: false,
+  rules: { allow: [], deny: DEFAULT_DENY_RULES },
+  notify: false,
 };
 
 const DB_VERSION = 2;
@@ -418,6 +429,14 @@ export function createStudioStore(wallet: string) {
     async putConnectors(list: StudioConnectorConfig[]): Promise<void> {
       const { vault } = await import('@/lib/core/SecureVault');
       await vault.setItem(`studio_connectors_${wallet.toLowerCase()}`, JSON.stringify(list));
+    },
+
+    // ── small values (the new chat being written, ...) ──
+    async getKv<T>(key: string): Promise<T | undefined> {
+      return (await (await d()).get('kv', key)) as T | undefined;
+    },
+    async putKv(key: string, value: unknown): Promise<void> {
+      await (await d()).put('kv', value, key);
     },
 
     // ── GitHub (token in the encrypted vault, repository link per workspace) ──

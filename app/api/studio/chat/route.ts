@@ -172,6 +172,7 @@ export async function POST(req: NextRequest) {
           outputTokens: u.output_tokens,
           costUsd: r.costUsd,
           webSearches: u.webSearches,
+          ...(r.contextTokens ? { contextTokens: r.contextTokens } : {}),
           remainingTodayUsd: Math.max(0, usage.remainingTodayUsd - r.costUsd),
         });
       };

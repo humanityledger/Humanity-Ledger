@@ -9,16 +9,18 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronDown, ChevronRight, Code2, Download, Eye, File as FileIcon, FileDiff, FilePlus2, Folder, FolderUp, Github, Pencil, Play,
-  Search, ShieldAlert, Trash2, Upload, X, FileArchive, MoreHorizontal,
+  Search, ShieldAlert, Trash2, Upload, X, FileArchive, MoreHorizontal, FileSearch, Undo2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { StudioApi } from '../useStudio';
 import type { WsFile } from '@/lib/studio/fs';
 import { sandboxDocument } from '@/lib/studio/artifacts';
-import { downloadBlob, inlineWorkspaceAssets, mimeForPath } from '@/lib/studio/ws-client';
+import { chatChanges, downloadBlob, inlineWorkspaceAssets, mimeForPath, searchWorkspace } from '@/lib/studio/ws-client';
 import { StudioMarkdown } from '../StudioMarkdown';
 import { DiffView } from './CodeCards';
 import { GitHubPanel } from './GitHubPanel';
+
+const LINE_PX = 12.5 * 1.55;
 
 interface TreeNode { name: string; path: string; children?: TreeNode[]; file?: WsFile }
 
@@ -80,11 +82,13 @@ function SafePreview({ html, title, t }: { html: string; title: string; t: Studi
   );
 }
 
-export function WorkspacePanel({ api, onClose, focusPath, onFocused }: {
+export function WorkspacePanel({ api, onClose, focusPath, onFocused, openGithub }: {
   api: StudioApi;
   onClose: () => void;
   focusPath?: string | null;
   onFocused?: () => void;
+  /** Open with the GitHub import showing. */
+  openGithub?: boolean;
 }) {
   const { t, wsFiles, streaming, checkpoints, active } = api;
   const [selected, setSelected] = useState<string | null>(null);
@@ -93,10 +97,20 @@ export function WorkspacePanel({ api, onClose, focusPath, onFocused }: {
   const [view, setView] = useState<'code' | 'preview' | 'diff'>('code');
   const [draft, setDraft] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
-  const [github, setGithub] = useState(false);
+  const [github, setGithub] = useState(!!openGithub);
+  useEffect(() => { if (openGithub) setGithub(true); }, [openGithub]);
+  /** Left column: the file tree, or what this chat changed. */
+  const [side, setSide] = useState<'files' | 'changes'>('files');
+  /** Search inside files instead of by name. */
+  const [inContent, setInContent] = useState(false);
+  const [jump, setJump] = useState<{ path: string; line: number } | null>(null);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const zipInput = useRef<HTMLInputElement>(null);
+  const gutterRef = useRef<HTMLPreElement>(null);
+  // A new file starts at the top: reset the line-number offset with it.
+  useEffect(() => { if (gutterRef.current) gutterRef.current.style.transform = ''; }, [selected]);
 
   const byPath = useMemo(() => new Map(wsFiles.map(f => [f.path, f])), [wsFiles]);
   const file = selected ? byPath.get(selected) ?? null : null;
@@ -110,20 +124,39 @@ export function WorkspacePanel({ api, onClose, focusPath, onFocused }: {
   // folderInput needs the non-standard attribute set on the element.
   useEffect(() => { folderInput.current?.setAttribute('webkitdirectory', ''); folderInput.current?.setAttribute('directory', ''); }, []);
 
-  // The file as it was before Studio's most recent change to it.
+  // The file as it was before Studio's most recent change to it (or, from
+  // the Changes list, before this chat first changed it).
   const baseline = useMemo(() => {
     if (!selected) return undefined;
-    for (let i = checkpoints.length - 1; i >= 0; i--) {
-      const b = checkpoints[i].before;
+    const order = side === 'changes' ? checkpoints : [...checkpoints].reverse();
+    for (const cp of order) {
+      const b = cp.before;
       if (selected in b) return b[selected] ? (b[selected]!.encoding === 'base64' ? '[binary]' : b[selected]!.content) : null;
     }
     return undefined;
-  }, [selected, checkpoints]);
+  }, [selected, checkpoints, side]);
 
+  const changes = useMemo(() => chatChanges(checkpoints, byPath), [checkpoints, byPath]);
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    return q ? wsFiles.filter(f => f.path.toLowerCase().includes(q)) : wsFiles;
-  }, [wsFiles, filter]);
+    return q && !inContent ? wsFiles.filter(f => f.path.toLowerCase().includes(q)) : wsFiles;
+  }, [wsFiles, filter, inContent]);
+  const found = useMemo(() => (inContent && filter.trim().length >= 2 ? searchWorkspace(wsFiles, filter.trim()) : null), [inContent, filter, wsFiles]);
+
+  // Opening a search result: put the caret on that line and scroll to it.
+  useEffect(() => {
+    if (!jump || jump.path !== selected || view !== 'code') return;
+    const el = editorRef.current;
+    const f = byPath.get(jump.path);
+    if (!el || !f || f.encoding === 'base64') return;
+    const lines = (draft ?? f.content).split('\n');
+    let pos = 0;
+    for (let i = 0; i < Math.min(jump.line - 1, lines.length); i++) pos += lines[i].length + 1;
+    el.focus({ preventScroll: true });
+    el.setSelectionRange(pos, pos + (lines[jump.line - 1]?.length ?? 0));
+    el.scrollTop = Math.max(0, (jump.line - 1) * LINE_PX - el.clientHeight / 3);
+    setJump(null);
+  }, [jump, selected, view, byPath, draft]);
   const tree = useMemo(() => buildTree(filtered), [filtered]);
   const previewHtml = useMemo(() => {
     if (!file || !isText || view !== 'preview' || (kind !== 'html' && kind !== 'svg')) return '';
@@ -193,11 +226,12 @@ export function WorkspacePanel({ api, onClose, focusPath, onFocused }: {
         <button type="button" onClick={onClose} aria-label={t.close} className="w-8 h-8 rounded-lg flex items-center justify-center text-[#4a505c] hover:bg-[#f2f4f7]"><X size={17} /></button>
       </header>
 
-      <div className="flex items-center gap-1 px-2 h-11 border-b border-[#eceef2] shrink-0 overflow-x-auto">
-        <button type="button" className={btn} disabled={readOnly} onClick={newFile}><FilePlus2 size={14} /> {t.wsNewFile}</button>
-        <button type="button" className={btn} disabled={readOnly} onClick={() => fileInput.current?.click()}><Upload size={14} /> {t.wsUploadFiles}</button>
-        <button type="button" className={btn} disabled={readOnly} onClick={() => folderInput.current?.click()}><FolderUp size={14} /> {t.wsUploadFolder}</button>
-        <button type="button" className={btn} disabled={readOnly} onClick={() => setGithub(g => !g)} aria-expanded={github}><Github size={14} /> {t.github}</button>
+      {/* No overflow clipping here: the "more" menu opens below the bar. Labels hide on phones. */}
+      <div className="flex items-center gap-1 px-2 h-11 border-b border-[#eceef2] shrink-0">
+        <button type="button" className={btn} disabled={readOnly} onClick={newFile} title={t.wsNewFile} aria-label={t.wsNewFile}><FilePlus2 size={14} /><span className="hidden sm:inline">{t.wsNewFile}</span></button>
+        <button type="button" className={btn} disabled={readOnly} onClick={() => fileInput.current?.click()} title={t.wsUploadFiles} aria-label={t.wsUploadFiles}><Upload size={14} /><span className="hidden sm:inline">{t.wsUploadFiles}</span></button>
+        <button type="button" className={btn} disabled={readOnly} onClick={() => folderInput.current?.click()} title={t.wsUploadFolder} aria-label={t.wsUploadFolder}><FolderUp size={14} /><span className="hidden sm:inline">{t.wsUploadFolder}</span></button>
+        <button type="button" className={`${btn} ${github ? 'bg-[#f2f4f7] text-[#15171c]' : ''}`} disabled={readOnly} onClick={() => setGithub(g => !g)} aria-expanded={github} title={t.github}><Github size={14} /><span className="hidden sm:inline">{t.github}</span></button>
         <div className="relative ml-auto">
           <button type="button" className={btn} onClick={() => setMenu(m => !m)} aria-expanded={menu} aria-label={t.settings}><MoreHorizontal size={15} /></button>
           {menu && (
@@ -218,34 +252,100 @@ export function WorkspacePanel({ api, onClose, focusPath, onFocused }: {
       <div className="flex-1 min-h-0 flex">
         {/* Tree */}
         <div className={`${file ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-[230px] md:shrink-0 md:border-r border-[#eceef2] min-h-0`}>
-          <label className="relative block p-2 shrink-0">
-            <Search size={13} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#a3a9b4]" />
-            <input value={filter} onChange={e => setFilter(e.target.value)} placeholder={t.wsFilter} aria-label={t.wsFilter} className="w-full h-8 pl-7 pr-2 rounded-lg border border-[#e4e7ec] text-[12.5px] outline-none focus:border-[#98a2b3]" />
-          </label>
-          <div className="flex-1 min-h-0 overflow-y-auto px-1 pb-2"
-            onDragOver={e => { if (e.dataTransfer?.types?.includes('Files')) e.preventDefault(); }}
-            onDrop={async e => { e.preventDefault(); e.stopPropagation(); if (!readOnly && e.dataTransfer?.files?.length) report(await api.wsImportPicked(e.dataTransfer.files)); }}>
-            {wsFiles.length === 0 ? <p className="px-3 py-4 text-[12.5px] leading-[1.5] text-[#727a88]">{t.wsEmpty}</p> : <ul>{renderNodes(tree, 0)}</ul>}
+          <div className="px-2 pt-2 shrink-0">
+            <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-[#eff1f4]" role="tablist">
+              <button type="button" role="tab" aria-selected={side === 'files'} className={`${tab(side === 'files')} flex-1 justify-center icon-btn`} onClick={() => setSide('files')}><FileIcon size={13} /> {t.files}</button>
+              <button type="button" role="tab" aria-selected={side === 'changes'} className={`${tab(side === 'changes')} flex-1 justify-center icon-btn`} onClick={() => setSide('changes')}>
+                <FileDiff size={13} /> {t.changesTab}{changes.length > 0 && <span className="tabular-nums text-[11px] px-1.5 rounded-full bg-[#2456d6] text-white leading-4">{changes.length}</span>}
+              </button>
+            </div>
           </div>
+          {side === 'files' ? (
+            <>
+              <div className="relative p-2 shrink-0">
+                <Search size={13} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#a3a9b4]" />
+                <input value={filter} onChange={e => setFilter(e.target.value)} placeholder={inContent ? t.searchContent : t.wsFilter} aria-label={inContent ? t.searchContent : t.wsFilter}
+                  className="w-full h-8 pl-7 pr-9 rounded-lg border border-[#e4e7ec] text-[12.5px] outline-none focus:border-[#98a2b3]" />
+                <button type="button" aria-pressed={inContent} onClick={() => setInContent(v => !v)} title={inContent ? t.searchNames : t.searchContent} aria-label={inContent ? t.searchNames : t.searchContent}
+                  className={`icon-btn absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center ${inContent ? 'bg-[#15171c] text-white' : 'text-[#727a88] hover:bg-[#f2f4f7]'}`}>
+                  <FileSearch size={13} />
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto px-1 pb-2"
+                onDragOver={e => { if (e.dataTransfer?.types?.includes('Files')) e.preventDefault(); }}
+                onDrop={async e => { e.preventDefault(); e.stopPropagation(); if (!readOnly && e.dataTransfer?.files?.length) report(await api.wsImportPicked(e.dataTransfer.files)); }}>
+                {wsFiles.length === 0 ? <p className="px-3 py-4 text-[12.5px] leading-[1.5] text-[#727a88]">{t.wsEmpty}</p>
+                  : found ? (
+                    <div>
+                      <p className="px-2 py-1 text-[11.5px] text-[#727a88] tabular-nums">{found.hits.length} {t.searchMatches} · {found.files} {t.searchInFiles}{found.truncated ? ` · ${t.searchTruncated}` : ''}</p>
+                      <ul>
+                        {found.hits.map((h, i) => {
+                          const first = i === 0 || found.hits[i - 1].path !== h.path;
+                          return (
+                            <li key={`${h.path}:${h.line}`}>
+                              {first && <p className="px-2 pt-2 pb-0.5 font-mono text-[11.5px] text-[#15171c] truncate" title={h.path}>{h.path}</p>}
+                              <button type="button" onClick={() => { setSelected(h.path); setDraft(null); setView('code'); setJump({ path: h.path, line: h.line }); }}
+                                className="w-full flex items-baseline gap-2 px-2 py-1 rounded-md text-left hover:bg-[#eef0f3]">
+                                <span className="font-mono text-[11px] text-[#a3a9b4] tabular-nums shrink-0 w-8 text-right">{h.line}</span>
+                                <span className="font-mono text-[11.5px] text-[#4a505c] truncate">{h.text}</span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ) : <ul>{renderNodes(tree, 0)}</ul>}
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 min-h-0 overflow-y-auto px-1 py-2">
+              {changes.length === 0 ? <p className="px-3 py-4 text-[12.5px] leading-[1.5] text-[#727a88]">{t.changesNone}</p> : (
+                <ul className="space-y-0.5">
+                  {changes.map(c => (
+                    <li key={c.path} className="group flex items-center gap-1 rounded-md hover:bg-[#eef0f3] pr-1">
+                      <button type="button" disabled={c.op === 'delete'} onClick={() => { setSelected(c.path); setDraft(null); setView('diff'); }}
+                        className={`flex-1 min-w-0 flex items-center gap-1.5 h-8 pl-2 text-left text-[12.5px] ${selected === c.path ? 'font-medium text-[#15171c]' : 'text-[#2b2f36]'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.op === 'create' ? 'bg-[#12805c]' : c.op === 'delete' ? 'bg-[#d93036]' : 'bg-[#2456d6]'}`} />
+                        <span className={`truncate font-mono text-[12px] ${c.op === 'delete' ? 'line-through text-[#727a88]' : ''}`} title={c.path}>{c.path}</span>
+                        {c.op !== 'update' && <span className="text-[10.5px] text-[#727a88] shrink-0">{c.op === 'create' ? t.changeNew : t.changeDeleted}</span>}
+                        <span className="ml-auto pl-1 shrink-0 font-mono text-[11px] tabular-nums"><span className="text-[#12805c]">+{c.added}</span> <span className="text-[#d93036]">−{c.removed}</span></span>
+                      </button>
+                      <button type="button" disabled={readOnly} title={t.revertFile} aria-label={`${t.revertFile} ${c.path}`}
+                        onClick={async () => { if (!window.confirm(`${t.revertConfirm}\n\n${c.path}`)) return; if (await api.revertFile(c.path)) toast.success(t.reverted); }}
+                        className="icon-btn w-7 h-7 rounded-md flex items-center justify-center text-[#4a505c] hover:bg-white hover:text-[#15171c] disabled:opacity-40 shrink-0">
+                        <Undo2 size={13} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
 
         {/* File */}
         {file && (
           <div className="flex-1 min-w-0 flex flex-col min-h-0">
-            <div className="flex items-center gap-1 px-2 h-10 border-b border-[#eceef2] shrink-0 overflow-x-auto">
-              <button type="button" className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#f2f4f7]" onClick={() => setSelected(null)} aria-label={t.back}><ChevronRight size={15} className="rotate-180" /></button>
-              <span className="font-mono text-[12px] text-[#15171c] truncate min-w-0 flex-1" title={file.path}>{file.path}</span>
-              {isText && (
-                <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-[#eff1f4] shrink-0">
-                  <button type="button" className={tab(view === 'code')} onClick={() => setView('code')}><Code2 size={13} /> {t.wsCode}</button>
-                  {kind && <button type="button" className={tab(view === 'preview')} onClick={() => setView('preview')}><Eye size={13} /> {t.wsPreview}</button>}
-                  <button type="button" className={tab(view === 'diff')} onClick={() => setView('diff')}><FileDiff size={13} /> {t.wsDiff}</button>
-                </div>
-              )}
-              <button type="button" className={btn} disabled={readOnly} onClick={rename} aria-label={t.wsRename} title={t.wsRename}><Pencil size={14} /></button>
-              <button type="button" className={btn} onClick={downloadOne} aria-label={t.wsDownload} title={t.wsDownload}><Download size={14} /></button>
-              <button type="button" className={btn} disabled={readOnly} onClick={() => { if (window.confirm(t.wsDeleteConfirm)) api.wsDeleteFile(file.path); }} aria-label={t.delete} title={t.delete}><Trash2 size={14} /></button>
+            {/* Row 1: which file and its actions. Row 2: how to look at it. */}
+            <div className="flex items-center gap-1 pl-2 pr-1 h-10 border-b border-[#f0f1f4] shrink-0 min-w-0">
+              <button type="button" className="md:hidden icon-btn w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#f2f4f7] shrink-0" onClick={() => setSelected(null)} aria-label={t.back}><ChevronRight size={15} className="rotate-180" /></button>
+              <span className="font-mono text-[12px] text-[#15171c] truncate min-w-0 flex-1" title={file.path} dir="rtl"><bdi>{file.path}</bdi></span>
+              {isText && <span className="hidden sm:inline text-[11.5px] text-[#a3a9b4] tabular-nums shrink-0 mr-1">{file.content.split('\n').length} {t.wsLines}</span>}
+              <button type="button" className={`${btn} shrink-0`} disabled={readOnly} onClick={rename} aria-label={t.wsRename} title={t.wsRename}><Pencil size={14} /></button>
+              <button type="button" className={`${btn} shrink-0`} onClick={downloadOne} aria-label={t.wsDownload} title={t.wsDownload}><Download size={14} /></button>
+              <button type="button" className={`${btn} shrink-0 hover:text-[#d93036]`} disabled={readOnly} onClick={() => { if (window.confirm(t.wsDeleteConfirm)) api.wsDeleteFile(file.path); }} aria-label={t.delete} title={t.delete}><Trash2 size={14} /></button>
             </div>
+            {isText && (
+              <div className="flex items-center px-2 h-10 border-b border-[#eceef2] shrink-0">
+                <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-[#eff1f4]" role="tablist">
+                  <button type="button" role="tab" aria-selected={view === 'code'} className={tab(view === 'code')} onClick={() => setView('code')}><Code2 size={13} /> {t.wsCode}</button>
+                  {kind && <button type="button" role="tab" aria-selected={view === 'preview'} className={tab(view === 'preview')} onClick={() => setView('preview')}><Eye size={13} /> {t.wsPreview}</button>}
+                  <button type="button" role="tab" aria-selected={view === 'diff'} className={tab(view === 'diff')} onClick={() => setView('diff')}>
+                    <FileDiff size={13} /> {t.wsDiff}{baseline !== undefined && <span className="w-1.5 h-1.5 rounded-full bg-[#2456d6]" />}
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="flex-1 min-h-0 overflow-auto">
               {!isText ? (
                 IMAGE_RE.test(file.path)
@@ -260,8 +360,17 @@ export function WorkspacePanel({ api, onClose, focusPath, onFocused }: {
               ) : (
                 <div className="flex flex-col h-full">
                   {readOnly && <p className="px-3 py-1.5 text-[11.5px] text-[#727a88] bg-[#f8f9fb] border-b border-[#eceef2]">{t.wsReadOnly}</p>}
+                  <div className="flex-1 min-h-[280px] flex bg-[#fbfcfd] overflow-hidden">
+                  {/* Line numbers, scrolled together with the editor. */}
+                  <div aria-hidden className="shrink-0 select-none overflow-hidden border-r border-[#eef0f3] bg-[#f7f8fa]">
+                    <pre ref={gutterRef} className="py-3 pl-3 pr-2 font-mono text-[12.5px] leading-[1.55] text-right text-[#b4b9c2] tabular-nums">
+                      {Array.from({ length: Math.max(1, (draft ?? file.content).split('\n').length) }, (_, i) => i + 1).join('\n')}
+                    </pre>
+                  </div>
                   <textarea
+                    ref={editorRef}
                     value={draft ?? file.content}
+                    onScroll={e => { if (gutterRef.current) gutterRef.current.style.transform = `translateY(${-e.currentTarget.scrollTop}px)`; }}
                     onChange={e => setDraft(e.target.value)}
                     readOnly={readOnly}
                     spellCheck={false}
@@ -278,8 +387,9 @@ export function WorkspacePanel({ api, onClose, focusPath, onFocused }: {
                         requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = s + 2; });
                       }
                     }}
-                    className="flex-1 min-h-[280px] w-full resize-none p-3 font-mono text-[12.5px] leading-[1.55] text-[#15171c] outline-none bg-[#fbfcfd] whitespace-pre"
+                    className="flex-1 min-w-0 h-full resize-none py-3 px-3 font-mono text-[12.5px] leading-[1.55] text-[#15171c] outline-none focus-visible:outline-none bg-transparent whitespace-pre"
                   />
+                  </div>
                   {draft !== null && draft !== file.content && (
                     <div className="flex items-center justify-end gap-2 p-2 border-t border-[#eceef2]">
                       <span className="mr-auto text-[12px] text-[#7a5200]">{t.wsUnsaved}</span>

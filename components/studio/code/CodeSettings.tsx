@@ -8,7 +8,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bot, Check, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { StudioApi } from '../useStudio';
-import { uid, type CustomCommand } from '@/lib/studio/store';
+import { DEFAULT_DENY_RULES, uid, type CustomCommand } from '@/lib/studio/store';
 import type { CustomAgent, PermissionMode, StudioMode } from '@/lib/studio/protocol';
 import { BUILTIN_COMMANDS, COMMAND_NAME_RE } from '@/lib/studio/commands';
 import { STUDIO_MODELS } from '@/lib/studio/models';
@@ -40,7 +40,20 @@ export function CodeSettings({ api }: { api: StudioApi }) {
   const [cmd, setCmd] = useState<CustomCommand | null>(null);
   const [agent, setAgent] = useState<CustomAgent | null>(null);
   const [err, setErr] = useState('');
-  useEffect(() => { setP(prefs); }, [prefs]);
+  const rulesOf = (x: typeof prefs) => x.rules ?? { allow: [], deny: DEFAULT_DENY_RULES };
+  const [allowText, setAllowText] = useState(rulesOf(prefs).allow.join('\n'));
+  const [denyText, setDenyText] = useState(rulesOf(prefs).deny.join('\n'));
+  const [notifyBlocked, setNotifyBlocked] = useState(false);
+  useEffect(() => { setP(prefs); setAllowText(rulesOf(prefs).allow.join('\n')); setDenyText(rulesOf(prefs).deny.join('\n')); }, [prefs]); // eslint-disable-line react-hooks/exhaustive-deps
+  const parseRules = (s: string) => Array.from(new Set(s.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.includes('..')).map(l => l.slice(0, 200)))).slice(0, 50);
+  const setNotify = async (v: boolean) => {
+    if (!v) { setP({ ...p, notify: false }); return; }
+    if (typeof Notification === 'undefined') { setNotifyBlocked(true); return; }
+    let perm = Notification.permission;
+    if (perm === 'default') { try { perm = await Notification.requestPermission(); } catch { perm = 'denied'; } }
+    setNotifyBlocked(perm !== 'granted');
+    if (perm === 'granted') setP({ ...p, notify: true });
+  };
 
   const persist = async (next = p) => { await savePrefs(next); setSaved(true); setTimeout(() => setSaved(false), 1500); };
 
@@ -94,10 +107,40 @@ export function CodeSettings({ api }: { api: StudioApi }) {
           <div><p className="text-[13.5px] font-medium">{t.sandbox}</p><p className={hint}>{t.sandboxHint} {t.sandboxNoticeBody}</p></div>
           <Toggle on={p.sandbox} onChange={v => setP({ ...p, sandbox: v, acceptedSandboxNotice: p.acceptedSandboxNotice || v })} labelText={t.sandbox} />
         </div>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[13.5px] font-medium">{t.notifyLabel}</p>
+            <p className={hint}>{t.notifyHint}</p>
+            {notifyBlocked && <p className="text-[12.5px] text-[#b42318] mt-1">{t.notifyBlocked}</p>}
+          </div>
+          <Toggle on={!!p.notify} onChange={setNotify} labelText={t.notifyLabel} />
+        </div>
         <div>
           <label className={label} htmlFor="cs-memory">{t.memory}</label>
           <textarea id="cs-memory" rows={6} maxLength={20_000} className={area} value={p.memory} onChange={e => setP({ ...p, memory: e.target.value })} placeholder="- I use pnpm and TypeScript strict mode&#10;- Prefer small, focused commits" />
           <p className={hint}>{t.memoryHint}</p>
+        </div>
+        <div>
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <p className="text-[13.5px] font-medium">{t.rulesTitle}</p>
+            <button type="button" className="text-[12.5px] text-[#4a505c] underline-offset-2 hover:underline icon-btn"
+              onClick={() => { setAllowText(''); setDenyText(DEFAULT_DENY_RULES.join('\n')); setP({ ...p, rules: { allow: [], deny: DEFAULT_DENY_RULES } }); }}>
+              {t.rulesReset}
+            </button>
+          </div>
+          <p className={`${hint} mb-2`}>{t.rulesHint}</p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label className={label} htmlFor="cs-allow"><span className="inline-block w-2 h-2 rounded-full bg-[#12805c] mr-1.5" />{t.rulesAllow}</label>
+              <textarea id="cs-allow" rows={4} className={`${area} text-[13px]`} value={allowText} placeholder={t.rulesAllowPlaceholder} spellCheck={false}
+                onChange={e => { setAllowText(e.target.value); setP({ ...p, rules: { ...rulesOf(p), allow: parseRules(e.target.value) } }); }} />
+            </div>
+            <div>
+              <label className={label} htmlFor="cs-deny"><span className="inline-block w-2 h-2 rounded-full bg-[#d93036] mr-1.5" />{t.rulesDeny}</label>
+              <textarea id="cs-deny" rows={4} className={`${area} text-[13px]`} value={denyText} placeholder={t.rulesDenyPlaceholder} spellCheck={false}
+                onChange={e => { setDenyText(e.target.value); setP({ ...p, rules: { ...rulesOf(p), deny: parseRules(e.target.value) } }); }} />
+            </div>
+          </div>
         </div>
         <button type="button" className={primary} onClick={() => persist()}>{saved ? <span className="inline-flex items-center gap-1.5"><Check size={15} /> {t.saved}</span> : t.save}</button>
       </section>

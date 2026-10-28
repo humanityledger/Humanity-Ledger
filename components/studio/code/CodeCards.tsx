@@ -68,7 +68,11 @@ export function ApprovalCard({ calls, files, t, busy, onDecide }: {
   const [allowed, setAllowed] = useState<Record<string, boolean>>(() => Object.fromEntries(calls.map(c => [c.id, true])));
   const [open, setOpen] = useState<Record<string, boolean>>(() => Object.fromEntries(calls.slice(0, 3).map(c => [c.id, true])));
   const [feedback, setFeedback] = useState('');
+  const [sent, setSent] = useState(false);
+  busy = busy || sent;
   const decide = (mode: 'selected' | 'none' | 'auto') => {
+    if (sent) return;
+    setSent(true);
     const results: ResumeResult[] = calls.map(c => {
       const ok = mode === 'none' ? false : mode === 'auto' ? true : !!allowed[c.id];
       return { tool_use_id: c.id, decision: ok ? 'allow' : 'deny', ...(ok || !feedback.trim() ? {} : { text: feedback.trim().slice(0, 4000) }) };
@@ -83,7 +87,11 @@ export function ApprovalCard({ calls, files, t, busy, onDecide }: {
         {previews.map(p => (
           <li key={p.id}>
             <div className="flex items-center gap-2 px-3 h-10">
-              <input type="checkbox" checked={!!allowed[p.id]} onChange={e => setAllowed(a => ({ ...a, [p.id]: e.target.checked }))} aria-label={p.detail} className="w-4 h-4 accent-[#15171c]" />
+              {/* Drawn checkbox: the app's global form styles hide native ones. */}
+              <button type="button" role="checkbox" aria-checked={!!allowed[p.id]} aria-label={p.detail} onClick={() => setAllowed(a => ({ ...a, [p.id]: !a[p.id] }))}
+                className={`icon-btn w-[18px] h-[18px] min-h-[18px] shrink-0 rounded-[5px] border flex items-center justify-center transition-colors ${allowed[p.id] ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#c4c9d2]'}`}>
+                {allowed[p.id] && <Check size={12} strokeWidth={3} />}
+              </button>
               <button type="button" onClick={() => setOpen(o => ({ ...o, [p.id]: !o[p.id] }))} className="flex-1 min-w-0 flex items-center gap-2 text-left">
                 {open[p.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 <span className="text-[#4a505c]">{opIcon(p.name)}</span>
@@ -101,7 +109,7 @@ export function ApprovalCard({ calls, files, t, busy, onDecide }: {
       <div className="p-3 border-t border-[#eceef2] space-y-2">
         <input value={feedback} onChange={e => setFeedback(e.target.value)} placeholder={t.feedbackPlaceholder} maxLength={4000}
           className="w-full h-9 px-3 rounded-lg border border-[#e4e7ec] text-[13px] outline-none focus:border-[#98a2b3]" />
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 [&>button]:justify-center">
           <button type="button" disabled={busy} onClick={() => decide('selected')} className="h-9 px-3 rounded-lg bg-[#15171c] text-white text-[13px] font-medium disabled:opacity-40 flex items-center gap-1.5"><Check size={14} />{calls.every(c => allowed[c.id]) ? t.approveAll : t.approve}</button>
           <button type="button" disabled={busy} onClick={() => decide('auto')} className="h-9 px-3 rounded-lg border border-[#e4e7ec] text-[13px] disabled:opacity-40 hover:bg-[#f2f4f7]">{t.approveAndAuto}</button>
           <button type="button" disabled={busy} onClick={() => decide('none')} className="h-9 px-3 rounded-lg text-[13px] text-[#a3242a] hover:bg-[#fdf2f2] disabled:opacity-40 flex items-center gap-1.5"><X size={14} />{t.deny}</button>
@@ -119,6 +127,10 @@ export function PlanCard({ id, plan, t, busy, onDecide }: {
 }) {
   const [revising, setRevising] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [sent, setSent] = useState(false);
+  busy = busy || sent;
+  const decide: typeof onDecide = (...a) => { if (sent) return; setSent(true); onDecide(...a); };
+  onDecide = decide;
   return (
     <div className="mt-2 rounded-2xl border border-[#cdd6f4] bg-[#f7f9ff] overflow-hidden">
       <div className="px-3 py-2.5 border-b border-[#dfe5f7] text-[13px] font-medium text-[#1a3a8f] flex items-center gap-1.5"><ListTodo size={14} />{t.planTitle}</div>
@@ -128,7 +140,7 @@ export function PlanCard({ id, plan, t, busy, onDecide }: {
           <textarea value={feedback} onChange={e => setFeedback(e.target.value)} placeholder={t.planFeedback} rows={3} maxLength={4000} autoFocus
             className="w-full px-3 py-2 rounded-lg border border-[#e4e7ec] text-[13px] outline-none focus:border-[#98a2b3] resize-y" />
         )}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 [&>button]:justify-center">
           {!revising ? (
             <>
               <button type="button" disabled={busy} onClick={() => onDecide([{ tool_use_id: id, decision: 'allow' }], t.outcomePlanApproved, 'auto')} className="h-9 px-3 rounded-lg bg-[#15171c] text-white text-[13px] font-medium disabled:opacity-40">{t.planApproveAuto}</button>
@@ -154,7 +166,9 @@ export function QuestionCard({ id, question, options, t, busy, onAnswer }: {
   onAnswer: (results: ResumeResult[], summary: string) => void;
 }) {
   const [text, setText] = useState('');
-  const answer = (a: string) => { const v = a.trim(); if (v) onAnswer([{ tool_use_id: id, decision: 'answer', text: v.slice(0, 8000) }], `${t.outcomeAnswered}: ${v.slice(0, 120)}`); };
+  const [sent, setSent] = useState(false);
+  busy = busy || sent;
+  const answer = (a: string) => { const v = a.trim(); if (!v || sent) return; setSent(true); onAnswer([{ tool_use_id: id, decision: 'answer', text: v.slice(0, 8000) }], `${t.outcomeAnswered}: ${v.slice(0, 120)}`); };
   return (
     <div className="mt-2 rounded-2xl border border-[#f0d9a8] bg-[#fffcf5] overflow-hidden">
       <div className="px-3 py-2.5 border-b border-[#f3e3c0] text-[13px] font-medium text-[#7a5200] flex items-center gap-1.5"><MessageCircleQuestion size={14} />{t.questionTitle}</div>

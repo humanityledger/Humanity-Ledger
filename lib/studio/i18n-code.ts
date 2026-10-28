@@ -207,6 +207,60 @@ export const CODE_EN = {
   ghTruncated: 'The repository is very large; only part of it was imported.',
   ghRefresh: 'Pull latest',
   ghPush: 'Push to',
+  permShortPlan: 'Plan',
+  permShortAsk: 'Ask',
+  permShortAuto: 'Auto',
+  codePlaceholder: 'Build, fix or explain… (/ for commands)',
+  moreSteps: 'more steps',
+  showAll: 'Show all',
+  codeQuickTitle: 'Start with your files',
+  initHint: 'Let Studio learn this project',
+  // permission rules
+  rulesTitle: 'Permission rules',
+  rulesHint: 'Path patterns, one per line (* matches within a folder, ** across folders). Deny always wins and applies in every mode.',
+  rulesAllow: 'Change without asking',
+  rulesDeny: 'Never change',
+  rulesAllowPlaceholder: 'src/**\ndocs/*.md',
+  rulesDenyPlaceholder: '.env\n**/*.pem',
+  rulesReset: 'Restore defaults',
+  // notifications
+  notifyLabel: 'Notify me when a task ends',
+  notifyHint: 'A browser notification when an answer finishes or needs you while this tab is in the background.',
+  notifyBlocked: 'Notifications are blocked for this site in your browser settings.',
+  notifyDone: 'Finished.',
+  notifyWaiting: 'Waiting for you.',
+  notifyFailed: 'Stopped with an error.',
+  // export
+  exportMd: 'Export as Markdown',
+  mdYou: 'You',
+  // context meter
+  ctxLabel: 'Context',
+  ctxUsed: 'of the context used',
+  ctxCompact: 'The context is nearly full. Run /compact to summarize it.',
+  // queue
+  queued: 'Queued: sends when this answer ends',
+  queueCancel: 'Remove from queue',
+  // mentions
+  mentionTitle: 'Workspace files',
+  mentionNone: 'No matching files',
+  mentionHint: '@ to attach a file',
+  // content search
+  searchContent: 'Search inside files',
+  searchNames: 'Search file names',
+  searchMatches: 'matches',
+  searchInFiles: 'files',
+  searchTruncated: 'Showing the first results only.',
+  // changes overview
+  changesTab: 'Changed',
+  changesTitle: 'Changed in this chat',
+  changesNone: 'This chat has not changed any file yet.',
+  revertFile: 'Revert',
+  revertConfirm: 'Put this file back as it was before this chat?',
+  reverted: 'File reverted.',
+  changeNew: 'new',
+  changeDeleted: 'deleted',
+  // keyboard
+  shiftTabHint: 'Shift+Tab changes the permission mode · Esc stops',
 };
 
 export const CODE_ES: typeof CODE_EN = {
@@ -416,4 +470,58 @@ export const CODE_ES: typeof CODE_EN = {
   ghTruncated: 'El repositorio es muy grande; solo se importó una parte.',
   ghRefresh: 'Traer lo último',
   ghPush: 'Subir a',
+  permShortPlan: 'Plan',
+  permShortAsk: 'Preguntar',
+  permShortAuto: 'Auto',
+  codePlaceholder: 'Construye, arregla o explica… (/ comandos)',
+  moreSteps: 'pasos más',
+  showAll: 'Ver todo',
+  codeQuickTitle: 'Empieza con tus archivos',
+  initHint: 'Que Studio aprenda este proyecto',
+  // permission rules
+  rulesTitle: 'Reglas de permisos',
+  rulesHint: 'Patrones de rutas, uno por línea (* dentro de una carpeta, ** entre carpetas). Denegar siempre gana y se aplica en todos los modos.',
+  rulesAllow: 'Cambiar sin preguntar',
+  rulesDeny: 'No cambiar nunca',
+  rulesAllowPlaceholder: 'src/**\ndocs/*.md',
+  rulesDenyPlaceholder: '.env\n**/*.pem',
+  rulesReset: 'Restaurar valores por defecto',
+  // notifications
+  notifyLabel: 'Avisarme cuando termine una tarea',
+  notifyHint: 'Una notificación del navegador cuando una respuesta termina o te necesita mientras esta pestaña está en segundo plano.',
+  notifyBlocked: 'Las notificaciones están bloqueadas para este sitio en la configuración del navegador.',
+  notifyDone: 'Terminado.',
+  notifyWaiting: 'Esperando tu respuesta.',
+  notifyFailed: 'Se detuvo con un error.',
+  // export
+  exportMd: 'Exportar como Markdown',
+  mdYou: 'Tú',
+  // context meter
+  ctxLabel: 'Contexto',
+  ctxUsed: 'del contexto usado',
+  ctxCompact: 'El contexto está casi lleno. Usa /compact para resumirlo.',
+  // queue
+  queued: 'En cola: se envía cuando termine esta respuesta',
+  queueCancel: 'Quitar de la cola',
+  // mentions
+  mentionTitle: 'Archivos del espacio de trabajo',
+  mentionNone: 'Ningún archivo coincide',
+  mentionHint: '@ para adjuntar un archivo',
+  // content search
+  searchContent: 'Buscar dentro de los archivos',
+  searchNames: 'Buscar por nombre',
+  searchMatches: 'coincidencias',
+  searchInFiles: 'archivos',
+  searchTruncated: 'Solo se muestran los primeros resultados.',
+  // changes overview
+  changesTab: 'Cambiados',
+  changesTitle: 'Cambiado en este chat',
+  changesNone: 'Este chat todavía no ha cambiado ningún archivo.',
+  revertFile: 'Revertir',
+  revertConfirm: '¿Devolver este archivo a como estaba antes de este chat?',
+  reverted: 'Archivo revertido.',
+  changeNew: 'nuevo',
+  changeDeleted: 'borrado',
+  // keyboard
+  shiftTabHint: 'Mayús+Tab cambia el modo de permisos · Esc detiene',
 };

@@ -15,8 +15,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle, ArrowLeft, ArrowUp, Check, ChevronDown, Code2, FileText, FolderOpen, Globe, Image as ImageIcon, Loader2,
   Menu, MoreHorizontal, Paperclip, Pencil, Pin, PinOff, Plug, Plus, Search, Settings, Sparkles, Square, Trash2, X, BookOpen, FolderPlus, Shapes,
-  SquareTerminal, MessageSquare, Files, ShieldCheck, Gauge, Box, History, Undo2, ListTodo,
+  SquareTerminal, MessageSquare, Files, ShieldCheck, Gauge, Box, History, Undo2, ListTodo, Github, Download, Clock3, AtSign,
 } from 'lucide-react';
+import { mentionAtCaret, mentionedPaths, rankPaths } from '@/lib/studio/ws-client';
 import { toast } from 'sonner';
 import { useStudio, type PendingAttachment } from './useStudio';
 import { StudioMarkdown } from './StudioMarkdown';
@@ -30,7 +31,7 @@ import type { Artifact } from '@/lib/studio/artifacts';
 import type { WsFile } from '@/lib/studio/fs';
 import type { Effort, PermissionMode, ResumeResult } from '@/lib/studio/protocol';
 import { searchStudio } from '@/lib/studio/search';
-import { PLAN_EFFORTS, STUDIO_MODELS, planAllowsModel, type StudioModelId } from '@/lib/studio/models';
+import { PLAN_EFFORTS, STUDIO_MODELS, STUDIO_PLANS, planAllowsModel, type StudioModelId } from '@/lib/studio/models';
 import { skillsById } from '@/lib/studio/skills';
 import type { StudioStrings } from '@/lib/studio/i18n';
 import { COMPACT_PROMPT, INIT_PROMPT, matchCommands, modelFromArg, parseCommand, REVIEW_PROMPT, type BuiltinCommandId } from '@/lib/studio/commands';
@@ -122,6 +123,23 @@ function ToolRow({ tool, t }: { tool: ToolActivity; t: StudioStrings }) {
     <div className="flex items-center gap-2 text-[12.5px] text-[#4a505c] min-w-0">
       <span className="shrink-0">{icon}</span>
       <span className={`truncate ${mono ? 'font-mono text-[12px]' : ''}`}>{label}</span>
+    </div>
+  );
+}
+
+/** Tool activity of one answer; long Code mode runs show the latest steps first. */
+function ToolList({ tools, t }: { tools: ToolActivity[]; t: StudioStrings }) {
+  const [all, setAll] = useState(false);
+  const LIMIT = 6;
+  const hidden = all ? 0 : Math.max(0, tools.length - LIMIT);
+  return (
+    <div className="mb-2 flex flex-col gap-1 p-2.5 rounded-xl bg-[#f8f9fb] border border-[#eceef2]">
+      {hidden > 0 && (
+        <button type="button" onClick={() => setAll(true)} className="icon-btn self-start h-6 -mt-0.5 mb-0.5 px-1.5 rounded-md text-[12px] text-[#727a88] hover:text-[#15171c] hover:bg-[#eef0f3] flex items-center gap-1">
+          <ChevronDown size={12} /> {hidden} {t.moreSteps}
+        </button>
+      )}
+      {tools.slice(hidden).map(x => <ToolRow key={x.id} tool={x} t={t} />)}
     </div>
   );
 }
@@ -220,11 +238,7 @@ function MessageView({
         {!!m.subagents?.length && (
           <SubagentList list={m.subagents} renderTools={id => (m.tools ?? []).filter(x => x.parent === id).slice(-40).map(x => <ToolRow key={x.id} tool={x} t={t} />)} />
         )}
-        {topTools.length > 0 && (
-          <div className="mb-2 flex flex-col gap-1 p-2.5 rounded-xl bg-[#f8f9fb] border border-[#eceef2] max-h-72 overflow-y-auto">
-            {topTools.map(x => <ToolRow key={x.id} tool={x} t={t} />)}
-          </div>
-        )}
+        {topTools.length > 0 && <ToolList tools={topTools} t={t} />}
         {pending && <div className="flex items-center gap-2 h-7 text-[13px] text-[#727a88]"><Loader2 size={14} className="animate-spin" /></div>}
         {m.text && <StudioMarkdown text={m.text} copyLabel={t.copy} copiedLabel={t.copied} />}
         {own.map(a => <ArtifactCard key={a.id} a={a} t={t} onOpen={() => onOpenArtifact(a.id)} />)}
@@ -288,14 +302,21 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
     artifacts, openArtifactId, setOpenArtifactId, streaming, usage, plan, store,
     newChat, openChat, renameChat, togglePin, deleteChat, setChatModel, setChatSkills, draftModel, draftSkills,
     saveArtifactEdit, restoreArtifactVersion, prepareFiles, send, stop, startCheckout,
-    mode, setChatMode, permission, setChatPermission, effort, setChatEffort, wsFiles, checkpoints, rewind, respond,
+    mode, setChatMode, permission, setChatPermission, effort, setChatEffort, wsFiles, checkpoints, rewind, respond, exportChat,
+    queueMessage, cancelQueued,
   } = api;
   const code = mode === 'code';
+  /** A message typed while an answer is streaming: sent as soon as the turn ends. */
+  const queued = api.queued && api.queued.convId === active?.id ? api.queued : null;
+  const [caret, setCaret] = useState(0);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const [mentionOff, setMentionOff] = useState<number | null>(null);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [focusPath, setFocusPath] = useState<string | null>(null);
   const [sandboxNotice, setSandboxNotice] = useState(false);
   const [slashIndex, setSlashIndex] = useState(0);
   const [showTodos, setShowTodos] = useState(false);
+  const [wsIntent, setWsIntent] = useState<'github' | null>(null);
 
   const [text, setText] = useState(initialPrompt ?? '');
   const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
@@ -348,10 +369,17 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
     el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
   }, [text]);
 
+  // Esc closes an open menu first; with nothing open (and no dialog) it stops the answer.
+  const escRef = useRef({ open: false, streaming: false, stop: stop });
+  escRef.current = { open: !!menu || !!picker, streaming, stop };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setSidebarOpen(true); setTimeout(() => document.getElementById('studio-search')?.focus(), 50); }
-      if (e.key === 'Escape') { setMenu(null); setPicker(null); }
+      if (e.key === 'Escape') {
+        const s = escRef.current;
+        if (s.open) { setMenu(null); setPicker(null); return; }
+        if (s.streaming && !e.defaultPrevented && !document.querySelector('[role="dialog"],[role="alertdialog"]')) s.stop();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -416,8 +444,13 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
   }, [code, setChatMode, newChat, setChatPermission, t, plan, setChatModel, setChatEffort, prefs.sandbox, toggleSandbox, active, lang, setOpenArtifactId, checkpoints, rewind, send]);
 
   const submit = useCallback(async () => {
-    if (streaming) return;
     if (!text.trim() && !pendingFiles.length) return;
+    if (streaming) {
+      // Commands act on the chat right away, so they wait for the answer to end.
+      if (text.trim().startsWith('/') || queued) return;
+      if (queueMessage(text, pendingFiles)) { setText(''); setPendingFiles([]); setFileErrors([]); stickRef.current = true; }
+      return;
+    }
     const cmd = !pendingFiles.length ? parseCommand(text, prefs.customCommands) : null;
     if (cmd) {
       if (cmd.kind === 'unknown') { toast.error(`${t.unknownCommand}: /${cmd.name}`); return; }
@@ -433,9 +466,34 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
     stickRef.current = true;
     files.forEach(f => f.previewUrl && URL.revokeObjectURL(f.previewUrl));
     await send(body, files);
-  }, [streaming, text, pendingFiles, send, prefs.customCommands, t, runBuiltin]);
+  }, [streaming, text, pendingFiles, send, prefs.customCommands, t, runBuiltin, queued, queueMessage]);
 
   const slashMatches = useMemo(() => matchCommands(text, prefs.customCommands), [text, prefs.customCommands]);
+
+  // "@path" suggestions from the workspace while typing in Code mode.
+  const wsPaths = useMemo(() => wsFiles.map(f => f.path), [wsFiles]);
+  const mention = code && wsPaths.length && !slashMatches.length ? mentionAtCaret(text, caret) : null;
+  const mentionOpen = !!mention && mention.start !== mentionOff;
+  const mentionMatches = useMemo(() => (mentionOpen && mention ? rankPaths(wsPaths, mention.query) : []), [mentionOpen, mention?.query, wsPaths]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mentioned = useMemo(() => (code && text.includes('@') ? mentionedPaths(text, wsPaths) : []), [code, text, wsPaths]);
+  const insertMention = useCallback((path: string) => {
+    if (!mention) return;
+    const next = `${text.slice(0, mention.start)}@${path} ${text.slice(caret)}`;
+    const pos = mention.start + path.length + 2;
+    setText(next);
+    setMentionIndex(0);
+    requestAnimationFrame(() => { const el = taRef.current; if (el) { el.focus(); el.setSelectionRange(pos, pos); setCaret(pos); } });
+  }, [mention, text, caret]);
+  const cyclePermission = useCallback(() => {
+    const order: PermissionMode[] = ['plan', 'ask', 'auto'];
+    const next = order[(order.indexOf(permission) + 1) % order.length];
+    setChatPermission(next);
+    toast(PERMISSION_LABEL(t)[next], { id: 'studio-perm', duration: 1400 });
+  }, [permission, setChatPermission, t]);
+
+  // How full the context is (from the last turn), against what Studio accepts.
+  const ctxMax = STUDIO_PLANS[plan]?.maxInputTokens ?? 150_000;
+  const ctxPct = active?.contextTokens ? Math.min(100, Math.round((active.contextTokens / ctxMax) * 100)) : 0;
 
   const onRespond = useCallback((results: ResumeResult[], summary: string, permissionAfter?: PermissionMode) => {
     stickRef.current = true;
@@ -489,12 +547,15 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
         <MoreHorizontal size={15} />
       </button>
       {menu === c.id && (
-        <div className="absolute right-1 top-9 z-30 w-44 bg-white border border-[#e4e7ec] rounded-xl shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)] p-1" role="menu">
+        <div className="absolute right-1 top-9 z-30 w-52 bg-white border border-[#e4e7ec] rounded-xl shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)] p-1" role="menu">
           <button role="menuitem" type="button" className="w-full flex items-center gap-2 px-2.5 h-9 rounded-lg text-[13px] hover:bg-[#f2f4f7]" onClick={() => { togglePin(c.id); setMenu(null); }}>
             {c.pinned ? <PinOff size={14} /> : <Pin size={14} />} {c.pinned ? t.unpin : t.pin}
           </button>
           <button role="menuitem" type="button" className="w-full flex items-center gap-2 px-2.5 h-9 rounded-lg text-[13px] hover:bg-[#f2f4f7]" onClick={() => { setRenaming({ id: c.id, title: c.title }); setMenu(null); }}>
             <Pencil size={14} /> {t.rename}
+          </button>
+          <button role="menuitem" type="button" className="w-full flex items-center gap-2 px-2.5 h-9 rounded-lg text-[13px] hover:bg-[#f2f4f7]" onClick={() => { setMenu(null); exportChat(c.id); }}>
+            <Download size={14} /> {t.exportMd}
           </button>
           <button role="menuitem" type="button" className="w-full flex items-center gap-2 px-2.5 h-9 rounded-lg text-[13px] text-[#d93036] hover:bg-[#fdf2f2]" onClick={() => { setMenu(null); if (window.confirm(t.deleteConfirm)) deleteChat(c.id); }}>
             <Trash2 size={14} /> {t.delete}
@@ -660,19 +721,35 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
               </p>
             )}
           </div>
-          <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-[#eff1f4] shrink-0" role="tablist" aria-label={t.modeCodeHint}>
-            <button type="button" role="tab" aria-selected={!code} disabled={streaming} onClick={() => setChatMode('chat')}
-              className={`h-8 px-2.5 rounded-md flex items-center gap-1.5 text-[12.5px] disabled:opacity-50 ${!code ? 'bg-white text-[#15171c] shadow-sm font-medium' : 'text-[#727a88] hover:text-[#15171c]'}`}>
-              <MessageSquare size={13} /><span className="hidden sm:inline">{t.modeChat}</span>
-            </button>
-            <button type="button" role="tab" aria-selected={code} disabled={streaming} onClick={() => setChatMode('code')} title={t.modeCodeHint}
-              className={`h-8 px-2.5 rounded-md flex items-center gap-1.5 text-[12.5px] disabled:opacity-50 ${code ? 'bg-white text-[#15171c] shadow-sm font-medium' : 'text-[#727a88] hover:text-[#15171c]'}`}>
-              <SquareTerminal size={13} /><span className="hidden sm:inline">{t.modeCode}</span>
-            </button>
+          {/* Chat / Code: one segmented control, labelled on every screen size. */}
+          <div className="flex items-center p-[3px] rounded-[10px] bg-[#eff1f4] shrink-0" role="tablist" aria-label={t.modeCodeHint}>
+            {([['chat', MessageSquare, t.modeChat], ['code', SquareTerminal, t.modeCode]] as const).map(([m, Icon, label]) => {
+              const on = (m === 'code') === code;
+              return (
+                <button key={m} type="button" role="tab" aria-selected={on} disabled={streaming} onClick={() => setChatMode(m)} title={m === 'code' ? t.modeCodeHint : undefined}
+                  className={`icon-btn h-[30px] px-2.5 rounded-[7px] flex items-center gap-1.5 text-[12.5px] transition-colors disabled:opacity-50 ${on ? 'bg-white text-[#15171c] font-medium shadow-[0_1px_2px_rgba(16,24,40,0.12)]' : 'text-[#5d6472] hover:text-[#15171c]'}`}>
+                  <Icon size={13} />{label}
+                </button>
+              );
+            })}
           </div>
+          {ctxPct > 0 && (
+            <button type="button" onClick={() => { if (ctxPct >= 80 && !streaming) { setText('/compact '); taRef.current?.focus(); } }}
+              title={`${t.ctxLabel}: ${ctxPct}% ${t.ctxUsed} (${(active?.contextTokens ?? 0).toLocaleString(lang)} / ${ctxMax.toLocaleString(lang)})${ctxPct >= 80 ? ` · ${t.ctxCompact}` : ''}`}
+              aria-label={`${t.ctxLabel} ${ctxPct}%`}
+              className={`icon-btn hidden sm:flex h-9 px-2 rounded-[10px] items-center gap-1.5 text-[11.5px] tabular-nums shrink-0 ${ctxPct >= 80 ? 'text-[#b42318] hover:bg-[#fef3f2]' : 'text-[#727a88] hover:bg-[#f7f8fa]'}`}>
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="-rotate-90">
+                <circle cx="8" cy="8" r="6" fill="none" stroke="#e4e7ec" strokeWidth="2.25" />
+                <circle cx="8" cy="8" r="6" fill="none" stroke={ctxPct >= 80 ? '#d92d20' : ctxPct >= 60 ? '#dc6803' : '#15171c'} strokeWidth="2.25" strokeLinecap="round"
+                  strokeDasharray={`${(ctxPct / 100) * 37.7} 37.7`} />
+              </svg>
+              {ctxPct}%
+            </button>
+          )}
           {code && !workspaceOpen && (
-            <button type="button" onClick={() => { setOpenArtifactId(null); setWorkspaceOpen(true); }} className="h-9 px-3 rounded-lg border border-[#e4e7ec] text-[12.5px] flex items-center gap-1.5 hover:bg-[#f2f4f7] shrink-0">
-              <Files size={14} /><span className="hidden sm:inline">{t.files}</span> <span className="tabular-nums text-[#727a88]">{wsFiles.length}</span>
+            <button type="button" onClick={() => { setOpenArtifactId(null); setWorkspaceOpen(true); }} title={t.wsTitle}
+              className="icon-btn h-9 pl-2.5 pr-3 rounded-[10px] border border-[#e4e7ec] text-[12.5px] flex items-center gap-1.5 hover:bg-[#f7f8fa] shrink-0">
+              <Files size={14} /><span className="hidden md:inline">{t.files}</span><span className="tabular-nums text-[#727a88]">{wsFiles.length}</span>
             </button>
           )}
           {!code && artifacts.length > 0 && !openArtifact && (
@@ -689,14 +766,28 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
         <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto"
           onScroll={e => { const el = e.currentTarget; stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; }}>
           {messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center px-4 py-10 text-center">
+            // min-h-full (not h-full): on short screens the welcome grows and scrolls instead of being cut off at the top.
+            <div className="min-h-full flex flex-col items-center justify-center px-4 py-10 text-center">
               <span className="w-12 h-12 rounded-2xl bg-[#15171c] text-white flex items-center justify-center mb-4">{code ? <SquareTerminal size={22} /> : <Sparkles size={22} />}</span>
               <h2 className="text-[22px] font-semibold tracking-[-0.02em]">{activeProject ? activeProject.name : code ? t.codeEmptyTitle : t.emptyTitle}</h2>
               <p className="mt-2 max-w-md text-[14px] text-[#4a505c]">{activeProject?.description || (code ? t.codeEmptyBody : t.emptyBody)}</p>
               {code && (
-                <button type="button" onClick={() => { setOpenArtifactId(null); setWorkspaceOpen(true); }} className="mt-4 h-10 px-4 rounded-xl border border-[#e4e7ec] text-[13.5px] flex items-center gap-2 hover:bg-[#f8f9fb]">
-                  <Files size={15} /> {t.files} <span className="tabular-nums text-[#727a88]">{wsFiles.length}</span>
-                </button>
+                <div className="mt-5 flex flex-wrap justify-center gap-2">
+                  <button type="button" onClick={() => { setOpenArtifactId(null); setWsIntent(null); setWorkspaceOpen(true); }}
+                    className="h-10 px-4 rounded-xl border border-[#e4e7ec] bg-white text-[13.5px] flex items-center gap-2 hover:bg-[#f8f9fb]">
+                    <Files size={15} /> {wsFiles.length ? t.files : t.wsUploadFolder} {wsFiles.length > 0 && <span className="tabular-nums text-[#727a88]">{wsFiles.length}</span>}
+                  </button>
+                  <button type="button" onClick={() => { setOpenArtifactId(null); setWsIntent('github'); setWorkspaceOpen(true); }}
+                    className="h-10 px-4 rounded-xl border border-[#e4e7ec] bg-white text-[13.5px] flex items-center gap-2 hover:bg-[#f8f9fb]">
+                    <Github size={15} /> {t.ghImport}
+                  </button>
+                  {wsFiles.length > 0 && (
+                    <button type="button" disabled={streaming} onClick={() => runBuiltin('init', '')} title={t.cmd_init}
+                      className="h-10 px-4 rounded-xl bg-[#15171c] text-white text-[13.5px] font-medium flex items-center gap-2 disabled:opacity-40">
+                      <Sparkles size={15} /> {t.initHint}
+                    </button>
+                  )}
+                </div>
               )}
               <div className="mt-6 grid sm:grid-cols-2 gap-2 w-full max-w-xl">
                 {starters.map(s => (
@@ -718,6 +809,12 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
         <div className="px-3 pb-3 pt-1 shrink-0" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
           <div className="max-w-3xl mx-auto">
             {fileErrors.length > 0 && <div className="mb-2 text-[12.5px] text-[#d93036]">{fileErrors.join(' · ')}</div>}
+            {ctxPct >= 80 && !streaming && (
+              <button type="button" onClick={() => runBuiltin('compact', '')}
+                className="icon-btn mb-2 max-w-full h-7 px-2.5 rounded-full bg-[#fef3f2] text-[12px] text-[#b42318] flex items-center gap-1.5 min-w-0">
+                <AlertTriangle size={12} className="shrink-0" /><span className="truncate">{ctxPct}% · {t.ctxCompact}</span>
+              </button>
+            )}
             {code && todos.some(x => x.status !== 'completed') && (
               showTodos ? (
                 <div className="mb-2 max-h-40 overflow-y-auto cursor-pointer" onClick={() => setShowTodos(false)} title={t.close}>
@@ -732,7 +829,7 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
                 </button>
               )
             )}
-            <div className={`relative rounded-[22px] border bg-white shadow-[0_8px_24px_-16px_rgba(16,24,40,0.25)] ${dragging ? 'border-[#15171c] border-dashed' : 'border-[#e4e7ec]'}`}>
+            <div className={`relative rounded-[22px] border bg-white shadow-[0_8px_24px_-16px_rgba(16,24,40,0.25)] ${dragging ? 'border-[#15171c] border-dashed' : 'border-[#e4e7ec] focus-within:border-[#b9bfc9]'}`}>
               {slashMatches.length > 0 && (
                 <div className="absolute bottom-full left-0 right-0 mb-2 z-30 max-h-72 overflow-y-auto bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.25)] p-1.5" role="listbox" aria-label={t.slashHint}>
                   <p className="px-2.5 pt-1 pb-1.5 text-[11.5px] font-medium text-[#727a88]">{t.slashHint}</p>
@@ -745,6 +842,43 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
                       {c.args && <span className="font-mono text-[11.5px] text-[#a3a9b4] shrink-0">{c.args}</span>}
                       <span className="text-[12.5px] text-[#727a88] truncate">{c.custom ? c.custom.description : (t as any)[`cmd_${c.name}`] ?? ''}</span>
                     </button>
+                  ))}
+                </div>
+              )}
+              {mentionOpen && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 z-30 max-h-72 overflow-y-auto bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.25)] p-1.5" role="listbox" aria-label={t.mentionTitle}>
+                  <p className="px-2.5 pt-1 pb-1.5 text-[11.5px] font-medium text-[#727a88] flex items-center gap-1.5"><AtSign size={12} />{t.mentionTitle}</p>
+                  {mentionMatches.length === 0 ? (
+                    <p className="px-2.5 py-2 text-[12.5px] text-[#a3a9b4]">{t.mentionNone}</p>
+                  ) : mentionMatches.map((p, i) => {
+                    const slash = p.lastIndexOf('/');
+                    return (
+                      <button key={p} type="button" role="option" aria-selected={i === mentionIndex % mentionMatches.length}
+                        onMouseEnter={() => setMentionIndex(i)} onMouseDown={e => e.preventDefault()} onClick={() => insertMention(p)}
+                        className={`w-full flex items-center gap-2 px-2.5 h-9 rounded-xl text-left min-w-0 ${i === mentionIndex % mentionMatches.length ? 'bg-[#f2f4f7]' : ''}`}>
+                        <FileText size={13} className="shrink-0 text-[#727a88]" />
+                        <span className="font-mono text-[12.5px] text-[#15171c] shrink-0">{p.slice(slash + 1)}</span>
+                        {slash > 0 && <span className="font-mono text-[11.5px] text-[#a3a9b4] truncate">{p.slice(0, slash)}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {queued && (
+                <div className="flex items-center gap-2 mx-3 mt-3 pl-3 pr-1 h-9 rounded-xl bg-[#f7f8fa] border border-dashed border-[#d0d5dd] text-[12.5px] text-[#4a505c] min-w-0">
+                  <Clock3 size={13} className="shrink-0" />
+                  <span className="truncate flex-1 min-w-0"><span className="text-[#727a88]">{t.queued} · </span><span className="text-[#15171c]">{queued.text || queued.files.map(f => f.name).join(', ')}</span></span>
+                  <button type="button" aria-label={t.queueCancel} title={t.queueCancel}
+                    onClick={() => { const q = cancelQueued(); if (q) { setText(prev => prev || q.text); setPendingFiles(prev => (prev.length ? prev : q.files)); } }}
+                    className="icon-btn w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[#eceef2] shrink-0"><X size={13} /></button>
+                </div>
+              )}
+              {mentioned.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 px-3 pt-3">
+                  {mentioned.map(p => (
+                    <span key={p} className="inline-flex items-center gap-1 h-7 px-2 rounded-lg bg-[#eef2ff] text-[#1a3a8f] text-[12px] font-mono max-w-[240px]" title={p}>
+                      <AtSign size={11} className="shrink-0" /><span className="truncate">{p}</span>
+                    </span>
                   ))}
                 </div>
               )}
@@ -762,8 +896,23 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
               <textarea
                 ref={taRef}
                 value={text}
-                onChange={e => setText(e.target.value)}
+                onChange={e => { setText(e.target.value); setCaret(e.target.selectionStart ?? e.target.value.length); }}
+                onSelect={e => setCaret(e.currentTarget.selectionStart ?? 0)}
                 onKeyDown={e => {
+                  if (mentionMatches.length) {
+                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setMentionIndex(i => (i + (e.key === 'ArrowDown' ? 1 : mentionMatches.length - 1)) % mentionMatches.length);
+                      return;
+                    }
+                    if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing)) {
+                      e.preventDefault();
+                      insertMention(mentionMatches[mentionIndex % mentionMatches.length]);
+                      return;
+                    }
+                    if (e.key === 'Escape') { e.preventDefault(); setMentionOff(mention?.start ?? null); return; }
+                  }
+                  if (code && e.key === 'Tab' && e.shiftKey && !slashMatches.length) { e.preventDefault(); cyclePermission(); return; }
                   if (slashMatches.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
                     e.preventDefault();
                     setSlashIndex(i => (i + (e.key === 'ArrowDown' ? 1 : slashMatches.length - 1)) % slashMatches.length);
@@ -779,10 +928,10 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
                   if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); }
                 }}
                 onPaste={e => { const files = Array.from(e.clipboardData?.files ?? []); if (files.length) { e.preventDefault(); addFiles(files); } }}
-                placeholder={code ? `${t.composerPlaceholder} · /` : t.composerPlaceholder}
+                placeholder={code ? t.codePlaceholder : t.composerPlaceholder}
                 aria-label={t.composerPlaceholder}
                 rows={1}
-                className="w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[15px] leading-[1.5] outline-none placeholder:text-[#a3a9b4] max-h-[240px]"
+                className="w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[15px] leading-[1.5] outline-none focus-visible:outline-none placeholder:text-[#a3a9b4] max-h-[240px]"
               />
               <div className="flex items-center gap-1 px-2 pb-2">
                 <input ref={fileRef} type="file" multiple className="hidden" onChange={e => { if (e.target.files) addFiles(e.target.files); e.target.value = ''; }} />
@@ -795,7 +944,9 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
                   <div className="relative">
                     <button type="button" onClick={() => setPicker(picker === 'permission' ? null : 'permission')} aria-expanded={picker === 'permission'} title={t.permission}
                       className={`h-9 px-2.5 rounded-full flex items-center gap-1.5 text-[12.5px] ${permission === 'auto' ? 'bg-[#fff4e5] text-[#9a5b00]' : permission === 'plan' ? 'bg-[#eef2ff] text-[#1a3a8f]' : 'text-[#4a505c] hover:bg-[#f2f4f7]'}`}>
-                      <ShieldCheck size={15} /><span className="hidden md:inline">{PERMISSION_LABEL(t)[permission]}</span><ChevronDown size={13} />
+                      <ShieldCheck size={15} />
+                      <span className="md:hidden">{permission === 'plan' ? t.permShortPlan : permission === 'auto' ? t.permShortAuto : t.permShortAsk}</span>
+                      <span className="hidden md:inline">{PERMISSION_LABEL(t)[permission]}</span><ChevronDown size={13} />
                     </button>
                     {picker === 'permission' && (
                       <div className="absolute bottom-11 left-0 z-30 w-72 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.25)] p-1.5">
@@ -815,7 +966,7 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
                 <div className="relative">
                   <button type="button" onClick={() => setPicker(picker === 'effort' ? null : 'effort')} aria-expanded={picker === 'effort'} title={`${t.effort} · ${t.effortHint}`}
                     className={`h-9 px-2.5 rounded-full flex items-center gap-1.5 text-[12.5px] ${effort !== 'auto' ? 'bg-[#f1ecfe] text-[#5b34c7]' : 'text-[#4a505c] hover:bg-[#f2f4f7]'}`}>
-                    <Gauge size={15} /><span className="hidden md:inline">{effort === 'auto' ? t.effort : EFFORT_LABEL(t)[effort]}</span>
+                    <Gauge size={15} />{effort !== 'auto' ? <span>{EFFORT_LABEL(t)[effort]}</span> : <span className="hidden lg:inline">{t.effort}</span>}
                   </button>
                   {picker === 'effort' && (
                     <div className="absolute bottom-11 left-0 z-30 w-60 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.25)] p-1.5">
@@ -837,10 +988,11 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
                 {code && (
                   <button type="button" aria-pressed={prefs.sandbox} onClick={toggleSandbox} title={`${t.sandbox} · ${t.sandboxHint}`}
                     className={`h-9 px-2.5 rounded-full flex items-center gap-1.5 text-[12.5px] ${prefs.sandbox ? 'bg-[#e9f7ef] text-[#0f6b45]' : 'text-[#4a505c] hover:bg-[#f2f4f7]'}`}>
-                    <Box size={15} /><span className="hidden md:inline">{t.sandbox}</span>
+                    <span className="relative"><Box size={15} />{prefs.sandbox && <span className="absolute -right-0.5 -top-0.5 w-1.5 h-1.5 rounded-full bg-[#12805c]" />}</span><span className="hidden lg:inline">{t.sandbox}</span>
                   </button>
                 )}
-                <div className="relative">
+                {/* On phones in Code mode the bar is full: skills stay reachable from the chat's settings. */}
+                <div className={`relative ${code && !currentSkills.length ? 'hidden sm:block' : ''}`}>
                   <button type="button" onClick={() => setPicker(picker === 'skills' ? null : 'skills')} aria-expanded={picker === 'skills'}
                     className={`h-9 px-2.5 rounded-full flex items-center gap-1.5 text-[12.5px] ${currentSkills.length ? 'bg-[#f1ecfe] text-[#5b34c7]' : 'text-[#4a505c] hover:bg-[#f2f4f7]'}`}>
                     <BookOpen size={15} /><span className={code ? 'hidden lg:inline' : 'hidden sm:inline'}>{t.skills}</span>{currentSkills.length > 0 && <span className="tabular-nums">{currentSkills.length}</span>}
@@ -866,8 +1018,11 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
                 </div>
                 <div className="ml-auto relative">
                   <button type="button" onClick={() => setPicker(picker === 'model' ? null : 'model')} aria-expanded={picker === 'model'} aria-label={t.model}
-                    className="h-9 px-2.5 rounded-full flex items-center gap-1 text-[12.5px] text-[#4a505c] hover:bg-[#f2f4f7]">
-                    {STUDIO_MODELS[currentModel]?.label.replace('Claude ', '') ?? currentModel}<ChevronDown size={14} />
+                    className="h-9 px-2.5 rounded-full flex items-center gap-1 text-[12.5px] text-[#4a505c] hover:bg-[#f2f4f7] whitespace-nowrap">
+                    {(() => {
+                      const short = STUDIO_MODELS[currentModel]?.label.replace('Claude ', '') ?? currentModel;
+                      return <><span className="sm:hidden">{short.split(' ')[0]}</span><span className="hidden sm:inline">{short}</span></>;
+                    })()}<ChevronDown size={14} />
                   </button>
                   {picker === 'model' && (
                     <div className="absolute bottom-11 right-0 z-30 w-72 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.25)] p-1.5">
@@ -888,13 +1043,18 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
                   )}
                 </div>
                 {streaming ? (
-                  <button type="button" onClick={stop} aria-label={t.stop} title={t.stop} className="w-9 h-9 rounded-full bg-[#15171c] text-white flex items-center justify-center"><Square size={13} fill="currentColor" /></button>
+                  <>
+                    {(text.trim() || pendingFiles.length > 0) && !queued && !text.trim().startsWith('/') && (
+                      <button type="button" onClick={submit} aria-label={t.queued} title={t.queued} className="icon-btn shrink-0 w-9 h-9 min-w-[36px] rounded-full border border-[#d0d5dd] text-[#15171c] flex items-center justify-center hover:bg-[#f2f4f7]"><Clock3 size={15} /></button>
+                    )}
+                    <button type="button" onClick={stop} aria-label={t.stop} title={`${t.stop} (Esc)`} className="icon-btn shrink-0 w-9 h-9 min-w-[36px] rounded-full bg-[#15171c] text-white flex items-center justify-center"><Square size={13} fill="currentColor" /></button>
+                  </>
                 ) : (
-                  <button type="button" onClick={submit} aria-label={t.send} disabled={!text.trim() && !pendingFiles.length} className="w-9 h-9 rounded-full bg-[#15171c] text-white flex items-center justify-center disabled:opacity-30"><ArrowUp size={17} /></button>
+                  <button type="button" onClick={submit} aria-label={t.send} disabled={!text.trim() && !pendingFiles.length} className="icon-btn shrink-0 w-9 h-9 min-w-[36px] rounded-full bg-[#15171c] text-white flex items-center justify-center disabled:opacity-30"><ArrowUp size={17} /></button>
                 )}
               </div>
             </div>
-            <p className="mt-1.5 text-center text-[11px] text-[#a3a9b4]">{t.footerNote}</p>
+            <p className="mt-1.5 text-center text-[11px] text-[#a3a9b4]">{t.footerNote}{code && <span className="hidden md:inline"> · {t.mentionHint} · {t.shiftTabHint}</span>}</p>
           </div>
         </div>
       </main>
@@ -902,7 +1062,7 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
       {/* Workspace (Code mode) or artifact panel */}
       {sidePanel === 'workspace' && (
         <div className="fixed inset-0 z-[250] lg:static lg:z-auto lg:w-[50%] lg:max-w-[880px] lg:min-w-[420px] lg:border-l border-[#eceef2]">
-          <WorkspacePanel api={api} onClose={() => setWorkspaceOpen(false)} focusPath={focusPath} onFocused={() => setFocusPath(null)} />
+          <WorkspacePanel api={api} onClose={() => { setWorkspaceOpen(false); setWsIntent(null); }} focusPath={focusPath} onFocused={() => setFocusPath(null)} openGithub={wsIntent === 'github'} />
         </div>
       )}
       {sidePanel === 'artifact' && openArtifact && (

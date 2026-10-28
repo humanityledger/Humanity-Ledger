@@ -103,6 +103,8 @@ describe('diffs', () => {
     const d = diffLines('a\nb\nc', 'a\nB\nc\nd');
     expect(d.filter(l => l.kind === '-').map(l => l.text)).toEqual(['b']);
     expect(d.filter(l => l.kind === '+').map(l => l.text)).toEqual(['B', 'd']);
+    // A replaced line reads "-old" then "+new".
+    expect(d.map(l => l.kind + l.text)).toEqual([' a', '-b', '+B', ' c', '+d']);
     expect(diffStats('a\nb', 'a\nc\nd')).toEqual({ added: 2, removed: 1 });
     expect(diffStats(null, 'x\ny')).toEqual({ added: 2, removed: 0 });
     const u = unifiedDiff('f.txt', 'a\nb', 'a\nc');

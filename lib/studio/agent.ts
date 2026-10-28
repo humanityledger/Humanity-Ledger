@@ -23,7 +23,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { applyArtifactCommand, ARTIFACT_TOOL, type ArtifactSnapshot, type ArtifactToolInput } from './artifacts';
-import { applyWsTool, normalizePath, WS_READ_TOOLS, WS_TOOLS, WS_WRITE_TOOLS, workspaceTree, type WsFile } from './fs';
+import { applyWsTool, matchGlob, normalizePath, WS_READ_TOOLS, WS_TOOLS, WS_WRITE_TOOLS, workspaceTree, type WsFile } from './fs';
 import {
   affordableOutputTokens, estimateCostUsd, isStudioModel, PLAN_EFFORTS, planAllowsModel, STUDIO_MODELS, WEB_SEARCH_USD,
   type StudioModelId, type StudioPlan, type TokenUsage,
@@ -63,6 +63,8 @@ export interface AgentResult {
   usage: AgentUsage;
   costUsd: number;
   stopReason: string | null;
+  /** Prompt + output tokens of the last model call (how full the context is). */
+  contextTokens?: number;
   /** Code execution container used (to reuse next turn). */
   containerId?: string;
   /** Files the sandbox wrote to $OUTPUT_DIR (the route remembers them for this wallet). */
@@ -368,10 +370,12 @@ export async function runAgent(opts: RunAgentOptions): Promise<AgentResult> {
   let continuing = false;
   let reasoningChars = 0;
   let finalText = '';
+  let contextTokens = 0;
   const outputFileIds: string[] = [];
   const uploadedFileIds: string[] = [];
   const result = (): AgentResult => ({
     usage: { ...total },
+    contextTokens: contextTokens || undefined,
     costUsd: Math.round(costUsd * 1_000_000) / 1_000_000,
     stopReason,
     containerId: st?.containerId,
@@ -399,6 +403,19 @@ export async function runAgent(opts: RunAgentOptions): Promise<AgentResult> {
     total.cache_read_input_tokens += r.usage.cache_read_input_tokens;
     total.webSearches += r.usage.webSearches;
     costUsd += r.costUsd;
+  };
+
+  /* ── permission rules (globs on paths; deny wins) ── */
+  const cleanRules = (list?: string[]) => (list ?? []).map(r => r.trim()).filter(r => r && !r.includes('..')).slice(0, 50);
+  const denyRules = cleanRules(req.rules?.deny);
+  const allowRules = cleanRules(req.rules?.allow);
+  const pathsOf = (b: any): string[] => ['path', 'from', 'to'].map(k => normalizePath(b?.input?.[k])).filter((p): p is string => !!p);
+  const ruleFor = (b: any): 'allow' | 'deny' | null => {
+    const paths = pathsOf(b);
+    if (!paths.length) return null;
+    if (paths.some(p => denyRules.some(r => matchGlob(p, r)))) return 'deny';
+    if (allowRules.length && paths.every(p => allowRules.some(r => matchGlob(p, r)))) return 'allow';
+    return null;
   };
 
   /* ── running our tools ── */
@@ -474,7 +491,8 @@ export async function runAgent(opts: RunAgentOptions): Promise<AgentResult> {
         emit({ type: 'question', id: q.id, question: String(q.input?.question ?? '').slice(0, 2_000), options: options?.length ? options : undefined });
         return { stop: 'question' };
       }
-      const writes = calls.filter(b => MUTATING.has(b.name));
+      // Calls an allow rule covers need no approval; denied ones are refused below.
+      const writes = calls.filter(b => MUTATING.has(b.name) && ruleFor(b) === null);
       if (writes.length && st.permission === 'ask') {
         emit({ type: 'approval', calls: writes.map(b => ({ id: b.id, name: b.name, input: b.input })) });
         return { stop: 'approval' };
@@ -502,8 +520,11 @@ export async function runAgent(opts: RunAgentOptions): Promise<AgentResult> {
 
       if (b.name in WS_TOOLS) {
         if (MUTATING.has(b.name)) {
+          const rule = ruleFor(b);
+          if (rule === 'deny') { err('A permission rule set by the user blocks changes to this path. Do not try to change it another way; tell the user if the task needs it.'); continue; }
           if (st.permission === 'plan' || st.sub?.readonly) { err('Files cannot be changed in this mode. Propose the change instead.'); continue; }
-          if (st.permission === 'ask' && !st.sub && d?.decision !== 'allow') {
+          // An allow rule stands in for a decision; an explicit "no" still wins.
+          if (st.permission === 'ask' && !st.sub && (d?.decision === 'deny' || (rule !== 'allow' && d?.decision !== 'allow'))) {
             err(`The user did not approve this change.${d?.text ? ` Their feedback: ${d.text.slice(0, 4_000)}` : ''}`);
             continue;
           }
@@ -782,6 +803,12 @@ export async function runAgent(opts: RunAgentOptions): Promise<AgentResult> {
     }
 
     addUsage(final.usage ?? {});
+    {
+      const u: any = final.usage ?? {};
+      // How full the context is after this call: the whole prompt plus what was written.
+      const seen = (u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.output_tokens ?? 0);
+      if (seen > 0) contextTokens = seen;
+    }
     if (final.container?.id && st) {
       st.containerId = String(final.container.id);
       if (!isSub) emit({ type: 'container', id: st.containerId, expiresAt: final.container.expires_at });

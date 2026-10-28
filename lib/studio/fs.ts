@@ -146,8 +146,9 @@ export function diffLines(before: string, after: string, maxCells = 4_000_000): 
     let j = 0;
     while (i < n || j < m) {
       if (i < n && j < m && midA[i] === midB[j]) { out.push({ kind: ' ', text: midA[i], a: start + i + 1, b: start + j + 1 }); i++; j++; }
-      else if (j < m && (i >= n || dp[i][j + 1] >= dp[i + 1][j])) { out.push({ kind: '+', text: midB[j], b: start + j + 1 }); j++; }
-      else { out.push({ kind: '-', text: midA[i], a: start + i + 1 }); i++; }
+      // On a tie, removals come first, as in a unified diff ("-old" then "+new").
+      else if (i < n && (j >= m || dp[i + 1][j] >= dp[i][j + 1])) { out.push({ kind: '-', text: midA[i], a: start + i + 1 }); i++; }
+      else { out.push({ kind: '+', text: midB[j], b: start + j + 1 }); j++; }
     }
   }
   for (let k = 0; k < a.length - 1 - endA; k++) {

@@ -27,7 +27,8 @@ import { skillsById } from '@/lib/studio/skills';
 import { resolveUiLang, STRINGS } from '@/lib/studio/i18n';
 import { MAX_WS_FILES, MAX_WS_TEXT_CHARS, normalizePath, type WsFile } from '@/lib/studio/fs';
 import { exportZip, importZip } from '@/lib/studio/zip';
-import { changeStats, downloadBlob, fileAfterChange, projectMemoryFile, readPickedFiles, textSize } from '@/lib/studio/ws-client';
+import { changeStats, downloadBlob, fileAfterChange, mentionBlocks, mentionedPaths, projectMemoryFile, readPickedFiles, textSize } from '@/lib/studio/ws-client';
+import { conversationMarkdown, markdownFileName } from '@/lib/studio/export-md';
 import { CONTINUE_PROMPT } from '@/lib/studio/commands';
 
 export interface PendingAttachment {
@@ -91,7 +92,9 @@ export function useStudio(wallet: string) {
   const [draftSkills, setDraftSkills] = useState<string[]>([]);
   const [draftMode, setDraftMode] = useState<StudioMode | null>(null);
   /** A new chat's id is known before its first message, so its workspace can be filled first. */
-  const [draftId, setDraftId] = useState<string>(() => uid('c_'));
+  const [draftId, setDraftIdState] = useState<string>(() => uid('c_'));
+  const draftIdRef = useRef(draftId);
+  const setDraftId = useCallback((id: string) => { draftIdRef.current = id; setDraftIdState(id); }, []);
   const [wsFiles, setWsFiles] = useState<WsFile[]>([]);
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
   const abortRef = useRef<AbortController | null>(null);
@@ -102,6 +105,8 @@ export function useStudio(wallet: string) {
   const streamingRef = useRef(false);
   const wsRef = useRef<{ id: string; files: Map<string, WsFile> }>({ id: '', files: new Map() });
   const autoContinueRef = useRef(0);
+  const queuedRef = useRef<{ convId: string; text: string; files: PendingAttachment[] } | null>(null);
+  const [queued, setQueued] = useState<{ convId: string; text: string; files: PendingAttachment[] } | null>(null);
   const runTurnRef = useRef<(input: TurnInput, convId?: string) => Promise<void>>(async () => {});
 
   const lang = resolveUiLang(prefs.uiLanguage);
@@ -117,8 +122,11 @@ export function useStudio(wallet: string) {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [p, cs, ps, cn] = await Promise.all([store.getPrefs(), store.listConversations(), store.listProjects(), store.getConnectors()]);
+      const [p, cs, ps, cn, savedDraft] = await Promise.all([store.getPrefs(), store.listConversations(), store.listProjects(), store.getConnectors(), store.getKv<string>('draftId')]);
       if (!alive) return;
+      // Keep the new chat's id across reloads, so files added before the first message are not lost.
+      if (typeof savedDraft === 'string' && /^c_[\w-]{8,64}$/.test(savedDraft) && !cs.some(c => c.id === savedDraft)) setDraftId(savedDraft);
+      else await store.putKv('draftId', draftIdRef.current);
       setPrefsState(p); setConversations(cs); setProjects(ps); setConnectorsState(cn); setReady(true);
     })().catch(() => setReady(true));
     return () => { alive = false; };
@@ -174,16 +182,29 @@ export function useStudio(wallet: string) {
     }
   }, [store]);
 
+  /**
+   * The new-chat id moves on only once a chat was created with it. An unsent
+   * new chat (and any files added to it) is kept until it is used, across
+   * reloads too.
+   */
+  const renewDraftIfUsed = useCallback(async () => {
+    const old = draftIdRef.current;
+    if (!(await store.getConversation(old).catch(() => undefined))) return;
+    const next = uid('c_');
+    setDraftId(next);
+    await store.putKv('draftId', next).catch(() => {});
+  }, [store, setDraftId]);
+
   // ── conversations ──
   const newChat = useCallback((projectId: string | null = activeProjectId) => {
     abortRef.current?.abort();
+    renewDraftIfUsed();
     setActiveId(null);
     setActiveProjectId(projectId);
     setOpenArtifactId(null);
     setDraftModel(null);
     setDraftSkills([]);
-    setDraftId(uid('c_'));
-  }, [activeProjectId]);
+  }, [activeProjectId, renewDraftIfUsed]);
 
   const openChat = useCallback((id: string) => {
     const c = conversations.find(x => x.id === id);
@@ -191,6 +212,15 @@ export function useStudio(wallet: string) {
     setActiveProjectId(c?.projectId ?? null);
     setOpenArtifactId(null);
   }, [conversations]);
+  const openChatRef = useRef(openChat);
+  useEffect(() => { openChatRef.current = openChat; }, [openChat]);
+
+  /** Save a chat as a Markdown file. */
+  const exportChat = useCallback(async (id: string) => {
+    const c = (await store.getConversation(id)) ?? conversations.find(x => x.id === id);
+    if (!c) return;
+    downloadBlob(conversationMarkdown(c, { you: t.mdYou, studio: 'Ledger Studio' }), markdownFileName(c.title), 'text/markdown;charset=utf-8');
+  }, [store, conversations, t]);
 
   const renameChat = useCallback(async (id: string, title: string) => {
     const c = conversations.find(x => x.id === id);
@@ -208,8 +238,10 @@ export function useStudio(wallet: string) {
     if (streamingIdRef.current === id) abortRef.current?.abort();
     await store.deleteConversation(id);
     setConversations(prev => prev.filter(c => c.id !== id));
-    if (activeId === id) { setActiveId(null); setOpenArtifactId(null); setDraftId(uid('c_')); }
-  }, [activeId, store]);
+    if (activeId === id) { setActiveId(null); setOpenArtifactId(null); }
+    // The deleted chat may have been created from the current new-chat id.
+    if (draftIdRef.current === id) { const next = uid('c_'); setDraftId(next); store.putKv('draftId', next).catch(() => {}); }
+  }, [activeId, store, setDraftId]);
 
   const setChatModel = useCallback(async (model: StudioModelId) => {
     if (active) await upsertConversation({ ...active, model });
@@ -222,9 +254,11 @@ export function useStudio(wallet: string) {
   }, [active, upsertConversation]);
 
   const setChatMode = useCallback(async (m: StudioMode) => {
-    if (active) await upsertConversation({ ...active, mode: m });
-    else setDraftMode(m);
-  }, [active, upsertConversation]);
+    if (active) { await upsertConversation({ ...active, mode: m }); return; }
+    setDraftMode(m);
+    // New chats start in the mode chosen last (also "Start new chats in" in settings).
+    if (prefs.defaultMode !== m) await savePrefs({ ...prefs, defaultMode: m });
+  }, [active, upsertConversation, prefs, savePrefs]);
 
   const setChatPermission = useCallback(async (p: PermissionMode) => {
     if (active) await upsertConversation({ ...active, permission: p });
@@ -348,7 +382,16 @@ export function useStudio(wallet: string) {
   const stop = useCallback(() => { autoContinueRef.current = MAX_AUTO_CONTINUE; abortRef.current?.abort(); }, []);
 
   const runTurn = useCallback(async (input: TurnInput, convId?: string) => {
-    if (streamingRef.current) return;
+    if (streamingRef.current) {
+      // The previous turn of this chat is still being saved: send this right after it.
+      const busy = streamingIdRef.current;
+      if (input.kind === 'message' && !input.auto && !input.label && busy && (convId ?? activeIdRef.current) === busy && !queuedRef.current) {
+        const q = { convId: busy, text: input.text, files: input.attachments ?? [] };
+        queuedRef.current = q;
+        setQueued(q);
+      }
+      return;
+    }
     const isMessage = input.kind === 'message';
     const prompt = isMessage ? input.text.trim() : '';
     const attachments = isMessage ? input.attachments ?? [] : [];
@@ -398,6 +441,11 @@ export function useStudio(wallet: string) {
         blocks.push({ type: 'tool_result', tool_use_id: id, is_error: true, content: 'The user did not answer this and sent a new message instead.' });
       }
       blocks.push(...attachments.map(a => attachmentBlock(a.kind, a.name, a.mime, a.data)));
+      // "@path" mentions: the files' current contents go with the prompt.
+      if (code && prompt.includes('@')) {
+        const wsNow = new Map((await store.listWsFiles(convWsId)).map(f => [f.path, f] as const));
+        blocks.push(...mentionBlocks(wsNow, mentionedPaths(prompt, wsNow.keys())));
+      }
       if (prompt) blocks.push({ type: 'text', text: prompt });
       const last = conv.apiMessages[conv.apiMessages.length - 1];
       checkpoint = code ? {
@@ -485,6 +533,7 @@ export function useStudio(wallet: string) {
         todos: conv.todos ?? [],
         sandbox: prefs.sandbox ? { enabled: true, containerId: conv.containerId } : undefined,
         agents: prefs.customAgents.slice(0, 20),
+        rules: { allow: (prefs.rules?.allow ?? []).slice(0, 50), deny: (prefs.rules?.deny ?? []).slice(0, 50) },
         resume: input.kind === 'resume' ? { results: input.results } : undefined,
       } : {}),
     };
@@ -643,7 +692,12 @@ export function useStudio(wallet: string) {
           break;
         case 'usage':
           patchAssistant(m => ({ ...m, costUsd: (m.costUsd ?? 0) + e.costUsd }));
-          current = { ...current, totalCostUsd: current.totalCostUsd + e.costUsd, totalTokens: current.totalTokens + e.inputTokens + e.outputTokens };
+          current = {
+            ...current,
+            totalCostUsd: current.totalCostUsd + e.costUsd,
+            totalTokens: current.totalTokens + e.inputTokens + e.outputTokens,
+            ...(e.contextTokens ? { contextTokens: e.contextTokens } : {}),
+          };
           break;
         case 'error':
           errored = true;
@@ -690,9 +744,7 @@ export function useStudio(wallet: string) {
       if (err?.name !== 'AbortError') fail('NETWORK', t.error);
     } finally {
       setStreaming(false);
-      streamingRef.current = false;
       abortRef.current = null;
-      streamingIdRef.current = null;
       // Keep the API history consistent: append exactly what the server produced.
       if (producedMessages && (producedMessages as any[]).length) {
         let api = [...apiWithUser, ...(producedMessages as any[])];
@@ -714,7 +766,18 @@ export function useStudio(wallet: string) {
       // /compact: the summary replaces the history.
       if (isMessage && input.compact && producedMessages && !errored) {
         const summary = current.messages.find(m => m.id === assistantId)?.text.trim();
-        if (summary) current = { ...current, apiMessages: [{ role: 'user', content: [{ type: 'text', text: `[Summary of the conversation so far]\n${summary}` }] }], compactedAt: Date.now() };
+        if (summary) current = { ...current, apiMessages: [{ role: 'user', content: [{ type: 'text', text: `[Summary of the conversation so far]\n${summary}` }] }], compactedAt: Date.now(), contextTokens: undefined };
+      }
+      // Tell the person when a turn they are not watching ends or needs them.
+      if (prefs.notify && !gone() && !ctrl.signal.aborted && typeof document !== 'undefined' && document.hidden) {
+        try {
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            const body = current.pending ? t.notifyWaiting : errored ? t.notifyFailed : t.notifyDone;
+            const n = new Notification(current.title || 'Ledger Studio', { body, tag: `studio-${current.id}`, icon: '/favicon.ico' });
+            const id = current.id;
+            n.onclick = () => { window.focus(); openChatRef.current(id); n.close(); };
+          }
+        } catch { /* notifications are optional */ }
       }
       // Nothing is still running once the stream has ended.
       patchAssistant(m => (m.tools?.some(x => x.status === 'running') || m.subagents?.some(s => s.status === 'running')
@@ -726,29 +789,49 @@ export function useStudio(wallet: string) {
         : m));
       current = { ...current, updatedAt: Date.now() };
       if (!gone()) setConversations(prev => prev.map(c => (c.id === current.id ? current : c)));
-      await persist();
-      // Save the checkpoint (a resumed turn adds to the one that started it).
-      if (checkpoint && !gone() && (isMessage || Object.keys(checkpoint.before).length)) {
-        await store.putCheckpoint(checkpoint).catch(() => {});
-        const all = await store.listCheckpoints(current.id).catch(() => [] as Checkpoint[]);
-        if (all.length > MAX_CHECKPOINTS) await store.deleteCheckpoints(all.slice(0, all.length - MAX_CHECKPOINTS).map(c => c.id)).catch(() => {});
-        if (activeIdRef.current === current.id) setCheckpoints(all.slice(-MAX_CHECKPOINTS));
+      try {
+        await persist();
+        // Save the checkpoint (a resumed turn adds to the one that started it).
+        if (checkpoint && !gone() && (isMessage || Object.keys(checkpoint.before).length)) {
+          await store.putCheckpoint(checkpoint).catch(() => {});
+          const all = await store.listCheckpoints(current.id).catch(() => [] as Checkpoint[]);
+          if (all.length > MAX_CHECKPOINTS) await store.deleteCheckpoints(all.slice(0, all.length - MAX_CHECKPOINTS).map(c => c.id)).catch(() => {});
+          if (activeIdRef.current === current.id) setCheckpoints(all.slice(-MAX_CHECKPOINTS));
+        }
+      } finally {
+        // Only now can the next turn start: it reads this chat back from storage.
+        streamingRef.current = false;
+        streamingIdRef.current = null;
       }
       refreshUsage();
       if (isFirst && producedMessages && !gone()) {
-        try {
-          const r = await fetch('/api/studio/title', { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: prompt.slice(0, 2000) || attachments.map(a => a.name).join(', ') }) });
-          const j = await r.json().catch(() => ({}));
-          if (j?.title && !gone()) {
-            current = { ...current, title: String(j.title).slice(0, 120) };
-            setConversations(prev => prev.map(c => (c.id === current.id ? current : c)));
-            await persist();
-          }
-        } catch { /* keep the provisional title */ }
+        const id = current.id;
+        const fallbackTitle = current.title;
+        void (async () => {
+          try {
+            const r = await fetch('/api/studio/title', { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: prompt.slice(0, 2000) || attachments.map(a => a.name).join(', ') }) });
+            const j = await r.json().catch(() => ({}));
+            if (!j?.title || deletedRef.current.has(id)) return;
+            const title = String(j.title).slice(0, 120);
+            // Change only the title: a later turn may already have saved this chat.
+            const latest = await store.getConversation(id);
+            if (!latest || latest.title !== fallbackTitle) return;
+            const next = { ...latest, title };
+            await store.putConversation(next);
+            setConversations(prev => prev.map(c => (c.id === id ? { ...c, title } : c)));
+          } catch { /* keep the provisional title */ }
+        })();
       }
-      // Long tasks: keep going on their own after the time or step limit.
+      // What runs next on its own: a message queued while this one streamed,
+      // or (for long tasks) the continuation after the time or step limit.
+      const q = queuedRef.current;
       const canContinue = code && prefs.autoContinue && !errored && !ctrl.signal.aborted && !current.pending && (notice === 'TIME_LIMIT' || notice === 'STEP_LIMIT');
-      if (canContinue && autoContinueRef.current < MAX_AUTO_CONTINUE && !gone()) {
+      if (q && q.convId === current.id && !current.pending && !gone()) {
+        queuedRef.current = null;
+        setQueued(null);
+        const id = current.id;
+        setTimeout(() => { runTurnRef.current({ kind: 'message', text: q.text, attachments: q.files }, id); }, 250);
+      } else if (canContinue && autoContinueRef.current < MAX_AUTO_CONTINUE && !gone()) {
         autoContinueRef.current++;
         const id = current.id;
         setTimeout(() => { runTurnRef.current({ kind: 'message', text: CONTINUE_PROMPT, label: 'continue', auto: true }, id); }, 400);
@@ -760,11 +843,38 @@ export function useStudio(wallet: string) {
   const send = useCallback((text: string, attachments: PendingAttachment[] = [], opts: { label?: string; compact?: boolean; mode?: StudioMode } = {}) =>
     runTurn({ kind: 'message', text, attachments, ...opts }), [runTurn]);
 
+  /** Keep one message to send as soon as the running turn of this chat ends. */
+  const queueMessage = useCallback((text: string, attachments: PendingAttachment[] = []): boolean => {
+    const convId = streamingIdRef.current;
+    if (!convId || queuedRef.current || (!text.trim() && !attachments.length)) return false;
+    const q = { convId, text, files: attachments };
+    queuedRef.current = q;
+    setQueued(q);
+    return true;
+  }, []);
+  /** Take the queued message back (returned so it can go back in the composer). */
+  const cancelQueued = useCallback(() => {
+    const q = queuedRef.current;
+    queuedRef.current = null;
+    setQueued(null);
+    return q;
+  }, []);
+
   /** Answer what a Code mode turn is waiting for, and continue it. */
+  const answeredRef = useRef<Set<string>>(new Set());
   const respond = useCallback((results: ResumeResult[], outcome: InteractionOutcome, permissionAfter?: PermissionMode) => {
-    if (!active?.pending) return Promise.resolve();
-    return runTurn({ kind: 'resume', results, outcome, permission: permissionAfter }, active.id);
-  }, [active, runTurn]);
+    const p = active?.pending;
+    if (!p || streamingRef.current) return Promise.resolve();
+    // One answer per waiting turn: a double click (or a repeated key press) must not resume it twice.
+    const key = `${active!.id}:${p.messageId}`;
+    if (answeredRef.current.has(key)) return Promise.resolve();
+    answeredRef.current.add(key);
+    return runTurn({ kind: 'resume', results, outcome, permission: permissionAfter }, active!.id)
+      .finally(() => {
+        // If the resume did not go through (offline, error), the turn is still waiting: allow answering again.
+        store.getConversation(active!.id).then(c => { if (c?.pending?.messageId === p.messageId) answeredRef.current.delete(key); }).catch(() => {});
+      });
+  }, [active, runTurn, store]);
 
   // ── checkpoints ──
   /**
@@ -818,6 +928,23 @@ export function useStudio(wallet: string) {
     return userText;
   }, [active, store, commitWs, upsertConversation]);
 
+  /**
+   * Put one file back as it was before this chat first changed it (the
+   * oldest checkpoint that recorded it). The conversation is not touched.
+   */
+  const revertFile = useCallback(async (path: string): Promise<boolean> => {
+    if (!active || streamingRef.current) return false;
+    const list = await store.listCheckpoints(active.id);
+    const first = list.find(cp => path in cp.before);
+    if (!first) return false;
+    const b = first.before[path];
+    await commitWs(first.wsId, [{
+      path,
+      file: b ? { path, content: b.content, encoding: b.encoding, size: b.encoding === 'base64' ? Math.floor(b.content.length * 0.75) : b.content.length, updatedAt: Date.now() } : null,
+    }]);
+    return true;
+  }, [active, store, commitWs]);
+
   const startCheckout = useCallback(async (action?: 'portal') => {
     const r = await fetch('/api/studio/checkout', { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify(action ? { action } : {}) });
     const j = await r.json().catch(() => ({}));
@@ -840,7 +967,8 @@ export function useStudio(wallet: string) {
     // Code mode
     mode, setChatMode, permission, setChatPermission, effort, setChatEffort,
     wsId, wsFiles, wsSaveFile, wsDeleteFile, wsRenameFile, wsAddFiles, wsImportPicked, wsImportZip, wsExportZip, wsClear,
-    checkpoints, rewind, respond, isWsBusy: wsBusy,
+    checkpoints, rewind, respond, isWsBusy: wsBusy, revertFile, exportChat,
+    queued, queueMessage, cancelQueued,
   };
 }
 

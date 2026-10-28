@@ -413,3 +413,77 @@ describe('Reasoning, compaction and the history', () => {
     expect(ids).toEqual(['a', 'b']);
   });
 });
+
+describe('Permission rules', () => {
+  it('deny blocks a change in every mode, even when changes are auto-accepted', async () => {
+    const c = fakeClient([callTools(toolUse('d1', 'write_file', { path: 'config/.env', content: 'SECRET=1' })), endWith('ok')]);
+    const r = run(c.client, codeReq({ permission: 'auto', rules: { deny: ['.env', '.env.*'] } }));
+    await r.p;
+    expect(r.events.some(e => e.type === 'file')).toBe(false);
+    const res = c.calls[1].messages.at(-1).content[0];
+    expect(res.is_error).toBe(true);
+    expect(res.content).toMatch(/permission rule/);
+  });
+
+  it('deny also covers the destination of a move and is not sent for approval', async () => {
+    const mv = toolUse('m1', 'move_file', { from: 'src/a.ts', to: 'keys/server.pem' });
+    const c = fakeClient([callTools(mv), endWith('ok')]);
+    const r = run(c.client, codeReq({ rules: { deny: ['**/*.pem'] } }));
+    const res = await r.p;
+    expect(res.stopReason).toBe('end_turn');
+    expect(r.events.some(e => e.type === 'approval')).toBe(false);
+    expect(r.events.some(e => e.type === 'file')).toBe(false);
+  });
+
+  it('allow skips the approval in ask mode, only for the paths it covers', async () => {
+    const ok = toolUse('a1', 'edit_file', { path: 'src/a.ts', old_string: '= 1', new_string: '= 3' });
+    const other = toolUse('a2', 'write_file', { path: 'README.md', content: '# New' });
+    // The allowed change runs at once and the model keeps going.
+    const c2 = fakeClient([callTools(ok), endWith('done')]);
+    const r2 = run(c2.client, codeReq({ rules: { allow: ['src/**'] } }));
+    const res2 = await r2.p;
+    expect(res2.stopReason).toBe('end_turn');
+    expect(r2.events.some(e => e.type === 'approval')).toBe(false);
+    expect((r2.events.find(e => e.type === 'file') as any).change).toMatchObject({ path: 'src/a.ts', content: 'export const a = 3;\n' });
+
+    // A mixed step still asks, but only about the change no rule covers.
+    const c3 = fakeClient([callTools(ok, other)]);
+    const r3 = run(c3.client, codeReq({ rules: { allow: ['src/**'] } }));
+    expect((await r3.p).stopReason).toBe('approval');
+    expect((r3.events.find(e => e.type === 'approval') as any).calls.map((x: any) => x.id)).toEqual(['a2']);
+  });
+
+  it('plan mode still refuses an allowed path', async () => {
+    const c = fakeClient([callTools(toolUse('p1', 'write_file', { path: 'src/z.ts', content: 'x' })), endWith('ok')]);
+    const r = run(c.client, codeReq({ permission: 'plan', rules: { allow: ['src/**'] } }));
+    await r.p;
+    expect(r.events.some(e => e.type === 'file')).toBe(false);
+  });
+
+  it('caps how many rules a request may carry', () => {
+    expect(() => codeReq({ rules: { allow: Array.from({ length: 51 }, (_, i) => `a${i}`) } })).toThrow();
+  });
+
+  it('on resume, an allowed path needs no decision but an explicit "no" still wins', async () => {
+    const msgs = [
+      { role: 'user', content: 'go' },
+      { role: 'assistant', content: [toolUse('t1', 'write_file', { path: 'src/b.ts', content: 'b' }), toolUse('t2', 'write_file', { path: 'src/c.ts', content: 'c' }), toolUse('t3', 'write_file', { path: 'notes.txt', content: 'n' })] },
+    ];
+    const c = fakeClient([endWith('ok')]);
+    const r = run(c.client, codeReq({ messages: msgs, rules: { allow: ['src/*.ts'] }, resume: { results: [{ tool_use_id: 't3', decision: 'allow' }, { tool_use_id: 't2', decision: 'deny' }] } }));
+    await r.p;
+    const written = r.events.filter(e => e.type === 'file').map(e => (e as any).change.path);
+    expect(written).toEqual(['src/b.ts', 'notes.txt']);
+  });
+});
+
+describe('Context meter', () => {
+  it('reports how full the context was on the last call', async () => {
+    const c = fakeClient([
+      { ...callTools(toolUse('r', 'read_file', { path: 'README.md' })), usage: { input_tokens: 100, cache_read_input_tokens: 9_000, output_tokens: 50 } },
+      { ...endWith('ok'), usage: { input_tokens: 200, cache_read_input_tokens: 9_500, cache_creation_input_tokens: 300, output_tokens: 40 } },
+    ]);
+    const res = await run(c.client, codeReq({ permission: 'auto' })).p;
+    expect(res.contextTokens).toBe(200 + 9_500 + 300 + 40);
+  });
+});
