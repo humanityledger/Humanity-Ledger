@@ -45,6 +45,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import { sendEnclaveResetEmail } from '@/lib/email';
+import { getClientIP } from '@/lib/security/rateLimiter';
 import crypto from 'crypto';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -59,12 +60,10 @@ const CLEARANCE_TTL_MS        = 15 * 60 * 1000;  // 15 min to use clearance toke
 // Primary rate-limit is DB-persisted per userId. IP limiting is an extra layer.
 const ipSendLog = new Map<string, { count: number; firstAt: number }>();
 
+// The first X-Forwarded-For hop is whatever the client sent; the shared helper
+// takes the hop our proxy appended.
 function getClientIp(req: NextRequest): string {
-  return (
-    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-    req.headers.get('x-real-ip') ||
-    '0.0.0.0'
-  );
+  return getClientIP(req);
 }
 
 function checkIpLimit(ip: string): boolean {
@@ -81,12 +80,15 @@ function checkIpLimit(ip: string): boolean {
 }
 
 // ── Secret ────────────────────────────────────────────────────────────────────
+// No hard-coded fallback: with no secret configured the reset flow used the
+// string below, published in this repository, as its HMAC key. It now fails
+// closed (the handler answers 500), like /api/auth/enclave-pin does.
 function getSecret(): string {
   const s = process.env.ENCLAVE_PIN_SECRET || process.env.JWT_SECRET;
   if (!s || s.length < 32) {
-    console.error('[Enclave Reset] CRITICAL: ENCLAVE_PIN_SECRET is not set or too short!');
+    throw new Error('[Enclave Reset] ENCLAVE_PIN_SECRET is not set or shorter than 32 characters.');
   }
-  return s || 'default-enclave-secret-PLEASE-CHANGE-IN-PRODUCTION';
+  return s;
 }
 
 // ── Crypto helpers ─────────────────────────────────────────────────────────────

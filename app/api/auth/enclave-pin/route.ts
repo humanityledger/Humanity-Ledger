@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
 import crypto from 'crypto';
 import { argon2id } from '@noble/hashes/argon2';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
@@ -136,6 +137,26 @@ function issueClearanceToken(userId: string, ts: number): string {
     .digest('hex');
 }
 
+/**
+ * Every path that checks a PIN goes through this first (POST verify, PUT
+ * change with currentPin, DELETE with currentPin). The counters are shared
+ * and incremented per request before the PIN is compared, so parallel
+ * requests cannot share one count. Before 2026-10-28 DELETE checked the PIN
+ * with no counter at all: unlimited guesses, and a hit deleted the PIN so a
+ * new one could be set.
+ */
+async function pinAttemptGate(userId: string): Promise<NextResponse | null> {
+  const burst = await checkRateLimit(userId, { max: MAX_ATTEMPTS, windowSec: ATTEMPT_WINDOW_MS / 1000, prefix: 'rl:pin' });
+  const daily = await checkRateLimit(userId, { max: 40, windowSec: 24 * 3600, prefix: 'rl:pin-day' });
+  if (burst.allowed && daily.allowed) return null;
+  const resetAt = daily.allowed ? burst.resetAt : daily.resetAt;
+  const retryAfterMin = Math.max(1, Math.ceil((resetAt * 1000 - Date.now()) / 60000));
+  return NextResponse.json(
+    { error: `Too many attempts. Try again in ${retryAfterMin} minutes.`, blocked: true },
+    { status: 429 }
+  );
+}
+
 // A-009: resolveUserId ONLY uses getSession() — no JWT fallbacks, no header fallbacks
 async function resolveUserId(): Promise<string | null> {
   try {
@@ -157,9 +178,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const { pin } = body;
 
-    if (!pin || !/^\d{6}$/.test(pin)) {
+    if (!pin || typeof pin !== 'string' || !/^\d{6}$/.test(pin)) {
       return NextResponse.json({ error: 'PIN must be exactly 6 digits.' }, { status: 400 });
     }
+
+    const gated = await pinAttemptGate(userId);
+    if (gated) return gated;
 
     // Check DB Rate Limit
     let userRow = await prisma.user.findUnique({
@@ -308,7 +332,7 @@ export async function PUT(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const { currentPin, newPin, clearanceToken: clientClearanceToken, clearanceTs: clientClearanceTs } = body;
 
-    if (!newPin || !/^\d{6}$/.test(newPin)) {
+    if (!newPin || typeof newPin !== 'string' || !/^\d{6}$/.test(newPin)) {
       return NextResponse.json({ error: 'New PIN must be exactly 6 digits.' }, { status: 400 });
     }
 
@@ -402,9 +426,11 @@ export async function PUT(req: NextRequest) {
     }
 
     if (!isAuthorized) {
-      if (!currentPin) {
+      if (!currentPin || typeof currentPin !== 'string' || !/^\d{6}$/.test(currentPin)) {
         return NextResponse.json({ error: 'Current PIN is required to change PIN.' }, { status: 400 });
       }
+      const gatedPut = await pinAttemptGate(userId);
+      if (gatedPut) return gatedPut;
 
       if (dbOtpExpiresAt && new Date() < new Date(dbOtpExpiresAt)) {
         if (dbOtpAttempts >= MAX_ATTEMPTS) {
@@ -536,9 +562,11 @@ export async function DELETE(req: NextRequest) {
         // No PIN to delete
         return NextResponse.json({ success: true, message: 'No PIN was set.' });
       }
-      if (!/^\d{6}$/.test(currentPin)) {
+      if (typeof currentPin !== 'string' || !/^\d{6}$/.test(currentPin)) {
         return NextResponse.json({ error: 'Current PIN must be exactly 6 digits.' }, { status: 400 });
       }
+      const gatedDel = await pinAttemptGate(userId);
+      if (gatedDel) return gatedDel;
       const isValid = await verifyPin(userId, currentPin, storedPinHash);
       if (!isValid) {
         return NextResponse.json({ error: 'Forbidden: Current PIN is incorrect.' }, { status: 403 });

@@ -248,6 +248,12 @@ export const RETIRED_API_ROUTES: readonly string[] = [
   // No caller. With INTERNAL_API_KEY unset in production the key check
   // compared undefined with undefined and let any account write log rows.
   '/api/security/audit-log',
+  // A second Stripe webhook next to /api/webhooks/stripe. It sits behind the
+  // session check, so Stripe could never reach it; opened up, it would credit
+  // every event twice. It also filed dispute evidence automatically, stating
+  // that 3-D Secure and a no-refund checkbox had been completed, which this
+  // app does not record.
+  '/api/payment/webhook',
 ];
 
 const PATTERNS = RETIRED_API_ROUTES.map(u => new RegExp("" + toRegex(u)));
