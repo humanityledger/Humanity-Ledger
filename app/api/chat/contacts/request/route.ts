@@ -8,21 +8,16 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/session';
+import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
+
+/** An EVM address or an Aztec address (both are used as contact ids). */
+const ADDRESS_RE = /^0x(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 
 export const dynamic = 'force-dynamic';
 
-async function resolveCallerAddress(req: NextRequest): Promise<string | null> {
-  // Priority 1: address injected by middleware after cryptographic JWT verification — cannot be forged by client
-  const verified = req.headers.get('x-verified-session-address');
-  if (verified) return verified.toLowerCase();
-  // Priority 2: server-side session (e.g. NextAuth cookie — email login)
-  const session = await getSession();
-  if (session?.userId) return session.userId.toLowerCase();
-  // Priority 3: client-supplied header — trusted for non-sensitive ops (contact requests).
-  // Anti-spoofing is enforced by cross-checking the address against the body in POST handlers.
-  return null; // Spoofing vector closed
-}
+// The session (revocation-aware), never a client-supplied address.
+const resolveCallerAddress = (req: NextRequest) => getVerifiedCaller(req);
 
 
 // ─── POST /api/chat/contacts/request ─────────────────────────────────────────
@@ -39,6 +34,15 @@ export async function POST(req: NextRequest) {
     }
 
     const to = toAddress.toLowerCase().trim();
+    // Requests (and the notification each one creates) go to real addresses
+    // only, and one account cannot flood others with them.
+    if (!ADDRESS_RE.test(to)) {
+      return NextResponse.json({ error: 'toAddress must be a wallet address' }, { status: 400 });
+    }
+    const rl = await checkRateLimit(caller, { max: 30, windowSec: 3600, prefix: 'rl:contact-req' });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many contact requests. Try again later.' }, { status: 429 });
+    }
 
     if (to === caller) {
       return NextResponse.json({ error: 'Cannot send request to yourself' }, { status: 400 });

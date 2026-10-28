@@ -1863,12 +1863,15 @@ html.watermark-active body::after {
 }
 
 /* ============================================================
-   50% ZOOM-OUT SYSTEM FOR LANDING PAGE AND /CONNECT
-   Renders at 50% scale at 100% default Chrome zoom on desktop
+   67% ZOOM-OUT SYSTEM FOR LANDING PAGE AND /CONNECT
+   Renders at 67% scale at 100% default Chrome zoom on desktop
    ============================================================ */
 @media screen and (min-width: 640px) {
   html:has(.hl-zoom-67-target),
   html.hl-zoom-67 {
     zoom: 0.67;
+    /* Under zoom, 100vh is the unzoomed viewport (it fills only 67% of the
+       screen). Full-height layouts divide by this to fill the real screen. */
+    --hl-zoom: 0.67;
   }
 }

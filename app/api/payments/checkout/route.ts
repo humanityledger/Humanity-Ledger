@@ -15,24 +15,25 @@ export async function POST(req: NextRequest) {
         const tier = (body.tier as string)?.toUpperCase() as PlanTier;
         const isAnnual = body.isAnnual === true;
         const billingCycle = isAnnual ? 'ANNUAL' : 'MONTHLY';
-        const returnTab = body.returnTab || 'dashboard';
+        // Goes into the Stripe return URLs: a plain tab name only.
+        const returnTab = typeof body.returnTab === 'string' && /^[a-z0-9_-]{1,32}$/i.test(body.returnTab) ? body.returnTab : 'dashboard';
 
-        // ── Auth: Accept either a valid JWT session OR a wallet address body param ──
-        // Priority 1: Secure JWT session (full SIWE sign-in flow)
+        // ── Auth: a signed-in session only ──
+        // [SECURITY 2026-10-28] An address in the request body used to be
+        // accepted when there was no session. Anyone could then open a Stripe
+        // checkout tied to another person's Stripe customer (which shows that
+        // customer's email and saved details), create account rows for any
+        // address, and start the 30-day trial for it. The address now always
+        // comes from the session; one sent in the body must match it.
         const validation = await validateSecureRequest(req);
-        let userId = validation.userId;
+        const userId = validation.valid ? validation.userId : undefined;
 
-        // Priority 2: Wallet address sent directly (Web3-native users without full email session)
-        // Validate it's a real EVM address format to prevent injection.
         if (!userId) {
-            const bodyAddress = body.userId || body.walletAddress;
-            if (bodyAddress && /^0x[a-fA-F0-9]{40}$/.test(bodyAddress)) {
-                userId = (bodyAddress as string).toLowerCase();
-            }
+            return NextResponse.json({ error: 'Sign in with your wallet to buy a plan.' }, { status: 401 });
         }
-
-        if (!userId) {
-            return NextResponse.json({ error: 'Unauthorized: Connect your wallet to purchase a plan.' }, { status: 401 });
+        const bodyAddress = body.userId || body.walletAddress;
+        if (typeof bodyAddress === 'string' && bodyAddress && bodyAddress.toLowerCase() !== userId.toLowerCase()) {
+            return NextResponse.json({ error: 'The connected wallet does not match your session. Sign in again.' }, { status: 403 });
         }
 
         if (!tier) {
@@ -49,7 +50,8 @@ export async function POST(req: NextRequest) {
 
         const normalizedUserId = userId.toLowerCase();
 
-        // [VIP BYPASS] Special Owner Exception — permanent, unlimited access
+        // [VIP BYPASS] Special Owner Exception — permanent, unlimited access.
+        // Reached only with the owner's own signed-in session (see above).
         if (normalizedUserId === '0x78831c25c86ea2a78a6127fc2ccb95e612d87b4a') {
             const PERMANENT_DATE = new Date('2099-12-31T23:59:59Z');
             await prisma.user.upsert({
@@ -112,7 +114,8 @@ export async function POST(req: NextRequest) {
                     console.log(`[STRIPE_AUTO_BOOTSTRAP] Successfully created Price ID: ${priceId}`);
                 } catch (bootstrapErr: any) {
                     console.error('[STRIPE_BOOTSTRAP_ERROR]', bootstrapErr);
-                    return NextResponse.json({ error: `Payment initialization failed. Verify Stripe API Key. (${bootstrapErr.message})` }, { status: 500 });
+                    // Stripe's message stays in the server log: it can name keys and account details.
+                    return NextResponse.json({ error: 'Payments are not available right now. Please try again later.' }, { status: 503 });
                 }
             }
         }

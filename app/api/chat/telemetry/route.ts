@@ -11,14 +11,9 @@ const TYPING_TTL_S   = 5;  // 5 seconds typing window
 // Middleware sets 'x-verified-session-address' from the JWT at edge level.
 // Falls back to reading the session cookie directly for non-edge environments.
 async function resolveAuthenticatedAddress(request: NextRequest): Promise<string | null> {
-    const fromHeader = request.headers.get('x-verified-session-address')
-        ?? request.headers.get('x-verified-session-address');
-    if (fromHeader) return fromHeader.toLowerCase();
-
     try {
-        const { getSession } = await import('@/lib/session');
-        const session = await getSession();
-        return session?.userId?.toLowerCase() ?? null;
+        const { getVerifiedCaller } = await import('@/lib/security/verifiedCaller');
+        return await getVerifiedCaller(request);
     } catch {
         return null;
     }

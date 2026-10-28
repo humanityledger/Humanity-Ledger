@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
-import { getSession } from '@/lib/session';
+import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 
 export async function POST(req: Request) {
   try {
     // [SECURITY] Require an authenticated session — never process files from anonymous clients
-    const session = await getSession();
-    const web3Address = (req as any).headers?.get?.('x-verified-session-address');
-    const userId = session?.userId || web3Address;
+    const userId = await getVerifiedCaller(req);
     
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

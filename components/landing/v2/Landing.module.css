@@ -43,7 +43,7 @@
   --card-pad: 64px;
   --gutter: 32px;
 
-  min-height: 100vh;
+  min-height: calc(100vh / var(--hl-zoom, 1));
   background: var(--page-bg);
   color: var(--hl-ink);
   font-family: var(--hl-font);
@@ -657,8 +657,9 @@
   font-size: 12.5px;
   color: var(--hl-ink);
   text-align: right;
-  word-break: break-all;
-  overflow-wrap: break-word;
+  /* Break between words ("Free, no / transaction"), never inside one. */
+  overflow-wrap: anywhere;
+  word-break: normal;
   min-width: 0;
 }
 

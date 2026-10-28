@@ -7,17 +7,11 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/session';
+import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 
 export const dynamic = 'force-dynamic';
 
-async function resolveUserId(req: NextRequest): Promise<string | null> {
-  const verified = req.headers.get('x-verified-session-address');
-  if (verified) return verified.toLowerCase();
-  const session = await getSession();
-  if (session?.userId) return session.userId.toLowerCase();
-  return null;
-}
+const resolveUserId = (req: NextRequest) => getVerifiedCaller(req);
 
 export async function GET(req: NextRequest) {
   try {
@@ -65,14 +59,16 @@ export async function POST(req: NextRequest) {
 
     const { ids, all } = await req.json();
 
-    if (all) {
+    if (all === true) {
       await prisma.notification.updateMany({
         where: { userId: user.id, read: false },
         data: { read: true },
       });
     } else if (Array.isArray(ids) && ids.length > 0) {
+      const clean = ids.filter((x: unknown): x is string => typeof x === 'string' && x.length <= 64).slice(0, 200);
+      if (!clean.length) return NextResponse.json({ ok: true });
       await prisma.notification.updateMany({
-        where: { userId: user.id, id: { in: ids } },
+        where: { userId: user.id, id: { in: clean } },
         data: { read: true },
       });
     }

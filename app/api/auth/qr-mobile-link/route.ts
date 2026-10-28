@@ -1,106 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mintJWT } from '@/lib/jwt';
-import { safeRedisSet } from '@/lib/redis/client';
+import { getSession } from '@/lib/session';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
+import { QR_TTL_SEC, QR_UUID_RE, qrClaimKey, qrEphKey, qrSessionKey, readKey, setFor, setOnce } from '@/lib/security/qrLogin';
+
+export const dynamic = 'force-dynamic';
+
+/**
+ * POST /api/auth/qr-mobile-link — the phone approves a sign-in on a computer.
+ *
+ * Body: { uuid, desktopPub, encryptedPayload, iv, tag?, mobilePub, claimHash }
+ *
+ * The phone (signed in) has scanned the computer's QR code and typed the PIN
+ * the computer shows. It encrypted a random claim code (plus its chat keys)
+ * to the computer's key, mixed with that PIN, and sends here only the
+ * ciphertext and the claim code's SHA-256.
+ *
+ * The server mints a session for the phone's wallet and keeps it next to the
+ * claim hash. The computer gets the ciphertext from /qr-poll, decrypts the
+ * claim code (only possible with its private key and the PIN) and trades it
+ * at /qr-hydrate for HttpOnly cookies. The session token is never stored in
+ * clear next to the ciphertext, returned to JavaScript, or handed to whoever
+ * polls the QR session.
+ *
+ * Fix (2026-10-28): the previous version minted a token for ANY uuid and
+ * stored it in clear for whoever polled that uuid. Together with the
+ * automatic "link from URL" code in MobileEnforcer, opening one crafted link
+ * on a signed-in phone gave an attacker's computer a session for that wallet.
+ */
+const B64_RE = /^[A-Za-z0-9+/=_-]{8,20000}$/;
+const PUB_RE = /^[A-Za-z0-9+/=_,-]{20,400}$/;
+const HASH_RE = /^[0-9a-f]{64}$/;
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { uuid, encryptedPayload, iv, tag, mobilePub, isServerMint } = body;
-
-    if (!uuid || typeof uuid !== 'string' || uuid.length < 8) {
-      return NextResponse.json({ error: 'Missing or invalid uuid' }, { status: 400 });
-    }
-    if (!mobilePub) {
-      return NextResponse.json({ error: 'Missing mobilePub' }, { status: 400 });
-    }
-    if (!isServerMint && (!encryptedPayload || !iv)) {
-      return NextResponse.json({ error: 'Missing encrypted payload fields' }, { status: 400 });
-    }
-
-    const humanSession = req.cookies.get('human_session')?.value || req.cookies.get('ledger_session')?.value;
-
-    if (!humanSession) {
+    const session = await getSession();
+    const wallet = session?.userId?.toLowerCase();
+    if (!wallet || !/^0x[0-9a-f]{40}$/.test(wallet)) {
       return NextResponse.json(
         { error: 'Session unauthenticated. Sign the cryptographic message in your wallet first.' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
-    let walletAddress: string | null = null;
+    const rl = await checkRateLimit(wallet, { max: 10, windowSec: 600, prefix: 'rl:qr-link' });
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many attempts. Try again in a few minutes.' }, { status: 429 });
 
-    try {
-      const { verifyJWT } = await import('@/lib/jwt');
-      const payload = await verifyJWT(humanSession);
-      walletAddress = (payload.sub as string) || (payload.address as string) || null;
-      if (!walletAddress) {
-        throw new Error('JWT payload missing address');
-      }
-    } catch (err: any) {
-      return NextResponse.json({ error: 'Invalid or expired session. Please reconnect.' }, { status: 401 });
+    const body = await req.json().catch(() => ({}));
+    const { uuid, desktopPub, encryptedPayload, iv, tag, mobilePub, claimHash } = body ?? {};
+    if (typeof uuid !== 'string' || !QR_UUID_RE.test(uuid)) {
+      return NextResponse.json({ error: 'Missing or invalid uuid' }, { status: 400 });
+    }
+    if (typeof encryptedPayload !== 'string' || !B64_RE.test(encryptedPayload)
+      || typeof iv !== 'string' || !B64_RE.test(iv)
+      || (tag != null && (typeof tag !== 'string' || !B64_RE.test(tag)))
+      || typeof mobilePub !== 'string' || !PUB_RE.test(mobilePub)
+      || typeof desktopPub !== 'string' || !PUB_RE.test(desktopPub)
+      || typeof claimHash !== 'string' || !HASH_RE.test(claimHash)) {
+      return NextResponse.json({ error: 'Insecure or incomplete handshake. Please update the app and scan again.' }, { status: 400 });
     }
 
-    const { prisma } = await import('@/lib/prisma');
-    const existingUser = await prisma.user.upsert({
-      where: { walletAddress: walletAddress.toLowerCase() },
-      update: { lastActive: new Date() },
-      create: {
-        walletAddress: walletAddress.toLowerCase(),
-        tier: 'INITIATE',
-        lastActive: new Date()
-      }
-    });
-
-    const crypto = await import('crypto');
-    const cryptographicNonce = crypto.randomBytes(32).toString('hex');
-
-    const jwt = await mintJWT({
-      sub: walletAddress,
-      address: walletAddress,
-      clearance: 'Private',
-      tier: existingUser?.tier || 'FREE',
-      kycStatus: 'UNVERIFIED',
-      humanityScore: existingUser?.humanityScore || 0,
-      iss: 'humanity-ledger',
-      source: 'qr-mobile-handshake',
-      nonce: cryptographicNonce,
-      issuedAt: new Date().toISOString()
-    });
-
-    let sessionPayload: string;
-
-    if (!isServerMint && encryptedPayload && iv) {
-      sessionPayload = JSON.stringify({
-        serverSignedJwt: jwt,
-        encryptedPayload,
-        iv,
-        tag: tag || null,
-        mobilePub,
-      });
-    } else {
-      return NextResponse.json(
-        { error: 'Insecure handshake mode rejected. Please update your mobile app.' },
-        { status: 403 }
-      );
+    // The computer must have opened this QR session, with this key.
+    const eph = await readKey(qrEphKey(uuid));
+    let ephPub: string | null = null;
+    try { ephPub = eph ? JSON.parse(eph).pub : null; } catch { ephPub = null; }
+    if (!ephPub || ephPub !== desktopPub) {
+      return NextResponse.json({ error: 'This QR code has expired. Refresh it on the computer.' }, { status: 410 });
     }
 
-    await safeRedisSet(`qr-session:${uuid}`, sessionPayload, 'EX', 300);
+    // First answer wins: a second phone cannot replace the one that linked.
+    const first = await setOnce(qrSessionKey(uuid), JSON.stringify({ encryptedPayload, iv, tag: tag ?? null, mobilePub }), QR_TTL_SEC);
+    if (!first) return NextResponse.json({ error: 'This QR code was already used.' }, { status: 409 });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
-    const cookieDomain = (process.env.NODE_ENV === 'production' && appUrl)
-        ? (() => { try { return new URL(appUrl).hostname; } catch { return undefined; } })()
-        : undefined;
-    const response = NextResponse.json({ success: true });
-    response.cookies.set('human_session', jwt, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 604800,
-      path: '/',
-      domain: cookieDomain,
-    });
+    const jwt = await mintJWT({ sub: wallet, address: wallet, iss: 'humanity-ledger', source: 'qr-mobile-handshake' });
+    await setFor(qrClaimKey(uuid), JSON.stringify({ jwt, claimHash, wallet }), QR_TTL_SEC);
 
-    return response;
-
+    return NextResponse.json({ success: true });
   } catch (e: any) {
     console.error('[QRMobileLink] Error:', e?.message);
     return NextResponse.json({ error: 'Server error during mobile QR link' }, { status: 500 });

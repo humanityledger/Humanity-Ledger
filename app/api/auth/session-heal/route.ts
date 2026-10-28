@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { verifyJWT, mintJWT } from '@/lib/jwt';
-import { prisma } from '@/lib/prisma';
+import { isSessionTokenRevoked } from '@/lib/security/sessionRevocation';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +28,9 @@ export async function GET(req: NextRequest) {
 
     if (primaryJwt) {
       try {
+        // A token revoked by a logout must not be traded for a fresh one:
+        // that turned any cookie copied before the logout back into a live session.
+        if (await isSessionTokenRevoked(primaryJwt)) return NextResponse.json({ healed: false, reason: 'revoked' });
         const payload = await verifyJWT(primaryJwt);
         const address = (payload.walletAddress || payload.address || payload.sub) as string;
         if (address) {
@@ -51,7 +54,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ healed: false });
   } catch (e: any) {
     console.error('[session-heal] Error:', e);
-    return NextResponse.json({ healed: false, error: e.message }, { status: 500 });
+    return NextResponse.json({ healed: false }, { status: 500 });
   }
 }
 

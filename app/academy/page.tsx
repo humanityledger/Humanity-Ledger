@@ -5,11 +5,11 @@ export const dynamic = 'force-dynamic';
 
 export default function AcademyPage() {
     return (
-        <div className="flex flex-col bg-white text-slate-900 w-full min-h-screen">
+        <div className="flex flex-col bg-white text-slate-900 w-full">
             <div className="w-full flex flex-col items-center justify-start p-4 md:p-8">
 
                 {/* ── ICAIEPHE 2026 — Turing Shield Anti-AI/Plagiarism Engine ── */}
-                <div className="w-full max-w-[1200px] mt-16 md:mt-24 mb-6 flex flex-col gap-3">
+                <div className="w-full max-w-[1200px] mt-4 mb-6 flex flex-col gap-3">
                     <div className="h-px w-full bg-slate-200" />
                     <div className="flex items-center gap-4">
                         <div className="flex flex-col gap-1">

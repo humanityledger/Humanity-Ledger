@@ -10,18 +10,13 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/session';
+import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import { deriveAztecAddress } from '@/lib/aztec/zk-identity';
 
 export const dynamic = 'force-dynamic';
 
-async function resolveCallerAddress(req: NextRequest): Promise<string | null> {
-  const verified = req.headers.get('x-verified-session-address');
-  if (verified) return verified.toLowerCase();
-  const session = await getSession();
-  if (session?.userId) return session.userId.toLowerCase();
-  return null; // Spoofing vector closed
-}
+// The session (revocation-aware), never a client-supplied address.
+const resolveCallerAddress = (req: NextRequest) => getVerifiedCaller(req);
 
 
 export async function POST(
@@ -39,7 +34,9 @@ export async function POST(
     }
 
     const { requestId } = await req.json();
-    if (!requestId) return NextResponse.json({ error: 'requestId required' }, { status: 400 });
+    if (typeof requestId !== 'string' || !requestId || requestId.length > 64) {
+      return NextResponse.json({ error: 'requestId required' }, { status: 400 });
+    }
 
     // Fetch and validate the request belongs to the caller as recipient
     const request = await (prisma as any).chatContactRequest.findUnique({

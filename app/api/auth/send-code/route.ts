@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateVerificationCode } from '@/lib/auth';
 import { sendVerificationEmail } from '@/lib/email';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,7 +94,8 @@ async function verifyTurnstile(token: string | undefined, ip: string): Promise<b
 // ─────────────────────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+    // The last X-Forwarded-For hop is the one our proxy added; the first is whatever the client sent.
+    const ip = getClientIP(request);
     const body = await request.json();
 
     // ── 1. Normalize & validate email ────────────────────────────────────────

@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/session';
+import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 
 export const dynamic = 'force-dynamic';
 
-async function resolveCaller(req: NextRequest) {
-  const session = await getSession();
-  if (session?.userId) return session.userId.toLowerCase();
-  const verified = req.headers.get('x-verified-session-address');
-  if (verified) return verified.toLowerCase();
-  return null;
-}
+const resolveCaller = (req: NextRequest) => getVerifiedCaller(req);
 
 /**
  * GET /api/me/balance

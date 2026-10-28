@@ -20,8 +20,16 @@ export async function POST(req: Request) {
             'DAI': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
         };
 
-        const fromTokenAddress = tokenAddresses[fromToken];
-        const toTokenAddress = tokenAddresses[toToken];
+        // The amount goes into the provider URL (with our API key): integers in base units only.
+        if (typeof amount !== 'string' && typeof amount !== 'number') {
+            return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
+        }
+        if (!/^\d{1,40}$/.test(String(amount)) || BigInt(String(amount)) === BigInt(0)) {
+            return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
+        }
+
+        const fromTokenAddress = Object.prototype.hasOwnProperty.call(tokenAddresses, fromToken) ? tokenAddresses[fromToken] : undefined;
+        const toTokenAddress = Object.prototype.hasOwnProperty.call(tokenAddresses, toToken) ? tokenAddresses[toToken] : undefined;
 
         if (!fromTokenAddress || !toTokenAddress) {
             return NextResponse.json({ error: 'Unsupported token' }, { status: 400 });

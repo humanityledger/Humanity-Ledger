@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { verifyRoomPassword, generateJoinToken } from '@/lib/utils/roomCrypto';
 import { getSession } from '@/lib/session';
+import { checkRateLimit, getClientIP } from '@/lib/security/rateLimiter';
 
 import crypto from 'crypto';
 
@@ -29,9 +30,9 @@ async function getSessionAddress(req: NextRequest): Promise<string | null> {
 
 // Rate-limit tracker for failed join attempts per IP
 const joinFailMap = new Map<string, { count: number; resetAt: number; lockedUntil?: number }>();
-function getIp(req: NextRequest): string {
-  return req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
-}
+// The first X-Forwarded-For hop is whatever the client sent; keying the lockout
+// on it let anyone guess room passwords forever with a new header each time.
+const getIp = (req: NextRequest): string => getClientIP(req);
 function checkJoinRateLimit(ip: string): { allowed: boolean; lockedUntil?: number } {
   const now = Date.now();
   const entry = joinFailMap.get(ip);
@@ -60,7 +61,17 @@ export async function POST(
   if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const roomId = (await params).roomId.toUpperCase();
+  if (!/^[A-Z0-9]{6,12}$/.test(roomId)) {
+    return NextResponse.json({ error: 'Invalid room ID' }, { status: 400 });
+  }
   const ip = getIp(req);
+
+  // Shared across instances (the map below is per process): at most 10 tries
+  // per person and room in 15 minutes, so a 4-character password cannot be guessed.
+  const tries = await checkRateLimit(`${roomId}:${address}`, { max: 10, windowSec: 900, prefix: 'rl:call-join' });
+  if (!tries.allowed) {
+    return NextResponse.json({ error: 'Too many attempts for this room. Please wait before trying again.' }, { status: 429 });
+  }
 
   // Rate limit
   const rl = checkJoinRateLimit(ip);

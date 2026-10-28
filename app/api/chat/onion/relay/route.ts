@@ -6,6 +6,7 @@ import {
 } from '@/lib/onion/OnionCrypto';
 import { safeRedisGet, safeRedisSet } from '@/lib/redis/client';
 import { assertFetchableUrl, fetchPublicUrl } from '@/lib/security/publicFetch';
+import { enqueueOnionDelivery } from '@/lib/chat/onionQueue';
 /**
  * POST /api/chat/onion/relay
  *
@@ -274,29 +275,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // The exit node delivers the message to the XMTP network.
     // We enqueue it server-side (no IP revealed to XMTP from the client).
     // Use the existing /api/chat/queue endpoint.
-    try {
-      const queueRes = await fetch(
-        `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/chat/onion/queue`,
-        {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            destination: inner.destination,
-            payload:     inner.payload,
-            sentAt:      inner.sentAt,
-            nonce:       inner.nonce,
-          }),
-        },
-      );
-
-      if (!queueRes.ok) {
-        return NextResponse.json({ error: 'Exit delivery failed.' }, { status: 502 });
-      }
-
-      return NextResponse.json({ ok: true, hop: 'exit', delivered: true });
-    } catch (err: any) {
-      return NextResponse.json({ error: 'Exit delivery error.' }, { status: 502 });
+    // In process (lib/chat/onionQueue.ts): the old HTTP hop to
+    // /api/chat/onion/queue had no session and was refused by the
+    // middleware, and that endpoint let anyone write to any inbox.
+    const delivered = await enqueueOnionDelivery({
+      destination: inner.destination,
+      payload: inner.payload,
+      nonce: inner.nonce,
+    });
+    if (!delivered.ok) {
+      return NextResponse.json({ error: delivered.error }, { status: delivered.status === 500 ? 502 : delivered.status });
     }
+    return NextResponse.json({ ok: true, hop: 'exit', delivered: true });
   }
 
   // ── 10. Forward to next relay hop ─────────────────────────────────────────

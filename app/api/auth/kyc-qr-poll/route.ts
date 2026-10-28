@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { safeRedisGet, safeRedisSet } from '@/lib/redis/client';
-import { mintJWT } from '@/lib/jwt';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -67,66 +66,18 @@ export async function GET(req: NextRequest) {
       // Burn-after-read: mark as consumed immediately
       await safeRedisSet(`kyc-session:${uuid}`, 'BURNED', 'EX', 30);
 
-      // If we have a wallet address, persist KYC verification and issue JWT
+      // [SECURITY 2026-10-28] Completing this flow no longer marks the account as
+      // a verified human, adds to humanityScore or issues a new session. The
+      // liveness score is reported by the phone itself (kyc-qr-session takes it
+      // from the request body), so anyone could post a perfect score and get
+      // the "verified" badge. Verified status comes only from a provider the
+      // server can check (webhooks/sumsub).
       if (walletAddress) {
-        try {
-          const normalizedAddress = walletAddress.toLowerCase();
-
-          await prisma.user.upsert({
-            where: { walletAddress: normalizedAddress },
-            update: {
-              isZkVerified: true,
-              humanityScore: { increment: 100 },
-              lastActive: new Date(),
-            },
-            create: {
-              walletAddress: normalizedAddress,
-              isZkVerified: true,
-              humanityScore: 100,
-              tier: 'INITIATE',
-              lastActive: new Date(),
-            },
-          });
-
-          const jwt = await mintJWT({
-            sub: normalizedAddress,
-            address: normalizedAddress,
-            clearance: 'Private',
-            tier: 'INITIATE',
-            kycStatus: 'VERIFIED',
-            isZkVerified: true,
-            humanityScore: 100,
-            iss: 'humanity-ledger',
-            issuedAt: new Date().toISOString(),
-          });
-
-          const response = NextResponse.json({
-            status: 'SUCCESS',
-            livenessScore,
-            encryptedPayload,
-            ekey,
-          });
-
-          // Set ledger_session cookie so the page can redirect
-          response.cookies.set('ledger_session', jwt, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 604800,
-            path: '/',
-          });
-
-          return response;
-        } catch (dbErr: any) {
-          console.error('[KYC:Poll] DB error:', dbErr);
-          // Still return success but without persisting
-          return NextResponse.json({
-            status: 'SUCCESS',
-            livenessScore,
-            encryptedPayload,
-            ekey,
-          });
-        }
+        await prisma.user.upsert({
+          where: { walletAddress: walletAddress.toLowerCase() },
+          update: { lastActive: new Date() },
+          create: { walletAddress: walletAddress.toLowerCase(), tier: 'INITIATE', lastActive: new Date() },
+        }).catch(() => {});
       }
 
       return NextResponse.json({

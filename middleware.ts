@@ -170,10 +170,15 @@ export function checkCsrf(req: NextRequest): NextResponse | null {
         allowed.add(appUrl);
       }
     }
-    allowed.add('http://localhost:3000');
-    allowed.add('http://localhost:3005');
-    allowed.add('http://127.0.0.1:3000');
-    allowed.add('http://127.0.0.1:3005');
+    // Local dev origins only outside production: in production any page a
+    // visitor runs on their own machine at localhost:3000 would otherwise
+    // pass this check with their cookies attached.
+    if (process.env.NODE_ENV !== 'production') {
+      allowed.add('http://localhost:3000');
+      allowed.add('http://localhost:3005');
+      allowed.add('http://127.0.0.1:3000');
+      allowed.add('http://127.0.0.1:3005');
+    }
 
     if (allowed.has(origin) || allowed.has(origin.replace(/\/$/, ''))) {
       return null;
@@ -309,8 +314,11 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       : applyRateLimit('ip:' + clientIp, 150);
     if (rateLimitRes) return rateLimitRes;
 
-    // B-015: Strict CSRF check on API mutations (webhooks and academy uploads excluded)
-    if (!pathname.startsWith('/api/webhooks/') && !pathname.startsWith('/api/academy/')) {
+    // B-015: Strict CSRF check on API mutations (webhooks excluded: they are
+    // server-to-server and verify their own signatures). Academy routes are
+    // checked too: progress and submissions change account data, and the
+    // upload form posts from the same origin.
+    if (!pathname.startsWith('/api/webhooks/')) {
       const csrfRes = checkCsrf(req);
       if (csrfRes) return csrfRes;
     }

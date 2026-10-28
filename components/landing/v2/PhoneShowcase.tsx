@@ -126,33 +126,46 @@ function fitPhoto(el: HTMLElement, i: number, zoom: number) {
   el.style.setProperty("--s", String(sc));
   el.style.setProperty("--ox", `${ox}px`);
   el.style.setProperty("--oy", `${oy}px`);
+  // The photo stays hidden until it has been fitted once (see .photo[data-fit]).
+  el.dataset.fit = "1";
 }
 
-/** The diagonal: upcoming photos wait below and to the right, past ones leave up and to the left. */
+/**
+ * A deck: the next photo waits just behind the current one, peeking out
+ * below and to the right, and comes forward as the visitor scrolls; the
+ * current one lifts away up and to the left. Every tile stays inside the
+ * stage, so no photo is ever cut by the edge of the card.
+ */
 function tileStyle(d: number) {
   const a = Math.abs(d);
-  let tx: number, ty: number, sc: number, op: number;
+  let tx: number, ty: number, sc: number, op: number, rz: number;
   if (d >= 0) {
-    tx = d * 46;
-    ty = d * 30;
-    sc = 1 - 0.13 * d;
-    // Opaque while it arrives, so it covers the one leaving instead of blending with it.
-    op = clamp(1 - 0.55 * (d - 1));
+    // d = 1: the one waiting behind; d = 2 and further: hidden behind it.
+    const k = Math.min(d, 1);
+    tx = k * 8;
+    ty = k * 7;
+    sc = 1 - 0.08 * k;
+    rz = k * 1.6;
+    // Opaque while it comes forward, so it covers the one leaving.
+    op = d <= 1 ? 1 : clamp(1 - (d - 1) * 1.6);
   } else {
-    tx = d * 34;
-    ty = d * 44;
-    sc = 1 - 0.06 * a;
-    op = clamp(1 - 1.25 * a);
+    tx = d * 22;
+    ty = d * 26;
+    sc = 1 - 0.05 * a;
+    rz = d * 2.4;
+    op = clamp(1 - 1.4 * a);
   }
-  const rx = d * 5;
-  const ry = d * -9;
-  const rz = d * -1.2;
   return {
-    transform: `perspective(1800px) translate3d(${tx}%, ${ty}%, 0) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${sc})`,
+    transform: `perspective(1800px) translate3d(${tx}%, ${ty}%, 0) rotateX(${d * 2.5}deg) rotateY(${d * -4}deg) rotateZ(${rz}deg) scale(${sc})`,
     opacity: op,
     zIndex: 100 - Math.round(a * 10) - (d < 0 ? 20 : 0),
     visibility: op < 0.01 ? "hidden" : "visible",
   } as const;
+}
+
+/** Screen pixels per CSS pixel for this element (below 1 while the page is zoomed out). */
+function screenScale(el: HTMLElement, rect = el.getBoundingClientRect()) {
+  return el.offsetHeight > 0 && rect.height > 0 ? rect.height / el.offsetHeight : 1;
 }
 
 function scrollParent(el: HTMLElement | null): HTMLElement | null {
@@ -232,7 +245,8 @@ export function PhoneShowcase() {
       const dw = deck.clientWidth;
       const dh = deck.clientHeight;
       const aspect = 1.25;
-      const tw = Math.min(dw, dh * 0.84 * aspect);
+      // Room for the next photo peeking out from behind (8% right, 7% down).
+      const tw = Math.min(dw * 0.88, dh * 0.86 * aspect);
       deck.style.setProperty("--tw", `${tw}px`);
       deck.style.setProperty("--th", `${tw / aspect}px`);
     }
@@ -244,10 +258,26 @@ export function PhoneShowcase() {
   useEffect(() => {
     layout();
     const deck = deckRef.current;
-    if (!deck || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => layout());
-    ro.observe(deck);
-    return () => ro.disconnect();
+    if (!deck) return;
+    // Fit again whenever the deck or any photo changes size, once the photos
+    // have loaded and when the page is shown again: a photo fitted while it
+    // still had no size would otherwise keep the default scale and leave an
+    // empty band at the bottom of its tile.
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => layout()) : null;
+    ro?.observe(deck);
+    deck.querySelectorAll<HTMLElement>("[data-photo]").forEach((el) => ro?.observe(el));
+    const imgs = [...deck.querySelectorAll<HTMLImageElement>("img")];
+    imgs.forEach((img) => img.addEventListener("load", layout));
+    window.addEventListener("load", layout);
+    window.addEventListener("pageshow", layout);
+    const late = [80, 400, 1200].map((ms) => window.setTimeout(layout, ms));
+    return () => {
+      ro?.disconnect();
+      imgs.forEach((img) => img.removeEventListener("load", layout));
+      window.removeEventListener("load", layout);
+      window.removeEventListener("pageshow", layout);
+      late.forEach(clearTimeout);
+    };
   }, [layout]);
 
   // Follow the scroll.
@@ -279,8 +309,10 @@ export function PhoneShowcase() {
 
       if (mode === "scroll") {
         const rect = track.getBoundingClientRect();
-        const top = parseFloat(getComputedStyle(stage).top) || 84;
-        const dist = Math.max(1, rect.height - stage.offsetHeight);
+        // Rects are in screen pixels; CSS lengths are not when the page is zoomed (67% on desktop).
+        const z = screenScale(track, rect);
+        const top = (parseFloat(getComputedStyle(stage).top) || 84) * z;
+        const dist = Math.max(1, rect.height - stage.offsetHeight * z);
         const p = clamp((top - rect.top) / dist);
         const seg = Math.min(p * N, N - 1e-6);
         const i0 = Math.floor(seg);
@@ -340,10 +372,12 @@ export function PhoneShowcase() {
     const scroller = scrollParent(track);
     if (!scroller) return;
     const rect = track.getBoundingClientRect();
-    const top = parseFloat(getComputedStyle(stage).top) || 84;
-    const dist = rect.height - stage.offsetHeight;
+    const z = screenScale(track, rect);
+    const top = (parseFloat(getComputedStyle(stage).top) || 84) * z;
+    const dist = rect.height - stage.offsetHeight * z;
     const target = ((i + 0.62 * (i === N - 1 ? 1.2 : 1)) / N) * dist;
-    scroller.scrollTo({ top: scroller.scrollTop + rect.top - top + target, behavior: "smooth" });
+    // scrollTop is in CSS pixels, the distances above in screen pixels.
+    scroller.scrollTo({ top: scroller.scrollTop + (rect.top - top + target) / z, behavior: "smooth" });
   };
 
   return (
@@ -454,10 +488,18 @@ export function LivePhone({
       fitPhoto(photo, i, z);
     };
     fit();
-    if (typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(fit);
-    ro.observe(el);
-    return () => ro.disconnect();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
+    ro?.observe(el);
+    const imgs = [...el.querySelectorAll<HTMLImageElement>("img")];
+    imgs.forEach((img) => img.addEventListener("load", fit));
+    window.addEventListener("pageshow", fit);
+    const late = [80, 400, 1200].map((ms) => window.setTimeout(fit, ms));
+    return () => {
+      ro?.disconnect();
+      imgs.forEach((img) => img.removeEventListener("load", fit));
+      window.removeEventListener("pageshow", fit);
+      late.forEach(clearTimeout);
+    };
   }, [i, zoom, fill]);
 
   useEffect(() => {

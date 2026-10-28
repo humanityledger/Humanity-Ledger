@@ -440,8 +440,12 @@ export default function ScanPage() {
                 <Shield size={28} className="text-white" />
               </div>
               <h2 className="text-white font-bold text-2xl mb-2">Enter Visual PIN</h2>
-              <p className="text-white/60 text-[15px] text-center mb-10 leading-relaxed px-4">
+              <p className="text-white/60 text-[15px] text-center mb-4 leading-relaxed px-4">
                 Verify the 4-digit code currently shown on your computer screen.
+              </p>
+              {/* Signing in by QR hands that computer your account: say so before the PIN. */}
+              <p role="note" className="text-[13px] text-center mb-8 leading-relaxed px-4 py-3 rounded-2xl bg-[#ff2a85]/10 text-[#ffb3cf] border border-[#ff2a85]/25">
+                This signs a computer into your account. Only continue if you opened this code yourself on a computer in front of you. Never enter it for someone who sent you the code or a link.
               </p>
               
               <div className="flex gap-4 mb-10">

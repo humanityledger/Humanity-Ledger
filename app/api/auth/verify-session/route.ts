@@ -34,6 +34,9 @@ export async function GET(request: NextRequest) {
             try {
                 const { verifyJWT } = await import('@/lib/jwt');
                 const payload = await verifyJWT(primaryJwt);
+                const { isSessionTokenRevoked } = await import('@/lib/security/sessionRevocation');
+                // Signed out on some device: the token is still well-formed but no longer a session.
+                if (await isSessionTokenRevoked(primaryJwt)) throw new Error('revoked');
                 const address = (payload.walletAddress || payload.address || payload.sub) as string;
 
                 if (address) {
@@ -77,7 +80,7 @@ export async function GET(request: NextRequest) {
             const res = NextResponse.json({ authenticated: false }, { status: 401 });
             const expiredDate = 'Thu, 01 Jan 1970 00:00:00 GMT';
             const secure = isProd ? '; Secure' : '';
-            for (const name of ['ledger_session', 'human_session', 'humanity_session', 'siwe_session', 'system_handshake']) {
+            for (const name of ['hl_session', 'ledger_session', 'human_session', 'humanity_session', 'siwe_session', 'system_handshake']) {
                 res.headers.append('Set-Cookie', `${name}=; Path=/; Expires=${expiredDate}; HttpOnly${secure}; SameSite=Strict`);
                 res.headers.append('Set-Cookie', `${name}=; Path=/; Expires=${expiredDate}; SameSite=Lax`);
             }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,9 +16,22 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
         }
         const address = session.userId;
-        const { lessonId, txHash, proofUrl = '' } = await request.json();
-        if (!lessonId) {
+        const rl = await checkRateLimit(address, { max: 30, windowSec: 3600, prefix: 'rl:academy-submit' });
+        if (!rl.allowed) {
+            return NextResponse.json({ ok: false, error: 'Too many submissions. Try again later.' }, { status: 429 });
+        }
+        const body = await request.json().catch(() => null);
+        const lessonId = body?.lessonId;
+        const txHash = body?.txHash ?? null;
+        const proofUrl = body?.proofUrl ?? '';
+        if (typeof lessonId !== 'string' || !/^[A-Za-z0-9_.:-]{1,128}$/.test(lessonId)) {
             return NextResponse.json({ ok: false, error: 'lessonId required' }, { status: 400 });
+        }
+        if (txHash !== null && (typeof txHash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(txHash))) {
+            return NextResponse.json({ ok: false, error: 'Invalid txHash' }, { status: 400 });
+        }
+        if (typeof proofUrl !== 'string' || proofUrl.length > 500 || (proofUrl && !/^https:\/\/[^\s<>"']+$/i.test(proofUrl))) {
+            return NextResponse.json({ ok: false, error: 'proofUrl must be an https link' }, { status: 400 });
         }
 
         const user = await prisma.user.findUnique({ where: { walletAddress: address } });

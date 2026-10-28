@@ -6,6 +6,7 @@ import {
   setSessionCookies,
   generateFingerprint,
 } from '@/lib/session';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,7 +95,8 @@ async function redisLockout(key: string, lockSec: number): Promise<void> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const ip   = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+    // The last X-Forwarded-For hop is the one our proxy added; the first is whatever the client sent.
+    const ip   = getClientIP(request);
 
     // ── 1. Normalize & validate inputs ───────────────────────────────────────
     const rawEmail: unknown = body?.email;

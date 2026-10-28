@@ -204,7 +204,16 @@ export default function ConnectPage() {
       const pair = await generateX25519KeyPair();
       setEphemeral(pair);
       setQrPin(generateVisualPin());
-      const sessId = crypto.randomUUID?.() ?? Date.now().toString(36);
+      const sessId = crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+      // Register the code's public key; the reply sets the cookie that lets
+      // only this browser poll the session and finish the sign-in.
+      const init = await fetch("/api/auth/qr-init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ uuid: sessId, pub: pair.publicKey, ecdh: !!pair.isECDH, exp: Date.now() + QR_LIFETIME_MS }),
+      });
+      if (!init.ok) throw new Error("qr-init failed");
       setQrSession(sessId);
       const url = new URL("/connect", window.location.origin);
       url.searchParams.set("s", sessId);
@@ -245,37 +254,26 @@ export default function ConnectPage() {
         const res = await fetch(`/api/auth/qr-poll?uuid=${qrSession}&t=${Date.now()}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
-        if (!data.encryptedPayload && !data.serverJwt) return;
+        if (!data.encryptedPayload || !data.iv || !data.mobilePub) return;
         clearInterval(poll);
 
-        let jwt: string | null = null;
-        if (data.encryptedPayload && data.iv && data.mobilePub) {
-          try {
-            const { deriveSharedSecret, decryptAESGCM } = await import("@/lib/web-crypto");
-            const shared = await deriveSharedSecret(ephemeral.privateKey, data.mobilePub, ephemeral.isECDH, qrPin ?? undefined);
-            const decrypted = await decryptAESGCM(shared, data.encryptedPayload, data.iv);
-            try {
-              const p = JSON.parse(decrypted);
-              if (p.jwt) jwt = p.jwt;
-              const active = jwt || data.serverJwt;
-              if (active) {
-                const parts = active.split(".");
-                if (parts.length === 3) {
-                  const j = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-                  const addr = (j.sub || j.address || "").toLowerCase();
-                  if (p.seed && addr) localStorage.setItem(`ledger_chat_seed_${addr}`, p.seed);
-                  if (p.vault) localStorage.setItem("system_vault_v1", p.vault);
-                }
-              }
-            } catch {
-              if (decrypted?.split(".").length === 3) jwt = decrypted;
-            }
-          } catch (e) {
-            console.warn("[QR] key agreement failed, using server token if present", e);
-          }
+        // The phone encrypted a one-time claim code (and its chat keys) to this
+        // browser's key mixed with the PIN on screen. Only the claim code
+        // turns into a session, and only here, in HttpOnly cookies.
+        let claim: string | null = null;
+        let seed: string | null = null;
+        let vault: string | null = null;
+        try {
+          const { deriveSharedSecret, decryptAESGCM } = await import("@/lib/web-crypto");
+          const shared = await deriveSharedSecret(ephemeral.privateKey, data.mobilePub, ephemeral.isECDH, qrPin ?? undefined);
+          const p = JSON.parse(await decryptAESGCM(shared, data.encryptedPayload, data.iv));
+          if (typeof p.claim === "string") claim = p.claim;
+          if (typeof p.seed === "string") seed = p.seed;
+          if (typeof p.vault === "string") vault = p.vault;
+        } catch (e) {
+          console.warn("[QR] could not decrypt the phone's answer (wrong PIN?)", e);
         }
-        if (!jwt && data.serverJwt) jwt = data.serverJwt;
-        if (!jwt) {
+        if (!claim) {
           setSyncStatus("ERROR");
           return;
         }
@@ -286,21 +284,18 @@ export default function ConnectPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ jwt }),
+          body: JSON.stringify({ uuid: qrSession, claim }),
         });
         if (!hy.ok) {
           setSyncStatus("ERROR");
           return;
         }
         const hd = await hy.json().catch(() => ({}));
-        let normalized: string | null = (hd as { address?: string }).address || null;
-        if (!normalized) {
-          const parts = jwt.split(".");
-          if (parts.length === 3) {
-            const p = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-            const addr = (p.sub || p.address || "") as string;
-            if (addr?.startsWith("0x") && addr.length === 42) normalized = addr.toLowerCase();
-          }
+        const addr = String((hd as { address?: string }).address || "").toLowerCase();
+        const normalized: string | null = /^0x[0-9a-f]{40}$/.test(addr) ? addr : null;
+        if (normalized) {
+          if (seed) localStorage.setItem(`ledger_chat_seed_${normalized}`, seed);
+          if (vault) localStorage.setItem("system_vault_v1", vault);
         }
         if (normalized) {
           localStorage.setItem("system_session_v2", JSON.stringify({ wallet: normalized, exp: Date.now() + 604_800_000, source: "qr-handshake" }));

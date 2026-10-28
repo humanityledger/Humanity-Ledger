@@ -441,6 +441,9 @@ export default function UniversalScanModal({
                   <p className="text-[10px] text-black/50 text-center max-w-[220px] leading-relaxed">
                     Enter the 4-digit code displayed on your desktop screen
                   </p>
+                  <p role="note" className="text-[11px] text-[#9a2a1a] bg-[#fff1ee] border border-[#f6c9bf] rounded-xl px-3 py-2 text-center max-w-[260px] leading-relaxed">
+                    This signs a computer into your account. Only continue if you opened this code yourself on a computer in front of you.
+                  </p>
                   {/* 4-box PIN input */}
                   <div className="flex gap-3 mt-1">
                     {[0,1,2,3].map((i) => (

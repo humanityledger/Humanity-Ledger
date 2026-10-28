@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/session';
+import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import { getIdentityStatus } from '@/lib/identity-gate';
 
 export const dynamic = 'force-dynamic';
@@ -20,8 +20,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
-    const callerAddress = session?.userId ?? req.headers.get('x-verified-session-address') ?? '';
+    const callerAddress = (await getVerifiedCaller(req)) ?? '';
 
     const status = await getIdentityStatus(callerAddress);
 
@@ -38,7 +37,7 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     console.error('[Identity Status] Error:', err.message);
     return NextResponse.json(
-      { error: 'Internal server error', details: err.message },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

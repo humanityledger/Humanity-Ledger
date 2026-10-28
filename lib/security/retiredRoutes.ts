@@ -202,6 +202,37 @@ export const RETIRED_API_ROUTES: readonly string[] = [
   '/api/aztec/test-flow',
   '/api/dev/testpxe',
   '/api/test-aztec',
+  // Added 2026-10-28 by hand: stubs that already answered 410 or 404 in
+  // production, so nothing behind them needs to load.
+  '/api/admin/sync-db',
+  '/api/admin/login',
+  '/api/dev/deploy',
+  // Added 2026-10-28 by hand: no caller anywhere in the repository, and each
+  // one could be misused by any signed-in account. telegram sent any text to
+  // any Telegram chat through our bot; projects/[id] took the owner from the
+  // query string, so anyone could edit or delete another person's project;
+  // newsletter/subscribe emailed any address; ai/forensic ran paid AI calls
+  // for anyone; identity created rows for any address; the others served
+  // random or placeholder figures.
+  '/api/notifications/telegram',
+  '/api/projects/[id]',
+  '/api/powered-by',
+  '/api/wallet/portfolio/live',
+  '/api/ai/forensic',
+  '/api/identity',
+  '/api/newsletter/subscribe',
+  '/api/signals/[symbol]',
+  '/api/vip/oi-history',
+  '/api/vip/liquidations-24h',
+  // The onion exit relay now queues in process (lib/chat/onionQueue.ts);
+  // over HTTP this let any account write into anyone's inbox.
+  '/api/chat/onion/queue',
+  // No caller. signup created accounts already marked as verified for any
+  // email address, without proving it was the caller's; the two KYC routes
+  // started sessions for a flow nothing uses any more.
+  '/api/auth/signup',
+  '/api/auth/kyc-init',
+  '/api/auth/kyc-qr-session',
 ];
 
 const PATTERNS = RETIRED_API_ROUTES.map(u => new RegExp("" + toRegex(u)));

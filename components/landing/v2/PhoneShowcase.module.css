@@ -17,7 +17,8 @@
 }
 
 .track[data-mode="scroll"] {
-  height: calc(var(--n) * 78vh + 100vh - 96px);
+  /* --hl-zoom: the landing is drawn at 67% on desktop, where 100vh is short of the screen. */
+  height: calc((var(--n) * 78vh + 100vh) / var(--hl-zoom, 1) - 96px);
 }
 
 /* ── Pinned stage (wide screens) ─────────────────────────────── */
@@ -28,14 +29,18 @@
 
 .track[data-mode="scroll"] .stage {
   position: sticky;
-  top: 84px;
-  height: calc(100vh - 104px);
+  /* Pinned in the middle of the screen, and no taller than the photos need:
+     a stage as tall as a large screen left a wide empty band above them. */
+  --stage-h: min(calc(100vh / var(--hl-zoom, 1) - 104px), 820px);
+  top: max(84px, calc((100vh / var(--hl-zoom, 1) - var(--stage-h)) / 2 + 20px));
+  height: var(--stage-h);
   min-height: 560px;
   display: grid;
   grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.62fr);
   gap: 24px;
   align-items: center;
-  overflow: hidden;
+  /* The deck stays inside the stage; visible keeps the shadows soft. */
+  overflow: visible;
 }
 
 .captions {
@@ -251,6 +256,14 @@
   width: 1600px;
   transform-origin: 0 0;
   transform: translate(var(--ox, 0px), var(--oy, 0px)) scale(var(--s, 0.4));
+  /* Hidden until the script has fitted the photo to its tile, so a photo is
+     never seen at the default scale (cut off, with an empty band below). */
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.photo[data-fit] .frame {
+  opacity: 1;
 }
 
 .base {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { prisma } from '@/lib/prisma';
 import rateLimit from '@/lib/rate-limit';
+import { getClientIP } from '@/lib/security/rateLimiter';
 /**
  * FASE 7  ALERTAS TELEGRAM REALES
  * El usuario guarda su Chat ID y el servidor envía mensajes reales
@@ -24,6 +25,12 @@ const limiter = rateLimit({ interval: 60_000 });
 export async function GET(req: NextRequest) {
     const wallet = req.nextUrl.searchParams.get('wallet');
     if (!wallet) return NextResponse.json({ configured: false });
+    // Only the owner may read their alert settings.
+    const __auth = await requireWallet(req);
+    if (__auth.errorResponse) return __auth.errorResponse;
+    if (wallet.toLowerCase() !== __auth.walletAddress) {
+        return NextResponse.json({ error: 'You can only read this for your own wallet.' }, { status: 403 });
+    }
 
     try {
         const record = await (prisma as any).telegramAlert.findUnique({
@@ -47,7 +54,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         //  Rate Limit check 
-        const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+        const ip = getClientIP(req);
         try {
             await limiter.check(3, ip);
         } catch {
@@ -58,7 +65,16 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { wallet, chatId, minApy = 20, evSignals = true } = body;
+        const { wallet, chatId: rawChatId } = body;
+        // These values are written into an HTML message sent by our bot, so they
+        // are coerced: minApy was interpolated as-is, letting anyone make the
+        // official bot send their own links and markup to any chat.
+        const minApy = Math.min(1000, Math.max(0, Number(body.minApy ?? 20) || 0));
+        const evSignals = body.evSignals !== false;
+        const chatId = typeof rawChatId === 'string' || typeof rawChatId === 'number' ? String(rawChatId).trim() : '';
+        if (chatId && !/^-?\d{1,20}$/.test(chatId)) {
+            return NextResponse.json({ error: 'Chat ID inválido' }, { status: 400 });
+        }
         // The wallet used to be taken from the body as-is: anyone signed in could
         // change this for any other wallet. It must be the caller's own.
         const __auth = await requireWallet(req);
@@ -113,7 +129,7 @@ export async function POST(req: NextRequest) {
 
     } catch (err: any) {
         console.error('[TELEGRAM_CONNECT]', err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }
 
@@ -140,7 +156,7 @@ export async function DELETE(req: NextRequest) {
 
         return NextResponse.json({ ok: true });
     } catch (err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }
 

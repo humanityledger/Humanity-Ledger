@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
     if (humanSession) {
       try {
         const payload = await verifyJWT(humanSession);
+        const { isSessionTokenRevoked } = await import('@/lib/security/sessionRevocation');
+        if (await isSessionTokenRevoked(humanSession)) throw new Error('revoked');
         const walletAddress = (payload.address || payload.sub) as string | undefined;
         if (walletAddress) {
           const user = await prisma.user.findUnique({

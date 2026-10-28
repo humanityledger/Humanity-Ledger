@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { ALL_MODULES, TOPIC_CATEGORIES } from '@/lib/data/academy-curriculum';
+import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +11,17 @@ export const dynamic = 'force-dynamic';
  * Idempotent: seeds the academy syllabus from static curriculum data.
  * Replaces the Server Action syncAcademySyllabusToDB.
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
+    // Seeding runs dozens of database writes, so it needs an account and is
+    // limited; anyone could otherwise loop it to load the database.
+    const caller = await getVerifiedCaller(req);
+    if (!caller) {
+        return NextResponse.json({ ok: false, error: 'Sign in to sync the syllabus.' }, { status: 401 });
+    }
+    const rl = await checkRateLimit(caller, { max: 3, windowSec: 3600, prefix: 'rl:academy-sync' });
+    if (!rl.allowed) {
+        return NextResponse.json({ ok: false, error: 'Too many sync requests. Try again later.' }, { status: 429 });
+    }
     try {
         let syncedCount = 0;
 
