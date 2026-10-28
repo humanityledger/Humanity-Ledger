@@ -12,7 +12,6 @@ import {
   AnalysisPhase, 
   ProgressUpdate
 } from '@/lib/academic-integrity-engine';
-import { useAztecNative } from '@/context/AztecNativeContext';
 import { turingTranslations, Language } from '@/lib/i18n-turing';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -34,8 +33,6 @@ export function TuringAcademicShield() {
   const [completedPhases, setCompletedPhases] = useState<string[]>([]);
   const [showLangMenu, setShowLangMenu] = useState(false);
 
-  const { spendQDs, balance, aztecAddress } = useAztecNative();
-
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,15 +42,45 @@ export function TuringAcademicShield() {
     'minhash', 'entropy', 'stylometry', 'zk_commit'
   ];
 
-  // ── Handle file reading safely
-  const readFile = (file: File) => {
-    if (file.name.endsWith('.pdf') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
-      setPhase('error');
-      setErrorMsg(t('errShort')); // Reusing a general error or making a specific one. Actually, let's just use errShort for any file error here to keep it simple, or hardcode a tiny text.
+  const [isUploading, setIsUploading] = useState(false);
+
+  // ── Handle file reading safely (supports .pdf, .docx, .txt, .md, .csv)
+  const readFile = async (file: File) => {
+    setFileName(file.name);
+    setErrorMsg('');
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    // Word documents and PDFs are extracted via our server parser
+    if (ext === 'docx' || ext === 'pdf' || ext === 'doc') {
+      try {
+        setIsUploading(true);
+        const form = new FormData();
+        form.append('file', file);
+
+        const res = await fetch('/api/academy/parse-document', {
+          method: 'POST',
+          body: form,
+        });
+
+        const data = await res.json();
+        if (data.ok && data.text) {
+          setText(data.text);
+          setPhase(null);
+          setErrorMsg('');
+        } else {
+          setPhase('error');
+          setErrorMsg(data.error || 'Error al procesar el archivo. Asegúrate de que no esté protegido.');
+        }
+      } catch (err: any) {
+        setPhase('error');
+        setErrorMsg('Error de red al procesar el archivo: ' + (err.message || 'Error desconocido'));
+      } finally {
+        setIsUploading(false);
+      }
       return;
     }
     
-    setFileName(file.name);
+    // Plain text formats (.txt, .md, .csv, etc.)
     const reader = new FileReader();
     reader.onload = (ev) => {
       const content = ev.target?.result as string;
@@ -83,44 +110,24 @@ export function TuringAcademicShield() {
 
   // ── Start analysis
   const handleAnalyze = async () => {
-    if (!aztecAddress) {
-      setPhase('error');
-      setErrorMsg(t('errConnect'));
-      return;
-    }
+    setErrorMsg('');
 
-    if (balance < 500) {
-      setPhase('error');
-      setErrorMsg(t('errBalance'));
-      return;
-    }
-
-    if (!text.trim() || text.trim().length < 100) {
+    if (!text || text.trim().length < 50) {
       setPhase('error');
       setErrorMsg(t('errShort'));
       return;
     }
     
     setPhase('normalizing');
-    setProgress(0);
-    setErrorMsg('');
+    setProgress(5);
     setResult(null);
     setCompletedPhases([]);
 
-    // We generate an ID based on time
     const ts = Date.now().toString(36).toUpperCase();
     const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
     const submissionId = `ID-${ts}-${rand}`;
 
     try {
-      const spendSuccess = await spendQDs(500, "Turing Shield Anti-Plagiarism Analysis");
-      if (!spendSuccess) {
-         setPhase('error');
-         setErrorMsg(t('errDebit'));
-         setProgress(0);
-         return;
-      }
-
       const res = await runAcademicIntegrityAnalysis(
         text, 
         submissionId,
@@ -129,7 +136,8 @@ export function TuringAcademicShield() {
           setProgress(update.progress);
           setCompletedPhases(prev => {
             const idx = PHASE_KEYS.indexOf(update.phase);
-            return PHASE_KEYS.slice(0, Math.max(0, idx)); 
+            if (idx === -1) return prev;
+            return PHASE_KEYS.slice(0, idx + 1); 
           });
         }
       );
@@ -139,6 +147,7 @@ export function TuringAcademicShield() {
       setProgress(100);
       setCompletedPhases(PHASE_KEYS);
     } catch (err: any) {
+      console.error('[TuringShield] Analysis error:', err);
       setPhase('error');
       setErrorMsg(err.message || t('errShort'));
       setProgress(0);
@@ -243,26 +252,97 @@ export function TuringAcademicShield() {
                   ${isDragging ? 'border-[#25D366] bg-emerald-50 scale-[1.02]' : 'border-gray-200 hover:border-emerald-300 hover:bg-gray-50/50'}`}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors duration-300 ${isDragging ? 'bg-emerald-100' : 'bg-gray-100'}`}>
-                  <Upload size={24} className={isDragging ? 'text-emerald-600' : 'text-gray-400'} />
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors duration-300 ${isDragging || isUploading ? 'bg-emerald-100' : 'bg-gray-100'}`}>
+                  {isUploading ? (
+                    <Loader2 size={24} className="text-emerald-600 animate-spin" />
+                  ) : (
+                    <Upload size={24} className={isDragging ? 'text-emerald-600' : 'text-gray-400'} />
+                  )}
                 </div>
-                <div className="text-center">
-                  <p className="text-gray-900 font-bold text-base">{t('dropzoneTitle')}</p>
-                  <p className="text-gray-500 text-xs mt-1.5">{t('dropzoneSub')}</p>
+                <div className="text-center flex flex-col items-center gap-2">
+                  <p className="text-gray-900 font-bold text-base">
+                    {isUploading ? 'Extrayendo texto del documento...' : t('dropzoneTitle')}
+                  </p>
+                  <p className="text-gray-500 text-xs">{t('dropzoneSub')}</p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                    className="mt-2 px-5 py-2.5 bg-black hover:bg-gray-800 text-white rounded-xl text-xs font-bold shadow transition-all active:scale-95"
+                  >
+                    📂 Seleccionar archivo PDF o Word (.docx)
+                  </button>
                 </div>
-                {fileName && (
+                {fileName && !isUploading && (
                   <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-full px-4 py-1.5 text-emerald-700 text-sm font-medium mt-2">
                     <FileText size={14} />
                     {fileName}
                   </div>
                 )}
-                <input ref={fileInputRef} type="file" accept=".txt,.md,.csv" className="hidden" onChange={handleFileInput} />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.doc,.txt,.md,.csv"
+                  className="hidden"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    (e.target as any).value = null;
+                  }}
+                  onChange={handleFileInput}
+                />
               </div>
 
-              <div className="flex items-center gap-4 py-2">
-                <div className="flex-1 h-px bg-gray-100" />
-                <span className="text-gray-300 text-xs font-bold tracking-widest">{t('orPaste')}</span>
-                <div className="flex-1 h-px bg-gray-100" />
+              <div className="flex flex-wrap items-center justify-between gap-2 py-1">
+                <span className="text-gray-400 text-xs font-bold tracking-widest uppercase">{t('orPaste')}</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sample = `PROPUNERE DE CERCETARE / FIȘĂ DE TEMĂ\n\nAdaptarea autorităților de management la noua arhitectură a fondurilor europene post-2027: provocări, riscuri și oportunități pentru România\n\nOprișan Elena Gratiela\n\n1. Tema și scurtă prezentare\nTema cercetării se înscrie în contextul reformei profunde a Politicii de Coeziune și a Cadrului Financiar Multianual 2028–2034. Comisia Europeană propune o arhitectură integrată, centrată pe Planuri de Parteneriat Național și Regional (PPNR / National and Regional Partnership Plans), care comasează instrumente anterior separate (coeziune, agricultură, politici sociale etc.) într-un număr redus de planuri naționale, cu accent sporit pe performanță, flexibilitate și legătura investiții–reforme. Pentru România, miza financiară estimată se situează în jurul a 60 de miliarde de euro.\nAutoritățile de management (AM) – atât cele naționale (în cadrul MIPE și al altor ministere), cât și cele regionale (Agențiile pentru Dezvoltare Regională, care în perioada 2021–2027 au preluat rolul de AM pentru programele regionale) – se află în fața unei transformări instituționale majore. Noua arhitectură poate aduce simplificare și mai bună coordonare strategică, dar generează și riscuri de recentralizare, reducerea autonomiei regionale, presiune pe capacitatea administrativă și necesitatea unor competențe noi ale personalului. Cercetarea explorează modul în care aceste autorități se pot adapta, identificând provocările, riscurile și oportunitățile pentru sistemul românesc de gestionare a fondurilor europene.\n\n2. Obiectivul principal al cercetării\nObiectivul principal este de a analiza și evalua procesul de adaptare instituțională și organizațională a autorităților de management din România la noua arhitectură a fondurilor europene post-2027, cu accent pe implicațiile pentru capacitatea administrativă, resursele umane și performanța sistemului de management și control.\nDe ce este relevant pentru managementul resurselor umane? Succesul absorbției și al utilizării eficiente a fondurilor europene depinde critic de calitatea resurselor umane din AM: competențe tehnice, capacitate de coordonare multi-nivel, abilități de management al schimbării și de lucru pe bază de rezultate.`;
+                      setText(sample);
+                      setFileName('propunere_cercetare_elena.docx');
+                      setPhase(null);
+                      setErrorMsg('');
+                    }}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-colors"
+                  >
+                    📄 Cargar propuesta de Elena (ejemplo)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const clipText = await navigator.clipboard.readText();
+                        if (clipText) {
+                          setText(clipText);
+                          setPhase(null);
+                          setErrorMsg('');
+                        }
+                      } catch {
+                        textareaRef.current?.focus();
+                      }
+                    }}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 transition-colors"
+                  >
+                    📋 Pegar portapapeles
+                  </button>
+                  {text && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setText('');
+                        setFileName('');
+                        setPhase(null);
+                        setErrorMsg('');
+                      }}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Textarea */}
@@ -271,6 +351,25 @@ export function TuringAcademicShield() {
                   ref={textareaRef}
                   value={text}
                   onChange={(e) => setText(e.target.value)}
+                  onInput={(e: any) => setText(e.target.value)}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const file = e.dataTransfer.files[0];
+                    if (file) {
+                      readFile(file);
+                    } else {
+                      const droppedText = e.dataTransfer.getData('text');
+                      if (droppedText) setText(droppedText);
+                    }
+                  }}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData('text');
+                    if (pasted) {
+                      setText(pasted);
+                    }
+                  }}
                   placeholder={t('textareaPlaceholder')}
                   className="w-full h-48 bg-white border border-gray-200 rounded-2xl p-5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#25D366]/10 focus:border-emerald-400 resize-none text-sm transition-all shadow-inner"
                 />
@@ -283,12 +382,30 @@ export function TuringAcademicShield() {
 
               {/* CTA */}
               <button
-                onClick={handleAnalyze}
-                disabled={!text.trim()}
-                className="w-full bg-black hover:bg-gray-900 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-bold text-base py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-black/10 active:scale-[0.98]"
+                type="button"
+                onClick={() => {
+                  if (!text || text.trim().length === 0) {
+                    setErrorMsg('Por favor carga un documento PDF/Word o pega texto en el recuadro para comenzar el análisis.');
+                    setPhase('error');
+                    textareaRef.current?.focus();
+                    return;
+                  }
+                  handleAnalyze();
+                }}
+                disabled={isUploading}
+                className="w-full bg-black hover:bg-gray-900 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-bold text-base py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-black/10 active:scale-[0.98] cursor-pointer"
               >
-                <BrainCircuit size={20} />
-                {t('analyzeBtn')}
+                {isUploading ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>Extrayendo texto del documento...</span>
+                  </>
+                ) : (
+                  <>
+                    <BrainCircuit size={20} />
+                    <span>{t('analyzeBtn')}</span>
+                  </>
+                )}
               </button>
             </div>
           )}

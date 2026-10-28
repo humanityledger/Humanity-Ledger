@@ -53,13 +53,28 @@ export class ChatDatabase {
     });
   }
 
+  async deleteMessages(ids: string[]): Promise<void> {
+    if (!ids.length) return;
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['messages'], 'readwrite');
+      const store = transaction.objectStore('messages');
+      ids.forEach(id => store.delete(id));
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
   async saveMessage(myAddress: string, peerAddress: string, msg: any): Promise<void> {
     const peerLower = (peerAddress || '').toLowerCase();
     const formatted = {
       ...msg,
       id: msg.id || `msg-${Date.now()}-${Math.random()}`,
       conversationId: `dm-${peerLower}`,
-      sentAtNs: msg.sentAtNs || (msg.sent ? new Date(msg.sent).getTime() * 1_000_000 : Date.now() * 1_000_000),
+      // Milliseconds, despite the field's name: every reader in the chat
+      // compares it with Date.now(). Nanoseconds here sorted these messages
+      // after everything else, forever.
+      sentAtNs: msg.sentAtNs || (msg.sent ? new Date(msg.sent).getTime() : Date.now()),
       sentAt: msg.sent || new Date(),
     };
     return this.saveMessages([formatted]);

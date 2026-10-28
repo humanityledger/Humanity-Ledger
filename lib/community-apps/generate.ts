@@ -16,6 +16,7 @@
 
 import { APP_TEMPLATES } from './templates';
 import { validateAppHtml } from './validate';
+import { studioWorkspaceHeaders } from '@/lib/studio/workspace';
 
 export class GenerationUnavailableError extends Error {}
 export class GenerationFailedError extends Error {
@@ -113,6 +114,8 @@ async function callAnthropic(system: string, user: string, signal: AbortSignal):
       'content-type': 'application/json',
       'x-api-key': process.env.ANTHROPIC_API_KEY as string,
       'anthropic-version': '2023-06-01',
+      // Keys not limited to one workspace must name it (see lib/studio/client.ts).
+      ...(studioWorkspaceHeaders() ?? {}),
     },
     body: JSON.stringify({
       model: process.env.COMMUNITY_APPS_MODEL || DEFAULT_ANTHROPIC_MODEL,

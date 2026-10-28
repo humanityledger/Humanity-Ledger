@@ -683,13 +683,17 @@
 }
 
 @media (min-width: 1024px) {
+  /* The card takes the height of the grid row (the full window, or the
+     sign-in card if that is taller) instead of a vh height: the app shell
+     zooms the page, and vh units do not follow that zoom, which left this
+     card ending two thirds of the way down. */
   .about,
   .root:not([data-stage="choose"]) .about {
     display: flex;
-    position: sticky;
-    top: 16px;
-    height: calc(100dvh - 32px);
-    min-height: 640px;
+    position: relative;
+    align-self: stretch;
+    height: auto;
+    min-height: 600px;
     padding: 36px 44px 32px;
     overflow: hidden;
   }
@@ -772,24 +776,32 @@
   position: relative;
   border-radius: 22px;
   overflow: hidden;
-  aspect-ratio: 4 / 3;
-  background: #d6d7d9;
+  /* Portrait, like the phone in it, so the phone is shown large on phones too. */
+  aspect-ratio: 4 / 5;
+  max-height: 560px;
+  /* The photograph's own backdrop, so no band shows while it loads. */
+  background: linear-gradient(180deg, #e9e9ea 0%, #d9d9db 100%);
   box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.06);
+}
+
+/* The photo fills the tile; fitPhoto() covers it and centres the phone,
+   whatever the tile's proportions. */
+.visual > * {
+  position: absolute;
+  inset: 0;
 }
 
 @media (min-width: 1024px) {
   .visual {
-    /* The phone photo (p1.webp) is 1600x1067 landscape.
-       fitPhoto() uses max(W/ph.w, H/ph.h)*zoom to scale-to-cover the container,
-       then centres the phone. For this to work the container must be LANDSCAPE too.
-       We fix the height to 300px and let aspect-ratio 4/3 give us ~400px width —
-       those are the values that mathematically centre the phone correctly.
-       height is explicit so CSS zoom:0.67 on <html> cannot squish this element. */
-    aspect-ratio: 4 / 3;
-    height: 300px;
-    width: auto;
-    align-self: center;
-    margin: 0 auto;
+    /* Fill the column's height, so the phone is large and the tile lines up
+       with the facts beside it. */
+    aspect-ratio: auto;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    min-height: 340px;
+    align-self: stretch;
+    margin: 0;
   }
 }
 

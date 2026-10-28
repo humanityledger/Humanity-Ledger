@@ -30,6 +30,8 @@ export const SLASH_COMMANDS: SlashCommandDef[] = [
   { command: '/gas', syntax: '/gas', description: 'Current live Ethereum gas tracker', category: 'crypto' },
   
   // Utility
+  { command: '/studio', syntax: '/studio [prompt]', description: 'Open Ledger Studio (AI). Nothing is sent to the chat', category: 'utility' },
+  { command: '/sequencer', syntax: '/sequencer', description: 'Open the Aztec sequencer dashboard', category: 'utility' },
   { command: '/help', syntax: '/help', description: 'List all native slash commands', category: 'utility' },
   { command: '/clear', syntax: '/clear', description: 'Clear local view history', category: 'utility' },
 ];
@@ -113,6 +115,12 @@ export async function executeBotCommand(text: string): Promise<string | null> {
   if (command === '/help') {
     return `⚡ **Humanity Ledger Commands:**\n` +
       SLASH_COMMANDS.map(c => `• \`${c.syntax}\` — ${c.description}`).join('\n');
+  }
+
+  if (command === '/sequencer') {
+    return `**Aztec sequencer**\n` +
+      `Live network status, your node, stake, committee duties and publisher gas, read from the Aztec node and the Rollup contract on Ethereum.\n` +
+      `[Open the sequencer dashboard](/sequencer)`;
   }
 
   // For server-resolved commands

@@ -567,7 +567,27 @@ export function TuringShieldGate({
     }
   };
 
-  if (!mounted) return null;
+  // Pre-mount / SSR: render a neutral loading screen matching the PIN gate style.
+  // Avoids hydration mismatches (server and client initial render match 1:1) and prevents blank white flash.
+  if (!mounted) {
+    return (
+      <div
+        className="fixed inset-0 z-[99999] flex items-center justify-center"
+        style={{ background: 'linear-gradient(160deg, #f7f8fa 0%, #f2f4f7 100%)' }}
+        aria-label="Loading"
+      >
+        <div className="flex gap-1.5">
+          {[0, 1, 2].map(i => (
+            <div
+              key={i}
+              className="w-2 h-2 rounded-full bg-[#15171c]/30 animate-pulse"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   // ─── FIRST-TIME SETUP OVERLAY ─────────────────────────────────────────────────
   if (settingPin) {

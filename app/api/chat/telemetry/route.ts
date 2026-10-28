@@ -104,34 +104,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const peer = searchParams.get('peer');
-        const self = searchParams.get('self');
-
-        if (!peer || !isAddress(peer)) {
-            return NextResponse.json({ error: 'Invalid peer address' }, { status: 400 });
-        }
-
-        const normalizedPeer = peer.toLowerCase();
-
-        const lastSeenStr = await safeRedisGet(`chat:presence:${normalizedPeer}`);
-
-        let isTyping = false;
-        if (self && isAddress(self)) {
-            const normalizedSelf = self.toLowerCase();
-            const typingStr = await safeRedisGet(`chat:typing:${normalizedPeer}:${normalizedSelf}`);
-            isTyping = !!typingStr && typingStr !== '0';
-        }
-
-        return NextResponse.json({
-            online:   !!lastSeenStr,
-            lastSeen: lastSeenStr ? parseInt(lastSeenStr, 10) : null,
-            isTyping,
-        });
-
-    } catch (err) {
-        console.error('[Chat/Telemetry/GET]', err);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-    }
+    // Retired. This read handed anyone, signed in or not, any wallet's online
+    // status and who they were typing to. Presence now comes from
+    // /api/chat/presence (mutual contacts + "Last seen" setting) and typing
+    // travels end-to-end over XMTP.
+    void request;
+    return NextResponse.json({ error: 'Gone' }, { status: 410 });
 }

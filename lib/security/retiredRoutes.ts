@@ -196,6 +196,12 @@ export const RETIRED_API_ROUTES: readonly string[] = [
   '/api/zk/notifications',
   '/api/zk/streams',
   '/api/zk/treasury',
+  // Added 2026-10-27 by hand: diagnostic endpoints reachable in production.
+  // test-flow drove airdrop/transfer calls for any address it was given;
+  // testpxe and test-aztec disclosed internal node URLs. None has a caller.
+  '/api/aztec/test-flow',
+  '/api/dev/testpxe',
+  '/api/test-aztec',
 ];
 
 const PATTERNS = RETIRED_API_ROUTES.map(u => new RegExp("" + toRegex(u)));

@@ -23,6 +23,7 @@
  */
 
 import type { Client } from '@xmtp/browser-sdk';
+import { hasSyncGroupName } from '@/lib/sync/xmtpSyncChannel';
 
 // ── Input sanitization ─────────────────────────────────────────────────────
 
@@ -150,6 +151,9 @@ export async function listUserGroups(client: Client): Promise<GroupInfo[]> {
 
   const result: GroupInfo[] = [];
   for (const group of groups) {
+    // The device-sync group (lib/sync) carries state between the user's own
+    // devices. It is not a chat and must never be listed as one.
+    if (hasSyncGroupName(group)) continue;
     try {
       await group.sync();
       const members = typeof group.members === 'function' ? await group.members() : (group.members ?? []);

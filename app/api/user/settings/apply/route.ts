@@ -20,6 +20,27 @@ const DIRECT_COLUMNS: Record<string, string> = {
   stealthy_mode:         'stealthMode',
 };
 
+// Only settings other people's apps or the server act on are stored here.
+// Anything else (display preferences, avatars, notes) stays on the device and
+// in the encrypted settings sync, so this endpoint is not a free-form blob
+// store anyone signed in can fill.
+const AUDIENCE = ['everybody', 'contacts', 'nobody'] as const;
+const EXTENDED_RULES: Record<string, (v: unknown) => boolean> = {
+  privacy_last_seen:     v => (AUDIENCE as readonly unknown[]).includes(v),
+  privacy_profile_photo: v => (AUDIENCE as readonly unknown[]).includes(v),
+  privacy_bio:           v => (AUDIENCE as readonly unknown[]).includes(v),
+  privacy_group_invites: v => (AUDIENCE as readonly unknown[]).includes(v),
+  show_read_receipts:    v => typeof v === 'boolean',
+};
+const DIRECT_RULES: Record<string, (v: unknown) => boolean> = {
+  language:        v => typeof v === 'string' && v.length <= 16,
+  theme:           v => typeof v === 'string' && v.length <= 32,
+  currency:        v => typeof v === 'string' && v.length <= 8,
+  allow_analytics: v => typeof v === 'boolean',
+  stealthy_mode:   v => typeof v === 'boolean',
+};
+// Keep in step with SERVER_SETTING_KEYS in lib/hooks/useSettingsEffect.ts.
+
 export async function POST(req: NextRequest) {
   try {
     const validation = await validateSecureRequest(req);
@@ -37,6 +58,9 @@ export async function POST(req: NextRequest) {
 
     const { key, value } = body;
     if (!key) return NextResponse.json({ error: 'Missing key' }, { status: 400 });
+    const rule = EXTENDED_RULES[key] ?? DIRECT_RULES[key];
+    if (!rule) return NextResponse.json({ error: 'This setting is not stored on the server' }, { status: 400 });
+    if (!rule(value)) return NextResponse.json({ error: 'Invalid value' }, { status: 400 });
 
     let updateData: Record<string, any> = {};
 

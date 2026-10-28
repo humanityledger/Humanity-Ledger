@@ -4,6 +4,7 @@ import { prisma as systemPrisma } from '@/lib/prisma';
 import { createPublicClient, http, verifyMessage, parseEther } from 'viem';
 import { optimism } from 'viem/chains';
 import { safeRedisGet, safeRedisSet } from '@/lib/redis/client';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 // Cast to base PrismaClient so TypeScript resolves goldenTicket + user models correctly.
 // The SystemPrismaClient augmentation adds cosmicEntity but doesn't remove base models 
@@ -104,7 +105,10 @@ async function checkClaimRateLimit(ip: string, walletAddress: string): Promise<{
 // Rate limited: 3 attempts per IP per hour (Redis-backed).
 // 
 export async function POST(req: NextRequest) {
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    // The FIRST X-Forwarded-For hop is whatever the client sent, so limiting on
+    // it let anyone reset the 3-per-hour limit with a new header. getClientIP
+    // takes the hop our own proxy appended (same rule as middleware.ts).
+    const ip = getClientIP(req);
 
     //  Parse body 
     let body: any;

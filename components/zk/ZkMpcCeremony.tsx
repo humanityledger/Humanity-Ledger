@@ -56,7 +56,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
         minimumContributions: 5,
       });
       const c2 = createCeremony({
-        circuitName: 'Powers of Tau â€” BN254 Universal SRS (2^20 gates)',
+        circuitName: 'Powers of Tau — BN254 Universal SRS (2^20 gates)',
         phase: 'phase1',
         coordinatorAddress: '0xaztec_genesis_sequencer',
         description: 'Universal Structured Reference String ceremony for Aztec Network zkSNARK proofs.',
@@ -95,7 +95,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
       setEntropyProgress(pct);
       if (pct >= 100) {
         setIsCollectingEntropy(false);
-        toast.success('EntropÃ­a criptogrÃ¡fica acumulada (128 bytes)');
+        toast.success('Entropía criptográfica acumulada (128 bytes)');
       }
       return updated;
     });
@@ -117,13 +117,13 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
     if (!selectedCeremony) return;
     if (entropyProgress < 100) {
       setIsCollectingEntropy(true);
-      toast.info('Mueve el cursor sobre el panel para capturar entropÃ­a fÃ­sica');
+      toast.info('Mueve el cursor sobre el panel para capturar entropía física');
       return;
     }
 
     setIsContributing(true);
     setContributionProgress(5);
-    setCurrentStep('Inicializando Barretenberg SRS engineâ€¦');
+    setCurrentStep('Inicializando Barretenberg SRS engine…');
 
     try {
       const contrib = await contributeToceremony(
@@ -137,13 +137,13 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
 
       if (contrib) {
         setLastContribution(contrib);
-        toast.success('Â¡ContribuciÃ³n MPC computada e incorporada a la ceremonia!');
+        toast.success('¡Contribución MPC computada e incorporada a la ceremonia!');
         loadCeremonies();
       } else {
-        toast.error('La ceremonia no estÃ¡ activa');
+        toast.error('La ceremonia no está activa');
       }
     } catch {
-      toast.error('Error al generar la contribuciÃ³n MPC');
+      toast.error('Error al generar la contribución MPC');
     } finally {
       setIsContributing(false);
       setEntropyProgress(0);
@@ -180,7 +180,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
     dlAnchor.setAttribute('href', dataStr);
     dlAnchor.setAttribute('download', `aztec-mpc-transcript-${ceremony.id}.json`);
     dlAnchor.click();
-    toast.success('TranscripciÃ³n criptogrÃ¡fica descargada');
+    toast.success('Transcripción criptográfica descargada');
   };
 
   return (
@@ -254,7 +254,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                       : 'bg-blue-50 text-blue-700 border border-blue-200'
                   }`}>
-                    {c.phase.toUpperCase()} Â· {c.status}
+                    {c.phase.toUpperCase()} · {c.status}
                   </span>
                   <span className="text-[11px] font-mono font-semibold text-black/50">
                     {c.contributions.length}/{c.minimumContributions}
@@ -280,7 +280,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                     onClick={() => handleExportTranscript(selectedCeremony)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-black/10 text-[12px] font-semibold text-[#1C1C1E] hover:bg-black/5"
                   >
-                    <Download size={13} /> Exportar TranscripciÃ³n
+                    <Download size={13} /> Exportar Transcripción
                   </button>
                 </div>
                 <p className="text-[13px] text-black/60 leading-relaxed mb-4">{selectedCeremony.description}</p>
@@ -311,14 +311,14 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Sparkles size={16} className="text-[#1C1C1E]" />
-                    <h4 className="text-[14px] font-bold text-[#1C1C1E]">Recolector de EntropÃ­a CriptogrÃ¡fica</h4>
+                    <h4 className="text-[14px] font-bold text-[#1C1C1E]">Recolector de Entropía Criptográfica</h4>
                   </div>
                   <span className="text-[12px] font-mono font-bold text-[#1C1C1E]">
                     {entropyProgress}% ({entropyBits.length}/128 bytes)
                   </span>
                 </div>
                 <p className="text-[12px] text-black/50 mb-3">
-                  Pasa el mouse sobre el canvas interactivo para recolectar ruido fÃ­sico y latencia de reloj para alimentar la funciÃ³n hash de BN254.
+                  Pasa el mouse sobre el canvas interactivo para recolectar ruido físico y latencia de reloj para alimentar la función hash de BN254.
                 </p>
 
                 <div
@@ -340,14 +340,14 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                   {entropyProgress === 0 && !isCollectingEntropy && (
                     <div className="absolute inset-0 flex items-center justify-center text-center p-4">
                       <p className="text-[12px] font-semibold text-black/40">
-                        Haz clic en &ldquo;Capturar EntropÃ­a&rdquo; y mueve el cursor libremente por este espacio
+                        Haz clic en &ldquo;Capturar Entropía&rdquo; y mueve el cursor libremente por este espacio
                       </p>
                     </div>
                   )}
                   {entropyProgress >= 100 && (
                     <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/10 backdrop-blur-[1px]">
                       <div className="flex items-center gap-2 text-emerald-700 font-bold text-[13px] bg-white px-3 py-1.5 rounded-full shadow-sm border border-emerald-200">
-                        <CheckCircle2 size={16} /> EntropÃ­a Completa
+                        <CheckCircle2 size={16} /> Entropía Completa
                       </div>
                     </div>
                   )}
@@ -361,7 +361,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                       onClick={() => setIsCollectingEntropy(true)}
                       className="px-4 py-2 rounded-xl bg-black/5 hover:bg-black/10 text-[#1C1C1E] text-[13px] font-bold transition-all"
                     >
-                      Capturar EntropÃ­a
+                      Capturar Entropía
                     </button>
                   )}
 
@@ -388,7 +388,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                       </>
                     ) : (
                       <>
-                        <Play size={16} /> Computar y Enviar ContribuciÃ³n MPC
+                        <Play size={16} /> Computar y Enviar Contribución MPC
                       </>
                     )}
                   </button>
@@ -407,8 +407,8 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                 {selectedCeremony.contributions.length === 0 ? (
                   <div className="p-8 text-center bg-[#F9F9FB] rounded-2xl border border-black/5">
                     <Cpu size={32} className="mx-auto text-black/20 mb-2" />
-                    <p className="text-[13px] font-semibold text-black/50">SÃ© el primer participante de esta ceremonia</p>
-                    <p className="text-[11px] text-black/40 mt-0.5">Tu contribuciÃ³n garantizarÃ¡ la inviolabilidad del setup</p>
+                    <p className="text-[13px] font-semibold text-black/50">Sé el primer participante de esta ceremonia</p>
+                    <p className="text-[11px] text-black/40 mt-0.5">Tu contribución garantizará la inviolabilidad del setup</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -429,7 +429,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
 
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                            âœ“ VÃ¡lida
+                            ✓ Válida
                           </span>
                           <span className="text-[10px] text-black/40">
                             {new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -481,12 +481,12 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-black/60 uppercase tracking-wider block mb-1">DescripciÃ³n</label>
+                  <label className="text-[11px] font-bold text-black/60 uppercase tracking-wider block mb-1">Descripción</label>
                   <textarea
                     rows={3}
                     value={newDescription}
                     onChange={e => setNewDescription(e.target.value)}
-                    placeholder="Detalles sobre las restricciones y parÃ¡metros del circuito..."
+                    placeholder="Detalles sobre las restricciones y parámetros del circuito..."
                     className="w-full px-3.5 py-2.5 rounded-xl border border-black/10 text-[13px] outline-none focus:border-[#1C1C1E] resize-none"
                   />
                 </div>
@@ -504,7 +504,7 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
                     </select>
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-black/60 uppercase tracking-wider block mb-1">MÃ­nimo Contribuciones</label>
+                    <label className="text-[11px] font-bold text-black/60 uppercase tracking-wider block mb-1">Mínimo Contribuciones</label>
                     <input
                       type="number"
                       min={1}

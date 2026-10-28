@@ -16,7 +16,9 @@ class NotificationEngine {
     }
 
     try {
-      this.registration = await navigator.serviceWorker.register('/ledger-sw.js');
+      // One worker for the whole app; a second script on the same scope
+      // replaced the first (see public/sw.js).
+      this.registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
       console.log('[NotificationEngine] Service Worker registered successfully.');
       
       // Request background sync for outbox if supported

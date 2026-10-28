@@ -1,0 +1,125 @@
+# Humanity Ledger — Aztec sequencer (v6.0.0)
+#
+# Follows the official operator setup (docs.aztec.network, "Running a
+# Sequencer", v6.0.0). One node runs the archiver, the world state and the
+# sequencer; it signs with the keys in ./keys/keystore.json.
+#
+#   cp aztec-sequencer.env.example .env        # fill it in
+#   ./scripts/preflight.sh                      # checks L1, ports, keys
+#   docker compose up -d                        # sequencer only
+#   docker compose --profile monitoring up -d   # + OTEL collector, Prometheus, Grafana
+#
+# Notes that matter:
+#  - The image is azteclabs/aztec. aztecprotocol/aztec has no v6 release and
+#    would silently pull v5.
+#  - The admin API (8880) is never published to the host.
+#  - Use a new, empty data directory when moving from v5.
+#  - Leave ROLLUP_VERSION unset so the node follows the canonical rollup.
+
+services:
+  aztec-sequencer:
+    image: "azteclabs/aztec:6.0.0"
+    container_name: "aztec-sequencer"
+    ports:
+      - ${AZTEC_PORT}:${AZTEC_PORT}
+      - ${P2P_PORT}:${P2P_PORT}
+      - ${P2P_PORT}:${P2P_PORT}/udp
+    volumes:
+      - ${DATA_DIRECTORY}:/var/lib/data
+      - ${KEY_STORE_DIRECTORY}:/var/lib/keystore
+    environment:
+      KEY_STORE_DIRECTORY: /var/lib/keystore
+      DATA_DIRECTORY: /var/lib/data
+      LOG_LEVEL: ${LOG_LEVEL}
+      ETHEREUM_HOSTS: ${ETHEREUM_HOSTS}
+      L1_CONSENSUS_HOST_URLS: ${L1_CONSENSUS_HOST_URLS}
+      ETHEREUM_DEBUG_HOSTS: ${ETHEREUM_DEBUG_HOSTS}
+      P2P_IP: ${P2P_IP}
+      P2P_PORT: ${P2P_PORT}
+      AZTEC_PORT: ${AZTEC_PORT}
+      AZTEC_ADMIN_PORT: ${AZTEC_ADMIN_PORT}
+      # Metrics go to the collector (monitoring profile). Unset = no export.
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:-}
+      # Nethermind older than 1.36.0 only: uncomment.
+      # L1_FIXED_PRIORITY_FEE_PER_GAS: "1"
+    entrypoint: >-
+      node
+      --no-warnings
+      /usr/src/yarn-project/aztec/dest/bin/index.js
+      start
+      --node
+      --sequencer
+      --network ${AZTEC_NETWORK}
+    healthcheck:
+      # GET /status answers while the node runs, including v6 standby mode.
+      test: ["CMD-SHELL", "curl -sf http://localhost:${AZTEC_PORT}/status >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - aztec
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # ── Monitoring (optional): docker compose --profile monitoring up -d ──────
+  otel-collector:
+    profiles: ["monitoring"]
+    image: "otel/opentelemetry-collector-contrib:0.111.0"
+    container_name: "aztec-otel-collector"
+    command: ["--config=/etc/otelcol/config.yml"]
+    volumes:
+      - ./monitoring/otel-collector-config.yml:/etc/otelcol/config.yml:ro
+    networks:
+      - aztec
+    restart: always
+
+  prometheus:
+    profiles: ["monitoring"]
+    image: "prom/prometheus:v2.54.1"
+    container_name: "aztec-prometheus"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    # Bound to localhost: reach it over an SSH tunnel, not the internet.
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks:
+      - aztec
+    restart: always
+
+  grafana:
+    profiles: ["monitoring"]
+    image: "grafana/grafana:11.2.2"
+    container_name: "aztec-grafana"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3001:3000"
+    networks:
+      - aztec
+    restart: always
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  aztec:
+    name: aztec

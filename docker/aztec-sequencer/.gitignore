@@ -1,0 +1,7 @@
+# Never commit keys, node state or filled-in configuration.
+.env
+keys/
+data/
+*.keystore.json
+key*.json
+!keystore.example.json

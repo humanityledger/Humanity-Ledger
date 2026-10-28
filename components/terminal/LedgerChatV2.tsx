@@ -26,6 +26,10 @@ import { useWalletStore } from '@/lib/store/wallet-store';
 import { useAztec } from '@/context/AztecContext';
 import { useAztecNative } from '@/context/AztecNativeContext';
 import { toast } from 'sonner';
+import { chatTextPx, DEFAULT_TEXT_SIZE_LEVEL } from '@/lib/chat/textSize';
+import { loadBlockList, saveBlockList, BLOCK_LIST_EVENT } from '@/lib/chat/blockList';
+import { deriveCallLog, callLogMessages, decodeCallEntry, callEntryLabel, isCallSignal, CALL_LOG_PREFIX, type CallSignal } from '@/lib/chat/callLog';
+import { startDeviceSync, stopDeviceSync, handleDeviceSyncMessage, setSynced, getSynced, getDeviceStore, DEVICE_SYNC_EVENT, type DeviceSyncEventDetail } from '@/lib/sync/runtime';
 import { vault } from '@/lib/core/SecureVault';
 import { ChatCommunityGate } from '@/components/chat/ChatCommunityGate';
 import { getLocalContacts, saveLocalContact, resolveContactName, LocalContact } from '@/lib/wallet/localAddressBook';
@@ -94,6 +98,9 @@ interface ConversationMeta {
   lastAt?: Date;
   unreadCount?: number;
 }
+
+/** Attach-menu entries hidden when Settings → Payments → "Payments in chats" is off. */
+const PAYMENT_DRAWER_IDS = new Set(['zkmoney', 'zkstream', 'zkinvoice', 'payment', 'tip']);
 
 /** forceAutoInit=true: always auto-init XMTP even on mobile (used by /chat route) */
 export interface LedgerChatProps {
@@ -200,6 +207,10 @@ export const formatMessagePreview = (content: string): string => {
   }
 
   // Handle system messages and metadata
+  if (cleanContent.startsWith(CALL_LOG_PREFIX)) {
+    const entry = decodeCallEntry(cleanContent);
+    return entry ? callEntryLabel(entry) : 'Call';
+  }
   if (cleanContent.startsWith('__CALL_OFFER__:')) {
     return cleanContent.includes(':video') ? '📹 Video Call' : '📞 Voice Call';
   }
@@ -239,6 +250,12 @@ import { MessageBubble, StickerPicker } from '../chat/MessageBubble';
 import { PinPrompt } from '@/components/chat/pin/PinPrompt';
 import { IncomingCallScreen, OutgoingCallScreen, AudioCallStage, CallControls } from '@/components/chat/call/CallScreens';
 import { Archive, ArchiveRestore, ChevronLeft, ChevronUp, ChevronDown, MessageSquare, Plus, ArrowUp, WifiOff, Pin, Check, ScanQrCode, Camera, FileText, Sticker, ListChecks, CreditCard, Receipt, Waves, Navigation, Timer, Info, LoaderCircle, Minimize2, Mail, ShieldCheck, Reply, Forward, Pencil, Flag, MessagesSquare, Globe } from 'lucide-react';
+import { Sparkles as StudioIcon } from 'lucide-react';
+
+// Ledger Studio (AI workspace). Loaded only when opened; never sees encrypted
+// chats unless the person sends something there themselves.
+const LedgerStudio = dynamic(() => import('@/components/studio/LedgerStudio').then(m => ({ default: m.LedgerStudio })), { ssr: false });
+const STUDIO_PREFIX = /^(?:@studio|\/studio)(?:\s+|$)/i;
 
 
 function isMessageExpired(msgTimestamp: number, timerSetting: string | undefined) {
@@ -279,9 +296,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const aztecNative = useAztecNative();
 
   // Mechanical keyboard click sound
+  // One AudioContext for every click: browsers cap how many a page may open.
+  const keyClickCtxRef = useRef<AudioContext | null>(null);
   const playKeyClick = () => {
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (!keyClickCtxRef.current || keyClickCtxRef.current.state === 'closed') {
+        keyClickCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = keyClickCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
@@ -310,7 +333,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const accentColor = ledgerSettings?.accent_color || '#15171c';
   // Font and size from settings (with sensible defaults)
   const chatFont = ledgerSettings?.font_family || 'inter';
-  const textSize = ledgerSettings?.text_size ?? 4;
+  const textSize = ledgerSettings?.text_size ?? DEFAULT_TEXT_SIZE_LEVEL;
 
   // Conversation wallpaper. Every option stays light and quiet so messages
   // keep their contrast; the default is the app's neutral background.
@@ -344,7 +367,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     'humanist': '"Nunito", sans-serif',
   };
   const fontFamily = FONT_MAP[chatFont] || FONT_MAP['inter'];
-  const fontSizePx = (textSize || 4) * 2 + 6;
+  const fontSizePx = chatTextPx(textSize);
 
 
   // MASTER RECOVERY: If wallet is connected but connector is missing (zombie session after mobile deep-link)
@@ -563,6 +586,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   useEffect(() => {
     const handleGlobalKeys = (e: KeyboardEvent) => {
+      // Ledger Studio has its own shortcuts while it is open.
+      if (document.querySelector('[data-ledger-studio]')) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setShowSearch(prev => !prev);
@@ -677,6 +702,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // Telegram-style features
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [studioOpen, setStudioOpen] = useState<{ prompt?: string } | null>(null);
   const [showVault, setShowVault] = useState(false);
   const [showScheduleCall, setShowScheduleCall] = useState(false);
 
@@ -686,6 +712,38 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const [blockedPeers, setBlockedPeers] = useState<Set<string>>(new Set());
+  // The stream callback reads this; state alone would be stale inside it.
+  const blockedPeersRef = useRef<Set<string>>(new Set());
+
+  // "Screen privacy": blur the open chat whenever the window loses focus or
+  // the tab is hidden, so the app switcher, screen shares and shoulder
+  // surfers see nothing. (A web page cannot block OS screenshots.)
+  const [screenShielded, setScreenShielded] = useState(false);
+  const antiScreenshotOn = !!ledgerSettings?.anti_screenshot;
+  useEffect(() => {
+    if (!antiScreenshotOn) { setScreenShielded(false); return; }
+    const hide = () => setScreenShielded(true);
+    const show = () => { if (!document.hidden) setScreenShielded(false); };
+    const onVis = () => (document.hidden ? hide() : show());
+    window.addEventListener('blur', hide);
+    window.addEventListener('focus', show);
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.removeEventListener('blur', hide);
+      window.removeEventListener('focus', show);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [antiScreenshotOn]);
+  useEffect(() => { blockedPeersRef.current = blockedPeers; }, [blockedPeers]);
+  useEffect(() => {
+    // The settings screen edits the same list; pick its changes up live.
+    const onChange = (e: Event) => {
+      const list = (e as CustomEvent).detail?.blocked;
+      if (Array.isArray(list)) setBlockedPeers(new Set(list.map((x: string) => String(x).toLowerCase())));
+    };
+    window.addEventListener(BLOCK_LIST_EVENT, onChange);
+    return () => window.removeEventListener(BLOCK_LIST_EVENT, onChange);
+  }, []);
 
   const [contextMenu, setContextMenu] = useState<{ id: string, content: string, x: number, y: number } | null>(null);
 
@@ -867,8 +925,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   useEffect(() => {
     const loadBlocked = async () => {
       try {
-        const b = await vault.getItem('ledger_blocked');
-        if (b) setBlockedPeers(new Set(JSON.parse(b)));
+        setBlockedPeers(new Set(await loadBlockList()));
         const eula = await vault.getItem('ledger_eula_accepted');
         if (eula === 'true') setHasAcceptedEula(true);
         const perm = await vault.getItem('ledger_media_perm');
@@ -996,16 +1053,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   };
 
   const toggleBlock = (peer: string) => {
-    setBlockedPeers(prev => {
-      const next = new Set(prev);
-      const isBlocked = next.has(peer.toLowerCase());
-      if (isBlocked) next.delete(peer.toLowerCase());
-      else next.add(peer.toLowerCase());
-      
-      vault.setItem('ledger_blocked', JSON.stringify(Array.from(next)));
-      toast.success(isBlocked ? "Unblocked" : "Blocked. They can no longer message you.");
-      return next;
-    });
+    const p = peer.toLowerCase();
+    const next = new Set(blockedPeersRef.current);
+    const wasBlocked = next.has(p);
+    if (wasBlocked) next.delete(p); else next.add(p);
+    blockedPeersRef.current = next;
+    setBlockedPeers(next);
+    saveBlockList(Array.from(next)).catch(() => {});
+    toast.success(wasBlocked ? 'Unblocked' : 'Blocked. Their messages and calls will no longer reach you.');
   };
 
   const reportMessage = async (msgId: string, content: string) => {
@@ -1057,6 +1112,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const dmId = `dm-${activePeer.toLowerCase()}`;
     const clearTs = Date.now();
     localStorage.setItem(`ledger_cleared_${address}_${activePeer.toLowerCase()}`, clearTs.toString());
+    setSynced(address, { [`cleared:${activePeer.toLowerCase()}`]: clearTs }); // clear on all devices
     // [BUG FIX] Filter by BOTH conversationId match AND by peer address presence in id
     // This catches messages that may not have conversationId set correctly
     setMessages(prev => prev.filter(m => {
@@ -1083,6 +1139,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       } else {
         next.add(peer.toLowerCase());
         toast.success('Archived');
+      }
+      if (address) {
+        const p = peer.toLowerCase();
+        setSynced(address, { [`archived:${p}`]: next.has(p) ? true : null }); // all devices
       }
       try { localStorage.setItem(`ledger_archived_${address}`, JSON.stringify([...next])); } catch {}
       return next;
@@ -1245,8 +1305,119 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       setMessages([]);
       canReceiveCache.current.clear();
       initInFlight.current = false;
+      stopDeviceSync();
     }
   }, [isConnected, address, client]);
+
+  // ── Device sync (lib/sync) ────────────────────────────────────────────────
+  // Mute, lock, archive, favourites, timers, "clear chat", read state and
+  // settings follow the account across its devices, end-to-end encrypted over
+  // an XMTP group that only this account's own devices belong to.
+  useEffect(() => {
+    if (!address) return;
+    getDeviceStore(address); // create it with this exact spelling of the address
+    if (client) startDeviceSync(client, address).catch(() => {});
+  }, [client, address]);
+
+  useEffect(() => {
+    if (!address) return;
+    const me = address.toLowerCase();
+    const onSync = (e: Event) => {
+      const detail = (e as CustomEvent<DeviceSyncEventDetail>).detail;
+      if (!detail || detail.account !== me || detail.source !== 'remote') return;
+      const store = getDeviceStore(address);
+      if (!store) return;
+      const { keys } = detail;
+      if (keys.some(k => k.startsWith('archived:'))) {
+        setArchivedPeers(new Set(store.peersWhere('archived')));
+      }
+      const readPeers = keys.filter(k => k.startsWith('read:')).map(k => k.slice(5));
+      if (readPeers.length) {
+        setConversations(prev => prev.map(c =>
+          readPeers.includes(c.peerAddress.toLowerCase()) && c.unreadCount ? { ...c, unreadCount: 0 } : c
+        ));
+      }
+      const active = activePeerRef.current?.toLowerCase();
+      if (active && keys.includes(`cleared:${active}`)) {
+        const ts = Number(store.get(`cleared:${active}`) || 0);
+        // sentAtNs holds milliseconds after mapping (see the clear filter in fetchHistorical).
+        if (ts > 0) setMessages(prev => prev.filter(m => m.conversationId !== `dm-${active}` || (m.sentAtNs || 0) > ts));
+      }
+    };
+    window.addEventListener(DEVICE_SYNC_EVENT, onSync);
+    return () => window.removeEventListener(DEVICE_SYNC_EVENT, onSync);
+  }, [address]);
+
+  // ── Call log in the chat (lib/chat/callLog.ts) ────────────────────────────
+  // Every call signal of a conversation (from history and from the live
+  // stream) is kept here, and the conversation's call bubbles are rebuilt from
+  // them. Both people hold the same signals, so both see the same calls.
+  const callSignalsRef = useRef<Map<string, CallSignal[]>>(new Map());
+  const addCallSignalsRef = useRef<(peer: string, sigs: CallSignal[]) => void>(() => {});
+  addCallSignalsRef.current = (peer: string, sigs: CallSignal[]) => {
+    // An empty `sigs` just re-derives (the clock may have turned Ringing into Missed).
+    const p = (peer || '').toLowerCase();
+    if (!p) return;
+    const list = callSignalsRef.current.get(p) || [];
+    const known = new Set(list.map(s => s.id));
+    for (const s of sigs) if (!known.has(s.id)) { list.push(s); known.add(s.id); }
+    callSignalsRef.current.set(p, list.slice(-500));
+    if (p !== activePeerRef.current?.toLowerCase()) return;
+    let clearedAt = 0;
+    try { clearedAt = parseInt(localStorage.getItem(`ledger_cleared_${address}_${p}`) || '0', 10) || 0; } catch {}
+    const msgs = callLogMessages(deriveCallLog(callSignalsRef.current.get(p) || []), {
+      conversationId: `dm-${p}`,
+      selfInboxId: (client as any)?.inboxId || '',
+      peerInboxId: activePeerInboxIdRef.current,
+    }).filter(m => m.sentAtNs > clearedAt); // "Clear chat" clears its calls too
+    if (!msgs.length) return;
+    setMessages(prev => {
+      const byId = new Map(msgs.map(m => [m.id, m]));
+      let changed = false;
+      const next = prev.map(m => {
+        const u = byId.get(m.id);
+        if (!u) return m;
+        byId.delete(m.id);
+        if (u.content === m.content) return m;
+        changed = true;
+        return { ...m, ...u };
+      });
+      if (byId.size) { changed = true; next.push(...byId.values()); }
+      return changed ? next.sort((a, b) => a.sentAtNs - b.sentAtNs) : prev;
+    });
+  };
+  // An unanswered call turns from "Ringing" into "Missed" with time alone.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const p = activePeerRef.current?.toLowerCase();
+      if (p && callSignalsRef.current.get(p)?.length) addCallSignalsRef.current(p, []);
+    }, 15000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Publish "read up to now" for a chat, at most every 5 s per chat, so a busy
+  // open conversation does not turn every incoming message into a sync message.
+  const lastReadPublishRef = useRef<Map<string, number>>(new Map());
+  const publishReadRef = useRef<(peer: string) => void>(() => {});
+  publishReadRef.current = (peer: string) => {
+    const p = (peer || '').toLowerCase();
+    if (!address || !/^0x[0-9a-f]{40}$/.test(p)) return;
+    const now = Date.now();
+    if (now - (lastReadPublishRef.current.get(p) || 0) < 5000) return;
+    lastReadPublishRef.current.set(p, now);
+    setSynced(address, { [`read:${p}`]: now });
+  };
+
+  // Opening a chat marks it read here and on the account's other devices.
+  useEffect(() => {
+    if (!address || !activePeer) return;
+    const peer = activePeer.toLowerCase();
+    if (!/^0x[0-9a-f]{40}$/.test(peer)) return;
+    setConversations(prev => prev.map(c =>
+      c.peerAddress.toLowerCase() === peer && c.unreadCount ? { ...c, unreadCount: 0 } : c
+    ));
+    setSynced(address, { [`read:${peer}`]: Date.now() });
+  }, [activePeer, address]);
 
   // [QUANTUM WEBSOCKET RESURRECTION] iOS Safari suspends WebSocket connections when the
   // user switches to their wallet app to sign. When they return, XMTP stream may be dead.
@@ -1417,38 +1588,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       localStorage.removeItem(draftKey);
     }
 
-    // Typing telemetry: only fire when there is actual text AND setting is enabled
-    if (!inputText.trim()) return;
-    if (ledgerSettings?.typing_indicators === false) return;
-    const sendTyping = async () => {
-        try {
-            await fetch('/api/chat/telemetry', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ address, type: 'typing', peer: activePeer })
-            });
-        } catch {}
-    };
+    // Typing is signalled end-to-end over XMTP (`__TYPING__`, see the input's
+    // onChange). The old server telemetry wrote to Redis on every keystroke
+    // and nobody read it, so it is gone.
+  }, [inputText, activePeer, address]);
 
-    const timeoutId = setTimeout(sendTyping, 500); 
-    return () => clearTimeout(timeoutId);
-  }, [inputText, activePeer, address, ledgerSettings]);
-
-  // Utility: immediately clear typing signal on the server (call after send)
-  const stopTypingSignal = async () => {
-    if (!activePeer || !address) return;
-    // We clear the typing key by sending an artificial empty heartbeat  Redis TTL handles it in 5s
-    // but this triggers an explicit flush to avoid the "ghost typing" 5-second tail.
-    // We write a dummy value that the server interprets as "not typing" via the TTL expiry.
-    // Fastest approach: write the key with a 0-second TTL to expire it immediately.
-    try {
-      await fetch('/api/chat/telemetry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, type: 'stop_typing', peer: activePeer })
-      });
-    } catch {}
-  };
+  const stopTypingSignal = () => {};
 
   // ─── Ringtone Generator ──────────────────────────────────────────────────────
   // Note: ringtoneCtxRef and ringtoneStopped are declared above (hoisted)
@@ -1473,6 +1618,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1);
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 1);
+      // "Vibrate on incoming call" (Settings > Calls) shares the vibration
+      // setting; useSettingsEffect mirrors it to ledger_haptics.
+      try {
+        const haptics = Number(localStorage.getItem('ledger_haptics') ?? '1');
+        if (haptics > 0 && typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate([400, 200, 400]);
+      } catch {}
     };
     playRing();
     const id = setInterval(playRing, 2000);
@@ -1482,6 +1633,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const stopRingtone = useCallback(() => {
     // Mark stopped FIRST so any in-flight playRing() that is about to execute returns early
     ringtoneStopped.current = true;
+    try { if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(0); } catch {}
     if (ringtoneRef.current) {
       clearInterval(ringtoneRef.current);
       ringtoneRef.current = null;
@@ -1533,7 +1685,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             { urls: 'stun:stun2.l.google.com:19302' },
             { urls: 'stun:stun3.l.google.com:19302' },
             { urls: 'stun:stun4.l.google.com:19302' },
-            // OpenRelay TURN — free, reliable, no account needed
+            // Our own TURN relay, when configured. "Hide my IP address in calls"
+            // sends every call through TURN, so a relay we run is what keeps
+            // those calls connecting at scale; the public one below is a fallback.
+            ...((): RTCIceServer[] => {
+              const urls = (process.env.NEXT_PUBLIC_TURN_URLS || '').split(',').map(s => s.trim()).filter(Boolean);
+              if (urls.length === 0) return [];
+              return [{ urls, username: process.env.NEXT_PUBLIC_TURN_USERNAME || undefined, credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL || undefined }];
+            })(),
+            // OpenRelay TURN — free public relay, best effort
             { urls: 'stun:openrelay.metered.ca:80' },
             {
               urls: 'turn:openrelay.metered.ca:80',
@@ -1638,13 +1798,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             if (remoteVideoRef.current) remoteVideoRef.current.srcObject = rStream;
             if (remoteAudioRef.current) {
               remoteAudioRef.current.srcObject = rStream;
-              if (ledgerSettings?.notifications_private !== false) {
-                remoteAudioRef.current.play().catch(e => console.warn('[Audio] remote play blocked:', e));
-              }
+              // Call audio always plays. It used to be gated on the "Private
+              // messages" NOTIFICATION toggle, which silenced the other person.
+              remoteAudioRef.current.play().catch(e => console.warn('[Audio] remote play blocked:', e));
             }
           });
-          connection.on('close', () => performEndCallRef.current());
-          connection.on('error', () => performEndCallRef.current());
+          connection.on('close', () => endCallIfCurrentRef.current(connection));
+          connection.on('error', () => endCallIfCurrentRef.current(connection));
         } else {
           console.warn('[Call] Received peer.on(call) in unexpected state:', callStateRef.current, '— rejecting.');
           connection.close();
@@ -1792,7 +1952,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
     if (remoteAudioRef.current && remoteStream && remoteAudioRef.current.srcObject !== remoteStream) {
       remoteAudioRef.current.srcObject = remoteStream;
-      if (ledgerSettings?.notifications_private !== false) { remoteAudioRef.current.play().catch(e => console.warn('Audio play blocked:', e)); }
+      remoteAudioRef.current.play().catch(e => console.warn('Audio play blocked:', e));
     }
   }, [callState, remoteStream]);
 
@@ -1949,6 +2109,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const performEndCallRef = useRef<() => void>(performEndCall);
   useEffect(() => { performEndCallRef.current = performEndCall; }, [performEndCall]);
 
+  // A PeerJS connection closing ends the call only if it is the call's
+  // connection. With several devices on one account, a caller can hold two:
+  // the one that reached the callee's PC (never answered) and the reverse
+  // dial from the phone that did answer. Closing the first must not end the
+  // second. With no active connection yet, any close ends the attempt as before.
+  const endCallIfCurrentRef = useRef<(conn: any) => void>(() => {});
+  endCallIfCurrentRef.current = (conn: any) => {
+    const active = activeConnectionRef.current;
+    if (!active || active === conn) performEndCallRef.current();
+  };
+
   // ─── startCall: Initiates an outgoing call ───────────────────────────────────
   // ANDROID FIX: This function MUST be called directly from a user-gesture handler
   // (onClick). Android Chrome enforces that getUserMedia() is only callable from
@@ -2040,11 +2211,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             if (remoteVideoRef.current) remoteVideoRef.current.srcObject = rStream;
             if (remoteAudioRef.current) {
               remoteAudioRef.current.srcObject = rStream;
-              if (ledgerSettings?.notifications_private !== false) { remoteAudioRef.current.play().catch(err => console.warn('[Audio] play() blocked:', err)); }
+              remoteAudioRef.current.play().catch(err => console.warn('[Audio] play() blocked:', err));
             }
           });
-          outConn.on('close', () => performEndCallRef.current());
-          outConn.on('error', () => performEndCallRef.current());
+          // The callee may answer on a different device than the one this
+          // connection reached (multi-device). When that other device drops
+          // this unanswered connection, the call that WAS answered must live on.
+          outConn.on('close', () => endCallIfCurrentRef.current(outConn));
+          outConn.on('error', () => endCallIfCurrentRef.current(outConn));
         }
       toast.success('Ringing');
 
@@ -2061,6 +2235,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             });
           }
           toast.error('No answer.');
+          // Tell the callee to stop ringing; both call logs then read "missed".
+          executeSendRef.current?.('__CALL_HANGUP__').catch(() => {});
           performEndCallRef.current();
         }
       }, 45000);
@@ -2156,11 +2332,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           if (remoteVideoRef.current) remoteVideoRef.current.srcObject = rStream;
           if (remoteAudioRef.current) {
             remoteAudioRef.current.srcObject = rStream;
-            if (ledgerSettings?.notifications_private !== false) { remoteAudioRef.current.play().catch(err => console.warn('[Audio] play() blocked:', err)); }
+            remoteAudioRef.current.play().catch(err => console.warn('[Audio] play() blocked:', err));
           }
         });
-        pendingConn.on('close', () => performEndCallRef.current());
-        pendingConn.on('error', () => performEndCallRef.current());
+        pendingConn.on('close', () => endCallIfCurrentRef.current(pendingConn));
+        pendingConn.on('error', () => endCallIfCurrentRef.current(pendingConn));
       } else {
         // FALLBACK: Outbound call to Caller's deterministic PeerID
         console.log('[Call:answerCall] No pending connection — falling back to outbound dial');
@@ -2196,11 +2372,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           if (remoteVideoRef.current) remoteVideoRef.current.srcObject = rStream;
           if (remoteAudioRef.current) {
             remoteAudioRef.current.srcObject = rStream;
-            if (ledgerSettings?.notifications_private !== false) { remoteAudioRef.current.play().catch(err => console.warn('[Audio] play() blocked:', err)); }
+            remoteAudioRef.current.play().catch(err => console.warn('[Audio] play() blocked:', err));
           }
         });
-        conn.on('close', () => performEndCallRef.current());
-        conn.on('error', () => performEndCallRef.current());
+        conn.on('close', () => endCallIfCurrentRef.current(conn));
+        conn.on('error', () => endCallIfCurrentRef.current(conn));
       }
 
       // Send CALL_ANSWER as status update for chat UI
@@ -2312,6 +2488,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   // ─── endCall: Either party hangs up ─────────────────────────────────────────
   const endCall = useCallback(async () => {
+    // Hanging up before the other side picked up is a call with no answer,
+    // not an answered call of 0 seconds.
+    const wasConnected = callStateRef.current === 'active';
     try {
       if (executeSendRef.current) await executeSendRef.current('__CALL_HANGUP__');
     } catch {}
@@ -2321,13 +2500,60 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         peerAddress: activePeer,
         type: callType || 'audio',
         direction: isCallerRef.current ? 'outgoing' : 'incoming',
-        status: 'answered',
-        durationSeconds: callDurationSeconds,
+        status: wasConnected ? 'answered' : 'missed',
+        durationSeconds: wasConnected ? callDurationSeconds : 0,
       });
     }
     performEndCall();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [performEndCall, address, activePeer, callType, callDurationSeconds]);
+
+  // ── Hang up from the Dynamic Island, call back from a call bubble ──────────
+  // The island's red button dispatches 'ledger_end_active_call'. Only the group
+  // call listened for it, so in a 1:1 call the island closed while the call
+  // went on and the other side never heard a hang-up. It now does exactly
+  // what the in-call buttons do: decline while ringing, hang up otherwise.
+  //
+  // "Hide my IP address in calls" is baked into the PeerJS connection when it
+  // is created, so a change used to apply only after a reload. Rebuild the
+  // connection when it changes (between calls, never during one).
+  const ipMaskingOn = !!(ledgerSettings as any)?.webrtc_ip_masking;
+  const ipMaskingPrevRef = useRef(ipMaskingOn);
+  useEffect(() => {
+    if (ipMaskingPrevRef.current === ipMaskingOn) return;
+    ipMaskingPrevRef.current = ipMaskingOn;
+    if (callStateRef.current !== 'idle') return;
+    try { peerInstanceRef.current?.destroy(); } catch {}
+    peerInstanceRef.current = null;
+    setPeerInstance(null);
+    const nextKey = peerInitKeyRef.current + 1;
+    peerInitKeyRef.current = nextKey;
+    setPeerInitKey(nextKey);
+  }, [ipMaskingOn]);
+
+  const endCallRef = useRef(endCall);
+  endCallRef.current = endCall;
+  const declineCallRef = useRef(declineCall);
+  declineCallRef.current = declineCall;
+  const startCallFromBubbleRef = useRef<(kind: 'audio' | 'video') => void>(() => {});
+  startCallFromBubbleRef.current = (kind) => { if (callStateRef.current === 'idle') handleStartCall(kind); };
+  useEffect(() => {
+    const onIslandHangup = () => {
+      const s = callStateRef.current;
+      if (s === 'ringing') declineCallRef.current();
+      else if (s !== 'idle') endCallRef.current();
+    };
+    const onCallBack = (e: Event) => {
+      const kind = (e as CustomEvent<{ kind?: 'audio' | 'video' }>).detail?.kind === 'video' ? 'video' : 'audio';
+      startCallFromBubbleRef.current(kind);
+    };
+    window.addEventListener('ledger_end_active_call', onIslandHangup);
+    window.addEventListener('ledger_call_back', onCallBack);
+    return () => {
+      window.removeEventListener('ledger_end_active_call', onIslandHangup);
+      window.removeEventListener('ledger_call_back', onCallBack);
+    };
+  }, []);
 
   // ─── toggleMic ───────────────────────────────────────────────────────────────
   const toggleMic = useCallback(() => {
@@ -2852,8 +3078,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const inboxId = parts.length > 1 ? parts[1] : null;
             if (inboxId && attempts < maxAttempts) {
                try {
-                  console.log('Attempting automatic revocation of previous XMTP installations for', inboxId);
-                  await revokeXMTPInstallations(wagmiSigner, inboxId);
+                  console.log('Freeing XMTP device slots (oldest installations) for', inboxId);
+                  const revoked = await revokeXMTPInstallations(wagmiSigner, inboxId);
+                  if (revoked > 0) toast(`Signed out ${revoked} old device${revoked === 1 ? '' : 's'}. Your recent devices stay signed in.`);
                   continue; // Retry initialization
                } catch (revokeErr) {
                   console.error('Revocation failed', revokeErr);
@@ -3138,6 +3365,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           for await (const msg of gen as any) {
             if (cancelled) { activeAbortController.abort(); break; }
             try {
+              // Device-sync messages carry state between this account's own
+              // devices (lib/sync). They are never chat content.
+              if (handleDeviceSyncMessage(msg)) continue;
               // [AUDIT FIX] Dynamically fetch selfInboxId to avoid stale closure if client rotates
               const selfInboxId = (client as any).inboxId ?? '';
               const _rawContentStr = typeof msg.content === 'string' ? msg.content : (msg.content ? JSON.stringify(msg.content) : '');
@@ -3222,6 +3452,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const msgConvPeer = resolvedPeerAddr || convoId || msg.senderInboxId || 'unknown';
             const realId = msg.id ?? `real-${sentAtNs}-${Math.random()}`;
 
+            // Blocked wallets: drop their messages, call signals and
+            // notifications here, before anything is shown, rung or stored.
+            if (fromPeer && blockedPeersRef.current.has(String(msgConvPeer).toLowerCase())) {
+              confirmedMsgIds.current.add(realId);
+              continue;
+            }
+
             // ── ABSOLUTE DEDUPLICATION GATE ──────────────────────────────────────
             // [CRITICAL FIX #3] On stream restart after a network drop, the stream
             // replays recent messages. Their IDs may be in confirmedMsgIds, but the
@@ -3274,6 +3511,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             
             // Phase 2: Intercept Typing Indicator
             if (typeof content === 'string' && content.startsWith('__TYPING__')) {
+              // Our own typing on another device is not "the peer is typing".
+              if (!fromPeer) continue;
               const sender = (msg.senderAddress || 'peer').toLowerCase();
               setTypingPeers(prev => new Set(prev).add(sender));
               setTimeout(() => {
@@ -3335,6 +3574,31 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               continue;
             }
             
+            // Every call signal, from either side and any device, feeds the call log.
+            if (isCallSignal(content)) {
+              addCallSignalsRef.current(msgConvPeer, [{ id: realId, content, sentAtMs: sentAtNs, fromMe: !fromPeer, senderInboxId: msg.senderInboxId }]);
+            }
+
+            // Multi-device calls. Call signals we sent from ANOTHER of our own
+            // devices arrive here too (same inbox). They must never ring this
+            // device or end a call on it, with one exception: if this device
+            // is ringing for an incoming call and our other device answered or
+            // declined it, stop ringing here quietly, the way WhatsApp does.
+            if (!fromPeer && typeof content === 'string' && content.startsWith('__CALL_')) {
+              const handledElsewhere = content.startsWith('__CALL_ANSWER__') || content === '__CALL_DECLINE__';
+              const signalAge = Date.now() - sentAtNs;
+              const sameCall = !!msgConvPeer && msgConvPeer.toLowerCase() === activePeerRef.current?.toLowerCase();
+              if (handledElsewhere && sameCall && signalAge >= 0 && signalAge < 60000 && callStateRef.current === 'ringing') {
+                const sigId = msg.id || `self-${sentAtNs}`;
+                if (!processedSignalIds.current.has(sigId)) {
+                  processedSignalIds.current.add(sigId);
+                  performEndCallRef.current(); // local only: stops the ringtone and drops the pending connection
+                  toast(content.startsWith('__CALL_ANSWER__') ? 'Answered on another device' : 'Declined on another device');
+                }
+              }
+              continue;
+            }
+
             // Phase 4.5: Intercept CALL_OFFER synchronously to guarantee ringing
             if (typeof content === 'string' && content.startsWith('__CALL_OFFER__:')) {
               const parts = content.split(':');
@@ -3606,19 +3870,27 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 if (fromPeer && !content.startsWith('__')) {
                   // We are focused on this chat, so send a read receipt!
                   if (!document.hidden) {
+                    // Seen here, so seen everywhere: clear the badge on our other devices.
+                    publishReadRef.current(msgConvPeer);
                     if (ledgerSettings?.notification_sound !== false) { playReceiveSound(); };
                     triggerHaptic(ledgerSettings?.haptics_intensity ?? 0);
                     if (ledgerSettings?.show_read_receipts !== false && /^0x[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$/.test(msgConvPeer)) {
                       sendMessage(client, msgConvPeer, `__READ__${realId}`, address).catch(e => console.warn('Failed to send read receipt', e));
                     }
                   } else {
-                    // Phase 5: Advanced Push Notifications when app is hidden
-                    notificationEngine.notifyLocal(
-                      `Ledger Chat: ${shortAddr(msgConvPeer)}`,
-                      formatMessagePreview(content),
-                      msgConvPeer,
-                      !!(ledgerSettings as any)?.hide_notification_content
-                    );
+                    // Phase 5: Advanced Push Notifications when app is hidden.
+                    // Same rules as the background-chat branch: Do not disturb,
+                    // a muted chat and the "Private messages" toggle all apply.
+                    const dndOn = !!(ledgerSettings as any)?.do_not_disturb;
+                    const chatMuted = (() => { try { return !!localStorage.getItem('ledger_muted_' + String(msgConvPeer || '').toLowerCase()); } catch { return false; } })();
+                    if (!dndOn && !chatMuted && ledgerSettings?.notifications_private !== false) {
+                      notificationEngine.notifyLocal(
+                        `Ledger Chat: ${shortAddr(msgConvPeer)}`,
+                        formatMessagePreview(content),
+                        msgConvPeer,
+                        !!(ledgerSettings as any)?.hide_notification_content
+                      );
+                    }
                   }
                 }
                 if (prev.some(m => m.id === mappedMsg.id)) return prev;
@@ -3656,14 +3928,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 }
               }
               let needsSync = false;
+              // Another device may already have read this chat past this
+              // message (its "read" can arrive before the message itself).
+              const readElsewhereTs = address ? Number(getSynced(address, `read:${msgConvPeer}`) || 0) : 0;
+              const countsAsUnread = fromPeer && readElsewhereTs < sentAtNs;
               setConversations(prev => {
                 if (!msgConvPeer) return prev;
                 const exists = prev.some(c => c.peerAddress.toLowerCase() === msgConvPeer);
                 let updated;
+                // Unread badge: a peer message in a chat that is not open adds
+                // one; our own message from another device means we have seen
+                // the chat there, so it clears.
                 if (exists) {
                   updated = prev.map(c =>
                     c.peerAddress.toLowerCase() === msgConvPeer
-                      ? { ...c, lastMessage: content.slice(0, 30), lastAt: new Date() }
+                      ? { ...c, lastMessage: content.slice(0, 30), lastAt: new Date(), unreadCount: countsAsUnread ? (c.unreadCount || 0) + 1 : (fromPeer ? (c.unreadCount || 0) : 0) }
                       : c
                   );
                 } else {
@@ -3671,7 +3950,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   updated = [{
                     peerAddress: msgConvPeer,
                     lastMessage: content.slice(0, 30),
-                    lastAt: new Date()
+                    lastAt: new Date(),
+                    unreadCount: countsAsUnread ? 1 : 0,
                   }, ...prev];
                 }
                 persistToLocal(updated);
@@ -3732,7 +4012,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         // [1] Load instantly from IndexedDB cache
         const dmId = `dm-${activePeer.toLowerCase()}`;
         try {
-          const localMsgs = await chatDB.getMessagesForConversation(dmId, 100);
+          const rawLocal = await chatDB.getMessagesForConversation(dmId, 100);
+          // Earlier builds saved each sent message twice: once under its
+          // temporary "optimistic-" id (timestamp in nanoseconds) and once
+          // under its real XMTP id. Drop and delete the temporary copies so
+          // conversations that already show duplicates heal on this load.
+          const staleIds = (rawLocal || []).filter((m: any) => typeof m.id === 'string' && m.id.startsWith('optimistic-')).map((m: any) => m.id);
+          if (staleIds.length) chatDB.deleteMessages(staleIds).catch(() => {});
+          const localMsgs = (rawLocal || [])
+            .filter((m: any) => !(typeof m.id === 'string' && m.id.startsWith('optimistic-')))
+            .map((m: any) => (m.sentAtNs > 1e14 ? { ...m, sentAtNs: Math.floor(m.sentAtNs / 1e6) } : m));
           if (localMsgs && localMsgs.length > 0 && !cancelled) {
             setMessages(prev => {
               const existingIds = new Set(prev.map(m => m.id));
@@ -3948,6 +4237,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
              mappedMsgs.push(m);
           }
           // __CALL_ signals are control-only; intentionally not pushed to mappedMsgs.
+        }
+
+        // Call log: every call signal in this conversation's history, from both
+        // sides, rebuilt into "Missed voice call" / "Outgoing call · 2:31" bubbles.
+        {
+          const selfIdForCalls = (client as any).inboxId;
+          const callSigs: CallSignal[] = combined
+            .filter((m: any) => isCallSignal(m.content))
+            .map((m: any) => ({ id: m.id, content: m.content, sentAtMs: m.sentAtNs, fromMe: m.senderInboxId === selfIdForCalls, senderInboxId: m.senderInboxId }));
+          addCallSignalsRef.current(activePeer, callSigs);
         }
 
         if (latestPinnedId) setPinnedMessageId(latestPinnedId);
@@ -4258,7 +4557,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         .replace(/\bshit\b/gi, 'situation')
         .replace(/\bbitch\b/gi, 'person')
         .replace(/\basshole\b/gi, 'individual')
-        .replace(/\bidiot|moron|stupid\b/gi, 'someone with a different view');
+        // Grouped so "oxymoron" or "stupidity" are left alone.
+        .replace(/\b(idiot|moron|stupid)\b/gi, 'someone with a different view');
     }
 
     // Disappearing messages: a timer set for this chat wins over the global one.
@@ -4349,17 +4649,51 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       // ALWAYS send via XMTP / offline queue — works both online AND offline.
       // sendMessage() handles: XMTP retries, fallback to DB offline queue, and
       // guarantees delivery when the recipient opens Ledger Chat.
-      await sendMessage(client, activePeer, finalContent, address);
+      const realId = await sendMessage(client, activePeer, finalContent, address);
 
-      // Persist sent message to IndexedDB so it survives reloads immediately
-      if (!isReaction) {
+      // ── Swap the optimistic bubble for the real message, by id ──────────────
+      // Pairing them by content (when the stream echo or the 12 s poll arrived)
+      // missed whenever the content had been transformed, and the optimistic
+      // copy was also written to IndexedDB under its temporary id with a
+      // nanosecond timestamp. On every reload both copies came back: the
+      // duplicates users saw. XMTP now hands back the real id at send time.
+      if (realId && isOffline) {
+        // XMTP accepted the message (it publishes it itself when the network
+        // returns), so the local outbox must not send it a second time.
+        try {
+          const outboxKey = `ledger_outbox_${address.toLowerCase()}`;
+          const box: Array<{ peer: string; content: string }> = JSON.parse(localStorage.getItem(outboxKey) || '[]');
+          const i = box.findIndex(e => e.peer === activePeer && e.content === finalContent);
+          if (i !== -1) { box.splice(i, 1); localStorage.setItem(outboxKey, JSON.stringify(box)); }
+        } catch {}
+      }
+
+      if (realId && finalContent.startsWith('__CALL_')) {
+        // Our own call signal goes into the call log right away, without
+        // waiting for the stream to echo it back.
+        addCallSignalsRef.current(activePeer, [{ id: realId, content: finalContent, sentAtMs: Date.now(), fromMe: true, senderInboxId: (client as any)?.inboxId }]);
+      }
+
+      if (realId && !isReaction) {
+        optimisticContentMap.current.delete(finalContent);
+        confirmedMsgIds.current.add(realId);
+        const sentAtMs = Date.now();
+        setMessages(prev => {
+          if (prev.some(m => m.id === realId)) {
+            // The stream echo already put the real message in: drop our copy.
+            return prev.filter(m => m.id !== optimisticId);
+          }
+          return prev.map(m => (m.id === optimisticId ? { ...m, id: realId, status: m.status || 'sent' } : m));
+        });
+        // Persist the REAL message (never the optimistic id) so it survives reloads.
         import('@/lib/chat/indexeddb').then(({ chatDB }) => {
           chatDB.saveMessages([{
-            id: optimisticId,
+            id: realId,
             senderInboxId: (client as any)?.inboxId || '',
             senderAddress: address.toLowerCase(),
             content: displayContent,
-            sentAtNs: Date.now() * 1_000_000,
+            burnAtNs,
+            sentAtNs: sentAtMs, // milliseconds, like every other message in the chat
             conversationId: `dm-${activePeer.toLowerCase()}`,
             status: 'sent',
           }]).catch(() => {});
@@ -4537,6 +4871,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
+    // "@studio ..." or "/studio ..." goes to Ledger Studio, never to the peer.
+    const studioCmd = STUDIO_PREFIX.exec(inputText.trim());
+    if (studioCmd) {
+      const q = inputText.trim().slice(studioCmd[0].length);
+      setInputText('');
+      setStudioOpen({ prompt: q || undefined });
+      return;
+    }
     setSendAnimKey(k => k + 1);
     // ── [FASE 16: Rate-Limit Guard] ──────────────────────────────────────
     const now = Date.now();
@@ -4807,7 +5149,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             onClearChat={() => {
               setShowContactInfo(false);
               if (window.confirm('Are you sure you want to clear this chat? This will remove all messages from your device.')) {
-                localStorage.setItem(`ledger_cleared_${address}_${activePeer.toLowerCase()}`, Date.now().toString());
+                const clearedAt = Date.now();
+                localStorage.setItem(`ledger_cleared_${address}_${activePeer.toLowerCase()}`, clearedAt.toString());
+                if (address) setSynced(address, { [`cleared:${activePeer.toLowerCase()}`]: clearedAt }); // all devices
                 setMessages(prev => prev.filter(m => m.conversationId !== `dm-${activePeer.toLowerCase()}`));
                 toast.success('Chat cleared');
               }
@@ -4825,12 +5169,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             onSearch={() => { setShowContactInfo(false); setShowSearch(true); }}
             onBlock={() => {
               setShowContactInfo(false);
-              setBlockedPeers(prev => {
-                const next = new Set(prev);
+              {
+                const next = new Set(blockedPeersRef.current);
                 next.add(activePeer.toLowerCase());
-                vault.setItem('ledger_blocked', JSON.stringify(Array.from(next)));
-                return next;
-              });
+                blockedPeersRef.current = next;
+                setBlockedPeers(next);
+                saveBlockList(Array.from(next)).catch(() => {});
+              }
               setActivePeer(null);
               toast.success(`${getDisplayName(activePeer)} is blocked`);
             }}
@@ -4873,6 +5218,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </div>
             </button>
             <div className="flex items-center gap-1">
+              <button onClick={() => setStudioOpen({})} className="relative w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Ledger Studio" aria-label="Ledger Studio">
+                <StudioIcon size={17} />
+              </button>
               <ZkNotificationBell />
               <button onClick={() => setShowZkWallet(true)} className="relative w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Private wallet" aria-label="Private wallet">
                 <Lock size={16} />
@@ -5312,7 +5660,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             />
 
             {/* Dynamic Chat Background */}
-            <div className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f7f8fa]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={{ ...(isSecretChat ? {} : bgStyle), fontFamily, fontSize: `${fontSizePx}px` }}>
+            <div className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f7f8fa]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={{ ...(isSecretChat ? {} : bgStyle), fontFamily, fontSize: `${fontSizePx}px`, ...(ledgerSettings?.anti_screenshot && screenShielded ? { filter: 'blur(18px)', transition: 'filter 120ms ease' } : { transition: 'filter 160ms ease' }) }}>
               {/* Matrix Rain Effect Layer */}
               {chatBackground === 'matrix' && (
                 <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,255,0,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -5338,7 +5686,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   if (m.conversationId?.toLowerCase() !== convId.toLowerCase()) return false;
                   if (m.burnAtNs && m.burnAtNs <= Date.now()) return false;
                   const c = typeof m.content === 'string' ? m.content : '';
-                  if (c.startsWith('__CALL_')) return false;
+                  // Call signals stay hidden; the call-log bubbles built from them show.
+                  if (c.startsWith('__CALL_') && !c.startsWith(CALL_LOG_PREFIX)) return false;
                   if (c.startsWith('__REACT__')) return false;
                   if (c.startsWith('__PIN__')) return false;
                   if (c.startsWith('__UNPIN__')) return false;
@@ -5594,6 +5943,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       { cmd: '/pay', label: 'Send a payment', icon: <CreditCard size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setShowWalletTransfer(true); } },
                       { cmd: '/poll', label: 'Create a poll', icon: <ListChecks size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setShowPollCreator(true); } },
                       { cmd: '/gif', label: 'Search GIFs', icon: <ImageIcon size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setShowGifPicker(true); } },
+                      { cmd: '/studio', label: 'Ask Ledger Studio (AI)', icon: <StudioIcon size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setStudioOpen({}); } },
                       { cmd: '/location', label: 'Share your location', icon: <MapPin size={17} strokeWidth={1.8} />, run: () => {
                           setInputText('');
                           if (navigator.geolocation) {
@@ -5602,7 +5952,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             });
                           }
                         } },
-                    ].map(c => (
+                    ].filter(c => c.cmd !== '/pay' || (ledgerSettings as any)?.payments_enabled !== false).map(c => (
                       <button key={c.cmd} type="button" role="menuitem" onClick={c.run} className="px-2.5 h-12 text-left hover:bg-[#f2f4f7] rounded-xl transition-colors flex items-center gap-3">
                         <span className="w-8 h-8 rounded-lg bg-[#eff1f4] text-[#15171c] flex items-center justify-center shrink-0">{c.icon}</span>
                         <span className="flex flex-col">
@@ -5669,7 +6019,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                                 setShowScheduleSheet(true);
                               } },
                             { id: 'burn',      color: '#FF6B00', iconPath: <Timer size={19} strokeWidth={1.8} />,      label: burnTimer ? `Disappearing after ${burnTimer >= 60 ? `${Math.floor(burnTimer/60)}m` : `${burnTimer}s`}` : 'Disappearing messages', sublabel: burnTimer ? 'Tap to change duration' : 'Messages vanish after they are read', onClick: () => { setShowBurnSheet(true); setShowAppDrawer(false); } },
-                          ].map((app) => (
+                          ].filter(app => (ledgerSettings as any)?.payments_enabled !== false || !PAYMENT_DRAWER_IDS.has(app.id)).map((app) => (
                             <button 
                               key={app.id} 
                               type="button" 
@@ -5803,7 +6153,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                                 e.target.style.height = `${Math.min(Math.max(e.target.scrollHeight, 44), 134)}px`;
                               }
                               const now = Date.now();
-                              if (now - lastTypingTimeRef.current > 3000 && val.trim().length > 0) {
+                              if (now - lastTypingTimeRef.current > 3000 && val.trim().length > 0 && ledgerSettings?.typing_indicators !== false) {
                                 lastTypingTimeRef.current = now;
                                 if (client && activePeer) {
                                   sendMessage(client, activePeer, '__TYPING__').catch(() => {});
@@ -6285,7 +6635,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                  aria-label="Message actions"
                  className="absolute bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)] p-1.5 min-w-[200px] flex flex-col animate-in fade-in zoom-in-95 duration-150"
                  style={{
-                   top: Math.max(8, Math.min(contextMenu.y, window.innerHeight - 330)),
+                   top: Math.max(8, Math.min(contextMenu.y, window.innerHeight - 380)),
                    left: Math.max(8, Math.min(contextMenu.x, window.innerWidth - 216)),
                  }}
                  onClick={e => e.stopPropagation()}
@@ -6298,6 +6648,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                  </button>
                  <button role="menuitem" type="button" onClick={() => { navigator.clipboard.writeText(contextMenu.content.replace(/^\[.*?\]/, '')); toast.success('Copied'); setContextMenu(null); }} className={item}>
                    <Copy size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Copy
+                 </button>
+                 <button role="menuitem" type="button" title="Opens Ledger Studio with this message in the composer. Nothing is sent until you press send there." onClick={() => {
+                   const body = contextMenu.content.replace(/^\[.*?\]/, '').replace(/^__REPLY__.*?__::/, '').replace(/^__BURN_\d+__::/, '').trim();
+                   setContextMenu(null);
+                   setStudioOpen({ prompt: body ? `> ${body.slice(0, 6000).split('\n').join('\n> ')}\n\n` : undefined });
+                 }} className={item}>
+                   <StudioIcon size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Ask Ledger Studio
                  </button>
                  <button role="menuitem" type="button" onClick={() => { setForwardMsg({ id: contextMenu.id, content: contextMenu.content }); setContextMenu(null); }} className={item}>
                    <Forward size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Forward
@@ -6329,6 +6686,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
          </div>,
          document.body
        ) : null}
+
+        {/* Ledger Studio, full screen over the chat */}
+        {studioOpen && effectiveAddress && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-[600] bg-white" data-ledger-studio="">
+            <LedgerStudio key={effectiveAddress.toLowerCase()} wallet={effectiveAddress} initialPrompt={studioOpen.prompt} onExit={() => setStudioOpen(null)} />
+          </div>,
+          document.body
+        )}
 
         {/* Forward a message */}
         {forwardMsg && (
@@ -6547,6 +6912,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
          <NativeCryptoSendModal
            isOpen={showWalletTransfer}
            recipientAddress={activePeer}
+           defaultToken={(ledgerSettings as any)?.default_token}
            onClose={() => { setShowWalletTransfer(false); setTransferAmount(''); }}
            onSent={(txHash, amount, token) => {
              const payload = JSON.stringify({ amount, token, txHash, to: activePeer });

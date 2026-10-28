@@ -86,6 +86,8 @@ interface NativeCryptoSendModalProps {
   recipientAddress: string;
   onClose: () => void;
   onSent: (txHash: string, amount: string, token: string) => void;
+  /** Settings → Payments → Default payment token (ETH, USDC or USDT). */
+  defaultToken?: string;
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -94,8 +96,9 @@ export function NativeCryptoSendModal({
   recipientAddress,
   onClose,
   onSent,
+  defaultToken,
 }: NativeCryptoSendModalProps) {
-  const [selectedToken, setSelectedToken] = useState(TOKENS[0]);
+  const [selectedToken, setSelectedToken] = useState(() => TOKENS.find(t => t.symbol === defaultToken) ?? TOKENS[0]);
   const [amount, setAmount] = useState('');
   const [showTokenPicker, setShowTokenPicker] = useState(false);
   const [showQR, setShowQR] = useState(false);

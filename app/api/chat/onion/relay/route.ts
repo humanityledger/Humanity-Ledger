@@ -5,6 +5,7 @@ import {
   importPrivateKeyJwk,
 } from '@/lib/onion/OnionCrypto';
 import { safeRedisGet, safeRedisSet } from '@/lib/redis/client';
+import { assertFetchableUrl, fetchPublicUrl } from '@/lib/security/publicFetch';
 /**
  * POST /api/chat/onion/relay
  *
@@ -224,26 +225,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // Block SSRF to private/loopback addresses (CRIT-01)
-  const host = nextHopUrl.hostname;
-  
-  // Robust check for all private IPv4, IPv6, and Carrier-Grade NAT ranges
-  const isInternal = 
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host === '0.0.0.0' ||
-    host === '::1' ||
-    host.endsWith('.local') ||
-    host.startsWith('10.') ||
-    /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host) || // 172.16.0.0/12 (Complete Private Range)
-    host.startsWith('192.168.') ||
-    host.startsWith('169.254.') || // Link-local / AWS IMDSv2 metadata endpoint
-    host.startsWith('100.') || // 100.64.0.0/10 CGNAT
-    host.startsWith('fc00:') || // IPv6 ULA
-    host.startsWith('fd') ||    // IPv6 ULA
-    host.startsWith('fe80:');   // IPv6 Link-local
-
-  if (isInternal && process.env.NODE_ENV === 'production') {
+  // Block SSRF (CRIT-01). The old check compared hostname prefixes, was off
+  // outside production, missed names that resolve to private addresses and
+  // IPv6 forms, and was never applied to the hop that is actually fetched
+  // (inner.nextHop, below). Every hop now goes through lib/security/publicFetch.
+  try {
+    assertFetchableUrl(nextHopUrl.href);
+  } catch {
     return NextResponse.json(
       { error: 'SSRF blocked: private addresses are not permitted.' },
       { status: 403 },
@@ -322,8 +310,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     try {
-      const forwardRes = await fetch(inner.nextHop, {
+      // inner.nextHop comes out of a layer anyone can encrypt to this relay's
+      // public key, so it is attacker-chosen: fetched only if it is public,
+      // checked again at connect time, never redirected.
+      const forwardRes = await fetchPublicUrl(inner.nextHop, {
         method:  'POST',
+        timeoutMs: 8000,
+        maxBytes: 16 * 1024,
         headers: {
           'Content-Type':  'application/json',
           'X-Onion-Route': '1',
@@ -336,7 +329,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         }),
       });
 
-      if (!forwardRes.ok) {
+      if (forwardRes.status < 200 || forwardRes.status >= 300) {
         return NextResponse.json(
           { error: `Next hop returned ${forwardRes.status}` },
           { status: 502 },

@@ -41,7 +41,9 @@ export function useLedgerChatPresence(myAddress: string, activePeer: string | nu
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           address: myAddress,
-          peerAddress: activePeerRef.current
+          peerAddress: activePeerRef.current,
+          // Your "Last seen" choice; the server applies it both ways.
+          visibility: (() => { try { return localStorage.getItem('ledger_privacy_last_seen') || 'contacts'; } catch { return 'contacts'; } })(),
         })
       });
       
@@ -49,7 +51,9 @@ export function useLedgerChatPresence(myAddress: string, activePeer: string | nu
         const data = await res.json();
         const lastSeen = data.lastActiveAt;
         if (!lastSeen) {
-          setPeerStatus(prev => ({ ...prev, status: 'offline', peer: activePeerRef.current }));
+          // Hidden by their (or your) "Last seen" setting, or simply away:
+          // show nothing rather than a stale time from an earlier poll.
+          setPeerStatus({ status: 'offline', lastSeen: null, isTyping: false, peer: activePeerRef.current });
           return;
         }
 
@@ -61,6 +65,9 @@ export function useLedgerChatPresence(myAddress: string, activePeer: string | nu
         } else {
           setPeerStatus({ status: 'offline', lastSeen, isTyping: false, peer: activePeerRef.current });
         }
+      } else {
+        // Not mutual contacts (403) or signed out: never show another chat's status.
+        setPeerStatus({ status: 'offline', lastSeen: null, isTyping: false, peer: activePeerRef.current });
       }
     } catch (e) {
       // Ignore network errors for presence

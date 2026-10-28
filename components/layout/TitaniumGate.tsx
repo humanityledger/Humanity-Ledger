@@ -14,7 +14,7 @@ type GateState = 'INTRO' | 'AUTH' | 'APP';
  * before someone agrees to them. Keep in step with PUBLIC_PATHS in middleware.ts.
  */
 const PUBLIC_PAGES = [
-    '/', '/connect', '/login', '/sign-up', '/terms', '/privacy', '/developers', '/forum', '/news', '/chat', '/hub',
+    '/', '/connect', '/login', '/sign-up', '/terms', '/privacy', '/developers', '/forum', '/news', '/chat', '/studio', '/hub', '/academy',
     '/docs', '/blog', '/changelog', '/status', '/contact', '/company', '/whitepaper', '/security/audits', '/network/status',
 ];
 

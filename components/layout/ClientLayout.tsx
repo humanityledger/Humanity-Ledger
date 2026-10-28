@@ -41,7 +41,7 @@ const LinkedGate = dynamic(
 // /chat and /hub handle their own auth — wrapping them with LinkedGate causes
 // redirect loops and blank screen bugs.
 // 
-const PUBLIC_PREFIXES = ['/privacy', '/terms', '/connect', '/sign-up', '/login', '/news', '/chat', '/hub'];
+const PUBLIC_PREFIXES = ['/privacy', '/terms', '/connect', '/sign-up', '/login', '/news', '/chat', '/studio', '/hub', '/academy'];
 
 // 
 // Routes that must NOT get the legacy black Downhead footer
@@ -71,7 +71,7 @@ const BOUNDED_PREFIXES = [
   '/connect', '/sign-up', '/login',
   '/admin', '/clearance',
   '/api-marketplace', '/directory', '/company', '/infrastructure',
-  '/forum', '/chat', '/hub', '/whitepaper', '/manifesto',
+  '/forum', '/chat', '/studio', '/hub', '/whitepaper', '/manifesto',
   '/docs', // Added to prevent infinite scroll bugs
   '/blog', // Blog posts are bounded pages
   '/', // Landing page — prevents white zone below footer
@@ -86,7 +86,11 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   useSystemSessionLock();
 
   React.useEffect(() => {
-    fetchSettings();
+    // Settings live on the account: a signed-out visitor has none to fetch,
+    // and asking anyway only logged a 401. Local DOM settings still apply.
+    const signedIn = typeof document !== 'undefined' && /(?:^|;\s*)(?:wallet-auth|system_handshake)=/.test(document.cookie);
+    if (signedIn) fetchSettings();
+    else useSettingsStore.getState().syncDOM();
   }, [fetchSettings]);
 
   //  Axioma 452: PWA Service Worker registration 
@@ -130,6 +134,11 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }, []);
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Both endpoints need a signed-in session. Signed-out visitors (most of
+      // the landing page's traffic) only produced a pair of 401s per page.
+      // `wallet-auth` / `system_handshake` are the readable hints set at sign-in.
+      const signedIn = /(?:^|;\s*)(?:wallet-auth|system_handshake)=/.test(document.cookie);
+      if (!signedIn) return;
       // Session log (existing)
       fetch('/api/session-logs', {
         method: 'POST',
@@ -285,7 +294,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   // /connect, /sign-up, /login manage their own internal centering
   const isCenteredPage = ['/clearance'].some(p => pathname.startsWith(p));
-  const isChat = pathname.startsWith('/chat');
+  const isChat = pathname.startsWith('/chat') || pathname.startsWith('/studio');
 
   // Root container
   const rootClass = isDashboard || isChat

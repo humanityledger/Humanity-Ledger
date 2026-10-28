@@ -11,11 +11,14 @@
  *   - Cloud metadata endpoints (169.254.169.254, fd00:ec2::254, etc.)
  *   - Non-HTTP/HTTPS schemes (file://, ftp://, etc.)
  *
- * Usage:
- *   const result = validateUrlForFetch(userSuppliedUrl);
- *   if (!result.safe) return NextResponse.json({ error: result.reason }, { status: 400 });
- *   const response = await fetch(userSuppliedUrl);
+ * This is a check of the URL TEXT only. It cannot see what a hostname resolves
+ * to, and fetch() follows redirects after it has run. To actually fetch a
+ * user-supplied URL, use fetchPublicUrl() from lib/security/publicFetch.ts,
+ * which runs this check on every hop and validates the resolved IP inside the
+ * socket's DNS lookup.
  */
+
+import { isBlockedIp, isIpLiteral, normalizeIpLiteral } from './ipPolicy';
 
 interface SsrfGuardResult {
   safe: boolean;
@@ -91,7 +94,26 @@ export function validateUrlForFetch(url: string): SsrfGuardResult {
     };
   }
 
-  const hostname = parsed.hostname.toLowerCase();
+  // A trailing dot is the same DNS name ("localhost." is localhost), so it is
+  // removed before any comparison. Without this, "metadata.google.internal."
+  // and "localhost." passed every check below.
+  const hostname = parsed.hostname.toLowerCase().replace(/\.+$/, '');
+
+  if (!hostname) {
+    return { safe: false, reason: 'Missing hostname' };
+  }
+
+  // IP literals are judged by the full public-unicast policy, which covers
+  // forms the checks below miss: [::], [::7f00:1], NAT64, 6to4, multicast.
+  if (isIpLiteral(hostname) && isBlockedIp(hostname)) {
+    const isMetadata = BLOCKED_METADATA_HOSTS.includes(normalizeIpLiteral(hostname));
+    return {
+      safe: false,
+      reason: isMetadata
+        ? 'Cloud metadata endpoints are blocked (SSRF protection)'
+        : 'Private or reserved IP addresses are blocked (SSRF protection)',
+    };
+  }
 
   // Block known metadata endpoints
   if (BLOCKED_METADATA_HOSTS.some(h => hostname === h || hostname.endsWith(`.${h}`))) {
@@ -99,7 +121,8 @@ export function validateUrlForFetch(url: string): SsrfGuardResult {
   }
 
   // Block known private/localhost hostnames
-  if (BLOCKED_HOSTNAMES.has(hostname)) {
+  // RFC 6761: every name under .localhost is loopback.
+  if (BLOCKED_HOSTNAMES.has(hostname) || hostname.endsWith('.localhost')) {
     return { safe: false, reason: 'Localhost and reserved hostnames are blocked (SSRF protection)' };
   }
 

@@ -29,6 +29,7 @@
     "test:audit": "vitest run test/unit/audit",
     "test:resilience": "vitest run test/unit/resilience",
     "test:scan": "vitest run test/unit/scan",
+    "studio:check": "node scripts/studio-check.mjs",
     "lint": "next lint",
     "check:copy": "node scripts/check-forbidden-copy.mjs",
     "audit": "slither . --print human-summary",
@@ -67,6 +68,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.3.0",
     "@auth/prisma-adapter": "^2.11.3",
     "@aztec-labs/accounts": "6.0.0",
     "@aztec-labs/aztec.js": "6.0.0",
@@ -237,6 +239,7 @@
     "os-browserify": "^0.3.0",
     "p-limit": "^6.1.0",
     "path-browserify": "^1.0.1",
+    "pdf-parse": "2.4.5",
     "peerjs": "^1.5.5",
     "permissionless": "^0.3.4",
     "pg": "^8.13.1",
@@ -310,7 +313,7 @@
     "systeminformation": "^5.23.0",
     "undici": "^6.29.1",
     "basic-ftp": "^6.2.3",
-    "vite": "^6.4.5",
+    "vite": "$vite",
     "hono": "^4.7.0",
     "fast-uri": "^3.1.9",
     "picomatch": "^4.0.2",
@@ -388,6 +391,7 @@
     "puppeteer": "^25.16.0",
     "terser-webpack-plugin": "5.6.1",
     "typescript": "5.5",
+    "vite": "^6.4.5",
     "vitest": "^5.0.5"
   }
 }

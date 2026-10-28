@@ -204,12 +204,16 @@ export async function getSession(req?: any): Promise<SessionPayload | null> {
         cookieStore = req?.cookies;
     }
 
+    const { isSessionTokenRevoked } = await import('@/lib/security/sessionRevocation');
+
     // Priority 1: B-007 unified session cookie 'hl_session'
     const hlSession = cookieStore.get(SESSION_CONFIG.COOKIE_NAME)?.value;
     if (hlSession) {
         try {
             const { verifyJWT } = await import('@/lib/jwt');
             const payload = (await verifyJWT(hlSession)) as any;
+            // A token revoked by logout (on any instance) is not a session.
+            if (await isSessionTokenRevoked(hlSession)) throw new Error('revoked');
             const uid = payload.walletAddress || payload.address || payload.userId || payload.sub;
             if (uid) {
                 return {
@@ -235,6 +239,7 @@ export async function getSession(req?: any): Promise<SessionPayload | null> {
             try {
                 const { verifyJWT } = await import('@/lib/jwt');
                 const payload = (await verifyJWT(legacyVal)) as any;
+                if (await isSessionTokenRevoked(legacyVal)) continue;
                 const uid = payload.walletAddress || payload.address || payload.userId || payload.sub;
                 if (uid) {
                     return {

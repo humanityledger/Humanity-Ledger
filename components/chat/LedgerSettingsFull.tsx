@@ -22,6 +22,21 @@ import { deriveAztecKeySet } from '@/lib/zk/aztecPxe';
 import { ZkPrivacyScore } from '@/components/zk/ZkPrivacyScore';
 import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
 import { ZkSettingsPanel } from '@/components/zk/ZkSettingsPanel';
+import { chatTextPx, textSizeLabel, DEFAULT_TEXT_SIZE_LEVEL } from '@/lib/chat/textSize';
+import { useSystemSignOut } from '@/hooks/useSystemSignOut';
+import { exportableLocalStorage } from '@/lib/settings/exportSafety';
+import { wipeLocalChatData } from '@/lib/settings/localWipe';
+import { loadBlockList, saveBlockList } from '@/lib/chat/blockList';
+import { downscaleAvatar, pushPublicProfile } from '@/lib/chat/profileSync';
+
+function downloadSettingsBackup(): void {
+  const data = exportableLocalStorage();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ledger-settings-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 interface LedgerSettingsFullProps {
   myAddress: string;
@@ -189,27 +204,39 @@ const SETTINGS_SECTIONS = [
   },
 ];
 
-const BlockListModal = () => {
-  const [blocked, setBlocked] = useState<string[]>([]);
+const BlockListModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [blocked, setBlocked] = useState<string[] | null>(null);
   useEffect(() => {
-    try { setBlocked(JSON.parse(localStorage.getItem('ledger_blocked_users') || '[]')); } catch {}
+    // Same list the chat enforces (vault `ledger_blocked`).
+    let alive = true;
+    loadBlockList().then(list => { if (alive) setBlocked(list); }).catch(() => { if (alive) setBlocked([]); });
+    return () => { alive = false; };
   }, []);
   const unblock = (addr: string) => {
-    const updated = blocked.filter(a => a !== addr);
+    const updated = (blocked || []).filter(a => a !== addr);
     setBlocked(updated);
-    localStorage.setItem('ledger_blocked_users', JSON.stringify(updated));
+    saveBlockList(updated).then(() => toast.success('Unblocked')).catch(() => toast.error('Could not unblock. Try again.'));
   };
   return (
     <div className="px-6 pb-6">
-      <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">Blocked addresses</h3>
-      {blocked.length === 0 ? (
-        <p className="text-[14px] text-[#727a88] text-center py-4">No blocked users</p>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[20px] font-semibold text-[#15171c]">Blocked addresses</h3>
+        <button type="button" onClick={onClose} aria-label="Close" className="w-8 h-8 rounded-full bg-[#f2f4f7] flex items-center justify-center"><X size={16} className="text-[#727a88]" /></button>
+      </div>
+      {blocked === null ? (
+        <p className="text-[14px] text-[#727a88] text-center py-10">Loading…</p>
+      ) : blocked.length === 0 ? (
+        <div className="py-12 flex flex-col items-center gap-3 text-[#727a88]">
+          <Shield size={40} className="opacity-30" />
+          <p className="text-[15px] font-medium">No blocked addresses</p>
+          <p className="text-[13px] text-center">Blocked wallets can't message or call you. Block someone from their chat info.</p>
+        </div>
       ) : (
-        <div className="max-h-[300px] overflow-y-auto">
+        <div className="max-h-[320px] overflow-y-auto">
           {blocked.map(addr => (
-            <div key={addr} className="flex items-center justify-between p-3 bg-[#f2f4f7] rounded-[14px] mb-2">
-              <span className="font-mono text-[13px] text-[#15171c]">{addr}</span>
-              <button onClick={() => unblock(addr)} className="text-[12px] font-semibold text-[#d93036] px-3 py-1 bg-white rounded-full shadow-sm">Unblock</button>
+            <div key={addr} className="flex items-center justify-between bg-[#f2f4f7] rounded-2xl px-4 py-3 mb-2">
+              <p className="text-[14px] font-semibold text-[#15171c] tabular-nums" title={addr}>{addr.length > 16 ? `${addr.slice(0, 8)}…${addr.slice(-6)}` : addr}</p>
+              <button type="button" onClick={() => unblock(addr)} className="text-[13px] text-[#15171c] font-semibold px-3 py-1.5 rounded-xl hover:bg-black/5">Unblock</button>
             </div>
           ))}
         </div>
@@ -271,9 +298,11 @@ const CustomRpcModalContent: React.FC<{
 
 const NukeModalContent: React.FC<{
   onClose: () => void;
-}> = ({ onClose }) => {
+  onConfirm: () => Promise<void>;
+}> = ({ onClose, onConfirm }) => {
   const [nukeConfirm, setNukeConfirm] = useState('');
-  const confirmed = nukeConfirm.trim().toUpperCase() === 'DELETE';
+  const [working, setWorking] = useState(false);
+  const confirmed = nukeConfirm.trim().toUpperCase() === 'DELETE' && !working;
 
   return (
     <div className="px-6 pb-6">
@@ -287,7 +316,7 @@ const NukeModalContent: React.FC<{
         </div>
       </div>
       <p className="text-[14px] text-[#727a88] mb-5 leading-relaxed">
-        All local data including conversation history, contacts, and settings will be permanently deleted. Your on-chain identity and XMTP inbox remain intact.
+        Erases what Ledger Chat keeps on this device: cached messages, contacts, blocked list, notes, saved files and settings, and signs you out. Your messages stay in your encrypted inbox and come back when you sign in again. Your wallet and funds are not touched.
       </p>
       <p className="text-[13px] text-[#3C3C43] mb-2 font-semibold">Type <span className="font-semibold text-red-600">DELETE</span> to confirm:</p>
       <input
@@ -301,18 +330,13 @@ const NukeModalContent: React.FC<{
       <button
         type="button"
         disabled={!confirmed}
-        onClick={() => {
-          for (let i = localStorage.length - 1; i >= 0; i--) {
-            const k = localStorage.key(i);
-            if (k?.startsWith('ledger_')) localStorage.removeItem(k);
-          }
-          sessionStorage.clear();
-          toast.success('All local data deleted');
-          setTimeout(() => window.location.reload(), 1500);
+        onClick={async () => {
+          setWorking(true);
+          try { await onConfirm(); } catch { setWorking(false); toast.error('Could not delete everything. Try again.'); }
         }}
         className={`w-full py-4 rounded-2xl text-white font-semibold text-[16px] transition-opacity ${confirmed ? 'bg-[#e5484d]' : 'bg-[#e5484d] opacity-30 cursor-not-allowed'}`}
       >
-        Delete everything
+        {working ? 'Deleting…' : 'Delete everything'}
       </button>
       <button type="button" onClick={onClose} className="w-full py-3 mt-2 text-[#727a88] font-semibold text-[16px]">
         Cancel
@@ -337,22 +361,38 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   const [avatarUrl, setAvatarUrl] = useState<string>('');
   const avatarFileRef = useRef<HTMLInputElement>(null);
 
-  const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  // Profile changes are applied locally at once, synced to your other devices
+  // through the settings engine, and published so the people you chat with
+  // see them. A failed publish is reported, not hidden.
+  const publishProfile = useCallback(async (patch: { displayName?: string; bio?: string; avatarUrl?: string }, okMsg: string) => {
+    const r = await pushPublicProfile(myAddress, patch);
+    if (r.ok) toast.success(okMsg);
+    else if (r.error === 'offline') toast.message(`${okMsg} on this device. It will be shared once you are back online.`);
+    else toast.error(`Saved on this device, but others cannot see it yet: ${r.error}`);
+  }, [myAddress]);
+
+  const handleAvatarChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error('Photo must be under 5 MB'); return; }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      setAvatarUrl(dataUrl);
-      try {
-        localStorage.setItem('ledger_avatar', dataUrl);
-        window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { avatarUrl: dataUrl } }));
-        toast.success('Profile photo updated');
-      } catch { toast.error('Photo too large for local storage. Try a smaller image.'); }
-    };
-    reader.readAsDataURL(file);
-  }, []);
+    if (!file.type.startsWith('image/')) { toast.error('Choose an image file.'); return; }
+    if (file.size > 15 * 1024 * 1024) { toast.error('Photo must be under 15 MB'); return; }
+    let dataUrl: string;
+    try { dataUrl = await downscaleAvatar(file); } catch (err: any) { toast.error(err?.message || 'Could not open that photo.'); return; }
+    setAvatarUrl(dataUrl);
+    try { localStorage.setItem('ledger_avatar', dataUrl); } catch {}
+    try { updateSetting('avatar_url', dataUrl); } catch {}
+    window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { avatarUrl: dataUrl } }));
+    await publishProfile({ avatarUrl: dataUrl }, 'Profile photo updated');
+  }, [publishProfile, updateSetting]);
+
+  const removeAvatar = useCallback(async () => {
+    setAvatarUrl('');
+    try { localStorage.removeItem('ledger_avatar'); } catch {}
+    try { updateSetting('avatar_url', ''); } catch {}
+    window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { avatarUrl: '' } }));
+    await publishProfile({ avatarUrl: '' }, 'Profile photo removed');
+  }, [publishProfile, updateSetting]);
 
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
@@ -384,32 +424,32 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
   // Load saved profile info
   useEffect(() => {
+    // The settings engine is the synced source; localStorage covers older builds.
     try {
-      setDisplayName(localStorage.getItem('ledger_displayName') || myName || '');
-      setBio(localStorage.getItem('ledger_bio') || '');
-      setAvatarUrl(localStorage.getItem('ledger_avatar') || '');
+      setDisplayName((settings as any)?.displayName || localStorage.getItem('ledger_displayName') || myName || '');
+      setBio((settings as any)?.bio ?? localStorage.getItem('ledger_bio') ?? '');
+      setAvatarUrl((settings as any)?.avatar_url || localStorage.getItem('ledger_avatar') || '');
     } catch {}
-  }, [myAddress, myName]);
+  }, [myAddress, myName, (settings as any)?.displayName, (settings as any)?.bio, (settings as any)?.avatar_url]);
 
+  const saveDisplayName = useCallback(async () => {
+    const name = displayName.trim().slice(0, 50);
+    setDisplayName(name);
+    setEditingName(false);
+    try { localStorage.setItem('ledger_displayName', name); } catch {}
+    try { updateSetting('displayName', name); } catch {}
+    window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { displayName: name } }));
+    await publishProfile({ displayName: name }, 'Display name saved');
+  }, [displayName, publishProfile, updateSetting]);
 
-
-  const saveDisplayName = useCallback(() => {
-    try {
-      localStorage.setItem('ledger_displayName', displayName);
-      // Broadcast to rest of app
-      window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { displayName } }));
-      toast.success('Display name saved');
-      setEditingName(false);
-    } catch {}
-  }, [displayName]);
-
-  const saveBio = useCallback(() => {
-    try {
-      localStorage.setItem('ledger_bio', bio);
-      toast.success('Bio saved');
-      setEditingBio(false);
-    } catch {}
-  }, [bio]);
+  const saveBio = useCallback(async () => {
+    const text = bio.trim().slice(0, 250);
+    setBio(text);
+    setEditingBio(false);
+    try { localStorage.setItem('ledger_bio', text); } catch {}
+    try { updateSetting('bio', text); } catch {}
+    await publishProfile({ bio: text }, 'Bio saved');
+  }, [bio, publishProfile, updateSetting]);
 
   const copyAddress = useCallback(() => {
     navigator.clipboard.writeText(myAddress).catch(() => {});
@@ -418,16 +458,22 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
     toast.success('Address copied');
   }, [myAddress]);
 
-  const handleSignOut = useCallback(() => {
-    if (!confirm('Sign out? You can reconnect your wallet at any time.')) return;
-    try {
-      disconnect();
-      ['ledger_session', 'ledger_onboarded_' + myAddress.toLowerCase()].forEach(k => {
-        try { localStorage.removeItem(k); } catch {}
-      });
-      window.location.href = '/';
-    } catch { toast.error('Failed to sign out'); }
-  }, [disconnect, myAddress]);
+  // Full sign-out: ends the server session (httpOnly cookies included),
+  // disconnects the wallet and locks the vault. Asked for in a sheet, not a
+  // blocking browser dialog.
+  const { nuclearDisconnect } = useSystemSignOut();
+  const [signingOut, setSigningOut] = useState(false);
+  const handleSignOut = useCallback(() => setModal('signout'), []);
+  const confirmSignOut = useCallback(async () => {
+    setSigningOut(true);
+    try { await nuclearDisconnect(); } catch { setSigningOut(false); toast.error('Failed to sign out'); }
+  }, [nuclearDisconnect]);
+
+  const deleteAllData = useCallback(async () => {
+    await wipeLocalChatData(myAddress);
+    toast.success('Local data deleted. Signing you out…');
+    await nuclearDisconnect();
+  }, [myAddress, nuclearDisconnect]);
 
   const purgeCache = useCallback(async () => {
     let count = 0;
@@ -442,14 +488,15 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       }
     }
     
-    // Clear IndexedDB for messages
+    // Clear IndexedDB for messages (they re-sync from the encrypted inbox)
+    let clearedDb = false;
     try {
         const { chatDB } = await import('@/lib/chat/indexeddb');
         await chatDB.clearAll();
-        count += 10;
+        clearedDb = true;
     } catch(e) {}
-    
-    toast.success(`Cleared ${count} cached items`);
+
+    toast.success(clearedDb ? 'Message cache cleared. Reloading…' : `Cleared ${count} cached item${count === 1 ? '' : 's'}`);
     setModal(null);
     setTimeout(() => window.location.reload(), 1000);
   }, []);
@@ -595,11 +642,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   {avatarUrl && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setAvatarUrl('');
-                        localStorage.removeItem('ledger_avatar');
-                        window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { avatarUrl: '' } }));
-                      }}
+                      onClick={() => { removeAvatar(); }}
                       className="text-[13px] font-semibold text-[#d93036] hover:text-red-600 transition-colors"
                     >
                       Remove photo
@@ -717,22 +760,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               <Group title="Data & backup">
                 <Row
                   icon={<Download size={18} />}
-                  label="Export local data"
-                  sublabel="Download a JSON file of your settings. It is not encrypted, keep it private."
+                  label="Export settings"
+                  sublabel="Your preferences as a JSON file. Keys and sessions are never included."
                   onTap={() => {
-                    try {
-                      const data: Record<string, string> = {};
-                      for (let i = 0; i < localStorage.length; i++) {
-                        const k = localStorage.key(i)!;
-                        if (k.startsWith('ledger_')) data[k] = localStorage.getItem(k) || '';
-                      }
-                      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url; a.download = `ledger-backup-${Date.now()}.json`; a.click();
-                      URL.revokeObjectURL(url);
-                      toast.success('Backup downloaded');
-                    } catch { toast.error('Export failed'); }
+                    try { downloadSettingsBackup(); toast.success('Settings exported'); }
+                    catch { toast.error('Export failed'); }
                   }}
                 />
                 <Row
@@ -767,16 +799,16 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           ════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'privacy' && (
             <>
-              <Group title="Who can see" footer="Controls who can see your profile info and activity.">
-                <Row icon={<Clock size={18} />} label="Last seen" value={settings.privacy_last_seen || 'Everybody'} onTap={() => setModal('privacy_last_seen')} />
+              <Group title="Who can see" footer="Last seen and online are only ever shown to contacts who added you back. If you choose Nobody, you won't see theirs either.">
+                <Row icon={<Clock size={18} />} label="Last seen & online" value={({ everybody: 'My contacts', contacts: 'My contacts', nobody: 'Nobody' } as Record<string, string>)[settings.privacy_last_seen || 'contacts'] || 'My contacts'} onTap={() => setModal('privacy_last_seen')} />
               </Group>
 
               <Group title="Disappearing messages" footer="New messages in all chats will auto-delete after the chosen time.">
                 <Row icon={<Trash2 size={18} />} label="Default timer" value={settings.auto_delete_timer || 'Off'} onTap={() => setModal('auto_delete')} />
                 <Row
                   icon={<EyeOff size={18} />}
-                  label="Burn on Read"
-                  sublabel="Messages disappear after being read"
+                  label="Burn after reading"
+                  sublabel={`Messages you receive are removed from this device ${(settings as any).burn_on_read_seconds || 10} s after you open them`}
                   toggle={!!settings.burn_on_read}
                   onToggle={v => updateSetting('burn_on_read', v)}
                 />
@@ -799,8 +831,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
                 <Row
                   icon={<Shield size={18} />}
-                  label="Anti-Screenshot"
-                  sublabel="Block screen capture in chat"
+                  label="Screen privacy"
+                  sublabel="Blurs the chat when you switch apps and turns off text selection. Browsers can't block screenshots."
                   toggle={!!settings.anti_screenshot}
                   onToggle={v => updateSetting('anti_screenshot', v)}
                 />
@@ -877,7 +909,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               <Group title="Messages">
                 <Row
                   icon={<MessageSquare size={18} />}
-                  label="Private messages"
+                  label="Message notifications"
+                  sublabel="Alerts for new messages in your chats"
                   toggle={settings.notifications_private !== false}
                   onToggle={v => updateSetting('notifications_private', v)}
                 />
@@ -909,7 +942,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <Row
                   icon={<Moon size={18} />}
                   label="Do not disturb"
-                  sublabel="Silence all notifications"
+                  sublabel="No message alerts or banners. Calls still ring."
                   toggle={!!(settings as any).do_not_disturb}
                   onToggle={v => updateSetting('do_not_disturb' as any, v)}
                 />
@@ -974,7 +1007,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <Row
                   icon={<Sliders size={18} />}
                   label="Font size"
-                  value={['XS','S','M','L','XL'][Math.min((settings.text_size ?? 2), 4)]}
+                  value={textSizeLabel(settings.text_size ?? DEFAULT_TEXT_SIZE_LEVEL)}
                   onTap={() => setModal('font_size')}
                 />
                 <Row
@@ -982,15 +1015,6 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   label="Bubble style"
                   value={settings.bubble_style || 'Default'}
                   onTap={() => setModal('bubble_style')}
-                />
-              </Group>
-
-              <Group title="Media & files" footer="Auto-download is subject to your data plan limits.">
-                <Row
-                  icon={<Archive size={18} />}
-                  label="Save Media to Photos"
-                  toggle={!!settings.saveToPhotos}
-                  onToggle={v => updateSetting('saveToPhotos', v)}
                 />
               </Group>
 
@@ -1011,20 +1035,13 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title="AI features" footer="AI features run locally and never send your messages to a server.">
+              <Group title="Writing help" footer="Runs on this device. Your messages are not sent anywhere to be checked.">
                 <Row
                   icon={<Zap size={18} />}
-                  label="Smart replies"
-                  sublabel="AI-suggested quick reply options"
+                  label="Soften strong language"
+                  sublabel="Replaces insults and swear words in messages you send"
                   toggle={!!settings.tone_translator}
                   onToggle={v => updateSetting('tone_translator', v)}
-                />
-                <Row
-                  icon={<Shield size={18} />}
-                  label="Contract scanner"
-                  sublabel="Scan ETH addresses for known risks"
-                  toggle={!!settings.contract_scanner}
-                  onToggle={v => updateSetting('contract_scanner', v)}
                 />
               </Group>
             </>
@@ -1050,7 +1067,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               <Group title="Ringtone & alerts">
                 <Row
                   icon={<Vibrate size={18} />}
-                  label="Vibrate on Incoming Call"
+                  label="Vibrate"
+                  sublabel="For incoming calls and new messages (same switch as in Notifications)"
                   toggle={settings.haptics_intensity > 0}
                   onToggle={v => updateSetting('haptics_intensity', v ? 2 : 0)}
                 />
@@ -1104,22 +1122,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               <Group>
                 <Row
                   icon={<Download size={18} />}
-                  label="Export all data"
-                  sublabel="Download your Ledger Chat data as JSON"
+                  label="Export settings"
+                  sublabel="Your preferences as a JSON file. Keys and sessions are never included."
                   onTap={() => {
-                    try {
-                      const data: Record<string, string> = {};
-                      for (let i = 0; i < localStorage.length; i++) {
-                        const k = localStorage.key(i)!;
-                        if (k.startsWith('ledger_')) data[k] = localStorage.getItem(k) || '';
-                      }
-                      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url; a.download = `ledger-export-${Date.now()}.json`; a.click();
-                      URL.revokeObjectURL(url);
-                      toast.success('Data exported');
-                    } catch { toast.error('Export failed'); }
+                    try { downloadSettingsBackup(); toast.success('Settings exported'); }
+                    catch { toast.error('Export failed'); }
                   }}
                 />
               </Group>
@@ -1296,23 +1303,24 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               <Group title="Native crypto payments">
                 <Row
                   icon={<Wallet size={18} />}
-                  label="Enable crypto payments"
-                  sublabel="Show payment buttons in chats (demo)"
-                  toggle={settings.payments_enabled ?? false}
+                  label="Payments in chats"
+                  sublabel="Show Payment, Tip and private payment options in the attach menu and /pay"
+                  toggle={settings.payments_enabled !== false}
                   onToggle={(v) => updateSetting('payments_enabled', v)}
                 />
               </Group>
 
               <Group title="Default payment token">
                 <div className="px-4 pb-4">
-                  {['zkDAI (Aztec)', 'ETH', 'USDC', 'USDT'].map((token) => (
+                  {/* The tokens the payment sheet can actually send; it opens on this one. */}
+                  {['ETH', 'USDC', 'USDT'].map((token) => (
                     <button
                       key={token}
                       onClick={() => updateSetting('default_token', token)}
-                      className={"flex items-center justify-between w-full py-3 border-b border-black/5 last:border-0 " + (settings.default_token === token ? "text-[#15171c]" : "text-[#15171c]")}
+                      className={"flex items-center justify-between w-full py-3 border-b border-black/5 last:border-0 " + ((settings.default_token || 'ETH') === token ? "text-[#15171c]" : "text-[#15171c]")}
                     >
                       <span className="font-semibold text-[14px]">{token}</span>
-                      {settings.default_token === token && (
+                      {(settings.default_token || 'ETH') === token && (
                         <div className="w-5 h-5 rounded-full bg-[#15171c] flex items-center justify-center">
                           <div className="w-2 h-2 bg-white rounded-full" />
                         </div>
@@ -1431,17 +1439,23 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       : modal === 'privacy_bio' ? 'About / bio'
                       : 'Group invites'}
                   </h3>
-                  {['everybody', 'contacts', 'nobody'].map(opt => (
+                  {/* Presence is only ever shared with mutual contacts, so "Everybody"
+                      would promise something the server never does. */}
+                  {(modal === 'privacy_last_seen' ? ['contacts', 'nobody'] : ['everybody', 'contacts', 'nobody']).map(opt => {
+                    const current = (settings as any)[modal!] === 'everybody' && modal === 'privacy_last_seen' ? 'contacts' : (settings as any)[modal!];
+                    const label = ({ everybody: 'Everybody', contacts: 'My contacts', nobody: 'Nobody' } as Record<string, string>)[opt];
+                    return (
                     <button
                       type="button"
                       key={opt}
                       onClick={() => { updateSetting(modal as any, opt); setModal(null); toast.success('Privacy updated'); }}
-                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${(settings as any)[modal!] === opt ? 'bg-[#15171c] text-white' : 'bg-[#f2f4f7] text-[#15171c] hover:bg-[#e4e7ec]'}`}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${current === opt ? 'bg-[#15171c] text-white' : 'bg-[#f2f4f7] text-[#15171c] hover:bg-[#e4e7ec]'}`}
                     >
-                      <span className="font-semibold capitalize">{opt}</span>
-                      {(settings as any)[modal!] === opt && <Check size={18} />}
+                      <span className="font-semibold">{label}</span>
+                      {current === opt && <Check size={18} />}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -1493,7 +1507,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <div className="px-6 pb-6">
                   <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">Font size</h3>
                   <div className="bg-[#f2f4f7] rounded-2xl p-4 mb-5">
-                    <p style={{ fontSize: `${12 + (settings.text_size ?? 2) * 2}px` }} className="text-[#15171c] text-center">
+                    <p style={{ fontSize: `${chatTextPx(settings.text_size ?? DEFAULT_TEXT_SIZE_LEVEL)}px` }} className="text-[#15171c] text-center">
                       Preview text at this size
                     </p>
                   </div>
@@ -1504,7 +1518,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       min={0}
                       max={4}
                       step={1}
-                      value={settings.text_size ?? 2}
+                      value={settings.text_size ?? DEFAULT_TEXT_SIZE_LEVEL}
                       onChange={e => updateSetting('text_size', parseInt(e.target.value))}
                       className="flex-1 accent-[#15171c]"
                     />
@@ -1580,34 +1594,34 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {modal === 'nuke' && (
                 <NukeModalContent
                   onClose={() => setModal(null)}
+                  onConfirm={deleteAllData}
                 />
+              )}
+
+              {/* ── Sign out ── */}
+              {modal === 'signout' && (
+                <div className="px-6 pb-6">
+                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">Sign out?</h3>
+                  <p className="text-[14px] text-[#727a88] mb-6 leading-relaxed">
+                    This ends your session on this device and disconnects your wallet. Your chats stay in your encrypted inbox; sign in again with the same wallet to see them.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={signingOut}
+                    onClick={confirmSignOut}
+                    className={`w-full py-4 bg-[#e5484d] rounded-2xl text-white font-semibold text-[16px] ${signingOut ? 'opacity-60 cursor-wait' : ''}`}
+                  >
+                    {signingOut ? 'Signing out…' : 'Sign out'}
+                  </button>
+                  <button type="button" disabled={signingOut} onClick={() => setModal(null)} className="w-full py-3 mt-2 text-[#727a88] font-semibold text-[16px]">
+                    Cancel
+                  </button>
+                </div>
               )}
 
 
               {/* ── Blocked Addresses ── */}
-              {modal === 'blocked_list' && (() => {
-                const blocked: string[] = (() => { try { return JSON.parse(localStorage.getItem('ledger_blocked_users') || '[]'); } catch { return []; } })();
-                return (
-                  <div className="px-6 pb-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-[20px] font-semibold text-[#15171c]">Blocked addresses</h3>
-                      <button type="button" onClick={() => setModal(null)} className="w-8 h-8 rounded-full bg-[#f2f4f7] flex items-center justify-center"><X size={16} className="text-[#727a88]" /></button>
-                    </div>
-                    {blocked.length === 0 ? (
-                      <div className="py-12 flex flex-col items-center gap-3 text-[#727a88]">
-                        <Shield size={40} className="opacity-30" />
-                        <p className="text-[15px] font-medium">No blocked addresses</p>
-                        <p className="text-[13px] text-center">Blocked wallets won't be able to send you messages</p>
-                      </div>
-                    ) : blocked.map((addr: string) => (
-                      <div key={addr} className="flex items-center justify-between bg-[#f2f4f7] rounded-2xl px-4 py-3 mb-2">
-                        <p className="text-[14px] font-semibold text-[#15171c] tabular-nums">{addr.slice(0, 8)}...{addr.slice(-6)}</p>
-                        <button type="button" onClick={() => { const upd = blocked.filter(b => b !== addr); localStorage.setItem('ledger_blocked_users', JSON.stringify(upd)); toast.success('Unblocked'); setModal(null); }} className="text-[13px] text-[#15171c] font-semibold px-3 py-1.5 rounded-xl hover:bg-black/5">Unblock</button>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
+              {modal === 'blocked_list' && <BlockListModal onClose={() => setModal(null)} />}
 
               {/* ── Manage Media ── */}
               {modal === 'manage_media' && (() => {

@@ -13,6 +13,13 @@ import { LedgerProtocolSettings } from '@/lib/wallet/SettingsEnginePXE';
 
 const SOUND_CACHE: Record<string, HTMLAudioElement> = {};
 
+// The only settings the server needs (see app/api/user/settings/apply). The
+// rest stay in the encrypted settings sync and never leave as plain values.
+const SERVER_SETTING_KEYS = new Set<string>([
+  'privacy_last_seen', 'privacy_profile_photo', 'privacy_bio', 'privacy_group_invites',
+  'show_read_receipts', 'language', 'theme', 'currency', 'allow_analytics', 'stealthy_mode',
+]);
+
 function getAudio(src: string): HTMLAudioElement {
   if (!SOUND_CACHE[src]) {
     SOUND_CACHE[src] = new Audio(src);
@@ -39,23 +46,9 @@ export function useSettingsEffect(
     (window as any).__ledger_mechanical_keyboard = s.mechanical_keyboard;
   }, [settings]);
 
-  useEffect(() => {
-    if (!settings?.mechanical_keyboard) return;
-    const handleKeyDown = () => {
-      try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.type = 'square'; osc.frequency.setValueAtTime(800, ctx.currentTime);
-        gain.gain.setValueAtTime(0.04, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
-        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.03);
-      } catch {}
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [settings?.mechanical_keyboard]);
+  // Keyboard sound is played by the message input itself (LedgerChatV2's
+  // onKeyDown). A second, page-wide listener here made every key click twice
+  // and opened a new AudioContext per keystroke, which browsers cap.
 
   useEffect(() => {
     if (!settings) return;
@@ -231,7 +224,7 @@ export function useSettingsEffect(
         (k) => (settings as any)[k] !== (prev as any)[k]
       ) as (keyof LedgerProtocolSettings)[];
 
-      changedKeys.forEach((key) => {
+      changedKeys.filter(k => SERVER_SETTING_KEYS.has(k as string)).forEach((key) => {
         fetch('/api/user/settings/apply', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

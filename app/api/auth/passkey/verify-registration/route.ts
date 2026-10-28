@@ -35,7 +35,10 @@ export async function POST(req: Request) {
         const { verified, registrationInfo } = verification;
 
         if (verified && registrationInfo) {
-            const { credentialPublicKey, credentialID } = registrationInfo;
+            // @simplewebauthn/server v10+ (installed: 14): the credential is
+            // { id: base64url string, publicKey: Uint8Array }. Same output as before.
+            const credentialPublicKey = registrationInfo.credential.publicKey;
+            const credentialID = Buffer.from(registrationInfo.credential.id, 'base64url');
             
             // Delete the challenge to prevent replay attacks
             try {

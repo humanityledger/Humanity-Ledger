@@ -8,7 +8,7 @@ export const turingTranslations = {
     
     // Upload State
     dropzoneTitle: "Drag & drop a text file or click to browse",
-    dropzoneSub: "Supports .txt, .md, .csv (Do not paste PDF files, copy their text and paste below)",
+    dropzoneSub: "Supports PDF (.pdf), Word (.docx), .txt, and .md documents",
     orPaste: "OR PASTE TEXT DIRECTLY",
     textareaPlaceholder: "Paste the student's essay, thesis, or academic document here...",
     wordCount: "words",
@@ -88,8 +88,8 @@ export const turingTranslations = {
     heroSubtitle: "Verificación Criptográfica de Integridad Académica",
     heroDesc: "Los detectores de IA estándar adivinan basándose en patrones. Turing Shield demuestra matemáticamente la integridad académica usando criptografía Zero-Knowledge, estilometría profunda y detección de evasión a nivel de byte. La herramienta forense definitiva para educadores.",
     
-    dropzoneTitle: "Arrastra un archivo de texto o haz clic para examinar",
-    dropzoneSub: "Soporta .txt, .md, .csv (No pegues archivos PDF, copia su texto y pégalo debajo)",
+    dropzoneTitle: "Arrastra un documento o haz clic para examinar",
+    dropzoneSub: "Soporta documentos PDF (.pdf), Word (.docx), .txt y .md",
     orPaste: "O PEGA EL TEXTO DIRECTAMENTE",
     textareaPlaceholder: "Pega el ensayo, tesis o documento académico del estudiante aquí...",
     wordCount: "palabras",

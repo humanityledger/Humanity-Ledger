@@ -3,10 +3,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
 import {
-  Forward, MapPin, Clock, Phone, PhoneMissed, Video, Check, CheckCheck, Lock, LockOpen, ExternalLink,
+  Forward, MapPin, Clock, Phone, PhoneMissed, PhoneIncoming, PhoneOutgoing, Video, Check, CheckCheck, Lock, LockOpen, ExternalLink,
   Heart, Waves, FileText, BarChart3, Wallet, Bot, Download, MessagesSquare, Users, Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { decodeCallEntry, callEntryLabel, formatDuration, CALL_LOG_PREFIX } from '@/lib/chat/callLog';
 import { parseZkPaymentPayload, parseEscrowPayload, ZkPaymentResult, ZkEscrowState } from '@/lib/zk/zkMoney';
 import { parseTipPayload, ZkTip } from '@/lib/zk/zkCommunityPayments';
 import { parseStreamPayload, calculateStreamProgress, ZkPaymentStream } from '@/lib/zk/zkStreaming';
@@ -415,19 +416,62 @@ const LocationBubble = React.memo(({ coords, isLive }: { coords: string; isMe: b
 LocationBubble.displayName = 'LocationBubble';
 
 // ─── Calls ───────────────────────────────────────────────────────────────────
-function CallRow({ icon, title, text, tone = 'neutral' }: { icon: React.ReactNode; title: string; text: string; tone?: 'neutral' | 'missed' }) {
+function CallRow({ icon, title, text, tone = 'neutral', action }: { icon: React.ReactNode; title: string; text: string; tone?: 'neutral' | 'missed'; action?: React.ReactNode }) {
   return (
     <div className={`${CARD} flex items-center gap-3 px-3.5 py-3 min-w-[200px]`}>
       <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${tone === 'missed' ? 'bg-[#fdecec] text-[#d93036]' : 'bg-[#eff1f4] text-[#15171c]'}`} aria-hidden="true">
         {icon}
       </span>
-      <span className="flex flex-col">
+      <span className="flex flex-col flex-1 min-w-0">
         <span className="text-[14.5px] font-medium text-[#15171c]">{title}</span>
-        <span className={`text-[13px] ${tone === 'missed' ? 'text-[#d93036]' : 'text-[#727a88]'}`}>{text}</span>
+        <span className={`text-[13px] tabular-nums ${tone === 'missed' ? 'text-[#d93036]' : 'text-[#727a88]'}`}>{text}</span>
       </span>
+      {action}
     </div>
   );
 }
+
+// A call, rebuilt from the call signals both people hold (lib/chat/callLog.ts).
+const CallLogBubble = React.memo(({ content }: { content: string; isMe: boolean }) => {
+  const e = decodeCallEntry(content);
+  if (!e) return null;
+  const at = new Date(e.startedAtMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const missed = !e.callerIsMe && (e.status === 'missed' || e.status === 'declined');
+  const text =
+    e.status === 'answered' && e.durationSec != null ? `${formatDuration(e.durationSec)} · ${at}`
+    : e.status === 'ringing' ? 'Ringing'
+    : e.status === 'ongoing' ? `Started ${at}`
+    : at;
+  const icon = missed
+    ? <PhoneMissed size={16} strokeWidth={1.9} />
+    : e.kind === 'video'
+      ? <Video size={16} strokeWidth={1.9} />
+      : e.callerIsMe ? <PhoneOutgoing size={16} strokeWidth={1.9} /> : <PhoneIncoming size={16} strokeWidth={1.9} />;
+  const canCallBack = e.status !== 'ringing' && e.status !== 'ongoing';
+  return (
+    <CallRow
+      icon={icon}
+      title={callEntryLabel(e)}
+      text={text}
+      tone={missed ? 'missed' : 'neutral'}
+      action={canCallBack ? (
+        <button
+          type="button"
+          onClick={(ev) => {
+            ev.stopPropagation();
+            window.dispatchEvent(new CustomEvent('ledger_call_back', { detail: { kind: e.kind } }));
+          }}
+          aria-label={e.kind === 'video' ? 'Video call back' : 'Call back'}
+          title={e.kind === 'video' ? 'Video call back' : 'Call back'}
+          className="ml-1 w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[#1f9d55] hover:bg-[#eaf6ef] active:scale-95 transition"
+        >
+          {e.kind === 'video' ? <Video size={17} strokeWidth={2} /> : <Phone size={17} strokeWidth={2} />}
+        </button>
+      ) : undefined}
+    />
+  );
+});
+CallLogBubble.displayName = 'CallLogBubble';
 
 const CallOfferBubble = React.memo(({ content }: { content: string; isMe: boolean }) => {
   const isVideo = content.includes(':video');
@@ -586,6 +630,7 @@ export const MessageBubble = React.memo(({
   const isCodeBlock = typeof content === 'string' && content.startsWith('```') && content.endsWith('```') && content.length > 6;
   const codeContent = isCodeBlock ? content.slice(3, -3).replace(/^[a-zA-Z0-9_-]+\n/, '').trim() : null;
 
+  const isCallLog    = content.startsWith(CALL_LOG_PREFIX);
   const isCallOffer  = content.startsWith('__CALL_OFFER__:') || content === '__CALL_HANGUP__';
   const isGroupCall  = content.startsWith('__CALL_GROUP_CREATED__:');
   const isMissedCall = content.startsWith('__CALL_MISSED__:') || content === '__CALL_DECLINE__';
@@ -797,6 +842,8 @@ export const MessageBubble = React.memo(({
               <PaymentBubble content={content} isMe={isMe} />
             ) : isTip ? (
               <TipBubble content={content} isMe={isMe} />
+            ) : isCallLog ? (
+              <CallLogBubble content={content} isMe={isMe} />
             ) : isCallOffer ? (
               <CallOfferBubble content={content} isMe={isMe} />
             ) : isGroupCall ? (

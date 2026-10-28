@@ -1749,10 +1749,17 @@ img, a, canvas, svg {
   -webkit-touch-callout: none;
 }
 
-/* 7. Force hardware-accelerated compositing on animated elements */
-.animate-pulse, .animate-spin, .animate-bounce, [class*="transition-"] {
+/* 7. Compositing hint for the looping animations only.
+   This used to match every element with a Tailwind transition-* class and
+   give it transform: translateZ(0). A transform makes an element the
+   containing block of every position:fixed descendant, so modals, menus and
+   full-screen overlays inside such an element were sized and placed
+   against it instead of the window. <body> itself carries transition-colors,
+   so every fixed overlay in the app was positioned against the body, which
+   is a scroll container: when anything scrolled it, overlays shifted off
+   screen (Ledger Studio opened cut off on the left and top). */
+.animate-pulse, .animate-spin, .animate-bounce {
   will-change: transform, opacity;
-  transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }

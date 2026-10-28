@@ -8,6 +8,7 @@ import {
   MessageCircle, Link, FileText, ArrowLeft, Copy, Check
 } from 'lucide-react';
 import { EncryptionInfoSheet } from './EncryptionInfoSheet';
+import { setSynced, DEVICE_SYNC_EVENT, type DeviceSyncEventDetail } from '@/lib/sync/runtime';
 
 interface ContactInfoPanelProps {
   peerAddress: string;
@@ -166,13 +167,32 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
       .catch(() => {});
   }, [peerAddress]);
 
-  useEffect(() => {
+  const readLocalPrefs = () => {
     setLockChat(!!localStorage.getItem('ledger_locked_' + key));
     setIsMuted(!!localStorage.getItem('ledger_muted_' + key));
     setDisappearing((localStorage.getItem('ledger_disappearing_' + key) as any) || 'off');
     let favs: string[] = []; try { favs = JSON.parse(localStorage.getItem('ledger_favourites') || '[]'); } catch {}
     setIsFav(favs.includes(key));
+  };
+
+  useEffect(() => {
+    readLocalPrefs();
   }, [peerAddress]);
+
+  // Mute, lock, timer and favourite follow the account to its other devices
+  // (lib/sync). When one of them changes this chat, refresh the toggles.
+  useEffect(() => {
+    const onSync = (e: Event) => {
+      const d = (e as CustomEvent<DeviceSyncEventDetail>).detail;
+      if (d?.source === 'remote' && d.keys.some(k => k.endsWith(':' + key))) readLocalPrefs();
+    };
+    window.addEventListener(DEVICE_SYNC_EVENT, onSync);
+    return () => window.removeEventListener(DEVICE_SYNC_EVENT, onSync);
+  }, [key]);
+
+  const syncFlag = (ns: 'muted' | 'locked' | 'fav', on: boolean) => {
+    if (myAddress) setSynced(myAddress, { [`${ns}:${key}`]: on ? true : null });
+  };
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -181,6 +201,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
 
   const handleMute = (v: boolean) => {
     setIsMuted(v);
+    syncFlag('muted', v);
     if (v) { 
       localStorage.setItem('ledger_muted_' + key, '1');
       showToast('Notifications muted'); 
@@ -197,13 +218,14 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   };
 
   const toggleFav = () => {
+    syncFlag('fav', !isFav);
     let favs: string[] = []; try { favs = JSON.parse(localStorage.getItem('ledger_favourites') || '[]'); } catch {}
     if (isFav) {
       localStorage.setItem('ledger_favourites', JSON.stringify(favs.filter((f: string) => f !== key)));
       setIsFav(false);
       showToast('Removed from Favorites');
     } else {
-      localStorage.setItem('ledger_favourites', JSON.stringify([...favs, key]));
+      localStorage.setItem('ledger_favourites', JSON.stringify(Array.from(new Set([...favs, key]))));
       setIsFav(true);
       showToast('Added to Favorites');
     }
@@ -298,11 +320,12 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
               <Row icon={<ImageIcon />} label="Shared media" value={String(mediaCount)} onTap={() => setModal('media')} />
             </Group>
 
-            <Group title="Privacy" footer="Mute, timer and lock apply on this device.">
+            <Group title="Privacy" footer="Mute, timer and lock apply on all your devices signed in to this account.">
               <Row icon={<Bell />} label="Mute notifications" toggle={isMuted} onToggle={handleMute} />
               <Row icon={<Clock />} label="Disappearing messages" value={{ off: 'Off', '24h': '24 hours', '7d': '7 days', '90d': '90 days' }[disappearing]} onTap={() => setModal('disappearing')} />
               <Row icon={<Lock />} label="Lock chat with PIN" toggle={lockChat} onToggle={(v: boolean) => {
                 setLockChat(v);
+                syncFlag('locked', v);
                 if (v) {
                   localStorage.setItem('ledger_locked_' + key, '1');
                   showToast('Chat locked. Opening it asks for your PIN');
@@ -344,6 +367,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
                 <button key={opt} onClick={() => {
                   setDisappearing(opt as any);
                   localStorage.setItem('ledger_disappearing_' + key, opt);
+                  if (myAddress) setSynced(myAddress, { [`disappearing:${key}`]: opt === 'off' ? null : opt });
                   setModal(null);
                   showToast(opt === 'off' ? 'Timer is off' : 'Timer saved');
                 }} className="flex items-center justify-between p-4 rounded-xl bg-white border border-black/[0.05] hover:border-[#15171c] transition-colors">

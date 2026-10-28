@@ -61,13 +61,13 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
     await new Promise(r => setTimeout(r, 1200));
     setSignalled(true);
     setSignalling(false);
-    toast.success('SeÃ±alizaciÃ³n V6 enviada exitosamente para el Sequencer');
+    toast.success('Señalización V6 enviada exitosamente para el Sequencer');
   };
 
   const handleCopyPayload = () => {
     navigator.clipboard.writeText(AZTEC_GOVERNANCE_PROPOSER_PAYLOAD);
     setCopiedPayload(true);
-    toast.success('DirecciÃ³n del Proposer Payload copiada');
+    toast.success('Dirección del Proposer Payload copiada');
     setTimeout(() => setCopiedPayload(false), 2000);
   };
 
@@ -140,7 +140,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
                 </div>
                 <p className="text-[12px] text-emerald-800/80 mt-0.5 leading-relaxed">
                   Imagen recomendada: <code className="bg-emerald-100 font-mono font-bold px-1.5 py-0.5 rounded text-emerald-900">{AZTEC_TESTNET_IMAGE}</code>.
-                  Los nodos no actualizados antes de las 10:00 UTC serÃ¡n penalizados (slashed) por el sequencer.
+                  Los nodos no actualizados antes de las 10:00 UTC serán penalizados (slashed) por el sequencer.
                 </p>
               </div>
             </div>
@@ -150,7 +150,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
               rel="noopener noreferrer"
               className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[12px] shrink-0 flex items-center gap-1.5 shadow-sm"
             >
-              GuÃ­a Oficial <ExternalLink size={13} />
+              Guía Oficial <ExternalLink size={13} />
             </a>
           </div>
         ) : (
@@ -168,7 +168,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
                   </span>
                 </div>
                 <p className="text-[12px] text-amber-800/80 mt-0.5 leading-relaxed">
-                  ConfiguraciÃ³n Path 1 activa (preserva base de datos sin resync). Historial L1 preservado desde el bloque de gÃ©nesis del Rollup.
+                  Configuración Path 1 activa (preserva base de datos sin resync). Historial L1 preservado desde el bloque de génesis del Rollup.
                 </p>
               </div>
             </div>
@@ -188,7 +188,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Radio size={18} className="text-[#1C1C1E] " />
-              <h3 className="text-[15px] font-bold text-[#1C1C1E]">SeÃ±alizaciÃ³n de Gobernanza V6 para Sequencers</h3>
+              <h3 className="text-[15px] font-bold text-[#1C1C1E]">Señalización de Gobernanza V6 para Sequencers</h3>
             </div>
             <a
               href="https://forum.aztec.network/t/proposal-v6-payload/8671"
@@ -200,7 +200,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
             </a>
           </div>
           <p className="text-[13px] text-black/60 mb-3 leading-relaxed">
-            La propuesta AZUP V6 estÃ¡ lista para seÃ±alizaciÃ³n de sequencers previa a la votaciÃ³n formal on-chain.
+            La propuesta AZUP V6 está lista para señalización de sequencers previa a la votación formal on-chain.
           </p>
 
           <div className="bg-white rounded-xl p-3 border border-black/5 flex items-center justify-between gap-3 mb-4">
@@ -233,15 +233,15 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
             >
               {signalling ? (
                 <>
-                  <RefreshCw size={16} className="animate-spin" /> Transmitiendo seÃ±alizaciÃ³n...
+                  <RefreshCw size={16} className="animate-spin" /> Transmitiendo señalización...
                 </>
               ) : signalled ? (
                 <>
-                  <CheckCircle2 size={16} /> Sequencer SeÃ±alizado a favor de V6
+                  <CheckCircle2 size={16} /> Sequencer Señalizado a favor de V6
                 </>
               ) : (
                 <>
-                  <Send size={15} /> SeÃ±alizar V6 Payload en mi Sequencer
+                  <Send size={15} /> Señalizar V6 Payload en mi Sequencer
                 </>
               )}
             </button>
@@ -255,7 +255,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
             <p className="text-[20px] font-black text-[#1C1C1E] font-mono mt-1">
               #{data?.currentBlock || '14,824'}
             </p>
-            <p className="text-[11px] text-[#1C1C1E] font-semibold mt-0.5">Ã‰poca #{data?.currentEpoch || '463'}</p>
+            <p className="text-[11px] text-[#1C1C1E] font-semibold mt-0.5">Época #{data?.currentEpoch || '463'}</p>
           </div>
 
           <div className="p-4 rounded-2xl bg-[#F9F9FB] border border-black/5">
@@ -271,7 +271,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
             <p className="text-[20px] font-black text-[#1C1C1E] font-mono mt-1">
               {data?.sequencerMetrics?.avgGasSavedVsL1 || '99.4%'}
             </p>
-            <p className="text-[11px] text-black/40 font-semibold mt-0.5">AmortizaciÃ³n por Lote</p>
+            <p className="text-[11px] text-black/40 font-semibold mt-0.5">Amortización por Lote</p>
           </div>
 
           <div className="p-4 rounded-2xl bg-[#F9F9FB] border border-black/5">
@@ -324,7 +324,7 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
                 ) : (
                   <tr>
                     <td colSpan={6} className="text-center py-6 text-black/40">
-                      Cargando historial de lotes Aztecâ€¦
+                      Cargando historial de lotes Aztec…
                     </td>
                   </tr>
                 )}

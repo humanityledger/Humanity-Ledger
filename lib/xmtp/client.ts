@@ -293,8 +293,36 @@ export async function getXMTPClient(
   return client;
 }
 
+/** How many of the newest installations survive an automatic cleanup. */
+export const KEEP_RECENT_INSTALLATIONS = 4;
+
 /**
- * Revokes all previous installations for a given Inbox ID to fix the 10/10 limit error.
+ * Pick which installations to revoke when the inbox is at XMTP's 10-device
+ * limit: everything except the `keep` most recently created ones.
+ *
+ * This used to revoke ALL installations. With one account on a PC and a
+ * phone, signing in on a new browser then signed the PC and the phone out of
+ * XMTP as well, which is the opposite of a multi-device messenger. Stale
+ * installations (cleared browser data, old tabs) are the oldest, so keeping
+ * the newest few keeps the devices actually in use.
+ */
+export function selectInstallationsToRevoke(
+  installations: Array<{ bytes: Uint8Array; clientTimestampNs?: bigint }>,
+  keep = KEEP_RECENT_INSTALLATIONS,
+): Uint8Array[] {
+  const zero = BigInt(0);
+  const sorted = [...installations].sort((a, b) => {
+    const ta = a.clientTimestampNs ?? zero;
+    const tb = b.clientTimestampNs ?? zero;
+    return ta > tb ? -1 : ta < tb ? 1 : 0; // newest first
+  });
+  return sorted.slice(Math.max(0, keep)).map(i => i.bytes);
+}
+
+/**
+ * Frees XMTP device slots for an inbox at the 10/10 limit by revoking its
+ * oldest installations. The newest KEEP_RECENT_INSTALLATIONS stay signed in.
+ * Returns how many were revoked.
  */
 export async function revokeXMTPInstallations(
   wagmiSigner: {
@@ -302,15 +330,17 @@ export async function revokeXMTPInstallations(
     signMessage: (message: string | Uint8Array) => Promise<string>;
   },
   inboxId: string
-): Promise<void> {
+): Promise<number> {
   const signer = buildXmtpSigner(wagmiSigner);
   const states = await (Client as any).inboxStateFromInboxIds([inboxId], XMTP_ENV);
   if (states && states[0] && states[0].installations) {
-    const installationsToRevoke = states[0].installations.map((i: any) => i.bytes);
+    const installationsToRevoke = selectInstallationsToRevoke(states[0].installations);
     if (installationsToRevoke.length > 0) {
       await (Client as any).revokeInstallations(signer as any, inboxId, installationsToRevoke, XMTP_ENV);
     }
+    return installationsToRevoke.length;
   }
+  return 0;
 }
 
 /** Remove a client from the registry (call on wallet disconnect) */
@@ -457,7 +487,10 @@ export async function sendMessage(
   toAddress: string,
   content: string,
   senderEthAddress?: string,
-): Promise<void> {
+): Promise<string | undefined> {
+  // Returns the XMTP message id of what was sent. The chat uses it to swap
+  // its optimistic bubble for the real message deterministically, instead of
+  // guessing the pair by content (which left duplicates behind).
   // XMTP Native Delivery — Zero plaintext server persistence (F2-01)
   if (!client) {
     throw new Error('XMTP client is not initialized');
@@ -479,50 +512,72 @@ export async function sendMessage(
   const cacheKey = `${client.inboxId || ''}:${finalTo.toLowerCase()}`;
   let lastError: any = null;
 
-  // FAST PATH: If we already have a cached DM conversation handle, attempt instant transmission
-  const cachedDm = activeDmCache.get(cacheKey);
-  if (cachedDm) {
+  // ── Exactly-once send ─────────────────────────────────────────────────────
+  // This used to call dm.send() inside a timeout and retry up to 4 times. A
+  // send that was slow but DID reach the network was then sent again, and the
+  // recipient saw the message two or three times. Now the message is created
+  // ONCE with sendOptimistic() (stored in the local XMTP database, id known
+  // immediately) and only publishMessages() is retried. publishMessages()
+  // publishes whatever is still unpublished in that conversation, so calling
+  // it again never creates a second copy.
+  let dm: any = activeDmCache.get(cacheKey) ?? null;
+  let sentId: string | undefined;
+
+  for (let i = 0; i < 4; i++) {
     try {
-      const sendTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('send timeout')), 6000));
-      await Promise.race([cachedDm.send(content), sendTimeout]);
-      // Non-blocking sync in background so UI returns immediately (< 300ms)
-      cachedDm.sync().catch(() => {});
-      console.log(`[XMTP] Ultra-fast cached delivery succeeded for ${toAddress}`);
-      return;
-    } catch (cachedErr) {
-      console.warn(`[XMTP] Cached DM handle failed, falling back to full discovery:`, cachedErr);
-      activeDmCache.delete(cacheKey);
+      if (!dm) {
+        dm = await withTimeout(client.conversations.newDmWithIdentifier(identifier), 8000, 'newDm timeout');
+        try { await withTimeout(dm.sync(), 3000, 'sync timeout'); } catch {}
+      }
+      if (!sentId) {
+        sentId = await withTimeout<string>(dm.sendOptimistic(content), 5000, 'prepare timeout');
+      }
+      await withTimeout(dm.publishMessages(), 8000, 'publish timeout');
+
+      activeDmCache.set(cacheKey, dm);
+      dm.sync().catch(() => {});
+      return sentId;
+    } catch (sendErr: any) {
+      lastError = sendErr;
+      console.warn(`[XMTP] Attempt ${i + 1} for ${toAddress} did not complete:`, sendErr?.message || sendErr);
+      if (!sentId) {
+        // Nothing was created yet: a fresh conversation handle is safe.
+        activeDmCache.delete(cacheKey);
+        dm = null;
+      }
+      if (i < 3) await new Promise(r => setTimeout(r, 300 * (i + 1)));
     }
   }
 
-  for (let i = 0; i < 3; i++) {
-    try {
-      const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 8000));
-      const dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
-
-      try {
-        const syncTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('sync timeout')), 3000));
-        await Promise.race([dm.sync(), syncTimeout]);
-      } catch {}
-
-      const sendTimeout = new Promise<void>((_, r) => setTimeout(() => r(new Error('send timeout')), 8000));
-      await Promise.race([dm.send(content), sendTimeout]);
-      
-      // Store in memory cache for subsequent instant messages
-      activeDmCache.set(cacheKey, dm);
-      // Run final sync asynchronously in background without delaying user UI
-      dm.sync().catch(() => {});
-      console.log(`[XMTP] Native encrypted delivery succeeded for ${toAddress}`);
-      return;
-    } catch (sendErr: any) {
-      lastError = sendErr;
-      activeDmCache.delete(cacheKey);
-      console.warn(`[XMTP] Attempt ${i + 1} for ${toAddress} did not complete:`, sendErr?.message || sendErr);
-      if (i < 2) await new Promise(r => setTimeout(r, 300));
-    }
+  if (sentId && dm) {
+    // The message exists locally but the network did not confirm it. Keep
+    // publishing in the background; it will not be duplicated, and the chat
+    // already shows it with its real id.
+    schedulePublishRetry(cacheKey, dm);
+    return sentId;
   }
 
   throw new Error(`Message delivery failed via XMTP: ${lastError?.message || 'Network error'}`);
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(label)), ms)),
+  ]);
+}
+
+const publishRetries = new Map<string, number>();
+/** Retry publishing a conversation's unpublished messages for up to ~2 minutes. */
+function schedulePublishRetry(cacheKey: string, dm: any, attempt = 0) {
+  if (attempt >= 8) { publishRetries.delete(cacheKey); return; }
+  if (attempt === 0 && publishRetries.has(cacheKey)) return; // already retrying
+  publishRetries.set(cacheKey, attempt);
+  setTimeout(() => {
+    dm.publishMessages()
+      .then(() => publishRetries.delete(cacheKey))
+      .catch(() => schedulePublishRetry(cacheKey, dm, attempt + 1));
+  }, Math.min(2000 * 2 ** attempt, 30_000));
 }
 
 /**

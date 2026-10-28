@@ -40,7 +40,9 @@ vi.mock('../../../lib/prisma', () => ({
 // 3. Mock OpenAI for Semantic Validation
 vi.mock('openai', () => {
   return {
-    default: vi.fn().mockImplementation(() => ({
+    // A regular function: the route calls `new OpenAI()`, and Vitest 4+ does
+    // not allow arrow-function mocks to be used as constructors.
+    default: vi.fn().mockImplementation(function () { return ({
       chat: {
         completions: {
           create: vi.fn().mockImplementation(async (args: any) => {
@@ -61,7 +63,7 @@ vi.mock('openai', () => {
           })
         }
       }
-    }))
+    }); })
   };
 });
 
