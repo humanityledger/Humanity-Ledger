@@ -6,20 +6,6 @@ import { RpcRelayerManager } from '@/lib/blockchain/rpc-relayer';
 
 export const dynamic = 'force-dynamic';
 
-const SAFE_PREFIXES = ['MATCH', 'OPTIONAL MATCH', 'CALL', 'RETURN', 'WITH', 'UNWIND'];
-
-function isSafeQuery(cypher: string): boolean {
-    const upper = cypher.trim().toUpperCase();
-    const start = upper.split(/\s/)[0];
-    return SAFE_PREFIXES.includes(start) && 
-        !upper.includes('CREATE') &&
-        !upper.includes('DELETE') &&
-        !upper.includes('MERGE') &&
-        !upper.includes('SET') &&
-        !upper.includes('REMOVE') &&
-        !upper.includes('DROP');
-}
-
 function serializeRecord(record: any) {
     const obj: Record<string, any> = {};
     for (const key of record.keys) {
@@ -169,32 +155,7 @@ export async function GET(req: NextRequest) {
     }
 }
 
-export async function POST(req: NextRequest) {
-    try {
-        const body = await req.json();
-        const { cypher, params = {} } = body;
-
-        if (!cypher || typeof cypher !== 'string') {
-            return NextResponse.json({ error: 'cypher field required' }, { status: 400 });
-        }
-
-        if (!isSafeQuery(cypher)) {
-            return NextResponse.json({ 
-                error: 'Only read-only MATCH queries are allowed via this endpoint'
-            }, { status: 403 });
-        }
-
-        const result = await runQuery(cypher, params);
-        const records = result.records.map(serializeRecord);
-        
-        return NextResponse.json({ 
-            ok: true, 
-            count: records.length, 
-            data: records
-        });
-
-    } catch (e: any) {
-        console.warn('[Graph] Cypher execution failed:', e.message);
-        return NextResponse.json({ ok: false, data: [], error: 'Internal Server Error', code: 'NEO4J_OFFLINE' }, { status: 200 });
-    }
-}
+// POST used to run any read-looking Cypher a signed-in account sent. The
+// keyword blacklist let through CALL procedures (apoc.*, dbms.*), LOAD CSV
+// FROM a URL (a request from the database server to any address) and
+// writes split across string concatenation. Nothing called it, so it is gone.

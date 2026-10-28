@@ -43,6 +43,7 @@ import { EmailLoginModal } from "@/components/auth/EmailLoginModal";
 import { useDynamicIsland } from "@/lib/store/dynamic-island-store";
 import { ConnectView, type ConnectStage, type WalletOption } from "@/components/connect/ConnectView";
 
+import { safeReturnPath } from "@/lib/security/safeRedirect";
 const DynamicUniversalScanModal = dynamic(() => import("@/components/scan/UniversalScanModal"), { ssr: false });
 
 const QR_LIFETIME_MS = 240_000;
@@ -78,12 +79,14 @@ const MOBILE_WALLETS: WalletOption[] = [
 ];
 
 /** Return path after sign-in. Only same-origin paths are honoured. */
-function safeReturnPath(): string {
+function returnPathFromQuery(): string {
   if (typeof window === "undefined") return "/chat";
   const rp = new URLSearchParams(window.location.search);
   const raw = rp.get("returnUrl") || rp.get("redirect_url") || rp.get("redirect") || "";
-  const ok = raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/terminal") && raw !== "/portfolio";
-  return ok ? raw : "/chat";
+  // safeReturnPath refuses other sites, "/\host" and javascript: URLs.
+  const path = safeReturnPath(raw, "/chat");
+  const ok = !path.startsWith("/terminal") && path !== "/portfolio";
+  return ok ? path : "/chat";
 }
 
 function readDisconnectGuard(): boolean {
@@ -189,7 +192,7 @@ export default function ConnectPage() {
     })();
     if (hasCookie || hasLocal) {
       setLinked(true);
-      const t = setTimeout(() => window.location.replace(safeReturnPath()), 500);
+      const t = setTimeout(() => window.location.replace(returnPathFromQuery()), 500);
       return () => clearTimeout(t);
     }
   }, [setLinked]);
@@ -306,7 +309,7 @@ export default function ConnectPage() {
           setLinked(true);
         }
         await new Promise((r) => setTimeout(r, 800));
-        window.location.replace(safeReturnPath());
+        window.location.replace(returnPathFromQuery());
       } catch {
         /* transient network error, keep polling */
       }
@@ -322,7 +325,7 @@ export default function ConnectPage() {
 
     if (isLinked) {
       redirectingRef.current = true;
-      window.location.replace(safeReturnPath());
+      window.location.replace(returnPathFromQuery());
       return;
     }
     if (readDisconnectGuard()) return;
@@ -346,7 +349,7 @@ export default function ConnectPage() {
             setSignStep(3);
             setLinked(true);
             redirectingRef.current = true;
-            window.location.replace(safeReturnPath());
+            window.location.replace(returnPathFromQuery());
             return;
           }
         }
@@ -400,7 +403,7 @@ export default function ConnectPage() {
           setSignStep(3);
           setLinked(true);
           redirectingRef.current = true;
-          window.location.replace(safeReturnPath());
+          window.location.replace(returnPathFromQuery());
           return;
         }
 

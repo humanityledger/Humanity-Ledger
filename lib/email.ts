@@ -1,3 +1,4 @@
+import { escapeHtml } from '@/lib/security/escapeHtml';
 import { Resend } from 'resend';
 
 // Provide a dummy key for build-time safety if env is missing
@@ -211,15 +212,21 @@ export async function sendWelcomeEmail(email: string, name?: string): Promise<vo
  * Send support message to admin
  */
 export async function sendSupportEmail(message: string, section: string, senderEmail?: string, senderName?: string): Promise<void> {
-  const adminEmail = 'josejordan20222@gmail.com';
+  const adminEmail = process.env.SUPPORT_INBOX || 'josejordan20222@gmail.com';
+  // Every field below comes from the support form: escape before it goes into HTML.
+  const safeSection = escapeHtml(String(section).toUpperCase());
+  const safeName = escapeHtml(senderName || 'Anonymous User');
+  const safeFrom = escapeHtml(senderEmail || 'Anonymous User');
+  const safeMessage = escapeHtml(message);
+  const validReplyTo = senderEmail && /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(senderEmail) ? senderEmail : undefined;
   
   try {
     const { data, error } = await resend.emails.send({
       // The 'from' address MUST be your verified domain or onboarding@resend.dev
       from: getSender('Humanity Ledger Support Form'),
       to: adminEmail,
-      replyTo: senderEmail || 'noreply@Humanity Ledger',
-      subject: `[Support - ${section.toUpperCase()}] New Message from ${senderName || 'Anonymous'}`,
+      ...(validReplyTo ? { replyTo: validReplyTo } : {}),
+      subject: `[Support - ${String(section).toUpperCase().replace(/[\r\n]/g, ' ').slice(0, 40)}] New Message from ${String(senderName || 'Anonymous').replace(/[\r\n]/g, ' ').slice(0, 80)}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -241,14 +248,14 @@ export async function sendSupportEmail(message: string, section: string, senderE
             </div>
             
             <div class="meta">
-              <p><strong>Category:</strong> ${section.toUpperCase()}</p>
-              <p><strong>Name:</strong> ${senderName || 'Anonymous User'}</p>
-              <p><strong>From:</strong> ${senderEmail || 'Anonymous User'}</p>
+              <p><strong>Category:</strong> ${safeSection}</p>
+              <p><strong>Name:</strong> ${safeName}</p>
+              <p><strong>From:</strong> ${safeFrom}</p>
               <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
             </div>
 
             <div class="message">
-              ${message}
+              ${safeMessage}
             </div>
 
             <div class="footer">
@@ -265,7 +272,7 @@ export async function sendSupportEmail(message: string, section: string, senderE
     
   } catch (error: any) {
     console.error(`[Email] Failed to forward support message:`, error?.message || error);
-    throw new Error(`Support email failed: ${error?.message || 'Unknown error'}`);
+    throw new Error('Support email failed');
   }
 }
 

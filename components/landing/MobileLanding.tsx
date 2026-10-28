@@ -26,6 +26,7 @@ import { HumanityLedgerTweetFeed } from "./HumanityLedgerTweetFeed";
 import { EmailLoginModal } from "@/components/auth/EmailLoginModal";
 
 
+import { safeReturnPath } from "@/lib/security/safeRedirect";
 //  Reown AppKit + WagmiAdapter localStorage key patterns 
 // These are ALL the keys that Reown AppKit v1/v2 and its WagmiAdapter write
 // to localStorage (2025-2026). We scan ALL of them when recovering a session.
@@ -945,7 +946,9 @@ export function MobileLanding() {
       // connect overlay. The component re-renders with isLinked=true and shows the
       // connected header (Ledger Hub + address badge + disconnect).
       const params = new URLSearchParams(window.location.search);
-      const next = params.get('next');
+      // ?next= is unchecked input: "javascript:…" ran code on our origin and
+      // "https://…" sent a just-signed-in person to another site.
+      const next = safeReturnPath(params.get('next'), '');
       if (next && next !== '/connect' && next !== window.location.pathname) {
           console.log('[Auth] Redirecting to:', next);
           window.location.replace(next);

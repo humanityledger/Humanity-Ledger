@@ -37,7 +37,6 @@ export function EntityCard({ entity }: { entity: any }) {
          )}
 
          {/* Animating DNA/Code wireframe overlay */}
-         <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("/patron-cosmico-4k.png")', backgroundSize: '150px' }} />
 
          {/* Core Icon representing the entity essence */}
          <div className="relative z-10 w-16 h-16 rounded-2xl bg-white shadow-lg flex items-center justify-center border border-black/5 group-hover:scale-110 transition-transform duration-500">

@@ -37,6 +37,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { APP_FRAME_CSP, isAppFramePath } from './lib/community-apps/framePolicy';
 import { isRetiredApiRoute } from './lib/security/retiredRoutes';
+import { isSessionPayload } from './lib/security/sessionClaims';
 
 // ── Public routes: accessible to EVERYONE (no auth required) ──────────────────
 const PUBLIC_PATHS = new Set([
@@ -95,11 +96,9 @@ const PUBLIC_PREFIXES = [
   '/api/health',
   '/api/status',
   '/api/registry/',
-  '/api/humanidfi/',
   // '/api/chat/', (Removed from public routes for security)
   '/api/call/',          // Group call room API
   '/api/provenance/',    // Provenance log API called on XMTP connect
-  '/api/chat/users/search',
   '/api/chat/presence',  // Safe chat presence heartbeat / query
   '/api/gif/',           // GIF search proxy and fallback catalog
   '/api/link-preview',   // Safe SSRF-guarded OpenGraph link preview
@@ -266,7 +265,9 @@ async function extractSessionAddress(req: NextRequest): Promise<string | null> {
         payload = result.payload;
       }
       
-      const addr = (payload as any).address ?? (payload as any).sub;
+      // A token that verifies is not automatically a sign-in (refresh tokens,
+      // retired webauthn tokens): lib/security/sessionClaims.ts.
+      const addr = isSessionPayload(payload) ? ((payload as any).address ?? (payload as any).sub) : null;
       if (addr && typeof addr === 'string') return addr.toLowerCase();
     } catch {
       // Expired or invalid JWT — fall through
@@ -277,8 +278,8 @@ async function extractSessionAddress(req: NextRequest): Promise<string | null> {
   const accessToken = req.cookies.get('human.access-token')?.value;
   if (accessToken) {
     try {
-      const { payload } = await jwtVerify(accessToken, getEdgeSecret());
-      const userId = (payload as any).userId;
+      const { payload } = await jwtVerify(accessToken, getEdgeSecret(), { algorithms: ['HS256'] });
+      const userId = isSessionPayload(payload) ? (payload as any).userId : null;
       if (userId && typeof userId === 'string') return userId.toLowerCase();
     } catch {
       // Expired or invalid JWT
@@ -286,6 +287,22 @@ async function extractSessionAddress(req: NextRequest): Promise<string | null> {
   }
 
   return null;
+}
+
+// ── Content Security Policy ──────────────────────────────────────────────────
+// One policy for every page. Public pages (/, /chat, /studio, /connect, docs)
+// used to leave through the early public-path return before any CSP was set,
+// so the chat, where keys and the wallet live, ran with no policy at all.
+// Development needs 'unsafe-eval' (React Refresh); production does not.
+function newNonce(): string {
+  const id = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+  return btoa(id);
+}
+
+export function buildCsp(nonce: string, isDev = process.env.NODE_ENV === 'development'): string {
+  return `default-src 'self'; script-src 'self' 'nonce-${nonce}' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ''} https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:${isDev ? ' ws:' : ''}; media-src 'self' blob: mediastream:; frame-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';`;
 }
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
@@ -332,7 +349,15 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     sanitizedHeaders.delete('x-session-ts');
     sanitizedHeaders.delete('x-wallet-address');
     sanitizedHeaders.delete('x-web3-address');
-    return NextResponse.next({ request: { headers: sanitizedHeaders } });
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.next({ request: { headers: sanitizedHeaders } });
+    }
+    const publicNonce = newNonce();
+    sanitizedHeaders.set('x-nonce', publicNonce);
+    const publicRes = NextResponse.next({ request: { headers: sanitizedHeaders } });
+    publicRes.headers.set('x-nonce', publicNonce);
+    publicRes.headers.set('Content-Security-Policy', buildCsp(publicNonce));
+    return publicRes;
   }
 
 
@@ -419,10 +444,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     : Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
   requestHeaders.set('x-request-id', requestId);
 
-  const nonceBytes = typeof crypto !== 'undefined' && crypto.randomUUID
-    ? crypto.randomUUID()
-    : Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
-  const nonce = Buffer.from(nonceBytes).toString('base64');
+  const nonce = newNonce();
   requestHeaders.set('x-nonce', nonce);
 
   const response = NextResponse.next({
@@ -434,10 +456,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   response.headers.set('x-nonce', nonce);
 
   // [SECURITY] B-016 / B-017: Unified strict CSP with nonce per request (N-05)
-  response.headers.set(
-    'Content-Security-Policy',
-    `default-src 'self'; script-src 'self' 'nonce-${nonce}' 'wasm-unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:; media-src 'self' blob: mediastream:; frame-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';`
-  );
+  response.headers.set('Content-Security-Policy', buildCsp(nonce));
 
   // [SECURITY] Cross-Origin Isolation for Barretenberg WASM Multithreading (SharedArrayBuffer)
   if (req.nextUrl.pathname.startsWith('/prove')) {

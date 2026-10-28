@@ -25,16 +25,8 @@ export function InstitutionalShell({
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 text-[#050505] relative font-aztec-body overflow-x-hidden bg-white">
 
-      {/*  Layer 1: Subtle pattern — light mode only  */}
-      <div
-        className="fixed inset-0 pointer-events-none -z-20 bg-[url('/patron-cosmico-4k.png')] bg-repeat bg-left-top"
-        style={{
-          backgroundSize: 'clamp(100px, 25vw, 400px)',
-          opacity: 0.04,
-          transform: 'translateZ(0)',
-          willChange: 'transform',
-        }}
-      />
+      {/* The background pattern layer pointed at /patron-cosmico-4k.png, which
+          is not in public/: every page using this shell made a failed request. */}
 
       {/*  Main content  */}
       <div className="flex-1 relative z-10">

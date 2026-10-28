@@ -233,6 +233,21 @@ export const RETIRED_API_ROUTES: readonly string[] = [
   '/api/auth/signup',
   '/api/auth/kyc-init',
   '/api/auth/kyc-qr-session',
+  // Added 2026-10-28 (second pass): account takeover. It signed a session
+  // token whose subject was the raw value of the ledger_session cookie,
+  // without verifying it, so any signed-in account could put another
+  // wallet's address there and receive that wallet's session. It never
+  // checked a passkey either. Tokens it issued are refused by
+  // lib/security/sessionClaims.ts.
+  '/api/premium/webauthn',
+  // Every wallet connection sent the visitor's IP address to ip-api.com over
+  // plain HTTP and stored city and coordinates next to the wallet address,
+  // with a userId taken from the request body. The only reader of that table
+  // (/api/network/global-logins) is retired, so the data had no use.
+  '/api/geo/login-event',
+  // No caller. With INTERNAL_API_KEY unset in production the key check
+  // compared undefined with undefined and let any account write log rows.
+  '/api/security/audit-log',
 ];
 
 const PATTERNS = RETIRED_API_ROUTES.map(u => new RegExp("" + toRegex(u)));

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { Mail, ArrowRight, ArrowLeft, Loader2, Lock, RefreshCw } from "lucide-react";
 
+import { safeReturnPath } from "@/lib/security/safeRedirect";
 // ─────────────────────────────────────────────────────────────────────────────
 // LOGIN PAGE — Email OTP flow
 //
@@ -45,8 +46,9 @@ export default function LoginPage() {
   // ── Redirect helper ──────────────────────────────────────────────────────
   const redirect = useCallback(() => {
     const params = new URLSearchParams(window.location.search);
-    const returnUrl = params.get("returnUrl") || params.get("redirect_url");
-    if (returnUrl && returnUrl.startsWith("/") && !returnUrl.startsWith("/connect")) {
+    // "//host" and "/\host" passed the old startsWith("/") check and left the site.
+    const returnUrl = safeReturnPath(params.get("returnUrl") || params.get("redirect_url"), "");
+    if (returnUrl && !returnUrl.startsWith("/connect")) {
       window.location.replace(returnUrl);
     } else {
       window.location.replace("/portfolio");

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,13 +11,19 @@ export const dynamic = 'force-dynamic';
  * Used by LedgerChatUserSearch to show real results.
  */
 export async function GET(req: NextRequest) {
+  // Signed-in only (it was public), and limited: the directory could be
+  // walked one letter at a time by anyone.
+  const caller = await getVerifiedCaller(req);
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const rl = await checkRateLimit(caller, { max: 60, windowSec: 60, prefix: 'rl:user-search' });
+  if (!rl.allowed) return NextResponse.json({ users: [], error: 'Too many searches' }, { status: 429 });
   const { searchParams } = new URL(req.url);
   const raw = searchParams.get('q')?.trim() ?? '';
 
   // Strip leading @ if present
   const q = raw.startsWith('@') ? raw.slice(1) : raw;
 
-  if (!q) {
+  if (!q || q.length > 64 || (!raw.startsWith('0x') && q.length < 2)) {
     return NextResponse.json({ users: [] });
   }
 

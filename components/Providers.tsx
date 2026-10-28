@@ -13,7 +13,6 @@ import { SessionProvider } from "next-auth/react";
 import { CWIProvider } from "@/lib/bsv/CWIContext";
 import { useEffect } from "react";
 import { WalletConnectionBridge } from "@/components/providers/WalletConnectionBridge";
-import { GeoLoginTracker } from "@/components/auth/GeoLoginTracker";
 import { VIPStoreBootstrap } from "@/components/providers/VIPStoreBootstrap";
 
 export default function Providers({ children, initialState, cookies }: { children: React.ReactNode, initialState?: State, cookies?: string | null }) {
@@ -33,7 +32,6 @@ export default function Providers({ children, initialState, cookies }: { childre
                                 <WorldProvider>
                                     <CWIProvider>
                                         <WalletConnectionBridge />
-                                        <GeoLoginTracker />
                                         <VIPStoreBootstrap />
                                         {children}
                                     </CWIProvider>

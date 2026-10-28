@@ -27,12 +27,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, skipped: true });
     }
 
-    const record = await logProvenanceEvent(type as ProvenanceEventType, address, details || {});
+    // Only a short page path is kept. Free-form client JSON was stored as is
+    // (no size limit) and its targetAddress set the record's recipient.
+    const path = typeof details?.path === 'string' && /^\/[\w\-/]{0,100}$/.test(details.path) ? details.path : undefined;
+    const record = await logProvenanceEvent(type as ProvenanceEventType, address, path ? { path } : {});
     
     return NextResponse.json({ success: true, hash: record?.txHash });
   } catch (err: any) {
     console.error('[Provenance Log] Error:', err);
     // Always return 200 — this is fire-and-forget from the frontend
-    return NextResponse.json({ success: false, error: err.message });
+    return NextResponse.json({ success: false });
   }
 }

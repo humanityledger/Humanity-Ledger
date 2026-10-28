@@ -1,34 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendSupportEmail } from '@/lib/email';
+import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
+import { checkRateLimit, getClientIP } from '@/lib/security/rateLimiter';
+
+/**
+ * POST /api/support — forwards the support form to the team inbox.
+ *
+ * Every field is typed and bounded (a non-string `section` used to crash the
+ * handler), callers are rate limited so the inbox and the email quota cannot
+ * be flooded, and the email provider's own error text is no longer returned
+ * (it described our configuration). lib/email.ts escapes the fields.
+ */
+const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
 export async function POST(req: NextRequest) {
+    const caller = await getVerifiedCaller(req);
+    const rl = await checkRateLimit(caller ?? getClientIP(req), { max: 5, windowSec: 3600, prefix: 'rl:support' });
+    if (!rl.allowed) {
+        return NextResponse.json({ error: 'Too many messages. Please try again later.' }, { status: 429 });
+    }
+
     try {
-        const body = await req.json();
-        // Correctly destructure all fields sent by the support form
-        const { name, email, category, message, section } = body;
+        const body = await req.json().catch(() => ({}));
+        const message = str(body?.message, 5000);
+        const name = str(body?.name, 100);
+        const email = str(body?.email, 254);
+        const section = str(body?.section, 40) || str(body?.category, 40) || 'general';
 
         if (!message) {
             return NextResponse.json({ error: 'Message is required' }, { status: 400 });
         }
 
-        // Map `category` (from form)  `section` (legacy field), fallback to either
-        const resolvedSection = section || category || 'general';
-
-        // Forward all fields including name so admin sees full context
-        await sendSupportEmail(message, resolvedSection, email, name);
-
+        await sendSupportEmail(message, section, email || undefined, name || undefined);
         return NextResponse.json({ success: true, message: 'Message forwarded successfully' });
-
     } catch (error: any) {
-        console.error('[API] Support route error:', error);
-        // If Resend fails, log the full error structure to Railway console
-        if (error?.name === 'ResendError' || error?.statusCode) {
-            console.error('[API] Resend API Failure Details:', JSON.stringify(error, null, 2));
-        }
-        return NextResponse.json(
-            { error: `API Resend Rechazó el correo: ${error?.message || 'Verifica tu API KEY o dominio en Resend.'}` },
-            { status: 500 }
-        );
+        console.error('[API] Support route error:', error?.message);
+        return NextResponse.json({ error: 'Your message could not be sent. Please try again later.' }, { status: 500 });
     }
 }
-

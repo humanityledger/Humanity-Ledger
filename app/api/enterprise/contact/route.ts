@@ -20,6 +20,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { escapeHtml } from '@/lib/security/escapeHtml';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -86,18 +87,20 @@ export async function POST(req: NextRequest) {
         const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
 
         if (botToken && adminChatId) {
+            // Form fields go into Telegram HTML: escape them (parse_mode HTML).
+            const e = escapeHtml;
             const msg = [
                 `️ <b>NEW CRYPTOGRAPHIC INQUIRY</b>`,
-                `ID: <code>${inquiryId}</code>`,
+                `ID: <code>${e(inquiryId)}</code>`,
                 ``,
-                ` <b>${companyName}</b>`,
-                ` ${contactName}  <code>${email}</code>`,
-                ` Tier: <b>${tier}</b>`,
-                ` Team Size: ${teamSize ?? 'Not specified'}`,
-                ` Current Stack: ${currentStack ?? 'Not specified'}`,
+                ` <b>${e(companyName)}</b>`,
+                ` ${e(contactName)}  <code>${e(email)}</code>`,
+                ` Tier: <b>${e(tier)}</b>`,
+                ` Team Size: ${e(teamSize ?? 'Not specified')}`,
+                ` Current Stack: ${e(currentStack ?? 'Not specified')}`,
                 ``,
-                ` Use Case: ${useCase.slice(0, 300)}${useCase.length > 300 ? '...' : ''}`,
-                preferredCall ? ` Preferred Call: ${preferredCall}` : null,
+                ` Use Case: ${e(useCase.slice(0, 300))}${useCase.length > 300 ? '...' : ''}`,
+                preferredCall ? ` Preferred Call: ${e(preferredCall)}` : null,
             ].filter(Boolean).join('\n');
 
             try {
@@ -131,7 +134,7 @@ export async function POST(req: NextRequest) {
 
     } catch (err: any) {
         return NextResponse.json(
-            { error: 'Inquiry submission failed', detail: err?.message },
+            { error: 'Inquiry submission failed' },
             { status: 500 }
         );
     }

@@ -47,7 +47,8 @@ describe('isPublicPath — sibling routes do not inherit a neighbour’s exempti
   it('keeps the documented public routes public', () => {
     expect(isPublicPath('/api/auth/nonce')).toBe(true);
     expect(isPublicPath('/api/health')).toBe(true);
-    expect(isPublicPath('/api/chat/users/search')).toBe(true);
+    // Since 2026-10-28 the user directory needs a session: anyone could walk it.
+    expect(isPublicPath('/api/chat/users/search')).toBe(false);
   });
 
   it('keeps protected routes protected', () => {
