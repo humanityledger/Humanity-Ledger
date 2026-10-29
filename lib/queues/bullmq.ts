@@ -18,6 +18,28 @@ export const stripeQueueEvents = isMockRedis ? ({} as QueueEvents) : new QueueEv
   connection: redisClient as any,
 });
 
+// Ends paid access everywhere it is recorded. The cancellation path used to
+// reset User.tier only: the Subscription row stayed ACTIVE with no expiry, and
+// lib/security/premium-security.ts grants access from that row, so a
+// cancelled subscriber kept the paid features.
+async function endSubscription(dbUser: { id: string; walletAddress: string }) {
+  await prisma.user.update({
+    where: { id: dbUser.id },
+    data: { tier: 'FREE', stripeSubscriptionId: null } as any,
+  });
+  await (prisma as any).subscription.updateMany({
+    where: { userId: dbUser.walletAddress },
+    data: { status: 'CANCELED', expiresAt: new Date() },
+  }).catch((e: unknown) => console.error('[WAC] Could not close the subscription row:', e));
+  await redisClient.setex(`tier:${dbUser.walletAddress}`, 600, 'FREE');
+  await redisClient.del(`human_session:${dbUser.walletAddress}`);
+  await redisClient.publish('system_mesh_auth_bus', JSON.stringify({
+    event: 'LICENSE_REVOKED',
+    wallet: dbUser.walletAddress,
+    tier: 'FREE',
+  }));
+}
+
 // Note: In Next.js, workers should ideally be run in a separate process.
 // For the scope of this implementation, we initialize the worker here.
 const stripeWorker = isMockRedis ? null : new Worker('stripe-webhook', async (job) => {
@@ -141,6 +163,10 @@ const stripeWorker = isMockRedis ? null : new Worker('stripe-webhook', async (jo
       }).catch(() => {/* ignore if subscription table schema differs */});
       await redisClient.setex(`tier:${dbUser.walletAddress}`, 600, tier.toUpperCase());
       console.log(`[WAC] Subscription updated for ${dbUser.walletAddress}: ${tier} / ${status}`);
+    } else if (dbUser && (status === 'canceled' || status === 'unpaid' || status === 'incomplete_expired')) {
+      // A subscription that stopped being paid used to keep its ACTIVE row,
+      // so access continued. End it the same way as a deletion.
+      await endSubscription(dbUser);
     }
   } else if (event.type === 'customer.subscription.deleted') {
     const subscription = event.data.object;
@@ -152,21 +178,7 @@ const stripeWorker = isMockRedis ? null : new Worker('stripe-webhook', async (jo
     });
 
     if (dbUser) {
-      await prisma.user.update({
-        where: { id: dbUser.id },
-        data: {
-          tier: 'FREE',
-          stripeSubscriptionId: null,
-        } as any,
-      });
-      
-      await redisClient.setex(`tier:${dbUser.walletAddress}`, 600, 'FREE');
-      await redisClient.del(`human_session:${dbUser.walletAddress}`);
-      await redisClient.publish('system_mesh_auth_bus', JSON.stringify({
-        event: 'LICENSE_REVOKED',
-        wallet: dbUser.walletAddress,
-        tier: 'FREE'
-      }));
+      await endSubscription(dbUser);
       console.log(`[WAC] Successfully downgraded customer ${customerId} to FREE`);
     }
   }

@@ -33,16 +33,21 @@ function instance() {
   purifier.addHook('afterSanitizeAttributes', node => {
     const el = node as Element;
     if (el.tagName === 'A') {
-      const href = el.getAttribute('href') || '';
-      if (!/^(https?:|mailto:|\/(?!\/)|#)/i.test(href)) el.removeAttribute('href');
+      // Browsers drop tabs and line breaks inside URLs and read "/\host" as
+      // "//host" (another site): normalise first, then refuse a backslash
+      // after the first slash like a second slash.
+      const href = (el.getAttribute('href') || '').replace(/[\t\n\r]/g, '').trim();
+      if (!/^(https?:|mailto:|\/(?![/\\])|#)/i.test(href)) el.removeAttribute('href');
+      else el.setAttribute('href', href);
       el.setAttribute('target', '_blank');
       el.setAttribute('rel', 'noopener noreferrer nofollow');
     }
     if (el.tagName === 'IMG') {
-      const src = el.getAttribute('src') || '';
+      const src = (el.getAttribute('src') || '').replace(/[\t\n\r]/g, '').trim();
       const inline = /^data:image\/(png|jpe?g|gif|webp);base64,/i.test(src);
-      const ours = /^\/(?!\/)/.test(src) || /^blob:/i.test(src);
+      const ours = /^\/(?![/\\])/.test(src) || /^blob:/i.test(src);
       if (!inline && !ours) el.removeAttribute('src');
+      else el.setAttribute('src', src);
       el.setAttribute('loading', 'lazy');
       el.setAttribute('referrerpolicy', 'no-referrer');
     }

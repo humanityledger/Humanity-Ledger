@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isCronAuthorized } from '@/lib/security/cronAuth';
 
 /**
  * POST /api/wallet/deadman/trigger
@@ -10,8 +11,7 @@ import { prisma } from '@/lib/prisma';
 export async function POST(req: Request) {
     try {
         // [SECURITY] Mandatory Cron Secret Check
-        const authHeader = req.headers.get('authorization');
-        if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        if (!isCronAuthorized(req)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -56,8 +56,7 @@ export async function POST(req: Request) {
             } catch (err: any) {
                 results.push({
                     userAddress: sw.userAddress,
-                    status: 'FAILED',
-                    error: err.message
+                    status: 'FAILED'
                 });
             }
         }

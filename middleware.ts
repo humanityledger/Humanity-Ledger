@@ -487,11 +487,18 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
+    // Every API request, whatever it looks like. The asset exclusions below
+    // used to apply here too, and they were unanchored lookaheads: any path
+    // containing ".png" (for example /api/chat/stream/x.png, a dynamic
+    // segment) skipped the middleware entirely, and with it the retired-route
+    // block, the session check, CSRF, rate limiting and the stripping of
+    // client-supplied identity headers.
+    '/api/:path*',
     /*
-     * Match all request paths EXCEPT static files and Next.js internals.
-     * This runs for all pages and API routes.
+     * Pages: everything except Next.js internals and static assets. The
+     * extension check is anchored to the end of the path.
      */
-    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.json|manifest.webmanifest|sw.js|ledger-sw.js|fonts|images|icons|.*\\.jpg|.*\\.jpeg|.*\\.png|.*\\.svg|.*\\.webp|.*\\.avif|.*\\.gif|.*\\.ico|.*\\.woff2?|.*\\.mp3|.*\\.wav|.*\\.mp4|.*\\.webm).*)',
+    '/((?!api/|_next/static|_next/image|favicon.ico$|robots.txt$|sitemap.xml$|manifest.json$|manifest.webmanifest$|sw.js$|ledger-sw.js$|fonts/|images/|icons/)(?!.*\\.(?:jpg|jpeg|png|svg|webp|avif|gif|ico|woff2?|mp3|wav|mp4|webm)$).*)',
   ],
 };
 

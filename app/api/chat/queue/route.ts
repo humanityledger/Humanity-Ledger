@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
-import { checkRateLimit } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
-
-const ETH_ADDR_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
 // GET: Fetch pending messages for the recipient.
 // DOES NOT delete them — client must call DELETE with IDs after successful processing.
@@ -36,42 +33,18 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: Store a message in the offline queue (sender → recipient)
-export async function POST(req: NextRequest) {
-  try {
-    const auth = await requireWallet(req);
-    if (auth.errorResponse) return auth.errorResponse;
-    const address = auth.walletAddress;
-
-    // Anyone signed in can write to anyone's inbox, so cap how fast.
-    const rl = await checkRateLimit(address.toLowerCase(), { max: 90, windowSec: 60, prefix: 'rl:dm' });
-    if (!rl.allowed) return NextResponse.json({ error: 'You are sending messages too fast. Wait a moment.' }, { status: 429 });
-
-    const body = await req.json();
-    const { recipient, content } = body;
-
-    if (!recipient || !content) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
-
-    if (!ETH_ADDR_REGEX.test(recipient)) {
-      return NextResponse.json({ error: 'Invalid recipient address' }, { status: 400 });
-    }
-    if (typeof content !== 'string' || content.trim().length === 0 || content.length > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Invalid content (max 10MB)' }, { status: 400 });
-    }
-
-    const msg = await prisma.pendingChatMessage.create({
-      data: {
-        sender: address.toLowerCase(),
-        recipient: recipient.toLowerCase(),
-        content: content.trim(),
-      },
-    });
-
-    return NextResponse.json({ success: true, id: msg.id });
-  } catch (e) {
-    console.error('[queue POST]', e);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
-  }
+// POST /api/chat/queue — retired 29 October 2026.
+//
+// Nothing in this repository sends here any more (direct messages travel over
+// XMTP; onion deliveries are queued in process by lib/chat/onionQueue.ts). As
+// an open endpoint it let any signed-in account write up to 10 MB per message,
+// 90 times a minute, into anyone's inbox, stored readable in PostgreSQL. The
+// read side stays so rows already stored can still be fetched and cleared.
+export async function POST() {
+  return NextResponse.json(
+    { error: 'Gone', message: 'Direct messages are sent over XMTP. This endpoint no longer accepts messages.' },
+    { status: 410 },
+  );
 }
 
 // DELETE: Acknowledge delivery — called by recipient after successfully processing messages.

@@ -23,6 +23,5 @@ export function secretEquals(given: string | null | undefined, expected: string)
   const a = Buffer.from(given);
   const b = Buffer.from(expected);
   if (a.length !== b.length) return false;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('crypto').timingSafeEqual(a, b);
 }

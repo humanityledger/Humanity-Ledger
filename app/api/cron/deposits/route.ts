@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cashier } from '@/lib/wallet/deposit-watcher';
+import { isCronAuthorized } from '@/lib/security/cronAuth';
 
 export const dynamic = 'force-dynamic'; // No caching
 export const maxDuration = 60; // Allow longer run time
@@ -10,12 +11,9 @@ export const maxDuration = 60; // Allow longer run time
  */
 export async function GET(req: Request) {
     // 1. Security Check (Bearer Token)
-    const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        // Allow unauthenticated for DEMO/DEV purposes if env is missing
-        if (process.env.NODE_ENV === 'production' && process.env.CRON_SECRET) {
-             return new NextResponse('Unauthorized', { status: 401 });
-        }
+    // Failed open before: with CRON_SECRET unset, anyone could start a scan.
+    if (!isCronAuthorized(req)) {
+        return new NextResponse('Unauthorized', { status: 401 });
     }
 
     try {

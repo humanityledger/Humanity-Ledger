@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: err?.message ?? 'Unknown error',
+        error: 'Internal error',
         hint: err?.message?.includes('NAPI')
           ? 'Running on Windows — this endpoint must be called on Railway (Linux). Deploy via Railway web shell instead.'
           : err?.message?.includes('fee')

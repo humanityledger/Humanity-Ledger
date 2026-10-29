@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
                     status:           _triggered ? 'TRIGGERED' : _paused ? 'PAUSED' : secondsRemaining === 0 ? 'EXPIRED' : 'ACTIVE',
                 };
             } catch (e: any) {
-                deadmanSwitch = { error: 'Contract unreachable', detail: e?.message };
+                deadmanSwitch = { error: 'Contract unreachable', detail: 'Internal error' };
             }
         }
 
@@ -121,7 +121,7 @@ export async function GET(req: NextRequest) {
                     status:           !hasLock ? 'NO_LOCK' : secondsRemaining > 0 ? 'LOCKED' : 'UNLOCKED',
                 };
             } catch (e: any) {
-                timeLock = { error: 'Contract unreachable', detail: e?.message };
+                timeLock = { error: 'Contract unreachable', detail: 'Internal error' };
             }
         }
 
@@ -137,7 +137,7 @@ export async function GET(req: NextRequest) {
 
     } catch (err: any) {
         return NextResponse.json(
-            { error: 'RPC provider unreachable', detail: err?.message },
+            { error: 'RPC provider unreachable', detail: 'Internal error' },
             { status: 503 }
         );
     }

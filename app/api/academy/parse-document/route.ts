@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import AdmZip from 'adm-zip';
+import { inflateRawSync } from 'zlib';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import { checkRateLimit, getClientIP } from '@/lib/security/rateLimiter';
 
@@ -58,7 +59,20 @@ export async function POST(req: NextRequest) {
         if (entry.header.size > MAX_DOCX_XML_BYTES) {
           return NextResponse.json({ ok: false, error: 'This document is too large to read.' }, { status: 413 });
         }
-        const xml = entry.getData().toString('utf8');
+        // header.size is what the file claims; a crafted zip can claim 1 KB
+        // and inflate to gigabytes. Inflate ourselves with a hard output cap
+        // instead of entry.getData(), which trusts the stream.
+        const raw = entry.getCompressedData();
+        let body: Buffer;
+        if (entry.header.method === 0) {
+          body = raw;
+        } else if (entry.header.method === 8) {
+          body = inflateRawSync(raw, { maxOutputLength: MAX_DOCX_XML_BYTES });
+        } else {
+          throw new Error('unsupported compression');
+        }
+        if (body.length > MAX_DOCX_XML_BYTES) throw new Error('too large');
+        const xml = body.toString('utf8');
         extractedText = xml
           .replace(/<w:p[^>]*>/g, '\n')
           .replace(/<[^>]+>/g, '')

@@ -4,9 +4,12 @@ import { encryptValue, decryptValue } from '@/lib/crypto';
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const wallet = req.headers.get('x-verified-session-address') || searchParams.get('wallet');
-    if (wallet !== req.headers.get('x-verified-session-address')) return NextResponse.json({error: 'IDOR attempt'}, { status: 403 });
+    // [SECURITY] A-026: Accept ONLY the header set by the session middleware.
+    // The previous code fell back to searchParams.get('wallet') and then the
+    // self-comparison guard on line 9 only fired if the header was also present,
+    // so a caller with no session cookie could pass their own wallet via query
+    // string and read that wallet's variables (IDOR).
+    const wallet = req.headers.get('x-verified-session-address');
 
     if (!wallet) return NextResponse.json([], { status: 401 });
 

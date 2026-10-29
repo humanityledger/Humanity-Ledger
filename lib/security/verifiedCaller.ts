@@ -16,6 +16,8 @@
  */
 
 import { cookies } from 'next/headers';
+import { jwtVerify } from 'jose';
+import { isSessionPayload } from '@/lib/security/sessionClaims';
 import { getSession } from '@/lib/session';
 import { isSessionTokenRevoked } from '@/lib/security/sessionRevocation';
 
@@ -37,8 +39,20 @@ export async function getVerifiedCaller(req: Request): Promise<string | null> {
 
   const emailToken = jar.get(EMAIL_COOKIE)?.value;
   if (!emailToken) return null;
+  // Verify the token here rather than trusting that the edge did: if the
+  // middleware is ever skipped for a request, the header is whatever the
+  // client sent, and any cookie value would have unlocked it.
+  let tokenUser: string | null = null;
+  try {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) return null;
+    const { payload } = await jwtVerify(emailToken, new TextEncoder().encode(secret), { algorithms: ['HS256'] });
+    const uid = isSessionPayload(payload) ? (payload as Record<string, unknown>).userId : undefined;
+    if (typeof uid === 'string' && uid) tokenUser = uid.toLowerCase();
+  } catch { return null; }
+  if (!tokenUser || tokenUser !== fromHeader.toLowerCase()) return null;
   try {
     if (await isSessionTokenRevoked(emailToken)) return null;
-  } catch { /* the revocation store is optional: the edge already verified the token */ }
-  return fromHeader.toLowerCase();
+  } catch { /* the revocation store is optional: the token itself was verified above */ }
+  return tokenUser;
 }

@@ -7,11 +7,15 @@ import { getSession } from '@/lib/session';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/admin/clean-posts
+ * POST /api/admin/clean-posts
  * Deletes ALL topics EXCEPT the one with the word "Welcome" in the title
  * (case-insensitive). The welcome post is always preserved.
+ *
+ * This was a GET. The CSRF check in the middleware covers only POST, PUT,
+ * PATCH and DELETE, and SameSite=Lax cookies travel with top-level GET
+ * navigations, so one link clicked by the admin on any site wiped the forum.
  */
-export async function GET(req: Request) {
+export async function POST(req: Request) {
   try {
     const session = await getSession();
     const address = session?.userId;

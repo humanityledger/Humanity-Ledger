@@ -22,8 +22,7 @@ interface ZkMpcCeremonyProps {
   className?: string;
 }
 
-export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCeremonyProps) {
-  if (!isZkEnabled) return null;
+function ZkMpcCeremonyInner({ userAddress, onClose, className = '' }: ZkMpcCeremonyProps) {
   const [ceremonies, setCeremonies] = useState<MpcCeremony[]>([]);
   const [selectedCeremony, setSelectedCeremony] = useState<MpcCeremony | null>(null);
   const [isContributing, setIsContributing] = useState(false);
@@ -540,3 +539,9 @@ export function ZkMpcCeremony({ userAddress, onClose, className = '' }: ZkMpcCer
   );
 }
 
+// The flag check lives here, not inside ZkMpcCeremonyInner: an early return before
+// hooks breaks the rules of hooks (react-hooks/rules-of-hooks).
+export function ZkMpcCeremony(props: Parameters<typeof ZkMpcCeremonyInner>[0]) {
+  if (!isZkEnabled) return null;
+  return <ZkMpcCeremonyInner {...props} />;
+}

@@ -254,6 +254,15 @@ export const RETIRED_API_ROUTES: readonly string[] = [
   // that 3-D Secure and a no-refund checkbox had been completed, which this
   // app does not record.
   '/api/payment/webhook',
+  // Added 2026-10-29. premium/webhooks answered "registered" and stored
+  // nothing; premium/paymaster returned a made-up "sponsor signature" string
+  // and sponsored no gas. Their only caller (Provenance Studio) no longer
+  // calls them. aztec/balance reported a 2,500 "QDs" balance for the retired
+  // token and created User rows for any address it was asked about; nothing
+  // calls it.
+  '/api/premium/webhooks',
+  '/api/premium/paymaster',
+  '/api/aztec/balance',
 ];
 
 const PATTERNS = RETIRED_API_ROUTES.map(u => new RegExp("" + toRegex(u)));

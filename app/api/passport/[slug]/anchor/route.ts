@@ -39,6 +39,22 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
+  // These values are shown on the public passport page as an on-chain
+  // confirmation, so only well-formed ones are stored.
+  const HEX32 = /^0x[0-9a-fA-F]{64}$/;
+  if (body.txHash !== undefined && (typeof body.txHash !== 'string' || !HEX32.test(body.txHash))) {
+    return NextResponse.json({ error: 'txHash must be a 32-byte hex string' }, { status: 400 });
+  }
+  if (body.coreEntropy !== undefined && (typeof body.coreEntropy !== 'string' || !HEX32.test(body.coreEntropy))) {
+    return NextResponse.json({ error: 'coreEntropy must be a 32-byte hex string' }, { status: 400 });
+  }
+  if (body.chainId !== undefined && (!Number.isSafeInteger(body.chainId) || (body.chainId as number) <= 0)) {
+    return NextResponse.json({ error: 'chainId must be a positive integer' }, { status: 400 });
+  }
+  if (passport.txHash && body.txHash && passport.txHash !== body.txHash) {
+    return NextResponse.json({ error: 'This record is already anchored to a different transaction' }, { status: 409 });
+  }
+
   // Idempotency: if already anchored with the same txHash, return current state
   if (body.txHash && passport.txHash === body.txHash) {
     const current = await prisma.productPassport.findUnique({

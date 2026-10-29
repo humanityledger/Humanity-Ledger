@@ -281,7 +281,7 @@ function CreateTab({ isMobile, onCreated, hasPlan, isOwner }: CreateTabProps) {
     const metadataStr = `StudioProvenance/v1|${passport.slug}`;
 
     try {
-      let finalTransactionPayload = {
+      const finalTransactionPayload = {
         passportSlug: passport.slug,
         metadata: metadataStr,
         creatorAddress: address,
@@ -310,26 +310,8 @@ function CreateTab({ isMobile, onCreated, hasPlan, isOwner }: CreateTabProps) {
         console.warn('Server prover unavailable, using local fallback.');
       }
 
-      // 2. Gasless Paymaster Subsidization - WITH FALLBACK
-      try {
-        console.log('Requesting Gasless Sponsor...');
-        const paymasterRes = await fetch('/api/premium/paymaster', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transactionPayload: finalTransactionPayload,
-            tier: 'FREE'
-          })
-        });
-        if (paymasterRes.ok) {
-          const paymasterData = await paymasterRes.json();
-          finalTransactionPayload = paymasterData.sponsoredTransaction;
-        } else {
-          console.log('Using standard gas estimation for free tier.');
-        }
-      } catch (e) {
-        console.warn('Paymaster unavailable, proceeding with standard gas.');
-      }
+      // 2. (A "gasless paymaster" step used to run here. /api/premium/paymaster
+      // returned a made-up signature string and sponsored nothing; retired.)
 
       setExplorerStatus('SUBMITTING');
 
@@ -340,21 +322,20 @@ function CreateTab({ isMobile, onCreated, hasPlan, isOwner }: CreateTabProps) {
         body: JSON.stringify(finalTransactionPayload)
       });
       
-      const data = await res.json();
+      // /api/aztec/anchor has no submit handler yet (it answers 405 with an
+      // empty body), so reading JSON unconditionally failed with a parse
+      // error. Say plainly that anchoring is unavailable instead.
+      const data = await res.json().catch(() => ({} as { error?: string; txHash?: string }));
+      if (res.status === 404 || res.status === 405 || res.status === 501) {
+        throw new Error('On-chain anchoring on Aztec is not available yet. The record is saved and stays unanchored.');
+      }
       if (!res.ok) throw new Error(data.error || 'Anchor failed');
-
       const aztecTxHash = data.txHash;
-
-      // 4. Register Webhook for Anchor Success
-      await fetch('/api/premium/webhooks', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({
-           webhookUrl: 'https://api.my-cryptographic-erp.com/webhooks/provenance',
-           eventTypes: ['PASSPORT_ANCHORED'],
-           tier: 'ELITE'
-         })
-      }).catch(e => console.error('Webhook registration failed silently', e));
+      if (typeof aztecTxHash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(aztecTxHash)) {
+        throw new Error('The anchor service did not return a transaction hash.');
+      }
+      // (A call here used to "register" a hard-coded webhook at a third-party
+      // domain through /api/premium/webhooks, which stored nothing. Removed.)
 
       // 5. Update passport via PATCH
       await fetch(`/api/passport/${passport.slug}/anchor`, {

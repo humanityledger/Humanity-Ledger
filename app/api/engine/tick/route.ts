@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { compileGraph, NodeData, EdgeData } from '@/lib/engine/compiler';
 import { runEngineTopology } from '@/lib/engine/runtime';
+import { isCronAuthorized } from '@/lib/security/cronAuth';
 
 /**
  * HEARTBEAT ORCHESTRATOR
@@ -10,11 +11,10 @@ import { runEngineTopology } from '@/lib/engine/runtime';
  */
 export async function POST(req: Request) {
     // 1. Cron Authentication
-    const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET || require('crypto').randomBytes(32).toString('hex')}`) {
-        if (process.env.NODE_ENV === 'production' && process.env.CRON_SECRET) {
-            return NextResponse.json({ error: 'Unauthorized CRON heartbeat' }, { status: 401 });
-        }
+    // Failed open before: a wrong secret was refused only in production and
+    // only when CRON_SECRET was set, so anyone could run every user's graph.
+    if (!isCronAuthorized(req)) {
+        return NextResponse.json({ error: 'Unauthorized CRON heartbeat' }, { status: 401 });
     }
 
     try {

@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
 
     } catch (err: any) {
         return NextResponse.json(
-            { error: 'Top ledger events unavailable', detail: err?.message },
+            { error: 'Top ledger events unavailable', detail: 'Internal error' },
             { status: 503 }
         );
     }

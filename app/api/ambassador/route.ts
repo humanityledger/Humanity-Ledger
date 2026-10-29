@@ -197,7 +197,7 @@ export async function POST(req: NextRequest) {
 
     } catch (err: any) {
         return NextResponse.json(
-            { error: 'Application failed', detail: err?.message },
+            { error: 'Application failed', detail: 'Internal error' },
             { status: 500 }
         );
     }

@@ -432,10 +432,13 @@ const nextConfig = {
                     //   - stun: and turn: schemes are handled by browser internally, NOT via CSP
                     // B-016: CSP is centralized in middleware.ts with dynamic per-request nonce (N-05)
                     { key: 'Referrer-Policy',            value: 'strict-origin-when-cross-origin' },
-                    // [ANDROID WEBRTC FIX] Permissions-Policy MUST be set correctly.
-                    // 'camera=*' and 'microphone=*' allow ALL origins (including iframes) to request them.
-                    // Without this, Android Chrome silently blocks getUserMedia even if the user said Allow.
-                    { key: 'Permissions-Policy', value: 'camera=*, microphone=*, geolocation=(), interest-cohort=()' },
+                    // camera/microphone for our own pages only. '*' also let any
+                    // cross-origin iframe on our pages (the CSP allows https: frames)
+                    // ask for them, and Chrome shows our origin in that prompt.
+                    // (self) still allows getUserMedia in the top-level page,
+                    // which is where calls run. Same value the middleware sets on
+                    // protected routes.
+                    { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=(), interest-cohort=()' },
                     { key: 'X-DNS-Prefetch-Control',     value: 'on' },
                 ]
             },

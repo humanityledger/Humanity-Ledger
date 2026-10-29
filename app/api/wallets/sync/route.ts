@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateSecureRequest } from '@/lib/security/premium-security';
-import { airdropWelcomeQDs } from '@/lib/blockchain/AirdropService';
 
 /**
  * POST /api/wallets/sync
@@ -41,17 +40,25 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // Trigger Genesis Airdrop only if truly newly created
-        if (newlyCreated && user?.walletAddress) {
-            airdropWelcomeQDs(user.walletAddress).catch(console.error);
-        }
+        // A "genesis airdrop" used to fire here: with PRIVATE_KEY and a token
+        // contract configured, the server signed a mint of 500 QD to every new
+        // account, paying gas from a hot key for anyone who made a wallet.
+        // Humanity Ledger has no token (QD retired 23 Oct 2026); removed.
+        void newlyCreated;
 
         if (!user) {
             throw new Error('User creation failed catastrophically');
         }
 
+        // Only well-formed addresses and short labels are stored.
+        const valid = wallets.filter((w: any) =>
+            w && typeof w.address === 'string' && /^0x[0-9a-fA-F]{40}$/.test(w.address) &&
+            (w.label === undefined || typeof w.label === 'string'));
+        if (valid.length !== wallets.length) {
+            return NextResponse.json({ error: 'Each wallet needs an EVM address and an optional text label' }, { status: 400 });
+        }
         // Upsert wallets into WatchedWallet
-        for (const w of wallets) {
+        for (const w of valid.map((x: any) => ({ address: x.address.toLowerCase(), label: x.label ? String(x.label).slice(0, 64) : undefined }))) {
             await prisma.watchedWallet.upsert({
                 where: { 
                     userId_address: {

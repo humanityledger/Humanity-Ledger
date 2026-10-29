@@ -26,14 +26,13 @@ interface ZkPrivacyScoreProps {
   onShieldMore?: () => void;
 }
 
-export function ZkPrivacyScore({
+function ZkPrivacyScoreInner({
   address,
   txHash,
   className = '',
   onExploreNotes,
   onShieldMore
 }: ZkPrivacyScoreProps) {
-  if (!isZkEnabled) return null;
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'metrics' | 'notes' | 'recommendations'>('metrics');
   const [analysis, setAnalysis] = useState<ZkPrivacyAnalysis | null>(null);
@@ -342,3 +341,9 @@ export function ZkPrivacyScore({
   );
 }
 
+// The flag check lives here, not inside ZkPrivacyScoreInner: an early return before
+// hooks breaks the rules of hooks (react-hooks/rules-of-hooks).
+export function ZkPrivacyScore(props: Parameters<typeof ZkPrivacyScoreInner>[0]) {
+  if (!isZkEnabled) return null;
+  return <ZkPrivacyScoreInner {...props} />;
+}

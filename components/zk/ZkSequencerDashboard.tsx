@@ -27,8 +27,7 @@ interface ZkSequencerDashboardProps {
   className?: string;
 }
 
-export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: ZkSequencerDashboardProps) {
-  if (!isZkEnabled) return null;
+function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkSequencerDashboardProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeNetwork, setActiveNetwork] = useState<'testnet' | 'mainnet'>('testnet');
@@ -337,3 +336,9 @@ export function ZkSequencerDashboard({ userAddress, onClose, className = '' }: Z
   );
 }
 
+// The flag check lives here, not inside ZkSequencerDashboardInner: an early return before
+// hooks breaks the rules of hooks (react-hooks/rules-of-hooks).
+export function ZkSequencerDashboard(props: Parameters<typeof ZkSequencerDashboardInner>[0]) {
+  if (!isZkEnabled) return null;
+  return <ZkSequencerDashboardInner {...props} />;
+}

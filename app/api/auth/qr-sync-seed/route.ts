@@ -71,12 +71,16 @@ export async function GET(req: NextRequest) {
   const parsed = safeJsonParse(data, null, 'QR_SYNC_SEED');
   if (!parsed) return NextResponse.json({ error: 'Invalid seed data' }, { status: 500 });
 
-  // Only return seeds created by this address (T-13 session binding)
+  // Only return seeds created by this address (T-13 session binding).
+  // If creatorAddress is null (POST was made without a session), reject unconditionally —
+  // we cannot prove ownership so we refuse rather than letting any authenticated user read it.
   const parsedAny = parsed as any;
-  if (parsedAny?.creatorAddress && session.userId) {
-    if (parsedAny.creatorAddress.toLowerCase() !== session.userId.toLowerCase()) {
-      return NextResponse.json({ error: 'Forbidden: seed belongs to another user' }, { status: 403 });
-    }
+  const creatorAddress: string | null = parsedAny?.creatorAddress ?? null;
+  if (!creatorAddress || !session.userId) {
+    return NextResponse.json({ error: 'Forbidden: seed ownership cannot be verified' }, { status: 403 });
+  }
+  if (creatorAddress.toLowerCase() !== session.userId.toLowerCase()) {
+    return NextResponse.json({ error: 'Forbidden: seed belongs to another user' }, { status: 403 });
   }
 
   return NextResponse.json(parsed);

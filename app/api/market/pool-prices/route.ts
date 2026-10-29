@@ -40,7 +40,7 @@ export async function GET(_req: NextRequest) {
   } catch (err: any) {
     console.error('[PoolPrices] Error:', err.message);
     return NextResponse.json(
-      { ok: false, error: 'Failed to fetch pool prices.', detail: err.message },
+      { ok: false, error: 'Failed to fetch pool prices.', detail: 'Internal error' },
       { status: 502 }
     );
   }

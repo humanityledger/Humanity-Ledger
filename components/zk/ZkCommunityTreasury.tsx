@@ -99,13 +99,12 @@ function BountyCard({ bounty, onClaim }: { bounty: ZkBounty; onClaim: () => void
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export function ZkCommunityTreasury({
+function ZkCommunityTreasuryInner({
   communityId,
   communityName,
   isAdmin = false,
   currentUserAddress = '',
 }: ZkCommunityTreasuryProps) {
-  if (!isZkEnabled) return null;
   const [treasury, setTreasury] = useState<ZkCommunityTreasuryModel>(getCommunityTreasury(communityId));
   const [stats, setStats] = useState<ZkCommunityStats>(getCommunityStats(communityId));
   const [tips, setTips] = useState<ZkTip[]>(getCommunityTips(communityId).slice(0, 10));
@@ -565,4 +564,11 @@ export function ZkCommunityTreasury({
       </AnimatePresence>
     </div>
   );
+}
+
+// The flag check lives here, not inside ZkCommunityTreasuryInner: an early return before
+// hooks breaks the rules of hooks (react-hooks/rules-of-hooks).
+export function ZkCommunityTreasury(props: Parameters<typeof ZkCommunityTreasuryInner>[0]) {
+  if (!isZkEnabled) return null;
+  return <ZkCommunityTreasuryInner {...props} />;
 }

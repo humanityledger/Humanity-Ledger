@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 async function handlePriceCommand(args: string): Promise<string> {
-  const token = args.trim().toUpperCase() || 'ETH';
+  const token = String(args ?? '').trim().toUpperCase().slice(0, 40) || 'ETH';
   try {
     const res = await fetch(
       `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(token.toLowerCase())}&vs_currencies=usd&include_24hr_change=true`,
@@ -22,10 +22,12 @@ async function handlePriceCommand(args: string): Promise<string> {
 }
 
 async function handleEnsCommand(args: string): Promise<string> {
-  const name = args.trim();
-  if (!name.endsWith('.eth')) return '❌ Please provide a valid .eth name';
+  const name = String(args ?? '').trim().toLowerCase();
+  // Labels only: the name goes into a URL path, and "a/../../x.eth" would
+  // otherwise reach a different endpoint on that host.
+  if (!/^([a-z0-9-]{1,63}\.)+eth$/.test(name) || name.length > 255) return '❌ Please provide a valid .eth name';
   try {
-    const res = await fetch(`https://api.ensideas.com/ens/resolve/${name}`);
+    const res = await fetch(`https://api.ensideas.com/ens/resolve/${encodeURIComponent(name)}`, { signal: AbortSignal.timeout(8000) });
     const data = await res.json();
     if (data.address) {
       return `🔍 **${name}**\n\`${data.address}\``;

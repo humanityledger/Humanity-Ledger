@@ -105,6 +105,13 @@ export async function POST(
 
   // Validate password (if room has one)
   if (room.passwordHash) {
+    // The per-account limit above does not stop someone holding many wallets
+    // (a wallet costs nothing to make). Cap password attempts per room across
+    // all accounts as well; a room password can be as short as 4 characters.
+    const roomTries = await checkRateLimit(roomId, { max: 60, windowSec: 900, prefix: 'rl:call-join-room' });
+    if (!roomTries.allowed) {
+      return NextResponse.json({ error: 'Too many attempts for this room. Please wait before trying again.' }, { status: 429 });
+    }
     if (!verifyRoomPassword(password, room.passwordHash)) {
       recordJoinFailure(ip);
       return NextResponse.json({ error: 'Incorrect password' }, { status: 403 });

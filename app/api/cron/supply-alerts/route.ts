@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Resend } from 'resend';
+import { isCronAuthorized } from '@/lib/security/cronAuth';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_build_time');
 
@@ -39,8 +40,9 @@ const unlocks = [
 
 export async function GET(req: NextRequest) {
     try {
-        const authHeader = req.headers.get('authorization');
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        // With CRON_SECRET unset the old check accepted "Bearer undefined",
+        // which let anyone send this email to every subscriber.
+        if (!isCronAuthorized(req)) {
             return NextResponse.json({ error: 'Unauthorized CRON execution' }, { status: 401 });
         }
         

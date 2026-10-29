@@ -93,6 +93,6 @@ export async function GET() {
         return NextResponse.json(mappedTxs);
     } catch (err: any) {
         console.error('[Mempool API Error]', err);
-        return NextResponse.json({ error: err.message }, { status: 502 });
+        return NextResponse.json({ error: 'Internal error' }, { status: 502 });
     }
 }

@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(analytics);
   } catch (error: any) {
     console.error(`[API-ANALYTICS-ERROR] ${address}:`, {
-        message: error.message,
+        message: 'Internal error',
         stack: error.stack
     });
     

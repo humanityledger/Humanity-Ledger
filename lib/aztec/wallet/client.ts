@@ -22,7 +22,6 @@ import { deriveAccountKeys, WALLET_TYPED_DATA } from './keys';
 import { parseUnits } from './amounts';
 import { loadLocalActivity, mergeActivity, upsertActivity, type Activity, type ActivityKind } from './history';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export type WalletPhase = 'idle' | 'signing' | 'starting' | 'deploying' | 'ready' | 'error';
 

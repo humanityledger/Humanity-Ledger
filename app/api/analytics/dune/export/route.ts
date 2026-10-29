@@ -138,7 +138,7 @@ export async function GET(req: NextRequest) {
 
     } catch (err: any) {
         return NextResponse.json(
-            { error: 'Export failed', detail: err?.message },
+            { error: 'Export failed', detail: 'Internal error' },
             { status: 503 }
         );
     }

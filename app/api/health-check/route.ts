@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
       ? { valid: true, count: (result as any).count }
       : { valid: false, error: (result as any).reason };
   } catch (err: any) {
-    auditIntegrity = { valid: false, error: err.message };
+    auditIntegrity = { valid: false, error: 'Internal error' };
   }
 
   // Determine overall system status

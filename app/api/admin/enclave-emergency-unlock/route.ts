@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
 
   } catch (err: any) {
     console.error('[Emergency Unlock] Error:', err);
-    return NextResponse.json({ error: 'Internal server error', detail: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', detail: 'Internal error' }, { status: 500 });
   }
 }
 
@@ -129,6 +129,6 @@ export async function GET(req: NextRequest) {
         : '✅ No users currently locked.',
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

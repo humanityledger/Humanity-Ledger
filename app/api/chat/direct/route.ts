@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
-import { checkRateLimit } from '@/lib/security/rateLimiter';
-import { checkMessageEnvelope, withinSizeLimit } from '@/lib/security/messageEnvelope';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,60 +72,16 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/**
- * POST /api/chat/direct
- * Send a direct message to another user (DB-backed, no XMTP required).
- * Body: { recipient: string, content: string }
- */
-export async function POST(req: NextRequest) {
-  try {
-    const auth = await requireWallet(req);
-    if (auth.errorResponse) return auth.errorResponse;
-    const address = auth.walletAddress;
-
-    // Anyone signed in can write to anyone's inbox, so cap how fast.
-    const rl = await checkRateLimit(address.toLowerCase(), { max: 90, windowSec: 60, prefix: 'rl:dm' });
-    if (!rl.allowed) return NextResponse.json({ error: 'You are sending messages too fast. Wait a moment.' }, { status: 429 });
-
-    const body = await req.json();
-    const { recipient, content } = body;
-
-    if (!recipient || !content) {
-      return NextResponse.json({ error: 'recipient and content are required' }, { status: 400 });
-    }
-    if (!/^0x[0-9a-fA-F]{40}$/i.test(recipient)) {
-      return NextResponse.json({ error: 'Invalid recipient address' }, { status: 400 });
-    }
-    if (typeof content !== 'string' || content.trim().length === 0) {
-      return NextResponse.json({ error: 'Content cannot be empty' }, { status: 400 });
-    }
-    if (!withinSizeLimit(content, 10 * 1024 * 1024)) {
-      return NextResponse.json({ error: 'Content too long (max 10MB)' }, { status: 400 });
-    }
-
-    // F2-02: this row is persisted to PostgreSQL. Anything readable here is
-    // readable by every operator, backup and support query. The guard refuses
-    // unsealed bodies once CHAT_REQUIRE_SEALED_ENVELOPE=true, and warns until then.
-    const envelope = checkMessageEnvelope(content, 'chat/direct');
-    if (envelope.rejection) {
-      return NextResponse.json(envelope.rejection, { status: 400 });
-    }
-
-    const msg = await prisma.directMessage.create({
-      data: {
-        sender: address,
-        recipient: recipient.toLowerCase(),
-        content: content.trim(),
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      id: msg.id,
-      createdAt: msg.createdAt.getTime(),
-    });
-  } catch (e) {
-    console.error('[chat/direct POST]', e);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
-  }
+// POST /api/chat/direct — retired 29 October 2026.
+//
+// Nothing in this repository sends here any more (direct messages travel over
+// XMTP; onion deliveries are queued in process by lib/chat/onionQueue.ts). As
+// an open endpoint it let any signed-in account write up to 10 MB per message,
+// 90 times a minute, into anyone's inbox, stored readable in PostgreSQL. The
+// read side stays so rows already stored can still be fetched and cleared.
+export async function POST() {
+  return NextResponse.json(
+    { error: 'Gone', message: 'Direct messages are sent over XMTP. This endpoint no longer accepts messages.' },
+    { status: 410 },
+  );
 }

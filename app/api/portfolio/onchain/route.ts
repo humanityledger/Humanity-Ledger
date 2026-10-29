@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     console.error('[OnChain Portfolio] Error:', err.message);
     return NextResponse.json(
-      { ok: false, error: 'Failed to fetch on-chain portfolio data.', detail: err.message },
+      { ok: false, error: 'Failed to fetch on-chain portfolio data.', detail: 'Internal error' },
       { status: 502 }
     );
   }

@@ -79,7 +79,7 @@ export async function GET(req: Request) {
   } catch (err: any) {
     console.error('[Aztec Balance Error]', err.message);
     return NextResponse.json(
-      { error: `Failed to fetch balance: ${err.message}` },
+      { error: 'Failed to fetch balance' },
       { status: 500 }
     );
   }

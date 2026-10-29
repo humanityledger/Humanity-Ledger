@@ -254,11 +254,14 @@ export async function POST(req: NextRequest) {
             throw new Error('MAX_SUPPLY_REACHED');
         }
 
-        //  Ensure User row exists and mark as ZK verified 
+        // Ensure the User row exists. It used to also set isZkVerified = true:
+        // signing one fixed message (or holding a session) then showed a
+        // "verified" badge next to the account in contacts and search, with
+        // no proof of personhood behind it. Same fix as auth/kyc-verify.
         const user = await (prisma as any).user.upsert({
             where: { walletAddress: address },
-            update: { isZkVerified: true },
-            create: { walletAddress: address, isZkVerified: true }
+            update: {},
+            create: { walletAddress: address }
         });
 
         // ── Identity Claim — Free Mint (ECDSA or Session verified) ───────────
@@ -386,7 +389,7 @@ export async function POST(req: NextRequest) {
         }
         console.error('[Golden Ticket POST Error]', error);
         return NextResponse.json(
-            { error: `Internal server error: ${error?.message || String(error)}` },
+            { error: 'Internal server error' },
             { status: 500 }
         );
     }
