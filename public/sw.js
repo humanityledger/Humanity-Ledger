@@ -1,3 +1,15 @@
+// Self-unregister immediately on localhost/127.0.0.1 to avoid chunk poisoning in dev
+if (typeof self !== 'undefined' && (self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1')) {
+  self.addEventListener('install', () => self.skipWaiting());
+  self.addEventListener('activate', (event) => {
+    event.waitUntil(
+      caches.keys()
+        .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+        .then(() => self.registration.unregister())
+    );
+  });
+}
+
 // public/sw.js — the one service worker for Humanity Ledger (scope "/").
 //
 // Before: two different workers (sw.js and ledger-sw.js) were registered on

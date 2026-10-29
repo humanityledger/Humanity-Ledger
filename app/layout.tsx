@@ -477,7 +477,25 @@ export default async function RootLayout({
 
   // on iOS Safari where sessionStorage persists across same-domain navigations.
 
-  var NUCLEAR_KEY = 'sw_nuclear_purge_v6';
+  if (typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        if (regs && regs.length > 0) {
+          Promise.all(regs.map(function(r) { return r.unregister(); })).then(function() {
+            if (window.caches) {
+              caches.keys().then(function(keys) {
+                Promise.all(keys.map(function(k) { return caches.delete(k); })).then(function() {
+                  window.location.reload(true);
+                });
+              });
+            }
+          });
+        }
+      });
+    }
+  }
+
+  var NUCLEAR_KEY = 'sw_nuclear_purge_v7';
 
   var isMobileSW = /android|iphone|ipad|ipod/i.test(navigator.userAgent || '');
 

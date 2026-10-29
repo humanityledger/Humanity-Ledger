@@ -96,6 +96,15 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   //  Axioma 452: PWA Service Worker registration 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          for (const reg of regs) reg.unregister();
+        });
+        if (window.caches) {
+          window.caches.keys().then((keys) => keys.forEach((k) => window.caches.delete(k)));
+        }
+        return;
+      }
       navigator.serviceWorker
         .register('/sw.js', { scope: '/' })
         .then((reg) => {

@@ -302,7 +302,7 @@ function newNonce(): string {
 }
 
 export function buildCsp(nonce: string, isDev = process.env.NODE_ENV === 'development'): string {
-  return `default-src 'self'; script-src 'self' 'nonce-${nonce}' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ''} https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:${isDev ? ' ws:' : ''}; media-src 'self' blob: mediastream:; frame-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';`;
+  return `default-src 'self'; script-src 'self' 'nonce-${nonce}' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ''} https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:${isDev ? ' ws: http:' : ''}; media-src 'self' blob: mediastream:; frame-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';`;
 }
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
