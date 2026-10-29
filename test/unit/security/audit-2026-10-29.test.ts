@@ -229,3 +229,71 @@ describe('qr-sync-seed ownership enforcement (A-024)', () => {
     expect(isRetiredApiRoute('/api/auth/qr-sync-seed')).toBe(false);
   });
 });
+
+// --- /api/notifications/ingest auth & timingSafeEqual (A-028) ---
+describe('/api/notifications/ingest auth (A-028)', () => {
+  it('returns 503 when INTERNAL_INGEST_KEY is unset', async () => {
+    delete process.env.INTERNAL_INGEST_KEY;
+    const { POST } = await import('@/app/api/notifications/ingest/route');
+    const req = new Request('http://localhost/api/notifications/ingest', {
+      method: 'POST',
+      headers: { 'X-Ingest-Key': 'some-key-here' },
+      body: JSON.stringify({}),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(503);
+  });
+
+  it('returns 401 when X-Ingest-Key does not match', async () => {
+    process.env.INTERNAL_INGEST_KEY = 'ingest-key-0123456789abcdef';
+    const { POST } = await import('@/app/api/notifications/ingest/route');
+    const req = new Request('http://localhost/api/notifications/ingest', {
+      method: 'POST',
+      headers: { 'X-Ingest-Key': 'wrong-key-0123456789abcdef' },
+      body: JSON.stringify({}),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+  });
+});
+
+// --- /api/internal/audit timingSafeEqual ---
+describe('/api/internal/audit timingSafeEqual', () => {
+  it('returns 503 when AUDIT_SECRET is unset or too short', async () => {
+    delete process.env.AUDIT_SECRET;
+    const { POST } = await import('@/app/api/internal/audit/route');
+    const req = new Request('http://localhost/api/internal/audit', {
+      method: 'POST',
+      headers: { 'x-internal-audit': 'test' },
+      body: JSON.stringify({}),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(503);
+  });
+
+  it('returns 401 when x-internal-audit secret does not match', async () => {
+    process.env.AUDIT_SECRET = 'audit-secret-0123456789abcdef0123456789abcdef';
+    const { POST } = await import('@/app/api/internal/audit/route');
+    const req = new Request('http://localhost/api/internal/audit', {
+      method: 'POST',
+      headers: { 'x-internal-audit': 'wrong-secret-0123456789abcdef0123456789abcdef' },
+      body: JSON.stringify({}),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+  });
+});
+
+// --- /api/bots/command ENS validation ---
+describe('/api/bots/command ENS validation', () => {
+  it('rejects path traversal attempts in ENS name', async () => {
+    const { POST } = await import('@/app/api/bots/command/route');
+    const req = new NextRequest('http://localhost/api/bots/command', {
+      method: 'POST',
+      body: JSON.stringify({ command: '/ens', args: '../../admin.eth' }),
+    });
+    const res = await POST(req);
+    const data = await res.json();
+    expect(data.response).toContain('Please provide a valid .eth name');
+  });
+});

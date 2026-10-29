@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import jwt from 'jsonwebtoken';
+import { getSession } from '@/lib/session';
 
 const STUDIO_B2B_URL = process.env.STUDIO_B2B_URL || 'https://studio-provenance-production.up.railway.app';
 
@@ -14,26 +14,19 @@ function getStudioSecret(): string {
   return s;
 }
 
-
 export async function GET(req: NextRequest) {
   try {
-    // 1. Verify user is logged into the B2C Wallet
-    const ledgerSessionCookie = req.cookies.get('ledger_session')?.value;
-    
-    if (!ledgerSessionCookie) {
+    // 1. Verify user is logged into the B2C Wallet via standard getSession()
+    // [SECURITY FIX] Previously checked only the legacy `ledger_session` cookie;
+    // users authenticated via `hl_session` (the primary session cookie) failed SSO.
+    const session = await getSession();
+
+    if (!session?.userId) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://humanidfi.com';
       return NextResponse.redirect(new URL('/?error=unauthorized_for_studio', appUrl));
     }
 
-    let walletAddress = 'unknown_wallet';
-    try {
-      const { verifyJWT } = await import('@/lib/jwt');
-      const payload = await verifyJWT(ledgerSessionCookie);
-      walletAddress = String(payload.walletAddress || payload.sub || 'unknown_wallet');
-    } catch (e) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://humanidfi.com';
-      return NextResponse.redirect(new URL('/?error=invalid_session', appUrl));
-    }
+    const walletAddress = session.userId.toLowerCase();
     const payload = {
       walletId: walletAddress,
       origin: 'B2C_WALLET_IDP',

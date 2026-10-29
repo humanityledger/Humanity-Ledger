@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, getClientIP } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,13 @@ async function handleEnsCommand(args: string): Promise<string> {
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 30 requests per minute per IP to protect external API rate limits (CoinGecko/Etherscan)
+  const ip = getClientIP(req);
+  const rl = await checkRateLimit(ip, { max: 30, windowSec: 60, prefix: 'rl:bots' });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 });
+  }
+
   try {
     const { command, args } = await req.json();
     let response = '';
