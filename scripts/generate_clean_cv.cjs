@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer');
 
+const photoB64 = fs.readFileSync(path.resolve('public/stefan_cirisanu.jpg')).toString('base64');
+
 const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -55,9 +57,17 @@ const htmlContent = `<!DOCTYPE html>
 
   /* Header */
   .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
     margin-bottom: 16px;
     padding-bottom: 14px;
     border-bottom: 2px solid #0f172a;
+  }
+
+  .header-left {
+    flex: 1;
   }
 
   .name {
@@ -82,6 +92,7 @@ const htmlContent = `<!DOCTYPE html>
     color: #475569;
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 16px;
   }
 
@@ -94,6 +105,29 @@ const htmlContent = `<!DOCTYPE html>
     color: #0f172a;
     text-decoration: none;
     font-weight: 500;
+  }
+
+  .header-photo {
+    flex-shrink: 0;
+  }
+
+  .avatar-frame {
+    width: 82px;
+    height: 82px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2.5px solid #0284c7;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
+    position: relative;
+    background-color: #0f172a;
+  }
+
+  .avatar-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.18);
+    display: block;
   }
 
   /* Section Title */
@@ -242,13 +276,19 @@ const htmlContent = `<!DOCTYPE html>
   <div class="page" id="page-1">
     <div class="content-area">
       <div class="header">
-        <div class="name">Stefan Antonio Cirisanu</div>
-        <div class="headline">Senior Software Engineer | Java, Spring Boot & Distributed Enterprise Architecture</div>
-        <div class="meta-row">
-          <span>Timișoara, Romania</span>
-          <span>stefan.cirisanu@icloud.com</span>
-          <span><a href="https://linkedin.com/in/stefan-antonio-cirisanu">linkedin.com/in/stefan antonio cirisanu</a></span>
-          <span>Resident in Timișoara</span>
+        <div class="header-left">
+          <div class="name">Stefan Antonio Cirisanu</div>
+          <div class="headline">Senior Software Engineer | Java, Spring Boot & Distributed Enterprise Architecture</div>
+          <div class="meta-row">
+            <span>Timișoara, Romania</span>
+            <span>stefan.cirisanu@icloud.com</span>
+            <span><a href="https://linkedin.com/in/stefan-antonio-cirisanu">linkedin.com/in/stefan antonio cirisanu</a></span>
+          </div>
+        </div>
+        <div class="header-photo">
+          <div class="avatar-frame">
+            <img src="data:image/jpeg;base64,${photoB64}" alt="Stefan Antonio Cirisanu" />
+          </div>
         </div>
       </div>
 
@@ -437,7 +477,7 @@ const htmlContent = `<!DOCTYPE html>
 
 async function buildCv() {
   const outputPath = path.resolve('Stefan_Antonio_Cirisanu_CV.pdf');
-  console.log('Rendering clean Sam Altman style CV...');
+  console.log('Rendering clean Sam Altman style CV with photo...');
 
   const tmpDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'clean-cv-'));
   const browser = await puppeteer.launch({
