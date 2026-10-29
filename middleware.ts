@@ -34,7 +34,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
+import { jwtVerify } from 'jose/jwt/verify';
 import { APP_FRAME_CSP, isAppFramePath } from './lib/community-apps/framePolicy';
 import { isRetiredApiRoute } from './lib/security/retiredRoutes';
 import { isSessionPayload } from './lib/security/sessionClaims';
