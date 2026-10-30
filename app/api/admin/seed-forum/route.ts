@@ -90,6 +90,9 @@ function getRandomItem(arr: any[]) {
 }
 
 export async function POST(req: Request) {
+    if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ error: 'Fictitious persona seeding is strictly forbidden in production.' }, { status: 403 });
+    }
     const deny = requireAdmin(req);
     if (deny) return deny;
 

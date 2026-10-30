@@ -14,12 +14,14 @@ contract HumanityForum {
     // Track state minimally just for existence/ownership (if needed)
     // Most data is served via an Indexer (The Graph/Envio) reading the events.
     uint256 public nextTopicId = 1;
+    uint256 public nextPostId = 1;
 
     event TopicCreated(uint256 indexed topicId, address indexed author, string category, string ipfsContentHash);
     event PostCreated(uint256 indexed topicId, uint256 indexed postId, address indexed author, string ipfsContentHash);
     event ContentLiked(uint256 indexed topicId, uint256 postId, address indexed liker);
 
     error NotRegistered();
+    error TopicNotFound();
 
     constructor(address _identity) {
         identityRegistry = HumanityIdentityRegistry(_identity);
@@ -37,12 +39,13 @@ contract HumanityForum {
     }
 
     function createPost(uint256 _topicId, string calldata _ipfsContentHash) external onlyRegistered {
-        // Pseudo-random post ID based on timestamp for the demo
-        uint256 postId = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
+        if (_topicId == 0 || _topicId >= nextTopicId) revert TopicNotFound();
+        uint256 postId = nextPostId++;
         emit PostCreated(_topicId, postId, msg.sender, _ipfsContentHash);
     }
 
     function likeContent(uint256 _topicId, uint256 _postId) external onlyRegistered {
+        if (_topicId == 0 || _topicId >= nextTopicId) revert TopicNotFound();
         emit ContentLiked(_topicId, _postId, msg.sender);
     }
 }

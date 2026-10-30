@@ -16,15 +16,17 @@ function getInternalSecret(): string {
 }
 
 export async function POST(req: NextRequest) {
-  // Auth: constant-time comparison of the secret
+  // Auth: constant-time comparison using pre-hashed SHA-256 digests
   const providedSecret = req.headers.get('x-cron-secret') ?? '';
   let authorized = false;
   try {
     const expected = getInternalSecret();
-    const a = Buffer.from(providedSecret.padEnd(64).slice(0, 64));
-    const b = Buffer.from(expected.padEnd(64).slice(0, 64));
-    authorized = providedSecret.length === expected.length &&
-      crypto.timingSafeEqual(a, b);
+    if (!expected || expected.length < 16) {
+      return NextResponse.json({ error: 'Misconfigured: secret length insufficient' }, { status: 503 });
+    }
+    const hashProvided = crypto.createHash('sha256').update(providedSecret).digest();
+    const hashExpected = crypto.createHash('sha256').update(expected).digest();
+    authorized = crypto.timingSafeEqual(hashProvided, hashExpected);
   } catch {
     return NextResponse.json({ error: 'Misconfigured' }, { status: 503 });
   }

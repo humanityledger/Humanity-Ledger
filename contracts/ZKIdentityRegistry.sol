@@ -51,7 +51,8 @@ contract ZKIdentityRegistry {
      * @dev Rotates the identity root in case of ZK Social Recovery execution.
      */
     function rotateIdentityRoot(bytes32 newRootHash) external {
-        // Requires multi-sig or recovery proof validation
+        require(identityRoots[msg.sender] != bytes32(0), "Identity not anchored");
+        require(newRootHash != bytes32(0), "Invalid root hash");
         identityRoots[msg.sender] = newRootHash;
         emit IdentityAnchored(msg.sender, newRootHash);
     }

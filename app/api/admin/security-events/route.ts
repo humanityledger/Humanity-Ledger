@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { verifyJWT } from '@/lib/jwt';
+import { requireAdmin } from '@/lib/admin-guard';
 
 // Simple admin authentication check
 async function isAdminAuthenticated(request: NextRequest): Promise<boolean> {
+    const deny = requireAdmin(request);
+    if (!deny) return true;
+
     const cookieStore = await cookies();
     const adminToken = cookieStore.get('admin_token');
 

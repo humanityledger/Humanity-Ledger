@@ -15,7 +15,11 @@ dotenv.config();
 const prisma = new PrismaClient();
 
 //  CONFIG 
-const TARGET_WALLET = process.env.TARGET_WALLET || '0xYOUR_WALLET_ADDRESS_HERE';
+const TARGET_WALLET = (process.env.TARGET_WALLET || process.env.OWNER_WALLET)?.toLowerCase();
+if (!TARGET_WALLET) {
+  console.error('[ERROR] TARGET_WALLET or OWNER_WALLET environment variable must be specified.');
+  process.exit(1);
+}
 const TARGET_TIER   = 'Private';
 // 
 

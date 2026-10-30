@@ -10,9 +10,20 @@ async function resolveStuckMigrations(databaseUrl) {
   let client;
   try {
     const isLocalhost = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
+    const sslStrict = process.env.DATABASE_SSL_STRICT === 'true' || Boolean(process.env.PGSSLROOTCERT);
+    const sslConfig = isLocalhost
+      ? false
+      : {
+          rejectUnauthorized: sslStrict,
+          ...(process.env.PGSSLROOTCERT ? { ca: require('fs').readFileSync(process.env.PGSSLROOTCERT).toString() } : {}),
+        };
+    if (!isLocalhost && !sslStrict) {
+      console.warn('[pre-deploy] Security Notice: DATABASE_SSL_STRICT is not enabled; connecting with unverified TLS. Set DATABASE_SSL_STRICT=true and supply PGSSLROOTCERT for production hardening.');
+    }
+
     client = new Client({
       connectionString: databaseUrl,
-      ssl: isLocalhost ? false : { rejectUnauthorized: false },
+      ssl: sslConfig,
       connectionTimeoutMillis: 10000,
     });
 

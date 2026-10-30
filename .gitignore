@@ -110,6 +110,8 @@ scripts/deploy*.sh
 *CV*.pdf
 *_CV.pdf
 *Curriculum*.pdf
+*Architecture*Security*.pdf
+*Dossier*.pdf
 CV_*.docx
 Documento_*.txt
 Documento_*.md

@@ -25,12 +25,20 @@ contract QDSToken is ERC20, Ownable {
     }
 
     /**
-     * @dev Overrides transfer to implement the protocol's burn mechanic if applicable.
-     * In the AppChain, standard transfers might be free, but protocol fees (Studio, RWA)
-     * will trigger this burn mechanism.
+     * @dev Process protocol fee with strict authorization and allowance enforcement.
+     * Prevents arbitrary third-party callers from unauthorized deflationary burning
+     * or transferring user balances. Caller must be the user, the protocol owner,
+     * an authorized exempt contract, or have sufficient ERC-20 allowance.
      */
     function processProtocolFee(address user, uint256 feeAmount) external {
+        require(user != address(0), "Invalid user address");
+        require(feeAmount > 0, "Fee amount must be greater than zero");
         require(balanceOf(user) >= feeAmount, "Insufficient QDS for fee");
+
+        // Enforce authorization & allowance protection against unauthorized third-party burn
+        if (msg.sender != user && msg.sender != owner() && !isExemptFromBurn[msg.sender]) {
+            _spendAllowance(user, msg.sender, feeAmount);
+        }
         
         uint256 burnAmount = (feeAmount * burnRateBasisPoints) / 10000;
         uint256 treasuryAmount = feeAmount - burnAmount;

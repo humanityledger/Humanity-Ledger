@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { isAdmin } from '@/lib/admin';
 import { getSession } from '@/lib/session';
+import { requireAdmin } from '@/lib/admin-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,11 +12,12 @@ export const dynamic = 'force-dynamic';
  * Deletes ALL topics EXCEPT the one with the word "Welcome" in the title
  * (case-insensitive). The welcome post is always preserved.
  *
- * This was a GET. The CSRF check in the middleware covers only POST, PUT,
- * PATCH and DELETE, and SameSite=Lax cookies travel with top-level GET
- * navigations, so one link clicked by the admin on any site wiped the forum.
+ * Dual authentication: Requires X-Admin-Secret header + active Admin Session.
  */
 export async function POST(req: Request) {
+  const deny = requireAdmin(req);
+  if (deny) return deny;
+
   try {
     const session = await getSession();
     const address = session?.userId;

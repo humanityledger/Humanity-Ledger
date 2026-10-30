@@ -6,6 +6,9 @@ import { isAdmin } from '@/lib/admin';
 import { requireAdmin } from '@/lib/admin-guard';
 
 export async function POST(req: Request) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Bulk user reset is strictly forbidden in production.' }, { status: 403 });
+  }
   const deny = requireAdmin(req);
   if (deny) return deny;
 

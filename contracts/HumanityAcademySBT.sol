@@ -35,14 +35,12 @@ contract HumanityAcademySBT is Ownable {
     }
 
     /**
-     * @dev Complete a course and mint an SBT record
+     * @dev Complete a course and mint an SBT record for a registered student
      */
-    function completeCourse(bytes32 _courseId, uint256 _xpAmount) external onlyOwner {
-        // In a real system, verification logic would happen here or via Oracles
-        // Currently restricted to Owner (system oracle) for security
-        
-        address student = msg.sender; // Conceptual simplification for demo
-        
+    function completeCourse(address student, bytes32 _courseId, uint256 _xpAmount) external onlyOwner {
+        require(student != address(0), "Invalid student address");
+        (,,,,,,,,uint256 createdAt) = identityRegistry.identities(student);
+        if (createdAt == 0) revert NotRegistered();
         if (courseCompletions[_courseId][student]) revert CourseAlreadyCompleted();
 
         courseCompletions[_courseId][student] = true;

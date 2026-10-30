@@ -6,7 +6,11 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const OWNER_ADDRESS = '0x78831c25c86ea2a78a6127fc2ccb95e612d87b4a'; // normalized lowercase
+const OWNER_ADDRESS = (process.env.OWNER_WALLET || process.env.OWNER_ADDRESS)?.toLowerCase();
+if (!OWNER_ADDRESS) {
+  console.error('[ERROR] OWNER_WALLET or OWNER_ADDRESS environment variable must be specified.');
+  process.exit(1);
+}
 const AMOUNT = 21_000_000;
 
 async function main() {

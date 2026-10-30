@@ -356,15 +356,15 @@ function RenderContent({ content }: { content: string }) {
       )}
 
       {signature && (
-        <div className="mt-8 p-4 bg-green-50 border border-green-200">
-          <span className="text-[10px] font-black text-green-700 tracking-[0.2em] uppercase flex items-center gap-2 mb-2">
-            AZTEC TESTNET VERIFIED SIGNATURE
+        <div className={`mt-8 p-4 ${signature.startsWith('SESSION:') ? 'bg-amber-50/70 border border-amber-200' : 'bg-green-50 border border-green-200'}`}>
+          <span className={`text-[10px] font-black tracking-[0.2em] uppercase flex items-center gap-2 mb-2 ${signature.startsWith('SESSION:') ? 'text-amber-700' : 'text-green-700'}`}>
+            {signature.startsWith('SESSION:') ? 'EDGE SESSION ATTESTATION (STANDARD AUTH)' : 'AZTEC TESTNET VERIFIED SIGNATURE'}
           </span>
-          <div className="font-mono text-[11px] break-all text-green-800">
-            HASH: {signature.startsWith('SESSION:') ? signature.replace('SESSION:', '') : signature}
+          <div className={`font-mono text-[11px] break-all ${signature.startsWith('SESSION:') ? 'text-amber-900' : 'text-green-800'}`}>
+            {signature.startsWith('SESSION:') ? 'ATTESTATION: EDGE_SESSION_CONFIRMED' : `HASH: ${signature}`}
           </div>
-          <div className="text-[9px] font-mono text-green-600 uppercase tracking-widest mt-2">
-            Cryptographically secured on Aztec Network Layer 2
+          <div className={`text-[9px] font-mono uppercase tracking-widest mt-2 ${signature.startsWith('SESSION:') ? 'text-amber-600' : 'text-green-600'}`}>
+            {signature.startsWith('SESSION:') ? 'Standard authenticated reply (Session-bound token)' : 'Cryptographically secured on Aztec Network Layer 2'}
           </div>
         </div>
       )}
