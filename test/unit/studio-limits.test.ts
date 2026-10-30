@@ -59,6 +59,7 @@ describe('Studio Provenance Plan Limits', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    process.env.ADMIN_WALLET_ADDRESS = '0x1111111111111111111111111111111111111111';
     mockGetSession = (await import('../../lib/session')).getSession;
   });
 
@@ -75,7 +76,7 @@ describe('Studio Provenance Plan Limits', () => {
   };
 
   it('allows the Owner Wallet to create infinite passports (bypasses limits)', async () => {
-    mockGetSession.mockResolvedValue({ userId: '0x78831c25c86ea2a78a6127fc2ccb95e612d87b4a' });
+    mockGetSession.mockResolvedValue({ userId: '0x1111111111111111111111111111111111111111' });
     const req = createMockRequest(validPayload);
     
     // Simulate 1000 passports already existing in DB

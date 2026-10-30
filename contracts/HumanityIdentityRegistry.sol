@@ -97,4 +97,8 @@ contract HumanityIdentityRegistry is Ownable {
             identities[msg.sender].lastActive = block.timestamp;
         }
     }
+
+    function isRegistered(address _user) external view returns (bool) {
+        return identities[_user].createdAt != 0;
+    }
 }

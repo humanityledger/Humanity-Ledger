@@ -1520,7 +1520,8 @@ export function ProvenanceStudioContent({
       .then(data => {
         const id = data?.user?.id?.toLowerCase();
         const tier = data?.user?.tier || 'FREE';
-        const owner = id === '0x78831c25c86ea2a78a6127fc2ccb95e612d87b4a';
+        const ownerWallet = (process.env.NEXT_PUBLIC_OWNER_WALLET || process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '').toLowerCase();
+        const owner = Boolean(ownerWallet && id === ownerWallet);
         
         setUserTier(tier);
         setIsOwner(owner);

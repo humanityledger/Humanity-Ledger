@@ -7,7 +7,7 @@ import { NODE_TIERS, PlanTier, PlanConfig } from '@/lib/node_infrastructure/tier
 import { useSystemAccount } from '@/hooks/useSystemAccount';
 
 // ── Owner wallet that has permanent, unlimited access ──────────────────────────
-const OWNER_WALLET = '0x78831c25c86ea2a78a6127fc2ccb95e612d87b4a';
+const OWNER_WALLET = (process.env.NEXT_PUBLIC_OWNER_WALLET || process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '').toLowerCase();
 
 interface SessionData {
     authenticated: boolean;
@@ -177,7 +177,7 @@ export function SubscriptionDashboard() {
         try {
             // Auto-provision permanent access for the owner wallet
             const currentAddr = address?.toLowerCase();
-            if (currentAddr === OWNER_WALLET) {
+            if (OWNER_WALLET && currentAddr === OWNER_WALLET) {
                 await fetch('/api/payments/provision-owner', { method: 'POST', credentials: 'include' }).catch(() => {});
             }
             const res = await fetch('/api/auth/session', { cache: 'no-store', credentials: 'include' });

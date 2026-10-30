@@ -102,8 +102,8 @@ export async function POST(req: NextRequest) {
   }
 
   const issuerAddress = identity.authorizedAddress.toLowerCase();
-  const adminWallet = (process.env.ADMIN_WALLET_ADDRESS || '0x78831c25c86ea2a78a6127fc2ccb95e612d87b4a').toLowerCase();
-  const isOwner = issuerAddress === adminWallet;
+  const adminWallet = (process.env.ADMIN_WALLET_ADDRESS || process.env.OWNER_WALLET || '').toLowerCase();
+  const isOwner = Boolean(adminWallet && issuerAddress === adminWallet);
 
   if (!isOwner) {
     // ── Rate Limiting: max 5 passports per minute per wallet ─────────────────

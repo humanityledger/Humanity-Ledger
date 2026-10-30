@@ -28,8 +28,7 @@ contract HumanityForum {
     }
 
     modifier onlyRegistered() {
-        (,,,,,,,,uint256 createdAt) = identityRegistry.identities(msg.sender);
-        if (createdAt == 0) revert NotRegistered();
+        if (!identityRegistry.isRegistered(msg.sender)) revert NotRegistered();
         _;
     }
 

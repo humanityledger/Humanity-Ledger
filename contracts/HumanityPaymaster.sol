@@ -40,9 +40,7 @@ contract HumanityPaymaster is Ownable {
         if (msg.sender != entryPoint) revert NotAuthorizedEntryPoint();
 
         // 1. Check if the user is registered in the Identity Registry
-        (,,,,,,,,uint256 createdAt) = identityRegistry.identities(sender);
-        
-        if (createdAt == 0) revert IdentityNotRegistered();
+        if (!identityRegistry.isRegistered(sender)) revert IdentityNotRegistered();
 
         // 2. Rate limiting / Gas capping
         if (sponsoredGas[sender] + requiredPreFund > MAX_SPONSORED_GAS_PER_USER) {

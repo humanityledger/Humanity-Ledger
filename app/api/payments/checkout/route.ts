@@ -52,7 +52,8 @@ export async function POST(req: NextRequest) {
 
         // [VIP BYPASS] Special Owner Exception — permanent, unlimited access.
         // Reached only with the owner's own signed-in session (see above).
-        if (normalizedUserId === '0x78831c25c86ea2a78a6127fc2ccb95e612d87b4a') {
+        const ownerWallet = (process.env.OWNER_WALLET || process.env.ADMIN_WALLET_ADDRESS || '').toLowerCase();
+        if (ownerWallet && normalizedUserId === ownerWallet) {
             const PERMANENT_DATE = new Date('2099-12-31T23:59:59Z');
             await prisma.user.upsert({
                 where: { walletAddress: normalizedUserId },

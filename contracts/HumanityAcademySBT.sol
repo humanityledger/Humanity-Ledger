@@ -29,8 +29,7 @@ contract HumanityAcademySBT is Ownable {
     }
 
     modifier onlyRegistered() {
-        (,,,,,,,,uint256 createdAt) = identityRegistry.identities(msg.sender);
-        if (createdAt == 0) revert NotRegistered();
+        if (!identityRegistry.isRegistered(msg.sender)) revert NotRegistered();
         _;
     }
 
@@ -39,8 +38,7 @@ contract HumanityAcademySBT is Ownable {
      */
     function completeCourse(address student, bytes32 _courseId, uint256 _xpAmount) external onlyOwner {
         require(student != address(0), "Invalid student address");
-        (,,,,,,,,uint256 createdAt) = identityRegistry.identities(student);
-        if (createdAt == 0) revert NotRegistered();
+        if (!identityRegistry.isRegistered(student)) revert NotRegistered();
         if (courseCompletions[_courseId][student]) revert CourseAlreadyCompleted();
 
         courseCompletions[_courseId][student] = true;

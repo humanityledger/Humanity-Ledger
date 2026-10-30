@@ -43,7 +43,7 @@ contract HumanityLedgerCore is Ownable {
      */
     function setPhase1Modules(
         address _identity,
-        address _paymaster,
+        address payable _paymaster,
         address _chat,
         address _academySBT,
         address _warRoom

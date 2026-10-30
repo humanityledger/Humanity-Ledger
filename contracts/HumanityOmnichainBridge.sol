@@ -53,7 +53,7 @@ contract HumanityOmnichainBridge is Ownable {
     error UntrustedPeer();
     error InvalidMessagePayload();
 
-    constructor(address _lzEndpoint, address _paymaster) Ownable(msg.sender) {
+    constructor(address _lzEndpoint, address payable _paymaster) Ownable(msg.sender) {
         require(_lzEndpoint != address(0), "Invalid LayerZero endpoint");
         lzEndpoint = ILayerZeroEndpointV2(_lzEndpoint);
         paymaster = HumanityPaymaster(_paymaster);

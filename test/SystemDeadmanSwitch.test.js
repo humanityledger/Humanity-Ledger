@@ -24,7 +24,7 @@ describe("SystemDeadmanSwitch", function () {
     await mockERC721.mint(owner.address, 1);
 
     // 2. Deploy Switch
-    const Switch = await ethers.getContractFactory("SystemDeadmanSwitch");
+    const Switch = await ethers.getContractFactory("LedgerDeadmanSwitch");
     switchContract = await Switch.deploy(owner.address, backup.address, TIMEOUT_DAYS);
 
     // 3. Approvals
@@ -39,7 +39,7 @@ describe("SystemDeadmanSwitch", function () {
     });
 
     it("Should revert if deployed with invalid timeout", async function () {
-      const Switch = await ethers.getContractFactory("SystemDeadmanSwitch");
+      const Switch = await ethers.getContractFactory("LedgerDeadmanSwitch");
       await expect(Switch.deploy(owner.address, backup.address, 89)).to.be.revertedWithCustomError(Switch, "TimeoutTooShort");
     });
   });
