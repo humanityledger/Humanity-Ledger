@@ -35,9 +35,20 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { action, targetAddress } = body;
 
-        if (!targetAddress) return NextResponse.json({ error: 'Missing targetAddress' }, { status: 400 });
+        if (!targetAddress || typeof targetAddress !== 'string') {
+            return NextResponse.json({ error: 'Missing targetAddress' }, { status: 400 });
+        }
 
         const address = targetAddress.toLowerCase();
+
+        // [SECURITY: IDOR MITIGATION]
+        // Non-admin users are strictly restricted to wiping their own account.
+        const callerId = (payload.userId || payload.sub || payload.address || '').toLowerCase();
+        if (payload.role !== 'ADMIN' && callerId !== address) {
+            return NextResponse.json({
+                error: 'Forbidden: You can only exercise Right to Be Forgotten for your own wallet identity.'
+            }, { status: 403 });
+        }
 
         switch (action) {
             case 'RIGHT_TO_BE_FORGOTTEN':

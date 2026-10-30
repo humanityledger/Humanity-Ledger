@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { vi } from 'vitest';
 import { NextRequest } from 'next/server';
 // Set env variable BEFORE importing route so OpenAI initializes
 process.env.OPENAI_API_KEY = 'test-key-mock';

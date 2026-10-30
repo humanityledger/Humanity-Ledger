@@ -21,14 +21,37 @@ export async function GET(request: NextRequest) {
     targetUrl = FALLBACKS[Math.abs(h) % FALLBACKS.length];
   }
 
-  // SSRF Protection: Restrict to known safe image hosts
-  const ALLOWED_HOSTS = /^https?:\/\/(images\.(pexels|unsplash|coindesk|decrypt|cointelegraph|reuters|bloomberg)\.com|.*\.coinmarketcap\.com|.*\.coingecko\.com|upload\.wikimedia\.org)/i;
-  if (!ALLOWED_HOSTS.test(targetUrl)) {
+  // SSRF Protection: Restrict to an exact-hostname allowlist.
+  // Using URL parsing (not regex) prevents subdomain-bypass attacks.
+  const ALLOWED_EXACT_HOSTS = new Set([
+    'images.pexels.com',
+    'images.unsplash.com',
+    'images.coindesk.com',
+    'images.decrypt.co',
+    'images.cointelegraph.com',
+    'images.reuters.com',
+    'images.bloomberg.com',
+    'upload.wikimedia.org',
+  ]);
+  const ALLOWED_HOST_SUFFIXES = ['.coinmarketcap.com', '.coingecko.com'];
+  let parsedTarget: URL;
+  try { parsedTarget = new URL(targetUrl!); } catch {
+    return NextResponse.json({ error: 'Blocked: Invalid URL' }, { status: 403 });
+  }
+  const targetHostname = parsedTarget.hostname.toLowerCase();
+  const isAllowed =
+    ALLOWED_EXACT_HOSTS.has(targetHostname) ||
+    ALLOWED_HOST_SUFFIXES.some(suffix => targetHostname.endsWith(suffix));
+  if (!isAllowed) {
     return NextResponse.json({ error: 'Blocked: Unauthorized image host' }, { status: 403 });
+  }
+  // Only allow HTTPS to prevent downgrade to cleartext
+  if (parsedTarget.protocol !== 'https:') {
+    return NextResponse.json({ error: 'Blocked: Only HTTPS image sources are allowed' }, { status: 403 });
   }
 
   try {
-    const res = await fetch(targetUrl, {
+    const res = await fetch(parsedTarget.href, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         'Accept': 'image/jpeg,image/png,image/webp,*/*;q=0.8',

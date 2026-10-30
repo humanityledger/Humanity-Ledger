@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { vi } from 'vitest';
 import { deriveCallLog, callEntryLabel, decodeCallEntry, encodeCallEntry, formatDuration, isCallSignal, type CallSignal } from '@/lib/chat/callLog';
 
 const T = 1_800_000_000_000;

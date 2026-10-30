@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { vi } from 'vitest';
 
 // L1 reads are mocked: these tests cover our logic, not Ethereum.
 vi.mock('@/lib/aztec/sequencer/l1', () => ({

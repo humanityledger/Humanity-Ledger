@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { vi } from 'vitest';
 import {
   applyOps, chunkOps, decodeMessage, encodeMessage, isValidOp, nextTime, wins,
   MAX_MESSAGE_BYTES, SYNC_PREFIX, type SyncOp,

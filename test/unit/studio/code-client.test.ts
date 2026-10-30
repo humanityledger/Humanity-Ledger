@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { vi } from 'vitest';
 import { BUILTIN_COMMANDS, expandTemplate, matchCommands, modelFromArg, parseCommand, splitCommand } from '@/lib/studio/commands';
 import { diffWorkspace, gitBlobSha, importRepo, isValidBranch, parseRepo, pushWorkspace, type GitLink } from '@/lib/studio/github';
 import { fileAfterChange, inlineWorkspaceAssets, projectMemoryFile, resolveRelative } from '@/lib/studio/ws-client';

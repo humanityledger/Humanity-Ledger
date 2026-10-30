@@ -113,6 +113,8 @@ export class TransactionService {
                 gas: gas + (gas * 20n / 100n)
             }) as `0x${string}`;
         }
+
+        return txHash;
     }
 
     /**

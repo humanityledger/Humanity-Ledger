@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { vi } from 'vitest';
 import fc from 'fast-check';
 
 describe('J-015: Property-based testing of Streams and Escrow accounting', () => {

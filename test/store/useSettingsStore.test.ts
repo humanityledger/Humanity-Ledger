@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { vi } from 'vitest';
 import { useSettingsStore } from '../../lib/store/useSettingsStore';
 
 // Mock safeStorage to simulate cross-platform persistence behavior

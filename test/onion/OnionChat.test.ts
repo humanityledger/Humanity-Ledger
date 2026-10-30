@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { vi } from 'vitest';
 import { generateEphemeralKeyPair, encryptLayer, decryptLayer } from '../../lib/onion/OnionCrypto';
 
 describe('Multiplatform Chat (Onion Routing) Tests', () => {

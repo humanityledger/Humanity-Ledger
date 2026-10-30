@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { vi } from 'vitest';
 import crypto from 'crypto';
 
 describe('J-013: Regression Tests for Security Findings', () => {

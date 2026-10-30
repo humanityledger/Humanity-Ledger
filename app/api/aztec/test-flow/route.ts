@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/admin-guard';
 
 /**
  * GET /api/aztec/test-flow?address=0x...
@@ -16,6 +17,9 @@ import { prisma } from '@/lib/prisma';
  * This is a REAL test — no mocks, no simulations.
  */
 export async function GET(req: NextRequest) {
+  const deny = requireAdmin(req);
+  if (deny) return deny;
+
   const { searchParams } = new URL(req.url);
   const address = searchParams.get('address');
 

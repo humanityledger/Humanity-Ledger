@@ -12,7 +12,7 @@
  */
 
 // @ts-ignore - Vitest types not fully linked in strict mode
-import { describe, it, expect, beforeAll } from 'vitest';
+// globals: true in vitest.config.ts
 import { ethers } from 'ethers';
 import {
   verifyEIP191Signature,

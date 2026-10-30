@@ -1,12 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { NextResponse } from 'next/server';
 
-export async function POST(req: NextRequest) {
-    if (!req.headers.get('x-verified-session-address')) return NextResponse.json({error: 'Unauthorized'}, {status: 401});
-    const body = await req.json();
-    const logPath = path.join(process.cwd(), 'xmtp-test.log');
-    fs.appendFileSync(logPath, body.msg + '\n');
-    console.log('[TEST]', body.msg);
-    return NextResponse.json({ ok: true });
+export const dynamic = 'force-dynamic';
+
+/**
+ * DEPRECATED / RETIRED ENDPOINT
+ * Direct log appending to local filesystem is disabled to prevent disk exhaustion.
+ */
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: 'Endpoint Locked (410 Gone)',
+      reason: 'Direct file logging endpoint is permanently retired.',
+    },
+    { status: 410 }
+  );
 }

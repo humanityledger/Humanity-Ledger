@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { vi } from 'vitest';
 import { COMPACT_BETA, runAgent, type SandboxIo } from '@/lib/studio/agent';
 import { chatRequestSchema, type StudioEvent } from '@/lib/studio/protocol';
 import { STUDIO_PLANS, estimateCostUsd } from '@/lib/studio/models';

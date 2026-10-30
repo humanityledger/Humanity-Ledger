@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { matchesPrefix, isPublicPath, checkCsrf } from '@/middleware';
 

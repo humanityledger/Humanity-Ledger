@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { vi } from 'vitest';
 import {
   chatChanges, chatOriginal, mentionAtCaret, mentionBlocks, mentionedPaths, MAX_MENTIONS, rankPaths, searchWorkspace,
 } from '@/lib/studio/ws-client';

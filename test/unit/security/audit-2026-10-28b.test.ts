@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { vi } from 'vitest';
 import { SignJWT } from 'jose';
 import { isSessionPayload } from '@/lib/security/sessionClaims';
 import { safeReturnPath } from '@/lib/security/safeRedirect';

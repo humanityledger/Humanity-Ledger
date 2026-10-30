@@ -12,7 +12,11 @@ import { getClientIP } from '@/lib/security/rateLimiter';
 const prisma = systemPrisma as unknown as PrismaClient;
 
 // Treasury wallet that receives the mint fee on Optimism
-const TREASURY_WALLET = '0x78831C25c86eA2a78A6127fC2Ccb95E612D87b4a' as const;
+// Loaded from env var to avoid hardcoding operational wallet addresses.
+const TREASURY_WALLET = (process.env.TREASURY_WALLET_ADDRESS || '').toLowerCase() as `0x${string}`;
+if (!TREASURY_WALLET || TREASURY_WALLET.length !== 42) {
+  console.warn('[GoldenTicket] TREASURY_WALLET_ADDRESS env var is not set -- on-chain payment verification will always fail.');
+}
 const MINT_FEE_WEI = parseEther('0.00111');
 
 // Verifies an Optimism transaction actually paid the treasury.

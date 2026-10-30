@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { vi } from 'vitest';
 import { XmtpSyncChannel, SYNC_GROUP_NAME } from '@/lib/sync/xmtpSyncChannel';
 import { encodeMessage, decodeMessage } from '@/lib/sync/lww';
 

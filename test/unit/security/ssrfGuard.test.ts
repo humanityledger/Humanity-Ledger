@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { vi } from 'vitest';
 import { validateUrlForFetch } from '@/lib/security/ssrfGuard';
 
 describe('validateUrlForFetch (B-031 SSRF Guard)', () => {

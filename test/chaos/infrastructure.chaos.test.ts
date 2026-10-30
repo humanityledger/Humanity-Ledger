@@ -14,7 +14,7 @@
  * Reference: Principles of Chaos Engineering (principlesofchaos.org)
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { vi } from 'vitest';
 import { CircuitBreaker } from '../../lib/resilience/circuit-breaker';
 import {
   verifyEIP191Signature,

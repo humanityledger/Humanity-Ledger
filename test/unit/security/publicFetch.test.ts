@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { vi } from 'vitest';
 import { isBlockedIp } from '@/lib/security/ipPolicy';
 import { validateUrlForFetch } from '@/lib/security/ssrfGuard';
 import { assertFetchableUrl, fetchPublicUrl, publicOnlyLookup, PublicFetchError } from '@/lib/security/publicFetch';

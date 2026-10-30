@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { vi } from 'vitest';
 import { requireWallet } from '@/lib/security/requireWallet';
 
 vi.mock('@/lib/session', () => ({

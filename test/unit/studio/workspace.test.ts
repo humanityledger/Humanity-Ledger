@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { vi } from 'vitest';
 import {
   applyWsTool, diffLines, diffStats, globToRegExp, matchGlob, normalizePath, unifiedDiff, unsafeRegex, workspaceTree, type WsFile,
 } from '@/lib/studio/fs';

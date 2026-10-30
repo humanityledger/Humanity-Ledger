@@ -40,7 +40,14 @@ describe("SystemDeadmanSwitch", function () {
 
     it("Should revert if deployed with invalid timeout", async function () {
       const Switch = await ethers.getContractFactory("LedgerDeadmanSwitch");
-      await expect(Switch.deploy(owner.address, backup.address, 89)).to.be.revertedWithCustomError(Switch, "TimeoutTooShort");
+      let reverted = false;
+      try {
+        await Switch.deploy(owner.address, backup.address, 89);
+      } catch (err) {
+        reverted = true;
+        expect(err.message).to.include("TimeoutTooShort");
+      }
+      expect(reverted).to.be.true;
     });
   });
 
@@ -50,23 +57,35 @@ describe("SystemDeadmanSwitch", function () {
       await time.increase(86400); // 1 day
       await switchContract.connect(owner).ping();
       const newPing = await switchContract.lastPing();
-      expect(newPing).to.be.greaterThan(initialPing);
+      expect(newPing > initialPing).to.be.true;
     });
 
     it("Should revert if non-owner tries to ping", async function () {
-      await expect(switchContract.connect(attacker).ping()).to.be.revertedWithCustomError(switchContract, "OwnableUnauthorizedAccount");
+      let reverted = false;
+      try {
+        await switchContract.connect(attacker).ping();
+      } catch (err) {
+        reverted = true;
+        expect(err.message).to.include("OwnableUnauthorizedAccount");
+      }
+      expect(reverted).to.be.true;
     });
   });
 
   describe("Trigger Inheritance", function () {
     it("Should revert if triggered before timeout", async function () {
-      await expect(
-        switchContract.connect(backup).triggerInheritance(
+      let reverted = false;
+      try {
+        await switchContract.connect(backup).triggerInheritance(
           [mockERC20.target],
           [mockERC721.target],
           [1]
-        )
-      ).to.be.revertedWithCustomError(switchContract, "NotYetExpired");
+        );
+      } catch (err) {
+        reverted = true;
+        expect(err.message).to.include("NotYetExpired");
+      }
+      expect(reverted).to.be.true;
     });
 
     it("Should successfully transfer assets after timeout", async function () {
@@ -83,8 +102,8 @@ describe("SystemDeadmanSwitch", function () {
       expect(await mockERC20.balanceOf(backup.address)).to.equal(ethers.parseEther("1000"));
       expect(await mockERC721.ownerOf(1)).to.equal(backup.address);
       
-      // Owner balance should be 0
-      expect(await mockERC20.balanceOf(owner.address)).to.equal(0);
+      // Owner balance should be 0n
+      expect(await mockERC20.balanceOf(owner.address)).to.equal(0n);
     });
   });
 });

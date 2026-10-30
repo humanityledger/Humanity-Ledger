@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { vi } from 'vitest';
 import { POST } from '../../app/api/passport/route';
 import { NextRequest } from 'next/server';
 import { prisma } from '../../lib/prisma';

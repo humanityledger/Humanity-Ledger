@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { vi } from 'vitest';
 import { appendAuditEntry, verifyAuditTrailIntegrity } from '../../../lib/audit/audit-trail';
 /**
  * AUDIT TRAIL  Test Suite

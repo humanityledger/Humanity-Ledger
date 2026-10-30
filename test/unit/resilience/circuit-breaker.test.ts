@@ -3,7 +3,7 @@
  * Validates all state transitions: CLOSED  OPEN  HALF_OPEN  CLOSED
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { vi } from 'vitest';
 import { CircuitBreaker } from '../../../lib/resilience/circuit-breaker';
 
 const makeBreaker = (overrides = {}) =>

@@ -22,7 +22,7 @@
  * 10. Explorer URL formatting
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { vi } from 'vitest';
 import { rawToQds, qdsToRaw } from '@/lib/aztec/qds-contract';
 import { deriveSecretKeyFromEvm, explorerTxUrl, explorerAddressUrl, AZTEC_EXPLORER, SPONSORED_FPC_ADDRESS } from '@/lib/aztec/client';
 

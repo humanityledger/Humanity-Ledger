@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { vi } from 'vitest';
 
 // metering.ts imports Prisma and Redis; the pure helpers under test need neither.
 vi.mock('@/lib/prisma', () => ({ prisma: {} }));

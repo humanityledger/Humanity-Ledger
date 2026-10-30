@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword, isValidEmail } from '@/lib/auth';
+import { checkRateLimit, getClientIP } from '@/lib/security/rateLimiter';
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 5 sign-in attempts per 5 minutes per IP to block credential stuffing
+  const ip = getClientIP(request);
+  const rl = await checkRateLimit(ip, { max: 5, windowSec: 300, prefix: 'rl:signin' });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Too many sign-in attempts. Please wait 5 minutes.' }, { status: 429 });
+  }
+
   try {
     const body = await request.json();
     // [PERSISTENCE FIX] Trim inputs — mobile keyboards inject trailing whitespace

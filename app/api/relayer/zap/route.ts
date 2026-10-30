@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        console.log(`[Relayer] Processing gasless zap for user: ${user}`);
+        console.log("[Relayer] Processing gasless zap for authenticated user");
         console.log(`[Relayer] Amount: ${ethers.formatEther(wldAmount)} AUTH`);
 
         // ====================================================================
@@ -66,11 +66,10 @@ export async function POST(req: NextRequest) {
         const relayerWallet = new ethers.Wallet(RELAYER_PRIVATE_KEY, provider);
         const zapContract = new ethers.Contract(ZAP_CONTRACT_ADDRESS, ZAP_ABI, relayerWallet);
 
-        console.log(`[Relayer] Relayer address: ${relayerWallet.address}`);
+        // Relayer address intentionally not logged (operational security)
 
         // Check relayer balance
         const balance = await provider.getBalance(relayerWallet.address);
-        console.log(`[Relayer] Balance: ${ethers.formatEther(balance)} ETH`);
 
         if (balance < ethers.parseEther("0.001")) {
             console.error("[Relayer] Insufficient balance!");
@@ -207,10 +206,10 @@ export async function POST(req: NextRequest) {
     } catch (error: any) {
         console.error("[Relayer] Error:", error);
 
-        // Check if it's a revert
+        // Check if it's a revert -- return generic message, not raw revert string
         if (error.message?.includes("revert")) {
             return NextResponse.json(
-                { error: `Transaction reverted: ${error.message}` },
+                { error: "Transaction reverted on-chain. Check parameters." },
                 { status: 400 }
             );
         }

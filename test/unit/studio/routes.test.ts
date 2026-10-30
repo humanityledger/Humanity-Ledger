@@ -3,7 +3,7 @@
  * locking logic, against a fake Redis, a scripted Anthropic SDK, mocked auth,
  * Prisma and Stripe.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const h = vi.hoisted(() => {

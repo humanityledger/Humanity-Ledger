@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { vi } from 'vitest';
 import { ethers } from 'ethers';
 import { renderHook, act } from '@testing-library/react';
 

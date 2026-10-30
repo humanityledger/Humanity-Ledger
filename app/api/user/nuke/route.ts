@@ -53,7 +53,7 @@ export async function POST(req: Request) {
                 signature: signature as `0x${string}`,
             });
         } catch (e: any) {
-            return NextResponse.json({ error: 'Cryptographic verification failed: ' + e.message }, { status: 401 });
+            return NextResponse.json({ error: 'Cryptographic verification failed' }, { status: 401 });
         }
 
         if (!isValidSignature) {
@@ -134,11 +134,14 @@ export async function POST(req: Request) {
         response.cookies.delete('kyc_token');
         response.cookies.delete('system_handshake');
         response.cookies.delete('next-auth.session-token');
+        response.cookies.delete('hl_session');
+        response.cookies.delete('human.session-token');
+        response.cookies.delete('__Secure-next-auth.session-token');
 
         return response;
 
     } catch (error: any) {
-        console.error(" [LedgerFortress:Nuke] Critical Failure:", error);
+        console.error("[LedgerFortress:Nuke] Critical Failure -- details redacted");
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

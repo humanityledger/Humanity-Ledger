@@ -52,7 +52,7 @@ jobs:
         run: npx prisma validate
         continue-on-error: true
         env:
-          DATABASE_URL: "postgresql://[REDACTED_DB_USER]:[REDACTED_DB_PASS]@localhost:5432/whalealert?schema=public"
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
   # 
   # JOB 2: Smart Contract Security Audit
@@ -123,7 +123,7 @@ jobs:
       - name: ️ Prisma Generate (no DB needed)
         run: npx prisma generate
         env:
-          DATABASE_URL: "postgresql://[REDACTED_DB_USER]:[REDACTED_DB_PASS]@localhost:5432/whalealert?schema=public"
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: ️ Next.js Production Build
         run: npm run build

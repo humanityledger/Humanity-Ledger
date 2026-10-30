@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { vi } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
 import {
