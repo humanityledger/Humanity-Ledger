@@ -117,6 +117,10 @@ Masterclass_*.md
 *.docx
 raw_pdf_*.txt
 extracted_pdf.txt
+public/*stefan*
+scripts/fetch_*.cjs
+scripts/generate_*cv*.cjs
+scripts/create-admin*.js
 
 # Scripts temporales de debug
 find_*.py

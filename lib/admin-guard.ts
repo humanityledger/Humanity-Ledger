@@ -21,6 +21,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { createHash, timingSafeEqual as cryptoTimingSafeEqual } from 'crypto';
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
@@ -65,15 +66,10 @@ export function requireAdmin(req: Request): NextResponse | null {
 
 /**
  * Timing-safe string comparison to prevent timing attacks on secret comparison.
- * Uses a constant-time algorithm compatible with the browser's Web Crypto API.
+ * Hashes both strings to SHA-256 first so comparison length never depends on input length.
  */
 function timingSafeEqual(a: string, b: string): boolean {
-    if (a.length !== b.length) return false;
-    const aBytes = new TextEncoder().encode(a);
-    const bBytes = new TextEncoder().encode(b);
-    let diff = 0;
-    for (let i = 0; i < aBytes.length; i++) {
-        diff |= aBytes[i] ^ bBytes[i];
-    }
-    return diff === 0;
+    const hashA = createHash('sha256').update(a).digest();
+    const hashB = createHash('sha256').update(b).digest();
+    return cryptoTimingSafeEqual(hashA, hashB);
 }

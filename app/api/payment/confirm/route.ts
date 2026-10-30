@@ -12,10 +12,10 @@ const TIER_NAMES: Record<string, string> = {
 };
 
 const BANK_DETAILS = {
-  beneficiary: 'STEFAN-ANTONIO CIRISANU',
-  iban: 'ES52 1583 0001 1090 8640 3529',
-  bic: 'REVOESM2',
-  bank: 'Revolut Bank UAB, Calle Príncipe de Vergara 132, 4 planta, 28002, Madrid, Spain'
+  beneficiary: process.env.BANK_BENEFICIARY || 'Humanity Ledger Foundation',
+  iban: process.env.BANK_IBAN || 'ES0000000000000000000000',
+  bic: process.env.BANK_BIC || 'REVOESM2',
+  bank: process.env.BANK_NAME || 'Institutional Custody Settlement'
 };
 
 export async function POST(request: NextRequest) {

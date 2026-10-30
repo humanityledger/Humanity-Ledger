@@ -22,7 +22,7 @@ export async function validateApiKey(req: NextRequest): Promise<ApiKeyValidation
   }
 
   //  INTERNAL BYPASS for development/dashboard (LEGENDARY) 
-  if (apiKey === 'DEV_INTERNAL_WAC') {
+  if (process.env.NODE_ENV !== 'production' && apiKey === 'DEV_INTERNAL_WAC') {
     return { 
       valid: true, 
       subscription: { 

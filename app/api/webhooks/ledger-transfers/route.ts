@@ -31,7 +31,9 @@ export async function POST(req: Request) {
         const digest = hmac.digest('hex');
         
         // Prevent timing attacks with constant-time comparison
-        if (signature.length !== digest.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))) {
+        const sigHash = crypto.createHash('sha256').update(signature).digest();
+        const digestHash = crypto.createHash('sha256').update(digest).digest();
+        if (!crypto.timingSafeEqual(sigHash, digestHash)) {
             console.error('[WEBHOOK ERROR] Cryptographic signature mismatch. Possible spoofing attack.');
             return NextResponse.json({ success: false, error: 'Unauthorized: Invalid Cryptographic Signature' }, { status: 401 });
         }

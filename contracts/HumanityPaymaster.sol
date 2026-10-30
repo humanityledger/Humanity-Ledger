@@ -61,7 +61,10 @@ contract HumanityPaymaster is Ownable {
      */
     receive() external payable {}
 
+    error WithdrawFailed();
+
     function withdraw(address payable to, uint256 amount) external onlyOwner {
-        to.transfer(amount);
+        (bool success, ) = to.call{value: amount}("");
+        if (!success) revert WithdrawFailed();
     }
 }
