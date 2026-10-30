@@ -107,6 +107,9 @@ scripts/deploy*.sh
 # =================================================================
 
 # Documentos personales/corporativos
+*CV*.pdf
+*_CV.pdf
+*Curriculum*.pdf
 CV_*.docx
 Documento_*.txt
 Documento_*.md

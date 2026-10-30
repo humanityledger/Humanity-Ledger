@@ -114,10 +114,17 @@ ENV HOSTNAME="0.0.0.0"
 # Copy verified production build and necessary runtime assets
 COPY --from=builder /app ./
 
+# Hardening: Enforce least privilege execution (CIS Docker Benchmark)
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 --gid nodejs nextjs && \
+    chown -R nextjs:nodejs /app
+
 # Final integrity checks
 RUN test -f /app/ecosystem.config.json || (echo "FATAL: ecosystem.config.json missing" && exit 1)
 RUN test -f /app/start.sh || (echo "FATAL: start.sh missing" && exit 1)
 RUN chmod +x /app/start.sh
+
+USER nextjs
 
 EXPOSE 3000
 

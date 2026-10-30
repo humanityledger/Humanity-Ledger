@@ -421,25 +421,14 @@ const nextConfig = {
             {
                 source: '/(.*)',
                 headers: [
-                    { key: 'X-Content-Type-Options',     value: 'nosniff' },
-                    { key: 'X-Frame-Options',            value: 'SAMEORIGIN' },
-                    { key: 'X-XSS-Protection',          value: '1; mode=block' },
-                    { key: 'Strict-Transport-Security',  value: 'max-age=63072000; includeSubDomains; preload' },
-                    // [WEBRTC FIX] CSP must explicitly allow:
-                    //   - blob: in connect-src for WebRTC data channels
-                    //   - blob: in media-src for getUserMedia MediaStream playback
-                    //   - wss: in connect-src for PeerJS WebSocket signaling
-                    //   - stun: and turn: schemes are handled by browser internally, NOT via CSP
-                    // B-016: CSP is centralized in middleware.ts with dynamic per-request nonce (N-05)
-                    { key: 'Referrer-Policy',            value: 'strict-origin-when-cross-origin' },
-                    // camera/microphone for our own pages only. '*' also let any
-                    // cross-origin iframe on our pages (the CSP allows https: frames)
-                    // ask for them, and Chrome shows our origin in that prompt.
-                    // (self) still allows getUserMedia in the top-level page,
-                    // which is where calls run. Same value the middleware sets on
-                    // protected routes.
-                    { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=(), interest-cohort=()' },
-                    { key: 'X-DNS-Prefetch-Control',     value: 'on' },
+                    { key: 'X-Content-Type-Options',              value: 'nosniff' },
+                    { key: 'X-Frame-Options',                     value: 'DENY' },
+                    { key: 'X-XSS-Protection',                   value: '1; mode=block' },
+                    { key: 'Strict-Transport-Security',           value: 'max-age=63072000; includeSubDomains; preload' },
+                    { key: 'X-Permitted-Cross-Domain-Policies',   value: 'none' },
+                    { key: 'Referrer-Policy',                     value: 'strict-origin-when-cross-origin' },
+                    { key: 'Permissions-Policy',                  value: 'camera=(self), microphone=(self), geolocation=(), interest-cohort=()' },
+                    { key: 'X-DNS-Prefetch-Control',              value: 'off' },
                 ]
             },
             //  API routes: never cache sensitive data endpoints 
