@@ -7,7 +7,18 @@ import crypto from 'crypto';
  * Uses a unique IV for every encryption operation throughout the database.
  */
 
-const ENCRYPTION_KEY = process.env.PII_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex'); // Fallback for dev only
+function getEncryptionKey(): Buffer {
+    const raw = process.env.PII_ENCRYPTION_KEY;
+    if (!raw) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error('[SECURITY CRITICAL] PII_ENCRYPTION_KEY environment variable is mandatory in production.');
+        }
+        // Deterministic development fallback to prevent cold-start decryption failures
+        return Buffer.from('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', 'hex');
+    }
+    return Buffer.from(raw, 'hex');
+}
+
 const ALGORITHM = 'aes-256-gcm';
 
 export const encryptionService = {
@@ -16,8 +27,9 @@ export const encryptionService = {
      */
     encrypt(text: string): string {
         try {
+            const key = getEncryptionKey();
             const iv = crypto.randomBytes(16);
-            const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
+            const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
             
             let encrypted = cipher.update(text, 'utf8', 'hex');
             encrypted += cipher.final('hex');
@@ -42,9 +54,10 @@ export const encryptionService = {
             
             const [ivHex, authTagHex, encryptedHex] = parts;
             
+            const key = getEncryptionKey();
             const decipher = crypto.createDecipheriv(
                 ALGORITHM, 
-                Buffer.from(ENCRYPTION_KEY, 'hex'), 
+                key, 
                 Buffer.from(ivHex, 'hex')
             );
             

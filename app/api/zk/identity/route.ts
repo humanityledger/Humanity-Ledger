@@ -118,7 +118,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { address, ...updates } = body;
+  const { address, ensName } = body;
   // The wallet used to be taken from the body as-is: anyone signed in could
   // change this for any other wallet. It must be the caller's own.
   const __auth = await requireWallet(req);
@@ -131,7 +131,11 @@ export async function PATCH(req: NextRequest) {
   const existing = registry.get(address.toLowerCase());
   if (!existing) return NextResponse.json({ error: 'Identity not found' }, { status: 404 });
 
-  const updated = { ...existing, ...updates, address: existing.address, aztecAddress: existing.aztecAddress };
+  // Prevent mass-assignment: only user-modifiable fields (ensName) are updated
+  const updated: IdentityRecord = {
+    ...existing,
+    ensName: typeof ensName === 'string' ? ensName.slice(0, 100) : existing.ensName,
+  };
   registry.set(address.toLowerCase(), updated);
 
   return NextResponse.json({ success: true, ...updated });

@@ -22,11 +22,17 @@ interface MoonPayWebhook {
  * Verify MoonPay webhook signature
  */
 function verifySignature(payload: string, signature: string, secret: string): boolean {
+  if (!secret || secret.length < 16) {
+    console.error('[MoonPay Webhook] Secret is missing or too short.');
+    return false;
+  }
   try {
     const hmac = crypto.createHmac('sha256', secret);
     hmac.update(payload);
     const computed = hmac.digest('hex');
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computed));
+    const hashProvided = crypto.createHash('sha256').update(signature).digest();
+    const hashComputed = crypto.createHash('sha256').update(computed).digest();
+    return crypto.timingSafeEqual(hashProvided, hashComputed);
   } catch (error) {
     console.error('[MoonPay Webhook] Signature verification failed:', error);
     return false;

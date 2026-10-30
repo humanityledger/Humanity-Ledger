@@ -64,6 +64,8 @@ contract HumanityPaymaster is Ownable {
     error WithdrawFailed();
 
     function withdraw(address payable to, uint256 amount) external onlyOwner {
+        require(to != address(0), "Invalid recipient address");
+        require(amount <= address(this).balance, "Insufficient balance");
         (bool success, ) = to.call{value: amount}("");
         if (!success) revert WithdrawFailed();
     }
