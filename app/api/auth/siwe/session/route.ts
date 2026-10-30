@@ -5,7 +5,10 @@ import { cookies } from 'next/headers';
 export async function GET(req: NextRequest) {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get('humanity_session')?.value;
+    const token = cookieStore.get('hl_session')?.value
+      ?? cookieStore.get('humanity_session')?.value
+      ?? cookieStore.get('ledger_session')?.value
+      ?? cookieStore.get('human_session')?.value;
 
     if (!token) {
       return NextResponse.json({ authenticated: false }, { status: 401 });

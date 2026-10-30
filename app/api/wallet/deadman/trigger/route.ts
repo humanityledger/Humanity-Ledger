@@ -1,74 +1,15 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { isCronAuthorized } from '@/lib/security/cronAuth';
 
-/**
- * POST /api/wallet/deadman/trigger
- * 
- * SYSTEM ROUTE: Should be called by a cron job (e.g. Vercel Cron or GitHub Actions)
- * This route checks for expired Dead Man's Switches and initiates the fund recovery process.
- */
-export async function POST(req: Request) {
-    try {
-        // [SECURITY] Mandatory Cron Secret Check
-        if (!isCronAuthorized(req)) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+export const dynamic = 'force-dynamic';
 
-        const now = new Date();
-        
-        // 1. Find all active switches that have expired
-        // Formula: lastPing + (inactivityPeriod * 30 days) < now
-        const activeSwitches = await prisma.deadMansSwitch.findMany({
-            where: {
-                active: true
-            }
-        });
-
-        const expiredSwitches = activeSwitches.filter(sw => {
-            const expiryDate = new Date(sw.lastPing);
-            expiryDate.setMonth(expiryDate.getMonth() + sw.inactivityPeriod);
-            return expiryDate < now;
-        });
-
-        const results = [];
-
-        for (const sw of expiredSwitches) {
-            try {
-                // 2. Mark as EXPIRED/EXECUTING
-                // Setting active to false is equivalent to 'TRIGGERED'/'EXECUTING' in this schema
-                await prisma.deadMansSwitch.update({
-                    where: { id: sw.id },
-                    data: { active: false }
-                });
-
-                // 3. Logic to execute the transfer via GetBlock RPC
-                // We halt the process here while Awaiting GetBlock integration. 
-                // We strictly forbid writing fake 'EXECUTED' statuses or synthetic execution hashes.
-
-                results.push({
-                    userAddress: sw.userAddress,
-                    beneficiary: sw.beneficiary,
-                    status: 'PENDING_GETBLOCK_EXECUTION',
-                    txHash: null
-                });
-
-            } catch (err: any) {
-                results.push({
-                    userAddress: sw.userAddress,
-                    status: 'FAILED'
-                });
-            }
-        }
-
-        return NextResponse.json({
-            processed: activeSwitches.length,
-            expired: expiredSwitches.length,
-            details: results
-        });
-
-    } catch (error: any) {
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-    }
+export async function POST() {
+    return NextResponse.json({
+        error: '410 Gone: Server-side custodial dead man switch execution is decommissioned. Dead man switch inheritance is non-custodial and operates on-chain via LedgerDeadmanSwitch.sol on Polygon.',
+    }, { status: 410 });
 }
 
+export async function GET() {
+    return NextResponse.json({
+        error: '410 Gone: Server-side custodial dead man switch execution is decommissioned. Dead man switch inheritance is non-custodial and operates on-chain via LedgerDeadmanSwitch.sol on Polygon.',
+    }, { status: 410 });
+}

@@ -78,8 +78,10 @@ function formatActiveEntry(row: any, index: number) {
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const chain  = searchParams.get('chain')?.toUpperCase() || null;
-  const limit  = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
-  const offset = parseInt(searchParams.get('offset') || '0', 10);
+  const rawLimit = parseInt(searchParams.get('limit') || '20', 10);
+  const limit  = Math.max(1, Math.min(isNaN(rawLimit) ? 20 : rawLimit, 100));
+  const rawOffset = parseInt(searchParams.get('offset') || '0', 10);
+  const offset = Math.max(0, isNaN(rawOffset) ? 0 : rawOffset);
   const verify = searchParams.get('verify'); // If set, verify hash of a specific entry
 
   try {

@@ -39,10 +39,12 @@ const CHAIN_DISPLAY: Record<string, string> = {
 
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
-    const minApy = parseFloat(searchParams.get('minApy') || '3');
+    const rawApy = parseFloat(searchParams.get('minApy') || '3');
+    const minApy = Math.max(0, isNaN(rawApy) ? 3 : rawApy);
     const chain = searchParams.get('chain') || 'all';
     const asset = searchParams.get('asset') || 'all';
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 200);
+    const rawLimit = parseInt(searchParams.get('limit') || '50', 10);
+    const limit = Math.max(1, Math.min(isNaN(rawLimit) ? 50 : rawLimit, 200));
 
     try {
         const res = await fetch(LLAMA_YIELDS, {
