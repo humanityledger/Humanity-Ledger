@@ -3,9 +3,11 @@
 //
 // Invariants enforced:
 // 1. Stream commitment: commitment == H(sender_secret, recipient_pubkey, total_allocation, rate_per_second, start_time, salt)
-// 2. Accrual constraint: (withdrawn_amount + claim_amount) <= (current_time - start_time) * rate_per_second
-// 3. Allocation ceiling: (withdrawn_amount + claim_amount) <= total_allocation
-// 4. Positive withdrawal: claim_amount > 0
+// 2. Temporal monotonicity: current_time >= start_time
+// 3. Accrual constraint: (withdrawn_amount + claim_amount) <= (current_time - start_time) * rate_per_second
+// 4. Allocation ceiling: (withdrawn_amount + claim_amount) <= total_allocation
+// 5. Positive parameters: claim_amount > 0, rate_per_second > 0, total_allocation > 0
+// 6. Identity non-zero: recipient_pubkey != 0 and sender_secret != 0
 
 use std::hash::pedersen_hash;
 
@@ -25,20 +27,26 @@ fn main(
     pub current_time: u64,
     pub stream_nullifier: Field
 ) {
-    // 1. Enforce temporal monotonicity
+    // 1. Enforce temporal monotonicity & strictly positive parameters
     assert(current_time >= start_time);
     assert(claim_amount > 0);
+    assert(rate_per_second > 0);
+    assert(total_allocation > 0);
 
-    // 2. Calculate maximum permissible withdrawal based on elapsed time
+    // 2. Enforce non-zero identity keys
+    assert(sender_secret != 0);
+    assert(recipient_pubkey != 0);
+
+    // 3. Calculate maximum permissible withdrawal based on elapsed time
     let elapsed_seconds = current_time - start_time;
     let accrued_capacity = elapsed_seconds * rate_per_second;
     let new_total_withdrawn = withdrawn_amount + claim_amount;
 
-    // 3. Constrain claim against elapsed accrual and total stream allocation
+    // 4. Constrain claim against elapsed accrual and total stream allocation
     assert(new_total_withdrawn <= accrued_capacity);
     assert(new_total_withdrawn <= total_allocation);
 
-    // 4. Validate initial stream commitment
+    // 5. Validate initial stream commitment
     let calculated_commitment = pedersen_hash([
         sender_secret,
         recipient_pubkey,
@@ -49,7 +57,7 @@ fn main(
     ]);
     assert(calculated_commitment == stream_commitment);
 
-    // 5. Derive stream nullifier for the state transition
+    // 6. Derive unique stream nullifier for the state transition
     let calculated_nullifier = pedersen_hash([
         stream_commitment,
         new_total_withdrawn as Field

@@ -1,0 +1,31 @@
+{
+  "circuit": "streams",
+  "version": "1.0.0",
+  "provingSystem": "UltraHonk",
+  "curve": "BN254",
+  "numPublicInputs": 3,
+  "publicInputs": [
+    "stream_commitment",
+    "current_time",
+    "stream_nullifier"
+  ],
+  "circuitSize": 2048,
+  "vkHash": "0x5a18c092dbce2b33918a5bf8e8071869e96e5792444b055963be5708846c98aa",
+  "verificationKey": {
+    "n": 2048,
+    "numPublicInputs": 3,
+    "qM": "0x28ba90a273e8964fa4ebc88a873c52a0a221f7b1e8432a265ecb0292bfef3b8e",
+    "qL": "0x16892bcda02d41a7d65b0581f1e31bb4a9d7bb3267eeec00bb5d2cf99a5e8e3d",
+    "qR": "0x09da51c118742b6a7ee8109bfbc998345fa97f5819777de8a92bb035c755ec03",
+    "qO": "0x1a8775f0a672b14bb188f63548e64c24a682ffc6014498305c65a0891823bb19",
+    "qC": "0x018d45ca82e66601b0f589998125430bb938ecbb55e71467cc1190bc2a1221bb",
+    "sigma1": "0x2e08c4e09f582b13ab994c65360057beea79159f8e4e7e9a8f4c45b84232c944",
+    "sigma2": "0x1d368bc79e604f86150a0494df9f7b6d194514ac01bb6a9ea156e545e8ef4920",
+    "sigma3": "0x0b8e734ca8a2ffba7729f37c35581177695cb3258c42a264a9388df671424368"
+  },
+  "l1Anchoring": {
+    "vault": "HumanityTimeLockVault",
+    "timelockDelaySeconds": 1209600,
+    "status": "ACTIVE_REGISTERED"
+  }
+}

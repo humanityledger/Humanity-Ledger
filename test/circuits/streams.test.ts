@@ -2,12 +2,18 @@ import { describe, it, expect } from 'vitest';
 import crypto from 'crypto';
 
 /**
- * Task T5: Noir Streams Circuit Constraint Verification & Negative Tests
+ * Task T3 / T5: Noir Streams Circuit Invariant Verification & Comprehensive Negative Suite
  * 
- * Verifies that the continuous payment stream circuit in `circuits/streams/src/main.nr`
- * strictly enforces time-weighted accrual bounds and total allocation caps.
+ * Enforces all normative constraints defined in `circuits/streams/src/main.nr`:
+ * 1. Monotonicity: current_time >= start_time
+ * 2. Positive parameters: claim_amount > 0, rate_per_second > 0, total_allocation > 0
+ * 3. Non-zero identity: sender_secret != 0 && recipient_pubkey != 0
+ * 4. Accrual ceiling: (withdrawn + claim) <= elapsed_seconds * rate
+ * 5. Allocation ceiling: (withdrawn + claim) <= total_allocation
+ * 6. Stream commitment binding
+ * 7. Stream nullifier binding
  */
-describe('T5 — Noir Continuous Streams Circuit Invariants', () => {
+describe('T3 / T5 — Noir Continuous Stream Circuit Constraint Invariants & Negative Tests', () => {
   const BN254_FR_MODULUS = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
   function fieldHash(inputs: bigint[]): bigint {
@@ -36,28 +42,45 @@ describe('T5 — Noir Continuous Streams Circuit Invariants', () => {
   }
 
   function verifyStreamCircuit(witness: StreamWitness, pubInputs: StreamPublicInputs): void {
+    // Invariant 1: Temporal monotonicity
     if (pubInputs.currentTime < witness.startTime) {
       throw new Error('Circuit constraint violation: current_time >= start_time');
     }
+
+    // Invariant 2: Positive parameters
     if (witness.claimAmount <= 0n) {
       throw new Error('Circuit constraint violation: claim_amount > 0');
+    }
+    if (witness.ratePerSecond <= 0n) {
+      throw new Error('Circuit constraint violation: rate_per_second > 0');
+    }
+    if (witness.totalAllocation <= 0n) {
+      throw new Error('Circuit constraint violation: total_allocation > 0');
+    }
+
+    // Invariant 3: Non-zero identity
+    if (witness.senderSecret === 0n) {
+      throw new Error('Circuit constraint violation: sender_secret must not be zero');
+    }
+    if (witness.recipientPubkey === 0n) {
+      throw new Error('Circuit constraint violation: recipient_pubkey must not be zero');
     }
 
     const elapsedSeconds = pubInputs.currentTime - witness.startTime;
     const accruedCapacity = elapsedSeconds * witness.ratePerSecond;
     const newTotalWithdrawn = witness.withdrawnAmount + witness.claimAmount;
 
-    // Constraint: Cannot withdraw more than accrued by time elapsed
+    // Invariant 4: Accrual capacity
     if (newTotalWithdrawn > accruedCapacity) {
       throw new Error('Circuit constraint violation: withdrawal exceeds accrued capacity');
     }
 
-    // Constraint: Cannot withdraw more than total stream deposit
+    // Invariant 5: Total allocation cap
     if (newTotalWithdrawn > witness.totalAllocation) {
       throw new Error('Circuit constraint violation: withdrawal exceeds total allocation');
     }
 
-    // Constraint: Validate commitment
+    // Invariant 6: Stream commitment binding
     const calculatedCommitment = fieldHash([
       witness.senderSecret,
       witness.recipientPubkey,
@@ -70,7 +93,7 @@ describe('T5 — Noir Continuous Streams Circuit Invariants', () => {
       throw new Error('Circuit constraint violation: stream commitment mismatch');
     }
 
-    // Constraint: Validate nullifier
+    // Invariant 7: Stream nullifier binding
     const calculatedNullifier = fieldHash([pubInputs.streamCommitment, newTotalWithdrawn]);
     if (calculatedNullifier !== pubInputs.streamNullifier) {
       throw new Error('Circuit constraint violation: stream nullifier mismatch');
@@ -81,11 +104,11 @@ describe('T5 — Noir Continuous Streams Circuit Invariants', () => {
     const witness: StreamWitness = {
       senderSecret: 0xaa11n,
       recipientPubkey: 0xbb22n,
-      totalAllocation: 10000n, // 10,000 units
-      ratePerSecond: 10n,       // 10 units / sec
+      totalAllocation: 10000n,
+      ratePerSecond: 10n,
       startTime: 1000n,
-      withdrawnAmount: 200n,    // already withdrew 200
-      claimAmount: 300n,        // withdrawing 300 (total = 500)
+      withdrawnAmount: 200n,
+      claimAmount: 300n,
       salt: 0x777n,
     };
 
@@ -101,7 +124,7 @@ describe('T5 — Noir Continuous Streams Circuit Invariants', () => {
 
     const pubInputs: StreamPublicInputs = {
       streamCommitment: commitment,
-      currentTime: 1060n, // 60 seconds elapsed -> capacity = 600 >= 500
+      currentTime: 1060n, // 60s elapsed -> 600 capacity >= 500
       streamNullifier: nullifier,
     };
 
@@ -116,7 +139,7 @@ describe('T5 — Noir Continuous Streams Circuit Invariants', () => {
       ratePerSecond: 10n,
       startTime: 1000n,
       withdrawnAmount: 0n,
-      claimAmount: 500n, // wants 500 units
+      claimAmount: 500n,
       salt: 0x777n,
     };
     const commitment = fieldHash([
@@ -129,10 +152,9 @@ describe('T5 — Noir Continuous Streams Circuit Invariants', () => {
     ]);
     const nullifier = fieldHash([commitment, 500n]);
 
-    // Only 20 seconds have elapsed (capacity = 200 < 500)
     const pubInputs: StreamPublicInputs = {
       streamCommitment: commitment,
-      currentTime: 1020n,
+      currentTime: 1020n, // 20s elapsed -> capacity = 200 < 500
       streamNullifier: nullifier,
     };
 
@@ -149,7 +171,7 @@ describe('T5 — Noir Continuous Streams Circuit Invariants', () => {
       ratePerSecond: 10n,
       startTime: 1000n,
       withdrawnAmount: 800n,
-      claimAmount: 300n, // 800 + 300 = 1100 > 1000 allocation!
+      claimAmount: 300n,
       salt: 0x777n,
     };
     const commitment = fieldHash([
@@ -164,12 +186,108 @@ describe('T5 — Noir Continuous Streams Circuit Invariants', () => {
 
     const pubInputs: StreamPublicInputs = {
       streamCommitment: commitment,
-      currentTime: 1200n, // 200s elapsed -> capacity = 2000, but cap is 1000
+      currentTime: 1200n,
       streamNullifier: nullifier,
     };
 
     expect(() => verifyStreamCircuit(witness, pubInputs)).toThrow(
       'withdrawal exceeds total allocation',
+    );
+  });
+
+  it('Negative Test: Rejects current_time prior to stream start_time', () => {
+    const witness: StreamWitness = {
+      senderSecret: 0xaa11n,
+      recipientPubkey: 0xbb22n,
+      totalAllocation: 1000n,
+      ratePerSecond: 10n,
+      startTime: 2000n,
+      withdrawnAmount: 0n,
+      claimAmount: 100n,
+      salt: 0x777n,
+    };
+    const commitment = fieldHash([
+      witness.senderSecret,
+      witness.recipientPubkey,
+      witness.totalAllocation,
+      witness.ratePerSecond,
+      witness.startTime,
+      witness.salt,
+    ]);
+    const nullifier = fieldHash([commitment, 100n]);
+
+    const pubInputs: StreamPublicInputs = {
+      streamCommitment: commitment,
+      currentTime: 1999n, // before start!
+      streamNullifier: nullifier,
+    };
+
+    expect(() => verifyStreamCircuit(witness, pubInputs)).toThrow(
+      'current_time >= start_time',
+    );
+  });
+
+  it('Negative Test: Rejects zero or negative rate per second', () => {
+    const witness: StreamWitness = {
+      senderSecret: 0xaa11n,
+      recipientPubkey: 0xbb22n,
+      totalAllocation: 1000n,
+      ratePerSecond: 0n, // invalid
+      startTime: 1000n,
+      withdrawnAmount: 0n,
+      claimAmount: 100n,
+      salt: 0x777n,
+    };
+    const commitment = fieldHash([
+      witness.senderSecret,
+      witness.recipientPubkey,
+      witness.totalAllocation,
+      0n,
+      witness.startTime,
+      witness.salt,
+    ]);
+    const nullifier = fieldHash([commitment, 100n]);
+
+    const pubInputs: StreamPublicInputs = {
+      streamCommitment: commitment,
+      currentTime: 1100n,
+      streamNullifier: nullifier,
+    };
+
+    expect(() => verifyStreamCircuit(witness, pubInputs)).toThrow(
+      'rate_per_second > 0',
+    );
+  });
+
+  it('Negative Test: Rejects zero recipient pubkey', () => {
+    const witness: StreamWitness = {
+      senderSecret: 0xaa11n,
+      recipientPubkey: 0n, // invalid
+      totalAllocation: 1000n,
+      ratePerSecond: 10n,
+      startTime: 1000n,
+      withdrawnAmount: 0n,
+      claimAmount: 100n,
+      salt: 0x777n,
+    };
+    const commitment = fieldHash([
+      witness.senderSecret,
+      0n,
+      witness.totalAllocation,
+      10n,
+      witness.startTime,
+      witness.salt,
+    ]);
+    const nullifier = fieldHash([commitment, 100n]);
+
+    const pubInputs: StreamPublicInputs = {
+      streamCommitment: commitment,
+      currentTime: 1100n,
+      streamNullifier: nullifier,
+    };
+
+    expect(() => verifyStreamCircuit(witness, pubInputs)).toThrow(
+      'recipient_pubkey must not be zero',
     );
   });
 });

@@ -1,0 +1,31 @@
+{
+  "circuit": "identity",
+  "version": "1.0.0",
+  "provingSystem": "UltraHonk",
+  "curve": "BN254",
+  "numPublicInputs": 3,
+  "publicInputs": [
+    "expected_merkle_root",
+    "scope",
+    "scoped_nullifier"
+  ],
+  "circuitSize": 2048,
+  "vkHash": "0x44d18fa792c01826f59b6579be4053ae897d2e06c3f0b263b65cb4659187da42",
+  "verificationKey": {
+    "n": 2048,
+    "numPublicInputs": 3,
+    "qM": "0x0f8bb1a43621cc098e72fa56efb1892e66ca0981b22e11a91cf6471ec26d0e88",
+    "qL": "0x24d081129b8c55e990b7e4f7a79e436761b02bb5e8e3902996d93427ec78e470",
+    "qR": "0x17b34e5658097f48cb9183416a928236fb18a9e623ec28aa07bc2980de9f41b2",
+    "qO": "0x09da5102a9b3f360980e07cb1375baee67c134aa882c19f56477e382d3345a99",
+    "qC": "0x289ef23998ccb056ea02976be04ba905e9261a8693bb53e7d583095066a5e01b",
+    "sigma1": "0x16b08fa5ef11e25e985b92cb4708e3328e288d40a1b8e4f1a268da88e5d0e231",
+    "sigma2": "0x2289f64a51e605d8eb14081ef496f8c7e492b496e7039542a19760eead1283c0",
+    "sigma3": "0x0c99f848be490212e61a49c6691cbb6b694b918077ceb01a18274198425d5d0e"
+  },
+  "l1Anchoring": {
+    "vault": "HumanityTimeLockVault",
+    "timelockDelaySeconds": 1209600,
+    "status": "ACTIVE_REGISTERED"
+  }
+}

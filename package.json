@@ -20,6 +20,7 @@
     "start": "npx prisma migrate deploy && next start",
     "start:prod": "npx prisma generate && npx prisma migrate deploy && cross-env NODE_OPTIONS=\"--max-old-space-size=4096\" PRISMA_HIDE_UPDATE_MESSAGE=\"true\" npx next start -p ${PORT:-3000} -H 0.0.0.0",
     "start:all": "npx prisma migrate deploy && pm2-runtime start ecosystem.config.json",
+    "check:traceability": "npx tsx scripts/check-traceability.ts",
     "test:aztec:e2e": "npx tsx scripts/aztec-pxe-e2e.ts",
     "compile:testnet": "node scripts/compile-testnet.js",
     "test": "vitest watch",

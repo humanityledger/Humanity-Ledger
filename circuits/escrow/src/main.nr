@@ -6,8 +6,12 @@
 // 2. Temporal validity: current_timestamp <= deadline
 // 3. Nullifier derivation: nullifier == H(sender_secret, salt)
 // 4. Positive amount: amount > 0
+// 5. Value ceiling: amount <= MAX_ESCROW_AMOUNT (overflow protection)
+// 6. Identity non-zero: recipient_pubkey != 0 and sender_secret != 0
 
 use std::hash::pedersen_hash;
+
+global MAX_ESCROW_AMOUNT: u64 = 1_000_000_000_000_000; // 1 Billion standard units (1e15)
 
 fn main(
     // Private inputs (witness)
@@ -22,13 +26,18 @@ fn main(
     pub deadline: u64,
     pub current_timestamp: u64
 ) {
-    // 1. Enforce amount is strictly positive
+    // 1. Enforce amount is strictly positive and within protocol maximum bounds
     assert(amount > 0);
+    assert(amount <= MAX_ESCROW_AMOUNT);
 
-    // 2. Enforce temporal boundary: release must occur before or at deadline
+    // 2. Enforce non-zero identity keys
+    assert(sender_secret != 0);
+    assert(recipient_pubkey != 0);
+
+    // 3. Enforce temporal boundary: release must occur before or at deadline
     assert(current_timestamp <= deadline);
 
-    // 3. Verify escrow commitment
+    // 4. Verify escrow commitment
     let calculated_commitment = pedersen_hash([
         sender_secret,
         recipient_pubkey,
@@ -37,7 +46,7 @@ fn main(
     ]);
     assert(calculated_commitment == escrow_commitment);
 
-    // 4. Verify unique nullifier to prevent double release
+    // 5. Verify unique nullifier to prevent double release
     let calculated_nullifier = pedersen_hash([sender_secret, salt]);
     assert(calculated_nullifier == nullifier);
 }

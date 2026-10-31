@@ -158,6 +158,7 @@ tmp_*/
 .neon
 _to_delete/
 .cache/
+.bb-crs/
 
 # Aztec test network operator secrets (admin of the test tokens). Never commit.
 .aztec-testnet.local.json

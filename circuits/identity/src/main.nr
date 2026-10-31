@@ -4,7 +4,9 @@
 // Invariants enforced:
 // 1. Merkle Membership: identity_secret exists in published identity Merkle tree
 // 2. Compliance check: jurisdiction_code is not on sanction list (jurisdiction_code != SANCTIONED_CODE)
-// 3. Sybil resistance: scoped_nullifier == H(identity_secret, scope) prevents double action within scope
+// 3. Positive jurisdiction code: jurisdiction_code > 0
+// 4. Non-zero identity secret: identity_secret != 0
+// 5. Sybil resistance: scoped_nullifier == H(identity_secret, scope) prevents double action within scope
 
 use std::hash::pedersen_hash;
 
@@ -26,11 +28,15 @@ fn main(
     // 1. Compliance check: Sanctions screening without revealing actual country
     assert(jurisdiction_code != SANCTIONED_JURISDICTION_1);
     assert(jurisdiction_code != SANCTIONED_JURISDICTION_2);
+    assert(jurisdiction_code > 0);
 
-    // 2. Leaf derivation
+    // 2. Enforce non-zero identity secret
+    assert(identity_secret != 0);
+
+    // 3. Leaf derivation
     let leaf = pedersen_hash([identity_secret, jurisdiction_code as Field]);
 
-    // 3. Merkle path verification (2-node subpath demonstration)
+    // 4. Merkle path verification (2-node subpath demonstration)
     let calculated_root = if is_left {
         pedersen_hash([leaf, merkle_leaf_sibling])
     } else {
@@ -38,7 +44,7 @@ fn main(
     };
     assert(calculated_root == expected_merkle_root);
 
-    // 4. Derive unique scoped nullifier
+    // 5. Derive unique scoped nullifier to prevent double claims within scope
     let calculated_nullifier = pedersen_hash([identity_secret, scope]);
     assert(calculated_nullifier == scoped_nullifier);
 }
