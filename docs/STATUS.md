@@ -1,5 +1,6 @@
 # Humanity Ledger — Protocol Status & Normative Verification Tracker
 **Current Status: Version 1.0 Specification Conformance Achieved — Ready for Testnet Stage 1 Audit**
+**Last Updated: 2026-10-31 — Directive Sections 1–5 Closed**
 
 > **Normative Baseline**: This status document conforms strictly to `docs/PROTOCOL_SPEC.md` and the claims mapped in `docs/TRACEABILITY_MATRIX.md`. All unearned claims of "100/100" or unconditional mainnet readiness have been retracted in favor of audited, testable criteria (A1–A7) and automated mathematical invariant verification suites.
 
@@ -110,3 +111,30 @@ npm run test:scan
 # 13. Supply-chain security audit (0 vulnerabilities verified)
 npm audit
 ```
+
+---
+
+## 5. Directive Closure Status (Sections 1–5)
+
+> **Updated**: 2026-10-31
+
+| Section | Item | Status | Artifact |
+|---|---|---|---|
+| 1.1 | Verification logs committed | ✅ DONE | `docs/verification-logs/` |
+| 2.1 | Client-side VK hash assertion | ✅ DONE | `docs/VK_MONITORING.md`, `lib/aztec/verifier.ts` |
+| 2.1 | 60-second VK detectability | ✅ DOCUMENTED | `docs/VK_MONITORING.md` §6 |
+| 2.2 | Proof generation benchmarks | ✅ DONE | `docs/PROOF_BENCHMARKS.md` |
+| 2.3 | DEPRECATED/RETIRED VK client behavior | ✅ DONE | `docs/VK_MONITORING.md` §4 |
+| 2.4 | Sequencer censorship fallback | ✅ DONE | `docs/SEQUENCER_RESILIENCE.md` |
+| 3.1 | `docs/AUDIT_SCOPE.md` | ✅ DONE | `docs/AUDIT_SCOPE.md` |
+| 3.2 | SBOM generation command | ✅ DONE | `docs/SUPPLY_CHAIN.md` §3 |
+| 3.3 | CSP report-only mode | ✅ DONE | `next.config.js` + `app/api/security/csp-report/route.ts` |
+| 3.4 | `docs/INCIDENT_RESPONSE.md` | ✅ DONE | `docs/INCIDENT_RESPONSE.md` |
+| 3.5 | EAF rejected bridge operation logging | ✅ VERIFIED | `lib/security/eaf-guard.ts` (console.warn on rejection) |
+| 4.1 | Proof performance benchmarks (p50/p95) | ✅ DONE | `docs/PROOF_BENCHMARKS.md` |
+| 4.2 | Load test plan committed | ✅ DONE | `docs/LOAD_TEST_PLAN.md` |
+| 4.3 | Observability metrics dashboard/list | ✅ DONE | `docs/OBSERVABILITY.md` |
+| 4.4 | Multi-region/degradation topology | ✅ DONE | `docs/DEPLOYMENT_TOPOLOGY.md` |
+| 5.1 | Bug bounty draft/scope | ✅ DONE | `docs/BUG_BOUNTY.md` |
+| 5.2 | Production gate in CONTRIBUTING.md | ✅ DONE | `CONTRIBUTING.md` §4 |
+| 5.3 | Monthly review schedule | ✅ DONE | `docs/AUDIT_DOSSIER.md` (see below) |

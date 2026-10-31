@@ -1,5 +1,6 @@
 # Humanity Ledger — Supply-Chain Integrity & Toolchain Verification
-**Version 1.0 — Normative Baseline (Task T11)**
+**Version 1.1 — Updated 2026-10-31 (SBOM generation added)**  
+**Authority**: `docs/PROTOCOL_SPEC.md` Task T11; Directive Section 3.2
 
 This document establishes the reproducible toolchain verification procedure required by Task **T11** of `docs/PROTOCOL_SPEC.md`.
 
@@ -41,3 +42,48 @@ All pull requests and commits modifying files within the following security-crit
 - `lib/community-apps/**` (EAF air-gapped iframe policy and `window.hl` bridge)
 
 Unsigned commits touching these paths will be rejected by GitHub branch protection rules.
+
+---
+
+## 3. Software Bill of Materials (SBOM)
+
+A CycloneDX SBOM is generated quarterly and on every release to enumerate all direct and transitive dependencies.
+
+### 3.1 SBOM Generation Command
+
+```bash
+# Generate CycloneDX SBOM (JSON format)
+npx @cyclonedx/cyclonedx-npm --output-file sbom.json --output-format JSON
+
+# Or XML format
+npx @cyclonedx/cyclonedx-npm --output-file sbom.xml --output-format XML
+```
+
+### 3.2 SBOM Artifact Location
+
+Generated SBOMs are committed to `docs/audit/sbom-YYYY-MM-DD.json` on each release tag.
+
+```bash
+# Example — generate and commit current SBOM
+npx @cyclonedx/cyclonedx-npm --output-file docs/audit/sbom-$(date +%F).json
+git add docs/audit/sbom-*.json
+git commit -m "chore: update SBOM for release"
+```
+
+### 3.3 Dependency Review Policy
+
+- Any new direct dependency requires a review comment in the PR explaining the rationale.
+- Any dependency with a known CRITICAL CVE blocks merge until remediated.
+- `npm audit` must report 0 vulnerabilities on the `claude/sync-and-hardening` branch.
+- Critical cryptographic dependencies (`@noir-lang/*`, `@aztec-labs/*`, `@xmtp/*`) use exact version pins.
+
+---
+
+## 4. Vulnerability Disclosure for Dependencies
+
+If a vulnerability is found in a dependency:
+
+1. Check if an override in `package.json` (`overrides` section) can remediate without breaking changes.
+2. File a GitHub Security Advisory on the dependency's repository.
+3. Document the CVE and remediation in `docs/AUDIT_DOSSIER.md`.
+4. Update `npm audit` badge in `docs/STATUS.md`.

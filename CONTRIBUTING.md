@@ -61,7 +61,41 @@ Before submitting a PR, verify that all applicable checks are satisfied:
 
 ---
 
-## 4. Development Workflow
+## 4. Production Gate — Mainnet Deployment Blockers
+
+> [!CAUTION]
+> Mainnet production deployment is **explicitly blocked** until ALL of the following gates are cleared. This requirement is enforced by the protocol governance process.
+
+### 4.1 External Audit Gate
+
+- [ ] External security audit completed by a firm listed in `docs/AUDIT_SCOPE.md` (Spearbit, Zellic, OpenZeppelin, or Trail of Bits)
+- [ ] All **CRITICAL** audit findings remediated and re-tested
+- [ ] All **HIGH** audit findings remediated or formally accepted with a dated risk note in `docs/AUDIT_DOSSIER.md`
+- [ ] Audit report reference added to `docs/AUDIT_DOSSIER.md`
+- [ ] `npx tsx scripts/check-traceability.ts` passes post-audit
+
+### 4.2 Security Program Gate
+
+- [ ] `docs/BUG_BOUNTY.md` program published on Immunefi
+- [ ] `docs/INCIDENT_RESPONSE.md` reviewed and approved by protocol lead
+- [ ] Monitoring stack from `docs/OBSERVABILITY.md` operational
+
+### 4.3 Performance Gate
+
+- [ ] Load test from `docs/LOAD_TEST_PLAN.md` Milestone 1 (10k concurrent) passed
+- [ ] ZK proof generation p95 < 8s verified on real mid-range mobile hardware (`docs/PROOF_BENCHMARKS.md`)
+
+### 4.4 Zero-Regression Gate
+
+- [ ] All tests in `scripts/run-all-tests.ps1` (or `run-all-tests.sh`) exit 0 on a clean machine
+- [ ] `npm audit` reports 0 vulnerabilities
+- [ ] No occurrences of `Fr.random`, `mockWorkerProof`, `simulatedNullifier`, `simulatedCommitment` in production code paths
+
+**Any deviation from this gate requires a dated risk-acceptance note signed by the protocol lead in `docs/AUDIT_DOSSIER.md`.**
+
+---
+
+## 5. Development Workflow
 
 1. Fork the repository and create your feature branch:
    ```bash

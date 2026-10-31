@@ -416,6 +416,11 @@ const nextConfig = {
     // NOTE: CSP is handled exclusively by middleware.ts (per-request, nonce-based).
     // Defining it here too would send DUPLICATE CSP headers causing the browser
     // to apply the most restrictive combination - breaking Clerk & WalletConnect.
+    //
+    // SECURITY: Content-Security-Policy-Report-Only is added here (not in middleware)
+    // so it does not interfere with the enforced CSP from middleware.ts.
+    // Report-only violations are collected at /api/security/csp-report.
+    // Reference: docs/OBSERVABILITY.md — hl_csp_violations_total
     async headers() {
         return [
             {
@@ -429,6 +434,10 @@ const nextConfig = {
                     { key: 'Referrer-Policy',                     value: 'strict-origin-when-cross-origin' },
                     { key: 'Permissions-Policy',                  value: 'camera=(self), microphone=(self), geolocation=(), interest-cohort=()' },
                     { key: 'X-DNS-Prefetch-Control',              value: 'off' },
+                    // [SECURITY] CSP Report-Only: collects violation reports without blocking.
+                    // Enforced CSP is set per-request by middleware.ts (nonce-based).
+                    // Reports are collected at /api/security/csp-report.
+                    { key: 'Content-Security-Policy-Report-Only', value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://aztec-testnet.drpc.org https://api.aztec.network wss:; frame-src 'none'; object-src 'none'; base-uri 'self'; report-uri /api/security/csp-report" },
                 ]
             },
             //  API routes: never cache sensitive data endpoints 

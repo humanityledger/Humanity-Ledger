@@ -100,6 +100,9 @@ pgsql.zip
 scripts/archive/
 scripts/*.sh
 !scripts/run-all-tests.sh
+# Whitelist verification logs committed as evidence (overrides *.log rule above)
+!docs/verification-logs/
+!docs/verification-logs/*.log
 !scripts/run-endurance-5h.sh
 scripts/wsl*.sh
 scripts/deploy*.sh

@@ -4,6 +4,11 @@
  * Implements strict host-side validation for Executable Artifact Frames (EAF),
  * enforcing 8 KB payload ceilings, origin validation, storage isolation, and
  * a global emergency kill switch (Fortification Items 111–140).
+ *
+ * Security: All rejected bridge operations are logged via console.warn for
+ * security monitoring (hl_eaf_rejection_total metric). Payloads are NEVER
+ * logged to prevent leaking user data. Only the rejection reason is recorded.
+ * Reference: docs/OBSERVABILITY.md — hl_eaf_rejection_total
  */
 
 export const EAF_MAX_PAYLOAD_BYTES = 8192; // Hard 8 KB limit (Item 116)
@@ -44,10 +49,12 @@ export function validateEAFBridgeMessage(
   allowedMethods: string[] = ['ping', 'getState', 'setState', 'requestProof'],
 ): EAFValidationResult {
   if (globalEafDisabled) {
+    console.warn('[EAF_REJECTION] reason=kill_switch appId=unknown method=unknown');
     return { valid: false, sanitizedMemberId: '', error: 'EAF execution disabled globally by emergency kill switch' };
   }
 
   if (!rawPayload || typeof rawPayload !== 'object') {
+    console.warn('[EAF_REJECTION] reason=invalid_structure');
     return { valid: false, sanitizedMemberId: '', error: 'Invalid message structure' };
   }
 
@@ -56,6 +63,8 @@ export function validateEAFBridgeMessage(
 
   // Hard 8 KB payload limit (Item 116)
   if (byteLength > EAF_MAX_PAYLOAD_BYTES) {
+    // Log size only — never log payload content
+    console.warn(`[EAF_REJECTION] reason=payload_too_large bytes=${byteLength} limit=${EAF_MAX_PAYLOAD_BYTES}`);
     return {
       valid: false,
       sanitizedMemberId: '',
@@ -67,11 +76,13 @@ export function validateEAFBridgeMessage(
 
   // Validate allowed methods (Item 113)
   if (!payload.method || !allowedMethods.includes(payload.method)) {
+    console.warn(`[EAF_REJECTION] reason=undeclared_method method=${String(payload.method).slice(0, 64)}`);
     return { valid: false, sanitizedMemberId: '', error: `Undeclared method "${payload.method}" rejected` };
   }
 
   // App ID must not contain path traversal characters (Item 115)
   if (!payload.appId || !/^[a-zA-Z0-9_\-]+$/.test(payload.appId)) {
+    console.warn('[EAF_REJECTION] reason=invalid_app_id');
     return { valid: false, sanitizedMemberId: '', error: 'Invalid appId or path traversal attempt' };
   }
 
