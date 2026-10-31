@@ -70,7 +70,10 @@ npx tsx scripts/verify-l1-bytecode.ts
 # 8. Verify Traceability Matrix & Status consistency (T2 / A7):
 npx tsx scripts/check-traceability.ts
 
-# 9. Verify property-based fuzzing (30,000 iterations / T12):
+# 9. Verify 300-Item Fortification Checklist (Lazarus APT defense):
+npx vitest run test/fortification.test.ts
+
+# 10. Verify property-based fuzzing (30,000 iterations / T12):
 npx vitest run test/property_fuzz.test.ts
 ```
 

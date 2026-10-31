@@ -168,5 +168,26 @@ When $\mathrm{VK}_{v+1}$ becomes `ACTIVE`:
 
 ---
 
+## 9. Fortification Against Sophisticated Adversaries (300-Item Checklist)
+
+To defend against advanced persistent threats (APTs) and nation-state cyber operations (such as the Lazarus Group / APT38), the Humanity Ledger protocol incorporates a canonical, defense-in-depth fortification checklist comprising 300 concrete, measurable items:
+
+- **Normative Document**: [`docs/FORTIFICATION_CHECKLIST.md`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/docs/FORTIFICATION_CHECKLIST.md)
+- **Automated Verification Suite**: [`test/fortification.test.ts`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/test/fortification.test.ts)
+- **Domain Breakdown**:
+  1. Cryptographic and Key Management (Items 1–40)
+  2. Aztec / Noir / UltraHonk Circuit and PXE Hardening (Items 41–80)
+  3. MLS / Messaging Hardening (Items 81–110)
+  4. EAF / Sandbox Hardening (Items 111–140)
+  5. L1 Contracts and Governance (Items 141–170)
+  6. Supply Chain and Dependency Security (Items 171–200)
+  7. Frontend, CSP, and Client Hardening (Items 201–230)
+  8. Monitoring, Detection, and Incident Response (Items 231–260)
+  9. Operational and Governance Hardening (Items 261–300)
+
+Every pull request modifying circuits, cryptography, contracts, or private state transitions must adhere to the mandatory invariant analysis checklist codified in [`.github/pull_request_template.md`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/.github/pull_request_template.md) and pass all automated fortification tests.
+
+---
+
 ### Historical Archive Note
 *The prior high-level Spanish overview document (Humanity Ledger - Protocol Specification v0.1) has been superseded by this normative specification and is retained in `docs/archive/PROTOCOL_SPEC_HISTORICAL_ES.md` for historical traceability.*

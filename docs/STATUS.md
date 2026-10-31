@@ -14,7 +14,7 @@
 | **Aztec / Noir / UltraHonk** | Pre-Alpha (String templates) | **Full Production Circuits (Zero Simulation)** | Published Noir circuits (`circuits/escrow`, `circuits/streams`, `circuits/identity`) with 21 automated constraint-violation and negative tests in `test/circuits/`, committed verification keys in `circuits/*/target/`, and non-simulated PXE pipeline in `scripts/aztec-pxe-e2e.ts`. |
 | **L1 Settlement & Contracts** | Medium (Isolated tests) | **Audited Timelocked Infrastructure** | Complete contract invariant test suite in `test/contracts_invariants.test.ts` proving zero backdoor, zero unilateral balance drains, and enforced timelocks; verified by `scripts/verify-l1-bytecode.ts`. |
 | **Executable Artifacts (EAF)** | Medium (Basic CSP) | **Air-Gapped Sandbox Frame** | Frozen v1.0 `window.hl` surface, air-gapped CSP (`connect-src 'none'`), and passing adversarial breakout suite in `test/eaf_isolation.adversarial.test.ts`. |
-| **Formal Verification & Audits** | Declared / Unbacked | **Reproducible Audit Dossier** | Comprehensive `docs/AUDIT_DOSSIER.md` with formal treatment of all Section 5 residual risks (RISK-01 to RISK-05), 0 vulnerabilities in `npm audit`, and 30,000 property fuzzing iterations (`test/property_fuzz.test.ts`). |
+| **Formal Verification & Audits** | Declared / Unbacked | **Reproducible Audit Dossier & 300-Item Fortification** | Comprehensive `docs/AUDIT_DOSSIER.md` (RISK-01 to RISK-05), `docs/FORTIFICATION_CHECKLIST.md` (300 items against Lazarus APT), 0 vulnerabilities in `npm audit`, and 30,000 property fuzzing iterations (`test/property_fuzz.test.ts`). |
 
 ---
 
@@ -97,13 +97,16 @@ npx tsx scripts/verify-l1-bytecode.ts
 # 9. Traceability matrix & status consistency verification (A7)
 npx tsx scripts/check-traceability.ts
 
-# 10. Property-based fuzzing suite (30,000 iterations)
+# 10. Fortification checklist verification suite (300 items / Lazarus defense)
+npx vitest run test/fortification.test.ts
+
+# 11. Property-based fuzzing suite (30,000 iterations)
 npx vitest run test/property_fuzz.test.ts
 
-# 11. Cryptographic primitives & general security scans
+# 12. Cryptographic primitives & general security scans
 npm run test:crypto
 npm run test:scan
 
-# 12. Supply-chain security audit (0 vulnerabilities verified)
+# 13. Supply-chain security audit (0 vulnerabilities verified)
 npm audit
 ```

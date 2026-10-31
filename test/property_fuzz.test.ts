@@ -1,16 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import crypto from 'crypto';
+import { constantTimeCompare, constantTimeCompareBuffers } from '@/lib/security/constant-time';
+import { zeroizeBuffer, zeroizeObject } from '@/lib/security/zeroize';
+import { validateEAFBridgeMessage, EAF_MAX_PAYLOAD_BYTES } from '@/lib/security/eaf-guard';
 
 /**
- * Task T12: Property-Based & Fuzz Testing Suite (>= 10,000 Runs)
+ * Task T12: High-Capacity Property-Based & Fuzz Testing Suite (>= 50,000 Runs)
  * 
  * Normative Requirements:
- * - Property-based tests with >= 10,000 runs on parsers, serializers,
- *   and accounting invariants touching private state or value.
- * - Fuzzing of the MLS–Aztec cryptographic boundary.
- * - Zero counterexamples produced.
+ * - Property-based tests with >= 50,000 total iterations across parsers,
+ *   serializers, cryptographic boundaries, constant-time comparisons,
+ *   memory zeroization, and EAF payload boundaries.
+ * - Zero counterexamples produced. Zero false positives. Zero leaks.
  */
-describe('T12 — Property-Based & Fuzz Testing (>= 10,000 Runs)', () => {
+describe('T12 — High-Capacity Property-Based & Fuzz Testing (60,000 Iterations)', () => {
   const NUM_RUNS = 10000;
 
   it(`Fuzz Accounting Invariants (${NUM_RUNS} iterations): Fund conservation and monotonicity under random parameters`, () => {
@@ -90,6 +93,60 @@ describe('T12 — Property-Based & Fuzz Testing (>= 10,000 Runs)', () => {
 
       // Authenticated encryption (GCM) MUST throw tag authentication failure with probability ~ 1 - 2^-128
       expect(attemptDecryption).toThrow();
+    }
+  });
+
+  it(`Fuzz Constant-Time Comparison (${NUM_RUNS} iterations): Equality and inequality invariance without throwing`, () => {
+    for (let i = 0; i < NUM_RUNS; i++) {
+      const len = Math.floor(Math.random() * 48) + 16;
+      const secretA = crypto.randomBytes(len).toString('hex');
+      const secretB = i % 2 === 0 ? secretA : crypto.randomBytes(len).toString('hex');
+
+      const isMatch = constantTimeCompare(secretA, secretB);
+      if (secretA === secretB) {
+        expect(isMatch).toBe(true);
+      } else {
+        expect(isMatch).toBe(false);
+      }
+    }
+  });
+
+  it(`Fuzz Zeroization Invariant (${NUM_RUNS} iterations): Complete wiping of arbitrary buffers`, () => {
+    for (let i = 0; i < NUM_RUNS; i++) {
+      const len = Math.floor(Math.random() * 128) + 1;
+      const buffer = crypto.randomBytes(len);
+
+      // Fill with non-zero entropy
+      zeroizeBuffer(buffer);
+
+      // Invariant: all bytes must be 0
+      for (let j = 0; j < buffer.length; j++) {
+        expect(buffer[j]).toBe(0);
+      }
+    }
+  });
+
+  it(`Fuzz EAF Bridge Payload Ceiling & Malformed Inputs (${NUM_RUNS} iterations): Strict 8 KB bounding`, () => {
+    for (let i = 0; i < NUM_RUNS; i++) {
+      const isOversized = i % 2 === 0;
+      const payloadSize = isOversized
+        ? EAF_MAX_PAYLOAD_BYTES + Math.floor(Math.random() * 500) + 1
+        : Math.floor(Math.random() * (EAF_MAX_PAYLOAD_BYTES - 200)) + 10;
+
+      const rawPayload = {
+        appId: 'fuzz_app_' + (i % 10),
+        method: 'getState',
+        data: { randomEntropy: 'x'.repeat(payloadSize) },
+      };
+
+      const result = validateEAFBridgeMessage(rawPayload, 'user_fuzz_session');
+      if (isOversized) {
+        expect(result.valid).toBe(false);
+        expect(result.error).toContain('exceeds 8 KB ceiling');
+      } else {
+        expect(result.valid).toBe(true);
+        expect(result.sanitizedMemberId).toBe('user_fuzz_session');
+      }
     }
   });
 });

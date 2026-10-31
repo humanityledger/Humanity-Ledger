@@ -32,6 +32,7 @@ This document satisfies Task **T2** of the Humanity Ledger Protocol Complete Nor
 | **CLM-EAF-01** | `README.md` § 2, `STATUS.md` § 1 | Executable Artifact Frames (EAF) run in an air-gapped null-origin iframe; cannot escape or access host session tokens. | **P6 (EAF Isolation)** | `test/eaf_isolation.adversarial.test.ts` (DOM breakout, storage traversal, network exfiltration) | `3536d09e` | **VERIFIED (Passes in CI)** |
 | **CLM-L1-01** | `contracts/README.md`, `PROTOCOL_SPEC.md` § 2.5 | Settlement contracts and timelocks have zero unilateral admin backdoors outside public timelock delay. | **P4 / Acceptance A4** | `test/contracts_invariants.test.ts`, `test/HumanTimeLock.test.ts`, `test/LedgerDeadmanSwitch.test.ts` | `3536d09e` | **VERIFIED (Passes in CI)** |
 | **CLM-AUTH-01** | `STATUS.md` § 4 | SIWE nonces are single-use with 10-minute TTL in Redis; session tokens use HttpOnly SameSite=Lax cookie. | **Supporting P5** | `test/unit/audit/auth-session.test.ts`, `test/unit/audit/siwe.test.ts` | `3536d09e` | **VERIFIED (Passes in CI)** |
+| **CLM-FORT-01** | `docs/FORTIFICATION_CHECKLIST.md`, `PROTOCOL_SPEC.md` § 9 | 300 concrete hardening items against sophisticated threat actors (Lazarus Group / APTs) across 9 security domains. | **P1–P6 Comprehensive** | `test/fortification.test.ts` (28 automated checks) | `fb557b6c` | **VERIFIED (Passes in CI)** |
 
 ---
 

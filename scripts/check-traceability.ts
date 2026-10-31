@@ -22,6 +22,7 @@ function main() {
   const root = process.cwd();
   const matrixPath = path.join(root, 'docs/TRACEABILITY_MATRIX.md');
   const statusPath = path.join(root, 'docs/STATUS.md');
+  const fortificationPath = path.join(root, 'docs/FORTIFICATION_CHECKLIST.md');
 
   if (!fs.existsSync(matrixPath)) {
     console.error(`[FAIL] Missing file: ${matrixPath}`);
@@ -29,6 +30,10 @@ function main() {
   }
   if (!fs.existsSync(statusPath)) {
     console.error(`[FAIL] Missing file: ${statusPath}`);
+    process.exit(1);
+  }
+  if (!fs.existsSync(fortificationPath)) {
+    console.error(`[FAIL] Missing file: ${fortificationPath}`);
     process.exit(1);
   }
 
@@ -90,6 +95,7 @@ function main() {
     'test/eaf_isolation.adversarial.test.ts',
     'test/contracts_invariants.test.ts',
     'test/property_fuzz.test.ts',
+    'test/fortification.test.ts',
   ];
 
   for (const file of citedFiles) {

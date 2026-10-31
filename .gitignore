@@ -99,6 +99,7 @@ pgsql.zip
 # [SECURITY] Local deployment scripts with testnet keys - never commit
 scripts/archive/
 scripts/*.sh
+!scripts/run-all-tests.sh
 scripts/wsl*.sh
 scripts/deploy*.sh
 
