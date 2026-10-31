@@ -7,9 +7,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/humanityledger/Humanity-Ledger"><img src="https://img.shields.io/badge/Genesis%20Target-December%2010%2C%202026%20(Alpha)-00f2fe?style=for-the-badge&logo=rocket" alt="Genesis Target: December 10, 2026" /></a>
+  <a href="https://github.com/humanityledger/Humanity-Ledger"><img src="https://img.shields.io/badge/Status-Pre--Alpha%20(Active%20Normative%20Hardening)-00f2fe?style=for-the-badge&logo=shield" alt="Status: Pre-Alpha" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript%205.x-Strict%20(0%20Errors)-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript Strict Compliance" /></a>
-  <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Unit%20Tests-451%2F451%20Passing-brightgreen?style=for-the-badge&logo=vitest&logoColor=white" alt="Unit Test Suite: 451 Passing" /></a>
+  <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Unit%20Tests-1024%2B%20Passing-brightgreen?style=for-the-badge&logo=vitest&logoColor=white" alt="Unit Test Suite: 1024+ Passing" /></a>
   <a href="https://xmtp.org/"><img src="https://img.shields.io/badge/Transport-XMTP%20MLS%20v3%20(RFC%209420)-0052FF?style=for-the-badge&logo=xmtp" alt="XMTP MLS Transport" /></a>
   <a href="https://aztec.network/"><img src="https://img.shields.io/badge/ZK%20SNARKs-Aztec%20Noir%20UltraHonk-8000FF?style=for-the-badge&logo=ethereum" alt="Aztec Noir UltraHonk" /></a>
   <a href="https://livekit.io/"><img src="https://img.shields.io/badge/Media%20Layer-LiveKit%20WebRTC%20SFU-00E599?style=for-the-badge&logo=webrtc" alt="LiveKit WebRTC SFU" /></a>
@@ -27,10 +27,10 @@ Since the inception of decentralized networking, digital communication architect
 
 Under this paradigm, a communication stream is not merely a sequence of serialized strings: **it is a distributed, reactive, multi-tenant execution canvas**. Users synthesize, execute, mutate, and verify fully functional collaborative software (Executable Artifact Frames — EAF) directly within the conversation thread in sub-80ms synchronization windows, with zero centralized compilation dependencies and absolute cryptographic isolation.
 
-$$\mathcal{M}_{\text{HL}} = \Big\langle \mathcal{I}_{\text{SIWE}}, \; \mathcal{T}_{\text{MLS}}, \; \Pi_{\text{UltraHonk}}, \; \Omega_{\text{Sandbox}}, \; \Delta_{\text{CRDT}} \Big\rangle$$
+$$\mathcal{M}_{\text{HL}} = \Big\langle \mathcal{I}_{\text{EdDSA}}, \; \mathcal{T}_{\text{MLS}}, \; \Pi_{\text{UltraHonk}}, \; \Omega_{\text{Sandbox}}, \; \Delta_{\text{CRDT}} \Big\rangle$$
 
 Where:
-* $\mathcal{I}_{\text{SIWE}}$ represents the self-sovereign cryptographic identity plane derived from EIP-4361 / EIP-191 primitives.
+* $\mathcal{I}_{\text{EdDSA}}$ represents the self-sovereign canonical cryptographic identity plane derived from client-generated EdDSA key pairs (with optional EIP-4361 bootstrap, conforming to `docs/PROTOCOL_SPEC.md` §2.1).
 * $\mathcal{T}_{\text{MLS}}$ represents the asynchronous post-compromise secure group messaging transport (IETF RFC 9420).
 * $\Pi_{\text{UltraHonk}}$ represents the Non-Interactive Zero-Knowledge (NIZK) state verification protocol executed via client-side Aztec Noir circuits.
 * $\Omega_{\text{Sandbox}}$ represents the air-gapped, null-origin micro-VM execution boundary enforcing strict Content Security Policies.

@@ -156,7 +156,8 @@ powershell.bat
 scratch/
 tmp_*/
 .neon
-_to_delete/ 
+_to_delete/
+.cache/
 
 # Aztec test network operator secrets (admin of the test tokens). Never commit.
 .aztec-testnet.local.json

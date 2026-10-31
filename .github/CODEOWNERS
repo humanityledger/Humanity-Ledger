@@ -1,10 +1,27 @@
 # Humanity Ledger — CODEOWNERS
-# All code owned by the core team. Security-sensitive files require a dedicated review.
+# All code owned by the core team. Security-sensitive files require dedicated cryptographic/security review.
 
 # Default owner for all files
 * @humanityledger
 
-# Security-critical: auth, middleware, crypto
+# Protocol Core: Aztec Noir Circuits & Verification Keys (Normative Spec §3 T13, T14)
+# Requires review from Aztec/Noir protocol specialists before VK alteration
+circuits/** @humanityledger
+lib/aztec/** @humanityledger
+lib/zk/** @humanityledger
+aztec-contracts/** @humanityledger
+
+# L1 Smart Contracts (Ethereum/EVM Vaults, Timelocks, Registries - Normative Spec §2.3)
+contracts/** @humanityledger
+hardhat.config.js @humanityledger
+test/contracts_invariants.test.ts @humanityledger
+
+# Ephemeral Application Framework (EAF) Sandbox & Bridge (Normative Spec §2.4, P6)
+lib/community-apps/** @humanityledger
+components/chat/community-apps/** @humanityledger
+test/eaf_isolation.adversarial.test.ts @humanityledger
+
+# Security-critical: auth, middleware, crypto, session
 middleware.ts @humanityledger
 lib/security/* @humanityledger
 lib/session.ts @humanityledger
@@ -13,18 +30,20 @@ lib/env.ts @humanityledger
 lib/auth* @humanityledger
 app/api/auth/** @humanityledger
 app/api/siwe/** @humanityledger
-
-# ZK / Aztec contracts
-aztec-contracts/** @humanityledger
-lib/aztec/** @humanityledger
-lib/zk/** @humanityledger
+test/key_custody.test.ts @humanityledger
+test/mls_post_compromise.test.ts @humanityledger
+test/property_fuzz.test.ts @humanityledger
 
 # Database schema — every migration needs review
 prisma/schema.prisma @humanityledger
 prisma/migrations/** @humanityledger
 
-# CI and deployment pipelines
+# CI and deployment pipelines & supply chain
 .github/workflows/** @humanityledger
+docs/PROTOCOL_SPEC.md @humanityledger
+docs/TRACEABILITY_MATRIX.md @humanityledger
+docs/AUDIT_DOSSIER.md @humanityledger
+docs/SUPPLY_CHAIN.md @humanityledger
 scripts/railway-pre-deploy.js @humanityledger
 start.sh @humanityledger
 railway.toml @humanityledger
