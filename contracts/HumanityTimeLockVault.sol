@@ -60,6 +60,7 @@ contract HumanityTimeLockVault is Ownable, ReentrancyGuard {
         require(_tokenAddress != address(0), "Invalid token");
         require(_amount > 0, "Amount must be > 0");
         require(vaults[msg.sender].lastHeartbeat > 0, "Vault not initialized");
+        require(!vaults[msg.sender].isTriggered, "Vault already triggered");
 
         IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
         vaultBalances[msg.sender][_tokenAddress] += _amount;
@@ -70,6 +71,7 @@ contract HumanityTimeLockVault is Ownable, ReentrancyGuard {
     function withdrawToken(address _tokenAddress, uint256 _amount) external nonReentrant {
         require(_tokenAddress != address(0), "Invalid token");
         require(_amount > 0, "Amount must be > 0");
+        require(!vaults[msg.sender].isTriggered, "Vault already triggered");
         require(vaultBalances[msg.sender][_tokenAddress] >= _amount, "Insufficient vault balance");
 
         vaultBalances[msg.sender][_tokenAddress] -= _amount;
@@ -82,6 +84,7 @@ contract HumanityTimeLockVault is Ownable, ReentrancyGuard {
 
     function pingHeartbeat() external {
         require(vaults[msg.sender].lastHeartbeat > 0, "No vault");
+        require(!vaults[msg.sender].isTriggered, "Vault already triggered");
         vaults[msg.sender].lastHeartbeat = block.timestamp;
         emit Heartbeat(msg.sender, block.timestamp);
     }

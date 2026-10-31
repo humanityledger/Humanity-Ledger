@@ -102,6 +102,11 @@ jobs:
         env:
           NODE_ENV: test
 
+      - name: Mathematical Property-Based Adversarial Battery (fast-check)
+        run: npx vitest run test/property/lazarus_adversarial_properties.test.ts
+        env:
+          NODE_ENV: test
+
       - name: Property-based fuzz (60,000 iterations)
         run: npx vitest run test/property_fuzz.test.ts
         env:
