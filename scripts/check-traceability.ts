@@ -97,6 +97,7 @@ function main() {
     'test/property_fuzz.test.ts',
     'test/fortification.test.ts',
     'test/aztec_vk_integrity.test.ts',
+    'test/lazarus_adversarial_deep.test.ts',
   ];
 
   for (const file of citedFiles) {

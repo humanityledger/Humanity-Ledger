@@ -39,9 +39,31 @@ export interface EAFValidationResult {
   error?: string;
 }
 
+const FORBIDDEN_PROTOTYPE_KEYS = Object.freeze(['__proto__', 'constructor', 'prototype']);
+
+/**
+ * Recursively scans an object for prototype poisoning attempts.
+ */
+function hasPrototypePollutionKey(target: any, depth = 0): boolean {
+  if (!target || typeof target !== 'object' || depth > 8) return false;
+  
+  // Inspect own properties and Symbol properties
+  const keys = Object.getOwnPropertyNames(target);
+  for (const key of keys) {
+    if (FORBIDDEN_PROTOTYPE_KEYS.includes(key.toLowerCase())) {
+      return true;
+    }
+    const val = target[key];
+    if (val && typeof val === 'object' && hasPrototypePollutionKey(val, depth + 1)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Validates an incoming EAF postMessage against size limits, global kill switch,
- * allowed methods, and prevents memberId spoofing.
+ * allowed methods, prototype pollution injections, and prevents memberId spoofing.
  */
 export function validateEAFBridgeMessage(
   rawPayload: unknown,
@@ -80,10 +102,22 @@ export function validateEAFBridgeMessage(
     return { valid: false, sanitizedMemberId: '', error: `Undeclared method "${payload.method}" rejected` };
   }
 
+  // Reject prototype poisoning in appId (Lazarus defense)
+  if (typeof payload.appId === 'string' && FORBIDDEN_PROTOTYPE_KEYS.includes(payload.appId.toLowerCase())) {
+    console.warn('[EAF_REJECTION] reason=prototype_pollution_app_id');
+    return { valid: false, sanitizedMemberId: '', error: 'Prototype pollution attempt in appId' };
+  }
+
   // App ID must not contain path traversal characters (Item 115)
   if (!payload.appId || !/^[a-zA-Z0-9_\-]+$/.test(payload.appId)) {
     console.warn('[EAF_REJECTION] reason=invalid_app_id');
     return { valid: false, sanitizedMemberId: '', error: 'Invalid appId or path traversal attempt' };
+  }
+
+  // Recursively inspect payload.data for prototype pollution injections
+  if (payload.data && typeof payload.data === 'object' && hasPrototypePollutionKey(payload.data)) {
+    console.warn('[EAF_REJECTION] reason=prototype_pollution_payload');
+    return { valid: false, sanitizedMemberId: '', error: 'Prototype pollution payload rejected' };
   }
 
   // Forged memberId in payload is IGNORED — strictly bound to authentic session identity (Item 114)

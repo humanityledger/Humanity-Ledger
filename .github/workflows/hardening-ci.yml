@@ -92,6 +92,11 @@ jobs:
         env:
           NODE_ENV: test
 
+      - name: Lazarus & APT Adversarial Deep Battery (14 vectors)
+        run: npx vitest run test/lazarus_adversarial_deep.test.ts
+        env:
+          NODE_ENV: test
+
       - name: Property-based fuzz (60,000 iterations)
         run: npx vitest run test/property_fuzz.test.ts
         env:
