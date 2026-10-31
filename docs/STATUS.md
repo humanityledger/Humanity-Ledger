@@ -93,4 +93,7 @@ npx vitest run test/property_fuzz.test.ts
 # 8. Cryptographic primitives & general security scans
 npm run test:crypto
 npm run test:scan
+
+# 9. Supply-chain security audit (0 vulnerabilities verified)
+npm audit
 ```
