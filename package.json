@@ -22,6 +22,8 @@
     "start:all": "npx prisma migrate deploy && pm2-runtime start ecosystem.config.json",
     "check:traceability": "npx tsx scripts/check-traceability.ts",
     "test:massive": "npx vitest run test/fortification.test.ts test/property_fuzz.test.ts test/aztec_e2e_no_simulation.test.ts test/key_custody.test.ts test/mls_post_compromise.test.ts test/circuits/ test/eaf_isolation.adversarial.test.ts",
+    "test:5h": "npx tsx scripts/endurance-5h-marathon.ts --hours=5",
+    "test:endurance": "npx tsx scripts/endurance-5h-marathon.ts",
     "test:aztec:e2e": "npx tsx scripts/aztec-pxe-e2e.ts",
     "compile:testnet": "node scripts/compile-testnet.js",
     "test": "vitest watch",
