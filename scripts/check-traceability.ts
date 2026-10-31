@@ -96,6 +96,7 @@ function main() {
     'test/contracts_invariants.test.ts',
     'test/property_fuzz.test.ts',
     'test/fortification.test.ts',
+    'test/aztec_vk_integrity.test.ts',
   ];
 
   for (const file of citedFiles) {
