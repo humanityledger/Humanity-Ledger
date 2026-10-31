@@ -97,6 +97,11 @@ jobs:
         env:
           NODE_ENV: test
 
+      - name: Quantum-Grade Cryptographic Hardening Battery (8 vectors)
+        run: npx vitest run test/unit/security/quantum_crypto_adversarial.test.ts
+        env:
+          NODE_ENV: test
+
       - name: Property-based fuzz (60,000 iterations)
         run: npx vitest run test/property_fuzz.test.ts
         env:

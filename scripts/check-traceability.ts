@@ -98,6 +98,7 @@ function main() {
     'test/fortification.test.ts',
     'test/aztec_vk_integrity.test.ts',
     'test/lazarus_adversarial_deep.test.ts',
+    'test/unit/security/quantum_crypto_adversarial.test.ts',
   ];
 
   for (const file of citedFiles) {

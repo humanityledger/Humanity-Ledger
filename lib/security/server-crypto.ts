@@ -19,6 +19,7 @@ export async function encrypt(text: string): Promise<string> {
     const key = await getKey();
     const iv = randomBytes(16);
     const cipher = createCipheriv(ALGORITHM, key, iv);
+    key.fill(0); // Zeroize raw key buffer immediately after cipher instantiation
     
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
@@ -38,6 +39,7 @@ export async function decrypt(text: string): Promise<string> {
     const authTag = Buffer.from(authTagHex, 'hex');
     
     const decipher = createDecipheriv(ALGORITHM, key, iv);
+    key.fill(0); // Zeroize raw key buffer immediately after decipher instantiation
     decipher.setAuthTag(authTag);
     
     let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');

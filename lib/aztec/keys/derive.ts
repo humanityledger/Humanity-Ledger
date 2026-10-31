@@ -26,7 +26,17 @@ export function deriveAztecSecretKey(signatureHex: string): string {
   // Derive 32 bytes of entropy using Node.js native crypto
   const derivedKey = crypto.hkdfSync('sha256', signatureBytes, '', info, 32);
   
+  // Anti-Lazarus: Immediately wipe signature bytes from heap
+  signatureBytes.fill(0);
+
   const hex = Buffer.from(derivedKey).toString('hex');
+  
+  // Wipe derivedKey buffer
+  if (Buffer.isBuffer(derivedKey)) {
+    derivedKey.fill(0);
+  } else if (derivedKey instanceof Uint8Array) {
+    (derivedKey as Uint8Array).fill(0);
+  }
   
   // Ensure it fits cleanly in Fr by clearing the top bits
   const padded = '00' + hex.slice(2);
