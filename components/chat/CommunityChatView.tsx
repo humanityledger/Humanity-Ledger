@@ -2,6 +2,7 @@
 import React, {
   useState, useEffect, useRef, useCallback, useMemo
 } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Send, Plus, MapPin, CircleDollarSign, Smile, BarChart2,
   Image as ImgIcon, Mic, Hash, CheckCircle, X, Reply,
@@ -11,7 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { NativeCryptoSendModal } from './NativeCryptoSendModal';
-import { ZkMoneyModal } from './ZkMoneyModal';
+const ZkMoneyModal = dynamic(() => import('./ZkMoneyModal').then(m => m.ZkMoneyModal), { ssr: false });
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { AnimatePresence, motion } from 'framer-motion';
 import DOMPurify from 'dompurify';
@@ -20,11 +21,11 @@ import { parseZkPaymentPayload, parseEscrowPayload } from '@/lib/zk/zkMoney';
 import { parseTipPayload, parseBountyPayload } from '@/lib/zk/zkCommunityPayments';
 import { parseStreamPayload, encodeStreamPayload, ZkPaymentStream } from '@/lib/zk/zkStreaming';
 import { parseInvoicePayload, encodeInvoicePayload, ZkInvoice } from '@/lib/zk/zkInvoice';
-import { ZkWalletPanel } from '@/components/zk/ZkWalletPanel';
+const ZkWalletPanel = dynamic(() => import('@/components/zk/ZkWalletPanel').then(m => m.ZkWalletPanel), { ssr: false });
 import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
 import { ZkEscrowCard } from '@/components/zk/ZkEscrowCard';
-import { ZkStreamManager } from '@/components/zk/ZkStreamManager';
-import { ZkInvoiceModal } from '@/components/zk/ZkInvoiceModal';
+const ZkStreamManager = dynamic(() => import('@/components/zk/ZkStreamManager').then(m => m.ZkStreamManager), { ssr: false });
+const ZkInvoiceModal = dynamic(() => import('@/components/zk/ZkInvoiceModal').then(m => m.ZkInvoiceModal), { ssr: false });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 // Shared sanitizer: no class/style, no remote images, safe links.

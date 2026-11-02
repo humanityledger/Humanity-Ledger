@@ -173,11 +173,12 @@ const nextConfig = {
 
         // [AZTEC BUILD FIX] The Aztec SDK is pure ESM and only ever runs in the
         // browser (lib/aztec/wallet/client.ts loads it with dynamic imports).
-        // On the server we stub every @aztec package subpath to false so webpack
-        // never tries to bundle them server-side. On the client we point each
-        // subpath directly at its pre-built CJS-compatible dest/api/*.js file,
+        // On the server we alias every @aztec and @aztec-labs module to our universal
+        // proxy stub (lib/aztec/aztec-stub.js) so SSR compilation never breaks.
+        // On the client we point each subpath directly to its pre-built JS file,
         // bypassing the string-only ESM exports field that webpack cannot resolve
         // in a CJS Next.js build context.
+        const aztecStub = path.resolve(__dirname, './lib/aztec/aztec-stub.js');
         const aztecJsRoot = path.resolve(__dirname, 'node_modules/@aztec/aztec.js/dest/api');
         const noirRoot   = path.resolve(__dirname, 'node_modules/@aztec/noir-contracts.js/dest');
         const walletsRoot = path.resolve(__dirname, 'node_modules/@aztec/wallets/dest/embedded/entrypoints');
@@ -193,27 +194,48 @@ const nextConfig = {
             '@aztec/aztec.js/crypto':    path.join(aztecJsRoot, 'crypto.js'),
             '@aztec/aztec.js/tx':        path.join(aztecJsRoot, 'tx.js'),
             '@aztec/aztec.js/wallet':    path.join(aztecJsRoot, 'wallet.js'),
-            // noir-contracts.js subpaths (empty exports map — alias directly to dest)
+            // noir-contracts.js subpaths
             '@aztec/noir-contracts.js/SponsoredFPC': path.join(noirRoot, 'SponsoredFPC.js'),
             '@aztec/noir-contracts.js/Token':        path.join(noirRoot, 'Token.js'),
-            // wallets/embedded — has browser/default export map; use browser build
+            // wallets/embedded
             '@aztec/wallets/embedded': path.join(walletsRoot, 'browser.js'),
-            // kv-store (only used in scripts, not browser; alias to indexeddb index)
+            // kv-store
             '@aztec/kv-store/deprecated/indexeddb': path.join(kvRoot, 'indexeddb', 'index.js'),
         };
+        // Mirror aliases for @aztec-labs/ scope
+        const aztecLabsSubpaths = Object.fromEntries(
+            Object.entries(aztecSubpaths).map(([k, v]) => [k.replace('@aztec/', '@aztec-labs/'), v])
+        );
+
         if (isServer) {
-            // Server must never bundle or execute the Aztec browser SDK.
+            // Server: stub every Aztec import to the universal SSR-safe proxy stub
+            const serverSubpaths = Object.fromEntries(
+                [...Object.keys(aztecSubpaths), ...Object.keys(aztecLabsSubpaths)].map(k => [k, aztecStub])
+            );
             config.resolve.alias = {
                 ...config.resolve.alias,
-                ...Object.fromEntries(Object.keys(aztecSubpaths).map(k => [k, false])),
-                '@aztec/aztec.js': false,
+                ...serverSubpaths,
+                '@aztec/aztec.js$': aztecStub,
+                '@aztec/aztec.js': aztecStub,
+                '@aztec-labs/aztec.js$': aztecStub,
+                '@aztec-labs/aztec.js': aztecStub,
+                '@aztec/wallets$': aztecStub,
+                '@aztec/wallets': aztecStub,
+                '@aztec-labs/wallets$': aztecStub,
+                '@aztec-labs/wallets': aztecStub,
+                '@aztec/noir-contracts.js$': aztecStub,
+                '@aztec/noir-contracts.js': aztecStub,
+                '@aztec-labs/noir-contracts.js$': aztecStub,
+                '@aztec-labs/noir-contracts.js': aztecStub,
             };
         } else {
-            // Client: resolve subpaths directly to their built JS files so webpack
-            // can read them without hitting the ESM-only string exports map.
+            // Client: resolve subpaths directly to their built JS files
             config.resolve.alias = {
                 ...config.resolve.alias,
                 ...aztecSubpaths,
+                ...aztecLabsSubpaths,
+                '@aztec/aztec.js$': aztecStub,
+                '@aztec-labs/aztec.js$': aztecStub,
             };
         }
 
