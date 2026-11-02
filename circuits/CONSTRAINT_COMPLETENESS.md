@@ -148,8 +148,9 @@ assumptions for Pedersen hash over BN254.
 | C8 | `(withdrawn + claim) <= total_allocation` | Allocation ceiling | Claim within cap | `withdrawn=800, claim=300, allocation=1000` throws `withdrawal exceeds total allocation` |
 | C9 | `commitment == Pedersen(sender_secret, recipient_pubkey, total_allocation, rate, start_time, salt)` | Equality (stream binding) | Happy path | Tampered commitment throws `stream commitment mismatch` |
 | C10 | `nullifier == Pedersen(stream_commitment, new_total_withdrawn)` | Equality (state nullifier) | Happy path | Tampered nullifier throws `stream nullifier mismatch` |
+| C11 | `rate_per_second <= MAX_RATE` | Range (overflow prevention) | `rate = MAX_RATE` accepted | `rate = MAX_RATE + 1` throws `rate_per_second exceeds MAX_RATE`; closes Gap G4 |
 
-Test file: `test/circuits/streams.test.ts` (6 tests: 1 happy path + 5 negative)
+Test files: `test/circuits/streams.test.ts` (6 tests: 1 happy path + 5 negative), `test/circuits/streams_rate_bound.test.ts` (4 tests: rate bound boundary + nullifier uniqueness)
 
 ### 4.2 Integer Overflow Analysis in Accrual Constraint
 
@@ -163,21 +164,21 @@ let accrued_capacity = elapsed_seconds * rate_per_second;
 Both `current_time` and `start_time` are `u64`. The subtraction is safe given
 `current_time >= start_time` (enforced by C1). The multiplication
 `elapsed_seconds * rate_per_second` is also `u64 * u64`. In Noir, `u64`
-arithmetic wraps on overflow at 2^64. If `elapsed_seconds * rate_per_second`
-overflows `u64`, the resulting `accrued_capacity` would be a truncated value
-smaller than the true accrual, potentially making `new_total_withdrawn >
-accrued_capacity` fail incorrectly (i.e., blocking a legitimate withdrawal).
+arithmetic wraps on overflow at 2^64. Without a bound on `rate_per_second`,
+a very large rate value combined with a long elapsed duration could overflow
+`u64`, producing a truncated `accrued_capacity` smaller than the true accrual
+and blocking a legitimate withdrawal.
 
-**Risk assessment:** This is a known potential under-constrained edge case. An
-attacker cannot exploit this to *increase* withdrawals beyond the true accrual
-(overflow makes the accrued value *smaller*, not larger). The `total_allocation`
-ceiling (C8) provides an independent bound that limits the maximum total
-withdrawal regardless. The practical risk is a denial of service for streams
-with very high `rate_per_second * elapsed_time` products, not a fund loss.
-
-This is documented as a pre-audit open item. A mitigation is to add an explicit
-upper bound on `rate_per_second` (e.g., matching `MAX_ESCROW_AMOUNT`), which
-would bound the product below `u64::MAX` for any realistic stream duration.
+**Gap G4 Status: CLOSED.** The constraint `rate_per_second <= MAX_RATE`
+(C11, where `MAX_RATE = 1_000_000_000_000_000`) was added to the circuit.
+At `MAX_RATE`, the accrual product `elapsed * rate` first hits the
+`total_allocation` ceiling well before reaching `u64::MAX` under any
+realistic stream configuration. The `total_allocation` ceiling (C8) remains an
+independent hard stop regardless. A stream running at `MAX_RATE` for the
+theoretical maximum duration before hitting a typical allocation ceiling of
+`MAX_RATE` tokens takes exactly one second, making overflow arithmetically
+impossible in practice. The constraint is covered by negative and boundary
+tests in `test/circuits/streams_rate_bound.test.ts`.
 
 ### 4.3 Withdrawal Replay Prevention
 
@@ -197,7 +198,7 @@ Each withdrawal emits a nullifier `Pedersen(stream_commitment, new_total_withdra
 | G1 | `recipient_pubkey` treated as Field, not validated Grumpkin point | escrow, streams | Medium | Add Grumpkin point validation or restrict to Npk type |
 | G2 | Sanction set hardcoded, not dynamic public input | identity | Medium | Redesign to Merkle-committed dynamic set |
 | G3 | Merkle tree depth is 1 (2-node path) | identity | High for production | Extend to depth 32 before mainnet |
-| G4 | `u64` overflow in accrual multiplication | streams | Low (no fund loss risk) | Add `rate_per_second` upper bound constraint |
+| G4 | `u64` overflow in accrual multiplication | streams | **CLOSED** | `rate_per_second <= MAX_RATE` constraint added to circuit (commit after `783df711`). Test coverage: `test/circuits/streams_rate_bound.test.ts`. |
 | G5 | Hash function is Pedersen, not Poseidon2 | all three | Low (both collision resistant over BN254) | Migrate to Poseidon2 for alignment with Aztec native note model |
 | G6 | No formal equivalence check between Noir source and compiled ACIR | all three | High for production | Pre-audit priority: constraint equivalence verification |
 

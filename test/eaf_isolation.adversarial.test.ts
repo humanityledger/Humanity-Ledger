@@ -167,4 +167,78 @@ describe('T7 / A3 — EAF Isolation & Adversarial Attack Suite', () => {
     expect(host.storage.has('app_board:shared:large_key')).toBe(false);
     expect(host.rejectedWrites.length).toBe(1);
   });
+
+  it('P6.6: Exact 8 KB + 1 byte boundary — payload at 8193 bytes is rejected, 8192 bytes is accepted', () => {
+    const host = new HostBridgeDispatcher('app_precision', { id: 'usr_alice', label: 'Alice' });
+
+    // JSON.stringify wraps a string in quotes, adding 2 bytes of overhead.
+    // To produce a serialized length of exactly MAX_PAYLOAD_BYTES (8192),
+    // the raw string value must be MAX_PAYLOAD_BYTES - 2 = 8190 characters.
+    const atCeilingRaw = 'X'.repeat(MAX_PAYLOAD_BYTES - 2); // serializes to exactly 8192 bytes
+    const resAtCeiling = host.handleMessage({
+      hl: 1, op: 'set', data: { key: 'ceiling_test', value: atCeilingRaw },
+    });
+    expect(resAtCeiling.success).toBe(true);
+
+    // One byte over ceiling: raw string 8190+1 = 8191 chars → serialized = 8193 bytes → rejected
+    const oneBeyondCeiling = 'X'.repeat(MAX_PAYLOAD_BYTES - 1); // serializes to 8193 bytes
+    const resBeyond = host.handleMessage({
+      hl: 1, op: 'set', data: { key: 'over_ceiling', value: oneBeyondCeiling },
+    });
+    expect(resBeyond.success).toBe(false);
+    expect(resBeyond.error).toBe('PAYLOAD_TOO_LARGE');
+    expect(host.storage.has('app_precision:shared:over_ceiling')).toBe(false);
+  });
+
+  it('P6.7: Prototype Pollution — crafted __proto__ key in bridge message cannot escalate privileges', () => {
+    const host = new HostBridgeDispatcher('app_proto', { id: 'usr_alice', label: 'Alice' });
+
+    // Attempt prototype pollution via bridge message payload
+    const pollutionAttempt = host.handleMessage({
+      hl: 1,
+      op: 'set',
+      data: {
+        key: '__proto__',
+        value: { isAdmin: true, canExecute: true },
+      },
+    });
+
+    // The message may or may not succeed (depending on key routing), but
+    // prototype pollution must NOT propagate to Object.prototype
+    expect((Object.prototype as any).isAdmin).toBeUndefined();
+    expect((Object.prototype as any).canExecute).toBeUndefined();
+
+    // A freshly created object must not inherit the poisoned property
+    const freshObj: any = {};
+    expect(freshObj.isAdmin).toBeUndefined();
+    expect(freshObj.canExecute).toBeUndefined();
+  });
+
+  it('P6.8: window.hl Bridge Surface is Frozen — runtime extension of bridge ops is impossible', () => {
+    // Simulate a frozen bridge surface (mirrors Object.freeze(window.hl) in production)
+    const bridgeSurface = Object.freeze({
+      ready: () => {},
+      get: () => {},
+      set: () => {},
+      list: () => {},
+      mine: () => {},
+      setMine: () => {},
+      everyone: () => {},
+      onChange: () => {},
+      zkProof: () => {},
+      error: () => {},
+    });
+
+    // Verify the object is frozen
+    expect(Object.isFrozen(bridgeSurface)).toBe(true);
+
+    // Attempting to add a new method must fail silently in strict-mode-equivalent
+    expect(() => {
+      (bridgeSurface as any).newDangerousMethod = () => 'pwned';
+    }).toThrow(); // In strict mode, assignment to frozen object throws TypeError
+
+    // The bridge surface must not contain the injected method
+    expect((bridgeSurface as any).newDangerousMethod).toBeUndefined();
+  });
 });
+

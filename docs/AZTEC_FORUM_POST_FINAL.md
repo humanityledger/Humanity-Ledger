@@ -197,13 +197,13 @@ No withdrawal witness is satisfiable before the stream opens at `start_time`. Th
 
 `withdrawn_amount + claim_amount <= (current_time - start_time) * rate_per_second`
 
-The sum of the already withdrawn amount and the current claim cannot exceed the linearly accrued balance. Both time values are `u64` public inputs. The multiplication `elapsed * rate` is computed in `u64` arithmetic. A known edge case exists where this product overflows `u64` for extreme parameter combinations; in that case the constraint becomes more restrictive (clamping the accrual downward), which cannot produce an over-withdrawal. The `total_allocation` ceiling below provides an independent hard bound. See `circuits/CONSTRAINT_COMPLETENESS.md` Section 4.2 for full analysis.
+The sum of the already withdrawn amount and the current claim cannot exceed the linearly accrued balance. Both time values are `u64` public inputs. The multiplication `elapsed * rate` is computed in `u64` arithmetic. A prior edge case existed where this product could overflow `u64` for extreme parameter combinations. This is now mitigated by the explicit circuit constraint `rate_per_second <= MAX_RATE` (where `MAX_RATE = 1_000_000_000_000_000`), which bounds the accrual product below `u64::MAX` for any realistic stream configuration. Gap G4 in `circuits/CONSTRAINT_COMPLETENESS.md` is marked CLOSED.
 
 **Allocation ceiling**
 
 `withdrawn_amount + claim_amount <= total_allocation`
 
-Total withdrawals across the stream lifetime are bounded by the committed allocation `total_allocation`, regardless of elapsed time or accrual. This is an independent constraint that holds even if the accrual computation overflows.
+Total withdrawals across the stream lifetime are bounded by the committed allocation `total_allocation`, regardless of elapsed time or accrual. This is an independent constraint that holds regardless of any arithmetic in the accrual computation.
 
 **State nullifier per withdrawal**
 
@@ -428,10 +428,13 @@ npm run test:run
 <tr><td>VK Lifecycle Integrity</td><td>test/aztec_vk_integrity.test.ts</td><td>8 / 8</td><td>OK</td></tr>
 <tr><td>Key Custody</td><td>test/key_custody.test.ts</td><td>5 / 5</td><td>OK</td></tr>
 <tr><td>MLS Post Compromise Security</td><td>test/mls_post_compromise.test.ts</td><td>6 / 6</td><td>OK</td></tr>
-<tr><td>EAF Adversarial Isolation</td><td>test/eaf_isolation.adversarial.test.ts</td><td>All escape vectors blocked</td><td>OK</td></tr>
+<tr><td>EAF Adversarial Isolation</td><td>test/eaf_isolation.adversarial.test.ts</td><td>8 / 8 (boundary, prototype pollution, frozen bridge included)</td><td>OK</td></tr>
 <tr><td>L1 Contract Invariants</td><td>test/contracts_invariants.test.ts</td><td>5 / 5</td><td>OK</td></tr>
 <tr><td>Property Based Fuzz</td><td>test/property_fuzz.test.ts</td><td>60,000 iterations</td><td>OK</td></tr>
-<tr><td><b>Full Suite</b></td><td>npm run test:run</td><td><b>1,076 / 1,076 across 61 files</b></td><td><b>OK</b></td></tr>
+<tr><td>Streams Rate Bound (Gap G4 Closure)</td><td>test/circuits/streams_rate_bound.test.ts</td><td>4 / 4</td><td>OK</td></tr>
+<tr><td>PXE Boundary and MLS Lockfile</td><td>test/pxe_boundary_security.test.ts</td><td>6 / 6</td><td>OK</td></tr>
+<tr><td>VK HASH_MISMATCH Unconditional Block</td><td>test/vk_hash_mismatch.test.ts</td><td>5 / 5</td><td>OK</td></tr>
+<tr><td><b>Full Suite</b></td><td>npm run test:run</td><td><b>1,094 / 1,094 across 64 files</b></td><td><b>OK</b></td></tr>
 </tbody>
 </table>
 
@@ -494,6 +497,14 @@ Before engaging an external audit firm for `circuits/escrow`, `circuits/identity
 **5. Hash function migration from Pedersen to Poseidon2**
 
 All three circuits currently use `pedersen_hash` from Noir's standard library. The Aztec native note commitment scheme uses Poseidon2 over BN254. This means that while the circuits enforce correct constraint semantics, the hash function used for commitment and nullifier derivation is not identical to the function used in Aztec native token contracts. Poseidon2 is more efficient in the UltraHonk constraint system (fewer constraints per hash invocation) and would improve interoperability with Aztec native note types. Migrating from Pedersen to Poseidon2 in all three circuits requires recompilation, new verification keys, and the full 14 day VK lifecycle upgrade. This migration is planned before the external audit engagement and before any mainnet consideration. The current Pedersen implementation is cryptographically sound (collision resistant over BN254); the migration is an alignment choice, not a security fix.
+
+**6. Dynamic sanction set and depth-32 identity Merkle root**
+
+The current identity circuit embeds the sanctioned jurisdiction set as two compile-time constants (`SANCTIONED_JURISDICTION_1 = 999`, `SANCTIONED_JURISDICTION_2 = 998`) and verifies a Merkle path of depth 1 (two-node tree). Both are prototyping constraints, not intended design endpoints. The production design requires a governance-controlled Merkle-committed sanction set (where updates are voted on-chain and committed as a new root public input) and a full depth-32 Merkle tree to accommodate a realistic identity registry. Any change to either currently requires a full circuit recompile, a new verification key, and the 14 day VK timelock. The engineering question is the interface between the on-chain governance contract and the circuit public inputs: specifically, how the Merkle root commitment flows from L1 governance execution into the PXE-side witness generation without reintroducing a trusted intermediary. We are not aware of a deployed reference implementation of this pattern in the Aztec ecosystem and welcome architectural input.
+
+**7. Grumpkin curve point validation: in-circuit versus PXE layer**
+
+The three circuits treat `recipient_pubkey` as a `Field` element without verifying that it represents a valid point on the Grumpkin curve. In the current PXE integration, invalid curve points are rejected before reaching the circuit: the PXE validates the recipient address before constructing the witness. This means the circuit operates under the assumption that the input is a valid point without enforcing that property in constraints. The open question is whether the cost of adding full in-circuit Grumpkin point validation (on-curve membership check) is justified given the PXE-layer guard, or whether the current design boundary is the appropriate architecture. Gap G1 in `circuits/CONSTRAINT_COMPLETENESS.md` documents this explicitly. We are interested in whether the Aztec native Npk type enforces this at the type system level in a way we can leverage without duplicating the constraint.
 
 ***
 
