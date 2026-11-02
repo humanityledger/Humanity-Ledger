@@ -1,13 +1,13 @@
 name: Clone Detection Monitor — Humanity Ledger
 # ============================================================
-# Copyright (c) 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.
+# Copyright (c) 2024-2026 Humanity Ledger Protocol. All Rights Reserved.
 # Humanity Ledger — https://humanidfi.com
 #
 # This GitHub Action runs daily and:
 #  1. Searches GitHub for forks of the Humanity Ledger repository
 #  2. Searches npm/web for packages using our unique identifiers
 #  3. Queries the beacon API for unauthorized deployments
-#  4. Sends a daily summary email to Stefan Antonio Cirisanu
+#  4. Sends a daily summary email to Humanity Ledger Protocol
 #
 # Schedule: Daily at 08:00 UTC (10:00 Madrid / Romania time)
 # ============================================================
@@ -102,7 +102,7 @@ jobs:
           DATE=$(date -u "+%Y-%m-%d %H:%M UTC")
           cat > daily_clone_report.md << 'REPORT'
           # 🛡️ Humanity Ledger — Daily Clone Detection Report
-          **Owner:** Stefan Antonio Cirisanu | legal@humanidfi.com
+          **Owner:** Humanity Ledger Protocol | legal@humanidfi.com
           **Date:** ${{ env.REPORT_DATE }}
 
           ---
@@ -143,7 +143,7 @@ jobs:
           4. Contact: legal@humanidfi.com
 
           ---
-          *Copyright (c) 2024-2026 Stefan Antonio Cirisanu. All Rights Reserved.*
+          *Copyright (c) 2024-2026 Humanity Ledger Protocol. All Rights Reserved.*
           REPORT
           
           echo "REPORT_DATE=$DATE" >> $GITHUB_ENV
@@ -173,7 +173,7 @@ jobs:
             ## Daily Clone Detection Report
 
             **Date:** ${date}
-            **Owner:** Stefan Antonio Cirisanu
+            **Owner:** Humanity Ledger Protocol
 
             | Metric | Count |
             |--------|-------|

@@ -373,8 +373,9 @@ No circuit in this repository has been verified against a formal mathematical sp
 The following commands reproduce every test battery from a clean checkout. Estimated wall time: under 60 seconds on a standard development machine with a stable network connection to the Aztec testnet node.
 
 ```bash
-# 1. Clone the repository from the organization
-git clone https://github.com/humanityledger
+# 1. Clone the repository
+# Full repository URL is listed in the Repository section at the end of this post.
+# After cloning, enter the project directory.
 
 # 2. Install dependencies
 npm install
