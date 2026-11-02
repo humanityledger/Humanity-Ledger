@@ -14,7 +14,7 @@
 | **Web2 / Messaging (MLS)** | Medium-High | **RFC 9420 Conformant** | Pinned XMTP browser SDK `5.2.0`; automated PCS & forward-secrecy epoch ratcheting tests in `test/mls_post_compromise.test.ts`. |
 | **Aztec / Noir / UltraHonk** | Pre-Alpha (String templates) | **Full Production Circuits (Non-Simulated Proving)** | Published Noir circuits (`circuits/escrow`, `circuits/streams`, `circuits/identity`) with 21 automated constraint-violation and negative tests in `test/circuits/`, committed verification keys in `circuits/*/target/`, and non-simulated PXE pipeline in `scripts/aztec-pxe-e2e.ts`. |
 | **L1 Settlement & Contracts** | Medium (Isolated tests) | **Audited Timelocked Infrastructure** | Complete contract invariant test suite in `test/contracts_invariants.test.ts` proving zero backdoor, zero unilateral balance drains, and enforced timelocks; verified by `scripts/verify-l1-bytecode.ts`. |
-| **Executable Artifacts (EAF)** | Medium (Basic CSP) | **Isolated Sandbox Frame** | Frozen v1.0 `window.hl` surface, air-gapped CSP (`connect-src 'none'`), and passing adversarial breakout suite in `test/eaf_isolation.adversarial.test.ts`. |
+| **Executable Artifacts (EAF)** | Medium (Basic CSP) | **Isolated Sandbox Frame** | Frozen v1.0 `window.hl` surface, network-isolated CSP (`connect-src 'none'`), and passing adversarial breakout suite in `test/eaf_isolation.adversarial.test.ts`. |
 | **Formal Verification & Audits** | Declared / Unbacked | **Reproducible Audit Dossier & Fortification** | Comprehensive `docs/AUDIT_DOSSIER.md` (RISK-01 to RISK-05), `docs/FORTIFICATION_CHECKLIST.md` (Lazarus APT defense), 0 vulnerabilities in `npm audit`, and 60,000 property fuzzing iterations (`test/property_fuzz.test.ts`). |
 
 ---
@@ -52,7 +52,7 @@
   - Proves forward secrecy and post-compromise security under simulated client key compromise across epoch ratchets.
 * **A3 (EAF isolation P6)**: **SATISFIED**
   - Verified by `test/eaf_isolation.adversarial.test.ts` (5 tests passing).
-  - Proves air-gapped CSP (`connect-src 'none'`), strict session-bound writes, cross-app storage isolation, and 8 KB payload ceilings.
+  - Proves network-isolated CSP (`connect-src 'none'`), strict session-bound writes, cross-app storage isolation, and 8 KB payload ceilings.
 * **A4 (L1 contracts)**: **SATISFIED**
   - Verified by `test/contracts_invariants.test.ts` (5 tests passing), `scripts/verify-l1-bytecode.ts` (passing), and `npm run test:contracts`.
   - Proves zero unilateral admin drain, immutable identity ownership, and enforced dead-man-switch timeouts; bytecode verified in `docs/L1_VERIFICATION.md`.

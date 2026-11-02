@@ -39,7 +39,7 @@ All pull requests and commits modifying files within the following security-crit
 - `circuits/**` (Noir zero-knowledge circuit definitions and proofs)
 - `contracts/**` (L1 settlement contracts, registries, timelocks)
 - `lib/aztec/**` (PXE wallet derivation, key handling, and RPC clients)
-- `lib/community-apps/**` (EAF air-gapped iframe policy and `window.hl` bridge)
+- `lib/community-apps/**` (EAF network-isolated iframe policy and `window.hl` bridge)
 
 Unsigned commits touching these paths will be rejected by GitHub branch protection rules.
 

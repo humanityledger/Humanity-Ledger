@@ -36,7 +36,7 @@ test/
 ├── mls_post_compromise.test.ts     # RFC 9420 TreeKEM PCS and forward secrecy verification
 ├── eaf_isolation.adversarial.test.ts # EAF client sandbox breakout and payload bounds tests
 ├── property_fuzz.test.ts           # 60,000-iteration randomized fuzzing harness
-├── aztec_e2e_no_simulation.test.ts # Zero-simulation CI guard assertions
+├── aztec_e2e_no_simulation.test.ts # Non-simulated proving CI guard assertions
 ├── fortification.test.ts           # 300-item system defense checklist tests
 └── unit/                           # Granular unit test suites (auth, crypto, session, store)
 ```

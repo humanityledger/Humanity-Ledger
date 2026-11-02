@@ -16,7 +16,7 @@ The Humanity Ledger protocol couples client-side zero-knowledge state transition
 3. **P3 (Private State Confidentiality)**: Verified via `test/circuits/*.test.ts` and client-side Web Worker execution.
 4. **P4 (Private State Integrity)**: Verified via Noir circuit constraints (`circuits/*`), verification key anchoring (`docs/CIRCUITS.md`), and L1 contracts (`test/contracts_invariants.test.ts`, `docs/L1_VERIFICATION.md`).
 5. **P5 (No Server Key Custody)**: Verified via `test/key_custody.test.ts` (full server compromise yields zero spending keys).
-6. **P6 (EAF Isolation)**: Verified via `test/eaf_isolation.adversarial.test.ts` (air-gapped null-origin sandbox).
+6. **P6 (EAF Isolation)**: Verified via `test/eaf_isolation.adversarial.test.ts` (network-isolated null-origin sandbox).
 
 ---
 

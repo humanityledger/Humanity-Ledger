@@ -27,7 +27,7 @@ Each property must be enforced by the mechanisms listed. Automated tests must de
 | **P3** | **Private state confidentiality** | Private balances, identity claims, and any EAF private state are invisible to the server and to the Aztec sequencer. | Client-side UltraHonk proof generation inside PXE / Web Worker. Private inputs never leave the client. |
 | **P4** | **Private state integrity** | Invalid private state transitions are rejected by the network. | Aztec circuit constraints + L1 verification of the proof against the published verification key. |
 | **P5** | **No server key custody** | The server never possesses, derives, or can reconstruct user spending keys or long-term MLS identity keys. | All long-term key generation and storage occurs exclusively on the client. No seed or private key is ever transmitted or stored server-side. |
-| **P6** | **EAF isolation** | An Executable Artifact Frame cannot read or write state belonging to another EAF or to the host conversation except through the declared bridge. | Air-gapped iframe with enumerated, versioned `window.hl` surface. Adversarial tests must attempt escape. |
+| **P6** | **EAF isolation** | An Executable Artifact Frame cannot read or write state belonging to another EAF or to the host conversation except through the declared bridge. | Network-isolated iframe with enumerated, versioned `window.hl` surface. Adversarial tests must attempt escape. |
 
 ### 1.3 Explicit Non-Claims
 The following are explicitly outside the claimed threat model and must not appear as guarantees in public materials:
@@ -104,7 +104,7 @@ Every residual risk identified in the protocol threat model is formally tracked,
 | **RISK-01** | Proof generation failure on constrained mobile/web clients | Medium | **TREATED** | Client-side fail-closed architecture: witness generation is in-memory only and zeroed on catch. Zero private witness leaked over network. Verified in `scripts/aztec-pxe-e2e.ts` and documented in `docs/AUDIT_DOSSIER.md`. |
 | **RISK-02** | Sequencer censorship or reordering of valid ZK proofs | Medium | **TREATED** | Nonce and nullifier monotonicity guarantees idempotency. Censored proofs can be rebroadcast to alternative sequencers without state corruption. Documented in `docs/AUDIT_DOSSIER.md`. |
 | **RISK-03** | MLS metadata leakage (traffic timing, group size) | Low | **ACCEPTED** | Explicitly outside claimed threat model (§1.3). Traffic analysis protections (e.g. constant-rate padding) deferred to future transport layers. Formally accepted by protocol governance. |
-| **RISK-04** | Client-side sandbox escape or PXE execution bugs | High | **TREATED & MITIGATED** | Air-gapped CSP (`connect-src 'none'`), null-origin sandbox, frozen `window.hl` API surface, and strict session-bound writes. Verified via `test/eaf_isolation.adversarial.test.ts` and `test/key_custody.test.ts`. |
+| **RISK-04** | Client-side sandbox escape or PXE execution bugs | High | **TREATED & MITIGATED** | Network-isolated CSP (`connect-src 'none'`), null-origin sandbox, frozen `window.hl` API surface, and strict session-bound writes. Verified via `test/eaf_isolation.adversarial.test.ts` and `test/key_custody.test.ts`. |
 | **RISK-05** | Upstream dependency supply-chain compromise | Medium | **TREATED** | Strict package integrity pinning (e.g. XMTP pinned to `5.2.0`), lockfile enforcement, and signed commit policy documented in `docs/SUPPLY_CHAIN.md`. |
 
 ---
