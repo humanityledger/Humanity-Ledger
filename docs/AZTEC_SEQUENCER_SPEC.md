@@ -1,14 +1,18 @@
-# Running an Aztec sequencer with Humanity Ledger (v6.0.0)
+# Humanity Ledger — Aztec Network Sequencer Integration Reference
 
-Status: checked against the live networks on 27 October 2026, the day after
-v6 became the canonical rollup (26 Oct 2026, 08:00 UTC).
+**Document Reference:** HL-SEQ-2026.1  
+**Scope:** This document describes how Humanity Ledger **monitors and integrates with** an externally
+operated Aztec Network sequencer node. The sequencer itself is part of the Aztec Network protocol;
+Humanity Ledger does not design, implement, or operate the sequencer consensus mechanism.  
+**Verified Against:** Aztec Network v6.0.0 live networks, 27 October 2026 (one day after v6 became
+the canonical rollup on 26 October 2026, 08:00 UTC).
 
-This replaces an earlier draft of this file. That draft described things
-Aztec does not have (an `EpochCommittee.sol` contract, a 100 ETH stake,
-"Fernet"/"BBA" consensus, `node_getTreeRoots`-style RPC methods, the
-`aztecprotocol/aztec:0.55` image) and its dashboard showed generated numbers
-when the node was unreachable. Everything below was verified against
-docs.aztec.network, the public Aztec nodes and the L1 contracts.
+> [!NOTE]
+> An earlier draft of this file described protocol elements that do not exist in Aztec Network
+> (an `EpochCommittee.sol` contract, a 100 ETH stake requirement, "Fernet"/"BBA" consensus,
+> `node_getTreeRoots`-style RPC methods, the `aztecprotocol/aztec:0.55` image), and its dashboard
+> displayed generated numbers when the node was unreachable. All data below was verified against
+> `docs.aztec.network`, public Aztec nodes, and the deployed L1 contracts.
 
 ## 1. What a sequencer is on Aztec today
 
@@ -37,7 +41,7 @@ Live values (read on chain, mainnet):
 
 All L1 addresses live in `lib/aztec/sequencer/networks.ts`.
 
-## 2. What we need (nothing here is optional)
+## 2. Prerequisites for Sequencer Operation
 
 1. **Stake**: 200,000 AZTEC per sequencer identity, staked through
    https://stake.aztec.network (self-stake), or run as a staking provider in

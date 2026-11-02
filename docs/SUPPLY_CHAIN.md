@@ -74,7 +74,7 @@ git commit -m "chore: update SBOM for release"
 
 - Any new direct dependency requires a review comment in the PR explaining the rationale.
 - Any dependency with a known CRITICAL CVE blocks merge until remediated.
-- `npm audit` must report 0 vulnerabilities on the `claude/sync-and-hardening` branch.
+- `npm audit` must report 0 vulnerabilities on the `main` branch.
 - Critical cryptographic dependencies (`@noir-lang/*`, `@aztec-labs/*`, `@xmtp/*`) use exact version pins.
 
 ---

@@ -173,8 +173,8 @@ When $\mathrm{VK}_{v+1}$ becomes `ACTIVE`:
 
 To defend against advanced persistent threats (APTs) and nation-state cyber operations (such as the Lazarus Group / APT38), the Humanity Ledger protocol incorporates a canonical, defense-in-depth fortification checklist comprising 300 concrete, measurable items:
 
-- **Normative Document**: [`docs/FORTIFICATION_CHECKLIST.md`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/docs/FORTIFICATION_CHECKLIST.md)
-- **Automated Verification Suite**: [`test/fortification.test.ts`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/test/fortification.test.ts)
+- **Normative Document**: [`docs/FORTIFICATION_CHECKLIST.md`](docs/FORTIFICATION_CHECKLIST.md)
+- **Automated Verification Suite**: [`test/fortification.test.ts`](test/fortification.test.ts)
 - **Domain Breakdown**:
   1. Cryptographic and Key Management (Items 1–40)
   2. Aztec / Noir / UltraHonk Circuit and PXE Hardening (Items 41–80)
@@ -186,7 +186,7 @@ To defend against advanced persistent threats (APTs) and nation-state cyber oper
   8. Monitoring, Detection, and Incident Response (Items 231–260)
   9. Operational and Governance Hardening (Items 261–300)
 
-Every pull request modifying circuits, cryptography, contracts, or private state transitions must adhere to the mandatory invariant analysis checklist codified in [`.github/pull_request_template.md`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/.github/pull_request_template.md) and pass all automated fortification tests.
+Every pull request modifying circuits, cryptography, contracts, or private state transitions must adhere to the mandatory invariant analysis checklist codified in [`.github/pull_request_template.md`](.github/pull_request_template.md) and pass all automated fortification tests.
 
 ---
 
