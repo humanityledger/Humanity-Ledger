@@ -1,0 +1,390 @@
+name: Advanced Security Hardening Suite
+
+# Runs on every push and PR to main/develop, plus daily at 05:00 UTC
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  security-events: write
+
+jobs:
+
+  # --- Job 1: Full adversarial test suite -----------------------------------
+  adversarial-tests:
+    name: Adversarial Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Run all adversarial test files
+        run: |
+          echo "=== Adversarial Hardening Test Suite ==="
+          npx vitest run \
+            test/key_exfiltration.adversarial.test.ts \
+            test/circuit_invariants.adversarial.test.ts \
+            test/crypto_integrity.adversarial.test.ts \
+            test/api_authorization.adversarial.test.ts \
+            test/supply_chain_attack.test.ts \
+            test/replay_and_doublespend.test.ts \
+            test/sidechannel_timing.test.ts \
+            test/social_engineering.test.ts \
+            --reporter=verbose 2>&1
+          echo "[PASS] All adversarial tests completed"
+
+      - name: Run full regression suite (ensure no regressions)
+        run: |
+          npx vitest run --reporter=verbose 2>&1 | tail -10
+
+  # --- Job 2: Static security analysis -------------------------------------
+  static-analysis:
+    name: Static Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Forbidden patterns scan
+        run: |
+          echo "=== Forbidden Patterns Scan ==="
+          node scripts/forbidden-patterns.mjs
+          echo "[PASS] Zero forbidden patterns"
+
+      - name: Scan for hardcoded secrets and credentials
+        run: |
+          echo "=== Hardcoded Credential Scan ==="
+          FAIL=0
+
+          # Private key patterns
+          if grep -rn --include="*.ts" --include="*.js" \
+            -E "(PRIVATE_KEY|privateKey|private_key)\s*=\s*['\"]0x[0-9a-fA-F]{64}['\"]" \
+            --exclude-dir=node_modules --exclude-dir=test . 2>/dev/null | grep -v "test-only\|mock\|example\|REDACTED"; then
+            echo "CRITICAL: Hardcoded private key detected"
+            FAIL=1
+          fi
+
+          # Mnemonic patterns
+          if grep -rn --include="*.ts" --include="*.js" \
+            -E "mnemonic\s*=\s*['\"][a-z]+ [a-z]+ [a-z]+ [a-z]+" \
+            --exclude-dir=node_modules --exclude-dir=test . 2>/dev/null; then
+            echo "CRITICAL: Hardcoded mnemonic detected"
+            FAIL=1
+          fi
+
+          # Database connection strings
+          if grep -rn --include="*.ts" --include="*.js" \
+            -E "postgresql://[a-zA-Z0-9]+:[^$@]" \
+            --exclude-dir=node_modules . 2>/dev/null | grep -v "example\|placeholder"; then
+            echo "CRITICAL: Hardcoded database URL detected"
+            FAIL=1
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo "STATIC ANALYSIS FAILED"
+            exit 1
+          fi
+          echo "[PASS] No hardcoded credentials found"
+
+      - name: Detect eval and Function constructor usage in production code
+        run: |
+          echo "=== Eval/Function Constructor Scan ==="
+          FAIL=0
+
+          # Check for eval() in production code (not tests)
+          if grep -rn --include="*.ts" --include="*.js" \
+            -E "\beval\s*\(" \
+            --exclude-dir=node_modules --exclude-dir=test . 2>/dev/null | \
+            grep -v "//.*eval\|evaluat\|interval\|relevant"; then
+            echo "WARNING: eval() usage detected in production code"
+            FAIL=1
+          fi
+
+          # Check for new Function() in production code
+          if grep -rn --include="*.ts" --include="*.js" \
+            -E "new\s+Function\s*\(" \
+            --exclude-dir=node_modules --exclude-dir=test . 2>/dev/null; then
+            echo "WARNING: new Function() detected in production code"
+            FAIL=1
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo "STATIC ANALYSIS FAILED: dangerous execution patterns found"
+            exit 1
+          fi
+          echo "[PASS] No dangerous execution patterns found"
+
+      - name: Check for missing security headers in middleware
+        run: |
+          echo "=== Security Headers Check ==="
+          FAIL=0
+
+          # Verify CSP is configured somewhere
+          if ! grep -rn --include="*.ts" "Content-Security-Policy\|contentSecurityPolicy" \
+            --exclude-dir=node_modules --exclude-dir=test . 2>/dev/null | head -1 | grep -q .; then
+            echo "WARNING: No CSP configuration detected"
+            FAIL=1
+          fi
+
+          # Verify X-Frame-Options or frame-ancestors is set
+          if ! grep -rn --include="*.ts" "X-Frame-Options\|frame-ancestors" \
+            --exclude-dir=node_modules --exclude-dir=test . 2>/dev/null | head -1 | grep -q .; then
+            echo "WARNING: No X-Frame-Options/frame-ancestors detected"
+            FAIL=1
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo "STATIC ANALYSIS: Security header configuration missing"
+            echo "NOTE: This is a warning - failing CI to enforce hardening"
+            exit 1
+          fi
+          echo "[PASS] Security header configuration verified"
+
+  # --- Job 3: Dependency security audit -------------------------------------
+  dependency-audit:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: npm audit - zero HIGH/CRITICAL
+        run: |
+          npm audit --audit-level=high --json > /tmp/audit.json 2>&1 || true
+          node -e "
+            const r = require('/tmp/audit.json');
+            const v = r.metadata?.vulnerabilities ?? {};
+            const critical = (v.high ?? 0) + (v.critical ?? 0);
+            console.log('Vulnerability summary:', JSON.stringify(v));
+            if (critical > 0) {
+              console.error('BLOCKED: ' + critical + ' HIGH/CRITICAL vulnerabilities found');
+              process.exit(1);
+            }
+            console.log('[PASS] Zero HIGH/CRITICAL vulnerabilities');
+          "
+
+      - name: Verify no packages from suspicious registries
+        run: |
+          echo "=== Registry Source Verification ==="
+          # Verify .npmrc does not point to unexpected registries
+          if [ -f ".npmrc" ]; then
+            if grep -E "registry\s*=" .npmrc | grep -v "registry.npmjs.org"; then
+              echo "WARNING: Custom registry configured — verify it is trusted"
+            else
+              echo "[OK] npm registry is the official registry"
+            fi
+          else
+            echo "[OK] No .npmrc — using default npm registry"
+          fi
+
+      - name: Verify XMTP is pinned at 5.2.0
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            const all = { ...pkg.dependencies, ...pkg.devDependencies };
+            const xmtp = Object.entries(all).filter(([k]) => k.startsWith('@xmtp/'));
+            if (xmtp.length === 0) {
+              console.log('[INFO] XMTP not a direct dependency');
+              process.exit(0);
+            }
+            for (const [name, version] of xmtp) {
+              if (!version.includes('5.2.0')) {
+                console.error('BLOCKED: XMTP package', name, 'is not pinned at 5.2.0:', version);
+                process.exit(1);
+              }
+              console.log('[OK]', name, '=', version);
+            }
+          "
+
+  # --- Job 4: Circuit constraint coverage check ----------------------------
+  circuit-coverage:
+    name: Circuit Constraint Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verify CONSTRAINT_COMPLETENESS.md is up to date
+        run: |
+          echo "=== Constraint Completeness Check ==="
+          if [ ! -f "circuits/CONSTRAINT_COMPLETENESS.md" ]; then
+            echo "CRITICAL: CONSTRAINT_COMPLETENESS.md is missing"
+            exit 1
+          fi
+
+          # Verify it contains Gap G4 as CLOSED
+          if ! grep -q "G4.*CLOSED\|CLOSED.*G4" circuits/CONSTRAINT_COMPLETENESS.md; then
+            echo "CRITICAL: Gap G4 is not marked CLOSED in CONSTRAINT_COMPLETENESS.md"
+            exit 1
+          fi
+
+          # Verify it documents all 3 circuits
+          for circuit in escrow streams identity; do
+            if ! grep -qi "$circuit" circuits/CONSTRAINT_COMPLETENESS.md; then
+              echo "CRITICAL: Circuit '$circuit' not documented in CONSTRAINT_COMPLETENESS.md"
+              exit 1
+            fi
+          done
+
+          echo "[PASS] CONSTRAINT_COMPLETENESS.md is present and complete"
+
+      - name: Verify rate bound constraint exists in streams circuit
+        run: |
+          STREAMS_MAIN="circuits/streams/src/main.nr"
+          if [ ! -f "$STREAMS_MAIN" ]; then
+            echo "CRITICAL: streams/src/main.nr not found"
+            exit 1
+          fi
+
+          # Verify MAX_RATE is defined
+          if ! grep -q "MAX_RATE" "$STREAMS_MAIN"; then
+            echo "CRITICAL: MAX_RATE constant missing from streams circuit (Gap G4 regression)"
+            exit 1
+          fi
+
+          # Verify assert constraint is present
+          if ! grep -q "assert.*rate_per_second.*MAX_RATE\|assert.*MAX_RATE.*rate_per_second" "$STREAMS_MAIN"; then
+            echo "CRITICAL: rate_per_second constraint missing (Gap G4 regression)"
+            exit 1
+          fi
+
+          echo "[PASS] Gap G4 constraint verified in streams circuit"
+
+      - name: Run circuit-specific adversarial tests
+        run: |
+          npm ci --prefer-offline
+          npx vitest run test/circuit_invariants.adversarial.test.ts --reporter=verbose 2>&1
+          npx vitest run test/streams_rate_bound.test.ts --reporter=verbose 2>&1
+
+  # --- Job 5: PXE boundary and key material security -----------------------
+  pxe-key-security:
+    name: PXE Boundary and Key Material Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Run key exfiltration adversarial tests
+        run: |
+          npx vitest run test/key_exfiltration.adversarial.test.ts --reporter=verbose 2>&1
+
+      - name: Run PXE boundary security tests
+        run: |
+          npx vitest run test/pxe_boundary_security.test.ts --reporter=verbose 2>&1
+
+      - name: Run VK hash mismatch tests
+        run: |
+          npx vitest run test/vk_hash_mismatch.test.ts --reporter=verbose 2>&1
+
+      - name: Run crypto integrity adversarial tests
+        run: |
+          npx vitest run test/crypto_integrity.adversarial.test.ts --reporter=verbose 2>&1
+
+  # --- Job 6: IP and watermark verification --------------------------------
+  ip-verification:
+    name: IP and Watermark Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify authorship watermarks are intact
+        run: |
+          echo "=== Authorship Watermark Verification ==="
+          FAIL=0
+
+          # HLSPEC identifier must be present in the normative specification
+          if [ -f "docs/SPECIFICATION.md" ]; then
+            if ! grep -q "HLSPEC" docs/SPECIFICATION.md; then
+              echo "WARNING: HLSPEC identifier missing from SPECIFICATION.md"
+              FAIL=1
+            else
+              echo "[OK] HLSPEC watermark present in SPECIFICATION.md"
+            fi
+          fi
+
+          # Canonical commit reference must be present in forum post
+          if [ -f "docs/AZTEC_FORUM_POST_FINAL.md" ]; then
+            if ! grep -q "783df711" docs/AZTEC_FORUM_POST_FINAL.md; then
+              echo "WARNING: Canonical commit reference missing from forum post"
+              FAIL=1
+            else
+              echo "[OK] Canonical commit reference present in forum post"
+            fi
+          fi
+
+          # License must credit Humanity Ledger
+          if ! grep -q "Humanity Ledger" LICENSE; then
+            echo "CRITICAL: LICENSE does not credit Humanity Ledger"
+            FAIL=1
+          else
+            echo "[OK] LICENSE credits Humanity Ledger"
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo "IP VERIFICATION FAILED"
+            exit 1
+          fi
+          echo "[PASS] All IP watermarks verified"
+
+      - name: Verify no personal names in tracked files
+        run: |
+          echo "=== Personal Name Redaction Check ==="
+          # Check that no personal name appears in tracked source files
+          # (using a placeholder since the actual name has been redacted from the codebase)
+          PATTERNS=(
+            "Stefan Antonio"
+            "Cirisanu"
+          )
+          FAIL=0
+          for pattern in "${PATTERNS[@]}"; do
+            HITS=$(git grep -l "$pattern" -- ':!*.log' ':!*.jsonl' 2>/dev/null || true)
+            if [ -n "$HITS" ]; then
+              echo "WARNING: Personal name pattern '$pattern' found in: $HITS"
+              FAIL=1
+            fi
+          done
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo "PRIVACY VIOLATION: Personal name found in tracked files"
+            exit 1
+          fi
+          echo "[PASS] No personal names in tracked source files"

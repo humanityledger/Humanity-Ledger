@@ -37,6 +37,15 @@ test/vk_hash_mismatch.test.ts @humanityledger
 test/circuits/streams_rate_bound.test.ts @humanityledger
 test/property_fuzz.test.ts @humanityledger
 circuits/CONSTRAINT_COMPLETENESS.md @humanityledger
+# Advanced adversarial hardening suite (added Nov 2026)
+test/key_exfiltration.adversarial.test.ts @humanityledger
+test/circuit_invariants.adversarial.test.ts @humanityledger
+test/crypto_integrity.adversarial.test.ts @humanityledger
+test/api_authorization.adversarial.test.ts @humanityledger
+test/supply_chain_attack.test.ts @humanityledger
+test/replay_and_doublespend.test.ts @humanityledger
+test/sidechannel_timing.test.ts @humanityledger
+test/social_engineering.test.ts @humanityledger
 
 # Database schema — every migration needs review
 prisma/schema.prisma @humanityledger
