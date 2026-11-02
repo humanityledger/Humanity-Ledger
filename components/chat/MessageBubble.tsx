@@ -526,35 +526,78 @@ StickerBubble.displayName = 'StickerBubble';
 
 // ─── Quick reactions ─────────────────────────────────────────────────────────
 const TAPBACKS = ['❤️', '👍', '👎', '😂', '😮', '🙏'];
+const EXTENDED_EMOJIS = ['🔥', '🎉', '💯', '⭐', '🤯', '😭', '🤔', '🫡', '💪', '👀', '🙌', '🤝', '😍', '🥹', '😎', '🫶'];
 
 const TapbackPicker = React.memo(({ isMe, onReact, onClose }: {
   isMe: boolean; onReact: (e: string) => void; onClose: () => void;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: 6 }}
-    transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-    role="menu"
-    aria-label="React to this message"
-    className="absolute z-50 flex items-center gap-0.5 p-1.5 bg-white rounded-full border border-[#e6e8ec] shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)]"
-    style={{ bottom: 'calc(100% + 10px)', ...(isMe ? { right: 0 } : { left: 0 }) }}
-    onClick={e => e.stopPropagation()}
-  >
-    {TAPBACKS.map(t => (
-      <button
-        type="button"
-        role="menuitem"
-        key={t}
-        aria-label={`React with ${t}`}
-        onClick={() => { onReact(t); onClose(); }}
-        className="w-10 h-10 flex items-center justify-center text-[22px] rounded-full hover:bg-[#f2f4f7] hover:scale-110 active:scale-95 transition-transform duration-150"
-      >
-        {t}
-      </button>
-    ))}
-  </motion.div>
-));
+}) => {
+  const [showMore, setShowMore] = React.useState(false);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10, scale: 0.92 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 6, scale: 0.9 }}
+      transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+      role="menu"
+      aria-label="React to this message"
+      className="absolute z-50 flex flex-col items-center gap-1"
+      style={{ bottom: 'calc(100% + 10px)', ...(isMe ? { right: 0 } : { left: 0 }) }}
+      onClick={e => e.stopPropagation()}
+    >
+      {/* Extended emoji grid */}
+      <AnimatePresence>
+        {showMore && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            className="grid grid-cols-4 gap-1 p-2 bg-white rounded-2xl border border-[#e6e8ec] shadow-xl mb-1"
+          >
+            {EXTENDED_EMOJIS.map(t => (
+              <button
+                type="button"
+                role="menuitem"
+                key={t}
+                aria-label={`React with ${t}`}
+                onClick={() => { onReact(t); onClose(); setShowMore(false); }}
+                className="w-10 h-10 flex items-center justify-center text-[22px] rounded-xl hover:bg-[#f2f4f7] hover:scale-110 active:scale-95 transition-transform duration-150"
+              >
+                {t}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Primary tapback bar */}
+      <div className="flex items-center gap-0.5 p-1.5 bg-white rounded-full border border-[#e6e8ec] shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)]">
+        {TAPBACKS.map(t => (
+          <button
+            type="button"
+            role="menuitem"
+            key={t}
+            aria-label={`React with ${t}`}
+            onClick={() => { onReact(t); onClose(); }}
+            className="w-10 h-10 flex items-center justify-center text-[22px] rounded-full hover:bg-[#f2f4f7] hover:scale-110 active:scale-95 transition-transform duration-150"
+          >
+            {t}
+          </button>
+        ))}
+        {/* More button */}
+        <button
+          type="button"
+          role="menuitem"
+          aria-label="More reactions"
+          onClick={() => setShowMore(v => !v)}
+          className={`w-10 h-10 flex items-center justify-center text-[18px] rounded-full transition-all duration-150 ${showMore ? 'bg-[#f2f4f7] rotate-45' : 'hover:bg-[#f2f4f7]'}`}
+        >
+          ➕
+        </button>
+      </div>
+    </motion.div>
+  );
+});
 TapbackPicker.displayName = 'TapbackPicker';
 
 // ─── Message ─────────────────────────────────────────────────────────────────
@@ -730,9 +773,40 @@ export const MessageBubble = React.memo(({
 
   const density = typeof window !== 'undefined' ? ((window as any).__ledger_bubble_style || bubbleStyle || 'default') : (bubbleStyle || 'default');
   const padding = density === 'compact' ? 'px-3 py-1.5' : density === 'wide' ? 'px-4 py-3' : 'px-3.5 py-2';
-  const textBubble = isMe
-    ? `msg-bubble-sent bg-[#15171c] text-white rounded-[20px] rounded-br-[6px]`
-    : `msg-bubble-recv bg-white text-[#15171c] border border-[#e6e8ec] rounded-[20px] rounded-bl-[6px]`;
+
+  // ── Bubble style variants ────────────────────────────────────────────────
+  const textBubble = (() => {
+    switch (density) {
+      case 'glass':
+        return isMe
+          ? 'msg-bubble-sent backdrop-blur-md bg-black/70 text-white rounded-[20px] rounded-br-[6px] border border-white/10 shadow-lg'
+          : 'msg-bubble-recv backdrop-blur-md bg-white/80 text-[#15171c] border border-white/60 rounded-[20px] rounded-bl-[6px] shadow';
+      case 'gradient':
+        return isMe
+          ? 'msg-bubble-sent bg-gradient-to-br from-[#1d1f24] via-[#15171c] to-[#2d2f36] text-white rounded-[20px] rounded-br-[6px] shadow-md'
+          : 'msg-bubble-recv bg-white text-[#15171c] border border-[#e6e8ec] rounded-[20px] rounded-bl-[6px]';
+      case 'rounded':
+        return isMe
+          ? 'msg-bubble-sent bg-[#15171c] text-white rounded-[24px]'
+          : 'msg-bubble-recv bg-white text-[#15171c] border border-[#e6e8ec] rounded-[24px]';
+      case 'minimal':
+        return isMe
+          ? 'msg-bubble-sent bg-transparent text-[#15171c] border-b border-[#15171c]/20 rounded-none pb-1'
+          : 'msg-bubble-recv bg-transparent text-[#15171c] border-b border-[#e6e8ec] rounded-none pb-1';
+      case 'brutalist':
+        return isMe
+          ? 'msg-bubble-sent bg-[#15171c] text-white rounded-none border-2 border-[#15171c] shadow-[3px_3px_0px_#000]'
+          : 'msg-bubble-recv bg-white text-[#15171c] rounded-none border-2 border-[#15171c] shadow-[3px_3px_0px_#e4e7ec]';
+      case 'cyberpunk':
+        return isMe
+          ? 'msg-bubble-sent bg-[#0a0a0a] text-[#39ff14] rounded-[4px] border border-[#39ff14]/60 shadow-[0_0_8px_rgba(57,255,20,0.25)]'
+          : 'msg-bubble-recv bg-[#111] text-[#00d4ff] rounded-[4px] border border-[#00d4ff]/50 shadow-[0_0_8px_rgba(0,212,255,0.2)]';
+      default:
+        return isMe
+          ? 'msg-bubble-sent bg-[#15171c] text-white rounded-[20px] rounded-br-[6px]'
+          : 'msg-bubble-recv bg-white text-[#15171c] border border-[#e6e8ec] rounded-[20px] rounded-bl-[6px]';
+    }
+  })();
 
   const readReceipts = typeof window === 'undefined' || (window as any).__ledger_read_receipts !== false;
 
@@ -779,9 +853,15 @@ export const MessageBubble = React.memo(({
 
       <motion.div
         id={`msg-${msg.id}`}
-        initial={{ opacity: 0, y: isMe ? 8 : -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={SPRING}
+        initial={isMe
+          ? { opacity: 0, scale: 0.88, y: 10 }
+          : { opacity: 0, y: -6 }
+        }
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={isMe
+          ? { type: 'spring', stiffness: 500, damping: 30, mass: 0.8 }
+          : SPRING
+        }
         className={`flex flex-col relative w-full ${isMe ? 'items-end' : 'items-start'}`}
         style={{ marginBottom: 2 }}
       >

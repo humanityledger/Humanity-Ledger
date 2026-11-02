@@ -1556,9 +1556,13 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <div className="px-6 pb-6">
                   <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">Bubble style</h3>
                   {[
-                    { id: 'default', label: 'Default', desc: 'Rounded corners, standard padding' },
-                    { id: 'compact', label: 'Compact', desc: 'Smaller bubbles, denser layout' },
-                    { id: 'wide', label: 'Wide', desc: 'Full-width bubbles' },
+                    { id: 'default',   label: 'Default',   desc: 'Rounded corners, comfortable padding' },
+                    { id: 'glass',     label: 'Glass',     desc: 'Frosted glass with blur effect' },
+                    { id: 'gradient',  label: 'Gradient',  desc: 'Smooth color gradient on sent bubbles' },
+                    { id: 'rounded',   label: 'Pill',      desc: 'Fully rounded pill-shaped bubbles' },
+                    { id: 'minimal',   label: 'Minimal',   desc: 'Clean lines, no heavy backgrounds' },
+                    { id: 'brutalist', label: 'Brutalist', desc: 'Bold borders, raw typography' },
+                    { id: 'cyberpunk', label: 'Cyberpunk', desc: 'Neon accents, angular corners' },
                   ].map(style => (
                     <button
                       type="button"

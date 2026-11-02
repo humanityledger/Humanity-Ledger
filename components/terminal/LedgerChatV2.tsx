@@ -62,6 +62,10 @@ import { BurnTimerSheet } from '@/components/chat/BurnTimerSheet';
 import { NativeCryptoSendModal } from '@/components/chat/NativeCryptoSendModal';
 import { SendTipModal } from '@/components/chat/SendTipModal';
 import { ScheduleMessageSheet } from '@/components/chat/ScheduleMessageSheet';
+import SwipeableConversationRow from '@/components/chat/SwipeableConversationRow';
+import { TypingIndicator } from '@/components/chat/TypingIndicator';
+import { ThemePickerSheet, THEME_PALETTES, applyThemePalette, type ThemePalette } from '@/components/chat/ThemePickerSheet';
+import { InChatSearch } from '@/components/chat/InChatSearch';
 import { ZkMoneyModal } from '@/components/chat/ZkMoneyModal';
 import { ZkWalletPanel } from '@/components/zk/ZkWalletPanel';
 import { ZkNotificationBell } from '@/components/zk/ZkNotificationBell';
@@ -776,6 +780,30 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // ─── Hito 4: Search, Forward, GIF, Scheduled ──────────────────────────────
   const [searchQuery, setSearchQuery] = useState(''); // in-chat search
   const [typingPeers, setTypingPeers] = useState<Set<string>>(new Set()); // typing indicators
+
+  // ─── UI Maturity: Theme picker, pin, mute ─────────────────────────────────
+  const [showThemePicker, setShowThemePicker] = useState(false);
+  const [chatThemeId, setChatThemeId] = React.useRef<string>('default');
+  const [pinnedPeers, setPinnedPeers] = useState<Set<string>>(new Set());
+  const [mutedPeers, setMutedPeers] = useState<Set<string>>(new Set());
+
+  const togglePin = React.useCallback((peer: string) => {
+    setPinnedPeers(prev => {
+      const next = new Set(prev);
+      const key = peer.toLowerCase();
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const toggleMute = React.useCallback((peer: string) => {
+    setMutedPeers(prev => {
+      const next = new Set(prev);
+      const key = peer.toLowerCase();
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
   const lastTypingTimeRef = useRef<number>(0);
   const [isLocked, setIsLocked] = useState(false); // Inactivity lock
   const [showSearch, setShowSearch] = useState(false); // search bar toggle
@@ -5234,6 +5262,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               <button onClick={() => setShowCreateGroup(true)} className="w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="New group" aria-label="New group">
                 <Users size={18} />
               </button>
+              <button onClick={() => setShowThemePicker(true)} className="w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Change theme" aria-label="Change theme">
+                <span className="text-[16px] leading-none select-none">🎨</span>
+              </button>
               <button onClick={() => setShowFullSettings(true)} className="w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Settings" aria-label="Settings">
                 <Settings size={18} />
               </button>
@@ -5327,80 +5358,94 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 </div>
               ) : (
             conversations
-              .filter(conv => conv.peerAddress?.toLowerCase() !== address?.toLowerCase()) // never show self-conversations
-              .filter(conv => showArchived ? archivedPeers.has(conv.peerAddress.toLowerCase()) : !archivedPeers.has(conv.peerAddress.toLowerCase())).map((conv, i) => {
+              .filter(conv => conv.peerAddress?.toLowerCase() !== address?.toLowerCase())
+              .filter(conv => showArchived ? archivedPeers.has(conv.peerAddress.toLowerCase()) : !archivedPeers.has(conv.peerAddress.toLowerCase()))
+              .sort((a, b) => {
+                const aPin = pinnedPeers.has(a.peerAddress.toLowerCase()) ? 1 : 0;
+                const bPin = pinnedPeers.has(b.peerAddress.toLowerCase()) ? 1 : 0;
+                return bPin - aPin;
+              })
+              .map((conv, i) => {
               const isActive = activePeer?.toLowerCase() === conv.peerAddress.toLowerCase();
               const contactName = resolveContactName(effectiveAddress, conv.peerAddress);
               const displayLabel = contactName || shortAddr(conv.peerAddress);
+              const isPinned = pinnedPeers.has(conv.peerAddress.toLowerCase());
+              const isMuted = mutedPeers.has(conv.peerAddress.toLowerCase());
               return (
-                <div key={i} className="relative w-full overflow-hidden border-b border-black/[0.04]">
-                  <div className="absolute inset-y-0 right-0 flex items-center justify-center w-20 bg-[#475061] text-white text-[12px] font-medium cursor-pointer" onClick={() => toggleArchive(conv.peerAddress)}>
-                    <div className="flex flex-col items-center gap-1">
-                      {archivedPeers.has(conv.peerAddress.toLowerCase()) ? <ArchiveRestore size={17} strokeWidth={1.9} /> : <Archive size={17} strokeWidth={1.9} />}
-                      {archivedPeers.has(conv.peerAddress.toLowerCase()) ? 'Unarchive' : 'Archive'}
-                    </div>
-                  </div>
-                  <motion.div
-                    drag="x"
-                    dragConstraints={{ left: -80, right: 0 }}
-                    dragElastic={0.08}
-                    whileTap={{ cursor: "grabbing" }}
-                    onDragEnd={(e, info) => { if (info.offset.x < -50) { toggleArchive(conv.peerAddress); } }}
-                    className="relative z-10 w-full bg-white"
+                <SwipeableConversationRow
+                  key={conv.peerAddress}
+                  peerAddress={conv.peerAddress}
+                  displayName={displayLabel}
+                  isPinned={isPinned}
+                  isMuted={isMuted}
+                  onArchive={() => toggleArchive(conv.peerAddress)}
+                  onPin={() => togglePin(conv.peerAddress)}
+                  onMute={() => toggleMute(conv.peerAddress)}
+                  onMarkAsRead={() => {/* mark-as-read handled by message stream */}}
+                  onDelete={() => {
+                    toggleArchive(conv.peerAddress);
+                  }}
+                >
+                  <button
+                    onContextMenu={(e) => { e.preventDefault(); setSidebarMenu({ peer: conv.peerAddress, x: e.clientX, y: e.clientY }); }}
+                    onClick={() => {
+                      if (typeof window !== 'undefined' && localStorage.getItem('ledger_locked_' + conv.peerAddress.toLowerCase())) {
+                        setLockedChatPeer(conv.peerAddress);
+                        return;
+                      }
+                      setActiveCommunity(null); setActivePeer(conv.peerAddress); setShowList(false);
+                    }}
+                    className={`w-full text-left px-4 py-3 transition-colors ${isActive ? 'bg-[#f2f4f7]' : 'hover:bg-[#f7f8fa]'}`}
                   >
-                    <button
-                      onContextMenu={(e) => { e.preventDefault(); setSidebarMenu({ peer: conv.peerAddress, x: e.clientX, y: e.clientY }); }}
-                      onClick={() => {
-                        // A locked chat asks for the account PIN, checked by the server.
-                        if (typeof window !== 'undefined' && localStorage.getItem('ledger_locked_' + conv.peerAddress.toLowerCase())) {
-                          setLockedChatPeer(conv.peerAddress);
-                          return;
-                        }
-                        setActiveCommunity(null); setActivePeer(conv.peerAddress); setShowList(false); }}
-                      className={`w-full text-left px-4 py-3 transition-colors ${isActive ? 'bg-[#f2f4f7]' : 'hover:bg-[#f7f8fa]'}`}
-                    >
-                      <div className="flex items-center gap-3 w-full">
-                        <div className="relative shrink-0">
-                          <Avatar address={conv.peerAddress} size={48} />
-                          {peerStatus.status === 'online' && activePeer?.toLowerCase() === conv.peerAddress.toLowerCase() && (
-                            <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#1f9d55] border-2 border-white" aria-label="Online" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1 mb-0.5">
-                            <p className="text-[15px] font-semibold text-[#15171c] truncate">{displayLabel}</p>
-                            {conv.lastMessage && (
-                              <span className={`text-[12px] shrink-0 tabular-nums ${conv.unreadCount ? 'text-[#1f9d55] font-medium' : 'text-[#a3a9b4]'}`}>
-                                {(() => {
-                                  const t = (conv as any).lastMessageTime;
-                                  if (!t) return '';
-                                  const d = new Date(t);
-                                  const now = new Date();
-                                  const isToday = d.toDateString() === now.toDateString();
-                                  return isToday
-                                    ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                    : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-                                })()}
-                              </span>
-                            )}
+                    <div className="flex items-center gap-3 w-full">
+                      <div className="relative shrink-0">
+                        <Avatar address={conv.peerAddress} size={48} />
+                        {peerStatus.status === 'online' && activePeer?.toLowerCase() === conv.peerAddress.toLowerCase() && (
+                          <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#1f9d55] border-2 border-white" aria-label="Online" />
+                        )}
+                        {isPinned && (
+                          <span className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-[#f59e0b] border-2 border-white flex items-center justify-center" aria-label="Pinned">
+                            <span className="text-[6px] text-white font-black">📌</span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <p className={`text-[15px] font-semibold truncate ${isMuted ? 'text-[#a3a9b4]' : 'text-[#15171c]'}`}>{displayLabel}</p>
+                            {isMuted && <span className="text-[10px] text-[#a3a9b4]">🔕</span>}
                           </div>
                           {conv.lastMessage && (
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-[14px] text-[#727a88] truncate">{formatMessagePreview(conv.lastMessage)}</p>
-                              {conv.unreadCount && conv.unreadCount > 0 ? (
-                                <div className="min-w-[20px] h-5 bg-[#1f9d55] rounded-full flex items-center justify-center px-1.5 shrink-0" aria-label={`${conv.unreadCount} unread`}>
-                                  <span className="text-[11px] font-semibold text-white tabular-nums">
-                                    {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
-                                  </span>
-                                </div>
-                              ) : null}
-                            </div>
+                            <span className={`text-[12px] shrink-0 tabular-nums ${conv.unreadCount && !isMuted ? 'text-[#1f9d55] font-medium' : 'text-[#a3a9b4]'}`}>
+                              {(() => {
+                                const t = (conv as any).lastMessageTime;
+                                if (!t) return '';
+                                const d = new Date(t);
+                                const now = new Date();
+                                const isToday = d.toDateString() === now.toDateString();
+                                return isToday
+                                  ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                  : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                              })()}
+                            </span>
                           )}
                         </div>
+                        {conv.lastMessage && (
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[14px] text-[#727a88] truncate">{formatMessagePreview(conv.lastMessage)}</p>
+                            {conv.unreadCount && conv.unreadCount > 0 && !isMuted ? (
+                              <div className="min-w-[20px] h-5 bg-[#1f9d55] rounded-full flex items-center justify-center px-1.5 shrink-0" aria-label={`${conv.unreadCount} unread`}>
+                                <span className="text-[11px] font-semibold text-white tabular-nums">
+                                  {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                                </span>
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
                       </div>
-                    </button>
-                  </motion.div>
-                </div>
+                    </div>
+                  </button>
+                </SwipeableConversationRow>
               );
             })
           )}
@@ -5580,45 +5625,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </div>
             </div>
 
-            {/* Hito 4: Search bar */}
-            {showSearch && (() => {
-              const convId = `dm-${activePeer!.toLowerCase()}`;
+            {/* In-chat search — powered by InChatSearch component */}
+            {activePeer && (() => {
+              const convId = `dm-${activePeer.toLowerCase()}`;
               const allMsgs = messages.filter(m => m.conversationId === convId);
-              const matches = searchQuery.trim() ? allMsgs.filter(m => typeof m.content === 'string' && m.content.toLowerCase().includes(searchQuery.toLowerCase())) : [];
-              const currentMatch = matches[searchIndex];
-              const handleNavSearch = (dir: 1 | -1) => {
-                setSearchIndex(i => {
-                  const next = (i + dir + matches.length) % matches.length;
-                  const el = document.getElementById(`msg-${matches[next]?.id}`);
-                  el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  return next;
-                });
-              };
               return (
-                <div className="bg-white border-b border-[#e4e7ec] px-3 h-12 flex items-center gap-2 z-20">
-                  <Search size={16} strokeWidth={1.9} className="text-[#a3a9b4] shrink-0" aria-hidden="true" />
-                  <input
-                    autoFocus
-                    value={searchQuery}
-                    onChange={e => { setSearchQuery(e.target.value); setSearchIndex(0); }}
-                    onKeyDown={e => { if (e.key === 'Escape') { setShowSearch(false); setSearchQuery(''); } if (e.key === 'Enter' && matches.length > 1) handleNavSearch(e.shiftKey ? -1 : 1); }}
-                    placeholder="Search in this chat"
-                    aria-label="Search in this chat"
-                    className="flex-1 bg-transparent text-[15px] text-[#15171c] placeholder:text-[#a3a9b4] outline-none"
-                  />
-                  {searchQuery.trim() && (
-                    <span className="text-[13px] text-[#727a88] tabular-nums shrink-0">{matches.length ? `${searchIndex + 1} of ${matches.length}` : 'No results'}</span>
-                  )}
-                  {matches.length > 1 && (
-                    <>
-                      <button type="button" onClick={() => handleNavSearch(-1)} className="w-8 h-8 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#475061]" aria-label="Previous result"><ChevronUp size={18} strokeWidth={1.9} /></button>
-                      <button type="button" onClick={() => handleNavSearch(1)} className="w-8 h-8 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#475061]" aria-label="Next result"><ChevronDown size={18} strokeWidth={1.9} /></button>
-                    </>
-                  )}
-                  <button type="button" onClick={() => { setShowSearch(false); setSearchQuery(''); }} className="w-8 h-8 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#475061]" aria-label="Close search">
-                    <X size={17} strokeWidth={1.9} />
-                  </button>
-                </div>
+                <InChatSearch
+                  open={showSearch}
+                  messages={allMsgs.map(m => ({ id: m.id, content: typeof m.content === 'string' ? m.content : '' }))}
+                  onClose={() => { setShowSearch(false); setSearchQuery(''); }}
+                  onNavigate={(msgId) => {
+                    const el = document.getElementById(`msg-${msgId}`);
+                    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                />
               );
             })()}
 
@@ -5765,13 +5785,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 );
               })()}
               {(peerStatus.isTyping || (activePeer && typingPeers.has(activePeer.toLowerCase()))) && (
-                  <div className="flex self-start items-start mt-2 ml-4">
-                      <div className="px-4 py-3 bg-white rounded-[18px] rounded-bl-[6px] border border-[#e4e7ec] flex items-center gap-1.5" role="status" aria-label={`${getDisplayName(activePeer!)} is typing`}>
-                        <div className="w-1.5 h-1.5 bg-[#a3a9b4] rounded-full" style={{ animation: 'typingBounce 1.2s ease-in-out infinite', animationDelay: '0ms', willChange: 'transform' }} />
-                        <div className="w-1.5 h-1.5 bg-[#a3a9b4] rounded-full" style={{ animation: 'typingBounce 1.2s ease-in-out infinite', animationDelay: '200ms', willChange: 'transform' }} />
-                        <div className="w-1.5 h-1.5 bg-[#a3a9b4] rounded-full" style={{ animation: 'typingBounce 1.2s ease-in-out infinite', animationDelay: '400ms', willChange: 'transform' }} />
-                      </div>
-                  </div>
+                <AnimatePresence>
+                  <TypingIndicator
+                    names={activePeer ? [getDisplayName(activePeer)] : []}
+                    accentColor={accentColor}
+                  />
+                </AnimatePresence>
               )}
               {sending && (
                 <div className="flex self-end items-center gap-2 my-2 mr-4 py-1 px-3 bg-black/[0.04] rounded-full text-[12px] font-medium text-[#727a88]" role="status">
@@ -7138,6 +7157,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         />,
         document.body
       )}
+
+      {/* ── Theme Picker Sheet ────────────────────────────────────────────── */}
+      <ThemePickerSheet
+        open={showThemePicker}
+        currentThemeId={chatThemeId.current}
+        onSelect={(palette: ThemePalette) => {
+          chatThemeId.current = palette.id;
+          applyThemePalette(palette);
+          setShowThemePicker(false);
+        }}
+        onClose={() => setShowThemePicker(false)}
+      />
 
       </div>{/* end h-full flex-col layout wrapper */}
     </TuringShieldGate>
