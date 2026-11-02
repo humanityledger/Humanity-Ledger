@@ -46,7 +46,7 @@ export default function AccessibilityDeclaration() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-black">3. Contacto y Soporte</h2>
             <p>
-              Si encuentra alguna barrera de accesibilidad o desea reportar una incidencia técnica, por favor comuníquese a través de <a href="mailto:accessibility@humanityledger.com" className="text-emerald-700 underline font-medium">accessibility@humanityledger.com</a>.
+              Si encuentra alguna barrera de accesibilidad o desea reportar una incidencia técnica, por favor comuníquese a través de <a href="mailto:humanityledger@icloud.com" className="text-emerald-700 underline font-medium">humanityledger@icloud.com</a>.
             </p>
           </section>
 

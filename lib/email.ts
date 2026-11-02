@@ -291,7 +291,7 @@ export async function sendEnclaveResetEmail(email: string, otp: string): Promise
         from:    getSender('Humanity Ledger Security'),
         to:      email,
         subject: '🔐 Your Enclave PIN Reset Code',
-        replyTo: 'security@humanidfi.com',
+        replyTo: 'humanityledger@icloud.com',
         html: `
           <!DOCTYPE html>
           <html lang="en">

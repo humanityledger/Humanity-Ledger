@@ -27,7 +27,7 @@ export default function GovernancePage() {
           ],
           bullets: [
             'Community Forum — Post suggestions, report issues, and discuss the future of the platform publicly in the Ledger Chat community forum.',
-            'Bug Reports — Security vulnerabilities and bugs can be reported confidentially to security@humanityledger.com. We review and prioritize every report.',
+            'Bug Reports — Security vulnerabilities and bugs can be reported confidentially to humanityledger@icloud.com. We review and prioritize every report.',
             'Feature Requests — Open a public discussion in the forum. Features with strong community support move up the roadmap.',
             'Direct Feedback — For sensitive matters, contact the team at humanityledger@icloud.com.',
           ],

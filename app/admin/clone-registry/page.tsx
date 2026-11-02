@@ -81,7 +81,7 @@ export default async function CloneRegistryPage({
           Clone Detection Registry
         </h1>
         <p className="text-[#8E8E93] text-[15px] mt-2">
-          Humanity Ledger Security · security@humanidfi.com
+          Humanity Ledger Security · humanityledger@icloud.com
         </p>
       </header>
 
@@ -215,7 +215,7 @@ export default async function CloneRegistryPage({
                               DMCA →
                             </a>
                             <a
-                              href={`mailto:legal@humanidfi.com?subject=Clone%20Report%3A%20${encodeURIComponent(clone.origin)}&body=Unauthorized%20deployment%20detected%20at%3A%20${encodeURIComponent(clone.origin)}%0AIP%3A%20${clone.ip}%0AFirst%20seen%3A%20${clone.seenAt}%0AMonetization%20Active%3A%20${isMonetized}`}
+                              href={`mailto:humanityledger@icloud.com?subject=Clone%20Report%3A%20${encodeURIComponent(clone.origin)}&body=Unauthorized%20deployment%20detected%20at%3A%20${encodeURIComponent(clone.origin)}%0AIP%3A%20${clone.ip}%0AFirst%20seen%3A%20${clone.seenAt}%0AMonetization%20Active%3A%20${isMonetized}`}
                               className="px-3 py-1.5 bg-[#F2F2F7] text-[#1C1C1E] border border-black/10 rounded-lg text-[12px] font-semibold hover:bg-[#E5E5EA]"
                             >
                               Report
@@ -259,7 +259,7 @@ export default async function CloneRegistryPage({
                 <strong className="text-[#1C1C1E]">Domain Registrar:</strong> If the clone has a custom domain, file an abuse report with their registrar (ICANN Lookup).
               </li>
               <li>
-                <strong className="text-[#1C1C1E]">Legal:</strong> Email <code className="bg-[#F2F2F7] text-[#1C1C1E] px-1.5 py-0.5 rounded">legal@humanidfi.com</code> with the clone details for formal legal action.
+                <strong className="text-[#1C1C1E]">Legal:</strong> Email <code className="bg-[#F2F2F7] text-[#1C1C1E] px-1.5 py-0.5 rounded">humanityledger@icloud.com</code> with the clone details for formal legal action.
               </li>
             </ol>
           </section>

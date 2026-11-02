@@ -42,7 +42,7 @@ The monorepo enforces six cryptographic invariants validated by automated contin
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ 3. Edge Enforced Identity Header Stripping                                  │
 │    All client supplied identity headers (x-wallet-address, x-user-id) are  │
-│    unconditionally stripped at Edge middleware before verified re-injection.│
+│    unconditionally stripped at Edge middleware before verified reinjection.│
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ 4. Constant Time Verification Across Sensitive Operations                   │
 │    Enclave PINs, HMAC signatures, and webhook tokens are verified via       │
@@ -90,7 +90,7 @@ The threat model evaluates the protocol against sophisticated adversaries, inclu
                                         ▼
                   ┌──────────────────────────────────────────┐
                   │          EDGE MIDDLEWARE (Vercel Edge)   │
-                  │  ✓ Strips client-injected identity hdrs  │
+                  │  ✓ Strips client injected identity hdrs  │
                   │  ✓ Enforces Strict CSP with nonce        │
                   │  ✓ Verifies SIWE JWT (O(1), timeSafe)    │
                   │  ✓ Blocks retired legacy routes (410)    │
@@ -101,14 +101,14 @@ The threat model evaluates the protocol against sophisticated adversaries, inclu
     ┌──────────────────────────────┐   ┌──────────────────────────────┐
     │    NEXT.JS API BACKEND       │   │   CLIENT BROWSER (PXE)       │
     │  ✓ Authenticated route logic │   │  ✓ Barretenberg WASM Prover  │
-    │  ✓ Rate-limit state (Redis)  │   │  ✓ Secure Enclave PIN Store  │
+    │  ✓ Rate limit state (Redis)  │   │  ✓ Secure Enclave PIN Store  │
     │  ✓ Prisma ORM indexing       │   │  ✓ XMTP MLS Decryption Keys  │
     │  ✗ NO private keys held      │   │  ✗ Keys NEVER leave device   │
     └──────────────┬───────────────┘   └──────────────┬───────────────┘
                    ▼                                    ▼
     ┌──────────────────────────────┐   ┌──────────────────────────────┐
     │  POSTGRESQL / REDIS          │   │  AZTEC ROLLUP & ETHEREUM L1  │
-    │  ✓ Public ledger indices     │   │  ✓ On-chain proof settlement  │
+    │  ✓ Public ledger indices     │   │  ✓ On chain proof settlement │
     │  ✓ Sanitised audit trails    │   │  ✓ Smart contract invariants  │
     │  ✗ NO plaintext DM content   │   │  ✓ VK timelock enforcement    │
     └──────────────────────────────┘   └──────────────────────────────┘
@@ -131,16 +131,16 @@ Production Noir circuits (`escrow`, `identity`, `streams`) maintain compiled Ver
 
 | Key State | Verification Action | System Behavior |
 |---|---|---|
-| `ACTIVE` | Local SHA-256 matches on-chain commitment | Proof synthesis permitted |
+| `ACTIVE` | Local SHA-256 matches on chain commitment | Proof synthesis permitted |
 | `DEPRECATED` | Hash matches but key is flagged for migration | Proof permitted with migration warning |
 | `RETIRED` | Key deactivated by protocol governance | Proof synthesis **unconditionally blocked** |
-| `HASH MISMATCH` | Local compiled hash differs from on-chain | Proof synthesis **unconditionally blocked** |
+| `HASH MISMATCH` | Local compiled hash differs from on chain | Proof synthesis **unconditionally blocked** |
 
-On-chain updates to verification key commitments are subject to a mandatory **14 day timelock delay**, preventing stealth key substitution attacks ([`docs/VK_MONITORING.md`](docs/VK_MONITORING.md)).
+On chain updates to verification key commitments are subject to a mandatory **14 day timelock delay**, preventing stealth key substitution attacks ([`docs/VK_MONITORING.md`](docs/VK_MONITORING.md)).
 
 ---
 
-## 6. Explicit Cryptographic Non-Claims
+## 6. Explicit Cryptographic Non Claims
 
 The following operational constraints are explicitly documented:
 

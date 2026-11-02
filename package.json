@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "license": "SEE LICENSE IN LICENSE",
-  "author": "Humanity Ledger <core@humanityledger.com> (https://github.com/humanityledger)",
+  "author": "Humanity Ledger <humanityledger@icloud.com> (https://github.com/humanityledger)",
   "scripts": {
     "dev": "next dev",
     "score": "python docs/antigravity/score.py docs/antigravity/backlog.csv",

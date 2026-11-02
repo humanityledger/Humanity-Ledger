@@ -165,10 +165,10 @@ The complete test battery can be reproduced on any standard developer workstatio
 # 1. Clone monorepo
 git clone https://github.com/humanityledger/Humanity-Ledger.git && cd Humanity-Ledger
 
-# 2. Verify non-simulated proof requirements and Noir circuit constraints
+# 2. Verify non simulated proof requirements and Noir circuit constraints
 npx vitest run test/aztec_e2e_no_simulation.test.ts test/aztec_vk_integrity.test.ts test/circuits/
 
-# 3. Verify non-custodial key isolation and MLS post-compromise security
+# 3. Verify non custodial key isolation and MLS post compromise security
 npx vitest run test/key_custody.test.ts test/mls_post_compromise.test.ts
 
 # 4. Verify Ephemeral Application Framework sandbox boundary isolation
@@ -183,7 +183,7 @@ npx tsx scripts/verify-l1-bytecode.ts
 # 7. Verify normative consistency across status and traceability matrices
 npm run check:traceability
 
-# 8. Execute high-capacity property fuzzing (60,000 iterations)
+# 8. Execute high capacity property fuzzing (60,000 iterations)
 npx vitest run test/property_fuzz.test.ts
 
 # 9. Execute full unit and integration battery (1,076 tests)

@@ -15,8 +15,8 @@ This dossier is prepared for the Aztec Foundation Technical and Ecosystem team t
 
 ### Core Value Proposition
 - **Sovereign Client Execution:** User private balances, witness generation, and transaction notes never touch any backend server or RPC relay unshielded. Proving is executed inside the client's local PXE (`@aztec-labs/aztec.js`).
-- **Cryptographic Non-Simulated Proving:** We prohibit mocked cryptographic primitives. Continuous integration enforces a strict non-simulation test requirement (`test/aztec_e2e_no_simulation.test.ts`) banning synthetic random fields (`Fr.random()`) or dummy proof strings in production test paths.
-- **Auditable Hybrid Architecture:** Off-chain private state transitions via Aztec UltraHonk, combined with verifiable Layer 1 EVM dispute resolution and timelocked vaults (`HumanityTimeLockVault`, `LedgerDeadmanSwitch`).
+- **Cryptographic Non Simulated Proving:** We prohibit mocked cryptographic primitives. Continuous integration enforces a strict non simulation test requirement (`test/aztec_e2e_no_simulation.test.ts`) banning synthetic random fields (`Fr.random()`) or dummy proof strings in production test paths.
+- **Auditable Hybrid Architecture:** Off chain private state transitions via Aztec UltraHonk, combined with verifiable Layer 1 EVM dispute resolution and timelocked vaults (`HumanityTimeLockVault`, `LedgerDeadmanSwitch`).
 
 ---
 
@@ -70,7 +70,7 @@ The repository implements three specialized Noir circuits in `circuits/`, compil
      - Temporal boundary: $t \le t_{\mathrm{deadline}}$
      - Nullifier uniqueness: $\mathrm{nf} = \mathcal{H}(s_{\mathrm{sender}}, \sigma)$
      - Value bounding: $0 < a \le 10^{15}$ (overflow & negative value protection)
-     - Non-zero identity: $s_{\mathrm{sender}} \ne 0 \land \mathrm{pk}_{\mathrm{recipient}} \ne 0$
+     - Non zero identity: $s_{\mathrm{sender}} \ne 0 \land \mathrm{pk}_{\mathrm{recipient}} \ne 0$
 
 2. **Anonymous Identity & Compliance Circuit (`circuits/identity/src/main.nr`):**
    - **Invariants:**
@@ -85,17 +85,17 @@ The repository implements three specialized Noir circuits in `circuits/`, compil
      - Allocation ceiling: $(w + c) \le A_{\mathrm{total}}$
      - Unique nullifier per withdrawal state transition.
 
-### 2.2 Client-Side Verification Key (VK) Lifecycle Enforcer
-In accordance with Invariant P4 (Private State Integrity), `lib/aztec/verifier.ts` asserts that local circuit verification keys match on-chain registered hashes anchored under a 14-day timelock before client proof synthesis:
-- **`ACTIVE`:** Proof synthesis permitted if local canonical SHA-256 matches on-chain commitment.
+### 2.2 Client Side Verification Key (VK) Lifecycle Enforcer
+In accordance with Invariant P4 (Private State Integrity), `lib/aztec/verifier.ts` asserts that local circuit verification keys match on chain registered hashes anchored under a 14 day timelock before client proof synthesis:
+- **`ACTIVE`:** Proof synthesis permitted if local canonical SHA-256 matches on chain commitment.
 - **`DEPRECATED`:** Proving permitted with console deprecation warning and migration banner.
-- **`RETIRED` / `HASH MISMATCH`:** Client-side proof synthesis is unconditionally blocked.
+- **`RETIRED` / `HASH MISMATCH`:** Client side proof synthesis is unconditionally blocked.
 
 ### 2.3 Aztec PXE Testnet Pipeline
 Implemented in `scripts/aztec-pxe-e2e.ts`:
 - Derives ephemeral `EmbeddedWallet` Schnorr keys from OS CSPRNG (`crypto.randomBytes`).
 - Connects to Aztec Node (`node.aztec.network`).
-- Issues faucet minting, executes `transfer_to_private` (shielding), `transfer` (private-to-private), and `transfer_to_public` (unshielding).
+- Issues faucet minting, executes `transfer_to_private` (shielding), `transfer` (private to private), and `transfer_to_public` (unshielding).
 - Tested against Aztec Testnet contracts (`SponsoredFPCContract`, `TokenContract`).
 
 ---
@@ -109,30 +109,30 @@ The Aztec Foundation engineering team can independently verify all test batterie
 git clone https://github.com/humanityledger/Humanity-Ledger.git
 cd Humanity-Ledger
 
-# 2. Verify Non-Simulated Proving & Noir Circuit Invariants
+# 2. Verify Non Simulated Proving & Noir Circuit Invariants
 npx vitest run test/aztec_e2e_no_simulation.test.ts test/aztec_vk_integrity.test.ts test/circuits/
 
-# 3. Verify Key Custody & MLS Post-Compromise Security
+# 3. Verify Key Custody & MLS Post Compromise Security
 npx vitest run test/key_custody.test.ts test/mls_post_compromise.test.ts
 
 # 4. Verify L1 Smart Contract Invariants (Cancun Hardhat Runtime)
 npm run test:contracts
 
-# 5. Run L1 Anti-Backdoor Bytecode Verifier & Traceability CI Checker
+# 5. Run L1 Anti Backdoor Bytecode Verifier & Traceability CI Checker
 npx tsx scripts/verify-l1-bytecode.ts
 npm run check:traceability
 
-# 6. Run Full Property-Based Fuzzing (60,000 iterations)
+# 6. Run Full Property Based Fuzzing (60,000 iterations)
 npx vitest run test/property_fuzz.test.ts
 
 # 7. Run Full Unit & Security Suite (1,076 tests)
 npm run test:run
 ```
 
-### Verification Results Summary (Commit `931b1005`)
+### Verification Results Summary (Commit `378cb27e`)
 | Test Battery | Target Area | Result | Status |
 |---|---|---|---|
-| **Non-Simulated Proving** (`test/aztec_e2e_no_simulation.test.ts`) | Aztec PXE Pipeline | 3/3 passed | ✅ VERIFIED |
+| **Non Simulated Proving** (`test/aztec_e2e_no_simulation.test.ts`) | Aztec PXE Pipeline | 3/3 passed | ✅ VERIFIED |
 | **VK Lifecycle Integrity** (`test/aztec_vk_integrity.test.ts`) | SHA-256 VK registry | 8/8 passed | ✅ VERIFIED |
 | **Noir Escrow Circuit** (`test/circuits/escrow.test.ts`) | Temporal & value invariants | 8/8 passed | ✅ VERIFIED |
 | **Noir Identity Circuit** (`test/circuits/identity.test.ts`) | Compliance & Merkle proof | 7/7 passed | ✅ VERIFIED |
@@ -140,18 +140,18 @@ npm run test:run
 | **Key Custody** (`test/key_custody.test.ts`) | Zero server key knowledge | 5/5 passed | ✅ VERIFIED |
 | **MLS Security** (`test/mls_post_compromise.test.ts`) | RFC 9420 PCS & epoch ratchet | 6/6 passed | ✅ VERIFIED |
 | **Contract Invariants** (`test/contracts_invariants.test.ts`) | L1 Timelock & Registry | 5/5 passed | ✅ VERIFIED |
-| **High-Capacity Fuzzing** (`test/property_fuzz.test.ts`) | 60k iterations property fuzz | 6/6 suites passed | ✅ VERIFIED |
+| **High Capacity Fuzzing** (`test/property_fuzz.test.ts`) | 60k iterations property fuzz | 6/6 suites passed | ✅ VERIFIED |
 | **Full Vitest Suite** (`npm run test:run`) | Entire codebase unit/integration | **1,076 / 1,076 passed** (61 files) | ✅ VERIFIED |
 
 ---
 
-## 4. Transparent Boundaries & Explicit Non-Claims
+## 4. Transparent Boundaries & Explicit Non Claims
 
-We adhere to a policy of total technical honesty. In our documentation (`README.md`, `docs/PROTOCOL_SPEC.md`), we publish explicit **Non-Claims**:
+We adhere to a policy of total technical honesty. In our documentation (`README.md`, `docs/PROTOCOL_SPEC.md`), we publish explicit **Non Claims**:
 
-1. **No Quantum Immunity Claim for Classical Primitives:** While the protocol uses hybrid post-compromise ratchets and defense-in-depth isolation, we explicitly state that underlying elliptic curve cryptography (BN254 curve in Aztec UltraHonk, secp256k1 on Ethereum L1, Curve25519) remains vulnerable to Shor's algorithm on cryptanalytically relevant quantum computers (CRQC).
-2. **No Metadata Privacy Claim for Network Topology:** MLS guarantees message payload confidentiality and post-compromise security, but does not obscure network packet headers, IP transport timings, or graph communication frequency.
-3. **Testnet Stage 1 Status:** Humanity Ledger is currently deployed on Aztec Testnet and Polygon Amoy / Base testnets. It is NOT presented as mainnet production-ready until Aztec reaches mainnet stability and formal external audits are complete.
+1. **No Quantum Immunity Claim for Classical Primitives:** While the protocol uses hybrid post compromise ratchets and defense in depth isolation, we explicitly state that underlying elliptic curve cryptography (BN254 curve in Aztec UltraHonk, secp256k1 on Ethereum L1, Curve25519) remains vulnerable to Shor's algorithm on cryptanalytically relevant quantum computers (CRQC).
+2. **No Metadata Privacy Claim for Network Topology:** MLS guarantees message payload confidentiality and post compromise security, but does not obscure network packet headers, IP transport timings, or graph communication frequency.
+3. **Testnet Stage 1 Status:** Humanity Ledger is currently deployed on Aztec Testnet and Polygon Amoy / Base testnets. It is NOT presented as mainnet production ready until Aztec reaches mainnet stability and formal external audits are complete.
 
 ---
 

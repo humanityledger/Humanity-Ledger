@@ -65,7 +65,7 @@ export default function AdminLoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="admin@humanityledger.com"
+              placeholder="humanityledger@icloud.com"
               className="w-full px-4 py-2.5 rounded-xl border border-black/10 focus:border-black focus:outline-none text-sm transition-colors text-black"
             />
           </div>
