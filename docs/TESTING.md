@@ -1,258 +1,103 @@
-# End-to-End Testing Guide
+# Humanity Ledger — Protocol Testing Architecture & Invariant Verification Specification
 
-## Overview
-This guide covers testing all gasless functionality before production deployment.
-
----
-
-## Prerequisites
-
-- [ ] All contracts deployed to Base Sepolia
-- [ ] Railway configured with environment variables
-- [ ] Relayer wallet funded with 0.1 ETH
-- [ ] Test wallet with AUTH tokens
+**Document Reference:** HL-TEST-SPEC-2026.1  
+**Target Audience:** Core developers, external security auditors, protocol contributors  
+**Version:** 1.1  
+**Date:** 2 November 2026  
+**Canonical Commit:** `c8ecf97d`
 
 ---
 
-## Test Suite
+## 1. Testing Philosophy & Verification Model
 
-### Test 1: Gasless Zap (Happy Path)
+Humanity Ledger enforces an **invariant-driven verification model** across its monorepo packages.
+Every architectural claim, zero-knowledge circuit constraint, and smart contract permission boundary
+is mapped to automated test suites that run synchronously on every local commit and pull request.
 
-**Objective:** Verify user can zap AUTH to outcome shares without gas
+### Core Testing Pillars
+1. **Mathematical Invariants ($\mathcal{P}_1$–$\mathcal{P}_6$)**: Verified by deterministic unit and negative boundary tests.
+2. **Non-Simulated Proving (A1)**: CI tripwires fail immediately if synthetic mock proofs, random field elements (`Fr.random`), or fake nullifiers are detected in production test paths.
+3. **High-Capacity Property Fuzzing (T12)**: 60,000 iterations exploring edge cases across fund conservation, signature parsing, constant-time comparison, memory zeroization, and sandbox payload ceilings.
+4. **L1 Settlement Invariants (A4)**: Automated EVM Cancun execution proving absence of administrative drain routes, timelock bypasses, or identity hijacking.
+5. **Pre-Commit Enforcement**: The pre-commit hook executes the full 1,076-test Vitest battery (~22–25 seconds) before any commit can be created.
 
-**Steps:**
-1. Connect wallet to application
-2. Navigate to Zap interface
-3. Enter amount: `1 AUTH`
-4. Select outcome: `Yes`
-5. Click "Zap (Free - No Gas)"
-6. Sign message in wallet (no gas prompt)
-7. Wait for confirmation
+---
 
-**Expected Results:**
--  Signature prompt appears (no gas)
--  Transaction submitted by relayer
--  User receives outcome shares
--  Transaction appears on Basescan
--  Database updated with transaction
+## 2. Test Suite Topology & Directory Organization
 
-**Verification:**
-```bash
-# Check Basescan
-https://sepolia.basescan.org/tx/TX_HASH
-
-# Check Database
-psql $DATABASE_URL -c "SELECT * FROM \"ProposalVote\" WHERE \"transactionHash\" = 'TX_HASH';"
+```
+test/
+├── circuits/                       # Noir circuit negative-constraint test suites (11 tests)
+│   ├── escrow_constraints.test.ts  # Escrow amount ceilings, timeouts, and nullifier binding
+│   ├── streams_invariants.test.ts  # Monotonic accrual, deposit cap, and withdrawal bounds
+│   └── identity_merkle.test.ts     # Merkle path integrity and jurisdiction screening
+├── contracts_invariants.test.ts    # L1 Solidity invariant tests (43 Hardhat tests)
+├── key_custody.test.ts             # Server compromise simulation (zero private keys stored)
+├── mls_post_compromise.test.ts     # RFC 9420 TreeKEM PCS and forward secrecy verification
+├── eaf_isolation.adversarial.test.ts # EAF client sandbox breakout and payload bounds tests
+├── property_fuzz.test.ts           # 60,000-iteration randomized fuzzing harness
+├── aztec_e2e_no_simulation.test.ts # Zero-simulation CI guard assertions
+├── fortification.test.ts           # 300-item system defense checklist tests
+└── unit/                           # Granular unit test suites (auth, crypto, session, store)
 ```
 
 ---
 
-### Test 2: Gasless Vote
+## 3. Test Execution Reference
 
-**Objective:** Verify user can vote on proposal without gas
+### Full Test Battery (1,076 Vitest Tests)
+```bash
+npm run test:run
+```
 
-**Steps:**
-1. Navigate to active proposal
-2. Click "Vote Yes" or "Vote No"
-3. Sign message in wallet
-4. Wait for confirmation
+### L1 Smart Contract Invariant Battery (43 Hardhat Tests)
+```bash
+npm run test:contracts
+```
 
-**Expected Results:**
--  Vote recorded on-chain
--  Vote count updated in UI
--  Transaction status: CONFIRMED
+### High-Capacity Property Fuzzing (60,000 Iterations)
+```bash
+npx vitest run test/property_fuzz.test.ts
+```
 
----
+### Comprehensive Massive Battery (Tests + L1 Bytecode + Traceability)
+```bash
+npm run test:massive
+```
 
-### Test 3: Gasless Proposal Creation
+### Traceability Matrix Consistency Check
+```bash
+npm run check:traceability
+```
 
-**Objective:** Verify user can create proposal without gas
-
-**Steps:**
-1. Navigate to "Create Proposal"
-2. Fill in:
-   - Market ID
-   - Title
-   - Description
-   - Stake: `10 USDC`
-3. Click "Create Proposal (Free)"
-4. Sign message
-5. Wait for confirmation
-
-**Expected Results:**
--  Proposal created on-chain
--  Proposal appears in database
--  Proposal visible in UI
+### Forbidden Pattern & Code Hygiene Scan
+```bash
+node scripts/forbidden-patterns.mjs
+```
 
 ---
 
-### Test 4: Slippage Protection
+## 4. Acceptance Criteria Verification Matrix
 
-**Objective:** Verify zap fails if slippage too high
-
-**Steps:**
-1. Enter zap amount: `100 AUTH`
-2. Manually set `minUSDC` very high in code
-3. Execute zap
-
-**Expected Results:**
--  Transaction reverts with "SlippageTooHigh"
--  User funds safe (not lost)
-
----
-
-### Test 5: Signature Replay Attack
-
-**Objective:** Verify nonce prevents replay attacks
-
-**Steps:**
-1. Execute a zap
-2. Capture the signature
-3. Try to submit same signature again
-
-**Expected Results:**
--  Second submission fails with "InvalidNonce"
+| Criterion | Target Property | Verification Suite | Automated Status |
+|---|---|---|---|
+| **A1** | Aztec Private State Transitions & Non-Simulated Proving | `test/aztec_e2e_no_simulation.test.ts` | **VERIFIED** |
+| **A2** | RFC 9420 MLS Messaging & Post-Compromise Security | `test/mls_post_compromise.test.ts` | **VERIFIED** |
+| **A3** | Ephemeral Application Framework (EAF) Sandbox Containment | `test/eaf_isolation.adversarial.test.ts` | **VERIFIED** |
+| **A4** | L1 Smart Contract Invariants & Anti-Backdoor Protections | `test/contracts_invariants.test.ts` | **VERIFIED** |
+| **A5** | Non-Custodial Key Architecture & Memory Hygiene | `test/key_custody.test.ts` | **VERIFIED** |
+| **A6** | Property-Based & High-Capacity Fuzzing (60,000 iters) | `test/property_fuzz.test.ts` | **VERIFIED** |
+| **A7** | Single Source of Truth & Traceability Alignment | `scripts/check-traceability.ts` | **VERIFIED** |
 
 ---
 
-### Test 6: Expired Signature
+## 5. Pre-Commit and Continuous Integration Gates
 
-**Objective:** Verify deadline enforcement
-
-**Steps:**
-1. Sign a zap message
-2. Wait 6 minutes (deadline is 5 minutes)
-3. Submit signature
-
-**Expected Results:**
--  Transaction fails with "SignatureExpired"
-
----
-
-### Test 7: Relayer Balance Monitoring
-
-**Objective:** Verify system handles low relayer balance
-
-**Steps:**
-1. Drain relayer wallet to < 0.001 ETH
-2. Try to execute zap
-
-**Expected Results:**
--  API returns 503 error
--  User sees "Relayer out of funds" message
-
----
-
-### Test 8: Concurrent Transactions
-
-**Objective:** Verify nonce management with concurrent requests
-
-**Steps:**
-1. Open two browser tabs
-2. Execute zap in both simultaneously
-
-**Expected Results:**
--  Both transactions succeed
--  Nonces increment correctly (0, 1)
--  No nonce collision
-
----
-
-### Test 9: Database Sync
-
-**Objective:** Verify watcher updates transaction status
-
-**Steps:**
-1. Execute a zap
-2. Check database immediately (should be PENDING)
-3. Wait 30 seconds
-4. Check database again (should be CONFIRMED)
-
-**Expected Results:**
--  Initial status: PENDING
--  Final status: CONFIRMED
--  Block number populated
-
----
-
-### Test 10: Error Handling
-
-**Objective:** Verify graceful error handling
-
-**Steps:**
-1. Try zap with insufficient AUTH balance
-2. Try vote on non-existent proposal
-3. Try execute proposal before timelock
-
-**Expected Results:**
--  Clear error messages
--  No crashes
--  User can retry
-
----
-
-## Performance Benchmarks
-
-### Target Metrics
-
-| Metric | Target | Actual |
-|--------|--------|--------|
-| Signature Time | < 2s | ___ |
-| Relayer Response | < 5s | ___ |
-| Confirmation Time | < 30s | ___ |
-| Gas Cost (Relayer) | < $0.10 | ___ |
-
----
-
-## Monitoring Checklist
-
-- [ ] Set up Sentry for error tracking
-- [ ] Configure relayer balance alerts
-- [ ] Monitor gas prices
-- [ ] Track transaction success rate
-- [ ] Set up uptime monitoring
-
----
-
-## Production Readiness Checklist
-
-- [ ] All tests passing
-- [ ] Error handling verified
-- [ ] Security audit complete
-- [ ] Documentation updated
-- [ ] Monitoring configured
-- [ ] Backup relayer wallet ready
-- [ ] Rate limiting enabled
-- [ ] Circuit breaker tested
-
----
-
-## Rollback Plan
-
-If issues arise in production:
-
-1. **Pause Contracts**
-   ```solidity
-   // Call as owner
-   zapContract.togglePause();
-   governanceContract.togglePause();
-   ```
-
-2. **Switch to Backup Relayer**
-   - Update `RELAYER_PRIVATE_KEY` in Railway
-   - Redeploy
-
-3. **Revert Deployment**
-   - Railway  Deployments  Rollback to previous
-
----
-
-## Support Contacts
-
-- **Smart Contract Issues:** [GitHub Issues]
-- **Relayer Issues:** Check Railway logs
-- **Database Issues:** Check Prisma logs
-
----
-
-**Last Updated:** January 26, 2026
+1. **Pre-Commit Hook**: Configured in `.husky/pre-commit` or `.git/hooks/pre-commit`. Any commit failing unit tests or compilation is aborted. Bypassing with `--no-verify` is prohibited by engineering guidelines.
+2. **Continuous Integration**: Every PR triggers GitHub Actions workflows executing:
+   - TypeScript strict compilation (`tsc --noEmit`)
+   - Forbidden security pattern scanner
+   - Full Vitest unit and integration test suite
+   - L1 Hardhat contract invariant test suite
+   - Traceability matrix consistency check
+   - npm dependency security audit (`npm audit`)

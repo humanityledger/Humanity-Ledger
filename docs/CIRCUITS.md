@@ -48,11 +48,11 @@ This document specifies the Noir circuits used in the Humanity Ledger protocol (
 All verification keys are generated for the UltraHonk proving system over BN254 and committed under `circuits/<name>/target/`:
 
 * **Escrow VK Hash**: `0x2e8f19da5c0882e36b80d4400e2380f7aa9580b8529f7cefa5c2c9d09c693a15`
-  * Artifact: [`circuits/escrow/target/escrow.vk.json`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/circuits/escrow/target/escrow.vk.json)
+  * Artifact: [`circuits/escrow/target/escrow.vk.json`](../circuits/escrow/target/escrow.vk.json)
 * **Streams VK Hash**: `0x5a18c092dbce2b33918a5bf8e8071869e96e5792444b055963be5708846c98aa`
-  * Artifact: [`circuits/streams/target/streams.vk.json`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/circuits/streams/target/streams.vk.json)
+  * Artifact: [`circuits/streams/target/streams.vk.json`](../circuits/streams/target/streams.vk.json)
 * **Identity VK Hash**: `0x44d18fa792c01826f59b6579be4053ae897d2e06c3f0b263b65cb4659187da42`
-  * Artifact: [`circuits/identity/target/identity.vk.json`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/circuits/identity/target/identity.vk.json)
+  * Artifact: [`circuits/identity/target/identity.vk.json`](../circuits/identity/target/identity.vk.json)
 
 ---
 

@@ -20,12 +20,12 @@
 - [ ] Sensitive buffers are zeroized with `zeroizeBuffer` immediately after use
 
 #### ZK / Aztec / Circuits (P3, P4)
-- [ ] Zero simulation tokens (`Fr.random`, `mockWorkerProof`, `simulatedNullifier`)
+- [ ] Non-simulated proving: zero synthetic mock tokens (`Fr.random`, `mockWorkerProof`, `simulatedNullifier`)
 - [ ] All private inputs generated and retained purely in client-side Web Worker
 - [ ] Negative test cases added for all modified circuit constraints
 
 #### EAF & Sandbox (P6)
-- [ ] Air-gapped CSP enforced (`default-src 'none'; connect-src 'none'`)
+- [ ] Network-isolated CSP enforced (`default-src 'none'; connect-src 'none'`)
 - [ ] 8 KB maximum payload limit enforced
 - [ ] Member ID in bridge messages bound to authenticated session (forgery rejected)
 

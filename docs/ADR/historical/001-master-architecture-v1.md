@@ -1,12 +1,14 @@
-# Humanity Ledger 2.0: MASTER ARCHITECTURE
-"A System Execution Environment for Sovereign Mini-Apps. Built for the Official January Ecosystem Launch."
+# Humanity Ledger 2.0: MASTER ARCHITECTURE (Historical Draft v1.0)
 
-> **Date of Record: 14/08/2026**
-> This document serves as the absolute blueprint and master photograph of the Humanity Ledger architecture, built on an uncompromising "Legendary Level" standard.
+> [!NOTE]
+> **HISTORICAL ARCHIVE ARTIFACT (14 August 2026)**: This document is preserved strictly for historical traceability.
+> It reflects an early architectural draft that has been superseded by the normative protocol specification
+> ([`docs/PROTOCOL_SPEC.md`](../../PROTOCOL_SPEC.md)). Terminology, informal design concepts, and legacy components
+> described herein do not represent the current verified protocol invariants.
 
 ---
 
-## 1. MACRO-ARCHITECTURE OVERVIEW
+## 1. MACRO-ARCHITECTURE OVERVIEW (Historical)
 Humanity Ledger is no longer just a portal; it is a **Hub & Spoke System Execution Environment**. It acts as a unified OS hosting sovereign Mini-Apps (LedgerChat, Portfolio, Markets, Studio Provenance). The central Hub provides Zero-Knowledge identity verification, while each Mini-App executes in its own isolated context.
 
 ### Topology Grid
@@ -88,7 +90,7 @@ graph TD
 ---
 
 ##  2. CELESTIAL GATEWAY (Node.js + WebSockets)
-**Technology:** Custom Node.js server ([server.ts](file:///c:/Users/admin/.gemini/antigravity/scratch/Wallet%20Human%20Polymarket%20ID/server.ts)) wrapping Next.js 15.
+**Technology:** Custom Node.js server (`server.ts`) wrapping Next.js 15.
 
 - **Unified Hub:** Handles HTTP requests and WebSocket connections (`Socket.io`) on a single port (3000).
 - **Resilience Standard:** Implements dynamic internal imports and mock-fallbacks to prevent startup crashes (ECONNREFUSED protection).
@@ -100,7 +102,7 @@ graph TD
 ---
 
 ##  3. THE INTELLIGENCE SERVICE (Deep Analytics)
-**Technology:** [AnalyticsService.ts](file:///c:/Users/admin/.gemini/antigravity/scratch/Wallet%20Human%20Polymarket%20ID/lib/blockchain/AnalyticsService.ts)
+**Technology:** `lib/blockchain/AnalyticsService.ts`
 
 Generates "Pentagon-level" address profiles by merging Moralis deep-indexing with real-time Ethers.js data.
 

@@ -1,32 +1,28 @@
 ---
 name: Bug Report
-about: Create a report to help us improve Whale Alert Network
+about: Create an issue report to help improve Humanity Ledger
 title: '[BUG] '
 labels: bug
 assignees: ''
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is. Please note we maintain a strict "no red deploy" policy.
+**Bug Description**
+A clear, concise description of the observed defect, including the deviation from the expected protocol or system invariant.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+**Reproduction Steps**
+1. Command or action executed:
+2. Environment configuration:
+3. Minimal reproducible payload or test case:
+4. Observed output / error stack:
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+**Expected Behavior**
+A clear description of the expected behavior according to `docs/PROTOCOL_SPEC.md`.
 
-**Hardware and Environment:**
- - OS: [e.g. Windows/macOS/Linux]
- - Node Version: [e.g. v18.17.0]
- - Browser: [e.g. Chrome, Safari]
- - Running Mode: [Full Indexing vs Lite Mode]
+**Environment:**
+- OS: [e.g. Linux, macOS, Windows]
+- Node.js Version: [e.g. v20.x]
+- Architecture: [e.g. x86_64, aarch64]
+- Branch / Commit Hash: [e.g. `main` @ `c8ecf97d`]
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
-
-**Additional context**
-Add any other context about the problem here (e.g. "happens only when indexing Base").
+**Logs / Screenshots**
+If applicable, attach sanitized terminal output or execution logs. Ensure no private keys, seed phrases, or sensitive credentials are included.

@@ -1,5 +1,5 @@
 # Humanity Ledger — L1 Smart Contract Bytecode & Invariant Verification
-**Public Verification Procedure & Zero-Backdoor Specification**
+**Public Bytecode Verification Procedure & Administrative Invariant Specification**
 
 This document provides the canonical procedure for third parties to independently verify the L1 smart contracts of the Humanity Ledger protocol against compiled source code and on-chain bytecode, satisfying Acceptance Criterion **A4** and Task **T8** (`docs/PROTOCOL_SPEC.md`).
 
@@ -11,11 +11,11 @@ All contracts are compiled with Solidity `0.8.20` or higher with optimizer enabl
 
 | Contract Name | Source Path | Target Testnet (Base Sepolia / Polygon Amoy) | Verified Deployed Address |
 |---|---|---|---|
-| **`HumanityTimeLockVault`** | [`contracts/HumanityTimeLockVault.sol`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/contracts/HumanityTimeLockVault.sol) | Base Sepolia (Chain ID 84532) | `0x3a71bE8d7fD1E229bB60bcfB9507E7bDb6d1A861` |
-| **`HumanityIdentityRegistry`** | [`contracts/HumanityIdentityRegistry.sol`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/contracts/HumanityIdentityRegistry.sol) | Base Sepolia (Chain ID 84532) | `0x5f8b5029D83b27b3dF0E7eC7c49392c6Bcb4f553` |
-| **`LedgerDeadmanSwitch`** | [`contracts/security/LedgerDeadmanSwitch.sol`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/contracts/security/LedgerDeadmanSwitch.sol) | Polygon Amoy (Chain ID 80002) | `0x1927c9D80816A9Ea21d1d86641A58d341bEcEE83` |
-| **`HumanTimeLock`** | [`contracts/civilization/HumanTimeLock.sol`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/contracts/civilization/HumanTimeLock.sol) | Base Sepolia (Chain ID 84532) | `0x718a20Cbcf5De73FeD192931a5401Fa2e7bb0F2b` |
-| **`ZKIdentityRegistry`** | [`contracts/ZKIdentityRegistry.sol`](file:///C:/Users/Grati/Documents/GitHub/Humanity-Ledger/contracts/ZKIdentityRegistry.sol) | Base Sepolia (Chain ID 84532) | `0x918cb0eFa71F021B7E2095811A1B283296062f84` |
+| **`HumanityTimeLockVault`** | [`contracts/HumanityTimeLockVault.sol`](../contracts/HumanityTimeLockVault.sol) | Base Sepolia (Chain ID 84532) | `0x3a71bE8d7fD1E229bB60bcfB9507E7bDb6d1A861` |
+| **`HumanityIdentityRegistry`** | [`contracts/HumanityIdentityRegistry.sol`](../contracts/HumanityIdentityRegistry.sol) | Base Sepolia (Chain ID 84532) | `0x5f8b5029D83b27b3dF0E7eC7c49392c6Bcb4f553` |
+| **`LedgerDeadmanSwitch`** | [`contracts/security/LedgerDeadmanSwitch.sol`](../contracts/security/LedgerDeadmanSwitch.sol) | Polygon Amoy (Chain ID 80002) | `0x1927c9D80816A9Ea21d1d86641A58d341bEcEE83` |
+| **`HumanTimeLock`** | [`contracts/civilization/HumanTimeLock.sol`](../contracts/civilization/HumanTimeLock.sol) | Base Sepolia (Chain ID 84532) | `0x718a20Cbcf5De73FeD192931a5401Fa2e7bb0F2b` |
+| **`ZKIdentityRegistry`** | [`contracts/ZKIdentityRegistry.sol`](../contracts/ZKIdentityRegistry.sol) | Base Sepolia (Chain ID 84532) | `0x918cb0eFa71F021B7E2095811A1B283296062f84` |
 
 ---
 
@@ -44,7 +44,7 @@ npx hardhat verify --network polygonAmoy 0x1927c9D80816A9Ea21d1d86641A58d341bEcE
 
 ---
 
-## 3. Explicit Guarantee: Zero Unilateral Admin Backdoors
+## 3. Administrative Invariants & Access Control Restrictions
 
 The contract architecture enforces the following mathematical and access-control invariants:
 

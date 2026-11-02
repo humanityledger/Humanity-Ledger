@@ -1,19 +1,22 @@
 ---
 name: Feature Request
-about: Suggest an idea for the Whale Alert Network
+about: Suggest an enhancement for Humanity Ledger
 title: '[FEAT] '
 labels: enhancement
 assignees: ''
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+**Problem Description**
+A clear and concise description of the functional or technical limitation being addressed.
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen. Keep in mind the strict privacy and zero-trust guidelines of the System Vault.
+**Proposed Specification / Enhancement**
+A formal description of the proposed functionality or protocol change, adhering to the non-custodial and cryptographic privacy invariants of Humanity Ledger.
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+**Invariant Analysis**
+Describe how the proposed change impacts existing protocol invariants ($\mathcal{P}_1$–$\mathcal{P}_6$), circuits, or smart contracts.
 
-**Additional context**
-Add any other context or mockups about the feature request here.
+**Alternatives Considered**
+A concise description of alternative architectural designs or specifications evaluated.
+
+**Additional Context**
+Add any reference implementations, benchmarking figures, or contextual links here.
