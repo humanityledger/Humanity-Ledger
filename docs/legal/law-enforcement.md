@@ -30,7 +30,7 @@ Due to our privacy-first architecture, there is very little data we can provide 
 
 ## Process
 
-1. All requests must be submitted to: **legal@humanityledger.com**
+1. All requests must be submitted to: **humanityledger@icloud.com**
 2. We require a valid legal process (court order, subpoena, warrant) from the appropriate jurisdiction
 3. We will notify the affected user **unless prohibited by law** (e.g., gag order)
 4. Emergency requests (imminent threat to life) are evaluated expeditiously
@@ -49,5 +49,5 @@ We aim to publish an annual transparency report disclosing:
 
 ## Contact
 
-**Legal requests**: legal@humanityledger.com  
+**Legal requests**: humanityledger@icloud.com  
 **Response time**: 10 business days (non-emergency)

@@ -162,7 +162,6 @@ Commits must follow structured prefixes indicating the modified package domain:
 
 ## 7. Contacts
 
-- **Protocol Core:** `core@humanityledger.com`
-- **Security Inquiries:** `security@humanityledger.com` (see [`SECURITY.md`](SECURITY.md))
+- **Protocol Communications and Security Inquiries:** `humanityledger@icloud.com` (see [`SECURITY.md`](SECURITY.md))
 - **Licensing and Legal:** `humanityledger@icloud.com` (see [`LICENSE`](LICENSE))
 - **Repository:** [https://github.com/humanityledger/Humanity-Ledger](https://github.com/humanityledger/Humanity-Ledger)

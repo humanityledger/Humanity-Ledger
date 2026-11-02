@@ -2,9 +2,9 @@
 
 > **Specification Standard:** HL-SEC-2026.5  
 > **Classification:** Public Cryptographic Protocol Specification  
-> **Target Audience:** Aztec Foundation (Alejo Amiras), Security Researchers, Protocol Auditors, and Institutional Partners  
-> **Protocol Baseline:** Monorepo Commit `931b1005` (November 2026)  
-> **Security Contact:** `security@humanityledger.com` — Initial acknowledgment within 12 hours
+> **Target Audience:** Aztec Foundation Technical and Ecosystem Team, Security Researchers, Protocol Auditors, and Institutional Partners  
+> **Protocol Baseline:** Monorepo Commit `378cb27e` (November 2026)  
+> **Security Contact:** `humanityledger@icloud.com` — Initial acknowledgment within 12 hours
 
 ---
 
@@ -156,11 +156,11 @@ The following operational constraints are explicitly documented:
 Humanity Ledger maintains an academic Coordinated Vulnerability Disclosure framework.
 
 > [!NOTE]
-> **No Monetary Bounties in Testnet Stage 1:** In accordance with our pre-mainnet status, Humanity Ledger does not offer cash bounties or financial rewards for vulnerability disclosures. All research contributions are acknowledged academically through public attribution, GitHub Security Advisories, and inclusion in the protocol Security Hall of Fame. A capitalized bounty program will be established upon mainnet funding.
+> **No Monetary Bounties in Testnet Stage 1:** In accordance with our pre mainnet status, Humanity Ledger does not offer cash bounties or financial rewards for vulnerability disclosures. All research contributions are acknowledged academically through public attribution, GitHub Security Advisories, and inclusion in the protocol Security Hall of Fame. A capitalized bounty program will be established upon mainnet funding.
 
 ### Submission Protocol
 
-- **Transmission:** Encrypted advisory via GitHub Security Advisories or to `security@humanityledger.com`.
+- **Transmission:** Encrypted advisory via GitHub Security Advisories or to `humanityledger@icloud.com`.
 - **Service Level Agreements:**
   - Initial Acknowledgment: 12 hours
   - Technical Triage: 24 hours
@@ -181,8 +181,7 @@ The protocol will not pursue legal action against security researchers who condu
 
 ## 8. Contacts
 
-- **Security Disclosures:** `security@humanityledger.com`
-- **Architecture and Core Engineering:** `core@humanityledger.com`
+- **Security Disclosures and General Inquiries:** `humanityledger@icloud.com`
 - **Legal and Licensing:** `humanityledger@icloud.com`
 
 *Humanity Ledger — Protocol Specification HL-SEC-2026.5 (November 2026)*

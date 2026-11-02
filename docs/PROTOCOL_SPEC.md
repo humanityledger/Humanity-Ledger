@@ -141,7 +141,7 @@ The Humanity Ledger protocol reaches the target maturity defined by this specifi
 All Zero-Knowledge circuits in Humanity Ledger (`circuits/escrow`, `circuits/streams`, `circuits/identity`) and their corresponding UltraHonk verification keys (VK) are governed by this migration and lifecycle policy:
 
 ### 8.1 Verification Key Immutability and Versioning
-- Each circuit build generates a deterministic verification key hash: $\mathrm{VK}_{v} = \mathrm{Poseidon2}(\text{circuit\_vk\_bytes})$.
+- Each circuit build generates a deterministic verification key hash: $\mathrm{VK}_{v} = \mathrm{Poseidon2}(\mathrm{vkBytes}_{v})$.
 - Verification keys are strictly immutable once registered on L1. A verification key cannot be modified in-place.
 - Any change to circuit logic, constraint structure, or field representation produces a distinct version identifier $\mathrm{VK}_{v+1}$.
 - The canonical on-chain circuit registry maintains a state machine for each registered VK:

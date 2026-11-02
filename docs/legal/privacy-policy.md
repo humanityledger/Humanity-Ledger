@@ -8,7 +8,7 @@
 
 Humanity Ledger ("we", "us") provides a privacy-preserving communication and payment platform. Our core product combines end-to-end encrypted messaging (via XMTP) with private payments (via Aztec Protocol).
 
-**Contact**: [privacy@humanityledger.com](mailto:privacy@humanityledger.com)
+**Contact**: [humanityledger@icloud.com](mailto:humanityledger@icloud.com)
 
 ---
 
@@ -69,7 +69,7 @@ Humanity Ledger ("we", "us") provides a privacy-preserving communication and pay
 - **Erasure** (Art. 17): Delete your account at Settings → Delete Account (`/api/user/nuke`)
 - **Portability** (Art. 20): Export your profile data via `GET /api/user/export`
 - **Rectification** (Art. 16): Update profile data in Settings
-- **Objection** (Art. 21): Contact [privacy@humanityledger.com](mailto:privacy@humanityledger.com)
+- **Objection** (Art. 21): Contact [humanityledger@icloud.com](mailto:humanityledger@icloud.com)
 
 **EEA residents** may also contact your national DPA.
 

@@ -2,7 +2,7 @@
 # GDPR Article 30
 
 **Controller**: Humanity Ledger  
-**DPO Contact**: privacy@humanityledger.com  
+**DPO Contact**: humanityledger@icloud.com  
 **Last updated**: October 2025
 
 ---

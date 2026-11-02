@@ -1,7 +1,7 @@
 # Breach Notification Procedure
 # GDPR Article 33 — 72-hour notification
 
-**Owner**: DPO (privacy@humanityledger.com)  
+**Owner**: DPO (humanityledger@icloud.com)  
 **Last updated**: October 2025
 
 ---
@@ -56,7 +56,7 @@ Subject: Personal Data Breach Notification — Humanity Ledger
 3. Approximate number of individuals: [N]
 4. Likely consequences: [description]
 5. Measures taken/proposed: [description]
-6. Contact: privacy@humanityledger.com
+6. Contact: humanityledger@icloud.com
 
 Date of discovery: [datetime]
 Date of this notification: [datetime]
@@ -77,7 +77,7 @@ What was exposed: [data categories]
 What we've done: [actions taken]
 What you should do: [e.g., change PIN, revoke sessions]
 
-Contact: privacy@humanityledger.com
+Contact: humanityledger@icloud.com
 ```
 
 ## 6. Post-Incident (7 days)
@@ -93,6 +93,5 @@ Contact: privacy@humanityledger.com
 
 | Role | Name | Contact |
 |------|------|---------|
-| DPO | TBD | privacy@humanityledger.com |
-| Security Lead | TBD | security@humanityledger.com |
+| DPO / Security | TBD | humanityledger@icloud.com |
 | On-call | TBD | (Slack #oncall) |

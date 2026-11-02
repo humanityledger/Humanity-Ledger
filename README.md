@@ -9,7 +9,7 @@ Execution Environment:  Aztec Private Execution Environment (PXE)
 Messaging Protocol:     RFC 9420 Messaging Layer Security (MLS)
 L1 Target:              Ethereum Cancun EVM (Solidity 0.8.28)
 Verification Status:    1,076 passing assertions · 61 test suites · 60,000 property fuzzing iterations
-Monorepo Baseline:      Commit 931b1005 (November 2026)
+Monorepo Baseline:      Commit 378cb27e (November 2026)
 Specification:          docs/PROTOCOL_SPEC.md
 Aztec Review Dossier:   docs/AZTEC_FOUNDATION_DOSSIER.md
 ```
@@ -33,8 +33,8 @@ The protocol operates under an untrusted relay assumption: neither intermediate 
 │  ┌───────────────────────────┐         ┌─────────────────────────────┐  │
 │  │   MLS Group State Engine  │         │   Aztec PXE (Client Local)  │  │
 │  │   TreeKEM / RFC 9420      │         │   Barretenberg UltraHonk    │  │
-│  └───────────────────────────┘         │   WASM Proving Engine       │  │
-│                                        └──────────────┬──────────────┘  │
+│  │   Post Compromise Guard   │         │   WASM Proving Engine       │  │
+│  └───────────────────────────┘         └──────────────┬──────────────┘  │
 │                                                       │                 │
 │                                                       ▼                 │
 │                                        ┌─────────────────────────────┐  │
@@ -87,7 +87,7 @@ The protocol enforces six architectural invariants verified continuously by auto
 |---|---|---|---|
 | **P1** | Private State Confidentiality | No client witness or spending key is serialised to remote relays | `test/aztec_e2e_no_simulation.test.ts` |
 | **P2** | Non Custodial Key Derivation | Spending and viewing keys exist only in local device memory | `test/key_custody.test.ts` |
-| **P3** | Post Compromise Security | Epoch update re-keys group; compromised state cannot read forward | `test/mls_post_compromise.test.ts` |
+| **P3** | Post Compromise Security | Epoch update re keys group; compromised state cannot read forward | `test/mls_post_compromise.test.ts` |
 | **P4** | Circuit Constraint Integrity | All state transitions satisfy ACIR polynomials and valid nullifiers | `test/circuits/` · `test/aztec_vk_integrity.test.ts` |
 | **P5** | Sandbox Boundary Isolation | Ephemeral applications cannot access outer window or network sockets | `test/eaf_isolation.adversarial.test.ts` |
 | **P6** | Layer 1 Balance Conservation | Smart contracts reject unauthorized drains or premature timelock bypass | `npm run test:contracts` · `scripts/verify-l1-bytecode.ts` |
@@ -115,22 +115,22 @@ Status tracking is monitored by continuous integration via `scripts/check-tracea
 The monorepo contains three production Noir circuits in [`circuits/`](circuits/), each accompanied by committed verification key artifacts (`target/*.vk.json`):
 
 1. **Private Escrow Release (`circuits/escrow/src/main.nr`):**
-   - Commitment relation: $\text{commitment} = \mathcal{H}(\text{sender\_secret}, \text{recipient\_pubkey}, \text{amount}, \text{salt})$
-   - Temporal constraint: $\text{current\_timestamp} \le \text{deadline}$
-   - Unique nullifier: $\text{nullifier} = \mathcal{H}(\text{sender\_secret}, \text{salt})$
-   - Value boundary: $0 < \text{amount} \le 10^{15}$ (arithmetic overflow protection)
+   - Commitment relation: $C = \mathcal{H}(s_{\mathrm{sender}}, \mathrm{pk}_{\mathrm{recipient}}, a, \sigma)$
+   - Temporal constraint: $t \le t_{\mathrm{deadline}}$
+   - Unique nullifier: $\mathrm{nf} = \mathcal{H}(s_{\mathrm{sender}}, \sigma)$
+   - Value boundary: $0 < a \le 10^{15}$ (arithmetic overflow protection)
 
 2. **Anonymous Compliance and Identity (`circuits/identity/src/main.nr`):**
    - Sanction exclusion: Proves subject jurisdiction is excluded from restricted sets without revealing nationality.
    - Merkle membership: Proves inclusion of identity commitment within authoritative credential tree.
-   - Scoped nullifier: $\text{nullifier} = \mathcal{H}(\text{identity\_secret}, \text{scope})$ prevents sybil registrations per context.
+   - Scoped nullifier: $\mathrm{nf}_{\mathrm{scoped}} = \mathcal{H}(s_{\mathrm{id}}, \mathrm{scope})$ prevents sybil registrations per context.
 
 3. **Continuous Payment Streams (`circuits/streams/src/main.nr`):**
-   - Monotonic temporal validity: $\text{current\_time} \ge \text{start\_time}$
-   - Rate accrual bound: $(\text{withdrawn} + \text{claim}) \le (\text{current\_time} - \text{start\_time}) \times \text{rate}$
-   - Capital allocation ceiling: $(\text{withdrawn} + \text{claim}) \le \text{total\_allocation}$
+   - Monotonic temporal validity: $t \ge t_{\mathrm{start}}$
+   - Rate accrual bound: $(w + c) \le (t - t_{\mathrm{start}}) \cdot r$
+   - Capital allocation ceiling: $(w + c) \le A_{\mathrm{total}}$
 
-Verification key integrity is managed by [`lib/aztec/verifier.ts`](lib/aztec/verifier.ts). Any cryptographic mismatch between local compiled keys and on-chain registered commitments unconditionally blocks client proof synthesis. Changes to verification keys on Layer 1 are subject to a mandatory 14 day timelock policy ([`docs/VK_MONITORING.md`](docs/VK_MONITORING.md)).
+Verification key integrity is managed by [`lib/aztec/verifier.ts`](lib/aztec/verifier.ts). Any cryptographic mismatch between local compiled keys and on chain registered commitments unconditionally blocks client proof synthesis. Changes to verification keys on Layer 1 are subject to a mandatory 14 day timelock policy ([`docs/VK_MONITORING.md`](docs/VK_MONITORING.md)).
 
 ---
 
@@ -146,7 +146,7 @@ Bytecode artifacts are automatically audited against backdoors and unauthorized 
 
 ---
 
-## 7. Explicit Cryptographic Non-Claims
+## 7. Explicit Cryptographic Non Claims
 
 In accordance with academic rigor, this protocol explicitly defines its operational boundaries:
 
@@ -199,7 +199,7 @@ npm audit
 
 ## 9. Aztec Foundation Technical Review
 
-A technical dossier specifically prepared for the product validation review by **Alejo Amiras** and the Aztec Foundation team is published at [`docs/AZTEC_FOUNDATION_DOSSIER.md`](docs/AZTEC_FOUNDATION_DOSSIER.md). It details client side PXE integration parameters, circuit constraint counts, mobile WebAssembly benchmarking goals, and joint security review proposals.
+A technical dossier detailing the protocol integration architecture for review by the Aztec Foundation engineering and ecosystem team is published at [`docs/AZTEC_FOUNDATION_DOSSIER.md`](docs/AZTEC_FOUNDATION_DOSSIER.md). It details client side PXE integration parameters, circuit constraint counts, mobile WebAssembly benchmarking goals, and security review proposals.
 
 ---
 
@@ -209,4 +209,4 @@ A technical dossier specifically prepared for the product validation review by *
 - **Security Policy:** [`SECURITY.md`](SECURITY.md) — HL-SEC-2026.5 standard, threat models, coordinated vulnerability disclosure, and response SLAs.
 - **Software License:** [`LICENSE`](LICENSE) — Version 2.0 Proprietary Software License (Restricted Read Only evaluation for personal and academic study).
 - **Vulnerability Disclosure Policy:** [`docs/BUG_BOUNTY.md`](docs/BUG_BOUNTY.md) — Academic Coordinated Vulnerability Disclosure framework.
-- **Communications:** `core@humanityledger.com` · Security: `security@humanityledger.com`
+- **Communications:** `humanityledger@icloud.com`

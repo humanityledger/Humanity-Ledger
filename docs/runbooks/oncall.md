@@ -20,8 +20,7 @@
 |---------|---------|
 | #incidents (Slack) | Live incident coordination |
 | #alerts (Slack) | Automated monitoring alerts |
-| security@humanityledger.com | Security incidents |
-| privacy@humanityledger.com | Privacy/legal incidents |
+| humanityledger@icloud.com | Security and privacy incidents |
 
 ---
 

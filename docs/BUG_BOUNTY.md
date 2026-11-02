@@ -3,7 +3,7 @@
 > **Protocol Standard:** HL-CVD-2026.1  
 > **Classification:** Public Security Advisory and Vulnerability Reporting Protocol  
 > **Status:** Active — Non-Monetary Academic Disclosure Framework (Testnet Stage 1)  
-> **Security Contact:** `security@humanityledger.com`
+> **Security Contact:** `humanityledger@icloud.com`
 
 ---
 
@@ -51,7 +51,7 @@ The following vectors are outside the protocol research scope:
 
 Researchers who identify potential security vulnerabilities should submit their findings privately:
 
-- **Transmission Channel:** Encrypted submission to `security@humanityledger.com` or via GitHub Private Security Advisories.
+- **Transmission Channel:** Encrypted submission to `humanityledger@icloud.com` or via GitHub Private Security Advisories.
 - **Initial Acknowledgment:** Within 12 hours of report transmission.
 - **Technical Triage:** Formal reproduction and severity determination within 24 hours.
 - **Remediation SLA:** 
