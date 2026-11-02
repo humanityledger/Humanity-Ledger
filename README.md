@@ -1,9 +1,17 @@
 # Humanity Ledger Protocol
 
+[![CI Test Suite](https://img.shields.io/badge/CI-1%2C076%20Passing-brightgreen?style=flat-square)](test/)
+[![Aztec PXE](https://img.shields.io/badge/Aztec-UltraHonk%20%2F%20PXE-blueviolet?style=flat-square)](https://aztec.network)
+[![Zero Simulation](https://img.shields.io/badge/Simulation-Zero%20Tolerance-success?style=flat-square)](test/aztec_e2e_no_simulation.test.ts)
+[![MLS Messaging](https://img.shields.io/badge/MLS-RFC%209420-blue?style=flat-square)](test/mls_post_compromise.test.ts)
+[![Maturity](https://img.shields.io/badge/Maturity-Testnet%20Stage%201-orange?style=flat-square)](docs/STATUS.md)
+[![License](https://img.shields.io/badge/License-Proprietary%202.0-lightgrey?style=flat-square)](LICENSE)
+
 > **Maturity Status:** Testnet Stage 1 — Audit & Product Validation Ready  
-> **Canonical Commit:** `ece61837` — 2 November 2026  
-> **Test Suite:** 1,076 / 1,076 passing · 61 files · 60,000 fuzz iterations · 0 failures  
-> **Normative Spec:** [`docs/PROTOCOL_SPEC.md`](docs/PROTOCOL_SPEC.md)
+> **Canonical Tree Baseline:** Commit `65f5c4bf` — 2 November 2026  
+> **Test Suite:** 1,076 / 1,076 passing · 61 test suites · 60,000 fuzz iterations · 0 failures  
+> **Normative Spec:** [`docs/PROTOCOL_SPEC.md`](docs/PROTOCOL_SPEC.md)  
+> **Aztec Foundation Dossier:** [`docs/AZTEC_FOUNDATION_DOSSIER.md`](docs/AZTEC_FOUNDATION_DOSSIER.md)
 
 Humanity Ledger is a privacy-first communication and settlement protocol. It couples **MLS messaging** (RFC 9420) with **client-side Aztec UltraHonk proof generation** via the Private Execution Environment (PXE) and auditable on-chain settlement over Ethereum L1, Base, and Polygon.
 
@@ -61,10 +69,10 @@ Each property is backed by passing automated tests on the `main` branch.
 | **A1** — Real Aztec E2E, zero simulation | ✅ Verified | `scripts/aztec-pxe-e2e.ts` · `test/aztec_e2e_no_simulation.test.ts` |
 | **A2** — MLS confidentiality and PCS | ✅ Verified | `test/mls_post_compromise.test.ts` · `npm run test:crypto` |
 | **A3** — EAF sandbox isolation | ✅ Verified | `test/eaf_isolation.adversarial.test.ts` |
-| **A4** — L1 contract invariants | ✅ Verified | `test/contracts_invariants.test.ts` · `test/HumanTimeLock.test.ts` |
+| **A4** — L1 contract invariants | ✅ Verified | `npm run test:contracts` · `scripts/verify-l1-bytecode.ts` |
 | **A5** — No server key custody | ✅ Verified | `test/key_custody.test.ts` |
 | **A6** — Residual risk documentation | ✅ Verified | `docs/PROTOCOL_SPEC.md` · `docs/AUDIT_DOSSIER.md` |
-| **A7** — Traceability matrix complete | ✅ Verified | `docs/TRACEABILITY_MATRIX.md` (CI-enforced by `scripts/check-traceability.ts`) |
+| **A7** — Traceability matrix complete | ✅ Verified | `docs/TRACEABILITY_MATRIX.md` (CI-enforced by `npm run check:traceability`) |
 
 ---
 
@@ -101,6 +109,7 @@ This repository does **not** claim the following:
 1. **Quantum resistance** for any classical cryptographic primitive (BN254, secp256k1, Curve25519 remain vulnerable to Shor's algorithm on cryptanalytically relevant quantum computers).
 2. **Metadata privacy** for MLS group membership, message timing, or IP-layer traffic patterns.
 3. **Mainnet production readiness** — the protocol is on Aztec Testnet and EVM testnets only.
+4. **Formal verification** — correctness is validated by automated property testing and fuzzing, but has not yet undergone third-party mathematical formal verification.
 
 These boundaries are specified in [`docs/PROTOCOL_SPEC.md`](docs/PROTOCOL_SPEC.md) and are treated as hard constraints, not aspirational caveats.
 
@@ -121,14 +130,14 @@ npx vitest run test/mls_post_compromise.test.ts test/key_custody.test.ts
 # 3. EAF adversarial isolation
 npx vitest run test/eaf_isolation.adversarial.test.ts
 
-# 4. L1 contract invariants (Hardhat)
-$env:TS_NODE_TRANSPILE_ONLY="1"; npx hardhat test test/contracts_invariants.test.ts test/HumanTimeLock.test.ts test/LedgerDeadmanSwitch.test.ts
+# 4. L1 contract invariants (Hardhat Cancun EVM)
+npm run test:contracts
 
 # 5. Anti-backdoor bytecode verifier
 npx tsx scripts/verify-l1-bytecode.ts
 
 # 6. Normative traceability CI (A1–A7)
-npx tsx scripts/check-traceability.ts
+npm run check:traceability
 
 # 7. High-capacity property fuzzing (60,000 iterations)
 npx vitest run test/property_fuzz.test.ts
@@ -136,14 +145,14 @@ npx vitest run test/property_fuzz.test.ts
 # 8. Full adversarial battery
 npm run test:massive
 
-# 9. Entire test suite
+# 9. Entire test suite (1,076 tests)
 npm run test:run
 
-# 10. Security audit
+# 10. Dependency security audit
 npm audit
 ```
 
-**Last verified result on `ece61837`:** 1,076 / 1,076 tests passing · 43 / 43 Hardhat invariants passing · 0 traceability contradictions · 0 bytecode backdoor patterns.
+**Last verified result on `65f5c4bf`:** 1,076 / 1,076 tests passing · 43 / 43 Hardhat invariants passing · 0 traceability contradictions · 0 bytecode backdoor patterns · 0 vulnerabilities in `npm audit`.
 
 ---
 
@@ -193,9 +202,9 @@ A technical dossier prepared for the Aztec Foundation product validation review 
 
 ---
 
-## License and Contribution
+## Community & Policy Navigation
 
-- **License:** See [`LICENSE`](LICENSE) — proprietary, read-only unless otherwise agreed in writing.
-- **Contributing:** See [`CONTRIBUTING.md`](CONTRIBUTING.md) for invariant analysis requirements and PR gates.
-- **Security:** See [`SECURITY.md`](SECURITY.md) for responsible disclosure policy and bug bounty scope.
-- **Contact:** `core@humanityledger.com`
+- **Contributing Guide:** [`CONTRIBUTING.md`](CONTRIBUTING.md) — Mandatory invariant analysis, PR verification gates, and development workflows.
+- **Security Policy:** [`SECURITY.md`](SECURITY.md) — HL-SEC-2026.5 standard, threat model, bug bounty scope, and SLA commitments.
+- **License:** [`LICENSE`](LICENSE) — Version 2.0 Proprietary Software License (Restricted Read-Only for educational and academic evaluation).
+- **Contact:** `core@humanityledger.com` · Security: `security@humanityledger.com`

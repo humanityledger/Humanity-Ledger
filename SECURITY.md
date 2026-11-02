@@ -2,9 +2,9 @@
 
 > **Specification Standard:** HL-SEC-2026.5 (Testnet Stage 1 Audit Ready)  
 > **Classification:** Public Cryptographic Protocol Specification  
-> **Last Updated:** 2 November 2026 · Canonical Commit `ece61837`  
-> **Target Audience:** Security Researchers · Protocol Auditors · Aztec Foundation · Institutional Partners  
-> **Security Contact:** `security@humanityledger.com` — Initial response within 24 hours
+> **Last Updated:** 2 November 2026 · Canonical Tree Baseline: Commit `65f5c4bf`  
+> **Target Audience:** Aztec Foundation (Alejo Amiras) · Security Researchers · Protocol Auditors · Institutional Partners  
+> **Security Contact:** `security@humanityledger.com` — Initial acknowledgment within 12 hours
 
 ---
 
@@ -70,12 +70,12 @@ The threat model explicitly accounts for state-sponsored Advanced Persistent Thr
 | **Private Key / Seed Extraction** | APT / Remote Code Execution | Zero Custody: keys generated via WebCrypto API or Secure Enclave hardware; private material is never transmitted. |
 | **Session Forgery & Cookie Tampering** | Replay / Man-in-the-Middle | Strict SIWE Nonce Binding: EIP-4361 sessions verified with `jose` at Edge; `HttpOnly; Secure; SameSite=Strict`. |
 | **Side-Channel Timing Profiling** | Advanced Cryptanalyst | Constant-Time Verification: Argon2id PIN and API credential comparisons use `timingSafeEqual` throughout. |
-| **Supply Chain Dependency Poisoning** | Malicious NPM Package | Strict Version Pinning; `engine-strict=true`; SLSA Level 3 CI provenance; `npm audit` enforced in CI. |
+| **Supply Chain Dependency Poisoning** | Malicious NPM Package | Strict Version Pinning; `engine-strict=true`; SLSA Level 3 CI provenance; `npm audit` enforced in CI (0 vulnerabilities). |
 | **UltraHonk Proof Serialization Exploit** | Aztec Protocol Adversary | Barretenberg updated outside GHSA-73xc-j27q-wg75 vulnerable ranges; VK hash mismatch unconditionally blocks proving. |
 | **Sybil Flooding & Distributed DoS** | Botnet / Proxy Farms | Edge rate-limiting (90 req/min per verified wallet) via Redis token buckets; WorldCoin proof-of-humanity integration. |
 | **Metadata & IP Surveillance** | Network Snooping / ISP | TURN relay enforcement: `iceTransportPolicy: 'relay'` masks participant IPs; XMTP MLS encrypts message content. |
 | **Prototype Pollution** | JavaScript Supply Chain | Deep defensive hardening verified by `test/fortification.test.ts` and `test/lazarus_adversarial_deep.test.ts`. |
-| **Memory Forensics / Key Residue** | Physical Device Compromise | Explicit zeroization via `lib/security/zeroize.ts`; verified by `test/property_fuzz.test.ts` (10,000 iterations). |
+| **Memory Forensics / Key Residue** | Physical Device Compromise | Explicit zeroization via `lib/security/zeroize.ts`; verified by `test/property_fuzz.test.ts` (60,000 iterations). |
 
 ---
 
@@ -150,7 +150,7 @@ The following are **not** guaranteed by the current protocol and are documented 
 
 ## 7. Responsible Disclosure & Bug Bounty
 
-We actively invite ethical security researchers to probe our contracts, circuits, and application runtime.
+We actively invite ethical security researchers and the Aztec ecosystem team to probe our contracts, circuits, and application runtime.
 
 ### Reporting Process
 
@@ -167,11 +167,11 @@ We actively invite ethical security researchers to probe our contracts, circuits
 
 ### Scope
 
-- Smart contracts (`/contracts/` — Solidity and Aztec Noir circuits in `circuits/`)
-- Cryptographic implementations (`/lib/security/`, `/lib/aztec/`)
-- Authentication and Edge perimeter (`middleware.ts`, `/app/api/auth/`)
-- XMTP MLS integration and key delegation (`/lib/xmtp/`)
-- EAF sandbox and postMessage bridge (`/lib/community-apps/`)
+- Smart contracts (`contracts/` — Solidity and Aztec Noir circuits in `circuits/`)
+- Cryptographic implementations (`lib/security/`, `lib/aztec/`)
+- Authentication and Edge perimeter (`middleware.ts`, `app/api/auth/`)
+- XMTP MLS integration and key delegation (`lib/xmtp/`)
+- EAF sandbox and postMessage bridge (`lib/community-apps/`)
 
 ### Out of Scope
 

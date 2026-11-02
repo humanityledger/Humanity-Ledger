@@ -2,7 +2,7 @@
 ## Protocol: Humanity Ledger | Recipient: Alejo Amiras & Aztec Foundation Product Team
 **Date:** November 2026  
 **Repository:** [https://github.com/humanityledger/Humanity-Ledger](https://github.com/humanityledger/Humanity-Ledger)  
-**Canon Commit (main):** `7b91d691`  
+**Canon Commit (main):** `65f5c4bf`  
 **Current Protocol Maturity:** Testnet Stage 1 — Audit & Validation Ready  
 
 ---
@@ -116,11 +116,11 @@ npx vitest run test/aztec_e2e_no_simulation.test.ts test/aztec_vk_integrity.test
 npx vitest run test/key_custody.test.ts test/mls_post_compromise.test.ts
 
 # 4. Verify L1 Smart Contract Invariants (Cancun Hardhat Runtime)
-$env:TS_NODE_TRANSPILE_ONLY="1"; npx hardhat test test/contracts_invariants.test.ts
+npm run test:contracts
 
 # 5. Run L1 Anti-Backdoor Bytecode Verifier & Traceability CI Checker
 npx tsx scripts/verify-l1-bytecode.ts
-npx tsx scripts/check-traceability.ts
+npm run check:traceability
 
 # 6. Run Full Property-Based Fuzzing (60,000 iterations)
 npx vitest run test/property_fuzz.test.ts
@@ -129,7 +129,7 @@ npx vitest run test/property_fuzz.test.ts
 npm run test:run
 ```
 
-### Verification Results Summary (Commit `7b91d691`)
+### Verification Results Summary (Commit `65f5c4bf`)
 | Test Battery | Target Area | Result | Status |
 |---|---|---|---|
 | **Zero Simulation Guard** (`test/aztec_e2e_no_simulation.test.ts`) | Aztec PXE Pipeline | 3/3 passed | ✅ VERIFIED |
@@ -175,4 +175,4 @@ We invite Alejo Amiras and the Aztec Foundation team to collaborate on the follo
 - **Core Engineering:** `core@humanityledger.com`
 - **Lead Developer & Protocol Architect:** Stefan Antonio Cirisanu (`stefan@humanityledger.com`)
 - **Repository:** `https://github.com/humanityledger/Humanity-Ledger`
-- **Branch:** `main` (Commit `7b91d691`)
+- **Branch:** `main` (Commit `65f5c4bf`)

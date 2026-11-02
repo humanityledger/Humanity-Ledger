@@ -4,7 +4,8 @@ We welcome contributions to the Humanity Ledger protocol, client applications, a
 
 > **Canonical Spec:** [`docs/PROTOCOL_SPEC.md`](docs/PROTOCOL_SPEC.md)  
 > **Traceability:** [`docs/TRACEABILITY_MATRIX.md`](docs/TRACEABILITY_MATRIX.md)  
-> **Last Updated:** 2 November 2026 · Commit `ece61837`
+> **Aztec Foundation Dossier:** [`docs/AZTEC_FOUNDATION_DOSSIER.md`](docs/AZTEC_FOUNDATION_DOSSIER.md)  
+> **Last Updated:** 2 November 2026 · Canonical Tree Baseline: Commit `65f5c4bf`
 
 ---
 
@@ -70,12 +71,12 @@ Before submitting a PR, verify that all applicable boxes are checked:
   - EAF adversarial isolation: `npx vitest run test/eaf_isolation.adversarial.test.ts`
   - Key custody: `npx vitest run test/key_custody.test.ts`
   - MLS post-compromise: `npx vitest run test/mls_post_compromise.test.ts`
-  - L1 contract invariants: `$env:TS_NODE_TRANSPILE_ONLY="1"; npx hardhat test test/contracts_invariants.test.ts`
+  - L1 contract invariants: `npm run test:contracts` (43 passing Hardhat invariants)
   - Property fuzzing (60,000 iterations): `npx vitest run test/property_fuzz.test.ts`
   - Adversarial battery: `npm run test:massive`
-- [ ] **Traceability** — If introducing a new protocol capability or modifying an existing claim, update `docs/TRACEABILITY_MATRIX.md` and link the corresponding test. Verify with `npx tsx scripts/check-traceability.ts`.
+- [ ] **Traceability** — If introducing a new protocol capability or modifying an existing claim, update `docs/TRACEABILITY_MATRIX.md` and link the corresponding test. Verify with `npm run check:traceability`.
 - [ ] **Bytecode Integrity** — If modifying L1 contracts, regenerate artifacts and re-run `npx tsx scripts/verify-l1-bytecode.ts`.
-- [ ] **Security Audit** — `npm audit` reports zero vulnerabilities.
+- [ ] **Dependency Security** — `npm audit` reports zero vulnerabilities.
 
 ---
 
@@ -86,10 +87,10 @@ Before submitting a PR, verify that all applicable boxes are checked:
 
 ### 4.1 External Audit Gate
 
-- [ ] External security audit completed by a firm listed in [`docs/AUDIT_SCOPE.md`](docs/AUDIT_SCOPE.md) (Spearbit, Zellic, OpenZeppelin, or Trail of Bits)
+- [ ] External security audit completed by an accredited Tier-1 firm listed in [`docs/AUDIT_SCOPE.md`](docs/AUDIT_SCOPE.md) (Spearbit, Zellic, OpenZeppelin, or Trail of Bits)
 - [ ] All **CRITICAL** findings remediated and re-tested
 - [ ] All **HIGH** findings remediated or formally accepted with a dated risk note in [`docs/AUDIT_DOSSIER.md`](docs/AUDIT_DOSSIER.md)
-- [ ] `npx tsx scripts/check-traceability.ts` passes post-audit
+- [ ] `npm run check:traceability` passes post-audit
 
 ### 4.2 Security Program Gate
 
@@ -99,12 +100,12 @@ Before submitting a PR, verify that all applicable boxes are checked:
 
 ### 4.3 Performance Gate
 
-- [ ] Load test Milestone 1 (10k concurrent users) passed (ref: [`docs/LOAD_TEST_PLAN.md`](docs/LOAD_TEST_PLAN.md))
+- [ ] Load test Milestone 1 (10,000 concurrent users) passed (ref: [`docs/LOAD_TEST_PLAN.md`](docs/LOAD_TEST_PLAN.md))
 - [ ] UltraHonk proof generation p95 < 8 s on mid-range mobile hardware (ref: [`docs/PROOF_BENCHMARKS.md`](docs/PROOF_BENCHMARKS.md))
 
 ### 4.4 Zero-Regression Gate
 
-- [ ] All tests in `scripts/run-all-tests.ps1` (or `run-all-tests.sh`) exit 0 on a clean machine
+- [ ] All tests in `npm run test:run` and `npm run test:contracts` exit 0 on a clean machine
 - [ ] `npm audit` reports 0 vulnerabilities
 - [ ] `node scripts/forbidden-patterns.mjs` reports 0 violations
 - [ ] `node scripts/check-forbidden-copy.mjs` reports 0 violations
@@ -125,19 +126,22 @@ npm install
 # 3. Run the critical invariant suite
 npx vitest run test/circuits/ test/key_custody.test.ts test/eaf_isolation.adversarial.test.ts test/mls_post_compromise.test.ts
 
-# 4. Run L1 contract invariants
-$env:TS_NODE_TRANSPILE_ONLY="1"; npx hardhat test test/contracts_invariants.test.ts
+# 4. Run L1 contract invariants (cross-platform)
+npm run test:contracts
 
 # 5. Run the full suite
 npm run test:run
 
-# 6. Verify traceability
-npx tsx scripts/check-traceability.ts
+# 6. Verify traceability consistency
+npm run check:traceability
 
-# 7. Build
+# 7. Verify anti-backdoor bytecode
+npx tsx scripts/verify-l1-bytecode.ts
+
+# 8. Build
 npm run build:local
 
-# 8. Submit your PR with the Invariant Analysis section completed
+# 9. Submit your PR with the Invariant Analysis section completed
 ```
 
 ---
@@ -158,10 +162,11 @@ Use the following prefix convention for all commits:
 
 ---
 
-## 7. Contact
+## 7. Contact & Security
 
 For questions about contributing or about the protocol architecture:
 
-- **Email:** `core@humanityledger.com`
-- **Security issues:** `security@humanityledger.com` (see [`SECURITY.md`](SECURITY.md))
+- **Protocol Core:** `core@humanityledger.com`
+- **Security Disclosures:** `security@humanityledger.com` (see [`SECURITY.md`](SECURITY.md))
+- **Licensing:** `humanityledger@icloud.com` (see [`LICENSE`](LICENSE))
 - **Repository:** [https://github.com/humanityledger/Humanity-Ledger](https://github.com/humanityledger/Humanity-Ledger)
