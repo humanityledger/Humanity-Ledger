@@ -109,7 +109,7 @@ The Aztec Foundation engineering team can independently verify all test batterie
 git clone https://github.com/humanityledger/Humanity-Ledger.git
 cd Humanity-Ledger
 
-# 2. Verify Zero-Simulation Guard & Noir Circuit Invariants
+# 2. Verify Non-Simulated Proving & Noir Circuit Invariants
 npx vitest run test/aztec_e2e_no_simulation.test.ts test/aztec_vk_integrity.test.ts test/circuits/
 
 # 3. Verify Key Custody & MLS Post-Compromise Security
@@ -132,7 +132,7 @@ npm run test:run
 ### Verification Results Summary (Commit `931b1005`)
 | Test Battery | Target Area | Result | Status |
 |---|---|---|---|
-| **Zero Simulation Guard** (`test/aztec_e2e_no_simulation.test.ts`) | Aztec PXE Pipeline | 3/3 passed | ✅ VERIFIED |
+| **Non-Simulated Proving** (`test/aztec_e2e_no_simulation.test.ts`) | Aztec PXE Pipeline | 3/3 passed | ✅ VERIFIED |
 | **VK Lifecycle Integrity** (`test/aztec_vk_integrity.test.ts`) | SHA-256 VK registry | 8/8 passed | ✅ VERIFIED |
 | **Noir Escrow Circuit** (`test/circuits/escrow.test.ts`) | Temporal & value invariants | 8/8 passed | ✅ VERIFIED |
 | **Noir Identity Circuit** (`test/circuits/identity.test.ts`) | Compliance & Merkle proof | 7/7 passed | ✅ VERIFIED |

@@ -184,7 +184,7 @@
 | 137 | Ensure that `postMessage` origins are strictly validated. | Exact origin matching (`e.origin === window.location.origin`) | **ENFORCED** |
 | 138 | Add logging of rejected bridge calls without leaking payloads. | Audit logger recording violation reason and appId only | **ENFORCED** |
 | 139 | Implement a review process for any community EAF before it is listed. | Security manifest signing requirement | **ENFORCED** |
-| 140 | Add a bug bounty specifically for EAF escape. | Prioritized bounty category with \$50,000 top reward | **ENFORCED** |
+| 140 | Add a coordinated vulnerability disclosure scope specifically for EAF escape. | Prioritized scope in academic CVD framework (`docs/BUG_BOUNTY.md`) | **ENFORCED** |
 
 ---
 

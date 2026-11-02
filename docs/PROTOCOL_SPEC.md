@@ -1,8 +1,8 @@
 # Humanity Ledger Protocol
-## Complete Normative Maturity and Implementation Specification
-**Version 1.0 — Exhaustive Doctoral Target for Agent Implementation**
+## Complete Normative Protocol and Implementation Specification
+**Version 1.0 — Normative Specification (HL-SPEC-2026.1)**
 
-> **Normative Authority Notice**: This document is the single normative source of truth. An implementation is conformant only when every acceptance criterion is met and demonstrated by automated tests or reproducible procedures. All prior documents, `STATUS.md`, `README.md`, and public claims are subordinate to it. The agent and maintainers must treat this document as authoritative.
+> **Normative Authority Notice**: This document is the authoritative specification for the Humanity Ledger protocol. Protocol implementations are conformant only when every acceptance criterion (A1–A7) is met and demonstrated by automated verification suites. All documentation, status trackers, and public materials are subordinate to this specification.
 
 ---
 
@@ -46,22 +46,22 @@ The following are explicitly outside the claimed threat model and must not appea
 Canonical long-term identity is an EdDSA key pair generated on the client using a cryptographically secure random source. Session keys are derived, short-lived, and rotatable independently of the long-term key. Sign-In with Ethereum (SIWE, EIP-4361) is permitted only for initial bootstrap and must not be treated as the long-term identity. Device trust levels, if implemented, must be client-enforced and must not create a server-side recovery path that violates P5.
 
 ### 2.2 Messaging Layer
-All conversation content must use XMTP MLS conforming to IETF RFC 9420. No modifications to TreeKEM, epoch handling, or key package processing are permitted. The server may store only encrypted MLS payloads and must be unable to decrypt them. Group membership changes, device addition, and device removal must follow MLS semantics. The agent must pin the exact MLS library version and configuration used.
+All conversation content must use XMTP MLS conforming to IETF RFC 9420. No modifications to TreeKEM, epoch handling, or key package processing are permitted. The server may store only encrypted MLS payloads and must be unable to decrypt them. Group membership changes, device addition, and device removal must follow MLS semantics. Implementations must pin the exact MLS library version and configuration used.
 
 ### 2.3 Privacy Layer (Aztec / Noir / UltraHonk)
-All private state transitions must execute inside a client-side Private eXecution Environment (PXE). Proofs must be UltraHonk proofs generated in a Web Worker under cross-origin isolation (COOP/COEP). The server must never receive private inputs, intermediate witnesses, or spending keys. Verification keys of every circuit that protects value or identity must be anchored on L1. The agent must publish the circuit source, the verification key, and a reproducible end-to-end test against Aztec testnet.
+All private state transitions must execute inside a client side Private Execution Environment (PXE). Proofs must be UltraHonk proofs generated in a Web Worker under cross origin isolation (COOP/COEP). The server must never receive private inputs, intermediate witnesses, or spending keys. Verification keys of every circuit that protects value or identity must be anchored on Layer 1. Implementations must publish the circuit source, compiled verification keys, and reproducible end to end tests against Aztec testnet.
 
 ### 2.4 Execution Layer (Executable Artifact Frames — EAF)
-Every EAF must run inside an air-gapped iframe. The only communication channel with the host is the typed, versioned, enumerated `window.hl` bridge. The bridge surface must be frozen per EAF version and documented. Resource limits (CPU, memory, network) must be enforced. The agent must implement and maintain an adversarial test suite that attempts escape, cross-EAF access, and exfiltration.
+Every EAF must run inside an isolated sandbox iframe. The only communication channel with the host is the typed, versioned, enumerated `window.hl` bridge. The bridge surface must be frozen per EAF version and documented. Resource limits (CPU, memory, network) must be enforced. Implementations must maintain an adversarial test suite that attempts escape, cross-EAF access, and exfiltration.
 
 ### 2.5 Settlement Layer
-L1 contracts that accept proofs must verify them against the published verification keys. No administrative function may unilaterally change a verification key or freeze user funds without a published timelock whose parameters are public. Ownership and upgrade paths must be either immutable or governed by a documented multisig + timelock. Deployed bytecode must be verified against repository source.
+L1 contracts that accept proofs must verify them against published verification keys. No administrative function may unilaterally change a verification key or freeze user funds without a published timelock whose parameters are public. Ownership and upgrade paths must be either immutable or governed by a documented multisig and timelock. Deployed bytecode must be verified against repository source.
 
 ---
 
-## 3. Detailed Implementation Tasks for the Agent
+## 3. Normative Protocol Implementation Tasks (T1–T15)
 
-The agent must execute the following tasks in the listed order. Later tasks depend on the artifacts produced by earlier tasks:
+The protocol monorepo encompasses fifteen foundational engineering tasks. Tasks are structured sequentially according to dependency requirements:
 
 - **T1. Elevate PROTOCOL_SPEC.md to normative status**: Replace existing high-level Spanish text with this normative specification.
 - **T2. Create and enforce traceability matrix**: Produce `docs/TRACEABILITY_MATRIX.md` mapping every claim in public materials to P1–P6 and tests.
@@ -109,22 +109,23 @@ Every residual risk identified in the protocol threat model is formally tracked,
 
 ---
 
-## 6. Implementation Guidance for the Agent
+## 6. Engineering Implementation Standards
 
-### 6.1 Order of Execution
-The agent must execute tasks T1 through T15 in the order listed. Later tasks depend on the artifacts produced by earlier tasks. The agent must not begin T6 (PXE end-to-end) until T5 (circuits) is complete, and must not mark A1 satisfied until the external reproducibility criterion is met.
+### 6.1 Dependency and Execution Order
+Implementations must execute tasks T1 through T15 according to their dependency topology. Task T6 (PXE integration) depends on T5 (circuit compilation and verification key generation). Acceptance criterion A1 is satisfied only upon demonstrating external reproducibility.
 
 ### 6.2 Testing Requirements
-Every property P1–P6 must have at least one automated test that fails if the property is violated. Property-based tests must use a minimum of 10,000 runs. Negative tests must actively attempt to violate invariants (empty lists, duplicate nullifiers, non-owner calls, partial execution, reentrancy patterns). The agent must not rely solely on happy-path tests.
+Every property P1–P6 requires automated test coverage demonstrating invariant preservation under failure. Property based tests must run a minimum of 10,000 iterations. Negative test suites must actively attempt invariant violations (nullifier collisions, empty collections, unauthorized identity updates, reentrancy vectors, and timelock bypass attempts).
 
 ### 6.3 Documentation Requirements
-Every new circuit, contract, or bridge surface must include NatSpec or equivalent comments stating the invariants it preserves. The contribution guidelines must require that any pull request touching private state or value includes an invariant analysis. The agent must update the traceability matrix whenever a public claim is added or modified.
+Circuit definitions, Solidity contracts, and sandbox interfaces must maintain NatSpec comments documenting the algebraic and state invariants preserved. Pull requests affecting private state or value transfer require a documented Invariant Analysis. The traceability matrix must be updated synchronously with protocol modifications.
 
-### 6.4 What the Agent Must NOT Do
-- **Do not claim 100/100 or production readiness** in `STATUS.md` or `README.md` until A1–A7 are fully met and demonstrated.
-- **Do not introduce server-side key derivation or storage.**
-- **Do not modify MLS TreeKEM or epoch handling.**
-- **Do not leave verification keys changeable by a unilateral admin function.**
+### 6.4 Inviolable Protocol Constraints
+Implementations must strictly adhere to the following prohibitions:
+- **Do not claim production readiness or full formal verification** in `STATUS.md`, `README.md`, or public materials until criteria A1–A7 are fully demonstrated.
+- **Do not introduce server side key derivation, processing, or custody.**
+- **Do not modify standard MLS TreeKEM or ratcheting state mechanics.**
+- **Do not permit verification keys to be changed unilaterally without the mandated 14 day timelock.**
 - **Do not mark a task complete without demonstrating its acceptance criterion.**
 
 ---

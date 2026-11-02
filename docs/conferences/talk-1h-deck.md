@@ -61,5 +61,5 @@
 
 ### Diapositiva 7: Resumen y Conclusiones
 - Principio de No Confianza en el Cliente.
-- Zero-Simulation Policy: Si no está en testnet/mainnet con pruebas reales, no se muestra como real.
+- Non-Simulated Proving Policy: Si no está en testnet/mainnet con pruebas reales, no se muestra como real.
 - Repositorio abierto, código auditable, licenciamiento transparente.

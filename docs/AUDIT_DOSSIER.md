@@ -62,18 +62,18 @@ npx vitest run test/aztec_e2e_no_simulation.test.ts
 npx vitest run test/eaf_isolation.adversarial.test.ts
 
 # 6. Verify L1 contract anti-backdoor invariants (A4 / T8):
-$env:LOCALAPPDATA = "$PWD\.cache"; npx hardhat test test/contracts_invariants.test.ts
+npm run test:contracts
 
 # 7. Verify L1 bytecode and anti-backdoor static analysis (T4):
 npx tsx scripts/verify-l1-bytecode.ts
 
 # 8. Verify Traceability Matrix & Status consistency (T2 / A7):
-npx tsx scripts/check-traceability.ts
+npm run check:traceability
 
-# 9. Verify 300-Item Fortification Checklist (Lazarus APT defense):
+# 9. Verify Fortification Checklist (Lazarus APT defense):
 npx vitest run test/fortification.test.ts
 
-# 10. Verify property-based fuzzing (30,000 iterations / T12):
+# 10. Verify property-based fuzzing (60,000 iterations / T12):
 npx vitest run test/property_fuzz.test.ts
 ```
 
@@ -81,7 +81,7 @@ npx vitest run test/property_fuzz.test.ts
 
 ## 5. npm Dependency Vulnerability Register (T11 Supply Chain — Full Eradication)
 
-Last evaluated: 2026-10-31. Verified via `npm audit`.
+Last evaluated: 2 November 2026. Verified via `npm audit`.
 
 **Status: FOUND 0 VULNERABILITIES (Exit Code: 0)**
 
