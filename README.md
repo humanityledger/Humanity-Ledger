@@ -9,7 +9,7 @@ Execution Environment:  Aztec Private Execution Environment (PXE)
 Messaging Protocol:     RFC 9420 Messaging Layer Security (MLS)
 L1 Target:              Ethereum Cancun EVM (Solidity 0.8.28)
 Verification Status:    1,076 passing assertions · 61 test suites · 60,000 property fuzzing iterations
-Monorepo Baseline:      Commit 8837be70 (November 2026)
+Monorepo Baseline:      Commit 783df711 (November 2026)
 Specification:          docs/PROTOCOL_SPEC.md
 Aztec Review Dossier:   docs/AZTEC_FOUNDATION_DOSSIER.md
 ```

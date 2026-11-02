@@ -323,7 +323,7 @@ Pilar = hoy + (100 − hoy) × (peso de tareas "Hecha" ÷ peso total del pilar).
 | I-019 | Textos legales coherentes con lo que el producto hace hoy | `app/legal/**` | Ninguna promesa de función inexistente | P1 | Pendiente |
 | I-020 | Página pública de estado del producto: qué es real y qué es demo | nueva página | Publicada y enlazada | P1 | Pendiente |
 | I-021 | Whitepaper sin afirmaciones no implementadas (postcuántico, 8.000 millones) | `app/whitepaper` | Cada afirmación técnica enlaza a código o se elimina | P1 | Pendiente |
-| I-022 | "Quantum Dots": definir con precisión o renombrar; quitar la explicación física | textos, `AztecIdentityCard.tsx` L962 | Sin física inventada | P2 | Pendiente |
+| I-022 | "Quantum Dots": eliminar completamente de todos los documentos públicos | todos los docs y textos | Eliminado en commit `783df711` | P2 | ✅ Done |
 | I-023 | README con instalación, arquitectura y comandos reales | `README.md` | Un desarrollador nuevo levanta el proyecto siguiéndolo | P1 | Pendiente |
 | I-024 | Borrar ramas obsoletas tras archivarlas (`backup-june-12`) | GitHub | Solo ramas activas | P3 | Pendiente |
 | I-025 | Borrar `k8s/` y Helm si el destino es Railway, o documentarlos | `k8s/` | Decisión aplicada | P3 | Pendiente |
