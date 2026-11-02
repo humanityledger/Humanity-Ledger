@@ -171,14 +171,51 @@ const nextConfig = {
             };
         }
 
-        // [AZTEC BUILD FIX] @aztec/aztec.js does not export its root path
-        // in package.json exports field. Webpack rejects root imports with:
-        // "Package path . is not exported from package @aztec/aztec.js".
-        // We alias to our universal root stub on both client and server.
-        config.resolve.alias = {
-            ...config.resolve.alias,
-            '@aztec/aztec.js': path.resolve(__dirname, './lib/aztec/aztec-stub.js'),
+        // [AZTEC BUILD FIX] The Aztec SDK is pure ESM and only ever runs in the
+        // browser (lib/aztec/wallet/client.ts loads it with dynamic imports).
+        // On the server we stub every @aztec package subpath to false so webpack
+        // never tries to bundle them server-side. On the client we point each
+        // subpath directly at its pre-built CJS-compatible dest/api/*.js file,
+        // bypassing the string-only ESM exports field that webpack cannot resolve
+        // in a CJS Next.js build context.
+        const aztecJsRoot = path.resolve(__dirname, 'node_modules/@aztec/aztec.js/dest/api');
+        const noirRoot   = path.resolve(__dirname, 'node_modules/@aztec/noir-contracts.js/dest');
+        const walletsRoot = path.resolve(__dirname, 'node_modules/@aztec/wallets/dest/embedded/entrypoints');
+        const kvRoot     = path.resolve(__dirname, 'node_modules/@aztec/kv-store/dest');
+        const aztecSubpaths = {
+            // aztec.js subpaths
+            '@aztec/aztec.js/fields':    path.join(aztecJsRoot, 'fields.js'),
+            '@aztec/aztec.js/addresses': path.join(aztecJsRoot, 'addresses.js'),
+            '@aztec/aztec.js/node':      path.join(aztecJsRoot, 'node.js'),
+            '@aztec/aztec.js/contracts': path.join(aztecJsRoot, 'contract.js'),
+            '@aztec/aztec.js/fee':       path.join(aztecJsRoot, 'fee.js'),
+            '@aztec/aztec.js/account':   path.join(aztecJsRoot, 'account.js'),
+            '@aztec/aztec.js/crypto':    path.join(aztecJsRoot, 'crypto.js'),
+            '@aztec/aztec.js/tx':        path.join(aztecJsRoot, 'tx.js'),
+            '@aztec/aztec.js/wallet':    path.join(aztecJsRoot, 'wallet.js'),
+            // noir-contracts.js subpaths (empty exports map — alias directly to dest)
+            '@aztec/noir-contracts.js/SponsoredFPC': path.join(noirRoot, 'SponsoredFPC.js'),
+            '@aztec/noir-contracts.js/Token':        path.join(noirRoot, 'Token.js'),
+            // wallets/embedded — has browser/default export map; use browser build
+            '@aztec/wallets/embedded': path.join(walletsRoot, 'browser.js'),
+            // kv-store (only used in scripts, not browser; alias to indexeddb index)
+            '@aztec/kv-store/deprecated/indexeddb': path.join(kvRoot, 'indexeddb', 'index.js'),
         };
+        if (isServer) {
+            // Server must never bundle or execute the Aztec browser SDK.
+            config.resolve.alias = {
+                ...config.resolve.alias,
+                ...Object.fromEntries(Object.keys(aztecSubpaths).map(k => [k, false])),
+                '@aztec/aztec.js': false,
+            };
+        } else {
+            // Client: resolve subpaths directly to their built JS files so webpack
+            // can read them without hitting the ESM-only string exports map.
+            config.resolve.alias = {
+                ...config.resolve.alias,
+                ...aztecSubpaths,
+            };
+        }
 
         // [EPERM FIX] Prevent webpack file watcher from scanning Windows system
         // protected directories. Without this, webpack glob scans crawl UP from
