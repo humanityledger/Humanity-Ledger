@@ -1,15 +1,17 @@
 # Humanity Ledger — Hardening Branch Invariant CI
-# Runs on every push/PR to claude/sync-and-hardening
+# Runs on every push/PR to main and claude/sync-and-hardening
 # Enforces: all invariant tests, traceability, npm audit, no-simulation guard
 
-name: Invariant & Security CI (claude/sync-and-hardening)
+name: Invariant & Security CI
 
 on:
   push:
     branches:
+      - main
       - claude/sync-and-hardening
   pull_request:
     branches:
+      - main
       - claude/sync-and-hardening
 
 permissions:
@@ -17,9 +19,9 @@ permissions:
   security-events: write
 
 jobs:
-  # ─── Job 1: Invariant Test Battery ────────────────────────────────────────
+  # --- Job 1: Invariant Test Battery --------------------------------------------
   invariant-tests:
-    name: Invariant Tests (A1–A7)
+    name: Invariant Tests (A1 through A7 + PXE + VK + Rate Bound)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -44,7 +46,7 @@ jobs:
         env:
           NODE_ENV: test
 
-      - name: A3 — EAF adversarial isolation (P6)
+      - name: A3 — EAF adversarial isolation (P6.1 through P6.8)
         run: npx vitest run test/eaf_isolation.adversarial.test.ts
         env:
           NODE_ENV: test
@@ -52,7 +54,7 @@ jobs:
       - name: A4 — L1 bytecode static analysis
         run: npx tsx scripts/verify-l1-bytecode.ts
 
-      - name: A5 — Key custody (P5)
+      - name: A5 — Key custody (P2)
         run: npx vitest run test/key_custody.test.ts
         env:
           NODE_ENV: test
@@ -60,12 +62,27 @@ jobs:
       - name: A6 — Traceability consistency lock
         run: npx tsx scripts/check-traceability.ts
 
-      - name: A7 — Noir circuit constraint tests (21 tests)
+      - name: A7 — Noir circuit constraint tests
         run: npx vitest run test/circuits/
         env:
           NODE_ENV: test
 
-      - name: VK Integrity & Lifecycle Assertion
+      - name: PXE.1-4 + MLS.1-2 — PXE boundary and MLS lockfile security
+        run: npx vitest run test/pxe_boundary_security.test.ts
+        env:
+          NODE_ENV: test
+
+      - name: VK HASH_MISMATCH — Unconditional proof block verification (5 tests)
+        run: npx vitest run test/vk_hash_mismatch.test.ts
+        env:
+          NODE_ENV: test
+
+      - name: Streams rate bound — Gap G4 closure (4 tests)
+        run: npx vitest run test/circuits/streams_rate_bound.test.ts
+        env:
+          NODE_ENV: test
+
+      - name: VK Integrity and Lifecycle Assertion
         run: npx vitest run test/aztec_vk_integrity.test.ts
         env:
           NODE_ENV: test

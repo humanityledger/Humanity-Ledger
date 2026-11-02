@@ -32,7 +32,11 @@ app/api/auth/** @humanityledger
 app/api/siwe/** @humanityledger
 test/key_custody.test.ts @humanityledger
 test/mls_post_compromise.test.ts @humanityledger
+test/pxe_boundary_security.test.ts @humanityledger
+test/vk_hash_mismatch.test.ts @humanityledger
+test/circuits/streams_rate_bound.test.ts @humanityledger
 test/property_fuzz.test.ts @humanityledger
+circuits/CONSTRAINT_COMPLETENESS.md @humanityledger
 
 # Database schema — every migration needs review
 prisma/schema.prisma @humanityledger
