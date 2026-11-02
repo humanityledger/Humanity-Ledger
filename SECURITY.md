@@ -3,7 +3,7 @@
 > **Specification Standard:** HL-SEC-2026.5  
 > **Classification:** Public Cryptographic Protocol Specification  
 > **Target Audience:** Aztec Foundation Technical and Ecosystem Team, Security Researchers, Protocol Auditors, and Institutional Partners  
-> **Protocol Baseline:** Monorepo Commit `378cb27e` (November 2026)  
+> **Protocol Baseline:** Monorepo Commit `8837be70` (November 2026)  
 > **Security Contact:** `humanityledger@icloud.com` — Initial acknowledgment within 12 hours
 
 ---

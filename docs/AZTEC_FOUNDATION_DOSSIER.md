@@ -2,7 +2,7 @@
 ## Protocol: Humanity Ledger | Target: Aztec Foundation Technical and Ecosystem Team
 **Date:** November 2026  
 **Repository:** [https://github.com/humanityledger/Humanity-Ledger](https://github.com/humanityledger/Humanity-Ledger)  
-**Canon Commit (main):** `378cb27e`  
+**Canon Commit (main):** `8837be70`  
 **Current Protocol Maturity:** Testnet Stage 1 — Audit & Validation Ready  
 
 ---
@@ -129,7 +129,7 @@ npx vitest run test/property_fuzz.test.ts
 npm run test:run
 ```
 
-### Verification Results Summary (Commit `378cb27e`)
+### Verification Results Summary (Commit `8837be70`)
 | Test Battery | Target Area | Result | Status |
 |---|---|---|---|
 | **Non Simulated Proving** (`test/aztec_e2e_no_simulation.test.ts`) | Aztec PXE Pipeline | 3/3 passed | ✅ VERIFIED |
@@ -175,4 +175,4 @@ We invite the Aztec Foundation team to collaborate on the following milestone in
 - **Protocol Engineering and Inquiries:** `humanityledger@icloud.com`
 - **Lead Developer and Protocol Architect:** Stefan Antonio Cirisanu (`humanityledger@icloud.com`)
 - **Repository:** `https://github.com/humanityledger/Humanity-Ledger`
-- **Branch:** `main` (Commit `378cb27e`)
+- **Branch:** `main` (Commit `8837be70`)
