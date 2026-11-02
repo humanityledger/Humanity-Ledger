@@ -24,11 +24,11 @@ NEXT_PUBLIC_IDENTITY_SIWE_STUDIO_ENABLED = OFF   ← deploy default (safe)
 
 | File | Role |
 |---|---|
-| [`lib/security/studio-identity-adapter.ts`](../../../lib/security/studio-identity-adapter.ts) | Adapter core: resolución dual, SHADOW telemetría, DB authority check |
-| [`app/api/passport/route.ts`](../../../app/api/passport/route.ts) | POST /api/passport integrado con adapter + Option D en tx |
-| [`app/api/premium/prover/route.ts`](../../../app/api/premium/prover/route.ts) | POST /api/premium/prover con adapter + Option D pre-Aztec |
-| [`app/api/auth/verify-session/route.ts`](../../../app/api/auth/verify-session/route.ts) | GET devuelve `humanityIdentity` suplementario |
-| [`components/provenance/ProvenanceSessionGate.tsx`](../../../components/provenance/ProvenanceSessionGate.tsx) | Gate client: SHADOW telemetría de mismatch |
+| [`lib/security/studio-identity-adapter.ts`](../../lib/security/studio-identity-adapter.ts) | Adapter core: resolución dual, SHADOW telemetría, DB authority check |
+| [`app/api/passport/route.ts`](../../app/api/passport/route.ts) | POST /api/passport integrado con adapter + Option D en tx |
+| [`app/api/premium/prover/route.ts`](../../app/api/premium/prover/route.ts) | POST /api/premium/prover con adapter + Option D pre-Aztec |
+| [`app/api/auth/verify-session/route.ts`](../../app/api/auth/verify-session/route.ts) | GET devuelve `humanityIdentity` suplementario |
+| [`components/provenance/ProvenanceSessionGate.tsx`](../../components/provenance/ProvenanceSessionGate.tsx) | Gate client: SHADOW telemetría de mismatch |
 
 ### Shadow Mode Behaviour (mode = SHADOW)
 

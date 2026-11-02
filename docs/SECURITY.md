@@ -1,6 +1,6 @@
 # Resumen de Seguridad y Modelo de Amenazas
 
-> Para el análisis detallado STRIDE, consulte [docs/security/threat-model.md](threat-model.md).
+> Para el análisis detallado STRIDE, consulte [docs/security/threat-model.md](security/threat-model.md).
 
 ---
 
