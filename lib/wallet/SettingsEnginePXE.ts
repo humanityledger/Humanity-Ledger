@@ -133,6 +133,8 @@ export interface LedgerProtocolSettings {
   accent_color: string;
   /** Chat background type */
   chat_background: 'default' | 'amoled' | 'holographic' | 'matrix' | 'gradient';
+  /** Active chat color theme palette id */
+  chat_theme?: string;
   /** Enable glowing NFT border on avatars */
   nft_border_enabled: boolean;
   /** Overlay recipient address as watermark to deter leaks */
@@ -332,6 +334,7 @@ export const DEFAULT_PXE_SETTINGS: LedgerProtocolSettings = {
   bubble_style: 'default',
   accent_color: '#1c7aff',
   chat_background: 'default',
+  chat_theme: 'default',
   nft_border_enabled: false,
   watermark_enabled: false,
 

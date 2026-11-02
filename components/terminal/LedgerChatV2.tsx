@@ -66,6 +66,7 @@ import SwipeableConversationRow from '@/components/chat/SwipeableConversationRow
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { ThemePickerSheet, THEME_PALETTES, applyThemePalette, type ThemePalette } from '@/components/chat/ThemePickerSheet';
 import { InChatSearch } from '@/components/chat/InChatSearch';
+import { WallpaperPickerSheet, WALLPAPER_OPTIONS, type WallpaperOption } from '@/components/chat/WallpaperPickerSheet';
 import { ZkMoneyModal } from '@/components/chat/ZkMoneyModal';
 import { ZkWalletPanel } from '@/components/zk/ZkWalletPanel';
 import { ZkNotificationBell } from '@/components/zk/ZkNotificationBell';
@@ -781,11 +782,39 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [searchQuery, setSearchQuery] = useState(''); // in-chat search
   const [typingPeers, setTypingPeers] = useState<Set<string>>(new Set()); // typing indicators
 
-  // ─── UI Maturity: Theme picker, pin, mute ─────────────────────────────────
+  // ─── UI Maturity: Theme picker, pin, mute, per-conv wallpaper ────────────
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [chatThemeId, setChatThemeId] = React.useRef<string>('default');
   const [pinnedPeers, setPinnedPeers] = useState<Set<string>>(new Set());
   const [mutedPeers, setMutedPeers] = useState<Set<string>>(new Set());
+
+  // Per-conversation wallpaper: peerAddress.toLowerCase() -> CSS background value
+  const [convWallpapers, setConvWallpapers] = useState<Record<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem('ledger_conv_wallpapers');
+      return stored ? JSON.parse(stored) : {};
+    } catch { return {}; }
+  });
+
+  const setConvWallpaper = React.useCallback((peer: string, bg: string) => {
+    setConvWallpapers(prev => {
+      const next = { ...prev, [peer.toLowerCase()]: bg };
+      localStorage.setItem('ledger_conv_wallpapers', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleWpChange = (e: any) => {
+      if (e?.detail?.peer && e?.detail?.bg) {
+        setConvWallpapers(prev => ({ ...prev, [e.detail.peer.toLowerCase()]: e.detail.bg }));
+      }
+    };
+    window.addEventListener('ledger_wallpaper_changed', handleWpChange);
+    return () => window.removeEventListener('ledger_wallpaper_changed', handleWpChange);
+  }, []);
+
+  const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
 
   const togglePin = React.useCallback((peer: string) => {
     setPinnedPeers(prev => {
@@ -1187,6 +1216,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setSidebarMenu(null);
     toast.success('Chat deleted');
   };
+
+  const markConversationAsRead = useCallback((peer: string) => {
+    const p = peer.toLowerCase();
+    setConversations(prev => prev.map(c => c.peerAddress.toLowerCase() === p ? { ...c, unreadCount: 0 } : c));
+    toast.success('Marked as read');
+  }, []);
 
   // Phase 4: Submit edited message — sends XMTP signal __EDIT__id__::newContent
   const submitEditMessage = async () => {
@@ -5381,10 +5416,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   onArchive={() => toggleArchive(conv.peerAddress)}
                   onPin={() => togglePin(conv.peerAddress)}
                   onMute={() => toggleMute(conv.peerAddress)}
-                  onMarkAsRead={() => {/* mark-as-read handled by message stream */}}
-                  onDelete={() => {
-                    toggleArchive(conv.peerAddress);
-                  }}
+                  onMarkAsRead={() => markConversationAsRead(conv.peerAddress)}
+                  onDelete={() => deleteConversation(conv.peerAddress)}
                 >
                   <button
                     onContextMenu={(e) => { e.preventDefault(); setSidebarMenu({ peer: conv.peerAddress, x: e.clientX, y: e.clientY }); }}
@@ -5599,6 +5632,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         {[
                           { label: 'Contact info', icon: <Info size={17} strokeWidth={1.8} />, onClick: () => setShowContactInfo(true) },
                           { label: 'Search in chat', icon: <Search size={17} strokeWidth={1.8} />, onClick: () => { setShowSearch(true); setSearchQuery(''); setSearchIndex(0); } },
+                          { label: 'Chat wallpaper', icon: <span className="text-[15px] leading-none">🖼️</span>, onClick: () => setShowWallpaperPicker(true) },
+                          { label: 'Change theme', icon: <span className="text-[15px] leading-none">🎨</span>, onClick: () => setShowThemePicker(true) },
                           { label: 'Save contact', icon: <UserPlus size={17} strokeWidth={1.8} />, onClick: () => { setSaveContactName(getDisplayName(activePeer!)); setShowSaveContactModal(true); } },
                           { label: isSecretChat ? 'Turn off secret chat' : 'Secret chat', icon: <Flame size={17} strokeWidth={1.8} />, onClick: () => setIsSecretChat(!isSecretChat) },
                           { label: 'Private wallet', icon: <ShieldCheck size={17} strokeWidth={1.8} />, onClick: () => setShowZkWallet(v => !v) },
@@ -5680,7 +5715,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             />
 
             {/* Dynamic Chat Background */}
-            <div className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f7f8fa]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={{ ...(isSecretChat ? {} : bgStyle), fontFamily, fontSize: `${fontSizePx}px`, ...(ledgerSettings?.anti_screenshot && screenShielded ? { filter: 'blur(18px)', transition: 'filter 120ms ease' } : { transition: 'filter 160ms ease' }) }}>
+            <div className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f7f8fa]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={{ ...(isSecretChat ? {} : (activePeer && convWallpapers[activePeer.toLowerCase()] ? { background: convWallpapers[activePeer.toLowerCase()] } : bgStyle)), fontFamily, fontSize: `${fontSizePx}px`, ...(ledgerSettings?.anti_screenshot && screenShielded ? { filter: 'blur(18px)', transition: 'filter 120ms ease' } : { transition: 'filter 160ms ease' }) }}>
               {/* Matrix Rain Effect Layer */}
               {chatBackground === 'matrix' && (
                 <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,255,0,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -6207,6 +6242,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           >
                             <Smile size={21} strokeWidth={1.8} />
                           </button>
+                          {/* Character counter — appears when approaching long message */}
+                          {inputText.length > 400 && (
+                            <span className={`text-[11px] tabular-nums font-medium shrink-0 mr-1 mb-[6px] self-end ${inputText.length > 900 ? 'text-[#e5484d]' : inputText.length > 700 ? 'text-[#f59e0b]' : 'text-[#a3a9b4]'}`}>
+                              {1000 - inputText.length}
+                            </span>
+                          )}
                         </>
                       )}
                     </div>
@@ -6239,24 +6280,49 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               <div className="w-16 h-16 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center text-[#15171c] mb-6">
                 <MessageSquare size={28} strokeWidth={1.6} aria-hidden="true" />
               </div>
-              <h1 className="text-[24px] md:text-[28px] font-semibold tracking-[-0.02em] text-[#15171c] mb-2">Ledger Chat</h1>
-              <p className="text-[15.5px] text-[#727a88] leading-relaxed max-w-sm">
-                Choose a conversation on the left, or start a new one by searching for a name or pasting a wallet address.
+              <h1 className="text-[24px] md:text-[28px] font-bold tracking-[-0.03em] text-[#15171c] mb-2">Ledger Chat</h1>
+              <p className="text-[15px] text-[#727a88] leading-relaxed max-w-[320px]">
+                Private. Encrypted. Yours. Select a chat or start a new one.
               </p>
-              <div className="mt-8 w-full grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-left">
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('ledger-new-chat-input')?.focus()}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#15171c] text-white rounded-xl text-[14px] font-medium hover:bg-[#2d2f36] transition-colors active:scale-95"
+                >
+                  <Plus size={16} strokeWidth={2.2} />
+                  New chat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateGroup(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#e4e7ec] text-[#15171c] rounded-xl text-[14px] font-medium hover:bg-[#f7f8fa] transition-colors active:scale-95"
+                >
+                  <Users size={16} strokeWidth={1.8} />
+                  New group
+                </button>
+              </div>
+              <div className="mt-8 w-full grid grid-cols-2 gap-2.5 text-left max-w-sm">
                 {[
-                  { icon: <Lock size={17} strokeWidth={1.8} />, title: 'Encrypted', text: 'Direct messages are encrypted on your device.' },
-                  { icon: <Users size={17} strokeWidth={1.8} />, title: 'Communities', text: 'Channels, roles and invite links.' },
-                  { icon: <Wallet size={17} strokeWidth={1.8} />, title: 'Payments', text: 'Send tokens from your own wallet.' },
-                ].map(f => (
-                  <div key={f.title} className="bg-white rounded-xl p-3.5 border border-[#e4e7ec]">
-                    <span className="w-8 h-8 rounded-lg bg-[#eff1f4] text-[#15171c] flex items-center justify-center mb-2.5" aria-hidden="true">{f.icon}</span>
-                    <p className="text-[14px] font-medium text-[#15171c]">{f.title}</p>
-                    <p className="text-[13px] text-[#727a88] leading-snug mt-0.5">{f.text}</p>
-                  </div>
+                  { emoji: '🔐', title: 'End-to-end encrypted', text: 'Messages live only on your devices.' },
+                  { emoji: '💸', title: 'Wallet payments', text: 'Send tokens directly from chat.' },
+                  { emoji: '👥', title: 'Communities', text: 'Channels, roles, and invite links.' },
+                  { emoji: '🎨', title: 'Fully customizable', text: '8 themes, 12 wallpapers, 7 bubble styles.' },
+                ].map((f, idx) => (
+                  <motion.div
+                    key={f.title}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 28, delay: idx * 0.06 }}
+                    className="bg-white rounded-2xl p-4 border border-[#e4e7ec] hover:shadow-sm transition-shadow"
+                  >
+                    <span className="text-[22px] mb-2 block">{f.emoji}</span>
+                    <p className="text-[13px] font-semibold text-[#15171c]">{f.title}</p>
+                    <p className="text-[12px] text-[#727a88] leading-snug mt-0.5">{f.text}</p>
+                  </motion.div>
                 ))}
               </div>
-              <p className="mt-6 text-[13px] text-[#a3a9b4]">Ledger Chat is in early access.</p>
+              <p className="mt-6 text-[12px] text-[#a3a9b4]">Powered by XMTP and Aztec Network</p>
             </div>
           </div>
         )}
@@ -7169,6 +7235,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }}
         onClose={() => setShowThemePicker(false)}
       />
+
+      {/* ── Wallpaper Picker Sheet ────────────────────────────────────────── */}
+      {activePeer && (
+        <WallpaperPickerSheet
+          open={showWallpaperPicker}
+          currentWallpaperId={WALLPAPER_OPTIONS.find(o => o.background === convWallpapers[activePeer.toLowerCase()])?.id || 'default'}
+          peerDisplayName={getDisplayName(activePeer)}
+          onSelect={(opt: WallpaperOption) => {
+            setConvWallpaper(activePeer, opt.background);
+          }}
+          onClose={() => setShowWallpaperPicker(false)}
+        />
+      )}
 
       </div>{/* end h-full flex-col layout wrapper */}
     </TuringShieldGate>

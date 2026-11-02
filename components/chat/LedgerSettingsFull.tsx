@@ -28,6 +28,8 @@ import { exportableLocalStorage } from '@/lib/settings/exportSafety';
 import { wipeLocalChatData } from '@/lib/settings/localWipe';
 import { loadBlockList, saveBlockList } from '@/lib/chat/blockList';
 import { downscaleAvatar, pushPublicProfile } from '@/lib/chat/profileSync';
+import { WALLPAPER_OPTIONS } from './WallpaperPickerSheet';
+import { THEME_PALETTES, applyThemePalette } from './ThemePickerSheet';
 
 function downloadSettingsBackup(): void {
   const data = exportableLocalStorage();
@@ -997,12 +999,24 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           ════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'chat' && (
             <>
-              <Group title="Appearance">
+              <Group title="Appearance & Themes">
                 <Row
                   icon={<Palette size={18} />}
+                  label="Color theme"
+                  value={THEME_PALETTES.find(p => p.id === (settings.chat_theme || 'default'))?.label || 'Classic'}
+                  onTap={() => setModal('color_theme')}
+                />
+                <Row
+                  icon={<Sun size={18} />}
                   label="Chat wallpaper"
-                  value={settings.chat_background === 'default' ? 'Default' : 'Custom'}
+                  value={WALLPAPER_OPTIONS.find(w => w.background === settings.chat_background || w.id === settings.chat_background)?.label || 'Default'}
                   onTap={() => setModal('wallpaper')}
+                />
+                <Row
+                  icon={<FileText size={18} />}
+                  label="Font family"
+                  value={settings.font_family ? (settings.font_family.charAt(0).toUpperCase() + settings.font_family.slice(1)) : 'Inter'}
+                  onTap={() => setModal('font_family')}
                 />
                 <Row
                   icon={<Sliders size={18} />}
@@ -1011,9 +1025,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   onTap={() => setModal('font_size')}
                 />
                 <Row
-                  icon={<Sun size={18} />}
+                  icon={<MessageSquare size={18} />}
                   label="Bubble style"
-                  value={settings.bubble_style || 'Default'}
+                  value={settings.bubble_style ? (settings.bubble_style.charAt(0).toUpperCase() + settings.bubble_style.slice(1)) : 'Default'}
                   onTap={() => setModal('bubble_style')}
                 />
               </Group>
@@ -1528,26 +1542,122 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 </div>
               )}
 
+              {/* ── Color Theme ── */}
+              {modal === 'color_theme' && (
+                <div className="px-6 pb-6">
+                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">Color theme</h3>
+                  <p className="text-[13px] text-[#727a88] mb-5">Curated palettes that transform your entire messaging aesthetic.</p>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {THEME_PALETTES.map(p => {
+                      const isSel = (settings.chat_theme || 'default') === p.id;
+                      return (
+                        <button
+                          type="button"
+                          key={p.id}
+                          onClick={() => {
+                            applyThemePalette(p);
+                            updateSetting('chat_theme', p.id as any);
+                            updateSetting('accent_color', p.accent as any);
+                            setModal(null);
+                            toast.success(`Theme applied: ${p.label}`);
+                          }}
+                          className={`p-3.5 rounded-2xl border-2 text-left transition-all ${
+                            isSel ? 'border-[#15171c] shadow-md' : 'border-transparent bg-[#f2f4f7]'
+                          }`}
+                          style={{ backgroundColor: p.bgSurface }}
+                        >
+                          <div className="w-full h-8 rounded-lg mb-2 flex overflow-hidden" style={{ backgroundColor: p.bgChat }}>
+                            <div className="h-full flex-1" style={{ backgroundColor: p.bubbleReceived }} />
+                            <div className="h-full w-[45%]" style={{ backgroundColor: p.accent }} />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[13px] font-semibold" style={{ color: p.textPrimary }}>
+                              {p.symbol} {p.label}
+                            </span>
+                            {isSel && <Check size={14} className="text-[#15171c]" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* ── Wallpaper ── */}
               {modal === 'wallpaper' && (
                 <div className="px-6 pb-6">
-                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">Chat wallpaper</h3>
-                  <div className="grid grid-cols-3 gap-3 mb-5">
-                    {['default','minimal','dots','circuit','waves'].map(bg => (
+                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">Chat wallpaper</h3>
+                  <p className="text-[13px] text-[#727a88] mb-5">Select a background texture, color, or gradient for your conversations.</p>
+                  <div className="grid grid-cols-3 gap-2.5 max-h-[380px] overflow-y-auto pr-1 mb-4">
+                    {WALLPAPER_OPTIONS.map(opt => {
+                      const isSel = (settings.chat_background || 'default') === opt.id || settings.chat_background === opt.background;
+                      return (
+                        <button
+                          type="button"
+                          key={opt.id}
+                          onClick={() => {
+                            updateSetting('chat_background', opt.background as any);
+                            setModal(null);
+                            toast.success(`Wallpaper: ${opt.label}`);
+                          }}
+                          className={`relative rounded-xl overflow-hidden border-2 text-left transition-all ${
+                            isSel ? 'border-[#15171c] shadow-md scale-[1.02]' : 'border-transparent hover:border-black/10'
+                          }`}
+                        >
+                          <div className="w-full h-16" style={opt.preview} />
+                          <div className="bg-white px-2 py-1 text-center">
+                            <span className="text-[11px] font-medium text-[#15171c] truncate block">
+                              {opt.label}
+                            </span>
+                          </div>
+                          {isSel && (
+                            <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#15171c] flex items-center justify-center">
+                              <Check size={9} strokeWidth={3} className="text-white" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Font Family ── */}
+              {modal === 'font_family' && (
+                <div className="px-6 pb-6">
+                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">Font family</h3>
+                  <p className="text-[13px] text-[#727a88] mb-5">Change the typeface used across all chat messages and transcripts.</p>
+                  {[
+                    { id: 'inter', label: 'Inter', desc: 'Modern, highly readable sans-serif' },
+                    { id: 'mono', label: 'JetBrains Mono', desc: 'Technical monospaced developer typeface' },
+                    { id: 'space-mono', label: 'Space Mono', desc: 'Retro-futuristic fixed-width font' },
+                    { id: 'system', label: 'System Native', desc: 'Native OS font (San Francisco / Segoe UI)' },
+                    { id: 'satoshi', label: 'Satoshi', desc: 'Clean geometric contemporary sans' },
+                    { id: 'serif', label: 'Merriweather Serif', desc: 'Editorial literary serif styling' },
+                    { id: 'dyslexic', label: 'OpenDyslexic', desc: 'High contrast specialized accessibility typeface' },
+                  ].map(font => {
+                    const isSel = (settings.font_family || 'inter') === font.id;
+                    return (
                       <button
                         type="button"
-                        key={bg}
-                        onClick={() => { updateSetting('chat_background', bg as any); setModal(null); toast.success('Wallpaper saved'); }}
-                        className={`h-24 rounded-2xl border-2 flex items-center justify-center font-semibold text-[12px] transition-all ${
-                          (settings.chat_background || 'default') === bg
-                            ? 'border-[#15171c] text-[#15171c] bg-black/5'
-                            : 'border-transparent bg-[#f2f4f7] text-[#727a88]'
+                        key={font.id}
+                        onClick={() => {
+                          updateSetting('font_family', font.id as any);
+                          setModal(null);
+                          toast.success(`Font set to ${font.label}`);
+                        }}
+                        className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${
+                          isSel ? 'bg-[#15171c] text-white' : 'bg-[#f2f4f7] text-[#15171c] hover:bg-[#e9ecf0]'
                         }`}
                       >
-                        {bg}
+                        <div className="text-left">
+                          <p className="font-semibold text-[15px]">{font.label}</p>
+                          <p className={`text-[12px] mt-0.5 ${isSel ? 'text-white/70' : 'text-[#727a88]'}`}>{font.desc}</p>
+                        </div>
+                        {isSel && <Check size={18} />}
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               )}
 

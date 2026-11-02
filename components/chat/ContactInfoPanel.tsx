@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { EncryptionInfoSheet } from './EncryptionInfoSheet';
 import { setSynced, DEVICE_SYNC_EVENT, type DeviceSyncEventDetail } from '@/lib/sync/runtime';
+import { WALLPAPER_OPTIONS } from './WallpaperPickerSheet';
 
 interface ContactInfoPanelProps {
   peerAddress: string;
@@ -320,6 +321,15 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
               <Row icon={<ImageIcon />} label="Shared media" value={String(mediaCount)} onTap={() => setModal('media')} />
             </Group>
 
+            <Group title="Personalization">
+              <Row
+                icon={<Palette />}
+                label="Custom wallpaper"
+                sublabel="Set a unique background for this chat"
+                onTap={() => setModal('wallpaper')}
+              />
+            </Group>
+
             <Group title="Privacy" footer="Mute, timer and lock apply on all your devices signed in to this account.">
               <Row icon={<Bell />} label="Mute notifications" toggle={isMuted} onToggle={handleMute} />
               <Row icon={<Clock />} label="Disappearing messages" value={{ off: 'Off', '24h': '24 hours', '7d': '7 days', '90d': '90 days' }[disappearing]} onTap={() => setModal('disappearing')} />
@@ -389,6 +399,42 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
               </div>
               <p className="text-[14px] text-[#15171c] font-medium">{mediaCount ? `${mediaCount} shared in this chat` : 'No media shared yet'}</p>
               <p className="text-[13px] text-[#727a88] leading-relaxed">Photos, files and GIFs sent in this chat are counted here.</p>
+            </div>
+          </Modal>
+        )}
+
+        {modal === 'wallpaper' && (
+          <Modal title="Chat wallpaper" onClose={() => setModal(null)}>
+            <div className="flex flex-col gap-3">
+              <p className="text-[13px] text-[#727a88] mb-1 leading-relaxed">
+                Choose a personalized background for your conversation with {displayName}.
+              </p>
+              <div className="grid grid-cols-3 gap-2.5 max-h-[340px] overflow-y-auto pr-1">
+                {WALLPAPER_OPTIONS.map(opt => (
+                  <button
+                    type="button"
+                    key={opt.id}
+                    onClick={() => {
+                      try {
+                        const stored = JSON.parse(localStorage.getItem('ledger_conv_wallpapers') || '{}');
+                        stored[key] = opt.background;
+                        localStorage.setItem('ledger_conv_wallpapers', JSON.stringify(stored));
+                        window.dispatchEvent(new CustomEvent('ledger_wallpaper_changed', { detail: { peer: key, bg: opt.background } }));
+                      } catch {}
+                      setModal(null);
+                      showToast(`Wallpaper updated for ${displayName}`);
+                    }}
+                    className="relative rounded-xl overflow-hidden border-2 border-transparent hover:border-[#15171c] transition-all text-left shadow-sm"
+                  >
+                    <div className="w-full h-14" style={opt.preview} />
+                    <div className="bg-white px-1.5 py-1 text-center">
+                      <span className="text-[10.5px] font-medium text-[#15171c] truncate block">
+                        {opt.label}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </Modal>
         )}
