@@ -1,210 +1,212 @@
 # Humanity Ledger Protocol
 
-[![CI Test Suite](https://img.shields.io/badge/CI-1%2C076%20Passing-brightgreen?style=flat-square)](test/)
-[![Aztec PXE](https://img.shields.io/badge/Aztec-UltraHonk%20%2F%20PXE-blueviolet?style=flat-square)](https://aztec.network)
-[![Zero Simulation](https://img.shields.io/badge/Simulation-Zero%20Tolerance-success?style=flat-square)](test/aztec_e2e_no_simulation.test.ts)
-[![MLS Messaging](https://img.shields.io/badge/MLS-RFC%209420-blue?style=flat-square)](test/mls_post_compromise.test.ts)
-[![Maturity](https://img.shields.io/badge/Maturity-Testnet%20Stage%201-orange?style=flat-square)](docs/STATUS.md)
-[![License](https://img.shields.io/badge/License-Proprietary%202.0-lightgrey?style=flat-square)](LICENSE)
-
-> **Maturity Status:** Testnet Stage 1 — Audit & Product Validation Ready  
-> **Canonical Tree Baseline:** Commit `65f5c4bf` — 2 November 2026  
-> **Test Suite:** 1,076 / 1,076 passing · 61 test suites · 60,000 fuzz iterations · 0 failures  
-> **Normative Spec:** [`docs/PROTOCOL_SPEC.md`](docs/PROTOCOL_SPEC.md)  
-> **Aztec Foundation Dossier:** [`docs/AZTEC_FOUNDATION_DOSSIER.md`](docs/AZTEC_FOUNDATION_DOSSIER.md)
-
-Humanity Ledger is a privacy-first communication and settlement protocol. It couples **MLS messaging** (RFC 9420) with **client-side Aztec UltraHonk proof generation** via the Private Execution Environment (PXE) and auditable on-chain settlement over Ethereum L1, Base, and Polygon.
-
----
-
-## Architecture Overview
+An integrated cryptographic monorepo coupling client local zero knowledge proof synthesis via the Aztec Private Execution Environment with post compromise secure messaging under RFC 9420.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Client Device (Browser / Desktop)            │
-│                                                                 │
-│  ┌─────────────────────┐   ┌───────────────────────────────┐   │
-│  │  MLS Messaging      │   │  Aztec PXE (Local)            │   │
-│  │  RFC 9420 / XMTP    │   │  UltraHonk Prover             │   │
-│  └─────────────────────┘   │  Noir Circuits (BN254)        │   │
-│                            │  - escrow · identity · streams │   │
-│                            └───────────────────────────────┘   │
-└──────────────────────────────────────┬──────────────────────────┘
-                                       │ Private Tx / Shielded Proof
-                                       ▼
-                          ┌────────────────────────┐
-                          │  Aztec Network Testnet │
-                          │  Sequencer / Prover    │
-                          └────────────┬───────────┘
-                                       │ Batch Settlement
-                                       ▼
-                          ┌────────────────────────┐
-                          │  Ethereum L1           │
-                          │  HumanityTimeLockVault │
-                          │  LedgerDeadmanSwitch   │
-                          └────────────────────────┘
+Protocol Standard:      HL-SPEC-2026.1
+Proving Architecture:   UltraHonk over BN254 (Barretenberg WASM)
+Execution Environment:  Aztec Private Execution Environment (PXE)
+Messaging Protocol:     RFC 9420 Messaging Layer Security (MLS)
+L1 Target:              Ethereum Cancun EVM (Solidity 0.8.28)
+Verification Status:    1,076 passing assertions · 61 test suites · 60,000 property fuzzing iterations
+Monorepo Baseline:      Commit 931b1005 (November 2026)
+Specification:          docs/PROTOCOL_SPEC.md
+Aztec Review Dossier:   docs/AZTEC_FOUNDATION_DOSSIER.md
 ```
 
 ---
 
-## Verified Protocol Properties (P1 – P6)
+## 1. Architectural Foundations
 
-Each property is backed by passing automated tests on the `main` branch.
+Humanity Ledger implements a dual layer architecture designed for sovereign client execution and asynchronous state settlement. 
 
-| Property | Guarantee | Test Evidence |
-|---|---|---|
-| **P1** — Message Confidentiality | MLS used in conformance with RFC 9420 | `test/mls_post_compromise.test.ts` · `npm run test:crypto` |
-| **P2** — Post-Compromise Security | Epoch advance does not expose prior secrets after device compromise | `test/mls_post_compromise.test.ts` |
-| **P3** — Private State Confidentiality | Private balances and witnesses stay client-side; server receives no private inputs | `scripts/aztec-pxe-e2e.ts` · `test/aztec_e2e_no_simulation.test.ts` |
-| **P4** — Private State Integrity | Invalid state transitions rejected by circuit constraints and contract invariants | `test/circuits/` · `test/contracts_invariants.test.ts` |
-| **P5** — No Server Key Custody | Server does not generate, derive, or store spending keys or long-term MLS identity keys | `test/key_custody.test.ts` |
-| **P6** — EAF Isolation | Executable artifact frames are bounded by a closed bridge surface; no sandbox escape | `test/eaf_isolation.adversarial.test.ts` |
+The protocol operates under an untrusted relay assumption: neither intermediate transport nodes, backend indexing services, nor network operators are granted access to private execution witnesses, spending keys, or unencrypted communication state.
 
----
+1. **Client Execution Layer:** Private state transitions, note discovery, and witness generation execute strictly within the client Private Execution Environment (PXE). Proof synthesis is performed locally using the UltraHonk polynomial interactive oracle proof system over the BN254 elliptic curve via Barretenberg compiled to WebAssembly.
+2. **Asynchronous Settlement Layer:** State commitments, nullifier emissions, and dispute resolutions settle to Aztec Testnet and Ethereum Layer 1 timelocked contracts (`HumanityTimeLockVault`, `LedgerDeadmanSwitch`).
+3. **Continuous Group Communication:** Multipoint communication is established using Messaging Layer Security (RFC 9420), providing cryptographically enforced forward secrecy and post compromise security across ratcheted epoch state transitions.
 
-## Acceptance Criteria Status (A1 – A7)
-
-| Criterion | Status | Evidence |
-|---|---|---|
-| **A1** — Real Aztec E2E, zero simulation | ✅ Verified | `scripts/aztec-pxe-e2e.ts` · `test/aztec_e2e_no_simulation.test.ts` |
-| **A2** — MLS confidentiality and PCS | ✅ Verified | `test/mls_post_compromise.test.ts` · `npm run test:crypto` |
-| **A3** — EAF sandbox isolation | ✅ Verified | `test/eaf_isolation.adversarial.test.ts` |
-| **A4** — L1 contract invariants | ✅ Verified | `npm run test:contracts` · `scripts/verify-l1-bytecode.ts` |
-| **A5** — No server key custody | ✅ Verified | `test/key_custody.test.ts` |
-| **A6** — Residual risk documentation | ✅ Verified | `docs/PROTOCOL_SPEC.md` · `docs/AUDIT_DOSSIER.md` |
-| **A7** — Traceability matrix complete | ✅ Verified | `docs/TRACEABILITY_MATRIX.md` (CI-enforced by `npm run check:traceability`) |
-
----
-
-## Noir Circuits
-
-Three production ZK circuits implemented in [`circuits/`](circuits/), each with a compiled Verification Key (`target/*.vk.json`):
-
-| Circuit | File | Key Invariants |
-|---|---|---|
-| **Escrow Release** | `circuits/escrow/src/main.nr` | Commitment binding · deadline enforcement · nullifier uniqueness · value ceiling (≤ 10¹⁵) |
-| **Anonymous Identity** | `circuits/identity/src/main.nr` | Sanction screening without identity disclosure · Merkle membership · scoped sybil-resistance nullifier |
-| **Payment Streams** | `circuits/streams/src/main.nr` | Temporal monotonicity · accrual constraint · allocation ceiling · withdrawal nullifier |
-
-Circuit verification keys are monitored by `lib/aztec/verifier.ts`. Hash mismatches or `RETIRED` status unconditionally block client-side proof generation.
-
----
-
-## L1 Smart Contracts
-
-49 contracts compiled (Cancun EVM target). Key contracts:
-
-| Contract | Purpose |
-|---|---|
-| `HumanityTimeLockVault` | Time-locked, non-custodial user vaults with anti-drain invariants |
-| `HumanityIdentityRegistry` | Self-sovereign identity registration — owner-only updates, no hijack |
-| `LedgerDeadmanSwitch` | Non-custodial inheritance switch — 90-day minimum · 2-step backup wallet change |
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Client Execution Context (Browser / Desktop)         │
+│                                                                         │
+│  ┌───────────────────────────┐         ┌─────────────────────────────┐  │
+│  │   MLS Group State Engine  │         │   Aztec PXE (Client Local)  │  │
+│  │   TreeKEM / RFC 9420      │         │   Barretenberg UltraHonk    │  │
+│  └───────────────────────────┘         │   WASM Proving Engine       │  │
+│                                        └──────────────┬──────────────┘  │
+│                                                       │                 │
+│                                                       ▼                 │
+│                                        ┌─────────────────────────────┐  │
+│                                        │   Noir Circuits (ACIR)      │  │
+│                                        │   escrow · identity · stream│  │
+│                                        └─────────────────────────────┘  │
+└───────────────────────────────────────────────────────┬─────────────────┘
+                                                        │ Shielded Proof
+                                                        ▼
+                                        ┌──────────────────────────────┐
+                                        │   Aztec Network Testnet      │
+                                        │   Sequencer & Prover Pool    │
+                                        │   Rollup State Trees         │
+                                        └───────────────┬──────────────┘
+                                                        │ Batch Settlement
+                                                        ▼
+                                        ┌──────────────────────────────┐
+                                        │   Ethereum Layer 1 (Cancun)  │
+                                        │   HumanityTimeLockVault      │
+                                        │   LedgerDeadmanSwitch        │
+                                        └──────────────────────────────┘
+```
 
 ---
 
-## Explicit Non-Claims
+## 2. Monorepo Package Topology
 
-This repository does **not** claim the following:
+Whereas the upstream Aztec architecture distributes its stack across separate repositories (`aztec-packages` for the protocol kernel, `noir` for the language compiler, and `barretenberg` for the proving backend C++ library), Humanity Ledger organizes its implementation as a single integrated monorepo. 
 
-1. **Quantum resistance** for any classical cryptographic primitive (BN254, secp256k1, Curve25519 remain vulnerable to Shor's algorithm on cryptanalytically relevant quantum computers).
-2. **Metadata privacy** for MLS group membership, message timing, or IP-layer traffic patterns.
-3. **Mainnet production readiness** — the protocol is on Aztec Testnet and EVM testnets only.
-4. **Formal verification** — correctness is validated by automated property testing and fuzzing, but has not yet undergone third-party mathematical formal verification.
+This topology guarantees atomic compilation and synchronization between Noir constraint systems, compiled verification keys, client TypeScript bindings, and Layer 1 smart contracts.
 
-These boundaries are specified in [`docs/PROTOCOL_SPEC.md`](docs/PROTOCOL_SPEC.md) and are treated as hard constraints, not aspirational caveats.
+| Package Directory | Domain | Technology | Key Responsibility |
+|---|---|---|---|
+| `circuits/` | Zero Knowledge Circuits | Noir / ACIR | Production Noir circuits and compiled verification keys (`target/*.vk.json`) |
+| `contracts/` | Settlement Smart Contracts | Solidity 0.8.28 | 49 contracts targeting Cancun EVM, enforcing non custodial timelocks and registry state |
+| `lib/aztec/` | Client Orchestration | TypeScript / Aztec.js | Client PXE manager, key derivation, note discovery, and verification key lifecycle policies |
+| `lib/security/` | Cryptographic Hardening | TypeScript / Node Crypto | Constant time primitives, memory zeroization buffers, and iframe security guards |
+| `lib/community-apps/` | Sandbox Runtime | TypeScript / HTML5 | Ephemeral Application Framework providing isolated execution with sealed network egress |
+| `scripts/` | Tooling and Verification CI | TypeScript / Node.js | Real Aztec PXE pipelines, Layer 1 bytecode verification, and traceability assertions |
+| `test/` | Automated Test Harness | Vitest / Hardhat | 1,076 unit and integration tests, Noir constraint violations, and 60,000 fuzz iterations |
+| `docs/` | Normative Specifications | Markdown | Protocol specifications, formal traceability matrix, and external audit dossiers |
 
 ---
 
-## How to Verify (< 60 seconds from a clean clone)
+## 3. Formally Enforced Protocol Properties (P1 – P6)
+
+The protocol enforces six architectural invariants verified continuously by automated test suites on the `main` branch:
+
+| Invariant | Guarantee | Mathematical Definition | Verification Evidence |
+|---|---|---|---|
+| **P1** | Private State Confidentiality | No client witness or spending key is serialised to remote relays | `test/aztec_e2e_no_simulation.test.ts` |
+| **P2** | Non Custodial Key Derivation | Spending and viewing keys exist only in local device memory | `test/key_custody.test.ts` |
+| **P3** | Post Compromise Security | Epoch update re-keys group; compromised state cannot read forward | `test/mls_post_compromise.test.ts` |
+| **P4** | Circuit Constraint Integrity | All state transitions satisfy ACIR polynomials and valid nullifiers | `test/circuits/` · `test/aztec_vk_integrity.test.ts` |
+| **P5** | Sandbox Boundary Isolation | Ephemeral applications cannot access outer window or network sockets | `test/eaf_isolation.adversarial.test.ts` |
+| **P6** | Layer 1 Balance Conservation | Smart contracts reject unauthorized drains or premature timelock bypass | `npm run test:contracts` · `scripts/verify-l1-bytecode.ts` |
+
+---
+
+## 4. Acceptance Criteria Verification Status (A1 – A7)
+
+Status tracking is monitored by continuous integration via `scripts/check-traceability.ts`:
+
+| Criterion | Specification | Status | Automated Test Evidence |
+|---|---|---|---|
+| **A1** | Aztec PXE execution without synthetic simulation | Verified | `test/aztec_e2e_no_simulation.test.ts` · `scripts/aztec-pxe-e2e.ts` |
+| **A2** | RFC 9420 Messaging Layer Security confidentiality and PCS | Verified | `test/mls_post_compromise.test.ts` · `npm run test:crypto` |
+| **A3** | Ephemeral Application Framework sandbox boundary isolation | Verified | `test/eaf_isolation.adversarial.test.ts` |
+| **A4** | Layer 1 contract invariants and timelock enforcement | Verified | `npm run test:contracts` · `scripts/verify-l1-bytecode.ts` |
+| **A5** | Zero server key knowledge and client local key custody | Verified | `test/key_custody.test.ts` |
+| **A6** | Explicit documentation of residual risks and non claims | Verified | `docs/PROTOCOL_SPEC.md` · `docs/AUDIT_DOSSIER.md` |
+| **A7** | Normative traceability matrix synchronized across documentation | Verified | `docs/TRACEABILITY_MATRIX.md` (Validated by `npm run check:traceability`) |
+
+---
+
+## 5. Noir Circuits and Constraint Systems
+
+The monorepo contains three production Noir circuits in [`circuits/`](circuits/), each accompanied by committed verification key artifacts (`target/*.vk.json`):
+
+1. **Private Escrow Release (`circuits/escrow/src/main.nr`):**
+   - Commitment relation: $\text{commitment} = \mathcal{H}(\text{sender\_secret}, \text{recipient\_pubkey}, \text{amount}, \text{salt})$
+   - Temporal constraint: $\text{current\_timestamp} \le \text{deadline}$
+   - Unique nullifier: $\text{nullifier} = \mathcal{H}(\text{sender\_secret}, \text{salt})$
+   - Value boundary: $0 < \text{amount} \le 10^{15}$ (arithmetic overflow protection)
+
+2. **Anonymous Compliance and Identity (`circuits/identity/src/main.nr`):**
+   - Sanction exclusion: Proves subject jurisdiction is excluded from restricted sets without revealing nationality.
+   - Merkle membership: Proves inclusion of identity commitment within authoritative credential tree.
+   - Scoped nullifier: $\text{nullifier} = \mathcal{H}(\text{identity\_secret}, \text{scope})$ prevents sybil registrations per context.
+
+3. **Continuous Payment Streams (`circuits/streams/src/main.nr`):**
+   - Monotonic temporal validity: $\text{current\_time} \ge \text{start\_time}$
+   - Rate accrual bound: $(\text{withdrawn} + \text{claim}) \le (\text{current\_time} - \text{start\_time}) \times \text{rate}$
+   - Capital allocation ceiling: $(\text{withdrawn} + \text{claim}) \le \text{total\_allocation}$
+
+Verification key integrity is managed by [`lib/aztec/verifier.ts`](lib/aztec/verifier.ts). Any cryptographic mismatch between local compiled keys and on-chain registered commitments unconditionally blocks client proof synthesis. Changes to verification keys on Layer 1 are subject to a mandatory 14 day timelock policy ([`docs/VK_MONITORING.md`](docs/VK_MONITORING.md)).
+
+---
+
+## 6. Layer 1 Smart Contracts
+
+49 Solidity contracts compiled for the Cancun EVM target reside in `contracts/`. Primary settlement controllers:
+
+- **`HumanityTimeLockVault.sol`:** Non custodial vault holding user assets under mathematical timelocks. Prohibits unilateral administrator withdrawals.
+- **`HumanityIdentityRegistry.sol`:** Self sovereign identity registry ensuring write permissions are restricted exclusively to identity key owners.
+- **`LedgerDeadmanSwitch.sol`:** Non custodial inheritance facility enforcing a minimum 90 day inactivity threshold and a two step backup authorization protocol.
+
+Bytecode artifacts are automatically audited against backdoors and unauthorized drain patterns by `scripts/verify-l1-bytecode.ts`.
+
+---
+
+## 7. Explicit Cryptographic Non-Claims
+
+In accordance with academic rigor, this protocol explicitly defines its operational boundaries:
+
+1. **No Quantum Resistance for Classical Primitives:** BN254 elliptic curves utilized in Aztec UltraHonk, secp256k1 utilized in Ethereum, and Curve25519 utilized in Diffie Hellman operations remain susceptible to polynomial time discrete logarithm algorithms on cryptanalytically relevant quantum computers. Migration to lattice based primitives represents a post 2028 roadmap objective.
+2. **No Transport Layer Traffic Analysis Immunity:** Messaging Layer Security guarantees payload confidentiality and forward secrecy. It does not conceal IP packet origin, packet lengths, or transmission timings. Network layer anonymity requires routing through Tor, Nym, or equivalent mixnet infrastructures.
+3. **Testnet Stage 1 Operational Status:** The protocol is deployed across Aztec Testnet and Ethereum testnet environments (Polygon Amoy and Base Sepolia). It is not production ready for high value mainnet deployment until external security audits and formal verification milestones are achieved.
+4. **Third Party Formal Verification Scope:** Automated invariant tests, negative circuit tests, and property fuzzing (60,000 iterations) pass with zero errors. Formal mathematical machine checked verification (e.g. Coq or Lean4 proofs) is an ongoing milestone and not yet completed.
+
+---
+
+## 8. Reproducible Verification Commands
+
+The complete test battery can be reproduced on any standard developer workstation in under 60 seconds from a clean repository checkout:
 
 ```bash
-# Clone
+# 1. Clone monorepo
 git clone https://github.com/humanityledger/Humanity-Ledger.git && cd Humanity-Ledger
 
-# 1. Zero-simulation guard + Noir circuits + VK lifecycle
+# 2. Verify non-simulated proof requirements and Noir circuit constraints
 npx vitest run test/aztec_e2e_no_simulation.test.ts test/aztec_vk_integrity.test.ts test/circuits/
 
-# 2. MLS post-compromise security + key custody
-npx vitest run test/mls_post_compromise.test.ts test/key_custody.test.ts
+# 3. Verify non-custodial key isolation and MLS post-compromise security
+npx vitest run test/key_custody.test.ts test/mls_post_compromise.test.ts
 
-# 3. EAF adversarial isolation
+# 4. Verify Ephemeral Application Framework sandbox boundary isolation
 npx vitest run test/eaf_isolation.adversarial.test.ts
 
-# 4. L1 contract invariants (Hardhat Cancun EVM)
+# 5. Verify Layer 1 contract invariants (Hardhat Cancun EVM)
 npm run test:contracts
 
-# 5. Anti-backdoor bytecode verifier
+# 6. Verify Layer 1 contract bytecode against unauthorized drain patterns
 npx tsx scripts/verify-l1-bytecode.ts
 
-# 6. Normative traceability CI (A1–A7)
+# 7. Verify normative consistency across status and traceability matrices
 npm run check:traceability
 
-# 7. High-capacity property fuzzing (60,000 iterations)
+# 8. Execute high-capacity property fuzzing (60,000 iterations)
 npx vitest run test/property_fuzz.test.ts
 
-# 8. Full adversarial battery
-npm run test:massive
-
-# 9. Entire test suite (1,076 tests)
+# 9. Execute full unit and integration battery (1,076 tests)
 npm run test:run
 
-# 10. Dependency security audit
+# 10. Audit dependency vulnerability database
 npm audit
 ```
 
-**Last verified result on `65f5c4bf`:** 1,076 / 1,076 tests passing · 43 / 43 Hardhat invariants passing · 0 traceability contradictions · 0 bytecode backdoor patterns · 0 vulnerabilities in `npm audit`.
+**Verified Test Metric:** 1,076 / 1,076 tests passing · 43 / 43 Hardhat contract invariants passing · 0 traceability contradictions · 0 bytecode backdoor signatures · 0 dependencies with known vulnerabilities.
 
 ---
 
-## Repository Layout
+## 9. Aztec Foundation Technical Review
 
-```
-circuits/          Noir circuit sources and compiled verification keys
-├── escrow/        Private escrow release circuit
-├── identity/      Anonymous compliance and identity membership circuit
-└── streams/       Continuous payment stream withdrawal circuit
-
-contracts/         49 Solidity contracts (Cancun EVM)
-├── HumanityTimeLockVault.sol
-├── HumanityIdentityRegistry.sol
-└── security/LedgerDeadmanSwitch.sol
-
-docs/              Normative documentation
-├── PROTOCOL_SPEC.md          Single source of truth for the protocol
-├── TRACEABILITY_MATRIX.md    P1–P6 / A1–A7 ↔ test mapping
-├── AUDIT_DOSSIER.md          External audit record and risk notes
-├── AZTEC_FOUNDATION_DOSSIER.md  Technical brief for Aztec Foundation review
-├── VK_MONITORING.md          Verification key lifecycle policy
-└── FORTIFICATION_CHECKLIST.md  Security hardening checklist
-
-scripts/
-├── aztec-pxe-e2e.ts          Real Aztec testnet PXE end-to-end pipeline
-├── check-traceability.ts     Normative CI consistency checker
-├── verify-l1-bytecode.ts     Anti-backdoor L1 bytecode verifier
-└── benchmark-proof-gen.ts    UltraHonk proving time profiler
-
-test/
-├── circuits/                 Noir circuit invariant and negative tests
-├── mls_post_compromise.test.ts
-├── key_custody.test.ts
-├── aztec_e2e_no_simulation.test.ts
-├── eaf_isolation.adversarial.test.ts
-├── contracts_invariants.test.ts
-├── property_fuzz.test.ts     60,000-iteration property fuzzer
-└── fortification.test.ts     Adversarial hardening battery
-```
+A technical dossier specifically prepared for the product validation review by **Alejo Amiras** and the Aztec Foundation team is published at [`docs/AZTEC_FOUNDATION_DOSSIER.md`](docs/AZTEC_FOUNDATION_DOSSIER.md). It details client side PXE integration parameters, circuit constraint counts, mobile WebAssembly benchmarking goals, and joint security review proposals.
 
 ---
 
-## Aztec Foundation
+## 10. Governance, Security, and Contribution
 
-A technical dossier prepared for the Aztec Foundation product validation review is available at [`docs/AZTEC_FOUNDATION_DOSSIER.md`](docs/AZTEC_FOUNDATION_DOSSIER.md). It covers the client-side PXE architecture, circuit design rationale, reproducible verification commands, explicit non-claims, and proposed collaboration areas.
-
----
-
-## Community & Policy Navigation
-
-- **Contributing Guide:** [`CONTRIBUTING.md`](CONTRIBUTING.md) — Mandatory invariant analysis, PR verification gates, and development workflows.
-- **Security Policy:** [`SECURITY.md`](SECURITY.md) — HL-SEC-2026.5 standard, threat model, bug bounty scope, and SLA commitments.
-- **License:** [`LICENSE`](LICENSE) — Version 2.0 Proprietary Software License (Restricted Read-Only for educational and academic evaluation).
-- **Contact:** `core@humanityledger.com` · Security: `security@humanityledger.com`
+- **Contribution Guidelines:** [`CONTRIBUTING.md`](CONTRIBUTING.md) — Architectural invariants, pull request validation gates, and monorepo workflow.
+- **Security Policy:** [`SECURITY.md`](SECURITY.md) — HL-SEC-2026.5 standard, threat models, coordinated vulnerability disclosure, and response SLAs.
+- **Software License:** [`LICENSE`](LICENSE) — Version 2.0 Proprietary Software License (Restricted Read Only evaluation for personal and academic study).
+- **Vulnerability Disclosure Policy:** [`docs/BUG_BOUNTY.md`](docs/BUG_BOUNTY.md) — Academic Coordinated Vulnerability Disclosure framework.
+- **Communications:** `core@humanityledger.com` · Security: `security@humanityledger.com`

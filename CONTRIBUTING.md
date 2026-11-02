@@ -1,172 +1,168 @@
 # Contributing to Humanity Ledger
 
-We welcome contributions to the Humanity Ledger protocol, client applications, and infrastructure. Because Humanity Ledger is a cryptographic privacy protocol operating across zero-knowledge proof systems (Aztec / Noir / UltraHonk), end-to-end messaging (MLS / TreeKEM / RFC 9420), L1 timelocks, and sandboxed app execution (EAF), **all contributions must adhere to doctoral-grade rigour and invariant verification**.
+This document establishes the technical standards, architectural review requirements, and invariant validation procedures for contributing to the Humanity Ledger protocol monorepo.
 
-> **Canonical Spec:** [`docs/PROTOCOL_SPEC.md`](docs/PROTOCOL_SPEC.md)  
-> **Traceability:** [`docs/TRACEABILITY_MATRIX.md`](docs/TRACEABILITY_MATRIX.md)  
-> **Aztec Foundation Dossier:** [`docs/AZTEC_FOUNDATION_DOSSIER.md`](docs/AZTEC_FOUNDATION_DOSSIER.md)  
-> **Last Updated:** 2 November 2026 · Canonical Tree Baseline: Commit `65f5c4bf`
+Because Humanity Ledger operates at the intersection of client side zero knowledge proof synthesis (Aztec / Noir / UltraHonk), cryptographic group state ratcheting (Messaging Layer Security / RFC 9420), and Layer 1 smart contract settlement, all contributions must satisfy strict mathematical rigor and empirical invariant testing.
 
----
-
-## 1. Code Ownership & Critical Paths
-
-Per [`.github/CODEOWNERS`](.github/CODEOWNERS), pull requests touching the following paths require dedicated cryptographic and architectural review before merging:
-
-| Path | Owner Domain |
-|---|---|
-| `circuits/**` | Aztec / Noir ZK circuits and verification key definitions |
-| `contracts/**` | L1 Ethereum smart contracts (vaults, timelocks, registries) |
-| `lib/aztec/**` | Client-side PXE interface, key derivation, and VK lifecycle enforcer |
-| `lib/security/**` | Constant-time comparison, zeroization, EAF guard, canary monitors |
-| `lib/community-apps/**` | Ephemeral Application Framework (EAF) runtime, CSP, postMessage bridge |
-| `test/**` | Invariant test suites — any removal or weakening requires dual approval |
-| `docs/PROTOCOL_SPEC.md` | Normative specification — changes require protocol lead sign-off |
-| `docs/TRACEABILITY_MATRIX.md` | CI-enforced traceability — must remain consistent with `docs/STATUS.md` |
+> **Normative Specification:** [`docs/PROTOCOL_SPEC.md`](docs/PROTOCOL_SPEC.md)  
+> **Traceability Matrix:** [`docs/TRACEABILITY_MATRIX.md`](docs/TRACEABILITY_MATRIX.md)  
+> **Aztec Validation Dossier:** [`docs/AZTEC_FOUNDATION_DOSSIER.md`](docs/AZTEC_FOUNDATION_DOSSIER.md)  
+> **Baseline Commit:** `931b1005` (November 2026)
 
 ---
 
-## 2. Mandatory Invariant Analysis for Critical PRs
+## 1. Monorepo Architecture and Code Ownership
 
-Any PR modifying a critical path **must** include an explicit **Invariant Analysis** section in the PR description:
+Unlike upstream Aztec development which spans separated repositories (`aztec-packages`, `noir`, `barretenberg`), Humanity Ledger maintains an integrated monorepo. Changes to core components affect interdependent cryptographic layers.
 
-### 2.1 Aztec / Noir Circuits (`circuits/`, `lib/aztec/`)
+Per [`.github/CODEOWNERS`](.github/CODEOWNERS), pull requests modifying the following paths require dedicated cryptographic and architectural review prior to merging:
 
-1. **Mathematical Invariant** — What algebraic relation or state predicate does this circuit enforce? State it formally (e.g. `commitment == H(sender_secret, recipient_pubkey, amount, salt)`).
-2. **Private Witness Isolation** — Does any private input escape the client boundary or get serialised to server logs or RPC endpoints?
-3. **Nullifier Uniqueness** — Is the nullifier deterministically derived from a secret and a domain-separated note identifier to prevent double-spending or double-release?
-4. **Constraint Regression** — Has the ACIR constraint count been profiled before and after the change?
-5. **VK Migration** — If the verification key changes, does this PR follow the Circuit Migration and Versioning Policy in [`docs/VK_MONITORING.md`](docs/VK_MONITORING.md) (14-day timelock gate)?
+| Path | Domain | Focus of Review |
+|---|---|---|
+| `circuits/**` | Noir Domain Circuits | Algebraic relations, ACIR constraint counts, and verification key generation |
+| `contracts/**` | Layer 1 Settlement | Solidity state transitions, non custodial timelocks, and EVM gas profiling |
+| `lib/aztec/**` | Aztec PXE Client | Local witness generation, Barretenberg WASM execution, and VK lifecycle checks |
+| `lib/security/**` | Cryptographic Hardening | Timing safe equality, memory zeroization routines, and iframe boundary enforcement |
+| `lib/community-apps/**` | Sandbox Runtime | Ephemeral application isolation, CSP policy enforcement, and postMessage schemas |
+| `test/**` | Automated Invariant Suites | Test integrity; deletion or weakening of existing assertions is strictly prohibited |
+| `docs/PROTOCOL_SPEC.md` | Normative Specification | Formal architectural specifications and threat models |
+| `docs/TRACEABILITY_MATRIX.md` | Traceability Matrix | Mapping of claims and criteria to executable test files (enforced by CI) |
 
-### 2.2 L1 Smart Contracts (`contracts/`)
+---
 
-1. **State Machine Transitions** — What invariants are maintained across all state transitions? Are monotonic properties preserved where required?
-2. **Access Control & Anti-Backdoor** — Does any function allow unilateral withdrawal of user balances or modification of verification keys without a timelock? (Strictly prohibited per Invariant P4 and [`scripts/verify-l1-bytecode.ts`](scripts/verify-l1-bytecode.ts).)
-3. **Reentrancy & Economic Boundaries** — Are state updates performed before external calls (Checks-Effects-Interactions pattern)? Are arithmetic operations guarded against overflow?
+## 2. Mandatory Invariant Analysis for Critical Pull Requests
 
-### 2.3 Ephemeral Application Framework (`lib/community-apps/`)
+Every pull request that modifies a critical component must include an explicit **Invariant Analysis** section in the pull request description detailing the following four domains:
 
-1. **CSP Air-Gap** — Does the frame configuration maintain `connect-src 'none'` and block all network egress?
-2. **Storage Compartmentalisation** — Does the storage key schema strictly partition state by `appId` and user session?
-3. **Identity Spoofing Prevention** — Are user IDs for mutations injected from verified server-side session cookies rather than from client iframe payload claims?
-4. **Payload Bounds** — Are state mutations bounded to the 8 KB EAF payload ceiling (enforced by `lib/security/eaf-guard.ts`)?
+### 2.1 Aztec and Noir Circuits (`circuits/`, `lib/aztec/`)
 
-### 2.4 Security & Cryptographic Library (`lib/security/`)
+1. **Algebraic Invariant:** Formulate the mathematical relation enforced by the circuit (e.g. $\text{commitment} = \mathcal{H}(\text{secret}, \text{pubkey}, \text{amount}, \text{salt})$).
+2. **Private Witness Isolation:** Confirm that private witnesses remain within the local client Web Worker and are never serialised to network transport or RPC logs.
+3. **Nullifier Uniqueness:** Verify that the nullifier is derived deterministically from private state and domain separated note identifiers to prevent double spending.
+4. **Constraint Regression:** Document the ACIR constraint count before and after the modification.
+5. **Verification Key Policy:** If the circuit changes, verify that the modification conforms to the 14 day timelock policy documented in [`docs/VK_MONITORING.md`](docs/VK_MONITORING.md).
 
-1. **Constant-Time Guarantee** — Are all new comparisons over secret data routed through `lib/security/constant-time.ts`?
-2. **Memory Zeroization** — Are private key buffers, symmetric key material, and MLS epoch secrets explicitly zeroized after use via `lib/security/zeroize.ts`?
-3. **Side-Channel Surface** — Does the change introduce any conditional branching on secret data outside of constant-time primitives?
+### 2.2 Layer 1 Smart Contracts (`contracts/`)
+
+1. **State Transition Invariants:** Specify the preconditions and postconditions of the contract state machine.
+2. **Absence of Unilateral Drain:** Demonstrate that no contract owner or privileged address can withdraw user balances or bypass timelock delays (enforced by Invariant P6 and `scripts/verify-l1-bytecode.ts`).
+3. **Reentrancy and Arithmetic Safety:** Verify adherence to the Checks Effects Interactions pattern and ensure arithmetic operations prevent overflow under Solidity 0.8.28 rules.
+
+### 2.3 Ephemeral Application Framework (`lib/community-apps/`, `lib/security/eaf-guard.ts`)
+
+1. **Hermetic CSP Air Gap:** Confirm that the sandbox iframe maintains `connect-src 'none'` and blocks all network sockets.
+2. **Storage Compartmentalization:** Verify that storage keys are strictly isolated per application identifier and session token.
+3. **Identity Spoofing Immunity:** Ensure mutation operations validate user identity from verified server session cookies rather than trusting client iframe claims.
+4. **Payload Bounding:** Verify that all cross context messages strictly respect the 8 KB payload ceiling enforced by `lib/security/eaf-guard.ts`.
+
+### 2.4 Cryptographic Library (`lib/security/`)
+
+1. **Timing Invariance:** Ensure that secret comparisons utilize `lib/security/constant-time.ts` (`crypto.timingSafeEqual`) to eliminate timing side channels.
+2. **Memory Zeroization:** Verify that ephemeral key buffers and symmetric secrets are zeroized immediately after use using `lib/security/zeroize.ts`.
+3. **Side Channel Elimination:** Confirm that no conditional branching occurs based on secret data outside of constant time primitives.
 
 ---
 
 ## 3. Pull Request Verification Checklist
 
-Before submitting a PR, verify that all applicable boxes are checked:
+Before submitting a pull request, verify that every item on this checklist is satisfied:
 
-- [ ] **No Unearned Claims** — No assertions of "production-ready", "audit-complete", or "quantum-safe" unless formally backed by an artifact in `docs/` and passing CI tests.
-- [ ] **Zero-Simulation Rule** — No occurrence of `Fr.random()`, `mockWorkerProof`, `simulatedNullifier`, `simulatedCommitment`, or `UltraHonk-v1-proof-verified` in any production code path. Enforced by `test/aztec_e2e_no_simulation.test.ts`.
-- [ ] **Automated Test Coverage**:
-  - Full test suite passes: `npm run test:run` (1,076 tests · 0 failures required)
+- [ ] **No Unsubstantiated Claims:** No assertions of production readiness or formal verification unless supported by documented artifacts in `docs/` and passing test suites.
+- [ ] **Prohibition of Synthetic Proof Simulation:** No usage of `Fr.random()`, `mockWorkerProof`, `simulatedNullifier`, or synthetic proof tokens in production test paths (enforced by `test/aztec_e2e_no_simulation.test.ts`).
+- [ ] **Automated Test Battery Passing:**
+  - Full test suite passes: `npm run test:run` (1,076 tests passing · 0 failures)
   - Noir circuit constraint tests: `npx vitest run test/circuits/`
-  - EAF adversarial isolation: `npx vitest run test/eaf_isolation.adversarial.test.ts`
-  - Key custody: `npx vitest run test/key_custody.test.ts`
-  - MLS post-compromise: `npx vitest run test/mls_post_compromise.test.ts`
-  - L1 contract invariants: `npm run test:contracts` (43 passing Hardhat invariants)
-  - Property fuzzing (60,000 iterations): `npx vitest run test/property_fuzz.test.ts`
-  - Adversarial battery: `npm run test:massive`
-- [ ] **Traceability** — If introducing a new protocol capability or modifying an existing claim, update `docs/TRACEABILITY_MATRIX.md` and link the corresponding test. Verify with `npm run check:traceability`.
-- [ ] **Bytecode Integrity** — If modifying L1 contracts, regenerate artifacts and re-run `npx tsx scripts/verify-l1-bytecode.ts`.
-- [ ] **Dependency Security** — `npm audit` reports zero vulnerabilities.
+  - Ephemeral application sandbox isolation: `npx vitest run test/eaf_isolation.adversarial.test.ts`
+  - Non custodial key isolation: `npx vitest run test/key_custody.test.ts`
+  - Messaging Layer Security post compromise tests: `npx vitest run test/mls_post_compromise.test.ts`
+  - Layer 1 contract invariants: `npm run test:contracts` (43 passing Hardhat tests)
+  - High capacity property fuzzing: `npx vitest run test/property_fuzz.test.ts` (60,000 iterations)
+  - Adversarial security battery: `npm run test:massive`
+- [ ] **Traceability Synchronization:** When adding or modifying protocol capabilities, update `docs/TRACEABILITY_MATRIX.md` and verify with `npm run check:traceability`.
+- [ ] **Bytecode Integrity:** When modifying Layer 1 Solidity contracts, recompile artifacts and confirm clean output from `npx tsx scripts/verify-l1-bytecode.ts`.
+- [ ] **Dependency Audit:** Verify that `npm audit` reports zero vulnerabilities.
 
 ---
 
-## 4. Mainnet Production Gate — Explicit Blockers
+## 4. Mainnet Production Deployment Gate
 
-> [!CAUTION]
-> Mainnet production deployment is **explicitly blocked** until ALL of the following gates are cleared. This is enforced by the protocol governance process.
+Mainnet production deployment is gated by formal governance criteria. The protocol will remain in Testnet Stage 1 until each of the following milestones is fulfilled:
 
-### 4.1 External Audit Gate
+### 4.1 External Security Audit Gate
 
-- [ ] External security audit completed by an accredited Tier-1 firm listed in [`docs/AUDIT_SCOPE.md`](docs/AUDIT_SCOPE.md) (Spearbit, Zellic, OpenZeppelin, or Trail of Bits)
-- [ ] All **CRITICAL** findings remediated and re-tested
-- [ ] All **HIGH** findings remediated or formally accepted with a dated risk note in [`docs/AUDIT_DOSSIER.md`](docs/AUDIT_DOSSIER.md)
-- [ ] `npm run check:traceability` passes post-audit
+- [ ] Comprehensive external audit completed by an accredited Tier 1 security firm listed in [`docs/AUDIT_SCOPE.md`](docs/AUDIT_SCOPE.md) (Spearbit, Zellic, OpenZeppelin, or Trail of Bits).
+- [ ] Complete remediation of all Critical and High severity findings.
+- [ ] Formal sign off and publication of the audit report in [`docs/AUDIT_DOSSIER.md`](docs/AUDIT_DOSSIER.md).
+- [ ] Verification of consistency via `npm run check:traceability`.
 
-### 4.2 Security Program Gate
+### 4.2 Security Operations Gate
 
-- [ ] Bug bounty program published on Immunefi (ref: [`docs/BUG_BOUNTY.md`](docs/BUG_BOUNTY.md))
-- [ ] Incident response runbook reviewed and approved (ref: [`docs/INCIDENT_RESPONSE.md`](docs/INCIDENT_RESPONSE.md))
-- [ ] Observability stack operational (ref: [`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md))
+- [ ] Coordinated vulnerability disclosure framework established (see [`docs/BUG_BOUNTY.md`](docs/BUG_BOUNTY.md)).
+- [ ] Incident response runbook reviewed and approved ([`docs/INCIDENT_RESPONSE.md`](docs/INCIDENT_RESPONSE.md)).
+- [ ] Telemetry and observability pipeline operational ([`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md)).
 
-### 4.3 Performance Gate
+### 4.3 Performance and Scalability Gate
 
-- [ ] Load test Milestone 1 (10,000 concurrent users) passed (ref: [`docs/LOAD_TEST_PLAN.md`](docs/LOAD_TEST_PLAN.md))
-- [ ] UltraHonk proof generation p95 < 8 s on mid-range mobile hardware (ref: [`docs/PROOF_BENCHMARKS.md`](docs/PROOF_BENCHMARKS.md))
+- [ ] Concurrent user load testing Milestone 1 (10,000 concurrent sessions) completed ([`docs/LOAD_TEST_PLAN.md`](docs/LOAD_TEST_PLAN.md)).
+- [ ] Client UltraHonk proof generation p95 latency under 8 seconds on consumer mobile hardware ([`docs/PROOF_BENCHMARKS.md`](docs/PROOF_BENCHMARKS.md)).
 
-### 4.4 Zero-Regression Gate
+### 4.4 Automated Zero Regression Gate
 
-- [ ] All tests in `npm run test:run` and `npm run test:contracts` exit 0 on a clean machine
-- [ ] `npm audit` reports 0 vulnerabilities
-- [ ] `node scripts/forbidden-patterns.mjs` reports 0 violations
-- [ ] `node scripts/check-forbidden-copy.mjs` reports 0 violations
-
-Any deviation requires a dated risk-acceptance note signed by the protocol lead in [`docs/AUDIT_DOSSIER.md`](docs/AUDIT_DOSSIER.md).
+- [ ] All tests in `npm run test:run` and `npm run test:contracts` exit with code 0 on a clean environment.
+- [ ] `npm audit` reports zero known vulnerabilities.
+- [ ] `node scripts/forbidden-patterns.mjs` reports zero violations.
+- [ ] `node scripts/check-forbidden-copy.mjs` reports zero violations.
 
 ---
 
-## 5. Development Workflow
+## 5. Local Development Workflow
 
 ```bash
-# 1. Fork and create a feature branch
-git checkout -b feature/your-hardening-component
-
-# 2. Install dependencies
+# 1. Clone repository and install dependencies
+git clone https://github.com/humanityledger/Humanity-Ledger.git
+cd Humanity-Ledger
 npm install
 
-# 3. Run the critical invariant suite
+# 2. Execute critical invariant verification
 npx vitest run test/circuits/ test/key_custody.test.ts test/eaf_isolation.adversarial.test.ts test/mls_post_compromise.test.ts
 
-# 4. Run L1 contract invariants (cross-platform)
+# 3. Execute Layer 1 contract invariants (Cancun EVM)
 npm run test:contracts
 
-# 5. Run the full suite
+# 4. Execute the complete test suite
 npm run test:run
 
-# 6. Verify traceability consistency
+# 5. Verify normative traceability consistency
 npm run check:traceability
 
-# 7. Verify anti-backdoor bytecode
+# 6. Verify bytecode integrity and absence of backdoor patterns
 npx tsx scripts/verify-l1-bytecode.ts
 
-# 8. Build
+# 7. Build local application package
 npm run build:local
-
-# 9. Submit your PR with the Invariant Analysis section completed
 ```
 
 ---
 
 ## 6. Commit Message Convention
 
-Use the following prefix convention for all commits:
+Commits must follow structured prefixes indicating the modified package domain:
 
-| Prefix | When to Use |
+| Prefix | Domain |
 |---|---|
-| `feat(circuit):` | New or modified Noir circuit |
-| `feat(contract):` | New or modified L1 Solidity contract |
-| `feat(pxe):` | Aztec PXE client integration changes |
-| `fix(security):` | Security hardening or vulnerability remediation |
-| `test:` | New or updated automated tests |
-| `docs:` | Documentation updates |
-| `chore:` | Dependency updates, CI config, tooling |
+| `feat(circuit):` | New or modified Noir circuit and ACIR constraints |
+| `feat(contract):` | New or modified Layer 1 Solidity contract |
+| `feat(pxe):` | Aztec PXE client orchestration or Barretenberg WASM integration |
+| `fix(security):` | Cryptographic hardening or vulnerability mitigation |
+| `test:` | New or updated automated invariant tests |
+| `docs:` | Specification and documentation updates |
+| `chore:` | Tooling, monorepo scripts, and dependency updates |
 
 ---
 
-## 7. Contact & Security
-
-For questions about contributing or about the protocol architecture:
+## 7. Contacts
 
 - **Protocol Core:** `core@humanityledger.com`
-- **Security Disclosures:** `security@humanityledger.com` (see [`SECURITY.md`](SECURITY.md))
-- **Licensing:** `humanityledger@icloud.com` (see [`LICENSE`](LICENSE))
+- **Security Inquiries:** `security@humanityledger.com` (see [`SECURITY.md`](SECURITY.md))
+- **Licensing and Legal:** `humanityledger@icloud.com` (see [`LICENSE`](LICENSE))
 - **Repository:** [https://github.com/humanityledger/Humanity-Ledger](https://github.com/humanityledger/Humanity-Ledger)

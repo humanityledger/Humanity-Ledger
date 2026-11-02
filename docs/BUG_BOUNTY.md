@@ -1,142 +1,81 @@
-# Humanity Ledger — Bug Bounty Program
-**Version 1.0 — 2026-10-31**  
-**Platform**: Immunefi (pending publication after external audit completion)  
-**Status**: DRAFT — Not yet live. Activates after external audit gate (see `docs/AUDIT_SCOPE.md` §6).
+# Coordinated Vulnerability Disclosure Policy
+
+> **Protocol Standard:** HL-CVD-2026.1  
+> **Classification:** Public Security Advisory and Vulnerability Reporting Protocol  
+> **Status:** Active — Non-Monetary Academic Disclosure Framework (Testnet Stage 1)  
+> **Security Contact:** `security@humanityledger.com`
 
 ---
 
-## 1. Program Overview
+## 1. Disclosure Framework and Scope
 
-The Humanity Ledger Bug Bounty Program rewards security researchers who responsibly disclose vulnerabilities in the protocol's cryptographic components, smart contracts, and application infrastructure.
-
-**Maximum Reward**: $50,000 USD (Critical)  
-**Minimum Reward**: $500 USD (Low)
+Humanity Ledger maintains an academic Coordinated Vulnerability Disclosure program. The protocol is currently deployed in Testnet Stage 1 across Aztec Testnet and Ethereum testnets.
 
 > [!IMPORTANT]
-> This program is **not yet live**. Responsible disclosures before the Immunefi publication date should be sent directly to the protocol team via the contact method in Section 7.
+> **No Monetary Bounties Active:** Humanity Ledger does **not** offer cash rewards, token distributions, or financial compensation for vulnerability disclosures during Testnet Stage 1. All security research is evaluated under a non-monetary academic disclosure framework. Participating researchers receive formal attribution, public acknowledgment in GitHub Security Advisories, and inclusion in the protocol Security Hall of Fame. A funded monetary bounty program is scheduled for deployment upon completion of external security audits and protocol mainnet capitalization.
 
 ---
 
-## 2. Scope
+## 2. In-Scope Technical Components
 
-### 2.1 In-Scope Assets
+Security researchers are invited to inspect and analyze the following monorepo components:
 
-| Asset | Category | Max Reward |
+| Monorepo Path | Domain | Description |
 |---|---|---|
-| `circuits/escrow/` — Noir ZK circuit | Circuit Soundness | $50,000 |
-| `circuits/streams/` — Noir ZK circuit | Circuit Soundness | $50,000 |
-| `circuits/identity/` — Noir ZK circuit | Circuit Soundness | $50,000 |
-| `contracts/HumanityTimeLockVault.sol` | Smart Contract | $50,000 |
-| `contracts/HumanityIdentityRegistry.sol` | Smart Contract | $30,000 |
-| `contracts/security/LedgerDeadmanSwitch.sol` | Smart Contract | $30,000 |
-| EAF bridge (`lib/security/eaf-guard.ts`) | Application | $10,000 |
-| Aztec PXE key flow (`lib/aztec/`) | Application | $10,000 |
-| VK anchoring and timelock bypass | Protocol | $50,000 |
-| MLS epoch advance and PCS | Protocol | $20,000 |
-
-### 2.2 Out-of-Scope
-
-The following are explicitly **not** in scope:
-
-- Third-party services: XMTP, WalletConnect, Clerk, Railway infrastructure
-- Transport-layer attacks (IP tracking, timing analysis)
-- Social engineering attacks against team members
-- Denial of Service (DoS) against the application server
-- Known issues listed in `docs/AUDIT_DOSSIER.md` RISK-01 to RISK-05
-- Issues in dependencies not directly controlled by this protocol (report to upstream)
-- Quantum attacks (not in threat model)
+| `circuits/escrow/` | Noir Circuit | Escrow release constraint satisfaction and nullifier derivation |
+| `circuits/identity/` | Noir Circuit | Membership proofs and anonymous sanction screening constraints |
+| `circuits/streams/` | Noir Circuit | Temporal monotonicity and continuous stream accrual constraints |
+| `contracts/HumanityTimeLockVault.sol` | Smart Contract | Non-custodial vault timelock mechanisms and balance conservation |
+| `contracts/HumanityIdentityRegistry.sol` | Smart Contract | Identity state binding and ownership preservation |
+| `contracts/security/LedgerDeadmanSwitch.sol` | Smart Contract | Dead man switch threshold logic and backup transfer controls |
+| `lib/aztec/verifier.ts` | Protocol | Verification key lifecycle transitions and hash verification |
+| `lib/security/eaf-guard.ts` | Runtime | Ephemeral application sandbox egress prevention and payload bounds |
+| `lib/security/constant-time.ts` | Cryptography | Timing invariant preservation and side-channel elimination |
+| `lib/security/zeroize.ts` | Memory | Ephemeral buffer wiping and secret destruction |
 
 ---
 
-## 3. Severity Classifications
+## 3. Out-of-Scope Domains
 
-### CRITICAL — Up to $50,000
+The following vectors are outside the protocol research scope:
 
-A vulnerability that directly enables:
-- **Circuit soundness break**: Producing a valid ZK proof for a false statement (e.g., spending funds the attacker does not own)
-- **VK bypass**: Registering a malicious verification key without the 14-day timelock
-- **Nullifier collision**: Bypassing double-spend prevention without knowing the secret
-- **L1 fund drain**: Extracting user funds from `HumanityTimeLockVault` without authorization
-- **Timelock bypass**: Executing a queued operation before `executeAfter` timestamp
-
-### HIGH — Up to $20,000
-
-- **Server private key exposure**: Extracting Aztec wallet keys or Schnorr signing keys from server side (would violate P1)
-- **EAF escape**: Sandboxed EAF iframe making unauthorized network requests
-- **MLS PCS failure**: Compromised epoch key persisting after device removal
-- **Identity spoofing**: Creating valid identity proofs for an address the attacker does not control
-- **VK mismatch detection failure**: Client accepting a proof verified under a wrong VK
-
-### MEDIUM — Up to $5,000
-
-- **Canary bypass**: Accessing server-side canary key without triggering detection
-- **Rate limit bypass**: Submitting ZK proofs at unlimited rate without restriction
-- **Session fixation/hijacking**: Persistent session after Clerk session revocation
-- **CSP violation enabling data exfiltration** (not DoS)
-- **Storage compartmentalization failure**: One EAF app reading another app's state
-
-### LOW — Up to $500
-
-- **Information disclosure**: Leaking non-sensitive metadata (not private keys or proof witnesses)
-- **Missing security headers** on critical endpoints (not already present in `next.config.js`)
-- **Minor access control gaps** not enabling fund loss or key exposure
+1. Distributed denial of service attacks that generate traffic volume without demonstrating logic flaws.
+2. Social engineering or phishing directed at protocol contributors or administrators.
+3. Attacks requiring physical possession of user devices with root privileges.
+4. Vulnerabilities in upstream third-party dependencies not introduced by this codebase.
+5. Theoretical quantum cryptanalysis against classical primitives (BN254, secp256k1, Curve25519), which are acknowledged non-claims under current protocol constraints.
 
 ---
 
-## 4. Reward Payment
+## 4. Reporting Protocol and Service Level Commitments
 
-- **Currency**: USDC (Ethereum mainnet) or ETH
-- **Payment timeline**: Within 30 days of validated report
-- **Safe Harbor**: Researchers acting in good faith are protected from legal action under this program
+Researchers who identify potential security vulnerabilities should submit their findings privately:
 
----
-
-## 5. Disclosure Policy
-
-**Responsible Disclosure Requirements**:
-
-1. **Do not exploit** beyond what is necessary to demonstrate the vulnerability
-2. **Do not access** other users' private data
-3. **Do not perform** DoS attacks
-4. **Report privately** before public disclosure
-5. **Allow 90 days** for the team to remediate before public disclosure
-
-**Disclosure Timeline**:
-- T+0: Report received; acknowledgment within 24 hours
-- T+7 days: Severity assessment and reward estimate communicated
-- T+30 days: Fix deployed (CRITICAL) or remediation plan shared (HIGH)
-- T+90 days: Public disclosure permitted if researcher agrees
+- **Transmission Channel:** Encrypted submission to `security@humanityledger.com` or via GitHub Private Security Advisories.
+- **Initial Acknowledgment:** Within 12 hours of report transmission.
+- **Technical Triage:** Formal reproduction and severity determination within 24 hours.
+- **Remediation SLA:** 
+  - Critical Severity: Resolution within 5 business days.
+  - High Severity: Resolution within 7 business days.
+  - Medium / Low Severity: Resolution within 30 business days.
 
 ---
 
-## 6. Hall of Fame
+## 5. Security Hall of Fame and Attribution
 
-Security researchers who responsibly disclose valid vulnerabilities will be credited in:
-- `docs/AUDIT_DOSSIER.md` Hall of Fame section
-- Protocol release notes
-- Immunefi program page (with researcher's consent)
-
----
-
-## 7. Contact
-
-**Before program goes live on Immunefi**:
-- GitHub: Open a **private security advisory** on the repository
-- Email: security@humanidfi.com (PGP key to be published)
-
-**After program is live**:
-- Immunefi program page: `https://immunefi.com/bounty/humanityledger/`
+Valid vulnerability disclosures will receive:
+1. Public attribution in the official GitHub Security Advisory.
+2. Permanent citation in `docs/AUDIT_DOSSIER.md` (Security Hall of Fame).
+3. Inclusion in protocol release notes.
+4. Documented eligibility for retroactive recognition upon the deployment of the mainnet capitalized incentive pool.
 
 ---
 
-## 8. Production Gate
+## 6. Safe Harbor Agreement
 
-This bug bounty program **activates** only after:
+Humanity Ledger will not initiate legal action against security researchers who:
 
-1. ✅ External audit completed by a firm listed in `docs/AUDIT_SCOPE.md`
-2. ✅ All CRITICAL and HIGH audit findings remediated
-3. ✅ `docs/AUDIT_DOSSIER.md` updated with audit report reference
-4. ✅ Protocol Lead approval
-5. ✅ Immunefi submission reviewed and approved
-
-See `CONTRIBUTING.md` for the full production gate checklist.
+1. Conduct research within the parameters of this policy.
+2. Refrain from modifying, exfiltrating, or disrupting private state data.
+3. Provide a coordinated disclosure window (minimum 30 days) prior to any public release.
+4. Refrain from extortion, commercial exploitation, or unauthorized data dissemination.

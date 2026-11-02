@@ -1,7 +1,7 @@
 Copyright (c) 2024–2026 Stefan Antonio Cirisanu. All Rights Reserved.
 
 Humanity Ledger — Proprietary Software License
-Version 2.0 · 2 November 2026
+Version 2.0 · November 2026
 
 This software, including all associated source code, circuit definitions, smart
 contracts, documentation, designs, protocols, trademarks, trade names, and
@@ -11,7 +11,7 @@ including but not limited to the Berne Convention for the Protection of
 Literary and Artistic Works.
 
 ────────────────────────────────────────────────────────────────────────────────
-PERMITTED USES (RESTRICTED READ-ONLY LICENSE)
+PERMITTED USES (RESTRICTED READ ONLY EVALUATION LICENSE)
 ────────────────────────────────────────────────────────────────────────────────
 
 You MAY:
@@ -28,7 +28,7 @@ You MAY NOT, without the express prior written consent of Stefan Antonio Cirisan
     any third party.
   • Use the names "Humanity Ledger", "LedgerChat", "Ledger Chat",
     "Sovereign Identity", "HumanityDFI", or any confusingly similar name,
-    logo, or mark in connection with any unauthorised derivative product.
+    logo, or mark in connection with any unauthorized derivative product.
   • Remove, obscure, or alter any copyright notice, authorship attribution,
     or ownership marker contained within the source code or documentation.
   • Use the Noir circuits, Aztec PXE integration, or Solidity contracts
@@ -39,22 +39,22 @@ You MAY NOT, without the express prior written consent of Stefan Antonio Cirisan
 COMMERCIAL LICENSING
 ────────────────────────────────────────────────────────────────────────────────
 
-Commercial use, white-label licensing, institutional integration, and API
+Commercial use, white label licensing, institutional integration, and API
 access agreements are available. To inquire about a commercial licence,
 contact: humanityledger@icloud.com
 
 ────────────────────────────────────────────────────────────────────────────────
-DMCA & ENFORCEMENT
+DMCA AND INTELLECTUAL PROPERTY ENFORCEMENT
 ────────────────────────────────────────────────────────────────────────────────
 
 Any infringing clone, fork, or deployment discovered operating without written
-authorisation is subject to:
+authorization is subject to:
   • Immediate DMCA takedown notices to the hosting platform.
   • Legal action for copyright infringement in the jurisdiction of the Owner's
     choosing.
   • Damages assessment under applicable international intellectual property law.
 
-To report an infringing clone or to request a commercial licence, contact:
+To report an infringing deployment or to request a commercial licence, contact:
   humanityledger@icloud.com
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -68,14 +68,14 @@ OWNER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE
 OF OR INABILITY TO USE THIS SOFTWARE.
 
 ────────────────────────────────────────────────────────────────────────────────
-ORIGINAL AUTHOR & SOLE OWNER
+ORIGINAL AUTHOR AND SOLE OWNER
 ────────────────────────────────────────────────────────────────────────────────
 
   Stefan Antonio Cirisanu
-  Founder & Protocol Architect, Humanity Ledger
+  Founder and Protocol Architect, Humanity Ledger
   https://humanityledger.com
   humanityledger@icloud.com
 
   Repository: https://github.com/humanityledger/Humanity-Ledger
   First Commit: 2024
-  Last Updated: 2 November 2026
+  Last Updated: November 2026

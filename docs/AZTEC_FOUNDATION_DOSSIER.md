@@ -2,21 +2,21 @@
 ## Protocol: Humanity Ledger | Recipient: Alejo Amiras & Aztec Foundation Product Team
 **Date:** November 2026  
 **Repository:** [https://github.com/humanityledger/Humanity-Ledger](https://github.com/humanityledger/Humanity-Ledger)  
-**Canon Commit (main):** `65f5c4bf`  
+**Canon Commit (main):** `931b1005`  
 **Current Protocol Maturity:** Testnet Stage 1 — Audit & Validation Ready  
 
 ---
 
 ## 1. Executive Summary
 
-Humanity Ledger is an open-source, privacy-preserving communication and settlement protocol. It couples end-to-end encrypted messaging conforming to the Messaging Layer Security (MLS, RFC 9420) standard with **client-side Zero-Knowledge proof generation powered by Aztec Network's Private Execution Environment (PXE) and UltraHonk proving system**.
+Humanity Ledger is an open source cryptographic protocol coupling end to end encrypted group messaging conforming to Messaging Layer Security (MLS, RFC 9420) with **client side zero knowledge proof generation powered by Aztec Network's Private Execution Environment (PXE) and UltraHonk proving system**.
 
-This dossier is submitted to **Alejo Amiras** and the Aztec Foundation Product Validation & Ecosystem team to facilitate a rigorous, reproducible technical review of our Aztec integration, Noir circuits, client-side proving architecture, and security boundaries.
+This dossier is submitted to **Alejo Amiras** and the Aztec Foundation Product Validation & Ecosystem team to facilitate a rigorous, reproducible technical review of our Aztec integration, Noir circuits, client side proving architecture, and security boundaries.
 
 ### Core Value Proposition
-- **Sovereign Client-Side Execution:** User private balances, witness generation, and transaction notes never touch any backend server or RPC relay unshielded. Proving is executed inside the client's local PXE (`@aztec-labs/aztec.js`).
-- **Cryptographic Zero-Simulation Mandate:** We reject "test theater" and mocked cryptographic primitives. Our CI enforces a strict zero-simulation rule (`test/aztec_e2e_no_simulation.test.ts`) banning synthetic random fields (`Fr.random()`) or dummy proof strings in production test paths.
-- **Auditable Hybrid Architecture:** Off-chain private state transitions via Aztec UltraHonk, combined with verifiable L1 EVM dispute resolution and timelocked vaults (`HumanityTimeLockVault`, `LedgerDeadmanSwitch`).
+- **Sovereign Client Execution:** User private balances, witness generation, and transaction notes never touch any backend server or RPC relay unshielded. Proving is executed inside the client's local PXE (`@aztec-labs/aztec.js`).
+- **Cryptographic Non-Simulated Proving:** We prohibit mocked cryptographic primitives. Continuous integration enforces a strict non-simulation test requirement (`test/aztec_e2e_no_simulation.test.ts`) banning synthetic random fields (`Fr.random()`) or dummy proof strings in production test paths.
+- **Auditable Hybrid Architecture:** Off-chain private state transitions via Aztec UltraHonk, combined with verifiable Layer 1 EVM dispute resolution and timelocked vaults (`HumanityTimeLockVault`, `LedgerDeadmanSwitch`).
 
 ---
 
@@ -129,7 +129,7 @@ npx vitest run test/property_fuzz.test.ts
 npm run test:run
 ```
 
-### Verification Results Summary (Commit `65f5c4bf`)
+### Verification Results Summary (Commit `931b1005`)
 | Test Battery | Target Area | Result | Status |
 |---|---|---|---|
 | **Zero Simulation Guard** (`test/aztec_e2e_no_simulation.test.ts`) | Aztec PXE Pipeline | 3/3 passed | ✅ VERIFIED |
@@ -175,4 +175,4 @@ We invite Alejo Amiras and the Aztec Foundation team to collaborate on the follo
 - **Core Engineering:** `core@humanityledger.com`
 - **Lead Developer & Protocol Architect:** Stefan Antonio Cirisanu (`stefan@humanityledger.com`)
 - **Repository:** `https://github.com/humanityledger/Humanity-Ledger`
-- **Branch:** `main` (Commit `65f5c4bf`)
+- **Branch:** `main` (Commit `931b1005`)

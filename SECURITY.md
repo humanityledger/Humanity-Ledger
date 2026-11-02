@@ -1,85 +1,88 @@
-# Security Policy & Threat Model — Humanity Ledger
+# Security Architecture, Threat Model, and Vulnerability Disclosure
 
-> **Specification Standard:** HL-SEC-2026.5 (Testnet Stage 1 Audit Ready)  
+> **Specification Standard:** HL-SEC-2026.5  
 > **Classification:** Public Cryptographic Protocol Specification  
-> **Last Updated:** 2 November 2026 · Canonical Tree Baseline: Commit `65f5c4bf`  
-> **Target Audience:** Aztec Foundation (Alejo Amiras) · Security Researchers · Protocol Auditors · Institutional Partners  
+> **Target Audience:** Aztec Foundation (Alejo Amiras), Security Researchers, Protocol Auditors, and Institutional Partners  
+> **Protocol Baseline:** Monorepo Commit `931b1005` (November 2026)  
 > **Security Contact:** `security@humanityledger.com` — Initial acknowledgment within 12 hours
 
 ---
 
-## 1. Architectural Philosophy — Zero-Trust, Zero-Simulation, Zero-Custody
+## 1. Architectural Security Principles
 
-Humanity Ledger is engineered under a **Zero-Trust, Zero-Simulation, Zero-Custody** paradigm. We operate under the explicit assumption that any external infrastructure component — cloud providers, databases, relayers, public RPC nodes, and third-party API dependencies — can at any time be actively monitored, compromised, or adversarial.
+Humanity Ledger operates under an untrusted relay and adversarial network model. The protocol assumes that public remote procedure call (RPC) relays, cloud infrastructure providers, database stores, and transport gateways may at any time be actively monitored, compromised, or adversarial.
 
-Our security envelope guarantees that even in the catastrophic event of a total database leak or Edge server compromise:
+The protocol enforces six architectural principles designed to minimize the trusted computing base:
 
-- **User funds cannot be stolen.** Private keys and spending keys are generated and held exclusively in the client runtime and never transmitted across the wire.
-- **Private Zero-Knowledge proofs cannot be forged.** UltraHonk proof generation executes inside the client-local Aztec PXE, governed by circuit verification keys anchored under a 14-day timelock.
-- **Private communications cannot be decrypted in plaintext.** MLS messaging follows RFC 9420 with full post-compromise security (PCS); the server stores no decryption key material.
+1. **Sovereign Client Execution:** All private state manipulation, witness generation, and transaction proof synthesis occur locally within the client Private Execution Environment (PXE). No private witness, balance note, or spending key is ever transmitted to remote relays or indexing infrastructure.
+2. **Non Simulated Proof Verification:** Automated continuous integration and regression suites enforce deterministic witness generation and UltraHonk proof synthesis. Synthetic random fields (`Fr.random()`) and mock proof strings are strictly prohibited in production test paths (`test/aztec_e2e_no_simulation.test.ts`).
+3. **Non Custodial Key Isolation:** The protocol server infrastructure does not hold, derive, or process private spending keys or long term cryptographic identity material (`test/key_custody.test.ts`).
+4. **Timing Safe Cryptographic Equality:** Secret token comparisons, MAC validations, and enclave PIN checks utilize constant time comparison primitives (`crypto.timingSafeEqual`) to eliminate timing side channels (`lib/security/constant-time.ts`).
+5. **Memory Zeroization:** Private key buffers, symmetric session secrets, and ratcheted epoch secrets are explicitly wiped from memory upon consumption (`lib/security/zeroize.ts`).
+6. **Hermetic Sandbox Boundary Isolation:** Untrusted community applications execute within sandboxed iframe containers governed by a strict Content Security Policy (`connect-src 'none'`), postMessage schema validation, and an 8 KB payload ceiling (`lib/security/eaf-guard.ts`).
 
 ---
 
-## 2. Inviolable Cryptographic Invariants
+## 2. Mathematically Enforced Invariants
 
-The following six invariants are mathematically enforced and validated by the automated CI/CD pipeline on every commit:
+The monorepo enforces six cryptographic invariants validated by automated continuous integration on every commit:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                       CORE CRYPTOGRAPHIC INVARIANTS                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ 1. Zero Custodial Key Exposure                                              │
-│    Private keys, mnemonic seeds, and Aztec viewing keys NEVER leave the     │
+│    Private keys, mnemonic seeds, and Aztec viewing keys never leave the     │
 │    client runtime. No server endpoint receives, logs, or processes raw keys.│
 │    Verified: test/key_custody.test.ts                                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ 2. Strict Replay Immunity & Nonce Consumption                               │
-│    Every state-mutating operation consumes a cryptographically secure,      │
-│    single-use nonce with Redis TTL and SHA-256 idempotency validation.      │
+│ 2. Strict Replay Immunity and Nonce Consumption                             │
+│    Every state mutating operation consumes a cryptographically secure,      │
+│    single use nonce with Redis TTL and SHA-256 idempotency validation.      │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ 3. Edge-Enforced Identity Header Stripping (A-016)                          │
-│    All client-supplied identity headers (x-wallet-address, x-user-id) are  │
+│ 3. Edge Enforced Identity Header Stripping                                  │
+│    All client supplied identity headers (x-wallet-address, x-user-id) are  │
 │    unconditionally stripped at Edge middleware before verified re-injection.│
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ 4. Constant-Time Verification Across All Sensitive Operations               │
+│ 4. Constant Time Verification Across Sensitive Operations                   │
 │    Enclave PINs, HMAC signatures, and webhook tokens are verified via       │
-│    crypto.timingSafeEqual to eliminate side-channel timing profiling.       │
+│    timingSafeEqual to eliminate side channel timing profiling.              │
 │    Implementation: lib/security/constant-time.ts                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ 5. Client-Side Zero-Knowledge Proving (PXE)                                │
+│ 5. Client Local Zero Knowledge Proof Synthesis                             │
 │    UltraHonk proofs and Noir circuits (escrow, identity, streams) execute   │
 │    strictly inside browser Web Workers with COOP/COEP isolation.            │
-│    Zero-simulation guard: test/aztec_e2e_no_simulation.test.ts             │
+│    Zero simulation guard: test/aztec_e2e_no_simulation.test.ts             │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ 6. Least Privilege & Sealed Egress for Community Sandboxes (EAF)           │
+│ 6. Sealed Network Egress for Community Sandboxes                           │
 │    Untrusted user applications execute in sandboxed iframes governed by     │
-│    connect-src 'none' and a parent-mediated authenticated postMessage bridge│
-│    with a strict 8 KB payload ceiling.                                      │
+│    connect-src 'none' and a parent mediated authenticated postMessage       │
+│    bridge with a strict 8 KB payload ceiling.                               │
 │    Verified: test/eaf_isolation.adversarial.test.ts                        │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. Threat Model & Adversarial Defense Matrix
+## 3. Threat Model and Adversarial Defense Matrix
 
-The threat model explicitly accounts for state-sponsored Advanced Persistent Threats (APTs — including Lazarus Group), distributed flash-loan attack teams, and sophisticated supply-chain poisoners.
+The threat model evaluates the protocol against sophisticated adversaries, including state sponsored Advanced Persistent Threats (APTs), distributed network syndicates, and supply chain poisoners.
 
-| Threat Vector | Adversary Profile | Defense in Humanity Ledger |
+| Threat Vector | Adversary Profile | Mitigation Mechanism in Humanity Ledger |
 |---|---|---|
-| **Private Key / Seed Extraction** | APT / Remote Code Execution | Zero Custody: keys generated via WebCrypto API or Secure Enclave hardware; private material is never transmitted. |
-| **Session Forgery & Cookie Tampering** | Replay / Man-in-the-Middle | Strict SIWE Nonce Binding: EIP-4361 sessions verified with `jose` at Edge; `HttpOnly; Secure; SameSite=Strict`. |
-| **Side-Channel Timing Profiling** | Advanced Cryptanalyst | Constant-Time Verification: Argon2id PIN and API credential comparisons use `timingSafeEqual` throughout. |
-| **Supply Chain Dependency Poisoning** | Malicious NPM Package | Strict Version Pinning; `engine-strict=true`; SLSA Level 3 CI provenance; `npm audit` enforced in CI (0 vulnerabilities). |
-| **UltraHonk Proof Serialization Exploit** | Aztec Protocol Adversary | Barretenberg updated outside GHSA-73xc-j27q-wg75 vulnerable ranges; VK hash mismatch unconditionally blocks proving. |
-| **Sybil Flooding & Distributed DoS** | Botnet / Proxy Farms | Edge rate-limiting (90 req/min per verified wallet) via Redis token buckets; WorldCoin proof-of-humanity integration. |
-| **Metadata & IP Surveillance** | Network Snooping / ISP | TURN relay enforcement: `iceTransportPolicy: 'relay'` masks participant IPs; XMTP MLS encrypts message content. |
-| **Prototype Pollution** | JavaScript Supply Chain | Deep defensive hardening verified by `test/fortification.test.ts` and `test/lazarus_adversarial_deep.test.ts`. |
-| **Memory Forensics / Key Residue** | Physical Device Compromise | Explicit zeroization via `lib/security/zeroize.ts`; verified by `test/property_fuzz.test.ts` (60,000 iterations). |
+| **Private Key Extraction** | Malicious Node / Host Compromise | Non custodial architecture: private keys are generated via WebCrypto API or hardware enclaves; private material is never transmitted across the wire. |
+| **Session Forgery and Replay** | Man in the Middle / Network Interceptor | Sign In With Ethereum (EIP-4361) sessions bound to cryptographically generated nonces and verified at Edge middleware (`HttpOnly; Secure; SameSite=Strict`). |
+| **Timing Side Channel Profiling** | Advanced Cryptanalyst | Constant time verification: Argon2id hashes, PIN comparisons, and authentication tokens evaluate via `crypto.timingSafeEqual`. |
+| **Supply Chain Dependency Injection** | Malicious Upstream Package | Strict version pinning, `engine-strict=true`, SLSA Level 3 CI provenance, and zero vulnerability status under `npm audit`. |
+| **UltraHonk Proof Serialization Exploit** | Malicious Prover / Circuit Adversary | Barretenberg dependencies updated outside historical CVE ranges; verification key hash mismatches unconditionally reject proof synthesis. |
+| **Sybil Flooding and Denial of Service** | Botnet / Proxy Farms | Edge rate limiting (90 requests per minute per verified wallet) using Redis token buckets, coupled with proof of humanity screening. |
+| **Metadata and Traffic Analysis** | Passive ISP / Network Snooper | TURN relay encapsulation (`iceTransportPolicy: 'relay'`) masks peer IP addresses; Messaging Layer Security encrypts payload trees under RFC 9420. |
+| **Prototype Pollution** | Malicious Runtime Script | Deep object immutability and defensive parsing validated by `test/fortification.test.ts` and `test/lazarus_adversarial_deep.test.ts`. |
+| **Memory Residue and Forensics** | Physical Device Forensic Extraction | Explicit zeroization via `lib/security/zeroize.ts`; validated by `test/property_fuzz.test.ts` across 60,000 iterations. |
 
 ---
 
-## 4. Security Boundary Map & Blast Radius Analysis
+## 4. Security Boundary and Blast Radius Analysis
 
 ```
                               [ UNTRUSTED INTERNET ]
@@ -111,91 +114,75 @@ The threat model explicitly accounts for state-sponsored Advanced Persistent Thr
     └──────────────────────────────┘   └──────────────────────────────┘
 ```
 
-### Blast Radius Analysis
+### Blast Radius Assessment
 
-| Compromise Scenario | Impact | Cannot Happen |
+| Compromised Subsystem | Adversary Capabilities | Absolute Bounds (What Cannot Happen) |
 |---|---|---|
-| **API / Edge Server** | Read-only access to public indices; transient DoS | Drain wallets · sign transactions · decrypt chats |
-| **Database (PostgreSQL)** | Public profile data · transaction hashes | Decrypt MLS messages (stored only on XMTP) |
-| **Redis** | Reset transient rate-limit counters | Forge sessions (session cryptography is independent) |
-| **Local Device Loss** | None — mitigated by Secure Enclave, WebAuthn, Argon2id PIN backoff | N/A with hardware-backed keys |
+| **API or Edge Server** | Read only access to public index data; service disruption | Cannot extract private keys · cannot forge ZK proofs · cannot decrypt private chats |
+| **PostgreSQL Database** | Access to public wallet metadata and transaction references | Cannot decrypt MLS message payloads (stored in decentralized XMTP network) |
+| **Redis Cache** | Reset transient rate limiting counters | Cannot forge authentication sessions or derive user keys |
+| **Physical Client Device** | Access to local storage (mitigated by Secure Enclave) | Cannot compromise historical epochs (guaranteed by MLS forward secrecy) |
 
 ---
 
-## 5. Verification Keys & Circuit Lifecycle
+## 5. Circuit Verification Keys and Governance
 
-Production Noir circuits (`escrow`, `identity`, `streams`) have compiled Verification Keys anchored in `circuits/*/target/*.vk.json`. The VK lifecycle enforcer (`lib/aztec/verifier.ts`) operates as follows:
+Production Noir circuits (`escrow`, `identity`, `streams`) maintain compiled Verification Keys in `circuits/*/target/*.vk.json`. The verification key monitor (`lib/aztec/verifier.ts`) asserts the following state machine before allowing proof generation:
 
-| VK Status | Client Behaviour |
-|---|---|
-| `ACTIVE` — local SHA-256 matches on-chain commitment | Proof synthesis permitted |
-| `DEPRECATED` — hash matches but marked for migration | Proof permitted with migration warning |
-| `RETIRED` — explicitly deactivated | Proof synthesis **unconditionally blocked** |
-| `HASH MISMATCH` — local != on-chain | Proof synthesis **unconditionally blocked** |
+| Key State | Verification Action | System Behavior |
+|---|---|---|
+| `ACTIVE` | Local SHA-256 matches on-chain commitment | Proof synthesis permitted |
+| `DEPRECATED` | Hash matches but key is flagged for migration | Proof permitted with migration warning |
+| `RETIRED` | Key deactivated by protocol governance | Proof synthesis **unconditionally blocked** |
+| `HASH MISMATCH` | Local compiled hash differs from on-chain | Proof synthesis **unconditionally blocked** |
 
-On-chain VK commitments are governed by a **14-day timelock** before any hash update takes effect. This prevents silent circuit substitution attacks. Monitored by [`docs/VK_MONITORING.md`](docs/VK_MONITORING.md).
-
----
-
-## 6. Explicit Security Non-Claims
-
-The following are **not** guaranteed by the current protocol and are documented as hard constraints, not aspirational caveats:
-
-1. **No quantum resistance for classical cryptographic primitives.** BN254 (Aztec UltraHonk), secp256k1 (Ethereum), and Curve25519 (X25519 key agreement) remain vulnerable to Shor's algorithm on a cryptanalytically relevant quantum computer (CRQC). Post-quantum migration is a future roadmap item.
-2. **No metadata privacy at the network layer.** MLS guarantees payload confidentiality and post-compromise security. It does not obscure IP addresses, connection timing, or communication graph frequency. Use Tor or a privacy-preserving transport layer for metadata protection.
-3. **No mainnet production readiness.** The protocol is deployed on Aztec Testnet and Polygon Amoy / Base testnets only. External audit and formal governance are prerequisites for mainnet deployment.
-4. **No formal verification.** Circuit and contract correctness is validated by automated invariant tests and the adversarial fuzzing battery, but has not yet undergone formal verification by a third-party verification firm.
+On-chain updates to verification key commitments are subject to a mandatory **14 day timelock delay**, preventing stealth key substitution attacks ([`docs/VK_MONITORING.md`](docs/VK_MONITORING.md)).
 
 ---
 
-## 7. Responsible Disclosure & Bug Bounty
+## 6. Explicit Cryptographic Non-Claims
 
-We actively invite ethical security researchers and the Aztec ecosystem team to probe our contracts, circuits, and application runtime.
+The following operational constraints are explicitly documented:
 
-### Reporting Process
+1. **Classical Elliptic Curve Cryptography:** BN254 (Aztec UltraHonk), secp256k1 (Ethereum), and Curve25519 (X25519) are not quantum resistant and are vulnerable to Shor's algorithm on cryptanalytically relevant quantum computers.
+2. **Network Layer Traffic Analysis:** Messaging Layer Security protects payload content and ratcheted state. It does not conceal IP addresses, connection durations, or transmission frequencies.
+3. **Deployment Maturity:** The protocol is deployed in Testnet Stage 1. Production deployment on Ethereum mainnet is gated by external audits and protocol governance.
+4. **Third Party Formal Verification:** Automated invariant verification and fuzzing batteries are operational. Formal machine checked mathematical proofs (e.g. Coq or Lean4) represent a future roadmap item.
 
-- **Email:** `security@humanityledger.com`
-- **PGP:** Submissions may be encrypted using the public key on file.
+---
 
-### SLA Commitments
+## 7. Coordinated Vulnerability Disclosure Framework
 
-| Severity | Initial Acknowledgment | Triage | Remediation |
-|---|---|---|---|
-| **Critical** | 12 hours | 24 hours | 5 calendar days |
-| **High** | 24 hours | 48 hours | 7 calendar days |
-| **Medium / Low** | 48 hours | 72 hours | 30 calendar days |
+Humanity Ledger maintains an academic Coordinated Vulnerability Disclosure framework.
+
+> [!NOTE]
+> **No Monetary Bounties in Testnet Stage 1:** In accordance with our pre-mainnet status, Humanity Ledger does not offer cash bounties or financial rewards for vulnerability disclosures. All research contributions are acknowledged academically through public attribution, GitHub Security Advisories, and inclusion in the protocol Security Hall of Fame. A capitalized bounty program will be established upon mainnet funding.
+
+### Submission Protocol
+
+- **Transmission:** Encrypted advisory via GitHub Security Advisories or to `security@humanityledger.com`.
+- **Service Level Agreements:**
+  - Initial Acknowledgment: 12 hours
+  - Technical Triage: 24 hours
+  - Remediation Window (Critical): 5 business days
+  - Remediation Window (High): 7 business days
+  - Remediation Window (Medium / Low): 30 business days
 
 ### Scope
 
-- Smart contracts (`contracts/` — Solidity and Aztec Noir circuits in `circuits/`)
-- Cryptographic implementations (`lib/security/`, `lib/aztec/`)
-- Authentication and Edge perimeter (`middleware.ts`, `app/api/auth/`)
-- XMTP MLS integration and key delegation (`lib/xmtp/`)
-- EAF sandbox and postMessage bridge (`lib/community-apps/`)
-
-### Out of Scope
-
-- Denial-of-service attacks not exploiting a logic vulnerability
-- Social engineering of team members
-- Physical attacks against user hardware
-- Issues in third-party dependencies not introduced by this codebase
+- **In Scope:** Noir circuits (`circuits/`), Layer 1 Solidity contracts (`contracts/`), client PXE orchestration (`lib/aztec/`), cryptographic library (`lib/security/`), and sandbox guards (`lib/community-apps/`).
+- **Out of Scope:** Volumetric denial of service attacks without protocol logic flaws, social engineering of maintainers, and third party upstream dependencies.
 
 ### Safe Harbor
 
-Humanity Ledger will **never** pursue legal action against security researchers who:
-
-1. Make a good faith effort to avoid privacy violations, destruction of data, and service interruption.
-2. Provide a reasonable disclosure period (minimum 7 days for Critical, 30 days for others) before public disclosure.
-3. Do not exploit vulnerabilities for financial gain, extortion, or unauthorised data retention.
+The protocol will not pursue legal action against security researchers who conduct testing within the bounds of this policy, preserve the confidentiality of private state data, and allow a reasonable disclosure window before publishing findings.
 
 ---
 
-## 8. Security Contacts
+## 8. Contacts
 
-| Role | Contact |
-|---|---|
-| Security disclosures | `security@humanityledger.com` |
-| Protocol architecture | `core@humanityledger.com` |
-| DMCA / IP enforcement | `humanityledger@icloud.com` |
+- **Security Disclosures:** `security@humanityledger.com`
+- **Architecture and Core Engineering:** `core@humanityledger.com`
+- **Legal and Licensing:** `humanityledger@icloud.com`
 
-*Humanity Ledger — Testnet Stage 1 · 2 November 2026*
+*Humanity Ledger — Protocol Specification HL-SEC-2026.5 (November 2026)*
