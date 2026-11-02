@@ -21,16 +21,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { createAztecNodeClient, waitForTx } from '@aztec-labs/aztec.js/node';
-import { Fr, Fq } from '@aztec-labs/aztec.js/fields';
-import { AztecAddress } from '@aztec-labs/aztec.js/addresses';
-import { getContractInstanceFromInstantiationParams, NO_WAIT } from '@aztec-labs/aztec.js/contracts';
-import { SponsoredFeePaymentMethod } from '@aztec-labs/aztec.js/fee';
-import { NO_FROM } from '@aztec-labs/aztec.js/account';
-import { SponsoredFPCContract } from '@aztec-labs/noir-contracts.js/SponsoredFPC';
-import { TokenContract } from '@aztec-labs/noir-contracts.js/Token';
-import { openTmpStore } from '@aztec-labs/kv-store/deprecated/indexeddb';
-import { EmbeddedWallet } from '@aztec-labs/wallets/embedded';
+import { createAztecNodeClient, waitForTx } from '@aztec/aztec.js/node';
+import { Fr, Fq } from '@aztec/aztec.js/fields';
+import { AztecAddress } from '@aztec/aztec.js/addresses';
+import { getContractInstanceFromInstantiationParams, NO_WAIT } from '@aztec/aztec.js/contracts';
+import { SponsoredFeePaymentMethod } from '@aztec/aztec.js/fee';
+import { NO_FROM } from '@aztec/aztec.js/account';
+import { SponsoredFPCContract } from '@aztec/noir-contracts.js/SponsoredFPC';
+import { TokenContract } from '@aztec/noir-contracts.js/Token';
+import { openTmpStore } from '@aztec/kv-store/deprecated/indexeddb';
+import { EmbeddedWallet } from '@aztec/wallets/embedded';
 
 // ---------------------------------------------------------------------------
 // Configuration Loader
