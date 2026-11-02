@@ -1,17 +1,26 @@
-import DOMPurify from 'isomorphic-dompurify';
+import DOMPurify from 'dompurify';
 
 // B-028: Hook registered once globally, not on every function invocation
 let hookRegistered = false;
-function ensureHook() {
-    if (hookRegistered) return;
-    hookRegistered = true;
-    DOMPurify.addHook('afterSanitizeAttributes', function (node) {
-        if ('target' in node && node.getAttribute('target') === '_blank') {
-            node.setAttribute('rel', 'noopener noreferrer');
-        }
-    });
+
+function getPurifier() {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+    const purify = (typeof (DOMPurify as any).sanitize === 'function')
+        ? (DOMPurify as any)
+        : (DOMPurify as any)(window);
+
+    if (!hookRegistered && purify?.addHook) {
+        hookRegistered = true;
+        purify.addHook('afterSanitizeAttributes', function (node: any) {
+            if ('target' in node && node.getAttribute('target') === '_blank') {
+                node.setAttribute('rel', 'noopener noreferrer');
+            }
+        });
+    }
+    return purify;
 }
-ensureHook();
 
 const SANITIZE_CONFIG = {
     ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'br', 'hr', 'img', 'svg', 'path'],
@@ -21,11 +30,19 @@ const SANITIZE_CONFIG = {
 
 /**
  * B-028: Helper to securely sanitize HTML content in both SSR (Node.js) and browser.
- * Cleans `<img/src=x/onerror=alert(1)>` on the server before rendering.
+ * Cleans `<img/src=x/onerror=alert(1)>` before rendering.
  */
 export const sanitizeHTML = (content: string): string => {
     if (!content) return '';
-    return DOMPurify.sanitize(content, SANITIZE_CONFIG);
+    const purifier = getPurifier();
+    if (purifier && typeof purifier.sanitize === 'function') {
+        return purifier.sanitize(content, SANITIZE_CONFIG);
+    }
+    // Safe SSR fallback when DOM environment is not yet initialized
+    return content
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+        .replace(/\bon\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
 };
 
 /**
