@@ -44,7 +44,7 @@ LAYER 1: Client Execution Context (Browser and Desktop)
   * MLS Group State Engine (RFC 9420 and TreeKEM)
       * Post Compromise Security Guard (XMTP 5.2.0 pinned)
   * EAF Runtime (Ephemeral Application Framework)
-      * Network Isolated Iframe (connect_src none, 8 KB postMessage ceiling)
+      * Network Isolated Iframe (network connection none, 8 KB postMessage ceiling)
   * Noir Circuits (ACIR and BN254 field arithmetic)
       * escrow, identity, streams
                      |
@@ -65,12 +65,17 @@ LAYER 3: Ethereum Layer 1 (Cancun EVM)
 
 The trust boundary is absolute at the PXE layer. The sequencer and prover pool see only proof objects and public inputs. They never receive witness data, nullifier key material, or the preimages of note commitments. The server infrastructure stores ciphertext and nullifier hashes exclusively.
 
-| Layer | Security Boundary | Enforcement Mechanism |
-|---|---|---|
-| **MLS** | Message payload confidentiality and post compromise security | RFC 9420 TreeKEM epoch ratchet, XMTP 5.2.0 pinned |
-| **PXE** | Private state confidentiality and witness isolation | UltraHonk proof synthesis in COOP and COEP Web Worker without witness egress |
-| **EAF** | Third party frame isolation | Sandboxed iframe, connect_src none, frozen window.hl bridge |
-| **L1** | Settlement finality and VK anchoring | Cancun EVM contracts with 14 day governed timelock |
+<table>
+<thead>
+<tr><th>Layer</th><th>Security Boundary</th><th>Enforcement Mechanism</th></tr>
+</thead>
+<tbody>
+<tr><td><b>MLS</b></td><td>Message payload confidentiality and post compromise security</td><td>RFC 9420 TreeKEM epoch ratchet, XMTP 5.2.0 pinned</td></tr>
+<tr><td><b>PXE</b></td><td>Private state confidentiality and witness isolation</td><td>UltraHonk proof synthesis in COOP and COEP Web Worker without witness egress</td></tr>
+<tr><td><b>EAF</b></td><td>Third party frame isolation</td><td>Sandboxed iframe, network connection none, frozen window.hl bridge</td></tr>
+<tr><td><b>L1</b></td><td>Settlement finality and VK anchoring</td><td>Cancun EVM contracts with 14 day governed timelock</td></tr>
+</tbody>
+</table>
 
 ***
 
@@ -219,12 +224,17 @@ No VK may transition from `PROPOSED` to `ACTIVE` in less than 14 days. This dela
 
 **Client behavior by state**
 
-| State | Client Action | Gate Condition |
-|---|---|---|
-| `ACTIVE` | Proof synthesis permitted | Local VK SHA256 matches on chain commitment in `VKRegistry` |
-| `DEPRECATED` | Proof synthesis permitted with migration warning | Within 90 day rollover window |
-| `RETIRED` | Proof synthesis unconditionally blocked | Beyond rollover window |
-| `HASH_MISMATCH` | Proof synthesis unconditionally blocked | Local VK SHA256 diverges from on chain anchor |
+<table>
+<thead>
+<tr><th>State</th><th>Client Action</th><th>Gate Condition</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ACTIVE</code></td><td>Proof synthesis permitted</td><td>Local VK SHA256 matches on chain commitment in VKRegistry</td></tr>
+<tr><td><code>DEPRECATED</code></td><td>Proof synthesis permitted with migration warning</td><td>Within 90 day rollover window</td></tr>
+<tr><td><code>RETIRED</code></td><td>Proof synthesis unconditionally blocked</td><td>Beyond rollover window</td></tr>
+<tr><td><code>HASH_MISMATCH</code></td><td>Proof synthesis unconditionally blocked</td><td>Local VK SHA256 diverges from on chain anchor</td></tr>
+</tbody>
+</table>
 
 `HASH_MISMATCH` is treated identically to `RETIRED`. A mismatch between the locally compiled VK and the on chain anchored VK indicates either a build environment divergence or a supply chain event. Both cases warrant identical treatment: circuit synthesis is blocked until the mismatch is resolved through the governance process. This is verifiable in `lib/aztec/verifier.ts`.
 
@@ -289,20 +299,12 @@ The EAF allows third party mini applications to execute inside Ledger Chat as is
 
 ### 7.1 Sandbox Boundary
 
-Every EAF instance is an HTML5 `<iframe>` element with these enforced attributes:
+Every EAF instance executes within an isolated iframe subject to the following immutable constraints:
 
-```html
-<iframe
-  sandbox="allow-scripts"
-  csp="default-src 'none'; script-src 'self'; connect-src 'none';"
-  origin="null"
-/>
-```
-
-* `connect_src none`: no network egress is possible from within the frame under any circumstance, regardless of what scripts inside the frame attempt
-* `allow_scripts only`: no form submission, no top frame navigation, no storage access, no same origin privilege escalation
-* `origin null`: the null origin prevents any cookie, local storage, or IndexedDB access shared with the host application
-* **8 KB postMessage ceiling:** payloads exceeding 8 KB from the EAF to the host are silently dropped by the host message handler, eliminating exfiltration via message flooding or chunked data transfer
+* Execution isolation: sandbox parameter restricts execution to scripts exclusively, disallowing form submission, navigation, storage access, or same origin escalation.
+* Network confinement: Content Security Policy enforces default policy none, script policy self, and network egress none under all circumstances.
+* Origin boundary: origin is explicitly set to null, eliminating cookie sharing or shared storage access with the host environment.
+* PostMessage ceiling: inbound messages from the application frame exceeding 8 KB are dropped unconditionally by the host dispatcher to prevent exfiltration through message flooding.
 
 ### 7.2 The window.hl Bridge
 
@@ -324,12 +326,17 @@ The only communication channel between an EAF instance and the host application 
 
 The monorepo contains 49 Solidity contracts targeting the Cancun EVM under Solidity 0.8.28. The four contracts most relevant to the security model are:
 
-| Contract | Function | Governance Model |
-|---|---|---|
-| `HumanityTimeLockVault` | Timelock custody for shielded value settlement | 14 day minimum delay enforced on chain; no unilateral override possible |
-| `LedgerDeadmanSwitch` | Inactivity triggered estate planning transfer | User defined trigger window; no admin key; no beneficiary override |
-| `VKRegistry` | On chain verification key anchoring | Timelock governed; every VK upgrade requires the full 14 day delay |
-| `EscrowFactory` | Deploys per counterparty escrow instances | Immutable bytecode; no upgradeable proxy pattern |
+<table>
+<thead>
+<tr><th>Contract</th><th>Function</th><th>Governance Model</th></tr>
+</thead>
+<tbody>
+<tr><td><code>HumanityTimeLockVault</code></td><td>Timelock custody for shielded value settlement</td><td>14 day minimum delay enforced on chain; no unilateral override possible</td></tr>
+<tr><td><code>LedgerDeadmanSwitch</code></td><td>Inactivity triggered estate planning transfer</td><td>User defined trigger window; no admin key; no beneficiary override</td></tr>
+<tr><td><code>VKRegistry</code></td><td>On chain verification key anchoring</td><td>Timelock governed; every VK upgrade requires the full 14 day delay</td></tr>
+<tr><td><code>EscrowFactory</code></td><td>Deploys per counterparty escrow instances</td><td>Immutable bytecode; no upgradeable proxy pattern</td></tr>
+</tbody>
+</table>
 
 All contracts are tested under Hardhat with Cancun EVM target. Invariant tests cover ownership transfer paths, reentrancy attack vectors, timelock bypass attempts, and boundary integer arithmetic across the full BN254 denomination range. Deployed bytecode is verifiable against repository source via verification scripts.
 
@@ -366,9 +373,8 @@ No circuit in this repository has been verified against a formal mathematical sp
 The following commands reproduce every test battery from a clean checkout. Estimated wall time: under 60 seconds on a standard development machine with a stable network connection to the Aztec testnet node.
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/humanityledger/Humanity-Ledger.git
-cd Humanity-Ledger
+# 1. Clone the repository from the organization
+git clone https://github.com/humanityledger
 
 # 2. Install dependencies
 npm install
@@ -397,20 +403,25 @@ npm run test:run
 
 **Verification results at commit `783df711`:**
 
-| Test Battery | Source | Result | Status |
-|---|---|---|---|
-| Non Simulation Policy | automated script | 0 forbidden patterns | OK |
-| Traceability Matrix | npm run check:traceability | A1 through A7 all SATISFIED | OK |
-| Noir Escrow Circuit | test/circuits/escrow.test.ts | 8 / 8 | OK |
-| Noir Identity Circuit | test/circuits/identity.test.ts | 7 / 7 | OK |
-| Noir Streams Circuit | test/circuits/streams.test.ts | 6 / 6 | OK |
-| VK Lifecycle Integrity | test/aztec_vk_integrity.test.ts | 8 / 8 | OK |
-| Key Custody | test/key_custody.test.ts | 5 / 5 | OK |
-| MLS Post Compromise Security | test/mls_post_compromise.test.ts | 6 / 6 | OK |
-| EAF Adversarial Isolation | test/eaf_isolation.adversarial.test.ts | All escape vectors blocked | OK |
-| L1 Contract Invariants | test/contracts_invariants.test.ts | 5 / 5 | OK |
-| Property Based Fuzz | test/property_fuzz.test.ts | 60,000 iterations | OK |
-| **Full Suite** | npm run test:run | **1,076 / 1,076 across 61 files** | **OK** |
+<table>
+<thead>
+<tr><th>Test Battery</th><th>Source</th><th>Result</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td>Non Simulation Policy</td><td>automated script</td><td>0 forbidden patterns</td><td>OK</td></tr>
+<tr><td>Traceability Matrix</td><td>npm run check:traceability</td><td>A1 through A7 all SATISFIED</td><td>OK</td></tr>
+<tr><td>Noir Escrow Circuit</td><td>test/circuits/escrow.test.ts</td><td>8 / 8</td><td>OK</td></tr>
+<tr><td>Noir Identity Circuit</td><td>test/circuits/identity.test.ts</td><td>7 / 7</td><td>OK</td></tr>
+<tr><td>Noir Streams Circuit</td><td>test/circuits/streams.test.ts</td><td>6 / 6</td><td>OK</td></tr>
+<tr><td>VK Lifecycle Integrity</td><td>test/aztec_vk_integrity.test.ts</td><td>8 / 8</td><td>OK</td></tr>
+<tr><td>Key Custody</td><td>test/key_custody.test.ts</td><td>5 / 5</td><td>OK</td></tr>
+<tr><td>MLS Post Compromise Security</td><td>test/mls_post_compromise.test.ts</td><td>6 / 6</td><td>OK</td></tr>
+<tr><td>EAF Adversarial Isolation</td><td>test/eaf_isolation.adversarial.test.ts</td><td>All escape vectors blocked</td><td>OK</td></tr>
+<tr><td>L1 Contract Invariants</td><td>test/contracts_invariants.test.ts</td><td>5 / 5</td><td>OK</td></tr>
+<tr><td>Property Based Fuzz</td><td>test/property_fuzz.test.ts</td><td>60,000 iterations</td><td>OK</td></tr>
+<tr><td><b>Full Suite</b></td><td>npm run test:run</td><td><b>1,076 / 1,076 across 61 files</b></td><td><b>OK</b></td></tr>
+</tbody>
+</table>
 
 ***
 
@@ -483,7 +494,7 @@ The following properties are not aspirational statements. They are design constr
 
 ## Repository and Contact
 
-* **Repository:** https://github.com/humanityledger/Humanity-Ledger
+* **Repository:** https://github.com/humanityledger
 * **Canonical commit:** `783df711`
 * **Normative specification:** `docs/PROTOCOL_SPEC.md` (HLSPEC 2026.1)
 * **Technical review dossier:** `docs/AZTEC_FOUNDATION_DOSSIER.md`
