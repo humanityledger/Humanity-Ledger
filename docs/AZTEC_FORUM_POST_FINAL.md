@@ -434,7 +434,15 @@ npm run test:run
 <tr><td>Streams Rate Bound (Gap G4 Closure)</td><td>test/circuits/streams_rate_bound.test.ts</td><td>4 / 4</td><td>OK</td></tr>
 <tr><td>PXE Boundary and MLS Lockfile</td><td>test/pxe_boundary_security.test.ts</td><td>6 / 6</td><td>OK</td></tr>
 <tr><td>VK HASH_MISMATCH Unconditional Block</td><td>test/vk_hash_mismatch.test.ts</td><td>5 / 5</td><td>OK</td></tr>
-<tr><td><b>Full Suite</b></td><td>npm run test:run</td><td><b>1,094 / 1,094 across 64 files</b></td><td><b>OK</b></td></tr>
+<tr><td>Key Exfiltration Adversarial</td><td>test/key_exfiltration.adversarial.test.ts</td><td>15 / 15</td><td>OK</td></tr>
+<tr><td>Circuit Invariants Adversarial</td><td>test/circuit_invariants.adversarial.test.ts</td><td>20 / 20</td><td>OK</td></tr>
+<tr><td>Cryptographic Integrity Adversarial</td><td>test/crypto_integrity.adversarial.test.ts</td><td>20 / 20</td><td>OK</td></tr>
+<tr><td>API Authorization Adversarial</td><td>test/api_authorization.adversarial.test.ts</td><td>20 / 20</td><td>OK</td></tr>
+<tr><td>Supply Chain Attack Hardening</td><td>test/supply_chain_attack.test.ts</td><td>10 / 10</td><td>OK</td></tr>
+<tr><td>Replay and Double Spend Hardening</td><td>test/replay_and_doublespend.test.ts</td><td>10 / 10</td><td>OK</td></tr>
+<tr><td>Side Channel Timing Hardening</td><td>test/sidechannel_timing.test.ts</td><td>10 / 10</td><td>OK</td></tr>
+<tr><td>Social Engineering Hardening</td><td>test/social_engineering.test.ts</td><td>10 / 10</td><td>OK</td></tr>
+<tr><td><b>Full Suite</b></td><td>npm run test:run</td><td><b>1,209 / 1,209 across 72 files</b></td><td><b>OK</b></td></tr>
 </tbody>
 </table>
 
@@ -466,6 +474,14 @@ Humanity Ledger monorepo at commit 783df711
     key_custody.test.ts
     mls_post_compromise.test.ts
     property_fuzz.test.ts
+    key_exfiltration.adversarial.test.ts
+    circuit_invariants.adversarial.test.ts
+    crypto_integrity.adversarial.test.ts
+    api_authorization.adversarial.test.ts
+    supply_chain_attack.test.ts
+    replay_and_doublespend.test.ts
+    sidechannel_timing.test.ts
+    social_engineering.test.ts
   docs/
     PROTOCOL_SPEC.md          (Normative specification HLSPEC 2026.1)
     AZTEC_FOUNDATION_DOSSIER.md
