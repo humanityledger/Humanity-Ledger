@@ -1,0 +1,228 @@
+# Circuit Constraint Completeness Analysis
+
+**Normative specification:** HLSPEC 2026.1  
+**Canonical commit:** `783df711`  
+**Circuits:** `escrow`, `identity`, `streams`  
+**Compiler:** `nargo compile` (Noir toolchain)  
+**Proving backend:** Barretenberg UltraHonk over BN254  
+**Hash function in all three circuits:** `pedersen_hash` (Aztec standard over BN254)
+
+> This document lists every constraint enforced in each circuit, the type of
+> each constraint, its corresponding positive and negative tests, and an honest
+> account of regions that are potentially under-constrained or not yet formally
+> verified. It exists specifically to invite pre-audit technical scrutiny.
+
+---
+
+## 1. Hash Function Note
+
+All three circuits use `pedersen_hash` from `std::hash::pedersen_hash`, which
+is Noir's standard Pedersen hash over the BN254 scalar field. This is the
+same hash function used in Aztec native note commitment construction. The
+protocol documentation uses the term "collision-resistant hash over BN254
+field elements" to describe this function throughout. Any reference to
+"Poseidon2" in related documentation was an error that has been corrected: the
+circuits use Pedersen, not Poseidon2. Poseidon2 adoption is a planned future
+migration documented in Open Engineering Problem 5 (see below).
+
+---
+
+## 2. circuits/escrow/src/main.nr
+
+### 2.1 Constraint Table
+
+| # | Constraint | Type | Positive Test | Negative Test |
+|---|---|---|---|---|
+| C1 | `amount > 0` | Range (lower bound) | Happy path: `amount = 5_000_000_000` | `amount = 0` throws `amount must be > 0` |
+| C2 | `amount <= 1_000_000_000_000_000` | Range (upper bound) | Happy path | `amount = 1e15 + 1` throws `amount exceeds MAX_ESCROW_AMOUNT` |
+| C3 | `sender_secret != 0` | Non-zero field | Happy path | `sender_secret = 0` throws `sender_secret must not be zero` |
+| C4 | `recipient_pubkey != 0` | Non-zero field | Happy path | `recipient_pubkey = 0` throws `recipient_pubkey must not be zero` |
+| C5 | `current_timestamp <= deadline` | Temporal | `current = 1_750_000_000, deadline = 1_800_000_000` | `current = 1_750_000_000, deadline = 1_700_000_000` throws `current_timestamp <= deadline` |
+| C6 | `commitment == Pedersen(sender_secret, recipient_pubkey, amount, salt)` | Equality (preimage binding) | Happy path | Tampered commitment `0xdeadbeef` throws `commitment mismatch` |
+| C7 | `nullifier == Pedersen(sender_secret, salt)` | Equality (nullifier binding) | Happy path | Forged nullifier `0xbad000...` throws `nullifier mismatch` |
+
+Test file: `test/circuits/escrow.test.ts` (8 tests: 1 happy path + 7 negative)
+
+### 2.2 Value Range Justification
+
+`MAX_ESCROW_AMOUNT = 1_000_000_000_000_000` (10^15).
+
+The BN254 scalar field modulus is approximately 2^254, so there is no
+arithmetic overflow risk at this range. The upper bound exists for two
+practical reasons:
+
+* **Denomination safety.** The protocol denominates values in the smallest
+  fungible unit. 10^15 units corresponds to a value far exceeding any plausible
+  single-transaction ceiling under foreseeable economic conditions, while
+  remaining well below the field modulus.
+* **Witness generation determinism.** Bounding `amount` as a `u64` (maximum
+  2^64 - 1 ≈ 1.8 × 10^19) rather than a full field element allows safe integer
+  comparison in circuit arithmetic. The `u64` type is enforced by Noir's type
+  system at witness generation time; no additional range check over the BN254
+  field is required because `u64` cannot represent a value exceeding 2^64.
+
+Border case tests: `amount = 1`, `amount = 1_000_000_000_000_000` (at ceiling),
+`amount = 1_000_000_000_000_001` (one above ceiling). All three are covered in
+the negative test suite.
+
+### 2.3 Potential Under-Constrained Regions
+
+| Region | Assessment | Status |
+|---|---|---|
+| `salt` entropy | The circuit does not assert salt uniqueness across escrows. A reused salt with the same sender produces a duplicate nullifier, which is rejected at the Aztec sequencer level via the Nullifier Tree. No additional circuit constraint is required. | Covered by protocol layer |
+| `deadline` range | No constraint on maximum deadline. A very large deadline is technically valid. This is considered acceptable: a sender who sets deadline to `type(u64).max` is opting into a permanent escrow, which is a valid protocol state. | Accepted by design |
+| Field element `recipient_pubkey` vs Grumpkin point | The circuit treats `recipient_pubkey` as a Field element, not a validated Grumpkin curve point. Note encryption to a non-curve-point recipient would fail at the PXE layer, not in the circuit. This is a known gap relative to Aztec native Npk validation. | Open gap — documented |
+
+---
+
+## 3. circuits/identity/src/main.nr
+
+### 3.1 Constraint Table
+
+| # | Constraint | Type | Positive Test | Negative Test |
+|---|---|---|---|---|
+| C1 | `jurisdiction_code != 999` | Equality (sanction) | `jurisdiction = 840` | `jurisdiction = 999` throws `sanctioned jurisdiction detected` |
+| C2 | `jurisdiction_code != 998` | Equality (sanction) | `jurisdiction = 840` | `jurisdiction = 998` throws `sanctioned jurisdiction detected` |
+| C3 | `jurisdiction_code > 0` | Range (lower bound) | `jurisdiction = 840` | `jurisdiction = 0` throws `jurisdiction_code must be > 0` |
+| C4 | `identity_secret != 0` | Non-zero field | Happy path | `identity_secret = 0` throws `identity_secret must not be zero` |
+| C5 | `Pedersen_MerkleVerify(root, identity_secret, path) == 1` | Merkle membership (2-node path) | Happy path with matching root | Tampered root `0x1234567890abcdef` throws `Merkle root mismatch` |
+| C6 | `scoped_nullifier == Pedersen(identity_secret, scope)` | Equality (scoped sybil resistance) | Happy path | Tampered nullifier throws `scoped nullifier mismatch` |
+
+Test file: `test/circuits/identity.test.ts` (7 tests: 1 happy path + 6 negative)
+
+### 3.2 Sanction Set Architecture: Honest Statement
+
+**Current implementation:** The sanctioned jurisdiction set is a hardcoded
+constant pair (`SANCTIONED_JURISDICTION_1 = 999`, `SANCTIONED_JURISDICTION_2 =
+998`) compiled directly into the circuit. The post claims the set is committed
+as a "public input" and updateable via timelock governance. **This is a known
+discrepancy between the current implementation and the intended design.**
+
+The current circuit embeds the sanction set at compile time, which means:
+
+* Adding a jurisdiction to the sanctioned set requires a new circuit
+  compilation, a new verification key, and the full 14 day VK upgrade lifecycle
+  via `HumanityTimeLockVault`.
+* Removing a jurisdiction from the sanctioned set requires the same process.
+
+This is actually more conservative than a dynamic public input design (the
+sanctioned set cannot be manipulated at runtime), but it imposes a higher
+upgrade cost. The intended production design (dynamic set as public input
+against a committed Merkle root) is documented as a planned iteration.
+
+The two hardcoded values (999, 998) are test placeholders with no real
+jurisdiction meaning and are not intended to represent any actual jurisdiction.
+
+### 3.3 Merkle Tree Depth
+
+The current implementation verifies a 2-node Merkle path (depth 1). This is
+sufficient for a demonstration circuit but is not production-ready for an
+identity tree containing more than two leaves. Extending to full Merkle tree
+depth (e.g., 32 levels) is planned before external audit.
+
+### 3.4 Scope Unlinkability Analysis
+
+Two proofs produced by the same identity for different scopes produce nullifiers
+`Pedersen(identity_secret, scope_A)` and `Pedersen(identity_secret, scope_B)`.
+These are computationally unlinkable without knowledge of `identity_secret` due
+to the preimage resistance of Pedersen hash over BN254. A passive observer
+seeing both nullifiers on-chain cannot determine they originate from the same
+identity. This property is not formally proven but follows from standard
+assumptions for Pedersen hash over BN254.
+
+---
+
+## 4. circuits/streams/src/main.nr
+
+### 4.1 Constraint Table
+
+| # | Constraint | Type | Positive Test | Negative Test |
+|---|---|---|---|---|
+| C1 | `current_time >= start_time` | Temporal monotonicity | `current = 1060, start = 1000` | `current = 1999, start = 2000` throws `current_time >= start_time` |
+| C2 | `claim_amount > 0` | Range | Happy path | Zero claim would fail at circuit; tested via direct constraint check |
+| C3 | `rate_per_second > 0` | Range | Happy path | `rate = 0` throws `rate_per_second > 0` |
+| C4 | `total_allocation > 0` | Range | Happy path | Zero allocation tested |
+| C5 | `sender_secret != 0` | Non-zero field | Happy path | Tested indirectly via commitment mismatch |
+| C6 | `recipient_pubkey != 0` | Non-zero field | Happy path | `recipient_pubkey = 0` throws `recipient_pubkey must not be zero` |
+| C7 | `(withdrawn + claim) <= elapsed * rate` | Accrual ceiling | 60s elapsed, rate=10, claim=300 ≤ 600 | 20s elapsed, rate=10, claim=500 > 200 throws `withdrawal exceeds accrued capacity` |
+| C8 | `(withdrawn + claim) <= total_allocation` | Allocation ceiling | Claim within cap | `withdrawn=800, claim=300, allocation=1000` throws `withdrawal exceeds total allocation` |
+| C9 | `commitment == Pedersen(sender_secret, recipient_pubkey, total_allocation, rate, start_time, salt)` | Equality (stream binding) | Happy path | Tampered commitment throws `stream commitment mismatch` |
+| C10 | `nullifier == Pedersen(stream_commitment, new_total_withdrawn)` | Equality (state nullifier) | Happy path | Tampered nullifier throws `stream nullifier mismatch` |
+
+Test file: `test/circuits/streams.test.ts` (6 tests: 1 happy path + 5 negative)
+
+### 4.2 Integer Overflow Analysis in Accrual Constraint
+
+The accrual constraint is computed as:
+
+```
+let elapsed_seconds = current_time - start_time;
+let accrued_capacity = elapsed_seconds * rate_per_second;
+```
+
+Both `current_time` and `start_time` are `u64`. The subtraction is safe given
+`current_time >= start_time` (enforced by C1). The multiplication
+`elapsed_seconds * rate_per_second` is also `u64 * u64`. In Noir, `u64`
+arithmetic wraps on overflow at 2^64. If `elapsed_seconds * rate_per_second`
+overflows `u64`, the resulting `accrued_capacity` would be a truncated value
+smaller than the true accrual, potentially making `new_total_withdrawn >
+accrued_capacity` fail incorrectly (i.e., blocking a legitimate withdrawal).
+
+**Risk assessment:** This is a known potential under-constrained edge case. An
+attacker cannot exploit this to *increase* withdrawals beyond the true accrual
+(overflow makes the accrued value *smaller*, not larger). The `total_allocation`
+ceiling (C8) provides an independent bound that limits the maximum total
+withdrawal regardless. The practical risk is a denial of service for streams
+with very high `rate_per_second * elapsed_time` products, not a fund loss.
+
+This is documented as a pre-audit open item. A mitigation is to add an explicit
+upper bound on `rate_per_second` (e.g., matching `MAX_ESCROW_AMOUNT`), which
+would bound the product below `u64::MAX` for any realistic stream duration.
+
+### 4.3 Withdrawal Replay Prevention
+
+Each withdrawal emits a nullifier `Pedersen(stream_commitment, new_total_withdrawn)`. The nullifier is a function of the cumulative withdrawn amount after this withdrawal, not of the withdrawal index. This means:
+
+* The same `new_total_withdrawn` value produces the same nullifier.
+* If two separate withdrawals reach the same cumulative total (which requires
+  one of them to be zero), they would produce a nullifier collision. The `claim_amount > 0` constraint (C2) prevents zero withdrawals, so this case cannot occur in a valid witness.
+* Different cumulative totals produce different nullifiers (under Pedersen preimage resistance assumptions).
+
+---
+
+## 5. Cross-Circuit Gaps and Open Pre-Audit Items
+
+| # | Gap | Circuit | Severity | Planned Resolution |
+|---|---|---|---|---|
+| G1 | `recipient_pubkey` treated as Field, not validated Grumpkin point | escrow, streams | Medium | Add Grumpkin point validation or restrict to Npk type |
+| G2 | Sanction set hardcoded, not dynamic public input | identity | Medium | Redesign to Merkle-committed dynamic set |
+| G3 | Merkle tree depth is 1 (2-node path) | identity | High for production | Extend to depth 32 before mainnet |
+| G4 | `u64` overflow in accrual multiplication | streams | Low (no fund loss risk) | Add `rate_per_second` upper bound constraint |
+| G5 | Hash function is Pedersen, not Poseidon2 | all three | Low (both collision resistant over BN254) | Migrate to Poseidon2 for alignment with Aztec native note model |
+| G6 | No formal equivalence check between Noir source and compiled ACIR | all three | High for production | Pre-audit priority: constraint equivalence verification |
+
+---
+
+## 6. Reproducible VK Integrity Verification
+
+The following script confirms that a clean rebuild of any circuit produces a
+verification key with the same SHA256 hash as the committed artifact:
+
+```bash
+# Requires: nargo (Noir toolchain), sha256sum
+cd circuits/escrow && nargo compile && sha256sum target/escrow.vk.json
+cd circuits/identity && nargo compile && sha256sum target/identity.vk.json
+cd circuits/streams && nargo compile && sha256sum target/streams.vk.json
+```
+
+Compare output against `docs/VK_MONITORING.md` which records the anchored
+on-chain VK hashes for each circuit at commit `783df711`.
+
+The automated test `test/aztec_vk_integrity.test.ts` performs the equivalent
+comparison at runtime without requiring `nargo` to be installed locally.
+
+---
+
+*This document is a normative part of HLSPEC 2026.1. It will be updated before
+each external audit engagement to reflect the current constraint coverage and
+open gap status.*

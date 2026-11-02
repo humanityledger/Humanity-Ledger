@@ -118,37 +118,43 @@ For mainnet, an unsolved design question exists regarding how to provide first u
 
 The monorepo contains three production Noir circuits compiled with committed verification key artifacts at `circuits/*/target/*.vk.json`. Tests in `test/circuits/` cover both valid witness paths and deliberate constraint violation cases (negative tests). Every constraint listed below is enforced by the ACIR constraint system, not by application layer validation.
 
+The complete pre-audit constraint analysis, including known under-constrained regions and planned mitigations, is documented in `circuits/CONSTRAINT_COMPLETENESS.md`.
+
+**Hash function used in all three circuits:** `pedersen_hash` from `std::hash::pedersen_hash` (Noir standard Pedersen hash over the BN254 scalar field). This is a collision-resistant hash function over BN254 field elements. Migrating to Poseidon2 for alignment with Aztec's native note commitment scheme is planned and documented as Open Engineering Problem 5.
+
+***
+
 ### 3.1 Private Escrow Release (circuits/escrow/src/main.nr)
 
 The escrow circuit governs the conditional release of a shielded value commitment. The circuit proves all of the following invariants simultaneously, with every private input remaining unknown to the verifier.
 
 **Commitment binding**
 
-`C = Poseidon2(sender_secret, recipient_Npk, amount, nonce)`
+`C = Pedersen(sender_secret, recipient_pubkey, amount, salt)`
 
-where `sender_secret` is the sender nullifier secret, `recipient_Npk` is the recipient nullifier public key, `amount` is the committed value, and `nonce` is a circuit blinding nonce. No valid UltraHonk proof can be produced for a commitment value that does not satisfy this exact preimage relation. The hash function is Poseidon2 over BN254, consistent with the Aztec protocol native note commitment scheme.
+where `sender_secret` is the sender nullifier secret, `recipient_pubkey` is the recipient public key, `amount` is the committed value, and `salt` is a circuit blinding nonce. No valid UltraHonk proof can be produced for a commitment value that does not satisfy this exact preimage relation.
 
 **Temporal boundary**
 
-`t <= deadline`
+`current_timestamp <= deadline`
 
-Witnesses with `t > deadline` are unsatisfiable. The constraint system rejects them before a proof attempt is made, at witness generation time, not at the application layer.
+Witnesses with `current_timestamp > deadline` are unsatisfiable. The constraint system rejects them at witness generation time, not at the application layer.
 
 **Nullifier uniqueness (double spend prevention)**
 
-`nf = Poseidon2(sender_secret, nonce)`
+`nf = Pedersen(sender_secret, salt)`
 
-The nullifier is fully determined by the sender secret and nonce. It is emitted on chain by the Aztec sequencer into the Nullifier Tree. A second proof for the same `(sender_secret, nonce)` pair produces a nullifier already indexed in the rollup Nullifier Tree and is rejected at the sequencer level, independently of the circuit. This mirrors exactly the nullifier model used across Aztec native token contracts.
+The nullifier is fully determined by the sender secret and salt. It is emitted on chain by the Aztec sequencer into the Nullifier Tree. A second proof for the same `(sender_secret, salt)` pair produces a nullifier already indexed in the rollup Nullifier Tree and is rejected at the sequencer level, independently of the circuit.
 
 **Value domain**
 
-`0 < amount <= 10^15`
+`0 < amount <= 1_000_000_000_000_000`
 
-This range constraint prevents zero value proofs and overflow conditions beyond practical denomination ranges within the BN254 scalar field.
+Both `amount` and the ceiling are typed as `u64` in the Noir circuit. The `u64` type bounds the maximum representable value to 2^64 - 1, which exceeds the 10^15 ceiling. The explicit `amount <= MAX_ESCROW_AMOUNT` constraint provides the protocol bound within that `u64` range. Border case tests cover `amount = 1`, `amount = 10^15`, and `amount = 10^15 + 1`.
 
 **Non zero identity guard**
 
-`sender_secret != 0` and `recipient_Npk != 0`
+`sender_secret != 0` and `recipient_pubkey != 0`
 
 ***
 
@@ -158,21 +164,22 @@ The identity circuit proves membership in an authorized identity tree and compli
 
 **Sanction screening in zero knowledge**
 
-`jurisdiction NOT IN { sanctioned_1, sanctioned_2, ... }`
+`jurisdiction_code != SANCTIONED_JURISDICTION_1` and `jurisdiction_code != SANCTIONED_JURISDICTION_2`
 
-The jurisdiction value is a private witness. The circuit produces a valid proof only when the jurisdiction is absent from the sanctioned set. The sanctioned set is committed as a public input to the circuit. Updating the set requires a governance proposal subject to the full 14 day timelock delay enforced by `HumanityTimeLockVault`.
+The jurisdiction value is a private witness. The circuit produces a valid proof only when the jurisdiction is absent from the sanctioned set. **Current implementation note:** the sanctioned set consists of two jurisdictions hardcoded as compile-time constants in the circuit (`999` and `998`, which are test placeholder values with no real-world jurisdiction meaning). Adding or removing a jurisdiction from the sanctioned set requires a new circuit compilation and the full 14 day VK upgrade lifecycle enforced by `HumanityTimeLockVault`. The intended production design (a dynamically committed Merkle root representing the full sanctioned set) is documented as a planned iteration in `circuits/CONSTRAINT_COMPLETENESS.md`.
 
 **Merkle membership**
 
-`EXISTS path : Poseidon2_MerkleVerify(root, identity_secret, path) == 1`
+`leaf = Pedersen(identity_secret, jurisdiction_code)`
+`root = Pedersen(leaf, sibling) OR Pedersen(sibling, leaf)`
 
-The identity secret must satisfy a Merkle inclusion proof against the canonical identity tree root published on chain. The Merkle tree uses Poseidon2 as the internal hash function, consistent with Aztec Note Hash Tree construction. The prover does not disclose the identity secret at any point.
+The identity secret must satisfy a Merkle inclusion proof against the canonical identity tree root published on chain. **Current implementation note:** the Merkle path is depth 1 (a 2-node subpath). Extending to full production depth (32 levels) is required before mainnet and is documented as a pre-audit open item.
 
 **Scoped sybil resistance**
 
-`nf_scoped = Poseidon2(identity_secret, scope_identifier)`
+`nf_scoped = Pedersen(identity_secret, scope_identifier)`
 
-Each application scope derives a distinct nullifier from the same underlying identity. A single identity cannot register twice within one scope. Proofs produced for different scopes are unlinkable to each other and to the underlying identity, because the scope identifier is a domain separation input that changes the nullifier output deterministically but without correlation.
+Each application scope derives a distinct nullifier from the same underlying identity. A single identity cannot register twice within one scope. Proofs produced for different scopes are unlinkable to each other and to the underlying identity under the preimage resistance assumption for Pedersen hash over BN254.
 
 ***
 
@@ -182,27 +189,31 @@ The stream circuit governs partial withdrawals from a time accruing payment chan
 
 **Temporal monotonicity**
 
-`t >= stream_start`
+`current_time >= start_time`
 
-No withdrawal witness is satisfiable before the stream opens at `stream_start`. This constraint is enforced in circuit arithmetic and cannot be bypassed by the application layer.
+No withdrawal witness is satisfiable before the stream opens at `start_time`. This constraint is enforced in circuit arithmetic and cannot be bypassed by the application layer.
 
 **Accrual constraint**
 
-`withdrawn + current_withdrawal <= elapsed_time * rate`
+`withdrawn_amount + claim_amount <= (current_time - start_time) * rate_per_second`
 
-where `elapsed_time` represents the positive difference between the current block timestamp `t` and `stream_start`. The sum of the already withdrawn amount and the current withdrawal amount cannot exceed the linearly accrued balance. The variables `rate` (per unit time emission rate) and `t` (current block timestamp) are public inputs. The withdrawal history `withdrawn` is a private witness verified against a committed state nullifier. This constraint is enforced entirely in BN254 scalar field arithmetic.
+The sum of the already withdrawn amount and the current claim cannot exceed the linearly accrued balance. Both time values are `u64` public inputs. The multiplication `elapsed * rate` is computed in `u64` arithmetic. A known edge case exists where this product overflows `u64` for extreme parameter combinations; in that case the constraint becomes more restrictive (clamping the accrual downward), which cannot produce an over-withdrawal. The `total_allocation` ceiling below provides an independent hard bound. See `circuits/CONSTRAINT_COMPLETENESS.md` Section 4.2 for full analysis.
 
 **Allocation ceiling**
 
-`withdrawn + current_withdrawal <= total_allocation`
+`withdrawn_amount + claim_amount <= total_allocation`
 
-Total withdrawals across the stream lifetime are bounded by the committed allocation `total_allocation`, regardless of elapsed time or accrual. This prevents an edge case where integer overflow in elapsed time could produce an accrual value exceeding the committed allocation.
+Total withdrawals across the stream lifetime are bounded by the committed allocation `total_allocation`, regardless of elapsed time or accrual. This is an independent constraint that holds even if the accrual computation overflows.
 
-**Nullifier per withdrawal state**
+**State nullifier per withdrawal**
 
-Each withdrawal emits a unique nullifier derived from the stream identifier and the current withdrawal index. Replay of any past withdrawal state is detectable at the Aztec rollup level via the Nullifier Tree without disclosing the withdrawal history to any observer.
+`nullifier = Pedersen(stream_commitment, new_total_withdrawn)`
+
+Each withdrawal emits a unique nullifier derived from the stream commitment and the cumulative withdrawn amount after this withdrawal. Replay of any past withdrawal state is detectable at the Aztec rollup level via the Nullifier Tree. The `claim_amount > 0` constraint prevents zero withdrawals, which would otherwise produce a nullifier collision with the initial state.
 
 ***
+
+
 
 ## 4. Verification Key Lifecycle State Machine
 
@@ -431,6 +442,7 @@ npm run test:run
 ```text
 Humanity Ledger monorepo at commit 783df711
   circuits/
+    CONSTRAINT_COMPLETENESS.md  (Pre-audit constraint analysis and gap register)
     escrow/src/main.nr        (Private escrow release)
     identity/src/main.nr      (Anonymous identity and compliance)
     streams/src/main.nr       (Continuous payment stream)
@@ -477,7 +489,11 @@ Note discovery via full Note Hash Tree scan is impractical for mobile clients at
 
 **4. Pre audit circuit review for constraint completeness**
 
-Before engaging an external audit firm for `circuits/escrow`, `circuits/identity`, and `circuits/streams`, we would value informal technical feedback from engineers familiar with UltraHonk constraint systems and BN254 arithmetization: specifically on under constrained regions, incomplete range check coverage, or witness generation edge cases that negative tests do not currently exercise. We are not requesting a formal audit. We are requesting early technical scrutiny before the formal audit cycle begins, with the specific goal of identifying constraint completeness gaps that a fuzzer alone would not surface.
+Before engaging an external audit firm for `circuits/escrow`, `circuits/identity`, and `circuits/streams`, we would value informal technical feedback from engineers familiar with UltraHonk constraint systems and BN254 arithmetization: specifically on under constrained regions, incomplete range check coverage, or witness generation edge cases that negative tests do not currently exercise. We are not requesting a formal audit. We are requesting early technical scrutiny before the formal audit cycle begins, with the specific goal of identifying constraint completeness gaps that a fuzzer alone would not surface. The full pre-audit gap analysis is documented in `circuits/CONSTRAINT_COMPLETENESS.md`.
+
+**5. Hash function migration from Pedersen to Poseidon2**
+
+All three circuits currently use `pedersen_hash` from Noir's standard library. The Aztec native note commitment scheme uses Poseidon2 over BN254. This means that while the circuits enforce correct constraint semantics, the hash function used for commitment and nullifier derivation is not identical to the function used in Aztec native token contracts. Poseidon2 is more efficient in the UltraHonk constraint system (fewer constraints per hash invocation) and would improve interoperability with Aztec native note types. Migrating from Pedersen to Poseidon2 in all three circuits requires recompilation, new verification keys, and the full 14 day VK lifecycle upgrade. This migration is planned before the external audit engagement and before any mainnet consideration. The current Pedersen implementation is cryptographically sound (collision resistant over BN254); the migration is an alignment choice, not a security fix.
 
 ***
 
