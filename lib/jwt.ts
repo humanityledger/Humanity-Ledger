@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify, JWTPayload, importJWK } from 'jose';
+import { isSessionPayload } from './security/sessionClaims';
 
 const alg = 'EdDSA';
 
@@ -63,6 +64,8 @@ export const mintJWT = async (payload: JWTPayload): Promise<string> => {
       .setProtectedHeader({ alg })
       .setIssuedAt()
       .setExpirationTime('7d')
+      .setIssuer('humanidfi.com')
+      .setAudience('humanidfi.com')
       .sign(keys.privateKey);
   }
 
@@ -72,20 +75,26 @@ export const mintJWT = async (payload: JWTPayload): Promise<string> => {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
+    .setIssuer('humanidfi.com')
+    .setAudience('humanidfi.com')
     .sign(new TextEncoder().encode(secret));
 };
 
+// Every caller treats the result as a sign-in, so a token that verifies but is
+// not a session (a refresh token, a retired webauthn token) is refused here.
+// See lib/security/sessionClaims.ts.
 export const verifyJWT = async (token: string): Promise<JWTPayload> => {
   const keys = await getEdDSAKeys();
 
+  let payload: JWTPayload;
   // EdDSA — strict: do not downgrade if keys are configured
   if (keys) {
-    const { payload } = await jwtVerify(token, keys.publicKey, { algorithms: [alg] });
-    return payload;
+    ({ payload } = await jwtVerify(token, keys.publicKey, { algorithms: [alg] }));
+  } else {
+    // HS256 fallback — secret validated lazily (runtime only)
+    const secret = getHS256Secret();
+    ({ payload } = await jwtVerify(token, new TextEncoder().encode(secret), { algorithms: ['HS256'] }));
   }
-
-  // HS256 fallback — secret validated lazily (runtime only)
-  const secret = getHS256Secret();
-  const { payload } = await jwtVerify(token, new TextEncoder().encode(secret), { algorithms: ['HS256'] });
+  if (!isSessionPayload(payload)) throw new Error('Not a session token');
   return payload;
 };

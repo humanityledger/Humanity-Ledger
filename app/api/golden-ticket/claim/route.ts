@@ -4,6 +4,7 @@ import { prisma as systemPrisma } from '@/lib/prisma';
 import { createPublicClient, http, verifyMessage, parseEther } from 'viem';
 import { optimism } from 'viem/chains';
 import { safeRedisGet, safeRedisSet } from '@/lib/redis/client';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 // Cast to base PrismaClient so TypeScript resolves goldenTicket + user models correctly.
 // The SystemPrismaClient augmentation adds cosmicEntity but doesn't remove base models 
@@ -11,7 +12,11 @@ import { safeRedisGet, safeRedisSet } from '@/lib/redis/client';
 const prisma = systemPrisma as unknown as PrismaClient;
 
 // Treasury wallet that receives the mint fee on Optimism
-const TREASURY_WALLET = '0x78831C25c86eA2a78A6127fC2Ccb95E612D87b4a' as const;
+// Loaded from env var to avoid hardcoding operational wallet addresses.
+const TREASURY_WALLET = (process.env.TREASURY_WALLET_ADDRESS || '').toLowerCase() as `0x${string}`;
+if (!TREASURY_WALLET || TREASURY_WALLET.length !== 42) {
+  console.warn('[GoldenTicket] TREASURY_WALLET_ADDRESS env var is not set -- on-chain payment verification will always fail.');
+}
 const MINT_FEE_WEI = parseEther('0.00111');
 
 // Verifies an Optimism transaction actually paid the treasury.
@@ -104,7 +109,10 @@ async function checkClaimRateLimit(ip: string, walletAddress: string): Promise<{
 // Rate limited: 3 attempts per IP per hour (Redis-backed).
 // 
 export async function POST(req: NextRequest) {
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    // The FIRST X-Forwarded-For hop is whatever the client sent, so limiting on
+    // it let anyone reset the 3-per-hour limit with a new header. getClientIP
+    // takes the hop our own proxy appended (same rule as middleware.ts).
+    const ip = getClientIP(req);
 
     //  Parse body 
     let body: any;
@@ -250,11 +258,14 @@ export async function POST(req: NextRequest) {
             throw new Error('MAX_SUPPLY_REACHED');
         }
 
-        //  Ensure User row exists and mark as ZK verified 
+        // Ensure the User row exists. It used to also set isZkVerified = true:
+        // signing one fixed message (or holding a session) then showed a
+        // "verified" badge next to the account in contacts and search, with
+        // no proof of personhood behind it. Same fix as auth/kyc-verify.
         const user = await (prisma as any).user.upsert({
             where: { walletAddress: address },
-            update: { isZkVerified: true },
-            create: { walletAddress: address, isZkVerified: true }
+            update: {},
+            create: { walletAddress: address }
         });
 
         // ── Identity Claim — Free Mint (ECDSA or Session verified) ───────────
@@ -278,11 +289,11 @@ export async function POST(req: NextRequest) {
         //  Create ticket using standard Prisma methods 
         const tempSerial = `PENDING-${address}-${Date.now()}`;
         
-        // --- 🔴 Aztec Testnet Verification Anchoring ---
+        // --- 🔴 Aztec Mainnet Verification Anchoring ---
         let aztecBlockNum = 0;
         let aztecExplorerUrl = '';
         try {
-            const nodeUrl = process.env.AZTEC_NODE_URL || 'https://v5.testnet.rpc.aztec-labs.com';
+            const nodeUrl = process.env.AZTEC_NODE_URL || 'https://node.aztec.network';
             const nodeInfoRes = await fetch(`${nodeUrl}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -296,7 +307,7 @@ export async function POST(req: NextRequest) {
                 aztecExplorerUrl = '';
             }
         } catch (e) {
-            console.warn('[GoldenTicket] Failed to anchor to Aztec Testnet block:', e);
+            console.warn('[GoldenTicket] Failed to anchor to Aztec Mainnet block:', e);
         }
 
         // Pack on-chain mint details into signatureData JSON
@@ -382,7 +393,7 @@ export async function POST(req: NextRequest) {
         }
         console.error('[Golden Ticket POST Error]', error);
         return NextResponse.json(
-            { error: `Internal server error: ${error?.message || String(error)}` },
+            { error: 'Internal server error' },
             { status: 500 }
         );
     }

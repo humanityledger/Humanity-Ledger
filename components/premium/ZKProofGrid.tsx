@@ -301,7 +301,7 @@ export function ZKProofGrid() {
             </div>
           ) : (
             <div className="flex items-center gap-1.5 px-2 py-1 border border-zinc-900/10 text-[7px] font-black uppercase tracking-widest text-zinc-900/30">
-              Conecta Aztec Identity
+              Connect Sovereign Identity
             </div>
           )}
           <div className="flex items-center gap-1.5">
@@ -440,11 +440,11 @@ export function ZKProofGrid() {
           </div>
 
           {/* CTA */}
-          {/* If user has no Aztec identity or insufficient balance, show a gate */}
+          {/* If user has no Sovereign Identity or insufficient balance, show a gate */}
           {!aztecAddress ? (
             <div className="w-full py-3.5 border border-zinc-900/20 bg-zinc-900/[0.02] text-center">
               <span className="text-[9px] font-black uppercase tracking-widest text-zinc-900/40">
-                Conecta tu Aztec Identity para generar pruebas ZK
+                Connect tu Sovereign Identity para generar pruebas ZK
               </span>
             </div>
           ) : !canAfford ? (
@@ -544,3 +544,4 @@ export function ZKProofGrid() {
     </div>
   );
 }
+

@@ -36,6 +36,7 @@ import { NativeSendView } from '@/components/portfolio/NativeSendView';
 import { SystemFooter } from '@/components/landing/SystemFooter';
 import { useAztecNative } from '@/context/AztecNativeContext';
 import { Zap } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
 
 
 // AUDIT FIX #6: Live ECB exchange rates — replaces the hardcoded 0.92 "video demo" rate.
@@ -95,11 +96,13 @@ export function InstitutionalPortfolioView() {
     const unlockVault = useWalletStore(s => s.unlockVault);
     const passwordHash = useWalletStore(s => s.passwordHash);
     const isLocked = useWalletStore(s => s.isLocked);
-    const displayCurrency = useWalletStore(s => s.displayCurrency || 'EUR');
+    
     const setDisplayCurrency = useWalletStore(s => s.setDisplayCurrency);
     const { address, isLocalSystemWallet, isConnected, isEmailAuth } = useSystemAccount();
     const { assets, totalBalance } = useRealWalletData([], address || undefined);
     const liveEurRate = useLiveEurRate(); // AUDIT FIX: live ECB rate
+    const { hideBalances, currency: settingsCurrency, toggleHideBalances } = useSettings();
+    const displayCurrency = settingsCurrency || "USD";
 
     
     // We keep 'HOME' as the main view, and overlay modals for actions
@@ -220,7 +223,7 @@ export function InstitutionalPortfolioView() {
                         onRefresh={refreshBalance}
                         onSend={() => setView('SEND')}
                         onReceive={() => setMicaLockType('RECEIVE')}
-                        onCreate={() => setView('CREATE')}
+                        onCreate={() => setView('BUY')}
                         onBuy={() => setView('BUY')}
                         onSwap={() => setMicaLockType('SWAP')}
                         onBridge={() => setMicaLockType('BRIDGE')}
@@ -229,12 +232,12 @@ export function InstitutionalPortfolioView() {
                         onAccountsClick={() => setShowAccounts(true)}
                         onScan={() => setShowScan(true)}
                         scannerBase={scannerBase}
-                        onShield={() => setView('SHIELD')}
-                        onSecurity={() => setView('SECURITY')}
-                        onSmartAccount={() => setView('SMART_ACCOUNT')}
-                        onDeploy={() => setView('DEPLOY')}
-                        onOmnichain={() => setView('OMNICHAIN')}
-                        onMempool={() => setView('MEMPOOL')}
+                        
+                        
+                        
+                        
+                        
+                        
                         onQds={handleQds}
                         assets={assets || []}
                         totalBalance={totalBalance}
@@ -305,7 +308,7 @@ export function InstitutionalPortfolioView() {
             />
 
             <AnimatePresence>
-                {showSettings && <SettingsView onBack={() => setShowSettings(false)} />}
+                {showSettings && <SettingsView onClose={() => setShowSettings(false)} />}
             </AnimatePresence>
             {showAccounts && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/90 backdrop-blur-sm p-4" onClick={() => setShowAccounts(false)}>
@@ -325,9 +328,10 @@ export function InstitutionalPortfolioView() {
 }
 
 function HomeView({ address, balance, balanceFiat, totalBalance, activeNetwork, loading, onRefresh, onSend, onReceive, onScan, onCreate, onBuy, onSwap, onBridge, onNetworkClick, onSettingsClick, onAccountsClick, scannerBase, onShield, onSecurity, onSmartAccount, onDeploy, onOmnichain, onMempool, onQds, assets, displayCurrency, setDisplayCurrency, rate, symbol, isEmailAuth }: any) {
+    const { hideBalances, toggleHideBalances, uiConfig } = useSettings();
     const [copied, setCopied] = useState(false);
     const [isDisconnecting, setIsDisconnecting] = useState(false);
-    const [activeTab, setActiveTab] = useState<'TOKENS'|'DEFI'|'ACTIVITY'|'AZTEC'>('TOKENS');
+    const [activeTab, setActiveTab] = useState<'TOKENS'|'ACTIVITY'|'AZTEC'>('TOKENS');
     const { nuclearDisconnect } = useSystemSignOut();
     const networkInfo = NETWORKS[activeNetwork as NetworkId] || NETWORKS.polygon;
 
@@ -376,6 +380,12 @@ function HomeView({ address, balance, balanceFiat, totalBalance, activeNetwork, 
 
                 <div className="hidden md:flex flex-col items-center">
                     <span className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-900/20">Humanity Ledger</span>
+                    {uiConfig?.showGasTracker !== false && feeData?.formatted?.gasPrice && (
+                        <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase tracking-widest text-zinc-900/40">
+                            <Zap size={10} className="text-zinc-900/30" />
+                            <span>Gas: {Number(feeData.formatted.gasPrice).toFixed(1)} gwei</span>
+                        </div>
+                    )}
                 </div>
 
                 {address && (
@@ -410,16 +420,18 @@ function HomeView({ address, balance, balanceFiat, totalBalance, activeNetwork, 
             {/* ── Main Dashboard Hero ── */}
             <section className="w-full flex flex-col items-center justify-center py-10 px-4 md:py-16 md:px-10 border-b border-zinc-900/10 bg-zinc-900/[0.02]">
                 <div className="flex flex-col items-center mb-6">
-                    <span className="text-[10px] uppercase font-black tracking-[0.3em] text-zinc-900/40 mb-3">Portfolio Value</span>
+                    <span onClick={toggleHideBalances} className="text-[10px] uppercase font-black tracking-[0.3em] text-zinc-900/40 mb-3 cursor-pointer hover:text-zinc-900 transition-colors">Portfolio Value {hideBalances ? "(Hidden)" : ""}</span>
                     <h1 className="text-5xl md:text-7xl font-sans tracking-tighter text-zinc-900 flex items-baseline gap-1">
                         <span className="text-3xl md:text-5xl opacity-40 font-serif mr-1">{symbol}</span>
-                        {((parseFloat(totalBalance) || 0) * rate).toFixed(2).split('.')[0]}
-                        <span className="text-2xl md:text-4xl opacity-50 font-serif">.{((parseFloat(totalBalance) || 0) * rate).toFixed(2).split('.')[1] || '00'}</span>
+                        {hideBalances ? "****" : ((parseFloat(totalBalance) || 0) * rate).toFixed(2).split('.')[0]}
+                        <span className="text-2xl md:text-4xl opacity-50 font-serif">
+                           {hideBalances ? "" : "." + (((parseFloat(totalBalance) || 0) * rate).toFixed(2).split('.')[1] || '00')}
+                        </span>
                     </h1>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
                     <p className="text-[11px] tracking-[0.18em] font-mono text-zinc-900/50 border border-zinc-900/10 px-4 py-1.5">
-                        {balance} {networkInfo.currency} ({symbol}{balanceFiat})
+                        {hideBalances ? "****" : balance} {networkInfo.currency} ({symbol}{hideBalances ? "****" : balanceFiat})
                     </p>
                 </div>
 
@@ -473,13 +485,12 @@ function HomeView({ address, balance, balanceFiat, totalBalance, activeNetwork, 
                         </div>
                     </div>
 
-                    {/* ── Aztec Identity Banner (for non-connected identities) ── */}
-                    <AztecIdentityBanner onOpenAztec={() => setActiveTab('AZTEC')} />
+                    {/* ── Sovereign Identity Banner (for non-connected identities) ── */}
 
                     {/* Minimalist Tabs Panel */}
                     <div className="bg-white border border-zinc-900/10 overflow-hidden flex flex-col shadow-sm rounded-sm">
                         <div className="flex border-b border-zinc-900/10 overflow-x-auto no-scrollbar snap-x">
-                            {(['TOKENS', 'DEFI', 'ACTIVITY', 'AZTEC'] as const).map(t => (
+                            {(['TOKENS', 'ACTIVITY'] as const).map(t => (
                                 <AztecAwareTabButton
                                     key={t}
                                     tab={t}
@@ -490,9 +501,7 @@ function HomeView({ address, balance, balanceFiat, totalBalance, activeNetwork, 
                         </div>
                         <div className="flex-1 bg-white flex flex-col p-4 md:p-8 min-h-[400px]">
                             {activeTab === 'TOKENS' && <QuantumHoldingsEngine address={address} activeNetwork={activeNetwork} scannerBase={scannerBase} userAssets={assets} displayCurrency={displayCurrency} rate={rate} symbol={symbol} onSwapRequest={onSwap} onBridgeRequest={onBridge} onQdsTransfer={onQds} />}
-                            {activeTab === 'DEFI' && <QuantumDeFiPositions address={address} activeNetwork={activeNetwork} />}
                             {activeTab === 'ACTIVITY' && <TransactionHistory address={address} scannerBase={scannerBase} activeNetwork={activeNetwork} />}
-                            {activeTab === 'AZTEC' && <div className="w-full max-w-4xl mx-auto"><AztecIdentityCard /></div>}
                         </div>
                     </div>
                 </section>
@@ -519,69 +528,15 @@ function ActionBtn({ label, icon, onClick }: any) {
     );
 }
 
-/** Inline QD balance badge in the portfolio header */
-function QDBadgeInline({ onClickAztec }: { onClickAztec: () => void }) {
-    const { balance, aztecAddress } = useAztecNative();
-    if (!aztecAddress) {
-        return (
-            <button
-                onClick={onClickAztec}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-300 bg-amber-50 rounded-full text-amber-700 hover:bg-amber-100 transition-colors animate-pulse"
-            >
-                <Zap size={10} />
-                <span className="text-[9px] font-black uppercase tracking-widest">CLAIM 1000 QDs</span>
-            </button>
-        );
-    }
-    return (
-        <button
-            onClick={onClickAztec}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-900/10 bg-zinc-900/5 rounded-full hover:bg-zinc-900 hover:text-white transition-colors"
-        >
-            <Zap size={10} className="text-amber-500" />
-            <span className="text-[9px] font-black uppercase tracking-widest">{balance.toFixed(2)} QD</span>
-        </button>
-    );
-}
 
-/** Prominent Aztec Identity banner shown above the tabs when identity is not connected */
-function AztecIdentityBanner({ onOpenAztec }: { onOpenAztec: () => void }) {
-    const { aztecAddress, balance } = useAztecNative();
-    if (aztecAddress) return null; // Already connected — no banner needed
-
-    return (
-        <div className="mb-6 relative overflow-hidden border border-amber-200 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            {/* Animated glow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-100/40 to-transparent animate-pulse pointer-events-none" />
-            <div className="flex items-center gap-3 flex-1 relative z-10">
-                <div className="w-10 h-10 rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center flex-shrink-0">
-                    <Zap size={18} className="text-amber-600" />
-                </div>
-                <div>
-                    <div className="font-black text-[11px] uppercase tracking-[0.2em] text-amber-800">Claim Your 10 QD Genesis Airdrop</div>
-                    <div className="text-[10px] text-amber-700/70 mt-0.5 font-mono">
-                        Connect your Aztec Identity to unlock Chat, Studio Passports &amp; Noir Sandbox.
-                    </div>
-                </div>
-            </div>
-            <button
-                onClick={onOpenAztec}
-                className="relative z-10 flex-shrink-0 px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-            >
-                Connect Identity →
-            </button>
-        </div>
-    );
-}
-
-/** Tab button that's visually upgraded for Aztec Identity */
+/** Tab button that's visually upgraded for Sovereign Identity */
 function AztecAwareTabButton({ tab, activeTab, onClick }: { tab: string; activeTab: string; onClick: () => void }) {
     const { aztecAddress, balance } = useAztecNative();
     const isAztec = tab === 'AZTEC';
     const isActive = activeTab === tab;
     const hasIdentity = !!aztecAddress;
 
-    const label = tab === 'TOKENS' ? 'Assets' : tab === 'DEFI' ? 'DeFi' : tab === 'ACTIVITY' ? 'History' : 'Aztec Identity';
+    const label = tab === 'TOKENS' ? 'Assets' : tab === 'DEFI' ? 'DeFi' : tab === 'ACTIVITY' ? 'History' : 'Sovereign Identity';
 
     return (
         <button
@@ -600,11 +555,6 @@ function AztecAwareTabButton({ tab, activeTab, onClick }: { tab: string; activeT
                 {isAztec && !hasIdentity && (
                     <span className="inline-flex items-center justify-center w-4 h-4 bg-amber-500 text-white text-[7px] font-black rounded-full animate-pulse ml-1">
                         !
-                    </span>
-                )}
-                {isAztec && hasIdentity && (
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-500/20 text-amber-700 text-[7px] font-black rounded-full ml-1">
-                        {balance.toFixed(1)} QD
                     </span>
                 )}
             </span>
@@ -660,3 +610,5 @@ function NetworkView({ onBack }: any) {
         </ModalView>
     );
 }
+
+

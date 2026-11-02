@@ -29,7 +29,7 @@ export async function GET(req: Request) {
 
         return NextResponse.json({ topics: pendingTopics, posts: pendingPosts });
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
 
@@ -55,6 +55,6 @@ export async function PUT(req: Request) {
 
         return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

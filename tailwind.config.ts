@@ -1,4 +1,7 @@
 import type { Config } from "tailwindcss";
+// An import rather than require(): Node 22 and later load this file as an ES
+// module, where require is not defined and the whole CSS build fails.
+import typography from "@tailwindcss/typography";
 
 const config: Config = {
     content: [
@@ -7,6 +10,11 @@ const config: Config = {
         "./app/**/*.{js,ts,jsx,tsx,mdx}",
     ],
     // System: darkMode is intentionally disabled platform-wide.
+    // CONSEQUENCE worth knowing: every `dark:` variant in the codebase is
+    // INERT — it compiles to a selector that is never matched, so it paints
+    // nothing. Those classes are dead code, not a broken theme. Delete them
+    // rather than trying to make them work (registered as N-05 in the UI audit).
+
     // Using a phantom class that is never applied  dark: variants in JSX
     // are inert. The light-mode firewall in globals.css also overrides any
     // accidental .dark injection from AppKit/Wagmi disconnect cycles.
@@ -19,6 +27,34 @@ const config: Config = {
             fontFamily: {
                 sans: ["Inter", "sans-serif"],
                 mono: ["JetBrains Mono", "Fira Code", "monospace"],
+            },
+            fontSize: {
+                "ledger-xs": ["var(--ledger-text-xs)", { lineHeight: "1" }],
+                "ledger-sm": ["var(--ledger-text-sm)", { lineHeight: "1.35" }],
+                "ledger-md": ["var(--ledger-text-md)", { lineHeight: "var(--ledger-leading-body)" }],
+                "ledger-lg": ["var(--ledger-text-lg)", { lineHeight: "1.35" }],
+                "ledger-xl": ["var(--ledger-text-xl)", { lineHeight: "var(--ledger-leading-tight)" }],
+                "ledger-2xl": ["var(--ledger-text-2xl)", { lineHeight: "var(--ledger-leading-tight)" }],
+            },
+            borderRadius: {
+                "ledger-sm": "var(--ledger-radius-sm)",
+                "ledger-md": "var(--ledger-radius-md)",
+                "ledger-lg": "var(--ledger-radius-lg)",
+                bubble: "var(--ledger-radius-bubble)",
+            },
+            boxShadow: {
+                "elev-1": "var(--ledger-elev-1)",
+                "elev-2": "var(--ledger-elev-2)",
+                "elev-3": "var(--ledger-elev-3)",
+            },
+            transitionTimingFunction: {
+                ledger: "var(--ledger-ease)",
+                "ledger-out": "var(--ledger-ease-out)",
+            },
+            transitionDuration: {
+                fast: "var(--ledger-dur-fast)",
+                base: "var(--ledger-dur-base)",
+                slow: "var(--ledger-dur-slow)",
             },
             colors: {
                 // Sistema Void
@@ -39,6 +75,52 @@ const config: Config = {
                 asgard: { // Monochrome Accent
                     DEFAULT: "#cccccc", // Light Gray
                     glow: "rgba(204, 204, 204, 0.5)",
+                },
+
+                // ── Token layer (styles/ledger-tokens.css) ──────────────────
+                // Every value below resolves to a CSS variable, so a change
+                // lands in one file instead of across components. The keys
+                // above are kept so existing class names keep working.
+                ledger: {
+                    void: "var(--ledger-void)",
+                    obsidian: "var(--ledger-obsidian)",
+                    surface: "var(--ledger-surface)",
+                    raised: "var(--ledger-surface-raised)",
+
+                    fg: "var(--ledger-fg)",
+                    "fg-strong": "var(--ledger-fg-strong)",
+                    "fg-muted": "var(--ledger-fg-muted)",
+                    "fg-faint": "var(--ledger-fg-faint)",
+
+                    edge: "var(--ledger-edge)",
+                    "edge-strong": "var(--ledger-edge-strong)",
+                    glass: "var(--ledger-glass)",
+                    "glass-hover": "var(--ledger-glass-hover)",
+
+                    // Trust scale — the only saturated colour in the system.
+                    sealed: "var(--ledger-sealed)",
+                    "sealed-dim": "var(--ledger-sealed-dim)",
+                    verified: "var(--ledger-verified)",
+                    "verified-dim": "var(--ledger-verified-dim)",
+                    unsealed: "var(--ledger-unsealed)",
+                    "unsealed-dim": "var(--ledger-unsealed-dim)",
+                    broken: "var(--ledger-broken)",
+                    "broken-dim": "var(--ledger-broken-dim)",
+                },
+
+                // Neutral ramp. Nine steps with a cold bias, so a grey reads
+                // as chosen rather than as an unfinished state.
+                n: {
+                    900: "var(--ledger-n-900)",
+                    800: "var(--ledger-n-800)",
+                    700: "var(--ledger-n-700)",
+                    600: "var(--ledger-n-600)",
+                    500: "var(--ledger-n-500)",
+                    400: "var(--ledger-n-400)",
+                    300: "var(--ledger-n-300)",
+                    200: "var(--ledger-n-200)",
+                    100: "var(--ledger-n-100)",
+                    0:   "var(--ledger-n-000)",
                 }
             },
             backgroundImage: {
@@ -73,7 +155,7 @@ const config: Config = {
         },
     },
     plugins: [
-        require('@tailwindcss/typography'),
+        typography,
     ],
 };
 export default config;

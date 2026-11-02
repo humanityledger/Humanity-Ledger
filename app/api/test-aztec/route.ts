@@ -4,11 +4,11 @@ export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/test-aztec
- * Tests live connectivity to the Aztec Testnet v5 RPC node.
+ * Tests live connectivity to the Aztec Mainnet v5 RPC node.
  * Uses raw JSON-RPC (no SDK import issues) so it always works server-side.
  */
 export async function GET() {
-  const rpcUrl = process.env.AZTEC_NODE_URL || 'https://v5.testnet.rpc.aztec-labs.com';
+  const rpcUrl = process.env.AZTEC_NODE_URL || 'https://node.aztec.network';
 
   try {
     // Raw JSON-RPC call — works in any Node.js environment without ESM issues
@@ -37,7 +37,7 @@ export async function GET() {
     const nodeInfo = json.result;
 
     // Also check SponsoredFPC address is configured
-    const fpcAddress = process.env.SPONSORED_FPC_ADDRESS || '0x1969946536f0c09269e2c75e414eef4e21a76e763c5514125208db33d7d944d7';
+    const fpcAddress = process.env.SPONSORED_FPC_ADDRESS || 'NOT_CONFIGURED';
 
     return NextResponse.json({
       success:         true,
@@ -47,7 +47,7 @@ export async function GET() {
       nodeVersion:     nodeInfo?.nodeVersion     ?? nodeInfo?.aztecProtocolVersion,
       sponsoredFpc:    fpcAddress,
       timestamp:       new Date().toISOString(),
-      note:            'Connected to Aztec Testnet v5 — Zero-Mock mode ACTIVE',
+      note:            'Connected to Aztec Mainnet v5 — Zero-Mock mode ACTIVE',
     });
 
   } catch (err: any) {

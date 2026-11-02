@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 // Cache globally at edge/server level every 5 minutes to avoid rate limits
-export const revalidate = 300; 
-
 //  [SOVEREIGN RESILIENCE] Persistent in-memory cache for Global Market Data.
 // Since Next.js routes run in a long-lived process (except in Serverless where it's per-instance),
 // this acts as a critical safety buffer during CoinGecko 429 (Rate Limit) events.

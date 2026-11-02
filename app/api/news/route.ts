@@ -7,7 +7,7 @@ import {
 } from '@/lib/news-analytics';
 import { safeJsonParse } from '@/lib/utils/json';
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 interface CryptoPanicArticle {
   id: number; domain: string; title: string; published_at: string;

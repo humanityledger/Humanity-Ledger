@@ -55,11 +55,12 @@ export async function GET(
   // all real-time messages sent to any address they know, in clear text.
   // A valid channelId must be:
   //   (a) the user's own address (self-channel), OR
-  //   (b) a conversation channel that contains the user's address
-  //       (composite channels like "0xAlice_0xBob")
+  //   (b) a conversation channel where the user's address is an exact segment
+  //       (composite channels like "0xAlice_0xBob" — checked by splitting on _ or -)
   const userAddr = session.userId.toLowerCase();
   const chanLower = channelId.toLowerCase();
-  const isAuthorized = chanLower === userAddr || chanLower.includes(userAddr);
+  const chanSegments = chanLower.split(/[_\-]/);
+  const isAuthorized = chanLower === userAddr || chanSegments.includes(userAddr);
   if (!isAuthorized) {
     return new Response('Forbidden: You are not a participant in this channel.', { status: 403 });
   }

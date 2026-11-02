@@ -13,26 +13,36 @@ export interface ScanRoute {
 }
 
 const ETH_ADDRESS_RE = /0x[a-fA-F0-9]{40}/;
+// Strict standalone match: the ENTIRE trimmed text is an Ethereum address (nothing else)
+const ETH_ADDRESS_STRICT_RE = /^0x[a-fA-F0-9]{40}$/;
 const GTIN_RE = /^\d{8,14}$/;
 
 function extractWalletAddress(text: string): string | null {
   const trimmed = text.trim();
+
+  // Case 1: The entire payload IS the address — most common QR format
+  if (ETH_ADDRESS_STRICT_RE.test(trimmed)) return trimmed;
+
+  // Case 2: EIP-681 standard URI: ethereum:0x...
   if (trimmed.startsWith('ethereum:')) {
     const addr = trimmed.slice('ethereum:'.length).split(/[?@/]/)[0];
-    if (ETH_ADDRESS_RE.test(addr)) return addr;
+    if (ETH_ADDRESS_RE.test(addr) && ETH_ADDRESS_STRICT_RE.test(addr)) return addr;
   }
-  const addrMatch = trimmed.match(ETH_ADDRESS_RE);
-  if (addrMatch) return addrMatch[0];
+
+  // Case 3: URL with known address params (?address= / ?wallet= / ?to=)
+  // Only accepted if it is a valid URL — prevents matching arbitrary text that
+  // contains a hex address coincidentally (e.g. GS1 barcodes, random URLs)
   try {
     const url = new URL(trimmed);
     const fromParam =
       url.searchParams.get('address') ||
       url.searchParams.get('wallet') ||
       url.searchParams.get('to');
-    if (fromParam && ETH_ADDRESS_RE.test(fromParam)) return fromParam;
+    if (fromParam && ETH_ADDRESS_STRICT_RE.test(fromParam.trim())) return fromParam.trim();
   } catch {
-    /* not a URL */
+    /* not a URL — no fallback regex match to prevent spoofing */
   }
+
   return null;
 }
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { safeRedisSet } from '@/lib/redis/client';
+import { qrEphKey, setOnce } from '@/lib/security/qrLogin';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,13 +25,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing uuid or pub' }, { status: 400 });
     }
 
-    const ttl = exp ? Math.max(60, Math.ceil((parseInt(exp, 10) - Date.now()) / 1000)) : 300;
-    await safeRedisSet(
-      `qr-ephkey:${uuid}`,
+    // [SECURITY] Validate UUID format to prevent Redis key injection
+    const UUID_RE = /^[0-9a-z-]{6,64}$/i;
+    if (!UUID_RE.test(uuid)) {
+      return NextResponse.json({ error: 'Invalid uuid format' }, { status: 400 });
+    }
+    // [SECURITY] The key is base64url: "x" (X25519) or "x,y" (P-256, what lib/web-crypto makes).
+    if (typeof pub !== 'string' || pub.length > 400 || !/^[A-Za-z0-9+/=_,-]{20,}$/.test(pub)) {
+      return NextResponse.json({ error: 'Invalid pub key format' }, { status: 400 });
+    }
+
+    const expMs = Number(exp);
+    const ttl = Number.isFinite(expMs) && expMs > 0 ? Math.max(60, Math.ceil((expMs - Date.now()) / 1000)) : 300;
+    // Once per uuid: another browser cannot swap in its own key for a code
+    // someone else is showing (the uuid is printed in the QR code).
+    const created = await setOnce(
+      qrEphKey(uuid),
       JSON.stringify({ pub, ecdh: ecdh === true || ecdh === '1' ? '1' : '0', exp }),
-      'EX',
-      Math.min(ttl, 300)
+      Math.min(ttl, 300),
     );
+    if (!created) {
+      return NextResponse.json({ error: 'This code already exists. Refresh to get a new one.' }, { status: 409 });
+    }
 
     const response = NextResponse.json({ ok: true });
     

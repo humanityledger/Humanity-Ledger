@@ -41,7 +41,7 @@ export default function ClearanceTab() {
               key={desk.id}
               role="button"
               onClick={() => setSelectedDesk(desk.id)}
-              className={`flex items-center justify-between p-6 rounded-2xl border transition-all ${selectedDesk === desk.id ? 'border-red-500/50 bg-white/5' : 'border-white/10 bg-[#050505] hover:border-white/30'}`}
+              className={`flex items-center justify-between p-6 rounded-2xl border transition-all ${selectedDesk === desk.id ? 'border-red-500/50 bg-white/5' : 'border-white/10 bg-white hover:border-white/30'}`}
             >
               <div className="flex items-center gap-6">
                 <div className="w-2 h-12 rounded-full" style={{ backgroundColor: desk.color }} />
@@ -70,7 +70,7 @@ export default function ClearanceTab() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="bg-[#050505] border border-white/10 p-8 rounded-3xl sticky top-12"
+                className="bg-white border border-white/10 p-8 rounded-3xl sticky top-12"
               >
                 <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center mb-6">
                   <Navigation size={20} className="text-white" />

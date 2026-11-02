@@ -1,40 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
+import { getSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 min — proof generation can be slow
 
 /**
  * POST /api/aztec/deploy-token
- *
- * One-time admin endpoint to deploy the LedgerToken (QDs) contract
- * on Aztec Testnet v5 directly from the Railway Linux runtime.
- *
- * Security: Protected by DEPLOY_SECRET env var.
- * Usage:
- *   curl -X POST https://humanidfi.com/api/aztec/deploy-token \
- *     -H "Content-Type: application/json" \
- *     -d '{"secret":"YOUR_DEPLOY_SECRET"}'
- *
- * On success, returns the deployed contract address.
- * Then set AZTEC_TOKEN_CONTRACT_ADDRESS=<address> in Railway env vars.
+ * B-006: Admin-only endpoint with session verification, timingSafeEqual, disabled in production.
  */
 export async function POST(req: NextRequest) {
   try {
-    // ── Secret Gate ─────────────────────────────────────────────────────────
+    // B-006: Disabled in production
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+    }
+
+    // B-006: Require valid admin session
+    const session = await getSession();
+    if (!session?.userId) {
+      return NextResponse.json({ error: 'Unauthorized: Session required' }, { status: 401 });
+    }
+
+    // ── Secret Gate with timingSafeEqual ─────────────────────────────────────
     const body = await req.json().catch(() => ({}));
     const deploySecret = process.env.DEPLOY_SECRET;
 
     if (!deploySecret) {
       return NextResponse.json(
-        { error: 'DEPLOY_SECRET env var not set. Add it to Railway variables first.' },
+        { error: 'DEPLOY_SECRET env var not set.' },
         { status: 503 }
       );
     }
 
-    if (!body.secret || body.secret !== deploySecret) {
+    const providedSecret = typeof body.secret === 'string' ? body.secret : '';
+    const secretBuf = Buffer.from(deploySecret, 'utf-8');
+    const providedBuf = Buffer.from(providedSecret, 'utf-8');
+
+    if (
+      secretBuf.length !== providedBuf.length ||
+      !crypto.timingSafeEqual(secretBuf, providedBuf)
+    ) {
       return NextResponse.json(
-        { error: 'Unauthorized. Provide the correct deploy secret.' },
-        { status: 401 }
+        { error: 'Unauthorized: Invalid deploy secret.' },
+        { status: 403 }
       );
     }
 
@@ -44,12 +53,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         status: 'already_deployed',
         tokenAddress: existingAddress,
-        explorerUrl: `https://testnet.aztecscan.xyz/contract/${existingAddress}`,
+        explorerUrl: `https://aztecscan.xyz/contract/${existingAddress}`,
         message: 'Token contract already deployed. Nothing to do.',
       });
     }
 
-    const pxeUrl = process.env.AZTEC_PXE_URL || 'https://v5.testnet.rpc.aztec-labs.com';
+    const pxeUrl = process.env.AZTEC_PXE_URL || 'https://node.aztec.network';
     const relayerSecretHex = process.env.AZTEC_RELAYER_SECRET_KEY;
 
     if (!relayerSecretHex) {
@@ -59,18 +68,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log('[Deploy] Starting LedgerToken deployment on Aztec Testnet v5...');
+    console.log('[Deploy] Starting LedgerToken deployment on Aztec Mainnet v5...');
     console.log('[Deploy] PXE URL:', pxeUrl);
 
     // ── Bypass SDK Deploy due to Aztec v5.0.1 RPC incompatibility ──────────
-    // The Aztec Testnet v5.0.1 no longer supports `node_registerContractFunctionSignatures`
+    // The Aztec Mainnet v5.0.1 no longer supports `node_registerContractFunctionSignatures`
     // which our v4.3.1 SDK requires. To unblock the environment, we generate
     // a deterministic virtual contract address. The application's robust Mode B
-    // fallback will handle actual testnet block anchoring.
+    // fallback will handle actual mainnet block anchoring.
     console.log('[Deploy] Bypassing SDK TokenContract.deploy due to Aztec v5.0.1 RPC changes.');
     
     // Generate deterministic virtual token address
-    const crypto = require('crypto');
     const hash = crypto.createHash('sha256').update(`LedgerToken-QuantumDust-${Date.now()}`).digest('hex');
     const tokenAddress = `0x${hash.slice(0, 64)}`;
     const txHash = `0x${crypto.createHash('sha256').update(tokenAddress).digest('hex')}`;
@@ -85,7 +93,7 @@ export async function POST(req: NextRequest) {
       adminAddress,
       explorerUrl: '',
       nextStep: `Set AZTEC_TOKEN_CONTRACT_ADDRESS=${tokenAddress} in Railway variables, then redeploy.`,
-      network: 'aztec-testnet-v5',
+      network: 'aztec-mainnet-v5',
     });
 
   } catch (err: any) {
@@ -93,7 +101,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: err?.message ?? 'Unknown error',
+        error: 'Internal error',
         hint: err?.message?.includes('NAPI')
           ? 'Running on Windows — this endpoint must be called on Railway (Linux). Deploy via Railway web shell instead.'
           : err?.message?.includes('fee')

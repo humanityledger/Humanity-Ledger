@@ -1,118 +1,28 @@
 {
-  "name": "Ledger Alert Network",
-  "short_name": "Ledger",
-  "description": "Institutional on-chain analytics. Real-time mempool surveillance. Cryptographic identity. Zero-mock. Zero-trust.",
+  "name": "Humanity Ledger",
+  "short_name": "Humanity",
+  "description": "Sovereign, End-to-End Encrypted Messaging & Zero-Knowledge Protocol",
   "start_url": "/",
-  "scope": "/",
   "display": "standalone",
-  "orientation": "any",
-  "background_color": "#FAFAF8",
+  "background_color": "#FFFFFF",
   "theme_color": "#0A0A0A",
-  "lang": "en",
-  "dir": "ltr",
-  "categories": ["finance", "productivity", "utilities"],
   "icons": [
     {
-      "src": "/icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any"
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
     },
     {
-      "src": "/icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/system-shots/Captura de pantalla 2026-05-10 002811.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Ledger Alert Network  Desktop"
-    },
-    {
-      "src": "/system-shots/Captura de pantalla 2026-05-07 012904.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Ledger Alert Network  Mobile"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Dashboard",
-      "short_name": "Terminal",
-      "description": "Open the analytics terminal",
-      "url": "/dashboard",
-      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Chat",
-      "short_name": "Chat",
-      "description": "Ledger Chat Encrypted",
-      "url": "/chat",
-      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Connect Wallet",
-      "short_name": "Connect",
-      "description": "Authenticate with your wallet",
-      "url": "/connect",
-      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Registry",
-      "short_name": "Registry",
-      "description": "Network Registry Explorer",
-      "url": "/registry",
-      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
-    }
-  ],
-  "prefer_related_applications": false,
-  "related_applications": [],
-  "protocol_handlers": [
-    {
-      "protocol": "web+ledger",
-      "url": "/protocol?q=%s"
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+// globals: true in vitest.config.ts
 import { ethers } from 'ethers';
 import { NETWORKS } from '../../../lib/store/wallet-store';
 

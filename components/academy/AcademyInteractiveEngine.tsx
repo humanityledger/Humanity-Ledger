@@ -24,8 +24,8 @@ export function AcademyInteractiveEngine({
     // [SECURITY FIX] isAdmin must be checked against a real admin address, never hardcoded true
     // Admin address is checked client-side for UI only — server-side upload endpoints
     // must independently verify the session/signature before accepting any upload.
-    const ADMIN_ADDRESS = '0x78831c25c86ea2a78a6127fc2ccb95e612d87b4a';
-    const isAdmin = !!(address && address.toLowerCase() === ADMIN_ADDRESS.toLowerCase());
+    const ADMIN_ADDRESS = (process.env.NEXT_PUBLIC_ADMIN_ADDRESS || process.env.NEXT_PUBLIC_OWNER_WALLET || '').toLowerCase();
+    const isAdmin = !!(address && ADMIN_ADDRESS && address.toLowerCase() === ADMIN_ADDRESS);
 
     // LMS States
     const [isSyncing, setIsSyncing] = useState(false);
@@ -215,7 +215,7 @@ export function AcademyInteractiveEngine({
                                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
                                                 <div className="p-6 md:p-8 pt-0 border-t border-slate-100 flex flex-col items-center justify-center bg-white">
                                                     <div className="w-full max-w-3xl border border-slate-200/60 bg-black/5 rounded-xl p-8 relative">
-                                                        {address?.toLowerCase() === '0x78831c25c86ea2a78a6127fc2ccb95e612d87b4a' ? (
+                                                        {isAdmin ? (
                                                             <div className="flex flex-col gap-4">
                                                                 <h5 className="font-mono text-[12px] uppercase font-bold tracking-widest border-b border-slate-200/60 pb-4 mb-2 text-slate-900 text-center">
                                                                     Upload Portal

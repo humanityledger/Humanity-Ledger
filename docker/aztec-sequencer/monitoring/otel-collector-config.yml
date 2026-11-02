@@ -1,0 +1,24 @@
+# The Aztec node pushes OTLP metrics here (OTEL_EXPORTER_OTLP_METRICS_ENDPOINT);
+# Prometheus scrapes them on :8889. Same layout as the operator docs.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch:
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    metric_expiration: 5m
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus]

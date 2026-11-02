@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { NewsProcessor } from '@/lib/news-processor';
 import { fetchNewsByCategory } from '@/lib/news-service';
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
     console.log('[Sync][Legendary-v3] Triggering multi-stream global news synchronization...');
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ 
             success: false, 
             error: "Internal sync failure",
-            details: error.message 
+            details: 'Error details redacted' 
         }, { status: 500 });
     }
 }

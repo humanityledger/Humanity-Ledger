@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     
     // IMPORTACIÓN DIRECTA DE RESEND (como hace lib/email.ts)
     const { Resend } = await import('resend');
-    const resend = new Resend(process.env.RESEND_API_KEY || 're_123456789');
+    const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_build_time');
 
     await resend.emails.send({
       from: 'Humanity Ledger <onboarding@resend.dev>', // Usamos onboarding o el config correcto

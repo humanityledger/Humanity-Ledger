@@ -6,7 +6,7 @@
 *   **`CreateTab`**: Complex form component handling inputs for passport creation, ZK issuance, logistics, sustainability metrics, and telemetry.
 *   **`RegistryTab`**: Component rendering the list of user-created passports with sorting, status filtering, and CSV export.
 *   **`SightInsightTab`**: Telemetry and network visualizer component displaying metrics (e.g. quantum shielded txs, relayer nodes).
-*   **`TestnetExplorer`**: Sub-component to visualize the anchoring transaction status visually on the Aztec Testnet.
+*   **`TestnetExplorer`**: Sub-component to visualize the anchoring transaction status visually on the Aztec Mainnet.
 *   **`SubscriptionDashboard`**: Dynamically loaded interface for managing user subscription and billing features.
 *   **`StatPill`, `CopyButton`, `FieldLabel`**: Reusable micro-components for UI consistency.
 

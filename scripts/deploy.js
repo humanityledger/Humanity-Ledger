@@ -42,22 +42,11 @@ async function main() {
     console.log(factoryAddress);
 
     // ---------------------------------------------------------
-    // 3. DEPLOY TEST COLLATERAL (MOCK USDC)
+    // 3. COLLATERAL CONFIGURATION (REAL NETWORK ASSET)
     // ---------------------------------------------------------
-    // Useful for development. In production, use real USDC.
-    // We create a simple ERC20 token.
-    const MockERC20 = await hre.ethers.getContractFactory("MockERC20");
-
-    try {
-        const mockToken = await MockERC20.deploy("Test USDC", "tUSDC", hre.ethers.parseEther("1000000")); // 1M initial tokens
-        await mockToken.waitForDeployment();
-        const tokenAddress = await mockToken.getAddress();
-
-        console.log("\n NEXT_PUBLIC_COLLATERAL_TOKEN_ADDRESS (Test USDC):");
-        console.log(tokenAddress);
-    } catch (error) {
-        console.log("\n️ Error deploying MockERC20:", error);
-    }
+    const collateralAddress = process.env.NEXT_PUBLIC_COLLATERAL_TOKEN_ADDRESS || "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; // Sepolia USDC
+    console.log("\n NEXT_PUBLIC_COLLATERAL_TOKEN_ADDRESS:");
+    console.log(collateralAddress);
 
     // ---------------------------------------------------------
     // 4. ORACLE NOTE

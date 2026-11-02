@@ -10,9 +10,11 @@ import { useSystemSessionLock } from '@/hooks/useSystemSessionLock';
 import { useWalletStore } from '@/lib/store/wallet-store';
 import { TitaniumGate } from '@/components/layout/TitaniumGate';
 import { InstitutionalHeader } from '@/components/shared/InstitutionalHeader';
-
+import { ThemeApplier } from '@/components/layout/ThemeApplier';
+import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
 
 import { ZoomWrapper } from './ZoomWrapper';
+import { isPublicContentPage } from '@/lib/routing/publicPages';
 import dynamic from 'next/dynamic';
 
 const UniversalEliteWallpaper = dynamic(
@@ -23,10 +25,7 @@ const UtilityPanels = dynamic(
   () => import('@/components/shared/UtilityPanels').then(m => ({ default: m.UtilityPanels })),
   { ssr: false }
 );
-const BillionLedgerNotification = dynamic(
-  () => import('@/components/shared/UtilityPanels').then(m => ({ default: m.BillionLedgerNotification })),
-  { ssr: false }
-);
+// BillionLedgerNotification removed per user request (no fake transfer alerts)
 
 const LinkedGate = dynamic(
   () => import('@/components/shared/LinkedGate').then(m => ({ default: m.LinkedGate })),
@@ -38,9 +37,11 @@ const LinkedGate = dynamic(
 // Do NOT declare or render it here to prevent double-initialization.
 // 
 // 
-// Routes that don't need the gate (public / landing)
+// Routes that don't need the LinkedGate wrapper (public / self-auth)
+// /chat and /hub handle their own auth — wrapping them with LinkedGate causes
+// redirect loops and blank screen bugs.
 // 
-const PUBLIC_PREFIXES = ['/privacy', '/terms', '/connect', '/sign-up', '/login', '/news'];
+const PUBLIC_PREFIXES = ['/privacy', '/terms', '/connect', '/sign-up', '/login', '/news', '/chat', '/studio', '/hub', '/academy'];
 
 // 
 // Routes that must NOT get the legacy black Downhead footer
@@ -70,7 +71,9 @@ const BOUNDED_PREFIXES = [
   '/connect', '/sign-up', '/login',
   '/admin', '/clearance',
   '/api-marketplace', '/directory', '/company', '/infrastructure',
-  '/forum', '/chat', '/hub', '/whitepaper', '/manifesto',
+  '/forum', '/chat', '/studio', '/hub', '/whitepaper', '/manifesto',
+  '/docs', // Added to prevent infinite scroll bugs
+  '/blog', // Blog posts are bounded pages
   '/', // Landing page — prevents white zone below footer
 ];
 
@@ -83,12 +86,25 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   useSystemSessionLock();
 
   React.useEffect(() => {
-    fetchSettings();
+    // Settings live on the account: a signed-out visitor has none to fetch,
+    // and asking anyway only logged a 401. Local DOM settings still apply.
+    const signedIn = typeof document !== 'undefined' && /(?:^|;\s*)(?:wallet-auth|system_handshake)=/.test(document.cookie);
+    if (signedIn) fetchSettings();
+    else useSettingsStore.getState().syncDOM();
   }, [fetchSettings]);
 
   //  Axioma 452: PWA Service Worker registration 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          for (const reg of regs) reg.unregister();
+        });
+        if (window.caches) {
+          window.caches.keys().then((keys) => keys.forEach((k) => window.caches.delete(k)));
+        }
+        return;
+      }
       navigator.serviceWorker
         .register('/sw.js', { scope: '/' })
         .then((reg) => {
@@ -111,7 +127,27 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   //  Axioma 350: Funnel tracking per navigation (non-blocking) 
   React.useEffect(() => {
+    // Network connectivity Dynamic Island
+    const handleOffline = () => {
+      useDynamicIsland.getState().setState('syncing', { title: 'No Connection', subtitle: 'Reconnecting...' });
+    };
+    const handleOnline = () => {
+      useDynamicIsland.getState().setState('tx_success', { title: 'Back Online' }, 2000);
+    };
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
+  React.useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Both endpoints need a signed-in session. Signed-out visitors (most of
+      // the landing page's traffic) only produced a pair of 401s per page.
+      // `wallet-auth` / `system_handshake` are the readable hints set at sign-in.
+      const signedIn = /(?:^|;\s*)(?:wallet-auth|system_handshake)=/.test(document.cookie);
+      if (!signedIn) return;
       // Session log (existing)
       fetch('/api/session-logs', {
         method: 'POST',
@@ -141,7 +177,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isLanding = pathname === '/';
   const isBounded = !isDashboard && BOUNDED_PREFIXES.some(p => pathname === p || (p !== '/' && pathname.startsWith(p)));
 
-  const isPublicPath = pathname === '/' || PUBLIC_PREFIXES.some(p => pathname.startsWith(p));
+  // Documentation, company and legal pages are public and must never be
+  // wrapped in LinkedGate, which redirects visitors without a session.
+  const isPublicPath = pathname === '/' || PUBLIC_PREFIXES.some(p => pathname.startsWith(p)) || isPublicContentPage(pathname);
   const content = !isPublicPath ? <LinkedGate>{children}</LinkedGate> : children;
 
   // For non-landing, non-dashboard pages: content is constrained to the left
@@ -160,7 +198,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     const originalBodyPosition = document.body.style.position;
     const originalHtmlOverflow = document.documentElement.style.overflow;
 
-    if (isDashboard || isBounded) {
+    if (isDashboard || isBounded || isChat) {
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
       // To strictly prevent drag-scroll bleeds on MacOS trackpad:
@@ -265,7 +303,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   // /connect, /sign-up, /login manage their own internal centering
   const isCenteredPage = ['/clearance'].some(p => pathname.startsWith(p));
-  const isChat = pathname.startsWith('/chat');
+  const isChat = pathname.startsWith('/chat') || pathname.startsWith('/studio');
 
   // Root container
   const rootClass = isDashboard || isChat
@@ -311,7 +349,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-
+      <ThemeApplier />
       <TitaniumGate>
         <UniversalEliteWallpaper />
 
@@ -328,17 +366,18 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             )}
 
             <div className={innerClass}>
-              <div className="relative z-40">
+              <div className={isChat ? 'absolute z-40 top-0 left-0 right-0 pointer-events-none' : 'relative z-40'}>
                 <UtilityPanels />
-                <BillionLedgerNotification />
+                {/* BillionLedgerNotification removed */}
               </div>
 
               <ZoomWrapper>
                 <main
                   className={mainClass}
-                  style={isBounded ? {
+                  style={(isBounded || isChat) ? {
                     height: '100%',
                     minHeight: '100%',
+                    maxHeight: '100%',
                     scrollbarWidth: 'thin',
                     overscrollBehavior: 'none',
                     touchAction: 'pan-y',

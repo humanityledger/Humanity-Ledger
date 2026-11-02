@@ -218,7 +218,7 @@ export default function InstitutionalLedger() {
                     <button
                         onClick={handleSearch}
                         disabled={isSearching}
-                        className="absolute inset-y-2 right-2 bg-[#050505]  hover:bg-[#FFFFFF]  text-white  px-8 font-bold text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
+                        className="absolute inset-y-2 right-2 bg-white  hover:bg-[#FFFFFF]  text-white  px-8 font-bold text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
                     >
                         {isSearching ? 'INDEXING...' : 'INITIATE'}
                     </button>
@@ -323,7 +323,7 @@ export default function InstitutionalLedger() {
                                     className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 border-b border-[#E5E5E5]  hover:bg-white  transition-all gap-4 group"
                                 >
                                     <div className="flex items-center gap-4 relative z-10">
-                                        <div className="w-12 h-12 bg-white  rounded-xl flex items-center justify-center border border-[#E5E5E5]  group-hover:bg-[#050505]  group-hover:text-white  transition-all">
+                                        <div className="w-12 h-12 bg-white  rounded-xl flex items-center justify-center border border-[#E5E5E5]  group-hover:bg-white  group-hover:text-white  transition-all">
                                             <span className="font-mono text-[10px] font-black">[BLK]</span>
                                         </div>
                                         <div className="flex flex-col gap-1 text-left">
@@ -458,7 +458,7 @@ export default function InstitutionalLedger() {
                                         href={selectedBlock ? `https://etherscan.io/block/${selectedBlock.id}` : `https://etherscan.io/tx/${selectedTx?.hash}`}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="flex-1 py-3 bg-[#050505]  text-white  rounded-lg font-bold uppercase tracking-[0.2em] text-[10px] hover:bg-[#888888]  transition-colors text-center"
+                                        className="flex-1 py-3 bg-white  text-white  rounded-lg font-bold uppercase tracking-[0.2em] text-[10px] hover:bg-[#888888]  transition-colors text-center"
                                     >
                                         VERIFY EXTERNALLY
                                     </a>

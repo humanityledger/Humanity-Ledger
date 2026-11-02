@@ -4,28 +4,24 @@ import { NextRequest, NextResponse } from 'next/server';
  * GET /api/auth/verify-session
  *
  * [UNIVERSAL SESSION VERIFICATION]
- * Checks ALL valid session token types used across the system:
- *   - ledger_session   : JWT from system-verify (MetaMask/Rainbow/Wagmi connect)
- *   - human_session   : JWT from qr-hydrate or system-verify
- *   - humanity_session: JWT from SIWE flow (P2-C.1 Identity Adapter)
- *   - system_handshake: raw 0x address (QR mobile handshake, fast path)
- *   - human.session-token: NextAuth JWT (Google OAuth, Email OTP via NextAuth)
+ * Cryptographically verifies session tokens:
+ *   - hl_session / ledger_session / human_session: Signed JWTs
+ *   - human.session-token: NextAuth JWT (Google OAuth)
  *
  * Priority order:
- *   1. Verify ledger_session / human_session JWT cryptographically.
- *   2. If JWT valid → session authentic. Heal system_handshake if missing.
- *   3. If JWT invalid/missing → check NextAuth session (Google OAuth).
- *   4. If NextAuth valid → authenticated. Heal system_handshake with email_ prefix.
- *   5. Otherwise → 401 Unauthenticated.
+ *   1. Verify primary JWT cryptographically (lib/jwt).
+ *   2. If JWT invalid/missing → check NextAuth session (Google OAuth).
+ *   3. Otherwise → 401 Unauthenticated.
  *
- * Also checks for humanity_session (SIWE P2-C.1) as supplementary identity context.
+ * NOTE: Legacy unauthenticated cookies are completely purged on every check.
  */
 export async function GET(request: NextRequest) {
     try {
+        const hlSession = request.cookies.get('hl_session')?.value;
         const ledgerSession = request.cookies.get('ledger_session')?.value;
         const humanSession = request.cookies.get('human_session')?.value;
-        const handshake    = request.cookies.get('system_handshake')?.value;
-        const primaryJwt   = ledgerSession || humanSession;
+        const humanitySession = request.cookies.get('humanity_session')?.value;
+        const primaryJwt   = hlSession || ledgerSession || humanSession || humanitySession;
 
         const isProd      = process.env.NODE_ENV === 'production';
         const appUrl      = process.env.NEXT_PUBLIC_APP_URL || '';
@@ -38,7 +34,10 @@ export async function GET(request: NextRequest) {
             try {
                 const { verifyJWT } = await import('@/lib/jwt');
                 const payload = await verifyJWT(primaryJwt);
-                const address = (payload.sub || payload.address) as string;
+                const { isSessionTokenRevoked } = await import('@/lib/security/sessionRevocation');
+                // Signed out on some device: the token is still well-formed but no longer a session.
+                if (await isSessionTokenRevoked(primaryJwt)) throw new Error('revoked');
+                const address = (payload.walletAddress || payload.address || payload.sub) as string;
 
                 if (address) {
                     // JWT is cryptographically valid → session is authentic.
@@ -51,8 +50,8 @@ export async function GET(request: NextRequest) {
                             const humanityPayload = await verifyJWT(humanityCookie) as any;
                             if (humanityPayload.sub && humanityPayload.sid) {
                                 humanityIdentity = {
-                                    address: (humanityPayload.sub as string).toLowerCase(),
-                                    sessionId: humanityPayload.sid as string,
+                                    address: ((humanityPayload.walletAddress || humanityPayload.address || humanityPayload.sub) as string).toLowerCase(),
+                                    sessionId: humanityPayload.sessionId || humanityPayload.sid || '',
                                 };
                             }
                         } catch {
@@ -67,20 +66,8 @@ export async function GET(request: NextRequest) {
                         humanityIdentity,
                     });
 
-                    // [HEAL] If system_handshake was missing, restore it now so
-                    // client-side guards (useSystemAccount, TitaniumGate, etc.)
-                    // can read it from document.cookie on the next render.
-                    if (!handshake || !handshake.startsWith('0x')) {
-                        console.info('[verify-session] Valid JWT but missing handshake — healing cookie for:', address);
-                        res.cookies.set('system_handshake', address.toLowerCase(), {
-                            httpOnly: false,
-                            secure: isProd,
-                            sameSite: 'lax',
-                            maxAge: 604800,
-                            path: '/',
-                            domain: cookieDomain,
-                        });
-                    }
+                    // Ensure obsolete system_handshake cookie is purged
+                    res.cookies.delete('system_handshake');
 
                     return res;
                 }
@@ -93,9 +80,9 @@ export async function GET(request: NextRequest) {
             const res = NextResponse.json({ authenticated: false }, { status: 401 });
             const expiredDate = 'Thu, 01 Jan 1970 00:00:00 GMT';
             const secure = isProd ? '; Secure' : '';
-            for (const name of ['ledger_session', 'human_session']) {
+            for (const name of ['hl_session', 'ledger_session', 'human_session', 'humanity_session', 'siwe_session', 'system_handshake']) {
                 res.headers.append('Set-Cookie', `${name}=; Path=/; Expires=${expiredDate}; HttpOnly${secure}; SameSite=Strict`);
-                res.headers.append('Set-Cookie', `${name}=; Path=/; Expires=${expiredDate}; HttpOnly${secure}; SameSite=Lax`);
+                res.headers.append('Set-Cookie', `${name}=; Path=/; Expires=${expiredDate}; SameSite=Lax`);
             }
             return res;
         }
@@ -117,19 +104,7 @@ export async function GET(request: NextRequest) {
                     user: { address: emailId, email, tier: 'FREE', authType: 'google_oauth' }
                 });
 
-                // Heal the JS-readable handshake cookie for client-side guards
-                const needsHeal = !handshake || (!handshake.startsWith('0x') && !handshake.startsWith('email_'));
-                if (needsHeal) {
-                    res.cookies.set('system_handshake', emailId, {
-                        httpOnly: false,
-                        secure: isProd,
-                        sameSite: 'lax',
-                        maxAge: 7 * 24 * 60 * 60,
-                        path: '/',
-                        domain: cookieDomain,
-                    });
-                }
-
+                res.cookies.delete('system_handshake');
                 return res;
             }
         } catch (nextAuthError) {
@@ -137,8 +112,6 @@ export async function GET(request: NextRequest) {
             console.debug('[verify-session] NextAuth check skipped:', String(nextAuthError).substring(0, 80));
         }
 
-        // ─── Priority 3: [REMOVED INSECURE FALLBACK] ─────────────
-        // The system_handshake cookie alone is NOT trusted for auth bypass.
         // All sessions MUST be cryptographically verified via SIWE/JWT or NextAuth.
 
         return NextResponse.json(

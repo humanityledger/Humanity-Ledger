@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Server, Activity, Database, Zap, Cpu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Public Aztec Alpha Testnet — confirmed by @joshc [AZTC] 2026-07-07
+// Public Aztec Mainnet — confirmed by @joshc [AZTC] 2026-07-07
 // Browser → public RPC (CORS-enabled). PXE sidecar for server-side ops uses AZTEC_PXE_URL env.
-const AZTEC_RPC_URL = process.env.NEXT_PUBLIC_AZTEC_NODE_URL || 'https://v5.testnet.rpc.aztec-labs.com';
+const AZTEC_RPC_URL = process.env.NEXT_PUBLIC_AZTEC_NODE_URL || 'https://node.aztec.network';
 
 export function NetworkStats({ theme = 'default' }: { theme?: 'default' | 'arctic' }) {
   const isArctic = theme === 'arctic';

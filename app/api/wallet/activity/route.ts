@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
         console.error('[Activity API] Failed to record user action:', error);
         return NextResponse.json({ 
             error: 'Internal Server Error', 
-            details: error.message 
+            details: 'Error details redacted' 
         }, { status: 500 });
     }
 }

@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
         const authUser = await prisma.authUser.findUnique({
             where: { id: plan.userId },
-            select: { encryptedPrivateKey: true, walletAddress: true }
+            select: { walletAddress: true }
         });
 
         if (!authUser || !authUser.walletAddress) {
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
 
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
 

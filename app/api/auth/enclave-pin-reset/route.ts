@@ -45,6 +45,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import { sendEnclaveResetEmail } from '@/lib/email';
+import { getClientIP } from '@/lib/security/rateLimiter';
 import crypto from 'crypto';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -59,12 +60,10 @@ const CLEARANCE_TTL_MS        = 15 * 60 * 1000;  // 15 min to use clearance toke
 // Primary rate-limit is DB-persisted per userId. IP limiting is an extra layer.
 const ipSendLog = new Map<string, { count: number; firstAt: number }>();
 
+// The first X-Forwarded-For hop is whatever the client sent; the shared helper
+// takes the hop our proxy appended.
 function getClientIp(req: NextRequest): string {
-  return (
-    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-    req.headers.get('x-real-ip') ||
-    '0.0.0.0'
-  );
+  return getClientIP(req);
 }
 
 function checkIpLimit(ip: string): boolean {
@@ -81,12 +80,15 @@ function checkIpLimit(ip: string): boolean {
 }
 
 // ── Secret ────────────────────────────────────────────────────────────────────
+// No hard-coded fallback: with no secret configured the reset flow used the
+// string below, published in this repository, as its HMAC key. It now fails
+// closed (the handler answers 500), like /api/auth/enclave-pin does.
 function getSecret(): string {
   const s = process.env.ENCLAVE_PIN_SECRET || process.env.JWT_SECRET;
   if (!s || s.length < 32) {
-    console.error('[Enclave Reset] CRITICAL: ENCLAVE_PIN_SECRET is not set or too short!');
+    throw new Error('[Enclave Reset] ENCLAVE_PIN_SECRET is not set or shorter than 32 characters.');
   }
-  return s || 'default-enclave-secret-PLEASE-CHANGE-IN-PRODUCTION';
+  return s;
 }
 
 // ── Crypto helpers ─────────────────────────────────────────────────────────────
@@ -195,9 +197,9 @@ async function resolveUser(userId: string): Promise<ResolvedUser | null> {
 // ── DB helpers ────────────────────────────────────────────────────────────────
 async function dbUpdate(dbId: string, table: 'user' | 'authUser', data: Record<string, any>) {
   if (table === 'user') {
-    await (prisma.user as any).update({ where: { id: dbId }, data });
+    return await (prisma.user as any).update({ where: { id: dbId }, data });
   } else {
-    await (prisma.authUser as any).update({ where: { id: dbId }, data });
+    return await (prisma.authUser as any).update({ where: { id: dbId }, data });
   }
 }
 
@@ -223,7 +225,7 @@ export async function POST(req: NextRequest) {
     const user = await resolveUser(userId);
     if (!user) {
       // Don't reveal whether userId maps to a real account.
-      await new Promise(r => setTimeout(r, 200 + Math.random() * 100));
+      await new Promise(r => setTimeout(r, 200 + crypto.randomInt(0, 100)));
       return NextResponse.json({ error: 'Session expired. Please reconnect.' }, { status: 401 });
     }
 
@@ -293,34 +295,30 @@ export async function POST(req: NextRequest) {
       const now = Date.now();
       const hasOtp = !!(user.enclaveOtpHash && user.enclaveOtpExpiresAt);
 
-      // [S11] Attempt guard — check BEFORE compare; increment BEFORE responding
-      if (!hasOtp || user.enclaveOtpAttempts >= MAX_VERIFY_ATTEMPTS) {
-        // Invalidate on lockout
-        if (hasOtp) {
-          await dbUpdate(user.dbId, user.table, {
-            enclaveOtpHash: null, enclaveOtpExpiresAt: null, enclaveOtpAttempts: 0,
-          });
-        }
-        // Constant-time delay so presence of OTP isn't distinguishable
-        await new Promise(r => setTimeout(r, 200 + Math.random() * 100));
-        return NextResponse.json({
-          error: hasOtp
-            ? 'Too many incorrect attempts. Your code has been invalidated. Request a new one.'
-            : 'No reset code found. Please request a new one.',
-          invalidated: true,
-        }, { status: 429 });
+            // [S11] Pre-check
+      if (!hasOtp) {
+        await new Promise(r => setTimeout(r, 200 + crypto.randomInt(0, 100)));
+        return NextResponse.json({ error: 'No reset code found. Please request a new one.', invalidated: true }, { status: 429 });
       }
 
-      // [S12] Expiry check (server-enforced)
+      // [S12] Expiry check
       if (user.enclaveOtpExpiresAt && now > user.enclaveOtpExpiresAt.getTime()) {
-        await dbUpdate(user.dbId, user.table, {
-          enclaveOtpHash: null, enclaveOtpExpiresAt: null, enclaveOtpAttempts: 0,
-        });
+        await dbUpdate(user.dbId, user.table, { enclaveOtpHash: null, enclaveOtpExpiresAt: null, enclaveOtpAttempts: 0 });
         return NextResponse.json({ error: 'Reset code expired. Please request a new one.', expired: true }, { status: 400 });
       }
 
-      // [S13] Increment attempts ATOMICALLY before responding (prevents race)
-      await dbUpdate(user.dbId, user.table, { enclaveOtpAttempts: { increment: 1 } });
+      // [S13] ATOMIC INCREMENT (Prevents TOCTOU Race Condition)
+      const updatedUser = await dbUpdate(user.dbId, user.table, { enclaveOtpAttempts: { increment: 1 } });
+      const newAttempts = updatedUser.enclaveOtpAttempts;
+
+      if (newAttempts > MAX_VERIFY_ATTEMPTS) {
+        await dbUpdate(user.dbId, user.table, { enclaveOtpHash: null, enclaveOtpExpiresAt: null, enclaveOtpAttempts: 0 });
+        await new Promise(r => setTimeout(r, 200 + crypto.randomInt(0, 100)));
+        return NextResponse.json({
+          error: 'Too many incorrect attempts. Your code has been invalidated. Request a new one.',
+          invalidated: true,
+        }, { status: 429 });
+      }
 
       // [S14] Constant-time HMAC compare
       const submittedHash = hashOtp(userId, otp);
@@ -379,3 +377,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Service temporarily unavailable.' }, { status: 500 });
   }
 }
+

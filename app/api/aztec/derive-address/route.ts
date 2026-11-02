@@ -29,13 +29,13 @@ export async function POST(req: Request) {
       success: true,
       aztecAddress,
       derivationMethod: 'SHA-256 + Keccak256 (aztec-schnorr domain separation)',
-      network: 'aztec-testnet',
+      network: 'aztec-mainnet',
     });
 
   } catch (err: any) {
     console.error('[Aztec Derive Address Error]', err.message);
     return NextResponse.json(
-      { error: `Derivation failed: ${err.message}` },
+      { error: 'Derivation failed' },
       { status: 500 }
     );
   }

@@ -5,6 +5,8 @@ import {
   importPrivateKeyJwk,
 } from '@/lib/onion/OnionCrypto';
 import { safeRedisGet, safeRedisSet } from '@/lib/redis/client';
+import { assertFetchableUrl, fetchPublicUrl } from '@/lib/security/publicFetch';
+import { enqueueOnionDelivery } from '@/lib/chat/onionQueue';
 /**
  * POST /api/chat/onion/relay
  *
@@ -224,26 +226,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // Block SSRF to private/loopback addresses (CRIT-01)
-  const host = nextHopUrl.hostname;
-  
-  // Robust check for all private IPv4, IPv6, and Carrier-Grade NAT ranges
-  const isInternal = 
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host === '0.0.0.0' ||
-    host === '::1' ||
-    host.endsWith('.local') ||
-    host.startsWith('10.') ||
-    /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host) || // 172.16.0.0/12 (Complete Private Range)
-    host.startsWith('192.168.') ||
-    host.startsWith('169.254.') || // Link-local / AWS IMDSv2 metadata endpoint
-    host.startsWith('100.') || // 100.64.0.0/10 CGNAT
-    host.startsWith('fc00:') || // IPv6 ULA
-    host.startsWith('fd') ||    // IPv6 ULA
-    host.startsWith('fe80:');   // IPv6 Link-local
-
-  if (isInternal && process.env.NODE_ENV === 'production') {
+  // Block SSRF (CRIT-01). The old check compared hostname prefixes, was off
+  // outside production, missed names that resolve to private addresses and
+  // IPv6 forms, and was never applied to the hop that is actually fetched
+  // (inner.nextHop, below). Every hop now goes through lib/security/publicFetch.
+  try {
+    assertFetchableUrl(nextHopUrl.href);
+  } catch {
     return NextResponse.json(
       { error: 'SSRF blocked: private addresses are not permitted.' },
       { status: 403 },
@@ -286,29 +275,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // The exit node delivers the message to the XMTP network.
     // We enqueue it server-side (no IP revealed to XMTP from the client).
     // Use the existing /api/chat/queue endpoint.
-    try {
-      const queueRes = await fetch(
-        `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/chat/onion/queue`,
-        {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            destination: inner.destination,
-            payload:     inner.payload,
-            sentAt:      inner.sentAt,
-            nonce:       inner.nonce,
-          }),
-        },
-      );
-
-      if (!queueRes.ok) {
-        return NextResponse.json({ error: 'Exit delivery failed.' }, { status: 502 });
-      }
-
-      return NextResponse.json({ ok: true, hop: 'exit', delivered: true });
-    } catch (err: any) {
-      return NextResponse.json({ error: 'Exit delivery error.' }, { status: 502 });
+    // In process (lib/chat/onionQueue.ts): the old HTTP hop to
+    // /api/chat/onion/queue had no session and was refused by the
+    // middleware, and that endpoint let anyone write to any inbox.
+    const delivered = await enqueueOnionDelivery({
+      destination: inner.destination,
+      payload: inner.payload,
+      nonce: inner.nonce,
+    });
+    if (!delivered.ok) {
+      return NextResponse.json({ error: delivered.error }, { status: delivered.status === 500 ? 502 : delivered.status });
     }
+    return NextResponse.json({ ok: true, hop: 'exit', delivered: true });
   }
 
   // ── 10. Forward to next relay hop ─────────────────────────────────────────
@@ -322,8 +300,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     try {
-      const forwardRes = await fetch(inner.nextHop, {
+      // inner.nextHop comes out of a layer anyone can encrypt to this relay's
+      // public key, so it is attacker-chosen: fetched only if it is public,
+      // checked again at connect time, never redirected.
+      const forwardRes = await fetchPublicUrl(inner.nextHop, {
         method:  'POST',
+        timeoutMs: 8000,
+        maxBytes: 16 * 1024,
         headers: {
           'Content-Type':  'application/json',
           'X-Onion-Route': '1',
@@ -336,7 +319,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         }),
       });
 
-      if (!forwardRes.ok) {
+      if (forwardRes.status < 200 || forwardRes.status >= 300) {
         return NextResponse.json(
           { error: `Next hop returned ${forwardRes.status}` },
           { status: 502 },

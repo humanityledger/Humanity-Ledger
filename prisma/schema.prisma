@@ -1,7 +1,23 @@
 // schema.prisma
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+
+  // Neon hands out two connection strings and they are not interchangeable.
+  //
+  //   DATABASE_URL           pooled, through PgBouncer in transaction mode.
+  //                          Right for the application: many short-lived
+  //                          queries sharing a small pool.
+  //   DATABASE_URL_UNPOOLED  direct to the Postgres instance.
+  //                          Required for migrations and introspection, which
+  //                          open session-level constructs (advisory locks,
+  //                          prepared statements, CREATE TYPE) that PgBouncer
+  //                          in transaction mode cannot carry across.
+  //
+  // Pointing `url` at the pooled string without declaring `directUrl` is the
+  // classic Neon + Prisma failure: the app runs fine, then `prisma migrate`
+  // hangs on an advisory lock or reports a phantom drift.
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
   // NOTE: pg_trgm/btree_gin/unaccent extensions omitted 
   // Railway PostgreSQL does not guarantee superuser extension access.
   // Full-text search is handled at the application layer via Prisma fullTextSearchPostgres.
@@ -136,6 +152,7 @@ model User {
   stealthMode           Boolean @default(false)
   requireSignForExports Boolean @default(true)
   allowAnalytics        Boolean @default(true)
+  extendedSettings      Json?   @default("{}")
 
   //  Sonar Alerts 
   emailAlerts         Boolean @default(false)
@@ -246,13 +263,11 @@ model ApiKey {
 
 model AuthUser {
   id                  String    @id @default(uuid())
-  email               String    @unique
+  email String? @unique
   name                String?
   username            String?   @unique
   passwordHash        String?
   walletAddress       String?   @unique
-  encryptedMnemonic   String?   @db.Text
-  walletSalt          String?
   verified            Boolean   @default(false)
   verificationCode    String? // legacy inline code field (kept for compatibility)
   codeExpiresAt       DateTime?
@@ -260,7 +275,7 @@ model AuthUser {
   backupCodes         String[]  @default([])
   lastLoginAt         DateTime?
   recoveryEmail       String?
-  encryptedPrivateKey String?
+  // encryptedPrivateKey String? (Removed for Non-Custodial Sovereign compliance)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -288,7 +303,7 @@ model AuthUser {
 
 model EmailSubscriber {
   id               String   @id @default(uuid())
-  email            String   @unique
+  email String? @unique
   frequency        String   @default("weekly") // "daily", "weekly", "monthly"
   subscribed       Boolean  @default(true)
   unsubscribeToken String?  @unique
@@ -357,17 +372,30 @@ model ChatContact {
   @@index([owner])
 }
 
+// Instagram-style friend request system
+model ChatContactRequest {
+  id          String   @id @default(uuid())
+  fromAddress String   // wallet address of requester
+  toAddress   String   // wallet address of recipient
+  status      String   @default("PENDING") // PENDING | ACCEPTED | REJECTED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([fromAddress, toAddress])
+  @@index([toAddress, status])
+  @@index([fromAddress, status])
+}
+
 model PendingChatMessage {
-  id        String   @id @default(uuid())
-  sender    String
-  recipient String
-  content   String   @db.Text
-  timestamp DateTime @default(now())
+  id          String   @id @default(uuid())
+  sender      String
+  recipient   String
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
 
   @@index([recipient])
   @@index([sender])
 }
-
 model ExchangePosition {
   id            String   @id @default(uuid())
   userId        String
@@ -447,6 +475,52 @@ model SiweNonce {
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
+
+// 
+// LEDGER CHAT — CALL ROOMS
+// Ephemeral rooms for group video/audio calls with password protection.
+// Auto-expire after 2h idle. Moderator can transfer control and kick participants.
+// 
+
+model CallRoom {
+  id               String   @id @default(cuid())
+  roomId           String   @unique // 8-char alphanumeric, user-visible
+  passwordHash     String   // SHA-256 of password, never stored plaintext
+  hostAddress      String   // Wallet address of room creator
+  moderatorAddress String   // Current moderator (starts as host, can be transferred)
+  isVideo          Boolean  @default(true)
+  maxParticipants  Int      @default(20)
+  participants     String[] // Array of wallet addresses currently in room
+  createdAt        DateTime @default(now())
+  lastActivityAt   DateTime @default(now())
+  expiresAt        DateTime // createdAt + 2h, enforced server-side
+  isActive         Boolean  @default(true)
+
+  @@index([roomId])
+  @@index([hostAddress])
+  @@index([expiresAt])
+}
+
+// 
+// CALL ROOM JOIN TOKENS
+// Signed tokens issued on successful password validation. Expire in 30min.
+// Prevents replay attacks and unauthorized joins after token expiry.
+// 
+
+model CallRoomToken {
+  id          String   @id @default(cuid())
+  roomId      String
+  address     String
+  token       String   @unique // HMAC-signed, single-use
+  used        Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([roomId, address])
+  @@index([token])
+}
+
+
 
 // 
 // CANONICAL IDENTITY (P2 SIWE MIGRATION)
@@ -1013,25 +1087,7 @@ model Log {
 // PRIVACY & SESSION AUDITING LOGS
 // 
 
-model UserSessionLog {
-  id         String   @id @default(uuid())
-  userId     String?
-  sessionId  String
-  timestamp  DateTime @default(now())
-  action     String // "PAGE_VIEW", "WALLET_CONNECT", "TAB_CHANGE", "EXPORT"
-  entityType String?
-  entityId   String?
-  ipAddress  String?
-  userAgent  String?
-  deviceType String?
-  location   String?
-  metadata   Json?
-
-  @@index([userId, timestamp(sort: Desc)])
-  @@index([action, timestamp(sort: Desc)])
-  @@index([sessionId])
-  @@index([timestamp(sort: Desc)])
-}
+// Removed: UserSessionLog (Telemetry / Analytics)
 
 model UserPrivacyProfile {
   id                String   @id @default(uuid())
@@ -1347,37 +1403,7 @@ model ProvenanceEvent {
 // Powers the /registry map — our live global activity intelligence layer.
 //
 
-model LoginGeoEvent {
-  id            String   @id @default(uuid())
-  // Anonymized identity — never store raw IP or wallet
-  userId        String? // Hashed user reference (nullable = pre-auth probe)
-  sessionType   String // "WALLET_CONNECT" | "EMAIL_LOGIN" | "QR_SCAN" | "METAMASK" | "RAINBOW" | "HUMANITY_ID"
-  // Geographic intelligence
-  countryCode   String // ISO 3166-1 alpha-2: "ES", "US", "JP"
-  countryName   String
-  region        String? // State/province
-  city          String?
-  latitude      Float?
-  longitude     Float?
-  // Network intelligence
-  ipHash        String? // SHA-256(ip+salt) — anonymous, non-reversible
-  asn           String? // Autonomous System Number for network analysis
-  isTor         Boolean  @default(false)
-  isVpn         Boolean  @default(false)
-  isDatacenter  Boolean  @default(false)
-  // Session metadata
-  authMethod    String   @default("UNKNOWN") // "SIWE", "EMAIL", "QR", "METAMASK"
-  deviceType    String? // "MOBILE" | "DESKTOP" | "TABLET"
-  wasSuccessful Boolean  @default(true)
-  timestamp     DateTime @default(now())
-
-  @@index([countryCode, timestamp(sort: Desc)])
-  @@index([userId, timestamp(sort: Desc)])
-  @@index([timestamp(sort: Desc)])
-  @@index([sessionType, timestamp(sort: Desc)])
-  @@index([wasSuccessful, timestamp(sort: Desc)])
-  @@map("login_geo_events")
-}
+// Removed: login_geo_events
 
 // 
 // QUANTUM PIPELINE & ZERO-KNOWLEDGE STATE
@@ -1565,3 +1591,259 @@ model ModerationReport {
   timestamp       DateTime @default(now())
   status          String   @default("PENDING")
 }
+
+
+// 
+// LEDGER CHAT SETTINGS ENGINE - Abysmally complex backend integration
+// 
+model UserSettings {
+  id            String   @id @default(uuid())
+  walletAddress String   @unique
+  settings      Json
+  lastSyncedAt  DateTime @default(now())
+
+  @@index([walletAddress])
+}
+
+
+
+
+// ─── COMMUNITIES & STATUS UPDATES ──────────────────────────────────────────
+
+model StatusUpdate {
+  id          String   @id @default(cuid())
+  ownerAddress String
+  text        String
+  emoji       String?
+  privacy     String   @default("contacts") // "everyone", "contacts", "except"
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([ownerAddress])
+  @@index([expiresAt])
+}
+
+model Community {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  isPrivate   Boolean  @default(false)
+  ownerAddress String
+  joinCode    String   @unique
+  createdAt   DateTime @default(now())
+  
+  members     CommunityMember[]
+  channels    CommunityChannel[]
+  permissions CommunityPermission?
+  apps        CommunityApp[]
+  // messages CommunityMessage[]
+
+  @@index([joinCode])
+  @@index([ownerAddress])
+}
+
+// Community apps: small tools a community runs inside its own space (a poll,
+// a sign-up sheet, a shared list). Each app is one HTML document served from
+// /api/chat/communities/[id]/apps/[appId]/frame into a sandboxed iframe with
+// no network access. Its only memory is CommunityAppEntry, through the bridge
+// in lib/community-apps/sdk.ts. Both tables are readable by the server: the
+// interface says so.
+model CommunityApp {
+  id             String   @id @default(cuid())
+  communityId    String
+  creatorAddress String
+  title          String
+  summary        String   @default("")
+  prompt         String   @default("") @db.Text
+  html           String   @db.Text
+  status         String   @default("draft") // draft | published
+  version        Int      @default(1)
+  source         String   @default("model") // model | template
+  templateId     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  community Community          @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  entries   CommunityAppEntry[]
+
+  @@index([communityId, status])
+  @@index([creatorAddress])
+}
+
+// scope is "shared" (any member may write) or a member's lowercase address
+// (only that member may write). A null value is a deletion; rows are kept as
+// tombstones so a client that syncs with ?since= also learns about deletions.
+model CommunityAppEntry {
+  id        String   @id @default(cuid())
+  appId     String
+  scope     String
+  key       String
+  value     Json?
+  updatedBy String   // lowercase address of the last writer, set by the server
+  updatedAt DateTime @updatedAt
+
+  app CommunityApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@unique([appId, scope, key])
+  @@index([appId, updatedAt])
+}
+
+model CommunityMember {
+  id           String    @id @default(cuid())
+  communityId  String
+  walletAddress String
+  role         String    @default("MEMBER") // ADMIN, MEMBER
+  joinedAt     DateTime  @default(now())
+
+  community    Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, walletAddress])
+  @@index([walletAddress])
+}
+
+// Removed: CommunityMessage (Centralized Storage)
+
+
+model QDCreditLedger {
+  id             String   @id @default(uuid())
+  address        String
+  delta          Float
+  direction      String
+  reason         String
+  counterparty   String?
+  txRef          String   @unique
+  idempotencyKey String   @unique
+  rail           String   @default("internal")
+  createdAt      DateTime @default(now())
+
+  @@index([address])
+  @@index([txRef])
+}
+
+// DECENTRALIZED FEDERATION RELAY
+// This model acts as a temporary store-and-forward relay node for MLS Group 
+// messages. In E2E groups, peers may be offline. This node stores the encrypted
+// ciphertext of the message, but NO PLAINTEXT is visible to the server.
+model CommunityPost {
+  id             String   @id @default(cuid())
+  communityId    String
+  channelId      String?
+  authorAddress  String
+  content        String   // ENCRYPTED CIPHERTEXT (AES-256-GCM or MLS payload)
+  title          String?
+  contentHtml    String?  // ENCRYPTED HTML CIPHERTEXT
+  likes          Int      @default(0)
+  createdAt      DateTime @default(now())
+  
+  @@index([communityId])
+  @@index([authorAddress])
+  @@index([communityId, createdAt])
+}
+
+
+// Login Geo Events - GDPR compliant (no raw IP, only hashed + country)
+model LoginGeoEvent {
+  id            String   @id @default(uuid())
+  userId        String?
+  ipHash        String
+  countryCode   String   @default("XX")
+  countryName   String   @default("Unknown")
+  region        String?
+  city          String?
+  latitude      Float?
+  longitude     Float?
+  asn           String?
+  sessionType   String   @default("UNKNOWN")
+  authMethod    String   @default("UNKNOWN")
+  deviceType    String?
+  wasSuccessful Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([countryCode])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMMUNITIES (Feature #3 — Ledger Chat's core differentiator)
+
+
+model CommunityChannel {
+  id          String   @id @default(cuid())
+  communityId String
+  name        String
+  description String?
+  isPaid      Boolean  @default(false)
+  price       Float?
+  currency    String?  // 'ETH', 'USDC'
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@index([communityId])
+}
+
+model CommunityPermission {
+  id              String   @id @default(cuid())
+  communityId     String   @unique
+  sendMessages    Boolean  @default(true)
+  sendMedia       Boolean  @default(true)
+  sendStickers    Boolean  @default(true)
+  sendPolls       Boolean  @default(true)
+  embedLinks      Boolean  @default(true)
+  addUsers        Boolean  @default(false)
+  pinMessages     Boolean  @default(false)
+  changeInfo      Boolean  @default(false)
+  slowModeSeconds Int      @default(0)
+  antiSpam        Boolean  @default(false)
+  requireApproval Boolean  @default(false)
+  postApproval    Boolean  @default(false)
+  notifyNewMember Boolean  @default(true)
+
+  community       Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+}
+
+model PushSubscription {
+  id            String   @id @default(uuid())
+  walletAddress String   @unique
+  endpoint      String   @db.Text
+  p256dh        String
+  auth          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([walletAddress])
+}
+
+
+model DirectMessage {
+  id          String   @id @default(uuid())
+  sender      String
+  recipient   String
+  content     String   @db.Text
+  delivered   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  deliveredAt DateTime?
+
+  @@index([recipient, delivered])
+  @@index([sender])
+  @@index([recipient, createdAt])
+  @@index([sender, createdAt])
+}
+
+
+model Story {
+  id            String   @id @default(cuid())
+  authorAddress String
+  contentUrl    String   @db.Text
+  mediaType     String
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([authorAddress])
+  @@index([expiresAt])
+}
+
+
+

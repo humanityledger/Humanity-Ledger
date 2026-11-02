@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 30s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  # The node does not serve /metrics itself; it pushes OTLP to the collector.
+  - job_name: aztec-node
+    static_configs:
+      - targets: ["otel-collector:8889"]

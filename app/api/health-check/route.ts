@@ -7,7 +7,7 @@
  *   - Audit trail integrity
  *   - Database connectivity
  *
- * Authentication: requires valid system_handshake or internal secret header
+ * Authentication: requires valid internal secret header for deep checks
  * Rate: exempt from rate limiting (registered in middleware BYPASS list)
  */
 
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
       ? { valid: true, count: (result as any).count }
       : { valid: false, error: (result as any).reason };
   } catch (err: any) {
-    auditIntegrity = { valid: false, error: err.message };
+    auditIntegrity = { valid: false, error: 'Internal error' };
   }
 
   // Determine overall system status

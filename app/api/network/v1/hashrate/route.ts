@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 
 // 
@@ -7,7 +6,7 @@ import { NextResponse } from 'next/server';
 // Returns current hashrate in EH/s + 30-day history
 // 
 
-export const revalidate = 60; // Cache 60 seconds
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {

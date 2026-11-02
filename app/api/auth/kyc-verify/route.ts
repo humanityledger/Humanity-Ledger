@@ -1,96 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyMessage } from 'viem';
 import { prisma } from '@/lib/prisma';
-import { mintJWT } from '@/lib/jwt';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
 
 /**
  * POST /api/auth/kyc-verify
- * 
- * Finalizes the Zero Knowledge KYC process by verifying the signature
- * and updating the user's verification status in the database.
+ *
+ * Records that the signed-in wallet completed the on-device liveness check
+ * and signed the attestation message.
+ *
+ * Security (2026-10-28): this used to set isZkVerified = true and add 100 to
+ * humanityScore on every call. The only inputs are a message the caller
+ * writes and signs with their own wallet, so anyone could mark themselves a
+ * verified human (the badge other people see next to a name) and raise their
+ * score without limit. A liveness result computed in the browser proves
+ * nothing to the server. Verified status now comes only from a provider the
+ * server can check (the Sumsub webhook).
  */
 export async function POST(req: NextRequest) {
-    try {
-        const { getSession } = await import('@/lib/session');
-        const session = await getSession();
-        if (!session || !session.userId) {
-            return NextResponse.json({ error: 'UNAUTHORIZED: Cryptographic session required.' }, { status: 401 });
-        }
-
-        const body = await req.json();
-        const { address, signature, message } = body;
-
-        if (address.toLowerCase() !== session.userId.toLowerCase()) {
-             return NextResponse.json({ error: 'FORBIDDEN: Address mismatch with session.' }, { status: 403 });
-        }
-
-        if (!message.startsWith('System KYC Attestation') || !message.includes(`Identity: ${address}`)) {
-             return NextResponse.json({ error: 'FORBIDDEN: Invalid attestation message.' }, { status: 403 });
-        }
-        
-        if (!address || !signature || !message) {
-            return NextResponse.json({ error: 'Missing cryptographic verification data' }, { status: 400 });
-        }
-
-        // 1. Strict Cryptographic Verification of the Attestation
-        const isValid = await verifyMessage({ address, message, signature });
-        if (!isValid) {
-            console.error(`[KYC:SECURITY]  Invalid biometric signature attempted for ${address}`);
-            return NextResponse.json({ error: 'Cryptographic binding failed' }, { status: 401 });
-        }
-        const normalizedAddress = address.toLowerCase();
-        const user = await prisma.user.upsert({
-            where: { walletAddress: normalizedAddress },
-            update: { 
-                isZkVerified: true,
-                humanityScore: { increment: 100 },
-                lastActive: new Date()
-            },
-            create: {
-                walletAddress: normalizedAddress,
-                isZkVerified: true,
-                humanityScore: 100,
-                tier: 'INITIATE',
-                lastActive: new Date()
-            }
-        });
-
-        // 3. Issue Updated System JWT
-        const jwt = await mintJWT({
-            sub: normalizedAddress,
-            address: normalizedAddress,
-            clearance: 'Private',
-            tier: user.tier || 'FREE',
-            kycStatus: 'VERIFIED',
-            isZkVerified: true,
-            humanityScore: user.humanityScore || 100,
-            iss: 'humanity-ledger',
-            issuedAt: new Date().toISOString()
-        });
-
-        // 4. Response with cookies
-        const response = NextResponse.json({ 
-            success: true,
-            status: 'VERIFIED',
-            user: {
-                address: normalizedAddress,
-                isZkVerified: true
-            }
-        });
-
-        response.cookies.set('human_session', jwt, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 604800, // 7 days
-            path: '/',
-        });
-
-        console.log(`[KYC:Success] Identity verified and persisted for ${normalizedAddress}`);
-        return response;
-
-    } catch (error: any) {
-        console.error('[KYC:Fatal]', error);
-        return NextResponse.json({ error: 'Identity Engine Failure' }, { status: 500 });
+  try {
+    const { getSession } = await import('@/lib/session');
+    const session = await getSession();
+    if (!session || !session.userId) {
+      return NextResponse.json({ error: 'UNAUTHORIZED: Cryptographic session required.' }, { status: 401 });
     }
+
+    const rl = await checkRateLimit(session.userId, { max: 5, windowSec: 3600, prefix: 'rl:kyc-verify' });
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many attempts' }, { status: 429 });
+
+    const body = await req.json().catch(() => ({}));
+    const { address, signature, message } = body ?? {};
+    if (typeof address !== 'string' || typeof signature !== 'string' || typeof message !== 'string' || message.length > 2_000) {
+      return NextResponse.json({ error: 'Missing cryptographic verification data' }, { status: 400 });
+    }
+    if (address.toLowerCase() !== session.userId.toLowerCase()) {
+      return NextResponse.json({ error: 'FORBIDDEN: Address mismatch with session.' }, { status: 403 });
+    }
+    if (!message.startsWith('System KYC Attestation') || !message.includes(`Identity: ${address}`)) {
+      return NextResponse.json({ error: 'FORBIDDEN: Invalid attestation message.' }, { status: 403 });
+    }
+
+    const isValid = await verifyMessage({ address: address as `0x${string}`, message, signature: signature as `0x${string}` });
+    if (!isValid) {
+      return NextResponse.json({ error: 'Cryptographic binding failed' }, { status: 401 });
+    }
+
+    const normalizedAddress = address.toLowerCase();
+    await prisma.user.upsert({
+      where: { walletAddress: normalizedAddress },
+      update: { lastActive: new Date() },
+      create: { walletAddress: normalizedAddress, tier: 'INITIATE', lastActive: new Date() },
+    });
+
+    return NextResponse.json({
+      success: true,
+      status: 'ATTESTED',
+      user: { address: normalizedAddress },
+    });
+  } catch (error: any) {
+    console.error('[KYC:Fatal]', error?.message);
+    return NextResponse.json({ error: 'Identity Engine Failure' }, { status: 500 });
+  }
 }

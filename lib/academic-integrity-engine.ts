@@ -445,8 +445,8 @@ export async function runAcademicIntegrityAnalysis(
 ): Promise<AnalysisResult> {
   
   // ── VALIDATION
-  if (!rawText || rawText.trim().length < 100) {
-    throw new Error('Document is too short. Please provide at least 100 characters for a reliable forensic analysis.');
+  if (!rawText || rawText.trim().length < 50) {
+    throw new Error('El documento es demasiado corto. Introduce al menos 50 caracteres para un análisis forense confiable.');
   }
 
   // ── PHASE 0: Unicode Security Audit & Normalization (5%)
@@ -462,7 +462,7 @@ export async function runAcademicIntegrityAnalysis(
 
   // ── VALIDATE word count on normalized text
   const wordsForFingerprint = preprocess(text);
-  if (wordsForFingerprint.length < 30) {
+  if (wordsForFingerprint.length < 10) {
     throw new Error(
       'Insufficient vocabulary after preprocessing. The document may be too short, ' +
       'written in an unsupported language, or contain mostly numbers/special characters.'

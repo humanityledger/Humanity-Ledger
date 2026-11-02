@@ -2,75 +2,113 @@
 
 import React from 'react';
 
+/**
+ * HLLogo — the Humanity Ledger mark.
+ *
+ * The mark is the black world map in a white disc, from /worldmap.png. It is
+ * the only logo the company uses. Do not substitute an icon, a monogram or a
+ * drawn globe anywhere in the product.
+ *
+ * Styles are inline rather than Tailwind classes so the mark renders
+ * identically wherever it is placed, including pages that do not load the
+ * Tailwind layer.
+ */
+
 export type HLLogoVariant = 'mark' | 'full';
 export type HLLogoTheme = 'dark' | 'light' | 'accent';
 
 interface HLLogoProps {
   variant?: HLLogoVariant;
+  /** `dark` draws dark text for light backgrounds. `light` draws white text. */
   theme?: HLLogoTheme;
   className?: string;
   size?: number;
   priority?: boolean;
+  /** Override the wordmark, for example "Ledger Chat". */
+  label?: string;
 }
 
-export function HLLogo({ variant = 'full', theme = 'dark', className = '', size = 32 }: HLLogoProps) {
-  const fg = theme === 'dark' ? '#0A0A0A' : theme === 'light' ? '#FFFFFF' : '#D4FF28';
-  const strokeColor = theme === 'dark' ? '#FFFFFF' : '#0A0A0A';
+export function HLLogo({
+  variant = 'full',
+  theme = 'dark',
+  className = '',
+  size = 32,
+  label = 'Humanity Ledger',
+}: HLLogoProps) {
+  const onDark = theme === 'light';
 
-  const Mark = (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+  const mark = (
+    <span
       aria-hidden="true"
-      style={{ flexShrink: 0 }}
+      style={{
+        width: size,
+        height: size,
+        flexShrink: 0,
+        borderRadius: 999,
+        overflow: 'hidden',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#ffffff',
+        boxShadow: onDark
+          ? '0 0 0 1px rgba(255,255,255,0.18)'
+          : '0 0 0 1px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06)',
+      }}
     >
-      <rect width="32" height="32" rx="7" fill={fg} />
-      <path
-        d="M9 8V24M23 8V24M9 16H23"
-        stroke={strokeColor}
-        strokeWidth="2.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+      <img
+        src="/worldmap.png"
+        alt=""
+        draggable={false}
+        style={{
+          width: '118%',
+          height: '118%',
+          objectFit: 'cover',
+          pointerEvents: 'none',
+          userSelect: 'none',
+        }}
       />
-    </svg>
+    </span>
   );
 
   if (variant === 'mark') {
-    return <div className={className} role="img" aria-label="Humanity Ledger">{Mark}</div>;
+    return (
+      <span
+        role="img"
+        aria-label={label}
+        className={className}
+        style={{ display: 'inline-flex', width: size, height: size, flexShrink: 0 }}
+      >
+        {mark}
+      </span>
+    );
   }
 
   return (
-    <div
-      className={`flex items-center gap-[10px] ${className}`}
+    <span
       role="img"
-      aria-label="Humanity Ledger"
+      aria-label={label}
+      className={className}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: Math.round(size * 0.32), flexShrink: 0 }}
     >
-      {Mark}
+      {mark}
       <span
         style={{
-          fontFamily: "'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif",
-          fontWeight: 900,
+          fontFamily: 'var(--hl-font, system-ui, sans-serif)',
           fontSize: Math.round(size * 0.5),
-          letterSpacing: '-0.03em',
+          fontWeight: 650,
+          letterSpacing: '-0.02em',
           lineHeight: 1,
-          color: fg,
-          textTransform: 'uppercase',
-          userSelect: 'none',
+          color: onDark ? '#ffffff' : 'var(--hl-ink, #15171c)',
           whiteSpace: 'nowrap',
         }}
       >
-        Humanity{' '}
-        <span style={{ opacity: 0.45 }}>Ledger</span>
+        {label}
       </span>
-    </div>
+    </span>
   );
 }
 
-export const HLMark = (props: Omit<HLLogoProps, 'variant'>) =>
-  <HLLogo {...props} variant="mark" />;
+export const HLMark = (props: Omit<HLLogoProps, 'variant'>) => <HLLogo {...props} variant="mark" />;
 
-/** Legacy alias — keeps any old LedgerLogo imports working */
+/** Legacy alias so older LedgerLogo imports keep working. */
 export { HLLogo as LedgerLogo };

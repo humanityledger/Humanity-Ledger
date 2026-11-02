@@ -1,22 +1,24 @@
+import { getSession } from '@/lib/session';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
-    try {
-        const cookieStore = await cookies();
-        const address = cookieStore.get('system_handshake')?.value;
+    const session = await getSession();
+    if (!session?.userId) {
+        return new Response(JSON.stringify({ error: 'Unauthorized: Authentication required.' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
 
+    try {
+        const address = session.userId.toLowerCase();
         let userId: string | undefined = undefined;
-        if (address) {
-            try {
-                const user = await prisma.user.findUnique({
-                    where: { walletAddress: address },
-                    select: { id: true }
-                });
-                if (user) userId = user.id;
-            } catch { /* ignore */ }
-        }
+        try {
+            const user = await prisma.user.findUnique({
+                where: { walletAddress: address },
+                select: { id: true }
+            });
+            if (user) userId = user.id;
+        } catch { /* ignore */ }
 
         const body = await req.json();
         const { action, metadata } = body;

@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
         const type  = searchParams.get('type')  || 'volume';
-        const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+        const rawLimit = parseInt(searchParams.get('limit') || '50', 10);
+        const limit = Math.max(1, Math.min(isNaN(rawLimit) ? 50 : rawLimit, 100));
 
         //  CACHE LAYER (MAXIMA PERFECCION) 
         if (type === 'volume') {

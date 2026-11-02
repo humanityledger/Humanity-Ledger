@@ -1,0 +1,244 @@
+/* A six digit PIN prompt that checks the PIN with the server.
+   Used to unlock Ledger Chat and to open a locked conversation. */
+
+.wrap,
+.wrap *,
+.wrap *::before,
+.wrap *::after {
+  box-sizing: border-box;
+}
+
+.wrap :where(h1, h2, h3, p) {
+  margin: 0;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+}
+
+.wrap.wrap button {
+  min-height: auto;
+}
+
+.wrap {
+  font-family: var(--hl-font);
+  color: var(--hl-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.screen {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px max(32px, env(safe-area-inset-bottom, 0px));
+  background: var(--hl-bg);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 17, 21, 0.36);
+  animation: fade var(--hl-dur) var(--hl-ease);
+}
+
+.card {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.overlay .card {
+  padding: 28px 24px 24px;
+  border-radius: 20px;
+  background: var(--hl-bg);
+  box-shadow: var(--hl-shadow-lg);
+  animation: rise var(--hl-dur) var(--hl-ease);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--hl-bg-muted);
+  color: var(--hl-ink);
+  margin-bottom: 18px;
+}
+
+.title {
+  font-size: 21px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.subtitle {
+  margin-top: 6px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--hl-ink-3);
+  max-width: 300px;
+}
+
+.dots {
+  display: flex;
+  gap: 14px;
+  margin: 28px 0 10px;
+}
+
+.shake {
+  animation: shake 360ms var(--hl-ease);
+}
+
+@keyframes shake {
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+.dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  border: 1.5px solid var(--hl-border-strong);
+  transition: background var(--hl-dur-fast) var(--hl-ease), border-color var(--hl-dur-fast) var(--hl-ease);
+}
+
+.dotFilled {
+  background: var(--hl-ink);
+  border-color: var(--hl-ink);
+}
+
+.message {
+  min-height: 20px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--hl-ink-3);
+}
+
+.error {
+  color: var(--hl-danger);
+}
+
+.pad {
+  width: 100%;
+  max-width: 280px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 20px;
+  margin-top: 18px;
+}
+
+.key {
+  height: 64px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--hl-bg-muted);
+  color: var(--hl-ink);
+  font: inherit;
+  font-size: 24px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background var(--hl-dur-fast) var(--hl-ease), transform var(--hl-dur-fast) var(--hl-ease);
+}
+
+.key:hover {
+  background: var(--hl-bg-pressed);
+}
+
+.key:active {
+  transform: scale(0.95);
+}
+
+.key:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.keyGhost {
+  background: transparent;
+}
+
+.keyGhost:hover {
+  background: var(--hl-bg-hover);
+}
+
+.footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.textButton {
+  border: 0;
+  background: none;
+  padding: 8px 12px;
+  border-radius: var(--hl-radius);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--hl-ink-2);
+  cursor: pointer;
+}
+
+.textButton:hover {
+  background: var(--hl-bg-hover);
+  color: var(--hl-ink);
+}
+
+.hiddenInput {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+}
+
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .overlay .card,
+  .shake,
+  .spin {
+    animation: none;
+  }
+}

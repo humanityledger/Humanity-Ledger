@@ -6,6 +6,7 @@ import {
   setSessionCookies,
   generateFingerprint,
 } from '@/lib/session';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,7 +95,8 @@ async function redisLockout(key: string, lockSec: number): Promise<void> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const ip   = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+    // The last X-Forwarded-For hop is the one our proxy added; the first is whatever the client sent.
+    const ip   = getClientIP(request);
 
     // ── 1. Normalize & validate inputs ───────────────────────────────────────
     const rawEmail: unknown = body?.email;
@@ -160,11 +162,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired code' }, { status: 401 });
     }
 
-    // ── 4. Lookup verification code ──────────────────────────────────────────
+    // ── 4. Lookup verification code (check SHA-256 hash or plaintext fallback - B-013) ──
+    const crypto = await import('crypto');
+    const inputHash = crypto.createHash('sha256').update(code).digest('hex');
+
     const verificationCode = await (prisma as any).verificationCode.findFirst({
       where: {
         userId:    user.id,
-        code,
+        code:      { in: [inputHash, code] },
         used:      false,
         expiresAt: { gt: new Date() },
       },
@@ -201,9 +206,7 @@ export async function POST(request: NextRequest) {
     // Secure httpOnly session cookies
     await setSessionCookies(accessToken, refreshToken);
 
-    // ── 8. Set system_handshake cookie with full security flags ───────────────
-    // This cookie is read by useSystemAccount on the client to detect login.
-    // HttpOnly = false so client JS can read it, but Secure + SameSite protect it.
+    // ── 8. Return authenticated response ─────────────────────────────────────
     const isProd = process.env.NODE_ENV === 'production';
     const response = NextResponse.json({
       success: true,
@@ -213,15 +216,6 @@ export async function POST(request: NextRequest) {
         email: user.email,
         name:  user.name ?? null,
       },
-    });
-
-    response.cookies.set('system_handshake', `email_${user.email}`, {
-      path:     '/',
-      maxAge:   7 * 24 * 60 * 60,
-      secure:   isProd,
-      sameSite: 'strict',
-      // Not httpOnly so client JS can detect the login — but SameSite+Secure prevent CSRF/XSS exfil
-      httpOnly: false,
     });
 
     // Clear failed-attempt counter on success

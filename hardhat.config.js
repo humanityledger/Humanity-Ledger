@@ -1,3 +1,4 @@
+require("ts-node/register");
 require("@nomicfoundation/hardhat-toolbox");
 require("@openzeppelin/hardhat-upgrades");
 require("dotenv").config({ path: ".env.local" });
@@ -7,7 +8,7 @@ require("dotenv").config();
 module.exports = {
     solidity: {
         compilers: [
-            { version: "0.8.24", settings: { optimizer: { enabled: true, runs: 200 } } },
+            { version: "0.8.24", settings: { evmVersion: "cancun", optimizer: { enabled: true, runs: 200 } } },
             { version: "0.8.22", settings: { optimizer: { enabled: true, runs: 200 } } },
             { version: "0.8.20", settings: { optimizer: { enabled: true, runs: 200 } } },
             { version: "0.5.17", settings: { optimizer: { enabled: true, runs: 200 } } },
@@ -16,18 +17,14 @@ module.exports = {
     },
     networks: {
         hardhat: {
-            forking: {
-                url: process.env.BASE_MAINNET_RPC || "https://mainnet.base.org",
-                blockNumber: 9000000,
-            },
-            chainId: 8453,
+            chainId: 31337,
         },
         optimismSepolia: {
             url: "https://sepolia.optimism.io",
             accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY.length >= 64) ? [process.env.PRIVATE_KEY] : [],
         },
         baseSepolia: {
-            url: `https://base-sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
+            url: `https://base-sepolia.infura.io/v3/${process.env.INFURA_API_KEY || ''}`,
             accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY.length >= 64) ? [process.env.PRIVATE_KEY] : [],
         },
         base: {
@@ -43,12 +40,11 @@ module.exports = {
              url: process.env.OPTIMISM_MAINNET_RPC || "https://mainnet.optimism.io",
              accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY.length >= 64) ? [process.env.PRIVATE_KEY] : [],
         },
-        //  Polygon 
         polygonAmoy: {
             url: process.env.POLYGON_AMOY_RPC || "https://rpc-amoy.polygon.technology",
             chainId: 80002,
             accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY.length >= 64) ? [process.env.PRIVATE_KEY] : [],
-            gasPrice: 30_000_000_000, // 30 gwei  Amoy safe default
+            gasPrice: 30_000_000_000,
         },
         polygon: {
             url: process.env.POLYGON_MAINNET_RPC || "https://polygon-rpc.com",
@@ -61,8 +57,7 @@ module.exports = {
         currency: "USD",
     },
     etherscan: {
-        // Etherscan V2: single API key covers all EVM chains incl. Polygon
-        apiKey: process.env.POLYGONSCAN_API_KEY || "",
+        apiKey: process.env.ETHERSCAN_API_KEY || process.env.POLYGONSCAN_API_KEY || "",
         customChains: [
             {
                 network: "polygonAmoy",

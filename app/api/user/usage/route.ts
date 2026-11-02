@@ -14,9 +14,10 @@ import { getSession } from '@/lib/session';
 export async function GET(req: NextRequest) {
   const session = await getSession();
   
-  // Also support wallet address via query param for non-session flows
-  const walletParam = req.nextUrl.searchParams.get('wallet');
-  const issuerAddress = session?.userId?.toLowerCase() || walletParam?.toLowerCase();
+  // Session only. A ?wallet= fallback answered for any wallet whenever the
+  // session was not readable here (e.g. a token revoked by logout, which the
+  // edge cannot see), so it exposed other people's figures.
+  const issuerAddress = session?.userId?.toLowerCase();
 
   if (!issuerAddress) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

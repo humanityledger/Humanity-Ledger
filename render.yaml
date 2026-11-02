@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: humanity-ledger
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: npm install --legacy-peer-deps && npx prisma generate && npx prisma migrate deploy && npm run build
+    startCommand: npx next start -p $PORT -H 0.0.0.0
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
+      - key: NODE_ENV
+        value: production
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=4096
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_UNPOOLED
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: NEXTAUTH_SECRET
+        sync: false
+      - key: NEXTAUTH_URL
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: ENCLAVE_PIN_PEPPER
+        sync: false
+      - key: ENCLAVE_PIN_SECRET
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false

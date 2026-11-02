@@ -136,7 +136,7 @@ export async function GET(req: NextRequest) {
 
     } catch (err: any) {
         return NextResponse.json(
-            { error: 'Hall of Fame unavailable', detail: err?.message },
+            { error: 'Hall of Fame unavailable', detail: 'Internal error' },
             { status: 503 }
         );
     }
@@ -208,7 +208,7 @@ export async function POST(req: NextRequest) {
 
     } catch (err: any) {
         return NextResponse.json(
-            { error: 'Submission failed', detail: err?.message },
+            { error: 'Submission failed', detail: 'Internal error' },
             { status: 500 }
         );
     }

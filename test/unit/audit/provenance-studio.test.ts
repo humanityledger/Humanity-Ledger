@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { vi } from 'vitest';
 import { NextRequest } from 'next/server';
 // Set env variable BEFORE importing route so OpenAI initializes
 process.env.OPENAI_API_KEY = 'test-key-mock';
@@ -12,8 +12,8 @@ vi.mock('../../../lib/session', () => ({
 }));
 
 // 2. Mock Prisma
-vi.mock('../../../lib/prisma', () => ({
-  prisma: {
+const { prismaMock } = vi.hoisted(() => {
+  const mock: any = {
     productPassport: {
       count: vi.fn().mockResolvedValue(0),
       findUnique: vi.fn().mockResolvedValue(null),
@@ -27,14 +27,22 @@ vi.mock('../../../lib/prisma', () => ({
     },
     user: {
       findUnique: vi.fn().mockResolvedValue({ tier: 'CRYPTOGRAPHIC' })
-    }
-  }
+    },
+    $transaction: vi.fn().mockImplementation(async (cb: any) => typeof cb === 'function' ? cb(mock) : Promise.all(cb))
+  };
+  return { prismaMock: mock };
+});
+
+vi.mock('../../../lib/prisma', () => ({
+  prisma: prismaMock
 }));
 
 // 3. Mock OpenAI for Semantic Validation
 vi.mock('openai', () => {
   return {
-    default: vi.fn().mockImplementation(() => ({
+    // A regular function: the route calls `new OpenAI()`, and Vitest 4+ does
+    // not allow arrow-function mocks to be used as constructors.
+    default: vi.fn().mockImplementation(function () { return ({
       chat: {
         completions: {
           create: vi.fn().mockImplementation(async (args: any) => {
@@ -55,7 +63,7 @@ vi.mock('openai', () => {
           })
         }
       }
-    }))
+    }); })
   };
 });
 

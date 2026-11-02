@@ -12,7 +12,7 @@
 
 import { NextResponse } from 'next/server';
 
-export const revalidate = 60; // ISR: cache for 60 seconds
+export const dynamic = 'force-dynamic';
 
 //  Known sovereign BTC wallet registry (publicly documented on-chain) 
 // Sources: Arkham Analytics, Blockchain.com labels, community research

@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
   try {
     const { subscription } = auth;
     const searchParams = req.nextUrl.searchParams;
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+    const rawLimit = parseInt(searchParams.get('limit') || '50', 10);
+    const limit = Math.max(1, Math.min(isNaN(rawLimit) ? 50 : rawLimit, 100));
     
     // 1. Enforce Plan Threshold
     const minUsd = Math.max(

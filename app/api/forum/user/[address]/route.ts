@@ -47,6 +47,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ address:
 
         return NextResponse.json(user);
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

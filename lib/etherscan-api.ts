@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 
 
-const getEtherscanApiKey = () => process.env.ETHERSCAN_API_KEY || 'HCK9HSJ6D9SFZT54IMNCCCZ71CII74HH6J';
+const getEtherscanApiKey = () => process.env.ETHERSCAN_API_KEY || '';
 //  MIGRATED TO V2 (V1 DEPRECATED FEB 2026)
 const ETHERSCAN_BASE = 'https://api.etherscan.io/v2/api';
 const CHAINID = '1'; // Ethereum Mainnet
@@ -148,7 +148,7 @@ export async function getEtherscanTokenBalances(address: string): Promise<Ethers
  */
 export async function getEtherscanHistory(address: string, page = 1, offset = 50) {
   try {
-    const apiKey = process.env.ETHERSCAN_API_KEY || 'HCK9HSJ6D9SFZT54IMNCCCZ71CII74HH6J'; // Fallback key
+    const apiKey = process.env.ETHERSCAN_API_KEY || ''; // Fallback key
     
     // 1. Get Normal ETH Transactions
     const ethUrl = `${ETHERSCAN_BASE}?chainid=${CHAINID}&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=${page}&offset=${offset}&sort=desc&apikey=${apiKey}`;

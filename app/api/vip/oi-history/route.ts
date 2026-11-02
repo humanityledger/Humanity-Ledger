@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
  * No Math.random()  only real API data.
  */
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 interface OIPoint {
   timestamp: number;

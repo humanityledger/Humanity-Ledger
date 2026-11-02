@@ -70,6 +70,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true });
     } catch (e: any) {
         console.error('[Academy Progress POST]', e);
-        return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
+        return NextResponse.json({ ok: false, error: 'Internal Server Error' }, { status: 500 });
     }
 }

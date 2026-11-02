@@ -23,14 +23,14 @@ import { RealWorldMap } from "@/components/landing/RealWorldMap";
 import { SystemFooter } from "@/components/landing/SystemFooter";
 import { SiweRegistryAdapter } from "@/components/auth/SiweRegistryAdapter";
 
-// ─── Humanity Ledger: Single Aztec Testnet config ────────────────────────────────
+// ─── Humanity Ledger: Single Aztec Mainnet config ────────────────────────────────
 // All registry data comes exclusively from Humanity Ledger internals:
 // - Wallets: registered users in our PostgreSQL DB
-// - Block Roots: Aztec Testnet L2 blocks (live RPC)
+// - Block Roots: Aztec Mainnet L2 blocks (live RPC)
 // - ZK State Commitments: Noir identity proofs created on humanidfi.com
 
-const AZTEC_TESTNET_RPC = process.env.NEXT_PUBLIC_AZTEC_NODE_URL ?? "https://v5.testnet.rpc.aztec-labs.com";
-const AZTEC_EXPLORER   = "https://testnet.aztecscan.xyz";
+const AZTEC_TESTNET_RPC = process.env.NEXT_PUBLIC_AZTEC_NODE_URL ?? "https://node.aztec.network";
+const AZTEC_EXPLORER   = "https://aztecscan.xyz";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -132,7 +132,7 @@ function AztecAnalyticsTab({ isDark }: { isDark: boolean }) {
     setFetching(true);
     setFetchError(null);
     try {
-      const rpcUrl = process.env.NEXT_PUBLIC_AZTEC_NODE_URL || "https://v5.testnet.rpc.aztec-labs.com";
+      const rpcUrl = process.env.NEXT_PUBLIC_AZTEC_NODE_URL || "https://node.aztec.network";
       const nodeInfoRes = await fetch(rpcUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "node_getNodeInfo", params: [] }) });
       const blockRes = await fetch(rpcUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "node_getBlockNumber", params: [] }) });
       const nodeInfoData = (await nodeInfoRes.json()).result || {};
@@ -424,7 +424,7 @@ function AztecAnalyticsTab({ isDark }: { isDark: boolean }) {
               className="text-[13px] font-bold"
               style={{ color: textClr }}
             >
-              Aztec Alpha Testnet
+              Aztec Mainnet
             </div>
           </div>
           <div>
@@ -491,8 +491,8 @@ const EVENT_TYPE_META: Record<string, { label: string; color: string; icon: stri
   PORTFOLIO_ACCESS:{ label: "Portfolio Accessed", color: "#8b5cf6", icon: "📊" },
   STUDIO_ACCESS:  { label: "Studio Provenance",   color: "#ec4899", icon: "🎨" },
   ANCHOR:         { label: "Passport Anchored",   color: "#14b8a6", icon: "⚓" },
-  SEND:           { label: "QDs Transfer",         color: "#f97316", icon: "→"  },
-  RECEIVE:        { label: "QDs Received",         color: "#22c55e", icon: "←"  },
+  SEND:           { label: "Transfer sent",        color: "#f97316", icon: "→"  },
+  RECEIVE:        { label: "Transfer received",    color: "#22c55e", icon: "←"  },
   REBALANCE:      { label: "Rebalance",            color: "#64748b", icon: "⇄"  },
 };
 
@@ -756,7 +756,7 @@ function RegistryContent() {
   // ── UI State
   const [activeTab, setActiveTab] = useState<TabType>("map");
   const [network, setNetwork] = useState<NetworkType>("testnet");
-  const [isDark, setIsDark] = useState(false);
+  const isDark = false;
   const [netDropOpen, setNetDropOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -826,7 +826,7 @@ function RegistryContent() {
           const blockHash  = parsed.txHash || parsed.aztecTxHash || "";
 
           entries.push({
-            chain: "Humanity Ledger · Aztec Testnet",
+            chain: "Humanity Ledger · Aztec Mainnet",
             badge: "WN-ZK",
             color: "#6366f1",
             proofType: "SNARK",
@@ -855,7 +855,7 @@ function RegistryContent() {
   }, []);
 
   // ── Humanity Ledger Indexer (Wallets + Block Roots) ────────────────────────────
-  // Sources: humanidfi.com DB (users, tickets) + Aztec Testnet L2 blocks.
+  // Sources: humanidfi.com DB (users, tickets) + Aztec Mainnet L2 blocks.
   // NO external chain scanning. All data is internal to Humanity Ledger.
 
   const runIndexer = useCallback(async (_selectedNetwork: NetworkType) => {
@@ -912,7 +912,7 @@ function RegistryContent() {
           if (!walletMap.has(key)) {
             walletMap.set(key, {
               address: t.walletAddress,
-              chain: "Aztec Testnet · Identity",
+              chain: "Aztec Mainnet · Identity",
               chainId: 2171337,
               badge: "AZTEC",
               color: "#7C3AED",
@@ -945,7 +945,7 @@ function RegistryContent() {
             if (!walletMap.has(key)) {
               walletMap.set(key, {
                 address: tx.fromAddress,
-                chain: "Humanity Ledger · Aztec Testnet",
+                chain: "Humanity Ledger · Aztec Mainnet",
                 chainId: 2171337,
                 badge: "WN",
                 color: "#10b981",
@@ -965,7 +965,7 @@ function RegistryContent() {
             if (!walletMap.has(key)) {
               walletMap.set(key, {
                 address: tx.toAddress,
-                chain: "Humanity Ledger · Aztec Testnet",
+                chain: "Humanity Ledger · Aztec Mainnet",
                 chainId: 2171337,
                 badge: "WN",
                 color: "#10b981",
@@ -988,7 +988,7 @@ function RegistryContent() {
     setProgress(65);
     if (abortRef.current) { setLoading(false); return; }
 
-    // ── 4. Aztec Testnet: Live L2 block roots ─────────────────────────────────
+    // ── 4. Aztec Mainnet: Live L2 block roots ─────────────────────────────────
     try {
       const rpcPayload = (method: string) =>
         JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: [] });
@@ -1015,7 +1015,7 @@ function RegistryContent() {
           const block: any = (await blockRes.json()).result ?? {};
           const archiveRoot: string = block.archiveRoot ?? block.header?.globalVariables?.blockNumber ?? "";
           roots.push({
-            chain: "Aztec Testnet",
+            chain: "Aztec Mainnet",
             badge: "AZTEC",
             color: "#7C3AED",
             blockNumber: blockN,
@@ -1039,7 +1039,7 @@ function RegistryContent() {
       // If Aztec node returned no blocks, create a synthetic entry from node_getNodeInfo
       if (roots.length === 0 && latestBlockNum > 0) {
         roots.push({
-          chain: "Aztec Testnet",
+          chain: "Aztec Mainnet",
           badge: "AZTEC",
           color: "#7C3AED",
           blockNumber: latestBlockNum,
@@ -1072,7 +1072,7 @@ function RegistryContent() {
 
       setStats({
         totalWallets: finalWallets.length,
-        totalChains: 1,  // Single network: Aztec Testnet
+        totalChains: 1,  // Single network: Aztec Mainnet
         latestBlock: Math.max(...roots.map((r) => r.blockNumber), 0),
         totalTxs,
         senders,
@@ -1238,7 +1238,7 @@ function RegistryContent() {
                       network === "mainnet" ? "#10b981" : "#f59e0b",
                   }}
                 />
-                {network === "mainnet" ? "Mainnet" : "Aztec Testnet"}
+                {network === "mainnet" ? "Mainnet" : "Aztec Mainnet"}
                 <ChevronDown
                   size={11}
                   className="transition-transform duration-150"
@@ -1293,7 +1293,7 @@ function RegistryContent() {
                               n === "mainnet" ? "#10b981" : "#f59e0b",
                           }}
                         />
-                        {n === "mainnet" ? "Mainnet" : "Aztec Testnet"}
+                        {n === "mainnet" ? "Mainnet" : "Aztec Mainnet"}
                         {network === n && (
                           <CheckCircle2
                             size={11}
@@ -1338,21 +1338,7 @@ function RegistryContent() {
               </button>
             </div>
 
-            {/* Dark / Light Toggle */}
-            <button
-              onClick={() => setIsDark((p) => !p)}
-              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              className="p-2 rounded-lg transition-all"
-              style={{
-                border: isDark
-                  ? "1px solid rgba(255,255,255,0.1)"
-                  : "1px solid rgba(0,0,0,0.1)",
-                backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "#fff",
-                color: isDark ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.55)",
-              }}
-            >
-              <span className="text-[10px] font-bold uppercase tracking-wider">{isDark ? "DARK" : "LIGHT"}</span>
-            </button>
+
           </div>
         </div>
 
@@ -2494,7 +2480,7 @@ function RegistryContent() {
                   </h2>
                 </div>
 
-                {/* Humanity Ledger — Aztec Testnet single-row breakdown */}
+                {/* Humanity Ledger — Aztec Mainnet single-row breakdown */}
                 {(()=>{
                   const aztecRoot = blockRoots.find(r => r.isCurrent);
                   const aztecWallets = wallets.filter(w => w.chainId === 2171337 || w.badge === "AZTEC" || w.badge === "WN");
@@ -2514,7 +2500,7 @@ function RegistryContent() {
                         </div>
                         <div>
                           <div className="text-[13px] font-bold" style={{ color: isDark ? "#fff" : "#0f172a" }}>
-                            Aztec Testnet
+                            Aztec Mainnet
                           </div>
                           <div className="text-[10px] font-mono" style={{ color: isDark ? "rgba(255,255,255,0.75)" : "rgba(0,0,0,0.35)" }}>
                             Chain ID: 2171337 · humanidfi.com

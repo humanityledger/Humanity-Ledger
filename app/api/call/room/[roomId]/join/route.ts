@@ -1,0 +1,178 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { cookies } from 'next/headers';
+import { verifyRoomPassword, generateJoinToken } from '@/lib/utils/roomCrypto';
+import { getSession } from '@/lib/session';
+import { checkRateLimit, getClientIP } from '@/lib/security/rateLimiter';
+
+import crypto from 'crypto';
+
+function getCallRoomSecret(): string {
+  const secret = process.env.CALL_ROOM_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CALL_ROOM_SECRET environment variable is strictly required in production');
+    }
+    return crypto.randomBytes(32).toString('hex');
+  }
+  return secret;
+}
+
+const TOKEN_TTL_MS = 4 * 60 * 60 * 1000;
+
+async function getSessionAddress(req: NextRequest): Promise<string | null> {
+  try {
+    const session = await getSession();
+    if (session?.userId) return session.userId.toLowerCase();
+    return null;
+  } catch { return null; }
+}
+
+// Rate-limit tracker for failed join attempts per IP
+const joinFailMap = new Map<string, { count: number; resetAt: number; lockedUntil?: number }>();
+// The first X-Forwarded-For hop is whatever the client sent; keying the lockout
+// on it let anyone guess room passwords forever with a new header each time.
+const getIp = (req: NextRequest): string => getClientIP(req);
+function checkJoinRateLimit(ip: string): { allowed: boolean; lockedUntil?: number } {
+  const now = Date.now();
+  const entry = joinFailMap.get(ip);
+  if (!entry || now > entry.resetAt) return { allowed: true };
+  if (entry.lockedUntil && now < entry.lockedUntil) return { allowed: false, lockedUntil: entry.lockedUntil };
+  return { allowed: true };
+}
+function recordJoinFailure(ip: string): void {
+  const now = Date.now();
+  const entry = joinFailMap.get(ip) || { count: 0, resetAt: now + 300_000 };
+  entry.count++;
+  // Exponential backoff
+  if (entry.count >= 5) {
+    const penaltyMs = Math.pow(2, entry.count - 5) * 60_000; // 1m, 2m, 4m...
+    entry.lockedUntil = now + Math.min(penaltyMs, 3600_000); // max 1hr
+  }
+  joinFailMap.set(ip, entry);
+}
+
+// ── POST /api/call/room/[roomId]/join — Validate password & issue token ──
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ roomId: string }> }
+) {
+  const address = await getSessionAddress(req);
+  if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const roomId = (await params).roomId.toUpperCase();
+  if (!/^[A-Z0-9]{6,12}$/.test(roomId)) {
+    return NextResponse.json({ error: 'Invalid room ID' }, { status: 400 });
+  }
+  const ip = getIp(req);
+
+  // Shared across instances (the map below is per process): at most 10 tries
+  // per person and room in 15 minutes, so a 4-character password cannot be guessed.
+  const tries = await checkRateLimit(`${roomId}:${address}`, { max: 10, windowSec: 900, prefix: 'rl:call-join' });
+  if (!tries.allowed) {
+    return NextResponse.json({ error: 'Too many attempts for this room. Please wait before trying again.' }, { status: 429 });
+  }
+
+  // Rate limit
+  const rl = checkJoinRateLimit(ip);
+  if (!rl.allowed) {
+    return NextResponse.json({
+      error: 'Too many failed attempts. Please wait before trying again.',
+      retryAfter: Math.ceil(((rl.lockedUntil ?? 0) - Date.now()) / 1000)
+    }, { status: 429 });
+  }
+
+  const body = await req.json().catch(() => ({})) as Record<string, unknown>;
+  const password = typeof body.password === 'string' ? body.password : '';
+  const peerId = typeof body.peerId === 'string' ? body.peerId : undefined;
+
+  if (password.length > 128) {
+    return NextResponse.json({ error: 'Password too long' }, { status: 400 });
+  }
+
+  const room = await prisma.callRoom.findFirst({
+    where: { roomId, isActive: true, expiresAt: { gt: new Date() } }
+  });
+
+  if (!room) {
+    return NextResponse.json({ error: 'Room not found or expired' }, { status: 404 });
+  }
+
+  // Validate participant count
+  if (room.participants.length >= room.maxParticipants) {
+    return NextResponse.json({ error: 'Room is full' }, { status: 403 });
+  }
+
+  // Validate password (if room has one)
+  if (room.passwordHash) {
+    // The per-account limit above does not stop someone holding many wallets
+    // (a wallet costs nothing to make). Cap password attempts per room across
+    // all accounts as well; a room password can be as short as 4 characters.
+    const roomTries = await checkRateLimit(roomId, { max: 60, windowSec: 900, prefix: 'rl:call-join-room' });
+    if (!roomTries.allowed) {
+      return NextResponse.json({ error: 'Too many attempts for this room. Please wait before trying again.' }, { status: 429 });
+    }
+    if (!verifyRoomPassword(password, room.passwordHash)) {
+      recordJoinFailure(ip);
+      return NextResponse.json({ error: 'Incorrect password' }, { status: 403 });
+    }
+  }
+
+  // Issue join token
+  const token = generateJoinToken(roomId, address, getCallRoomSecret(), peerId);
+  const tokenExpiry = new Date(Date.now() + TOKEN_TTL_MS);
+  await prisma.callRoomToken.create({
+    data: { roomId, address, token, expiresAt: tokenExpiry }
+  });
+
+  // Add participant to room
+  const updatedParticipants = Array.from(new Set([...room.participants, address]));
+  await prisma.callRoom.update({
+    where: { roomId },
+    data: { participants: updatedParticipants, lastActivityAt: new Date() }
+  });
+
+  return NextResponse.json({
+    success: true,
+    joinToken: token,
+    roomId: room.roomId,
+    isVideo: room.isVideo,
+    moderatorAddress: room.moderatorAddress,
+    hostAddress: room.hostAddress,
+    participants: updatedParticipants,
+    expiresAt: room.expiresAt.toISOString(),
+  });
+}
+
+// ── DELETE /api/call/room/[roomId]/join — Leave the room ──
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ roomId: string }> }
+) {
+  const address = await getSessionAddress(req);
+  if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const roomId = (await params).roomId.toUpperCase();
+  const room = await prisma.callRoom.findFirst({ where: { roomId, isActive: true } });
+  if (!room) return NextResponse.json({ success: true }); // idempotent
+
+  const updatedParticipants = room.participants.filter((p: string) => p !== address);
+  let newModerator = room.moderatorAddress;
+
+  // If moderator is leaving, transfer to next participant (or deactivate if empty)
+  if (room.moderatorAddress === address && updatedParticipants.length > 0) {
+    newModerator = updatedParticipants[0];
+  }
+
+  if (updatedParticipants.length === 0) {
+    // Last person left — deactivate room
+    await prisma.callRoom.update({ where: { roomId }, data: { isActive: false } });
+  } else {
+    await prisma.callRoom.update({
+      where: { roomId },
+      data: { participants: updatedParticipants, moderatorAddress: newModerator, lastActivityAt: new Date() }
+    });
+  }
+
+  return NextResponse.json({ success: true, newModerator });
+}

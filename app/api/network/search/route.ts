@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
         console.error('[API-SEARCH-CRASH]', error.message);
         return NextResponse.json({ 
             error: 'Failed to generate legendary analytics', 
-            details: error.message 
+            details: 'Error details redacted' 
         }, { status: 500 });
     }
 }

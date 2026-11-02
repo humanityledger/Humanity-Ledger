@@ -1,0 +1,381 @@
+/* Call screens for Ledger Chat. Light, quiet, and readable at a glance:
+   who is calling, whether it is voice or video, and the two buttons that
+   matter. Colours come from app/ledger-tokens.css. */
+
+.screen,
+.screen *,
+.screen *::before,
+.screen *::after {
+  box-sizing: border-box;
+}
+
+.screen :where(h1, h2, h3, p) {
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  margin: 0;
+}
+
+.screen.screen button {
+  min-height: auto;
+}
+
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(48px, env(safe-area-inset-top, 0px)) 24px max(44px, env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, #f7f8fa 0%, #eceef2 100%);
+  color: var(--hl-ink);
+  font-family: var(--hl-font);
+  -webkit-font-smoothing: antialiased;
+  touch-action: none;
+  animation: appear var(--hl-dur-slow) var(--hl-ease);
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Top */
+
+.top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--hl-ink-2);
+}
+
+.secure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--hl-ink-3);
+}
+
+/* Centre */
+
+.centre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  text-align: center;
+}
+
+.avatarWrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 220px;
+  height: 220px;
+}
+
+.ring {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid rgba(21, 23, 28, 0.08);
+  animation: ripple 2.6s cubic-bezier(0.2, 0, 0, 1) infinite;
+}
+
+.ring:nth-child(1) {
+  width: 132px;
+  height: 132px;
+}
+
+.ring:nth-child(2) {
+  width: 132px;
+  height: 132px;
+  animation-delay: 0.9s;
+}
+
+@keyframes ripple {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.65);
+    opacity: 0;
+  }
+}
+
+.still .ring {
+  animation: none;
+  opacity: 0;
+}
+
+.avatar {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 40px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 12px 32px -12px rgba(16, 24, 40, 0.25);
+  transition: transform 80ms linear;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.name {
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  max-width: 88vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.address {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--hl-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.status {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  color: var(--hl-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--hl-ink-4);
+}
+
+.dotLive {
+  background: #1f9d55;
+}
+
+.dotWarn {
+  background: #d4a017;
+}
+
+.statusWarn {
+  color: var(--hl-warning);
+}
+
+/* Actions */
+
+.actions {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+}
+
+.action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--hl-ink-2);
+}
+
+.round {
+  width: 68px;
+  height: 68px;
+  border-radius: 999px;
+  border: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: #fff;
+  transition: transform var(--hl-dur-fast) var(--hl-ease), filter var(--hl-dur-fast) var(--hl-ease);
+  box-shadow: 0 10px 24px -10px rgba(16, 24, 40, 0.35);
+}
+
+.round:hover {
+  filter: brightness(1.05);
+}
+
+.round:active {
+  transform: scale(0.94);
+}
+
+.decline {
+  background: #e5484d;
+}
+
+.accept {
+  background: #1f9d55;
+}
+
+.secondary {
+  width: 56px;
+  height: 56px;
+  margin-top: 6px;
+  background: #fff;
+  color: var(--hl-ink);
+  border: 1px solid var(--hl-border);
+  box-shadow: var(--hl-shadow-xs);
+}
+
+/* Controls during a call */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 999px;
+}
+
+.controlsLight {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid var(--hl-border);
+  box-shadow: var(--hl-shadow-md);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.controlsDark {
+  background: rgba(15, 17, 21, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.control {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  border: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background var(--hl-dur-fast) var(--hl-ease), transform var(--hl-dur-fast) var(--hl-ease);
+}
+
+.control:active {
+  transform: scale(0.94);
+}
+
+.controlsLight .control {
+  background: var(--hl-bg-muted);
+  color: var(--hl-ink);
+}
+
+.controlsLight .control:hover {
+  background: var(--hl-bg-pressed);
+}
+
+.controlsLight .controlOn {
+  background: var(--hl-ink);
+  color: #fff;
+}
+
+.controlsDark .control {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.controlsDark .control:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.controlsDark .controlOn {
+  background: #fff;
+  color: var(--hl-ink);
+}
+
+.controlEnd {
+  width: 60px;
+  height: 52px;
+  border-radius: 999px;
+  border: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  background: #e5484d;
+  color: #fff;
+  margin-left: 4px;
+  transition: filter var(--hl-dur-fast) var(--hl-ease), transform var(--hl-dur-fast) var(--hl-ease);
+}
+
+.controlEnd:hover {
+  filter: brightness(1.06);
+}
+
+.controlEnd:active {
+  transform: scale(0.94);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen,
+  .ring {
+    animation: none;
+  }
+}
+
+/* The background of an audio call in progress. Sits inside the call
+   overlay, under its top bar and controls. */
+.stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  text-align: center;
+  background: linear-gradient(180deg, #f7f8fa 0%, #eceef2 100%);
+  color: var(--hl-ink);
+  font-family: var(--hl-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.stage :where(p) {
+  margin: 0;
+  font-family: inherit;
+}

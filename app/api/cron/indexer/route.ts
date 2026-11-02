@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { runAllAggregations } from '@/lib/indexer/aggregation-service';
+import { isCronAuthorized } from '@/lib/security/cronAuth';
 
 export const dynamic  = 'force-dynamic';
 export const runtime  = 'nodejs';
@@ -16,10 +17,8 @@ export const maxDuration = 60; // Maximum 60s for cron completions on Railway
 
 export async function GET(req: NextRequest) {
     // Validate the cron secret to prevent unauthorized triggering
-    const authHeader = req.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // Open to everyone when CRON_SECRET was unset; now refused instead.
+    if (!isCronAuthorized(req)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -37,7 +36,7 @@ export async function GET(req: NextRequest) {
     } catch (err: any) {
         console.error('[CRON/INDEXER] Fatal:', err);
         return NextResponse.json(
-            { error: 'Aggregation failed', detail: err?.message },
+            { error: 'Aggregation failed' },
             { status: 500 }
         );
     }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFlag } from '@/lib/feature-flags/index';
-import { verifyAdminSession } from '@/lib/auth';
+import { requireAdmin } from '@/lib/admin-guard';
 
 // GET /api/feature-flags/[key]?wallet=0x...
 export async function GET(
@@ -32,8 +32,8 @@ export async function POST(
   { params }: { params: Promise<{ key: string }> }
 ) {
   const { key } = await params;
-  const admin  = await verifyAdminSession(req);
-  if (!admin) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  const deny = requireAdmin(req);
+  if (deny) return deny;
 
   const body = await req.json();
   const { setFlag } = await import('@/lib/feature-flags/index');

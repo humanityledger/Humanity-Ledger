@@ -359,7 +359,7 @@ function GlobalLedger({ feed }: { feed: any[] }) {
                         <div className="px-4 py-4 flex flex-col justify-center gap-1">
                              {txHash ? (
                                   <a
-                                   href={aztecExplorerUrl || `https://testnet.aztecscan.xyz`}
+                                   href={aztecExplorerUrl || `https://aztecscan.xyz`}
                                    target="_blank"
                                    rel="noopener noreferrer"
                                    className="text-[10px] font-black font-mono text-emerald-600 hover:underline flex items-center gap-1"
@@ -476,7 +476,7 @@ export function GoldTicketPanel() {
         await new Promise(r => setTimeout(r, 800));
         
         try {
-            const rpcUrl = process.env.NEXT_PUBLIC_AZTEC_NODE_URL || 'https://v5.testnet.rpc.aztec-labs.com';
+            const rpcUrl = process.env.NEXT_PUBLIC_AZTEC_NODE_URL || 'https://node.aztec.network';
             toast.loading('[Aztec] Connecting to RPC Node...', { id: 'aztec-rpc' });
             await fetch(rpcUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "node_getNodeInfo", params: [] }) });
             toast.loading('[Aztec] Connected! Generating Shielded Account...', { id: 'aztec-rpc' });
@@ -515,7 +515,7 @@ export function GoldTicketPanel() {
                 toast.success(
                   <span className="flex flex-col gap-1">
                     <span>Registration Complete — Welcome to the System Ledger</span>
-                    <a href={sigData.aztecExplorerUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 underline font-mono">
+                    <a href={sigData.aztecExplorerUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 underline font-mono">
                       Verify on AztecScan
                     </a>
                   </span>,
@@ -707,7 +707,7 @@ export function GoldTicketPanel() {
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-black/40 font-mono uppercase tracking-wider text-[9px] font-bold">Network</span>
-              <span className="font-mono font-black text-[#7C3AED]">Aztec Testnet</span>
+              <span className="font-mono font-black text-[#7C3AED]">Aztec Mainnet</span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-black/40 font-mono uppercase tracking-wider text-[9px] font-bold">Mint Fee Paid</span>
@@ -717,7 +717,7 @@ export function GoldTicketPanel() {
               <div className="flex justify-between items-center text-xs">
                 <span className="text-black/40 font-mono uppercase tracking-wider text-[9px] font-bold">Transaction Hash</span>
                 <a
-                  href={aztecExplorerUrl || `https://testnet.aztecscan.xyz`}
+                  href={aztecExplorerUrl || `https://aztecscan.xyz`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-mono font-black text-black hover:underline flex items-center gap-1"
@@ -826,3 +826,4 @@ export function GoldTicketPanel() {
     </div>
   );
 }
+

@@ -60,9 +60,9 @@ export async function GET(request: NextRequest) {
         if (!mobileWallet) {
             try {
                 const session = await getSession();
-                mobileWallet = (session as any)?.walletAddress || request.cookies.get('system_handshake')?.value || '';
+                mobileWallet = (session as any)?.walletAddress || (session as any)?.userId || '';
             } catch {
-                mobileWallet = request.cookies.get('system_handshake')?.value || '';
+                mobileWallet = '';
             }
         }
 

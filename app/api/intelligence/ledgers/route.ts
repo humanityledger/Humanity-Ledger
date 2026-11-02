@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ledgerService } from '@/lib/services/ledger-data';
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 const CATEGORIES = ['Institutional', 'Ledger', 'Exchange', 'Smart Money', 'MEV Bot', 'Fund', 'DAO'];
 

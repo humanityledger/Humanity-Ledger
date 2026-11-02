@@ -1,13 +1,11 @@
-import { AztecDocPage } from '@/components/landing/AztecDocPage';
-import { ROADMAP_SECTIONS } from '@/lib/content/footerPagesAztec';
+import { redirect } from "next/navigation";
 
-export default function RoadmapPage() {
-  return (
-    <AztecDocPage
-      eyebrow="Protocol · System Architecture"
-      title="System Architecture"
-      subtitle="Five-phase implementation plan for the Humanity Ledger protocol on the Aztec Network. Each phase builds on verified foundations, from cryptographic infrastructure to full sovereign adoption."
-      sections={ROADMAP_SECTIONS}
-    />
-  );
+/**
+ * Retired on 23 October 2026. This page described the product in ways the
+ * code does not support (a token, open source licensing, guarantees that are
+ * not met). The documentation is the single description of the product now;
+ * old links land on the page that covers the same ground.
+ */
+export default function Moved() {
+  redirect("/changelog");
 }

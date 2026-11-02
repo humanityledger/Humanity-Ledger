@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 // Revalidate server-side cache every 5 minutes
-export const revalidate = 300;
-
 /**
  * GET /api/fx/eur-rate
  *

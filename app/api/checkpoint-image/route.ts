@@ -13,15 +13,15 @@ import path from "path";
 const ASSET_ALIAS: Record<string, string[]> = {
   "official-ledger-system.png": [
     path.join(process.cwd(), "public", "official-ledger-system.png"),
-    path.join(process.cwd(), "public", "logo-landingpage.png"),
-    path.join(process.cwd(), "public", "official-ledger-legendary.png"),
-    path.join(process.cwd(), "public", "official-ledger-monochrome.png"),
-    path.join(process.cwd(), "public", "ledger-logo.png"),
-    path.join(process.cwd(), "public", "official-ledger.png"),
+    path.join(process.cwd(), "public", "logo-mark.png"),
+    path.join(process.cwd(), "public", "logo-mark.png"),
+    path.join(process.cwd(), "public", "logo-mark.png"),
+    path.join(process.cwd(), "public", "logo-mark.png"),
+    path.join(process.cwd(), "public", "logo-mark.png"),
   ],
   "ledger-logo-institutional.png": [
     path.join(process.cwd(), "public", "official-ledger-system.png"),
-    path.join(process.cwd(), "public", "logo-landingpage.png"),
+    path.join(process.cwd(), "public", "logo-mark.png"),
     path.join(process.cwd(), "public", "ledger-logo-institutional.png"),
   ],
   "corporate-cube-grid.jpg": [

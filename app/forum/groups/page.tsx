@@ -2,8 +2,7 @@ import React from 'react';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 
-export const dynamic   = 'force-dynamic';
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 export default async function ForumGroupsPage() {
   let groupsData = { ELITE: 0, PRO: 0, STANDARD: 0, FREE: 0, TOTAL: 0 };

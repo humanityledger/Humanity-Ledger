@@ -4,7 +4,7 @@ import { deriveAztecAddress } from '@/lib/aztec/zk-identity';
 /**
  * identity-gate.ts — Humanity Ledger Supply Gate
  * ─────────────────────────────────────────────
- * Enforces the hard cap of 200 unique identities on the Aztec Testnet.
+ * Enforces the hard cap of 200 unique identities on the Aztec Mainnet.
  *
  * Only wallets that have CLAIMED one of the 200 genesis airdrops are
  * considered "verified identities" and are granted full domain access.

@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 
     } catch (err: any) {
         return NextResponse.json(
-            { error: 'Sector rankings unavailable', detail: err?.message },
+            { error: 'Sector rankings unavailable', detail: 'Internal error' },
             { status: 503 }
         );
     }

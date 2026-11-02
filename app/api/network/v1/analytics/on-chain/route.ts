@@ -4,9 +4,9 @@ import { NextResponse } from 'next/server';
 /**
  * On-Chain Metrics API
  * Aggregates key on-chain health indicators from mempool.space stats endpoint.
- * Cached 5 minutes.
+ * Cached dynamically via fetch next options, not full route cache.
  */
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 const MEMPOOL_BASE = 'https://mempool.space/api';
 

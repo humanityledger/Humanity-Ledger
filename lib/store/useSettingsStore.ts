@@ -38,6 +38,11 @@ export interface SystemSettings {
     audioAlerts: boolean;
     ledgerAlertThreshold: number;
     email: string;
+    notif_msgs?: boolean;
+    notif_calls?: boolean;
+    notif_sound?: boolean;
+    dnd?: boolean;
+    notif_preview?: boolean;
 
     // ── 5. Privacy & Security ─────────────────────────────────────────────
     inactivityLockMinutes: number;
@@ -45,6 +50,8 @@ export interface SystemSettings {
     stealthMode: boolean;
     requireSignForExports: boolean;
     allowAnalytics: boolean;
+    payments_enabled?: boolean;
+    displayName?: string;
 
     // ── 6. Chat Identity ──────────────────────────────────────────────────
     chatName: string;
@@ -158,23 +165,11 @@ const applyDOMClasses = (state: Partial<SystemSettings>) => {
     if (typeof document === 'undefined') return;
     const html = document.documentElement;
 
-    // Theme
-    if (state.theme) {
-        const resolvedDark =
-            state.theme === 'dark' ||
-            (state.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        if (resolvedDark) {
-            html.classList.add('dark');
-            html.setAttribute('data-theme', 'dark');
-            html.style.backgroundColor = '#0A0A0A';
-            html.style.color = '#F5F5F5';
-        } else {
-            html.classList.remove('dark');
-            html.setAttribute('data-theme', 'light');
-            html.style.backgroundColor = '#FFFFFF';
-            html.style.color = '#1C1917';
-        }
-    }
+    // Theme — Always enforce pure sovereign light aesthetic (no dark mode per architecture)
+    html.classList.remove('dark');
+    html.setAttribute('data-theme', 'light');
+    html.style.backgroundColor = '#FFFFFF';
+    html.style.color = '#15171c';
 
     // UI Density
     if (state.density) {
@@ -254,6 +249,11 @@ export const useSettingsStore = create<SettingsState>()(
             audioAlerts: true,
             ledgerAlertThreshold: 1000000,
             email: '',
+            notif_msgs: true,
+            notif_calls: true,
+            notif_sound: true,
+            dnd: false,
+            notif_preview: true,
 
             // ── Defaults: Privacy ─────────────────────────────────────────
             inactivityLockMinutes: 15,
@@ -261,6 +261,8 @@ export const useSettingsStore = create<SettingsState>()(
             stealthMode: false,
             requireSignForExports: false,
             allowAnalytics: false,
+            payments_enabled: true,
+            displayName: '',
 
             // ── Defaults: Chat Identity ───────────────────────────────────
             chatName: 'Ledger User',
@@ -407,12 +409,19 @@ export const useSettingsStore = create<SettingsState>()(
                 audioAlerts: state.audioAlerts,
                 ledgerAlertThreshold: state.ledgerAlertThreshold,
                 email: state.email,
+                notif_msgs: state.notif_msgs,
+                notif_calls: state.notif_calls,
+                notif_sound: state.notif_sound,
+                dnd: state.dnd,
+                notif_preview: state.notif_preview,
                 // Privacy
                 inactivityLockMinutes: state.inactivityLockMinutes,
                 autoDisconnectTimer: state.autoDisconnectTimer,
                 stealthMode: state.stealthMode,
                 requireSignForExports: state.requireSignForExports,
                 allowAnalytics: state.allowAnalytics,
+                payments_enabled: state.payments_enabled,
+                displayName: state.displayName,
                 // Identity
                 chatName: state.chatName,
                 chatBio: state.chatBio,
@@ -453,3 +462,22 @@ export const useSettingsStore = create<SettingsState>()(
         }
     )
 );
+
+
+// [BACKEND SYNC] Subscribe to Zustand changes and sync to backend
+if (typeof window !== 'undefined') {
+  useSettingsStore.subscribe((state) => {
+    // Debounce the sync to avoid API spam
+    if ((window as any)._settingsSyncTimeout) clearTimeout((window as any)._settingsSyncTimeout);
+    (window as any)._settingsSyncTimeout = setTimeout(() => {
+      const address = localStorage.getItem('wagmi.store') ? JSON.parse(localStorage.getItem('wagmi.store')!).state.connections.value?.[0]?.[1]?.accounts?.[0] : null;
+      if (!address) return;
+      fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-verified-session-address': address },
+        body: JSON.stringify(state)
+      }).catch(e => console.error('[Zustand Sync] Failed:', e));
+    }, 1000);
+  });
+}
+

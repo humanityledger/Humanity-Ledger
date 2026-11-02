@@ -1,0 +1,214 @@
+# Humanity Ledger — Hardening Branch Invariant CI
+# Runs on every push/PR to claude/sync-and-hardening
+# Enforces: all invariant tests, traceability, npm audit, no-simulation guard
+
+name: Invariant & Security CI (claude/sync-and-hardening)
+
+on:
+  push:
+    branches:
+      - claude/sync-and-hardening
+  pull_request:
+    branches:
+      - claude/sync-and-hardening
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # ─── Job 1: Invariant Test Battery ────────────────────────────────────────
+  invariant-tests:
+    name: Invariant Tests (A1–A7)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies (no scripts)
+        run: npm ci --legacy-peer-deps --ignore-scripts
+
+      - name: A1 — No-simulation guard (Aztec PXE)
+        run: npx vitest run test/aztec_e2e_no_simulation.test.ts
+        env:
+          NODE_ENV: test
+
+      - name: A2 — MLS post-compromise security (RFC 9420)
+        run: npx vitest run test/mls_post_compromise.test.ts
+        env:
+          NODE_ENV: test
+
+      - name: A3 — EAF adversarial isolation (P6)
+        run: npx vitest run test/eaf_isolation.adversarial.test.ts
+        env:
+          NODE_ENV: test
+
+      - name: A4 — L1 bytecode static analysis
+        run: npx tsx scripts/verify-l1-bytecode.ts
+
+      - name: A5 — Key custody (P5)
+        run: npx vitest run test/key_custody.test.ts
+        env:
+          NODE_ENV: test
+
+      - name: A6 — Traceability consistency lock
+        run: npx tsx scripts/check-traceability.ts
+
+      - name: A7 — Noir circuit constraint tests (21 tests)
+        run: npx vitest run test/circuits/
+        env:
+          NODE_ENV: test
+
+      - name: VK Integrity & Lifecycle Assertion
+        run: npx vitest run test/aztec_vk_integrity.test.ts
+        env:
+          NODE_ENV: test
+
+  # ─── Job 2: Fortification & Fuzz ─────────────────────────────────────────
+  fortification:
+    name: 300-Item Fortification + 60k Fuzz
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --ignore-scripts
+
+      - name: Fortification checklist (28 tests)
+        run: npx vitest run test/fortification.test.ts
+        env:
+          NODE_ENV: test
+
+      - name: Lazarus & APT Adversarial Deep Battery (14 vectors)
+        run: npx vitest run test/lazarus_adversarial_deep.test.ts
+        env:
+          NODE_ENV: test
+
+      - name: Quantum-Grade Cryptographic Hardening Battery (8 vectors)
+        run: npx vitest run test/unit/security/quantum_crypto_adversarial.test.ts
+        env:
+          NODE_ENV: test
+
+      - name: Mathematical Property-Based Adversarial Battery (fast-check)
+        run: npx vitest run test/property/lazarus_adversarial_properties.test.ts
+        env:
+          NODE_ENV: test
+
+      - name: Property-based fuzz (60,000 iterations)
+        run: npx vitest run test/property_fuzz.test.ts
+        env:
+          NODE_ENV: test
+
+  # ─── Job 3: Dependency Audit ─────────────────────────────────────────────
+  dependency-audit:
+    name: npm audit — Block on any vulnerability
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --ignore-scripts
+
+      - name: npm audit — zero tolerance
+        run: |
+          npm audit --audit-level=low --json > npm-audit-report.json || true
+          node -e "
+            const report = require('./npm-audit-report.json');
+            const vulns = report.metadata?.vulnerabilities ?? {};
+            const total = Object.values(vulns).reduce((a, b) => a + b, 0);
+            console.log('Vulnerabilities:', JSON.stringify(vulns));
+            if (total > 0) {
+              console.error('BLOCKED: ' + total + ' vulnerabilities found on hardening branch.');
+              process.exit(1);
+            }
+            console.log('[PASS] Zero vulnerabilities on claude/sync-and-hardening.');
+          "
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hardening-audit-report
+          path: npm-audit-report.json
+          retention-days: 90
+
+  # ─── Job 4: No-Simulation String Guard ───────────────────────────────────
+  no-simulation-guard:
+    name: Simulation String Guard (Fr.random / mock / simulated)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan for prohibited simulation strings in production code
+        run: |
+          echo "Scanning for prohibited strings in production code paths..."
+          FORBIDDEN_FOUND=0
+
+          # Exclude: test files, docs, node_modules, .git, scripts/endurance (expected mock data)
+          for pattern in "Fr\.random()" "simulatedNullifier" "simulatedCommitment" "mockWorkerProof" "UltraHonk-v1-proof-verified"; do
+            MATCHES=$(grep -rn "$pattern" \
+              --include="*.ts" --include="*.tsx" --include="*.js" --include="*.mjs" \
+              --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=test \
+              --exclude-dir=docs \
+              . 2>/dev/null || true)
+            if [ -n "$MATCHES" ]; then
+              echo "FORBIDDEN PATTERN '$pattern' found in production code:"
+              echo "$MATCHES"
+              FORBIDDEN_FOUND=1
+            fi
+          done
+
+          if [ "$FORBIDDEN_FOUND" -eq 1 ]; then
+            echo "BLOCKED: Simulation strings present in production code paths."
+            exit 1
+          fi
+          echo "[PASS] Zero simulation strings in production code."
+
+  # ─── Job 5: VK Integrity Check ───────────────────────────────────────────
+  vk-integrity:
+    name: VK Artifacts Present and Valid JSON
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify VK artifacts exist and are valid JSON
+        run: |
+          for circuit in escrow streams identity; do
+            VK_PATH="circuits/${circuit}/target/${circuit}.vk.json"
+            if [ ! -f "$VK_PATH" ]; then
+              echo "MISSING: $VK_PATH"
+              exit 1
+            fi
+            # Validate JSON structure
+            node -e "
+              const vk = require('./${VK_PATH}');
+              if (!vk.circuit || !vk.vkHash || !vk.provingSystem) {
+                console.error('INVALID VK structure in ${VK_PATH}');
+                process.exit(1);
+              }
+              console.log('[OK] ${circuit} VK: hash=' + vk.vkHash.slice(0,18) + '...');
+            "
+          done
+          echo "[PASS] All 3 VK artifacts present and valid."

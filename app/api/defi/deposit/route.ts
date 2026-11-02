@@ -27,6 +27,6 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error('[DeFi_API_Deposit]', error.message);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

@@ -12,6 +12,7 @@ export class TransactionManager {
   // Extradimensional Quantum Nonce Tracker (Mutex / Local Cache)
   // Prevents 'Nonce too low' EVM reverts when rapid-firing transactions before the Mempool updates.
   private static localNonceCache: Map<string, { nonce: number, timestamp: number }> = new Map();
+  private static nonceMutex: Map<string, Promise<void>> = new Map();
 
   constructor(wallet: ethers.Wallet) {
     if (!wallet.provider) throw new Error("Wallet must be connected to a Provider.");
@@ -25,6 +26,17 @@ export class TransactionManager {
    */
   async getSafeNextNonce(): Promise<number> {
     const address = this.wallet.address.toLowerCase();
+    
+    // Asynchronous Mutex to prevent TOCTOU race conditions
+    while (TransactionManager.nonceMutex.get(address)) {
+      await TransactionManager.nonceMutex.get(address);
+    }
+    
+    let releaseMutex: () => void;
+    const mutexPromise = new Promise<void>(resolve => { releaseMutex = resolve; });
+    TransactionManager.nonceMutex.set(address, mutexPromise);
+    
+    try {
     const networkPending = await this.provider.getTransactionCount(this.wallet.address, "pending");
     
     const local = TransactionManager.localNonceCache.get(address);
@@ -40,6 +52,10 @@ export class TransactionManager {
     // Otherwise, trust the network and seed the cache
     TransactionManager.localNonceCache.set(address, { nonce: networkPending, timestamp: now });
     return networkPending;
+    } finally {
+      TransactionManager.nonceMutex.delete(address);
+      releaseMutex!();
+    }
   }
 
   /**
@@ -122,3 +138,4 @@ export class TransactionManager {
     return signature;
   }
 }
+

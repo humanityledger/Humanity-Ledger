@@ -200,7 +200,7 @@ export async function GET(req: NextRequest) {
                 } catch (err: any) {
                     if (!running) break;
                     // Send error event (non-fatal  client will stay connected)
-                    send('error', { message: err?.message ?? 'Stream error' });
+                    send('error', { message: 'Internal error' });
                     await new Promise(r => setTimeout(r, 3000));
                 }
             }

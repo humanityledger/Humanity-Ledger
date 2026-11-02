@@ -4,7 +4,7 @@ import { serializePassport } from '@/lib/passport/serialize';
 import { PassportView } from '@/components/passport/PassportView';
 import { PassportWalletGuard } from '@/components/passport/PassportWalletGuard';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 type Props = { params: Promise<{ slug: string }> };
 

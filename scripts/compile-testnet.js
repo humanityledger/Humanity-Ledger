@@ -34,7 +34,7 @@ for (const contract of contracts) {
     `${contractPath}:/usr/src/project`,
     '-w',
     '/usr/src/project',
-    'aztecprotocol/aztec:5.0.0',
+    'azteclabs/aztec:5.0.0',
     'compile'
   ];
 

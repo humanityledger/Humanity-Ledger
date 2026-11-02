@@ -1,0 +1,30 @@
+# Branch Protection Rules — J-005
+# Apply these settings in GitHub → Settings → Branches → Add rule for 'main'
+
+branch: main
+
+rules:
+  require_pull_request_before_merging: true
+  required_approving_review_count: 1
+  dismiss_stale_reviews: true
+  require_code_owner_reviews: true
+  require_status_checks_to_pass_before_merging: true
+  required_status_checks:
+    - "TypeScript + ESLint + Forbidden Patterns"
+    - "Secret Scanning (Gitleaks)"
+  require_branches_to_be_up_to_date_before_merging: true
+  restrict_pushes_direct_to_branch: true
+  allow_force_pushes: false
+  allow_deletions: false
+  block_creations: false
+
+# To apply programmatically with GitHub CLI:
+# gh api repos/:owner/:repo/branches/main/protection \
+#   --method PUT \
+#   --field required_pull_request_reviews[required_approving_review_count]=1 \
+#   --field required_status_checks[strict]=true \
+#   --field restrictions=null \
+#   --field enforce_admins=false \
+#   --field required_linear_history=false \
+#   --field allow_force_pushes=false \
+#   --field allow_deletions=false

@@ -10,6 +10,6 @@ export async function GET() {
         const latest = mempoolWatcher.recentTiers.slice(-30);
         return NextResponse.json({ result: latest });
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

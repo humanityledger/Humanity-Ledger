@@ -6,6 +6,7 @@ export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean })
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [showTranscript, setShowTranscript] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
 
   useEffect(() => {
@@ -83,53 +84,71 @@ export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean })
   };
 
   return (
-    <div className={`flex items-center gap-2 min-w-[200px] max-w-[280px] p-2 rounded-2xl transition-all ${isMe ? 'bg-[#050505]' : 'bg-gray-100/50'}`}>
-      <audio ref={audioRef} src={src} preload="metadata" playsInline x-webkit-airplay="allow" />
-      
-      <button 
-        onClick={togglePlay}
-        className={`w-9 h-9 flex items-center justify-center shrink-0 rounded-full transition-colors ${
-          isMe ? 'bg-white text-black hover:bg-white/90' : 'bg-[#050505] text-white hover:bg-black/90'
-        }`}
-      >
-        {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-1" />}
-      </button>
+    <div className="flex flex-col gap-1 w-full select-none">
+      <div className="flex items-center gap-2.5 min-w-[220px] max-w-[290px] py-1">
+        <audio ref={audioRef} src={src} preload="auto" playsInline x-webkit-airplay="allow" />
+        
+        <button
+          type="button"
+          onClick={togglePlay}
+          aria-label={isPlaying ? 'Pause voice message' : 'Play voice message'}
+          className="w-9 h-9 rounded-full bg-[#15171c] hover:bg-[#2b2f38] text-white flex items-center justify-center shrink-0 transition-all active:scale-95"
+        >
+          {isPlaying ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
+        </button>
 
-      <div className="flex-1 flex flex-col gap-1 mx-1 justify-center">
-        {/* Synthetic Waveform aesthetic */}
-        <div className="relative w-full h-8 flex items-center">
-           <input
-            type="range"
-            min={0}
-            max={duration || 1}
-            value={progress}
-            onChange={handleSeek}
-            className="absolute z-20 w-full opacity-0 cursor-pointer h-full"
-          />
-          {/* Aesthetic visual waveform bar */}
-          <div className={`w-full h-1.5 rounded-full relative overflow-hidden ${isMe ? 'bg-white/20' : 'bg-black/10'}`}>
-            <div 
-              className={`absolute top-0 left-0 h-full rounded-full transition-all duration-75 ${isMe ? 'bg-white' : 'bg-[#050505]'}`}
-              style={{ width: `${duration ? (progress / duration) * 100 : 0}%` }}
+        <div className="flex-1 flex flex-col gap-1 mx-1 justify-center">
+          {/* Waveform track with seekable slider */}
+          <div className="relative w-full h-7 flex items-center gap-[2px] cursor-pointer">
+            <input
+              type="range"
+              min={0}
+              max={duration || 1}
+              step="0.05"
+              value={progress}
+              onChange={handleSeek}
+              aria-label="Position in voice message"
+              className="absolute z-20 w-full opacity-0 cursor-pointer h-full inset-0"
             />
+            {/* Generate 30 bars for the waveform */}
+            {Array.from({ length: 28 }).map((_, i) => {
+              const isActive = duration > 0 && (i / 28) <= (progress / duration);
+              const height = 24 + ((i * 19) % 56); 
+              return (
+                <div 
+                  key={i} 
+                  className={`flex-1 rounded-full transition-colors duration-100 ${
+                    isActive ? 'bg-[#15171c]' : 'bg-[#d4d8df]'
+                  }`}
+                  style={{ height: `${height}%` }}
+                />
+              );
+            })}
+          </div>
+          
+          <div className="flex items-center justify-between text-[12px] tabular-nums text-[#727a88] leading-none px-0.5">
+            <span>{isPlaying ? formatTime(progress) : formatTime(duration)}</span>
+            {duration > 0 && <span>{formatTime(duration)}</span>}
           </div>
         </div>
-        
-        <div className={`flex items-center justify-between px-1 ${isMe ? 'text-white/60' : 'text-black/50'}`}>
-           <span className="text-[9px] font-mono font-medium tracking-wider">
-             {isPlaying ? formatTime(progress) : formatTime(duration)}
-           </span>
-        </div>
+
+        {/* Speed toggle pill */}
+        <button
+          type="button"
+          onClick={togglePlaybackRate}
+          aria-label="Playback speed"
+          className="px-2 py-0.5 rounded-full text-[12px] font-medium tabular-nums bg-[#eff1f4] hover:bg-[#e4e7ec] text-[#4a505c] transition-colors shrink-0"
+        >
+          {playbackRate}x
+        </button>
       </div>
 
-      <button 
-        onClick={togglePlaybackRate}
-        className={`w-8 h-8 flex items-center justify-center rounded-full text-[10px] font-bold font-mono transition-colors shrink-0 ${
-          isMe ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-black/5 hover:bg-black/10 text-black'
-        }`}
-      >
-        {playbackRate}x
-      </button>
+      {showTranscript && (
+        <div className="px-3 py-1.5 rounded-xl text-[13px] bg-[#f2f4f7] text-[#4a505c]">
+          Transcribing
+        </div>
+      )}
     </div>
   );
 };
+

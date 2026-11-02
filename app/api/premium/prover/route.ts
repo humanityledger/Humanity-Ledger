@@ -67,10 +67,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Verify Aztec Testnet node is alive (Zero-Mock mandate) ───────────────
+    // ── Verify Aztec Mainnet node is alive (Zero-Mock mandate) ───────────────
     console.log(`[Prover] Delegating ZK proof generation for tier: ${userTier} | address: ${issuerAddress.slice(0, 12)}…`);
     const { createAztecNodeClient } = await import('@aztec/aztec.js/node');
-    const nodeUrl = process.env.AZTEC_NODE_URL || 'https://v5.testnet.rpc.aztec-labs.com';
+    const nodeUrl = process.env.AZTEC_NODE_URL || 'https://node.aztec.network';
     const node    = createAztecNodeClient(nodeUrl);
 
     const [blockNumber, nodeInfo] = await Promise.all([
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     // ZK Status: DEMO — no on-chain verifier contract consuming this proof yet.
     return NextResponse.json({
       success:          true,
-      message:          'Server-side proving delegated to Aztec Testnet Prover Node.',
+      message:          'Server-side proving delegated to Aztec Mainnet Prover Node.',
       proverNetwork:    nodeInfo.l1ContractAddresses?.rollupAddress?.toString(),
       l1ChainId:        nodeInfo.l1ChainId,
       rollupVersion:    nodeInfo.rollupVersion,

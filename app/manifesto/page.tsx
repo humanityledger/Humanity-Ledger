@@ -1,13 +1,11 @@
-import { AztecDocPage } from '@/components/landing/AztecDocPage';
-import { MANIFESTO_SECTIONS } from '@/lib/content/footerPagesAztec';
+import { redirect } from "next/navigation";
 
-export default function ManifestoPage() {
-  return (
-    <AztecDocPage
-      eyebrow="Protocol · Privacy Manifesto"
-      title="Privacy Manifesto"
-      subtitle="The foundational principles governing data Privatety, financial confidentiality, and cryptographic self-determination within the Humanity Ledger protocol."
-      sections={MANIFESTO_SECTIONS}
-    />
-  );
+/**
+ * Retired on 23 October 2026. This page described the product in ways the
+ * code does not support (a token, open source licensing, guarantees that are
+ * not met). The documentation is the single description of the product now;
+ * old links land on the page that covers the same ground.
+ */
+export default function Moved() {
+  redirect("/company");
 }

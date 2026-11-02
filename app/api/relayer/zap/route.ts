@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
 import { ethers } from "ethers";
 import { prisma } from "@/lib/prisma";
@@ -23,6 +24,12 @@ const ZAP_ABI = [
 
 export async function POST(req: NextRequest) {
     try {
+        // Auth guard
+        const session = await getSession();
+        if (!session?.userId) {
+            return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
+        }
+
         // ====================================================================
         // PARSE REQUEST
         // ====================================================================
@@ -48,7 +55,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        console.log(`[Relayer] Processing gasless zap for user: ${user}`);
+        console.log("[Relayer] Processing gasless zap for authenticated user");
         console.log(`[Relayer] Amount: ${ethers.formatEther(wldAmount)} AUTH`);
 
         // ====================================================================
@@ -59,11 +66,10 @@ export async function POST(req: NextRequest) {
         const relayerWallet = new ethers.Wallet(RELAYER_PRIVATE_KEY, provider);
         const zapContract = new ethers.Contract(ZAP_CONTRACT_ADDRESS, ZAP_ABI, relayerWallet);
 
-        console.log(`[Relayer] Relayer address: ${relayerWallet.address}`);
+        // Relayer address intentionally not logged (operational security)
 
         // Check relayer balance
         const balance = await provider.getBalance(relayerWallet.address);
-        console.log(`[Relayer] Balance: ${ethers.formatEther(balance)} ETH`);
 
         if (balance < ethers.parseEther("0.001")) {
             console.error("[Relayer] Insufficient balance!");
@@ -126,7 +132,7 @@ export async function POST(req: NextRequest) {
         await prisma.blockchainTransaction.create({
             data: {
                 txHash: tx.hash,
-                userId: user.toLowerCase(),
+                userId: session.userId, // IDOR fix: use verified session, NOT client-supplied user field
                 blockNumber: 0,
                 status: "PENDING",
                 type: "GASLESS_ZAP",
@@ -200,16 +206,16 @@ export async function POST(req: NextRequest) {
     } catch (error: any) {
         console.error("[Relayer] Error:", error);
 
-        // Check if it's a revert
+        // Check if it's a revert -- return generic message, not raw revert string
         if (error.message?.includes("revert")) {
             return NextResponse.json(
-                { error: `Transaction reverted: ${error.message}` },
+                { error: "Transaction reverted on-chain. Check parameters." },
                 { status: 400 }
             );
         }
 
         return NextResponse.json(
-            { error: error.message || "Relayer execution failed" },
+            { error: 'Internal Server Error' || "Relayer execution failed" },
             { status: 500 }
         );
     }
@@ -242,7 +248,7 @@ export async function GET(req: NextRequest) {
     } catch (error: any) {
         console.error("[Relayer] Nonce fetch error:", error);
         return NextResponse.json(
-            { error: error.message || "Failed to fetch nonce" },
+            { error: 'Internal Server Error' || "Failed to fetch nonce" },
             { status: 500 }
         );
     }

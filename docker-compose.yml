@@ -9,7 +9,7 @@ services:
       - "8545:8545"
 
   aztec-sandbox:
-    image: aztecprotocol/aztec-sandbox:latest
+    image: aztecprotocol/aztec-sandbox:6.0.0-rc.1
     ports:
       - "18080:8080" # PXE  (host 18080 → container 8080)
       - "18081:8081" # Node (host 18081 → container 8081)
@@ -21,3 +21,40 @@ services:
       - AZTEC_PORT=8080
     depends_on:
       - ethereum
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=humanity_ledger
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+
+  app:
+    build:
+      context: .
+      target: runner
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/humanity_ledger
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  pgdata:
+  redisdata:

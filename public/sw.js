@@ -1,197 +1,135 @@
-/**
- * System Service Worker — Axioma 452 v3
- *
- * KEY FIX: CACHE_VERSION is now a build timestamp injected at build time.
- * On every Railway deploy, a new timestamp is embedded, which causes the SW
- * activate event to delete ALL old caches — eliminating ChunkLoadErrors.
- *
- * Strategy:
- *   - JS/CSS chunks (.next/static): Network-first (never serve stale hashed chunks)
- *   - Images/fonts: Cache-first (truly immutable by filename hash)
- *   - HTML pages: Network-first (always get fresh HTML from server)
- *   - API routes: Network-only (never cache dynamic data)
- */
+// Self-unregister immediately on localhost/127.0.0.1 to avoid chunk poisoning in dev
+if (typeof self !== 'undefined' && (self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1')) {
+  self.addEventListener('install', () => self.skipWaiting());
+  self.addEventListener('activate', (event) => {
+    event.waitUntil(
+      caches.keys()
+        .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+        .then(() => self.registration.unregister())
+    );
+  });
+}
 
-// ─── CRITICAL: This timestamp changes on EVERY build ────────────────────────
-// Format: ISO string replaced by build script / CI. Falls back to deployment
-// URL parameter so Railway's CDN can distinguish builds.
-const BUILD_ID = self.registration.scope + '?v=4';
-const CACHE_VERSION = 'system-v4-08152026';
+// public/sw.js — the one service worker for Humanity Ledger (scope "/").
+//
+// Before: two different workers (sw.js and ledger-sw.js) were registered on
+// the same scope, so whichever registered last replaced the other. The push
+// worker also pre-cached four files that do not exist, so its install always
+// failed and push notifications could never show. And the cache-first fetch
+// handler served an old "/" after every deploy, pointing at chunks that no
+// longer existed (the ChunkLoadError the page has a recovery script for).
+//
+// Now: one worker; pages are network-first (fresh HTML after a deploy,
+// cached shell only when offline); hashed build assets are cache-first; the
+// API and anything that is not a same-origin GET is never touched.
 
-const STATIC_CACHE = `${CACHE_VERSION}-static`;
-const PAGE_CACHE   = `${CACHE_VERSION}-pages`;
+const VERSION = 'hl-2026-10-27';
+const SHELL_CACHE = `${VERSION}-shell`;
+const STATIC_CACHE = `${VERSION}-static`;
+const SHELL = ['/', '/manifest.json', '/favicon.ico', '/icon-192.png', '/icon-512.png'];
+const ICON = '/icon-192.png';
+const BADGE = '/favicon-32x32.png';
 
-// ─── Install: skip waiting immediately so new SW takes over fast ─────────────
 self.addEventListener('install', (event) => {
-  // Skip waiting — do NOT pre-cache. Pre-caching on install causes stale
-  // content to be served immediately. We load-on-demand instead.
+  // One missing file must never fail the install, so add them one by one.
+  event.waitUntil(
+    caches.open(SHELL_CACHE).then((cache) =>
+      Promise.all(SHELL.map((url) => cache.add(new Request(url, { cache: 'reload' })).catch(() => {}))),
+    ),
+  );
   self.skipWaiting();
 });
 
-// ─── Activate: DELETE ALL old caches from previous versions ─────────────────
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== STATIC_CACHE && key !== PAGE_CACHE)
-          .map((key) => {
-            console.log('[SW] Deleting stale cache:', key);
-            return caches.delete(key);
-          })
-      )
-    ).then(() => {
-      console.log('[SW] Activated. Cache version:', CACHE_VERSION);
-      return self.clients.claim();
-    })
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
   );
 });
 
-// ─── Fetch: routing strategies ───────────────────────────────────────────────
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
-
-  // Skip non-GET and cross-origin
-  if (request.method !== 'GET' || url.origin !== location.origin) return;
-
-  // 1. API routes → Network-only (never cache live data)
-  if (url.pathname.startsWith('/api/')) {
-    // Don't intercept — let browser handle natively
-    return;
-  }
-
-  // 2. Next.js JS/CSS chunks (_next/static) → Network-first
-  // These have content-hashed filenames, so network version is always "fresh".
-  // But we must NOT serve stale versions after a new deploy — that's what
-  // causes ChunkLoadErrors. Network-first ensures we always try network first.
-  if (url.pathname.startsWith('/_next/static/')) {
-    event.respondWith(networkFirstWithCache(request, STATIC_CACHE));
-    return;
-  }
-
-  // 3. Public static assets (images, fonts, icons) → Cache-first
-  // These are truly static and safe to cache aggressively.
-  const staticExts = ['.png', '.jpg', '.jpeg', '.webp', '.svg', '.ico', '.woff2', '.woff', '.ttf'];
-  if (staticExts.some((ext) => url.pathname.endsWith(ext))) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE));
-    return;
-  }
-
-  // 4. HTML navigation requests → Network-first (always fresh HTML)
-  // This ensures users get the latest build's HTML which references correct chunks.
-  if (request.mode === 'navigate') {
-    event.respondWith(networkFirstWithFallback(request, PAGE_CACHE));
-    return;
-  }
-});
-
-// ─── Strategy: Network-first with cache fallback ─────────────────────────────
-async function networkFirstWithCache(request, cacheName) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(cacheName);
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch {
-    const cached = await caches.match(request);
-    return cached ?? offlineFallback();
-  }
-}
-
-// ─── Strategy: Network-first for HTML with cache fallback ────────────────────
-async function networkFirstWithFallback(request, cacheName) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(cacheName);
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-    return offlineFallback();
-  }
-}
-
-// ─── Strategy: Cache-first for truly static assets ───────────────────────────
-async function cacheFirst(request, cacheName) {
-  const cached = await caches.match(request);
-  if (cached) return cached;
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(cacheName);
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch {
-    return offlineFallback();
-  }
-}
-
-// ─── Offline fallback ────────────────────────────────────────────────────────
-function offlineFallback() {
-  return new Response(
-    `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
-    <title>Ledger Network — Offline</title>
-    <style>
-      body{margin:0;background:#ffffff;color:#050505;font-family:monospace;
-           display:flex;align-items:center;justify-content:center;min-height:100vh;
-           flex-direction:column;gap:16px;}
-      h1{font-size:14px;letter-spacing:.2em;text-transform:uppercase;opacity:.6;}
-      p{font-size:11px;opacity:.4;letter-spacing:.1em;text-transform:uppercase;}
-    </style>
-    </head><body>
-      <h1>Ledger Network</h1>
-      <p>Offline — Reconnect to resume</p>
-    </body></html>`,
-    { headers: { 'Content-Type': 'text/html' } }
-  );
-}
-
-// ─── Message: force cache clear from app ─────────────────────────────────────
-// Called from the ChunkLoadError recovery script in app/layout.tsx
 self.addEventListener('message', (event) => {
-  if (event.data?.type === 'CLEAR_ALL_CACHES') {
-    caches.keys().then((keys) => {
-      Promise.all(keys.map((key) => caches.delete(key))).then(() => {
-        console.log('[SW] All caches cleared by app request');
-        event.ports[0]?.postMessage({ done: true });
-      });
-    });
-  }
-  if (event.data?.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-// ─── Push notifications ───────────────────────────────────────────────────────
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api/')) return;
+  if (url.pathname.startsWith('/_next/webpack-hmr') || url.pathname.includes('hot-update')) return;
+
+  // Hashed, immutable build output: cache-first.
+  if (url.pathname.startsWith('/_next/static/')) {
+    event.respondWith(
+      caches.open(STATIC_CACHE).then(async (cache) => {
+        const hit = await cache.match(req);
+        if (hit) return hit;
+        const res = await fetch(req);
+        if (res.ok) cache.put(req, res.clone()).catch(() => {});
+        return res;
+      }),
+    );
+    return;
+  }
+
+  // Pages: always ask the network first; fall back to the cached shell offline.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req).catch(async () => (await caches.match(req)) || (await caches.match('/')) || Response.error()),
+    );
+  }
+  // Everything else goes straight to the network (browser cache rules apply).
+});
+
+// ── Push notifications ──────────────────────────────────────────────────────
 self.addEventListener('push', (event) => {
   if (!event.data) return;
-  try {
-    const { title, body, icon, data } = event.data.json();
-    event.waitUntil(
-      self.registration.showNotification(title ?? 'Ledger Alert', {
-        body:  body  ?? 'New on-chain signal detected.',
-        icon:  icon  ?? '/icons/icon-192x192.png',
-        badge: '/icons/icon-96x96.png',
-        data,
-        tag:   'system-alert',
-        renotify: true,
-        requireInteraction: false,
-      })
-    );
-  } catch {
-    console.warn('[SW] Push payload parse error');
-  }
+  let data = {};
+  try { data = event.data.json(); } catch { data = { body: event.data.text() }; }
+
+  // Privacy-first: a payload can ask for the content to stay hidden.
+  const title = data.hideContent ? 'New message' : data.title || 'Ledger Chat';
+  const body = data.hideContent ? 'You have a new encrypted message.' : data.body || 'Open Ledger Chat to read it.';
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: ICON,
+      badge: BADGE,
+      vibrate: [200, 100, 200],
+      data: { url: data.url || '/chat', peerAddress: data.peerAddress },
+      tag: data.peerAddress || 'ledger-notification',
+      renotify: true,
+    }),
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url ?? '/dashboard';
-  event.waitUntil(clients.openWindow(url));
+  const data = event.notification.data || {};
+  const target = new URL(data.url || '/chat', self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      for (const client of windows) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          client.postMessage({ type: 'NAVIGATE_CHAT', peerAddress: data.peerAddress });
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow ? self.clients.openWindow(target) : undefined;
+    }),
+  );
+});
+
+// ── Background sync: ask an open tab to flush the offline outbox ─────────────
+self.addEventListener('sync', (event) => {
+  if (event.tag !== 'sync-messages') return;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((clients) => {
+      clients.forEach((client) => client.postMessage({ type: 'FLUSH_OUTBOX' }));
+    }),
+  );
 });

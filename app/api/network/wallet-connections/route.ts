@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export const revalidate = 0; // always fresh
+export const dynamic = 'force-dynamic';
 
 // Map ISO2 from cf-ipcountry to natural-earth country name used in the map
 const ISO2_TO_NAME: Record<string, string> = {
@@ -79,17 +79,10 @@ export async function GET() {
       // Redis unavailable — continue without it
     }
 
-    // Ensure real users appear on the map (attributed to Spain as primary market)
-    if (totalRealUsers > 0) {
-      byCountry["Spain"] = (byCountry["Spain"] || 0) + totalRealUsers;
-    }
-
-    // Guarantee at least one entry so the map renders
-    if (Object.keys(byCountry).length === 0) {
-      byCountry["Spain"] = 1;
-    }
-
-    const total = Math.max(totalRealUsers + addedFromRedis, 1);
+    // Only countries we actually recorded a connection from. Accounts without
+    // a recorded country used to be put on Spain, and an empty map got a made-up
+    // "Spain: 1"; both showed places nobody connected from.
+    const total = Math.max(totalRealUsers, addedFromRedis);
     const activeRegions = Object.keys(byCountry).length;
 
     return NextResponse.json(
@@ -99,7 +92,7 @@ export async function GET() {
   } catch (err: any) {
     console.error("[wallet-connections]", err?.message);
     return NextResponse.json(
-      { byCountry: { Spain: 1 }, total: 1, activeRegions: 1, updatedAt: Date.now() },
+      { byCountry: {}, total: 0, activeRegions: 0, updatedAt: Date.now() },
       { headers: { "Cache-Control": "no-store, no-cache" } }
     );
   }

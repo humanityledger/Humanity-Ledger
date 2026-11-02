@@ -1,0 +1,49 @@
+# Alert rules from the Aztec operator docs ("Monitoring and metrics", v6).
+# Metric names are matched with an optional suffix because the OTLP →
+# Prometheus conversion may append unit suffixes.
+groups:
+  - name: aztec-sequencer
+    rules:
+      - alert: AztecL2BlockHeightStalled
+        expr: max(changes({__name__=~"aztec_archiver_block_height(_.*)?"}[15m])) == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "L2 block height has not advanced for 15 minutes"
+
+      - alert: AztecPublisherCannotAffordSends
+        expr: min({__name__=~"aztec_l1_publisher_sends_affordable(_.*)?"}) < 1
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "The publisher cannot afford its next L1 transaction: the sequencer will skip its slot"
+
+      - alert: AztecPublisherBalanceLow
+        expr: min({__name__=~"aztec_l1_publisher_balance_eth(_.*)?"}) < 0.1
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Publisher ETH balance below 0.1 ETH"
+
+      - alert: AztecLowPeerCount
+        expr: max({__name__=~"aztec_peer_manager_peer_count_peers(_.*)?"}) < 5
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Fewer than 5 P2P peers (check TCP+UDP 40400 and P2P_IP)"
+
+      - alert: AztecL1HeightStalled
+        expr: max(changes({__name__=~"aztec_archiver_l1_block_height(_.*)?"}[5m])) == 0
+        for: 1m
+        labels: { severity: warning }
+        annotations:
+          summary: "The node's view of L1 has not advanced for 5 minutes (check ETHEREUM_HOSTS)"
+
+      - alert: AztecSlashingVotesNearQuorum
+        expr: >
+          max({__name__=~"aztec_slasher_own_validator_current_round_votes_max(_.*)?"})
+          >= 0.8 * max({__name__=~"aztec_slasher_quorum_size(_.*)?"})
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Slashing votes against one of our validators are close to quorum"

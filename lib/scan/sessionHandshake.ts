@@ -3,21 +3,8 @@
  */
 
 export type SessionHandshakeResult =
-  | { ok: true }
+  | { ok: true; cleanup?: () => void }
   | { ok: false; message: string; needsWallet?: boolean };
-
-/**
- * Read the wallet address from the system_handshake cookie (JS-readable).
- * Returns null if not set or invalid format.
- */
-function getHandshakeCookieAddress(): string | null {
-  try {
-    const match = document.cookie.match(/system_handshake=(0x[0-9a-fA-F]{40})/i);
-    return match?.[1]?.toLowerCase() ?? null;
-  } catch {
-    return null;
-  }
-}
 
 export async function completeSessionHandshake(
   decodedText: string,
@@ -112,12 +99,7 @@ export async function completeSessionHandshake(
   }
 
   // Determine the authoritative address
-  let resolvedAddress: string | null = null;
-  if (wagmiAddr) {
-    resolvedAddress = wagmiAddr.toLowerCase();
-  } else {
-    resolvedAddress = getHandshakeCookieAddress();
-  }
+  let resolvedAddress: string | null = wagmiAddr ? wagmiAddr.toLowerCase() : null;
 
   // 1. Verify if the server already recognizes our session (via HttpOnly cookies)
   // We CANNOT check document.cookie for human_session because it is HttpOnly.
@@ -227,34 +209,33 @@ export async function completeSessionHandshake(
   // If PIN is wrong/missing the desktop will fail to decrypt the AES-GCM payload
   const shared = await deriveSharedSecret(mobilePair.privateKey, ephemeralPub, isECDH, visualPin);
 
-  let postBody: Record<string, unknown>;
-  if (hasValidSession) {
-    let payloadStr = jwt || '';
-    try {
-      const normAddr = resolvedAddress;
-      const seed = normAddr ? localStorage.getItem(`ledger_chat_seed_${normAddr}`) : null;
-      const vault = localStorage.getItem('system_vault_v1');
-      payloadStr = JSON.stringify({ jwt, seed, vault });
-    } catch {}
+  // A one-time claim code, readable only by the computer that shows this QR
+  // code and its PIN. The server keeps the new session until the computer
+  // presents the code (see app/api/auth/qr-mobile-link). No session token
+  // travels in this message.
+  void jwt;
+  const claimBytes = crypto.getRandomValues(new Uint8Array(32));
+  const claim = Array.from(claimBytes, b => b.toString(16).padStart(2, '0')).join('');
+  const claimHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(claim))))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  let payloadStr = JSON.stringify({ claim });
+  try {
+    const normAddr = resolvedAddress;
+    const seed = normAddr ? localStorage.getItem(`ledger_chat_seed_${normAddr}`) : null;
+    const vault = localStorage.getItem('system_vault_v1');
+    payloadStr = JSON.stringify({ claim, seed, vault });
+  } catch { /* storage unavailable: send the claim alone */ }
 
-    const encrypted = await encryptAESGCM(shared, payloadStr);
-    postBody = {
-      uuid,
-      encryptedPayload: encrypted.encryptedPayload,
-      iv: encrypted.iv,
-      tag: encrypted.tag,
-      mobilePub: mobilePair.publicKey,
-      isServerMint: false,
-      fallbackJwt: jwt,
-    };
-  } else {
-    postBody = {
-      uuid,
-      mobilePub: mobilePair.publicKey,
-      isServerMint: true,
-      fallbackJwt: jwt,
-    };
-  }
+  const encrypted = await encryptAESGCM(shared, payloadStr);
+  const postBody: Record<string, unknown> = {
+    uuid,
+    desktopPub: ephemeralPub,
+    encryptedPayload: encrypted.encryptedPayload,
+    iv: encrypted.iv,
+    tag: encrypted.tag,
+    mobilePub: mobilePair.publicKey,
+    claimHash,
+  };
 
   const res = await fetch('/api/auth/qr-mobile-link', {
     method: 'POST',
@@ -287,7 +268,10 @@ export async function completeSessionHandshake(
       return;
     }
     try {
-      const sRes = await fetch(`/api/auth/qr-sync-seed?uuid=${uuid}`);
+      const sRes = await fetch(`/api/auth/qr-sync-seed?uuid=${uuid}`, {
+        credentials: 'include',
+        cache: 'no-store',
+      });
       if (sRes.ok) {
         const sData = await sRes.json();
         if (sData.encryptedSeed && sData.iv) {
@@ -313,5 +297,7 @@ export async function completeSessionHandshake(
     }
   }, 1000);
 
-  return { ok: true };
+  // Return cleanup so callers can clear the interval on component unmount
+  // (prevents ghost polling after the scan page is navigated away from)
+  return { ok: true, cleanup: () => clearInterval(pollSeed) };
 }

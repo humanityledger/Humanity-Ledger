@@ -1,0 +1,37 @@
+name: Weekly Performance Smoke Test (k6)
+
+on:
+  schedule:
+    # Run every Monday at 04:00 UTC
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+jobs:
+  k6-smoke:
+    name: k6 Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull and run k6 smoke test
+        run: |
+          docker run --rm -i grafana/k6:latest run - << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+
+          export const options = {
+            vus: 10,
+            duration: '30s',
+            thresholds: {
+              http_req_duration: ['p(95)<500'],
+              http_req_failed: ['rate<0.01'],
+            },
+          };
+
+          export default function () {
+            const res = http.get('https://humanidfi.com/api/health');
+            check(res, {
+              'status is 200': (r) => r.status === 200,
+            });
+            sleep(1);
+          }
+          EOF

@@ -41,7 +41,14 @@ export class TxBuilder {
     };
 
     // Precision gas estimation
-    const gasLimit = await provider.estimateGas(tx);
+    let gasLimit: bigint;
+    try {
+      gasLimit = await provider.estimateGas(tx);
+    } catch (err: any) {
+      console.error("[TxBuilder] Gas estimation reverted:", err);
+      // Fallback buffer or custom throw for insufficient funds
+      throw new Error(err.message.includes("insufficient funds") ? "INSUFFICIENT_FUNDS" : "CONTRACT_REVERT");
+    }
     // Add 10% buffer to gas limit for complex contract interactions
     tx.gasLimit = (gasLimit * BigInt(110)) / BigInt(100);
 
@@ -73,4 +80,5 @@ export class TxBuilder {
 }
 
 export const txBuilder = new TxBuilder();
+
 

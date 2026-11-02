@@ -1,1 +1,3 @@
+#!/usr/bin/env sh
+node scripts/forbidden-patterns.mjs
 npm run test:run

@@ -52,17 +52,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Update user with password and marked as verified
-    // Also store the generated wallet if provided
+    // [C6 SECURITY HARDENING]: Sovereign non-custodial wallet — server never stores mnemonic or seed data
     const user = await (prisma.authUser as any).update({
       where: { email },
       data: {
         passwordHash,
         name: name || null,
-        username: username, // [NEW] Elite Username
+        username: username,
         verified: true,
-        walletAddress: walletAddress || null,
-        encryptedMnemonic: encryptedMnemonic || null,
-        walletSalt: walletSalt || null
+        walletAddress: walletAddress || null
       }
     });
 
@@ -146,7 +144,7 @@ export async function POST(request: NextRequest) {
     console.error('[Auth] Complete signup error:', error);
     console.error('[Auth] Error details:', {
       email: body?.email,
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorMessage: 'Internal Server Error',
       stack: error instanceof Error ? error.stack : undefined
     });
     return NextResponse.json(

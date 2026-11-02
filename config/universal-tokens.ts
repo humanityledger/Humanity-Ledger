@@ -39,7 +39,7 @@ export const UNIVERSAL_TOKENS: UniversalToken[] = QUANTUM_TOKENS.map(t => ({
     logoPath: t.logoPath,
 }));
 
-// Aztec Quantum Dots — private ZK token on Aztec Testnet.
+// Aztec Quantum Dots — private ZK token on Aztec Mainnet.
 // Not on EVM so has no on-chain address; uses the Aztec API route for transfers.
 const QDS_TOKEN: UniversalToken = {
     symbol:   'QDs',

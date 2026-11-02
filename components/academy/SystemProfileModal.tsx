@@ -15,7 +15,7 @@ export function SystemProfileModal({
 }) {
   const [activeTab, setActiveTab] = useState("IDENTITY");
 
-  // Mock states until full actions hook logic is integrated:
+  // Local states until full actions hook logic is integrated:
   const sessionLogs = [
     { timestamp: "2026-04-19 14:02:11", action: "LESSON_COMPLETED", ip: "192.168.1.1", loc: "Madrid, ES" },
     { timestamp: "2026-04-19 13:45:00", action: "TASK_SUBMISSION", ip: "192.168.1.1", loc: "Madrid, ES" },
@@ -163,7 +163,7 @@ export function SystemProfileModal({
                         <div className="bg-[#FAF9F5] border border-black/10 p-4 max-w-[80%] self-start">
                             <span className="font-mono text-[8px] text-black/40 block mb-2">TEACHER ROOT  14:02</span>
                             <p className="font-serif text-[12px] leading-relaxed">
-                                Bienvenido al canal de mentoría directa. Este es un enclave cifrado asíncrono. Sube la demostración de tu smart contract cuando estés listo, o déjame tus consultas si la entropía de la Capa Cero te bloquea.
+                                Welcome al canal de mentoría directa. Este es un enclave cifrado asíncrono. Sube la demostración de tu smart contract cuando estés listo, o déjame tus consultas si la entropía de la Capa Cero te bloquea.
                             </p>
                         </div>
                     </div>
@@ -172,7 +172,7 @@ export function SystemProfileModal({
                             <Terminal size={14}/>
                          </div>
                          <input type="text" placeholder="Transmitir mensaje al mentor..." className="flex-1 px-4 text-[10px] font-mono border border-black/10 outline-none focus:border-black" />
-                         <button className="px-6 bg-black text-white font-mono text-[10px] uppercase font-bold hover:bg-neutral-800">Enviar</button>
+                         <button className="px-6 bg-black text-white font-mono text-[10px] uppercase font-bold hover:bg-neutral-800">send</button>
                     </div>
                 </div>
              )}
@@ -183,3 +183,4 @@ export function SystemProfileModal({
     </AnimatePresence>
   );
 }
+

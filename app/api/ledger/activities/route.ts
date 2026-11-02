@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import rateLimit from '@/lib/rate-limit';
-import { withCache, CacheTTL } from '@/src/lib/cache/redis-cache';
+import { withCache, CacheTTL } from '@/lib/cache/redis-cache';
 import { fetchRealLedgerTransfers } from '@/lib/blockchain/LedgerFlowService';
 
 /**
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
     } catch (error: any) {
         console.error('[API ERROR] Ledger activities:', error);
         return NextResponse.json(
-            { error: error.message, activities: [], timestamp: Date.now() },
+            { error: 'Internal Server Error', activities: [], timestamp: Date.now() },
             { status: 500 }
         );
     }

@@ -126,7 +126,11 @@ export async function verifyPremiumAccess(userId: string): Promise<{
 // SECURITY LAYER 6: CSRF Protection
 // ============================================
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET || 'dev-only-fallback-key-do-not-use-in-prod';
+const _rawEncKey = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET;
+if (!_rawEncKey) {
+  console.error('[SECURITY CRITICAL] ENCRYPTION_KEY is not set. CSRF tokens are insecurely signed!');
+}
+const ENCRYPTION_KEY = _rawEncKey ?? require('crypto').randomBytes(32).toString('hex');
 
 export function generateCSRFToken(userId: string): string {
   const timestamp = Date.now();

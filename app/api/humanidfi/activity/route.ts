@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireWallet } from '@/lib/security/requireWallet';
 import { prisma } from '@/lib/prisma';
 import { sanitiseExplorerUrl } from '@/lib/aztec/client';
 
@@ -7,19 +8,28 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/humanidfi/activity?page=1&limit=50
  *
- * Returns ALL real transactions produced on humanidfi.com, sorted newest first.
- * Never returns mocked or external data — only records from our PostgreSQL database.
+ * Returns the signed-in wallet's own activity records, newest first.
  * Used by the Registry "Humanity Ledger Activity" section.
+ *
+ * Until 2026-10-28 this was public and returned every wallet's records. The
+ * chat and the portfolio write one each day someone opens them, so anyone
+ * on the internet could see which wallet used the app and when. It also
+ * listed rows of the retired QDs token.
  */
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  const auth = await requireWallet(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const caller = auth.walletAddress.toLowerCase();
   const { searchParams } = new URL(req.url);
-  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const limit = Math.min(50, parseInt(searchParams.get('limit') || '50', 10));
-  const type = searchParams.get('type') || undefined;
+  const page = Math.min(1000, Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1));
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '50', 10) || 50));
+  const rawType = searchParams.get('type');
+  const type = rawType && /^[A-Z_]{1,40}$/.test(rawType) ? rawType : undefined;
 
   try {
     const where: any = {
-      token: { in: ['ATOMIC_LOG', 'QDs'] }
+      token: 'ATOMIC_LOG',
+      fromAddress: { equals: caller, mode: 'insensitive' },
     };
     if (type) where.type = type;
 
@@ -81,7 +91,7 @@ export async function GET(req: Request) {
       totalPages: Math.ceil(total / limit),
     });
   } catch (err: any) {
-    console.error('[HumanIDFi Activity]', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('[HumanIDFi Activity]', err?.message);
+    return NextResponse.json({ error: 'Could not load activity' }, { status: 500 });
   }
 }

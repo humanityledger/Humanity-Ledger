@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({
             total:        allIntegrations.length,
             integrations: allIntegrations,
-            embedSnippet: `<script src="https://humanidfi.com/sdk/powered-by.js" data-theme="dark" async></script>`,
+            embedSnippet: `<script src="https://humanidfi.com/sdk/powered-by.js" data-theme="light" async></script>`,
             registerUrl:  '/api/powered-by',
             badgeAssets: {
                 dark:  'https://humanidfi.com/badges/powered-by-dark.svg',
@@ -139,8 +139,8 @@ export async function POST(req: NextRequest) {
             embedKey,
             approved:       false,
             reviewTime:     '24-48 hours',
-            embedSnippet:   `<script src="https://humanidfi.com/sdk/powered-by.js" data-key="${embedKey}" data-theme="dark" async></script>`,
-            badgeMarkdown:  `[![Powered by Humanity Ledger](https://humanidfi.com/badges/powered-by-dark.svg)](https://humanidfi.com?ref=${integrationId})`,
+            embedSnippet:   `<script src="https://humanidfi.com/sdk/powered-by.js" data-key="${embedKey}" data-theme="light" async></script>`,
+            badgeMarkdown:  `[![Powered by Humanity Ledger](https://humanidfi.com/badges/powered-by-light.svg)](https://humanidfi.com?ref=${integrationId})`,
             nextSteps: [
                 'Add the badge to your README and UI',
                 'Our team will review and approve within 48h',

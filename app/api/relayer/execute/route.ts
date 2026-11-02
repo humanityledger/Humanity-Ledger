@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/session";
 import { ethers } from "ethers";
 import { prisma } from "@/lib/prisma";
 
@@ -17,6 +18,10 @@ const GOVERNANCE_ABI = [
 
 export async function POST(req: NextRequest) {
     try {
+        const session = await getSession();
+        if (!session?.userId) {
+            return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
+        }
         const body = await req.json();
         const { executor, proposalId, nonce, deadline, signature } = body;
 
@@ -24,7 +29,24 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing required parameters" }, { status: 400 });
         }
 
-        console.log(`[Relayer] Executing proposal ${proposalId} for: ${executor}`);
+        // Strict input validation -- prevent injection and type confusion attacks
+        if (typeof executor !== "string" || !/^0x[a-fA-F0-9]{40}$/.test(executor)) {
+            return NextResponse.json({ error: "Invalid executor address format" }, { status: 400 });
+        }
+        if (typeof proposalId !== "string" || !/^0x[a-fA-F0-9]{1,64}$/.test(proposalId)) {
+            return NextResponse.json({ error: "Invalid proposalId format" }, { status: 400 });
+        }
+        if (typeof signature !== "string" || !/^0x[a-fA-F0-9]{130,}$/.test(signature)) {
+            return NextResponse.json({ error: "Invalid signature format" }, { status: 400 });
+        }
+        // Numeric bounds on nonce and deadline
+        const safeNonce = nonce != null ? BigInt(String(nonce)) : 0n;
+        const safeDeadline = deadline != null ? BigInt(String(deadline)) : 0n;
+        if (safeDeadline > 0n && safeDeadline < BigInt(Math.floor(Date.now() / 1000))) {
+            return NextResponse.json({ error: "Deadline has passed" }, { status: 400 });
+        }
+
+        console.log("[Relayer] Executing proposal for validated executor");
 
         // Setup provider & signer
         const provider = new ethers.JsonRpcProvider(RPC_URL);
@@ -42,8 +64,8 @@ export async function POST(req: NextRequest) {
             await governanceContract.executeProposalWithSignature.staticCall(
                 executor,
                 proposalId,
-                nonce,
-                deadline,
+                safeNonce,
+                safeDeadline,
                 signature
             );
         } catch (simError: any) {
@@ -55,10 +77,10 @@ export async function POST(req: NextRequest) {
         const tx = await governanceContract.executeProposalWithSignature(
             executor,
             proposalId,
-            nonce,
-            deadline,
+            safeNonce,
+            safeDeadline,
             signature,
-            { gasLimit: 500000 }
+            { gasLimit: 500_000 }
         );
 
         console.log(`[Relayer] Execution tx sent: ${tx.hash}`);
@@ -85,7 +107,8 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error("[Relayer] Execution error:", error);
-        return NextResponse.json({ error: error.message || "Execution failed" }, { status: 500 });
+        const safeErr = "Execution failed. Please try again.";
+        return NextResponse.json({ error: safeErr }, { status: 500 });
     }
 }
 

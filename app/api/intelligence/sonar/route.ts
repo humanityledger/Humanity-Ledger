@@ -3,7 +3,7 @@ import { mainnetClient, bscClient } from '@/lib/blockchain/rpc-engine';
 import { formatUnits } from 'viem';
 import { ledgerService } from '@/lib/services/ledger-data';
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {

@@ -1,89 +1,9 @@
 // @ts-nocheck
-/**
- * lib/aztec/client.ts — Aztec Testnet v5.0.0 client
- *
- * Architecture (v5.0.0 SDK):
- *  - createAztecNodeClient → connects to the public Aztec Testnet node
- *  - PXE runs as a sidecar (via `aztec start --pxe`) or externally
- *  - `AZTEC_PXE_URL` can point to an external PXE (e.g. https://pxe.humanidfi.com)
- *    OR be left unset to use the node directly for read-only queries.
- *
- * Real Testnet info (confirmed 2026-07-07):
- *  Node URL:     https://v5.testnet.rpc.aztec-labs.com
- *  Explorer:     https://testnet.aztecscan.xyz
- *  SponsoredFPC: 0x1969946536f0c09269e2c75e414eef4e21a76e763c5514125208db33d7d944d7
- *  L1 Chain:     11155111 (Sepolia)
- *  Rollup:       0xfe6061806cac748085904a010d2d9e33b8031741
- */
+export const AZTEC_EXPLORER = 'https://aztecscan.xyz';
 
-export const AZTEC_TESTNET_NODE  = process.env.AZTEC_NODE_URL  || 'https://v5.testnet.rpc.aztec-labs.com';
-export const AZTEC_PXE_URL       = process.env.AZTEC_PXE_URL   || process.env.AZTEC_NODE_URL || 'https://v5.testnet.rpc.aztec-labs.com';
-export const AZTEC_EXPLORER      = 'https://testnet.aztecscan.xyz';
-export const AZTEC_NETWORK       = 'aztec-testnet';
-export const L1_CHAIN_ID         = 11155111; // Sepolia
-export const ROLLUP_VERSION      = 1; 
-export const ROLLUP_ADDRESS      = '0xd73a91bdcf6891c7642f3e460036e1ef2cc23178';
-// Additional L1 contracts (live node, 2026-07-21)
-export const REGISTRY_ADDRESS    = '0xa0bfb1b494fb49041e5c6e8c2c1be09cd171c6ba';
-export const FEE_JUICE_ADDRESS   = '0x762c132040fda6183066fa3b14d985ee55aa3c18';
-
-// SponsoredFPC — canonical address from docs.aztec.network/networks (V5.0.1 official, July 26, 2026)
-// Source: https://docs.aztec.network/developers/getting_started_on_testnet
-export const PRIMARY_FPC_ADDRESS =
-  process.env.SPONSORED_FPC_ADDRESS ||
-  '0x1441491b59934ec64f8c98f17c91f23c01ca2a45dbb35caf123146ec76f9970c';
-
-// Canonical alias for backward compatibility and test imports
-export const SPONSORED_FPC_ADDRESS = PRIMARY_FPC_ADDRESS;
 
 /**
- * Returns the canonical SponsoredFPC address.
- * In a future version this may rotate between multiple real FPC instances
- * as Aztec Labs deploys additional relayers on mainnet.
- */
-export function getFpcAddress(): string {
-  return PRIMARY_FPC_ADDRESS;
-}
-
-// Cache the node client across hot-reloads
-let _nodeClient: any = null;
-
-/**
- * Returns a cached Aztec Node JSON-RPC client.
- * In v5.0.0 of aztec.js, this is createAztecNodeClient from @aztec/aztec.js/node.
- * The node client supports: getBlockNumber, getNodeInfo, getTxReceipt, sendTx, etc.
- */
-export async function getAztecNodeClient() {
-  if (_nodeClient) return _nodeClient;
-  const { createAztecNodeClient } = await import('@aztec/aztec.js/node');
-  _nodeClient = createAztecNodeClient(AZTEC_TESTNET_NODE);
-  console.log(`[Aztec] ✅ Node client connected → ${AZTEC_TESTNET_NODE}`);
-  return _nodeClient;
-}
-
-/**
- * Derives a deterministic Aztec secret key from an EVM address string.
- * Uses a deterministic hash of the EVM address padded to 31 bytes (Fr-safe).
- *
- * NOTE: In production this should be an EIP-191 signature from the user's wallet
- * to ensure the user controls the Aztec key. For the server-custodial testnet
- * model, this deterministic derivation is acceptable.
- */
-export function deriveSecretKeyFromEvm(evmAddress: string): string {
-  const normalized = evmAddress.toLowerCase().replace('0x', '');
-  
-  // [SECURITY PATCH A2] Use server-side secret (pepper) for derivation instead of predictable 0x00 padding.
-  // This ensures the secret key remains strictly custodial and cannot be guessed.
-  const crypto = require('crypto');
-  const secret = process.env.JWT_SECRET || 'ledger-oracle-secret';
-  const hash = crypto.createHash('sha256').update(`${normalized}:${secret}`).digest('hex');
-  
-  // Pad to 62 chars then prefix — result fits in bn254 scalar field (Fr)
-  return `0x00${hash.slice(0, 62)}`;
-}
-
-/**
- * Aztec testnet explorer URL for a given transaction hash.
+ * Aztec mainnet explorer URL for a given transaction hash.
  *
  * AztecScan SPA uses /tx-effect/:hash (NOT /tx/:hash — that route does not exist).
  * Virtual/synthetic hashes generated server-side are never indexed on-chain, so we
@@ -127,14 +47,14 @@ export function sanitiseExplorerUrl(stored: string | null | undefined): string {
   if (hashMatch) return `${AZTEC_EXPLORER}/tx-effect/${hashMatch[1]}`;
 
   // Root or just the explorer domain — fine
-  if (stored.startsWith('https://testnet.aztecscan.xyz')) return stored;
+  if (stored.startsWith('https://aztecscan.xyz')) return stored;
 
   // Unknown format — fall back to root
   return AZTEC_EXPLORER;
 }
 
 /**
- * Aztec testnet explorer URL for a given address.
+ * Aztec mainnet explorer URL for a given address.
  */
 export function explorerAddressUrl(address: string): string {
   return `${AZTEC_EXPLORER}/address/${address}`;
@@ -148,11 +68,16 @@ export function truncateAztecAddress(addr: string, chars = 8): string {
   return `${addr.slice(0, chars)}...${addr.slice(-chars)}`;
 }
 
+const AZTEC_MAINNET_RPC = 'https://api.aztec.network/aztec-mainnet/api/v1';
+
 /**
- * Probe the Aztec Testnet node to get current network info.
+ * Probe the Aztec Mainnet node to get current network info.
  * Returns null if unreachable.
+ *
+ * Uses direct HTTP JSON-RPC fetch instead of SDK client to avoid
+ * loading the full Aztec.js Node bundle in browser context.
  */
-export async function probeTestnetNode(): Promise<{
+export async function probeMainnetNode(): Promise<{
   blockNumber: number;
   nodeVersion: string;
   l1ChainId: number;
@@ -162,17 +87,35 @@ export async function probeTestnetNode(): Promise<{
 } | null> {
   const start = Date.now();
   try {
-    const node = await getAztecNodeClient();
-    const [blockNumber, nodeInfo] = await Promise.all([
-      node.getBlockNumber(),
-      node.getNodeInfo(),
+    const [blockRes, nodeRes] = await Promise.all([
+      fetch(AZTEC_MAINNET_RPC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'node_getBlockNumber', params: [], id: 1 }),
+        signal: AbortSignal.timeout(8000),
+      }),
+      fetch(AZTEC_MAINNET_RPC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'node_getNodeInfo', params: [], id: 2 }),
+        signal: AbortSignal.timeout(8000),
+      }),
     ]);
+
+    if (!blockRes.ok || !nodeRes.ok) throw new Error('[Aztec] Node RPC returned non-200');
+
+    const blockData = await blockRes.json();
+    const nodeData = await nodeRes.json();
+
+    const blockNumber = Number(blockData.result ?? 0);
+    const info = nodeData.result ?? {};
+
     return {
       blockNumber,
-      nodeVersion: nodeInfo.nodeVersion,
-      l1ChainId: nodeInfo.l1ChainId,
-      rollupVersion: nodeInfo.rollupVersion,
-      rollupAddress: nodeInfo.l1ContractAddresses.rollupAddress.toString(),
+      nodeVersion: info.nodeVersion ?? 'unknown',
+      l1ChainId: Number(info.l1ChainId ?? 1),
+      rollupVersion: Number(info.rollupVersion ?? 0),
+      rollupAddress: info.l1ContractAddresses?.rollupAddress ?? '',
       latencyMs: Date.now() - start,
     };
   } catch (e: any) {
@@ -180,3 +123,19 @@ export async function probeTestnetNode(): Promise<{
     return null;
   }
 }
+
+
+export function deriveSecretKeyFromEvm(evmAddress: string): string {
+  throw new Error('CUSTODIAL_DERIVE_RETIRED');
+}
+
+/**
+ * Aztec Sponsored Fee Payment Contract (FPC) address on mainnet.
+ * Used by airdrop routes to pay gas fees on behalf of new users.
+ */
+export const SPONSORED_FPC_ADDRESS = '0x25048e204c3cb7e43d2c2640448df2d3d4b81fe5f9e7bbdc98ea7ee4ec0c04e6';
+
+export function getFpcAddress(): string {
+  return process.env.AZTEC_FPC_ADDRESS ?? SPONSORED_FPC_ADDRESS;
+}
+

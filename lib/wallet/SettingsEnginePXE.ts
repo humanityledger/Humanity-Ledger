@@ -1,35 +1,60 @@
 import { vault } from '@/lib/core/SecureVault';
-import { encrypt, decrypt } from '@/lib/wallet/encryption';
+import { announceLocalSettingsChange } from '@/lib/sync/bus';
+import { registerRemoteSettingsSink } from '@/lib/sync/runtime';
+import { chatTextPx } from '@/lib/chat/textSize';
 
 /**
- * ══════════════════════════════════════════════════════════════════════════════════
- *  QUANTUM PXE SETTINGS ENGINE — FULL SOVEREIGN MATRIX
- *  Abyssal Complexity Level: MAXIMUM TRILLION PARAMETER INTEGRATION
+ * в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+ *  Ledger Settings Engine
  *
  *  Architecture:
- *    1. LedgerProtocolSettings — The complete typed settings universe
+ *    1. LedgerProtocolSettings — The complete typed settings interface
  *    2. SettingsEnginePXE     — Singleton class with encrypted vault backing
  *    3. pxeEngine             — Singleton instance (import this into React components)
  *
  *  Every field in LedgerProtocolSettings maps to:
  *    a) A UI toggle/selector in LedgerChatSettings.tsx
  *    b) A runtime behaviour gate in LedgerChat.tsx
- *    c) An encrypted quantum blob in the PXE vault (key: pxe_settings_<address>)
+ *    c) An encrypted blob in the secure vault (key: pxe_settings_<address>)
  *
  *  Data flow:
  *    UI mutate -> pxeEngine.mutate() -> optimistic cache update -> broadcast() ->
- *    React re-render -> async AES-256-GCM re-encryption -> vault.setItem()
- * ══════════════════════════════════════════════════════════════════════════════════
+ *    React re-render -> async re-encryption -> vault.setItem()
+ * в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
  */
 
-// ───────────────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 //  SECTION 1: COMPLETE SETTINGS INTERFACE
-// ───────────────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 export interface LedgerProtocolSettings {
-  // ─────────────────────────────────────────────────────
+  securityNotifs: boolean;
+  twoStep: boolean;
+  passkeys: boolean;
+  lastSeenPublic: boolean;
+  profilePublic: boolean;
+  aboutPublic: boolean;
+  groupsPublic: boolean;
+  statusPublic: boolean;
+  allowCameraEffects: boolean;
+  appLock: boolean;
+  silenceUnknown: boolean;
+  protectIP: boolean;
+  disableLinkPreviews: boolean;
+  saveToPhotos: boolean;
+  stickerSuggestions: boolean;
+  voiceTranscripts: boolean;
+  archiveKeep: boolean;
+  animations: boolean;
+  inAppNotifs: boolean;
+  showPreview: boolean;
+  msgNotifs: boolean;
+  groupNotifs: boolean;
+  useLessData: boolean;
+  e2eBackup: boolean;
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  ALERTS & SOUNDS
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   /** Enable notifications for direct encrypted channels */
   notifications_private: boolean;
   /** Enable notifications for encrypted group channels */
@@ -47,9 +72,9 @@ export interface LedgerProtocolSettings {
   /** Haptic intensity: 0=off, 1=light, 2=medium, 3=strong */
   haptics_intensity: 0 | 1 | 2 | 3;
 
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  PRIVACY ENGINE
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   /** Require a 6-digit passcode to open the application */
   passcode_enabled: boolean;
   /** Who can see your "last seen" timestamp */
@@ -69,9 +94,9 @@ export interface LedgerProtocolSettings {
   /** Number of Tor onion routing hops (1=direct, 3=standard, 5=max) */
   onion_hops: 1 | 3 | 5;
 
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  SELF-DESTRUCT PROTOCOL
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   /** Auto-delete received+sent messages after this time */
   auto_delete_timer: 'off' | '24 hours' | '1 week' | '1 month';
   /** Burn-on-Read: destroy messages N seconds after recipient opens them */
@@ -79,9 +104,9 @@ export interface LedgerProtocolSettings {
   /** Seconds before a read message self-destructs */
   burn_on_read_seconds: 3 | 10 | 30 | 60;
 
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  DATA & STORAGE
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   /** Automatically download media when connected to WiFi */
   auto_download_wifi: boolean;
   /** Automatically download media when on cellular data */
@@ -93,9 +118,9 @@ export interface LedgerProtocolSettings {
   /** Allow anonymous telemetry to help improve the network */
   allow_analytics: boolean;
 
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  AESTHETICS
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   /** Visual theme for the entire application */
   theme: 'brutalist' | 'monochrome' | 'neon_void' | 'terminal';
   /** UI density */
@@ -113,9 +138,9 @@ export interface LedgerProtocolSettings {
   /** Overlay recipient address as watermark to deter leaks */
   watermark_enabled: boolean;
 
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  LANGUAGE & LOCALE
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   /** UI language code */
   language: 'en' | 'es' | 'fr' | 'de' | 'jp' | 'cn';
   /** Time display format */
@@ -123,9 +148,9 @@ export interface LedgerProtocolSettings {
   /** Date display format */
   date_format: 'DD/MM/YYYY' | 'MM/DD/YYYY';
 
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  IDENTITY (MY PROFILE)
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   /** User's display name */
   displayName: string;
   /** Username handle (without @) */
@@ -135,9 +160,9 @@ export interface LedgerProtocolSettings {
   /** Avatar stored as base64 data URL */
   avatar_url: string;
 
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  AI GHOST MODE
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   /** Enable AI tone translator before sending hostile messages */
   tone_translator: boolean;
   /** Automatically reply when away */
@@ -145,9 +170,9 @@ export interface LedgerProtocolSettings {
   /** Text the Ghost will reply with when away */
   ghost_auto_reply_text: string;
 
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  DEFI & LEDGER INTELLIGENCE TOOLS
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   /** Recognize $TICKER cashtags and render as price widgets */
   ticker_widgets: boolean;
   /** Scan 0x... addresses for contract verification/honeypot risk */
@@ -157,36 +182,116 @@ export interface LedgerProtocolSettings {
   /** Show on-chain attestation score badge on messages */
   show_attestation_badge: boolean;
 
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  NETWORK & PROTOCOL
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   /** Gas fee preset for on-chain transactions */
   gas_preset: 'ECONOMY' | 'STANDARD' | 'FAST' | 'INSTANT';
   /** MEV protection for transactions */
   mev_protection: boolean;
+  /** Route traffic via Tor network (requires local daemon) */
+  tor_routing: boolean;
   /** Custom RPC URL (empty = default) */
   custom_rpc_url: string;
 
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  WORKSPACES (SAVED CHANNEL FOLDERS)
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   /** JSON-serialized list of workspace folder names */
   workspaces_json: string;
 
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  METADATA
-  // ─────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   /** Epoch ms of last full settings sync to Aztec network */
   last_synced_at: number;
   /** Schema version for migration compatibility */
   schema_version: number;
+
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  //  EXTENDED SETTINGS (Settings Panel v2)
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  /** Notification for reactions to my messages */
+  notifications_reactions?: boolean;
+  /** Notification for incoming voice calls */
+  notifications_calls?: boolean;
+  /** Notification for incoming video calls */
+  notifications_video_calls?: boolean;
+  /** Show typing indicators */
+  typing_indicators?: boolean;
+  /** Auto-download photos */
+  auto_download_photos?: boolean;
+  /** Auto-download videos */
+  auto_download_videos?: boolean;
+  /** Press Enter to send (vs Shift+Enter) */
+  enter_to_send?: boolean;
+  /** High-quality audio for calls */
+  high_quality_audio?: boolean;
+  /** HD video for calls */
+  hd_video?: boolean;
+  /** Noise suppression for calls */
+  noise_suppression?: boolean;
+  /** Echo cancellation for calls */
+  echo_cancellation?: boolean;
+  /** Do not disturb mode */
+  do_not_disturb?: boolean;
+  /** Hide notification content preview */
+  hide_notification_content?: boolean;
+  /** Auto-lock timer label */
+  auto_lock_timer?: string;
+  /** ZK Obfuscation enabled */
+  zkObfuscation?: boolean;
+  /** Require wallet signature each session */
+  requireSignature?: boolean;
+  /** Anti-screenshot mode */
+  anti_screenshot?: boolean;
+  /** Disappearing messages timer */
+  disappearing_messages?: string;
+  address_book_sync?: boolean;
+  zk_private_dai_default?: boolean;
+  zk_auto_shield?: boolean;
+  zk_client_proofs?: boolean;
+  zk_min_anonymity?: boolean;
+  payments_enabled?: boolean;
+  payment_confirmations?: boolean;
+  show_balances?: boolean;
+  default_token?: string;
+  chat_background_custom_url?: string;
+  chat_font?: string;
+  font_size?: string | number;
+  font_family?: string;
+  privacy_read_receipts?: boolean;
 }
 
-// ───────────────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 //  SECTION 2: DEFAULT SETTINGS MATRIX
-// ───────────────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 export const DEFAULT_PXE_SETTINGS: LedgerProtocolSettings = {
+  securityNotifs: true,
+  twoStep: false,
+  passkeys: false,
+  lastSeenPublic: true,
+  profilePublic: true,
+  aboutPublic: true,
+  groupsPublic: true,
+  statusPublic: true,
+  allowCameraEffects: true,
+  appLock: false,
+  silenceUnknown: false,
+  protectIP: true,
+  disableLinkPreviews: false,
+  saveToPhotos: false,
+  stickerSuggestions: true,
+  voiceTranscripts: false,
+  archiveKeep: false,
+  animations: true,
+  inAppNotifs: true,
+  showPreview: true,
+  msgNotifs: true,
+  groupNotifs: true,
+  useLessData: false,
+  e2eBackup: false,
   // Alerts & Sounds
   notifications_private: true,
   notifications_groups: true,
@@ -199,7 +304,7 @@ export const DEFAULT_PXE_SETTINGS: LedgerProtocolSettings = {
 
   // Privacy Engine
   passcode_enabled: false,
-  privacy_last_seen: 'nobody',
+  privacy_last_seen: 'contacts',
   privacy_profile_photo: 'contacts',
   privacy_bio: 'everybody',
   privacy_group_invites: 'contacts',
@@ -223,7 +328,7 @@ export const DEFAULT_PXE_SETTINGS: LedgerProtocolSettings = {
   // Aesthetics
   theme: 'brutalist',
   ui_density: 'compact',
-  text_size: 3,
+  text_size: 2,
   bubble_style: 'default',
   accent_color: '#1c7aff',
   chat_background: 'default',
@@ -238,13 +343,13 @@ export const DEFAULT_PXE_SETTINGS: LedgerProtocolSettings = {
   // Identity
   displayName: '',
   username: '',
-  bio: 'Building the Sovereign Network. Cryptography, Privacy, and Decentralization.',
+  bio: '',
   avatar_url: '',
 
   // AI Ghost Mode
   tone_translator: false,
   ghost_auto_reply: false,
-  ghost_auto_reply_text: 'The Ledger is away. Message received by the sovereign network.',
+  ghost_auto_reply_text: 'I am currently away. I will reply as soon as possible.',
 
   // DeFi Tools
   ticker_widgets: true,
@@ -255,6 +360,7 @@ export const DEFAULT_PXE_SETTINGS: LedgerProtocolSettings = {
   // Network
   gas_preset: 'STANDARD',
   mev_protection: false,
+  tor_routing: false,
   custom_rpc_url: '',
 
   // Workspaces
@@ -262,18 +368,18 @@ export const DEFAULT_PXE_SETTINGS: LedgerProtocolSettings = {
 
   // Metadata
   last_synced_at: 0,
-  schema_version: 3,
+  schema_version: 4,
 };
 
-// ───────────────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 //  SECTION 3: REACTIVE SUBSCRIPTION TYPE
-// ───────────────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type PXESubscriber = (settings: LedgerProtocolSettings) => void;
 
-// ───────────────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 //  SECTION 4: SETTINGS ENGINE CLASS
-// ───────────────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 class SettingsEnginePXE {
   /** Per-address in-memory cache for instant synchronous access */
@@ -283,48 +389,66 @@ class SettingsEnginePXE {
   /** Throttle async vault writes to prevent encryption storms */
   private writeDebounce: Record<string, ReturnType<typeof setTimeout>> = {};
   /** Track schema version to perform automatic field migrations */
-  private readonly CURRENT_SCHEMA = 3;
+  private readonly CURRENT_SCHEMA = 4;
 
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  PUBLIC: mountNode — async boot for a user wallet address
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
   async mountNode(address: string): Promise<LedgerProtocolSettings> {
     if (this.cache[address]) return this.cache[address];
 
     try {
-      const rawData = await vault.getItem(`pxe_settings_${address}`);
+      let rawData = await vault.getItem(`pxe_settings_${address}`);
+      let parsed: Partial<LedgerProtocolSettings> | null = null;
 
-      if (!rawData) {
+      // 1. Fetch from Local Vault
+      if (rawData) {
+        try {
+          parsed = JSON.parse(rawData);
+        } catch {
+          console.warn('[PXE ENGINE] Parse failed, resetting local cache');
+        }
+      }
+
+      // 2. Fetch from Global Database (Decentralized Prisma Backend)
+      if (typeof window !== 'undefined') {
+        try {
+          const res = await fetch('/api/chat/settings', {
+            credentials: 'include',
+            headers: { 'x-web3-address': address }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.settings && Object.keys(data.settings).length > 0) {
+              // Remote always wins if its last_synced_at is newer
+              if (!parsed || (data.settings.last_synced_at > (parsed.last_synced_at || 0))) {
+                parsed = data.settings;
+                // Save the newer remote state locally immediately
+                await vault.setItem(`pxe_settings_${address}`, JSON.stringify(parsed));
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[PXE ENGINE] Remote fetch error, falling back to local:', err);
+        }
+      }
+
+      if (!parsed) {
         // First run — initialize defaults and persist
         const fresh = { ...DEFAULT_PXE_SETTINGS, last_synced_at: Date.now() };
         this.cache[address] = fresh;
         await this.syncToPXE(address, fresh);
         this.broadcast(address, fresh);
+        Object.entries(fresh).forEach(([k, v]) => this.applyDOMSideEffects(k as keyof LedgerProtocolSettings, v));
         return fresh;
       }
-
-      // Decrypt the stored blob
-      let decryptedString: string;
-      try {
-        decryptedString = decrypt(rawData);
-      } catch {
-        // Decryption failed (e.g. key rotation) — fall back to defaults
-        console.warn('[PXE ENGINE] Decryption failed, resetting to defaults');
-        // Re-initialize from defaults on decryption failure
-        const fresh = { ...DEFAULT_PXE_SETTINGS, last_synced_at: Date.now() };
-        this.cache[address] = fresh;
-        await this.syncToPXE(address, fresh);
-        this.broadcast(address, fresh);
-        return fresh;
-      }
-
-      const parsed = JSON.parse(decryptedString) as LedgerProtocolSettings;
 
       // Schema migration: merge any new fields from DEFAULT_PXE_SETTINGS
-      const migrated = this.migrateSchema(parsed);
+      const migrated = this.migrateSchema(parsed as LedgerProtocolSettings);
       this.cache[address] = migrated;
       this.broadcast(address, migrated);
+      Object.entries(migrated).forEach(([k, v]) => this.applyDOMSideEffects(k as keyof LedgerProtocolSettings, v));
 
       return migrated;
     } catch (error) {
@@ -335,9 +459,9 @@ class SettingsEnginePXE {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  PUBLIC: mutate — update a single setting field
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
   async mutate<K extends keyof LedgerProtocolSettings>(
     address: string,
@@ -351,6 +475,9 @@ class SettingsEnginePXE {
     // 1. Optimistic in-memory update (zero latency for UI)
     this.cache[address] = { ...this.cache[address], [key]: value };
     this.broadcast(address, this.cache[address]);
+    // Live to the account's other devices (lib/sync). Remote changes come
+    // back through applyRemote(), which does not announce, so no echo loop.
+    announceLocalSettingsChange(address, { [key]: value });
 
     // 2. DOM side-effects for critical settings
     this.applyDOMSideEffects(key, value);
@@ -362,9 +489,9 @@ class SettingsEnginePXE {
     }, 50);
   }
 
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  PUBLIC: mutateBatch — update multiple settings in one vault write
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
   async mutateBatch(
     address: string,
@@ -376,6 +503,7 @@ class SettingsEnginePXE {
 
     this.cache[address] = { ...this.cache[address], ...mutations };
     this.broadcast(address, this.cache[address]);
+    announceLocalSettingsChange(address, mutations as Record<string, unknown>);
 
     for (const [key, value] of Object.entries(mutations)) {
       this.applyDOMSideEffects(key as keyof LedgerProtocolSettings, value);
@@ -384,9 +512,42 @@ class SettingsEnginePXE {
     await this.syncToPXE(address, this.cache[address]);
   }
 
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  //  PUBLIC: applyRemote — settings changed on another of the user's devices
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+
+  /**
+   * Apply settings that arrived over device sync. Only known fields whose
+   * type matches the default are taken. Written to the local vault only: the
+   * device that made the change already saved it to the server.
+   */
+  applyRemote(account: string, changes: Record<string, unknown>): void {
+    const accepted: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(changes)) {
+      if (k === 'last_synced_at' || k === 'schema_version') continue;
+      if (!Object.prototype.hasOwnProperty.call(DEFAULT_PXE_SETTINGS, k)) continue;
+      const def = (DEFAULT_PXE_SETTINGS as any)[k];
+      if (def !== null && def !== undefined && typeof def !== typeof v) continue;
+      accepted[k] = v;
+    }
+    if (!Object.keys(accepted).length) return;
+
+    // The cache may be keyed by a checksummed or a lowercase address.
+    const targets = Object.keys(this.cache).filter(a => a.toLowerCase() === account.toLowerCase());
+    for (const address of targets) {
+      this.cache[address] = { ...this.cache[address], ...(accepted as Partial<LedgerProtocolSettings>) };
+      this.broadcast(address, this.cache[address]);
+      for (const [key, value] of Object.entries(accepted)) {
+        this.applyDOMSideEffects(key as keyof LedgerProtocolSettings, value);
+      }
+      const snapshot = { ...this.cache[address], last_synced_at: Date.now() };
+      Promise.resolve(vault.setItem(`pxe_settings_${address}`, JSON.stringify(snapshot))).catch(() => {});
+    }
+  }
+
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  PUBLIC: subscribe — wire a React component to live PXE updates
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
   subscribe(address: string, callback: PXESubscriber): () => void {
     if (!this.subscribers[address]) {
@@ -406,17 +567,17 @@ class SettingsEnginePXE {
     };
   }
 
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  PUBLIC: get — synchronous read (call mountNode first in useEffect)
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
   get(address: string): LedgerProtocolSettings {
     return this.cache[address] ?? { ...DEFAULT_PXE_SETTINGS };
   }
 
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  PUBLIC: purgeNode — wipe all settings for an address (nuclear option)
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
   async purgeNode(address: string): Promise<void> {
     delete this.cache[address];
@@ -425,35 +586,47 @@ class SettingsEnginePXE {
     const fresh = { ...DEFAULT_PXE_SETTINGS, last_synced_at: Date.now() };
     this.cache[address] = fresh;
     this.broadcast(address, fresh);
+    Object.entries(fresh).forEach(([k, v]) => this.applyDOMSideEffects(k as keyof LedgerProtocolSettings, v));
   }
 
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  PUBLIC: exportSettings — plain JSON dump for backup purposes
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
   exportSettings(address: string): string {
     const s = this.cache[address] ?? DEFAULT_PXE_SETTINGS;
     return JSON.stringify(s, null, 2);
   }
 
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  PRIVATE: syncToPXE — AES-256-GCM encrypt + vault write
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
   private async syncToPXE(address: string, settings: LedgerProtocolSettings): Promise<void> {
     try {
       const updated = { ...settings, last_synced_at: Date.now() };
       const payload = JSON.stringify(updated);
-      const encryptedBlob = encrypt(payload);
-      await vault.setItem(`pxe_settings_${address}`, encryptedBlob);
+      
+      // 1. Local Encrypted Vault Backup
+      await vault.setItem(`pxe_settings_${address}`, payload);
+
+      // 2. Global Database Sync (Decentralized Prisma Backend)
+      if (typeof window !== 'undefined') {
+        fetch('/api/chat/settings', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', 'x-web3-address': address },
+          body: JSON.stringify({ settings: updated })
+        }).catch(err => console.warn('[PXE ENGINE] Remote sync error:', err));
+      }
     } catch (error) {
       console.error('[PXE ENGINE] Vault sync error:', error);
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  PRIVATE: broadcast — notify all React subscribers
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
   private broadcast(address: string, settings: LedgerProtocolSettings): void {
     this.subscribers[address]?.forEach(cb => {
@@ -461,9 +634,9 @@ class SettingsEnginePXE {
     });
   }
 
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  PRIVATE: applyDOMSideEffects — instant DOM mutations for critical keys
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
   private applyDOMSideEffects(key: keyof LedgerProtocolSettings, value: any): void {
     if (typeof document === 'undefined') return;
@@ -478,7 +651,7 @@ class SettingsEnginePXE {
         html.style.setProperty('--ledger-accent', value);
         break;
       case 'text_size':
-        html.style.setProperty('--ledger-text-size', `${value * 2 + 10}px`);
+        html.style.setProperty('--ledger-text-size', `${chatTextPx(value)}px`);
         break;
       case 'ui_density':
         html.classList.remove('ui-relaxed', 'ui-compact', 'ui-dense');
@@ -505,22 +678,36 @@ class SettingsEnginePXE {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   //  PRIVATE: migrateSchema — forward-compatible schema upgrades
-  // ─────────────────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
   private migrateSchema(parsed: Partial<LedgerProtocolSettings>): LedgerProtocolSettings {
     // Merge with defaults so any new fields added in schema v3 are populated
     const migrated: LedgerProtocolSettings = { ...DEFAULT_PXE_SETTINGS, ...parsed };
 
-    // Schema v1 → v2: rename privacy_last_seen legacy values
+    // Schema v1 в†’ v2: rename privacy_last_seen legacy values
     if ((migrated as any).privacy_last_seen === 'all') {
       migrated.privacy_last_seen = 'everybody';
     }
 
-    // Schema v2 → v3: populate new AI Ghost Mode defaults if missing
+    // Schema v2 в†’ v3: populate new AI Ghost Mode defaults if missing
     if (!migrated.ghost_auto_reply_text) {
       migrated.ghost_auto_reply_text = DEFAULT_PXE_SETTINGS.ghost_auto_reply_text;
+    }
+
+    // Schema v3 в†’ v4. Two settings start being enforced with this version:
+    //  - Last seen: until now the server ignored it, so every contact saw
+    //    your presence whatever it said. The old default 'nobody' was never
+    //    applied; keep people visible to their contacts, as before, instead
+    //    of silently hiding everyone the day enforcement ships.
+    //  - Text size: level 3 used to render at 12px. One scale now drives the
+    //    preview and the chat, so move the old default to the new default.
+    if ((parsed.schema_version ?? 0) < 4) {
+      if (migrated.privacy_last_seen === 'nobody') migrated.privacy_last_seen = 'contacts';
+      if (migrated.text_size === 3) migrated.text_size = 2;
+      // A sample bio used to ship as the default and showed as people's own.
+      if (migrated.bio === 'Building the Sovereign Network. Cryptography, Privacy, and Decentralization.') migrated.bio = '';
     }
 
     // Stamp current schema version
@@ -530,9 +717,9 @@ class SettingsEnginePXE {
   }
 }
 
-// ───────────────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 //  SECTION 5: SINGLETON EXPORT
-// ───────────────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 /**
  * The global PXE Settings Engine singleton.
@@ -544,3 +731,9 @@ class SettingsEnginePXE {
  *   const unsub = pxeEngine.subscribe(address, callback);
  */
 export const pxeEngine = new SettingsEnginePXE();
+
+// Settings changed on the user's other devices arrive here (lib/sync/runtime).
+registerRemoteSettingsSink((account, changes) => pxeEngine.applyRemote(account, changes));
+
+
+

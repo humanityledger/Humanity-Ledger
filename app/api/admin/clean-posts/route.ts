@@ -3,15 +3,21 @@ import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { isAdmin } from '@/lib/admin';
 import { getSession } from '@/lib/session';
+import { requireAdmin } from '@/lib/admin-guard';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/admin/clean-posts
+ * POST /api/admin/clean-posts
  * Deletes ALL topics EXCEPT the one with the word "Welcome" in the title
  * (case-insensitive). The welcome post is always preserved.
+ *
+ * Dual authentication: Requires X-Admin-Secret header + active Admin Session.
  */
-export async function GET(req: Request) {
+export async function POST(req: Request) {
+  const deny = requireAdmin(req);
+  if (deny) return deny;
+
   try {
     const session = await getSession();
     const address = session?.userId;
@@ -80,6 +86,6 @@ export async function GET(req: Request) {
       preservedTitles: allTopics.filter((t: any) => keepIds.includes(t.id)).map((t: any) => t.title),
     });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

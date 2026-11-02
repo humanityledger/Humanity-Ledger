@@ -303,7 +303,7 @@ export function AztecShieldingTerminal() {
         <div className="flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 bg-zinc-900/40" />
           <span className="text-[7px] font-mono text-zinc-900/25 uppercase tracking-widest">
-            Sepolia · Aztec Testnet
+            Sepolia · Aztec Mainnet
           </span>
         </div>
       </div>
@@ -479,7 +479,7 @@ export function AztecShieldingTerminal() {
               >
                 {txHashes.l1 && (
                   <a
-                    href={`https://testnet.aztecscan.xyz`}
+                    href={`https://aztecscan.xyz`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-between w-full py-2.5 px-3 border border-zinc-900/8 hover:border-zinc-900 text-[8px] font-black uppercase tracking-widest text-zinc-900/40 hover:text-zinc-900 transition-all"
@@ -490,7 +490,7 @@ export function AztecShieldingTerminal() {
                 )}
                 {txHashes.l2 && (
                   <a
-                    href={`https://testnet.aztecscan.xyz`}
+                    href={`https://aztecscan.xyz`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-between w-full py-2.5 px-3 border border-zinc-900/8 hover:border-zinc-900 text-[8px] font-black uppercase tracking-widest text-zinc-900/40 hover:text-zinc-900 transition-all"

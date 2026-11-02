@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ledgerService } from '../../../../../lib/services/ledger-data';
 
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 // Hard API timeout: 8 seconds maximum. Never blocks for 300s.
 const API_TIMEOUT_MS = 8000;

@@ -7,7 +7,7 @@ import { Resend } from 'resend';
 
 export const dynamic = 'force-dynamic';
 
-const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_build');
+const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_build_time');
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!;
 
 const PLAN_LIMITS: Record<string, { dailyRequests: number; threshold: number; maxKeys: number }> = {

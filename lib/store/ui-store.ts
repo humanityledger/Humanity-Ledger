@@ -1,13 +1,18 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-//  Persisted subset: only UI preferences survive reloads 
-// CRITICAL: isLinked and isConnectModalOpen are intentionally NOT persisted.
-// isLinked is derived fresh on every mount from the live system_handshake cookie
-// to prevent stale auth state after disconnection.
+export type AppTheme = 'dark' | 'light' | 'system';
+export type AppLanguage = 'en' | 'es';
+export type PrivacyLevel = 'strict' | 'standard';
+
 interface PersistedUIState {
   isStealthMode: boolean;
   activePanel: 'history' | 'notifications' | 'settings' | 'privacy' | null;
+  theme: AppTheme;
+  language: AppLanguage;
+  soundsEnabled: boolean;
+  ghostMode: boolean;
+  privacyLevel: PrivacyLevel;
 }
 
 interface UIState extends PersistedUIState {
@@ -21,6 +26,11 @@ interface UIState extends PersistedUIState {
   setLinked: (value: boolean) => void;
   setZkVerified: (value: boolean) => void;
   setActivePanel: (panel: 'history' | 'notifications' | 'settings' | 'privacy' | null) => void;
+  setTheme: (theme: AppTheme) => void;
+  setLanguage: (lang: AppLanguage) => void;
+  setSoundsEnabled: (enabled: boolean) => void;
+  setGhostMode: (enabled: boolean) => void;
+  setPrivacyLevel: (level: PrivacyLevel) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -29,9 +39,13 @@ export const useUIStore = create<UIState>()(
       //  Persisted preferences 
       isStealthMode: false,
       activePanel: null,
+      theme: 'system',
+      language: 'en',
+      soundsEnabled: true,
+      ghostMode: false,
+      privacyLevel: 'standard',
 
       //  Runtime-only state (never persisted) 
-      // Resets on every page load; correct value is re-derived from cookie in LinkedGate.
       isConnectModalOpen: false,
       isLinked: false,
       isZkVerified: false,
@@ -44,14 +58,22 @@ export const useUIStore = create<UIState>()(
       setLinked: (value: boolean) => set({ isLinked: value }),
       setZkVerified: (value: boolean) => set({ isZkVerified: value }),
       setActivePanel: (panel) => set({ activePanel: panel }),
+      setTheme: (theme) => set({ theme }),
+      setLanguage: (language) => set({ language }),
+      setSoundsEnabled: (soundsEnabled) => set({ soundsEnabled }),
+      setGhostMode: (ghostMode) => set({ ghostMode }),
+      setPrivacyLevel: (privacyLevel) => set({ privacyLevel }),
     }),
     {
       name: 'ledger-ui-storage',
-      // Explicitly whitelist only the keys that should persist.
-      // isLinked and isConnectModalOpen are excluded.
       partialize: (state): PersistedUIState => ({
         isStealthMode: state.isStealthMode,
         activePanel: state.activePanel,
+        theme: state.theme,
+        language: state.language,
+        soundsEnabled: state.soundsEnabled,
+        ghostMode: state.ghostMode,
+        privacyLevel: state.privacyLevel,
       }),
     }
   )

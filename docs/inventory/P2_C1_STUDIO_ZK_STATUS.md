@@ -30,7 +30,7 @@
 - **Status:** `DEMO` — Proof is generated (or simulated via `0xLocalWasmProof`) but NOT cryptographically verified on-chain
 
 ### 3. `POST /api/aztec/anchor` (blockchain interaction)
-- **Type:** Aztec Testnet transaction
+- **Type:** Aztec Mainnet transaction
 - **Circuit:** Aztec protocol-level (not application-level Noir circuit)
 - **Prover:** Aztec Sequencer
 - **Verifier:** Aztec protocol

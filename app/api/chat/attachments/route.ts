@@ -1,15 +1,12 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
 
-import { getSession } from '@/lib/session';
+import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
-    const web3Address = req.headers.get('x-web3-address');
-    const userId = session?.userId || web3Address;
+    // [SECURITY] Require an authenticated session — never process files from anonymous clients
+    const userId = await getVerifiedCaller(req);
     
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -22,9 +19,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+    // [SECURITY] Reduced to 1MB to prevent Redis exhaustion
+    // 1MB raw → ~1.33MB base64 string. At 50-message cap: ~66MB max Redis usage.
+    const MAX_SIZE = 1 * 1024 * 1024; // 1MB
     if (file.size > MAX_SIZE) {
-      return NextResponse.json({ error: 'File too large. Maximum size is 2MB for system transmission.' }, { status: 413 });
+      return NextResponse.json({ error: 'File too large. Maximum size is 1MB for system transmission.' }, { status: 413 });
     }
 
     const bytes = await file.arrayBuffer();

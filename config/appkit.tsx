@@ -22,24 +22,24 @@ if (!process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID && typeof window !== 'unde
 }
 
 // 2. Interstellar Node Override
+// NOTE: These env vars intentionally have no NEXT_PUBLIC_ prefix.
+// In the client bundle they resolve to undefined (safe), falling back to the
+// public RPC URLs listed below. Premium RPC keys are only used server-side.
 const dedicatedBase = {
     ...base,
     rpcUrls: {
         ...base.rpcUrls,
-        default: { http: [process.env.GETBLOCK_BASE_RPC || 'https://base.drpc.org'] },
-        public: { http: [process.env.GETBLOCK_BASE_RPC || 'https://base.drpc.org'] }
+        default: { http: [process.env.NEXT_PUBLIC_GETBLOCK_BASE_RPC || 'https://base.drpc.org'] },
+        public: { http: [process.env.NEXT_PUBLIC_GETBLOCK_BASE_RPC || 'https://base.drpc.org'] }
     }
 };
-
-// Infura key  server-side only, never expose in client bundle
-const infuraKey = process.env.INFURA_API_KEY ?? '';
 
 const dedicatedMainnet = {
     ...mainnet,
     rpcUrls: {
         ...mainnet.rpcUrls,
-        default: { http: [process.env.ETH_RPC_URL || 'https://cloudflare-eth.com'] },
-        public: { http: [process.env.ETH_RPC_URL || 'https://cloudflare-eth.com'] }
+        default: { http: [process.env.NEXT_PUBLIC_ETH_RPC_URL || 'https://cloudflare-eth.com'] },
+        public: { http: [process.env.NEXT_PUBLIC_ETH_RPC_URL || 'https://cloudflare-eth.com'] }
     }
 };
 
@@ -47,8 +47,8 @@ const dedicatedBsc = {
     ...bsc,
     rpcUrls: {
         ...bsc.rpcUrls,
-        default: { http: [process.env.BNB_RPC_URL || 'https://bsc.publicnode.com'] },
-        public: { http: [process.env.BNB_RPC_URL || 'https://bsc.publicnode.com'] }
+        default: { http: [process.env.NEXT_PUBLIC_BNB_RPC_URL || 'https://bsc.publicnode.com'] },
+        public: { http: [process.env.NEXT_PUBLIC_BNB_RPC_URL || 'https://bsc.publicnode.com'] }
     }
 };
 
@@ -82,16 +82,16 @@ const dedicatedMonadMainnet: AppKitNetwork = {
 } as any;
 
 const galactica: AppKitNetwork = {
-    id: 9302,
-    name: 'Galactica Reticulum',
-    caipNetworkId: 'eip155:9302',
+    id: 613419,
+    name: 'Galactica Mainnet',
+    caipNetworkId: 'eip155:613419',
     chainNamespace: 'eip155',
     nativeCurrency: { name: 'GNET', symbol: 'GNET', decimals: 18 },
     rpcUrls: {
-        default: { http: ['https://evm-rpc-http-reticulum.galactica.com/'] }
+        default: { http: ['https://galactica-mainnet.g.alchemy.com/public'] }
     },
     blockExplorers: {
-        default: { name: 'Galactica Explorer', url: 'https://explorer-reticulum.galactica.com/' }
+        default: { name: 'Galactica Explorer', url: 'https://explorer.galactica.com/' }
     }
 } as any;
 
@@ -155,7 +155,7 @@ const metadata = {
     name: 'Humanity Ledger',
     description: 'Zero-Knowledge Identity Infrastructure',
     url: CANONICAL_APP_URL,
-    icons: [`${CANONICAL_APP_URL}/official-ledger-monochrome.png`],
+    icons: [`${CANONICAL_APP_URL}/logo-mark.png`],
 }
 
 //  1-Click Auth (SIWE) Configuration 

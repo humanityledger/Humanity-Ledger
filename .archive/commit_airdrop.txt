@@ -1,5 +1,0 @@
-feat(airdrop): increase genesis airdrop to 1000 QDs
-
-- Increased AIRDROP_AMOUNT from 200 to 1000 QDs to give users plenty of balance to chat freely
-- Updated all UI references from 200 QDs to 1000 QDs (WhaleChat, IdentityCard, ConnectPage, etc)
-- Note: Existing 200 QD airdrops were retroactively updated to 1000 QDs in the database via a manual script, so all existing users also received the full 1000 QDs.

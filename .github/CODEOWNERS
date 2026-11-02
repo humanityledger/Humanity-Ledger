@@ -1,43 +1,49 @@
-# CODEOWNERS  Whale Alert Network
-# © 20242026 humanityledger. All Rights Reserved.
-# Proprietary & Confidential.
-#
-# This file defines the code ownership structure of this repository.
-# Code reviews are MANDATORY from the Owner for all changes.
-# No pull request may be merged without Owner approval.
-#
-# Reference: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# Humanity Ledger — CODEOWNERS
+# All code owned by the core team. Security-sensitive files require dedicated cryptographic/security review.
 
-#  GLOBAL OWNER 
-# humanityledger is the sole owner of ALL files in this repository.
-# All pull requests require approval from this account.
+# Default owner for all files
 * @humanityledger
 
-#  CRITICAL PATHS 
-# These paths are particularly sensitive and require explicit review.
+# Protocol Core: Aztec Noir Circuits & Verification Keys (Normative Spec §3 T13, T14)
+# Requires review from Aztec/Noir protocol specialists before VK alteration
+circuits/** @humanityledger
+lib/aztec/** @humanityledger
+lib/zk/** @humanityledger
+aztec-contracts/** @humanityledger
 
-# Authentication & Security Layer
-/app/api/                     @humanityledger
-/components/providers/        @humanityledger
-/components/security/         @humanityledger
-/components/shared/LinkedGate.tsx  @humanityledger
-/components/layout/TitaniumGate.tsx @humanityledger
-/hooks/useSystemAccount.ts @humanityledger
-/hooks/useSystemSessionLock.ts @humanityledger
+# L1 Smart Contracts (Ethereum/EVM Vaults, Timelocks, Registries - Normative Spec §2.3)
+contracts/** @humanityledger
+hardhat.config.js @humanityledger
+test/contracts_invariants.test.ts @humanityledger
 
-# Data Layer
-/prisma/                      @humanityledger
-/lib/                         @humanityledger
+# Ephemeral Application Framework (EAF) Sandbox & Bridge (Normative Spec §2.4, P6)
+lib/community-apps/** @humanityledger
+components/chat/community-apps/** @humanityledger
+test/eaf_isolation.adversarial.test.ts @humanityledger
 
-# Configuration & Infrastructure
-/.env*                        @humanityledger
-/next.config.*                @humanityledger
-/package.json                 @humanityledger
-/Dockerfile*                  @humanityledger
-/docker-compose*              @humanityledger
+# Security-critical: auth, middleware, crypto, session
+middleware.ts @humanityledger
+lib/security/* @humanityledger
+lib/session.ts @humanityledger
+lib/jwt.ts @humanityledger
+lib/env.ts @humanityledger
+lib/auth* @humanityledger
+app/api/auth/** @humanityledger
+app/api/siwe/** @humanityledger
+test/key_custody.test.ts @humanityledger
+test/mls_post_compromise.test.ts @humanityledger
+test/property_fuzz.test.ts @humanityledger
 
-# Legal Documents  Never modify without Owner consent
-/LICENSE                      @humanityledger
-/NOTICE                       @humanityledger
-/SECURITY.md                  @humanityledger
-/CODEOWNERS                   @humanityledger
+# Database schema — every migration needs review
+prisma/schema.prisma @humanityledger
+prisma/migrations/** @humanityledger
+
+# CI and deployment pipelines & supply chain
+.github/workflows/** @humanityledger
+docs/PROTOCOL_SPEC.md @humanityledger
+docs/TRACEABILITY_MATRIX.md @humanityledger
+docs/AUDIT_DOSSIER.md @humanityledger
+docs/SUPPLY_CHAIN.md @humanityledger
+scripts/railway-pre-deploy.js @humanityledger
+start.sh @humanityledger
+railway.toml @humanityledger

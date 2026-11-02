@@ -37,14 +37,14 @@ export async function logProvenanceEvent(
         token: 'ATOMIC_LOG',
         fromAddress: address,
         toAddress: target,
-        chainId: 2151908, // Aztec Testnet ID for HumanIDFi
+        chainId: 2151908, // Aztec Mainnet ID for HumanIDFi
         blockNumber: BigInt(Date.now()), // Deterministic pseudo-block
         metadata: {
           provenance: true,
           fingerprint: fingerprint,
           actionDetails: details,
           certificateRoot: `0x${Buffer.from(fingerprint).toString('hex').slice(0, 64)}`,
-          explorerUrl: `https://testnet.aztecscan.xyz` // Virtual provenance hash — always route to explorer root
+          explorerUrl: `https://aztecscan.xyz` // Virtual provenance hash — always route to explorer root
         }
       }
     });

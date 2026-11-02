@@ -23,7 +23,7 @@ const SYMBOL_TO_NAME: Record<string, string> = {
  * We fan-out one request per symbol with a 24h startTime window, then aggregate.
  */
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 async function fetchSymbolLiquidations(symbol: string, startTime: number): Promise<number> {
   try {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAddress } from 'viem';
 import { getEnrichedHistory } from '@/lib/wallet/activities-server';
-import { withCache, CacheTTL, addressCacheKey } from '@/src/lib/cache/redis-cache';
+import { withCache, CacheTTL, addressCacheKey } from '@/lib/cache/redis-cache';
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);

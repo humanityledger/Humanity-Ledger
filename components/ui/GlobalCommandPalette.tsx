@@ -124,7 +124,7 @@ export function GlobalCommandPalette({
                   value={query}
                   onChange={e => { setQuery(e.target.value); setCursor(0); }}
                 />
-                <kbd className="text-[9px] font-black font-mono text-[#050505]/20  bg-[#050505]/[0.04]  border border-[#050505]/[0.07]  rounded px-1.5 py-0.5 leading-none shrink-0">
+                <kbd className="text-[9px] font-black font-mono text-[#050505]/20  bg-white/[0.04]  border border-[#050505]/[0.07]  rounded px-1.5 py-0.5 leading-none shrink-0">
                   ESC
                 </kbd>
               </div>
@@ -146,7 +146,7 @@ export function GlobalCommandPalette({
                           <button
                             key={page.id}
                             onClick={() => { onTabChange(page.id); setIsOpen(false); }}
-                            className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#050505]/[0.03]  text-left transition-colors group"
+                            className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/[0.03]  text-left transition-colors group"
                           >
                             <div className="flex items-center gap-3">
                               <span className="text-[12.5px] font-medium text-[#050505]/65  group-hover:text-[#050505]  transition-colors">
@@ -168,7 +168,7 @@ export function GlobalCommandPalette({
                         key={page.id}
                         onClick={() => { onTabChange(page.id); setIsOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                          i === cursor ? "bg-[#050505]/[0.05] " : "hover:bg-[#050505]/[0.03] "
+                          i === cursor ? "bg-white/[0.05] " : "hover:bg-white/[0.03] "
                         }`}
                       >
                         <div className="flex flex-col gap-0.5 min-w-0">

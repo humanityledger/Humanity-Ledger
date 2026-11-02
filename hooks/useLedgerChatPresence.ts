@@ -1,6 +1,5 @@
 // hooks/useLedgerChatPresence.ts
-// Fully local presence system using BroadcastChannel API (no server needed)
-// Tabs/windows in the same origin share presence state in real-time
+// Network-backed presence system
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
@@ -11,29 +10,9 @@ export interface PeerPresence {
   peer: string | null;
 }
 
-export interface PresenceBroadcastPayload {
-  type: 'heartbeat' | 'typing_start' | 'typing_stop' | 'active_peer' | 'away' | 'bye';
-  from: string;
-  to?: string;
-  timestamp: number;
-}
-
-const PRESENCE_CHANNEL = 'ledger-presence';
-const HEARTBEAT_INTERVAL_MS = 10_000; // 10s
-const AWAY_THRESHOLD_MS = 30_000;     // 30s of no heartbeats = away
-const OFFLINE_THRESHOLD_MS = 60_000;  // 60s = offline
-
-// Shared cross-tab channel
-let broadcastChannel: BroadcastChannel | null = null;
-function getChannel(): BroadcastChannel | null {
-  if (typeof window === 'undefined') return null;
-  if (!broadcastChannel) {
-    try {
-      broadcastChannel = new BroadcastChannel(PRESENCE_CHANNEL);
-    } catch {}
-  }
-  return broadcastChannel;
-}
+const HEARTBEAT_INTERVAL_MS = 15_000; 
+const AWAY_THRESHOLD_MS = 45_000;     
+const OFFLINE_THRESHOLD_MS = 90_000;  
 
 export function useLedgerChatPresence(myAddress: string, activePeer: string | null) {
   const [peerStatus, setPeerStatus] = useState<PeerPresence>({
@@ -43,146 +22,68 @@ export function useLedgerChatPresence(myAddress: string, activePeer: string | nu
     peer: activePeer,
   });
 
-  const peerHeartbeats = useRef<Map<string, number>>(new Map());
-  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const myAddressRef = useRef(myAddress);
   const activePeerRef = useRef(activePeer);
-
-  myAddressRef.current = myAddress;
   activePeerRef.current = activePeer;
 
-  const broadcast = useCallback((payload: Omit<PresenceBroadcastPayload, 'from' | 'timestamp'>) => {
-    const ch = getChannel();
-    if (!ch || !myAddressRef.current) return;
-    try {
-      ch.postMessage({
-        ...payload,
-        from: myAddressRef.current,
-        timestamp: Date.now(),
-      } satisfies PresenceBroadcastPayload);
-    } catch {}
+  const broadcastTyping = useCallback(() => {
+    // Typing indicator is not supported over DB polling due to rate limits
   }, []);
 
-  const broadcastTyping = useCallback(() => {
-    broadcast({ type: 'typing_start', to: activePeerRef.current ?? undefined });
-
-    // Auto-stop typing signal after 3 seconds
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => {
-      broadcast({ type: 'typing_stop', to: activePeerRef.current ?? undefined });
-    }, 3000);
-  }, [broadcast]);
-
-  const evaluatePeerStatus = useCallback(() => {
-    if (!activePeerRef.current) {
+  const evaluatePeerStatus = useCallback(async () => {
+    if (!activePeerRef.current || !myAddress) {
       setPeerStatus({ status: 'offline', lastSeen: null, isTyping: false, peer: null });
       return;
     }
 
-    const lastHeartbeat = peerHeartbeats.current.get(activePeerRef.current.toLowerCase());
-    if (!lastHeartbeat) {
-      setPeerStatus(prev => ({ ...prev, status: 'offline', peer: activePeerRef.current }));
-      return;
-    }
+    try {
+      const res = await fetch('/api/chat/presence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: myAddress,
+          peerAddress: activePeerRef.current,
+          // Your "Last seen" choice; the server applies it both ways.
+          visibility: (() => { try { return localStorage.getItem('ledger_privacy_last_seen') || 'contacts'; } catch { return 'contacts'; } })(),
+        })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        const lastSeen = data.lastActiveAt;
+        if (!lastSeen) {
+          // Hidden by their (or your) "Last seen" setting, or simply away:
+          // show nothing rather than a stale time from an earlier poll.
+          setPeerStatus({ status: 'offline', lastSeen: null, isTyping: false, peer: activePeerRef.current });
+          return;
+        }
 
-    const age = Date.now() - lastHeartbeat;
-    if (age < AWAY_THRESHOLD_MS) {
-      setPeerStatus(prev => ({ ...prev, status: 'online', lastSeen: lastHeartbeat, peer: activePeerRef.current }));
-    } else if (age < OFFLINE_THRESHOLD_MS) {
-      setPeerStatus(prev => ({ ...prev, status: 'away', lastSeen: lastHeartbeat, peer: activePeerRef.current }));
-    } else {
-      setPeerStatus(prev => ({ ...prev, status: 'offline', lastSeen: lastHeartbeat, peer: activePeerRef.current }));
+        const age = Date.now() - lastSeen;
+        if (age < AWAY_THRESHOLD_MS) {
+          setPeerStatus({ status: 'online', lastSeen, isTyping: false, peer: activePeerRef.current });
+        } else if (age < OFFLINE_THRESHOLD_MS) {
+          setPeerStatus({ status: 'away', lastSeen, isTyping: false, peer: activePeerRef.current });
+        } else {
+          setPeerStatus({ status: 'offline', lastSeen, isTyping: false, peer: activePeerRef.current });
+        }
+      } else {
+        // Not mutual contacts (403) or signed out: never show another chat's status.
+        setPeerStatus({ status: 'offline', lastSeen: null, isTyping: false, peer: activePeerRef.current });
+      }
+    } catch (e) {
+      // Ignore network errors for presence
     }
-  }, []);
+  }, [myAddress]);
 
   useEffect(() => {
     if (!myAddress) return;
 
-    const ch = getChannel();
-    if (!ch) return;
-
-    const handleMessage = (event: MessageEvent<PresenceBroadcastPayload>) => {
-      const { type, from, to, timestamp } = event.data;
-      if (!from || from.toLowerCase() === myAddress.toLowerCase()) return;
-
-      const fromKey = from.toLowerCase();
-
-      switch (type) {
-        case 'heartbeat':
-        case 'active_peer':
-          peerHeartbeats.current.set(fromKey, timestamp);
-          // If this is from our active peer, re-evaluate
-          if (activePeerRef.current?.toLowerCase() === fromKey) {
-            evaluatePeerStatus();
-          }
-          break;
-
-        case 'typing_start':
-          if (to?.toLowerCase() === myAddress.toLowerCase() && activePeerRef.current?.toLowerCase() === fromKey) {
-            setPeerStatus(prev => ({ ...prev, isTyping: true }));
-          }
-          break;
-
-        case 'typing_stop':
-          if (to?.toLowerCase() === myAddress.toLowerCase()) {
-            setPeerStatus(prev => ({ ...prev, isTyping: false }));
-          }
-          break;
-
-        case 'away':
-          if (activePeerRef.current?.toLowerCase() === fromKey) {
-            setPeerStatus(prev => ({ ...prev, status: 'away', lastSeen: timestamp }));
-          }
-          break;
-
-        case 'bye':
-          if (activePeerRef.current?.toLowerCase() === fromKey) {
-            setPeerStatus(prev => ({ ...prev, status: 'offline', lastSeen: timestamp }));
-          }
-          break;
-      }
-    };
-
-    ch.addEventListener('message', handleMessage);
-
-    // Start heartbeat
-    const sendHeartbeat = () => {
-      broadcast({ type: 'heartbeat', to: activePeerRef.current ?? undefined });
-    };
-    sendHeartbeat();
-    heartbeatRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
-
-    // Evaluating peer every 10s
-    const evalInterval = setInterval(evaluatePeerStatus, 10_000);
-
-    // On visibility change
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        broadcast({ type: 'heartbeat' });
-        evaluatePeerStatus();
-      } else {
-        broadcast({ type: 'away' });
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // On page close
-    const handleBeforeUnload = () => {
-      broadcast({ type: 'bye' });
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    evaluatePeerStatus();
+    const heartbeatInterval = setInterval(evaluatePeerStatus, HEARTBEAT_INTERVAL_MS);
 
     return () => {
-      ch.removeEventListener('message', handleMessage);
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      clearInterval(evalInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      broadcast({ type: 'bye' });
+      clearInterval(heartbeatInterval);
     };
-  }, [myAddress, broadcast, evaluatePeerStatus]);
+  }, [myAddress, evaluatePeerStatus]);
 
   // Re-evaluate when activePeer changes
   useEffect(() => {

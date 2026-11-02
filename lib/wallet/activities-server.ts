@@ -3,7 +3,7 @@
  * Fetch real on-chain transactions across multiple chains using Alchemy
  */
 
-import { matchNewsToMarket } from '@/utils/news-matcher';
+import { matchNewsToMarket } from '@/lib/utils/news-matcher';
 
 const DATA_API = 'https://data-api.polymarket.com';
 

@@ -48,18 +48,18 @@ const THEMES: Record<string, ThemeConfig> = {
   PHARMA: {
     bg: 'bg-slate-50',
     cardBg: 'bg-white',
-    cardBorder: 'border-blue-100',
-    headerBorder: 'border-blue-100',
+    cardBorder: 'border-emerald-100',
+    headerBorder: 'border-emerald-100',
     textMain: 'text-slate-900',
     textMuted: 'text-slate-500',
-    accentBg: 'bg-blue-50',
-    accentText: 'text-blue-700',
-    iconColor: 'text-blue-400',
-    bannerVerifiedBg: 'bg-blue-600',
+    accentBg: 'bg-emerald-50',
+    accentText: 'text-emerald-700',
+    iconColor: 'text-emerald-400',
+    bannerVerifiedBg: 'bg-emerald-600',
     bannerVerifiedText: 'text-white',
     bannerPendingBg: 'bg-slate-200',
     bannerPendingText: 'text-slate-700',
-    buttonBg: 'bg-blue-600 hover:bg-blue-700',
+    buttonBg: 'bg-emerald-600 hover:bg-emerald-700',
   },
   FOOD: {
     bg: 'bg-stone-50',
@@ -151,7 +151,7 @@ const THEMES: Record<string, ThemeConfig> = {
     accentBg: 'bg-black/5',
     accentText: 'text-black/70',
     iconColor: 'text-black/30',
-    bannerVerifiedBg: 'bg-[#050505]',
+    bannerVerifiedBg: 'bg-white',
     bannerVerifiedText: 'text-white',
     bannerPendingBg: 'bg-black/5',
     bannerPendingText: 'text-black/60',
@@ -167,7 +167,7 @@ const CHAIN_EXPLORERS: Record<number, { name: string; base: string }> = {
   1:    { name: 'Etherscan',    base: 'https://etherscan.io/tx/' },
   8453: { name: 'Basescan',    base: 'https://basescan.org/tx/' },
   137:  { name: 'Polygonscan', base: 'https://polygonscan.com/tx/' },
-  11155111: { name: 'AztecScan', base: 'https://testnet.aztecscan.xyz/tx-effect/' },
+  2151908: { name: 'AztecScan', base: 'https://aztecscan.xyz/tx-effect/' },
 };
 
 /* ─────────────────────────────────────────────
@@ -175,7 +175,7 @@ const CHAIN_EXPLORERS: Record<number, { name: string; base: string }> = {
 ───────────────────────────────────────────── */
 function explorerUrl(chainId: number | null, txHash: string | null): string | null {
   if (!txHash || !chainId) return null;
-  if (chainId === 11155111 || chainId === 89021716) return 'https://testnet.aztecscan.xyz';
+  if (chainId === 2151908 || chainId === 89021716) return 'https://aztecscan.xyz';
   const explorer = CHAIN_EXPLORERS[chainId];
   return explorer ? `${explorer.base}${txHash}` : null;
 }
@@ -665,3 +665,4 @@ export function PassportView({ passport }: { passport: ProductPassportPublic }) 
     </div>
   );
 }
+

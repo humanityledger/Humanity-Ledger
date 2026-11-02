@@ -10,7 +10,7 @@ const CACHE_TTL = 10000; // 10 segundos
 /**
  * 0-Conf Mempool Sniffer (Server-Sent Events)
  * -------------------------------------------
- * Conecta vía WebSocket al registry de GetBlock compartiendo la misma conexión global.
+ * Connect vía WebSocket al registry de GetBlock compartiendo la misma conexión global.
  * Filtra transacciones pendientes y aplica caché para evitar Multi-User RPC Exhaustion.
  */
 export async function GET(req: NextRequest) {

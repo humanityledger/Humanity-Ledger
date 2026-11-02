@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, Eye, Settings, ShieldAlert, Fingerprint, Zap, Laptop, MapPin, Smartphone, Globe, Shield, ArrowUpRight, ArrowDownLeft, Lock, Link2, CheckCircle2 } from 'lucide-react';
 import { useUIStore } from '@/lib/store/ui-store';
-import { useSettings } from '@/src/context/SettingsContext';
+import { useSettings } from '@/context/SettingsContext';
 import useSWR from 'swr';
 import { useVIPStore, VIPStoreState, LedgerEvent } from '@/lib/vip-store'; 
 import { useSystemAccount as useAccount } from '@/hooks/useSystemAccount';
@@ -305,7 +305,6 @@ export function UtilityPanels() {
                                     className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[11px] font-black font-mono text-[#050505] focus:outline-none focus:border-black transition-all uppercase tracking-wider appearance-none"
                                 >
                                     <option value="light">Arctic Light</option>
-                                    <option value="dark">Void Dark</option>
                                     <option value="auto">System OS</option>
                                 </select>
                             </div>
@@ -471,6 +470,8 @@ function SettingToggle({ label, description, active, onToggle, color = 'chartreu
 }
 
 export function BillionLedgerNotification() {
+    // Disabled per user request (eliminates fake transfer popups)
+    return null;
     const ledgerEvents = useVIPStore((state: VIPStoreState) => state.ledgerEvents);
     const [activeTransfers, setActiveTransfers] = useState<LedgerEvent[]>([]);
 

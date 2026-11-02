@@ -1,8 +1,14 @@
+import { getSession } from '@/lib/session';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ address: string }> }) {
+    const session = await getSession();
+    if (!session?.userId) {
+        return new Response(JSON.stringify({ error: 'Unauthorized: Authentication required.' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     try {
         const { address } = await params;
         const cookieStore = await cookies();
@@ -71,6 +77,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ address:
             return NextResponse.json({ success: true, user: fallbackUser, warning: 'Partial save due to schema version' });
         }
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

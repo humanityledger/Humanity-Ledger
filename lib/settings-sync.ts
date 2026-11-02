@@ -41,11 +41,18 @@ export class SettingsSyncService {
    * Load settings from server with fallback to localStorage
    */
   async loadSettings(): Promise<{ settings: UserSettings; version?: number } | null> {
+    // Signed-out visitors have no server settings; don't ask (it was a 401
+    // for the CSRF token and another for the settings on every page view).
+    if (typeof document !== 'undefined' && !/(?:^|;\s*)(?:wallet-auth|system_handshake)=/.test(document.cookie)) {
+      const local = this.loadFromLocalStorage();
+      return local ? { settings: local } : null;
+    }
     try {
       // Try to load from server with retry logic
       const data = await this.retryableRequest<any>(async () => {
         return fetch('/api/user/settings', {
           method: 'GET',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -69,7 +76,11 @@ export class SettingsSyncService {
       const local = this.loadFromLocalStorage();
       return local ? { settings: local } : null;
     } catch (error) {
-      console.error('Failed to load settings from server:', error);
+      // Signed-out visitors get 401 here; that is expected, not an error.
+      const msg = error instanceof Error ? error.message : String(error);
+      if (!/authentication required|unauthori[sz]ed|401/i.test(msg)) {
+        console.error('Failed to load settings from server:', error);
+      }
       // Fallback to localStorage
       const local = this.loadFromLocalStorage();
       return local ? { settings: local } : null;
@@ -91,6 +102,7 @@ export class SettingsSyncService {
 
         return fetch('/api/user/settings', {
           method: 'PUT',
+          credentials: 'include',
           headers,
           body: JSON.stringify({
             ...settings,
@@ -172,24 +184,30 @@ export class SettingsSyncService {
         }
 
         // If CSRF expired or invalid, refetch and retry once
-        if (response.status === 401 && attempt < this.maxRetries) {
-            console.log('[SyncService] 401 detected, refreshing CSRF token...');
+        if (response.status === 401 && attempt === 0) {
             const csrfRes = await fetch('/api/auth/csrf');
             if (csrfRes.ok) {
                 const data = await csrfRes.json();
-                csrfToken = data.token;
-                continue; // Immediate retry with new token
+                if (data?.token && data.token !== csrfToken) {
+                  csrfToken = data.token;
+                  continue; // Immediate retry with new token
+                }
             }
         }
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `Server returned ${response.status}`);
+            const err: any = new Error(errorData.error || `Server returned ${response.status}`);
+            // A client error (signed out, forbidden, invalid) will not change
+            // on retry. Retrying it made every signed-out page load fire a
+            // burst of 401s; only network failures and 5xx are retried.
+            if (response.status >= 400 && response.status < 500 && response.status !== 408) err.noRetry = true;
+            throw err;
         }
 
         return response.json();
       } catch (error: any) {
-        if (attempt === this.maxRetries) throw error;
+        if (error?.noRetry || attempt === this.maxRetries) throw error;
         const delay = this.baseDelay * Math.pow(2, attempt);
         console.log(`Retry attempt ${attempt + 1} after ${delay}ms`);
         await this.delay(delay);
@@ -236,6 +254,7 @@ export class SettingsSyncService {
 
         return fetch('/api/user/settings', {
           method: 'PATCH',
+          credentials: 'include',
           headers,
           body: JSON.stringify(updates),
         });

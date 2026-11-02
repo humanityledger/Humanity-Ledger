@@ -1,0 +1,80 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, getClientIP } from '@/lib/security/rateLimiter';
+
+export const dynamic = 'force-dynamic';
+
+async function handlePriceCommand(args: string): Promise<string> {
+  const token = String(args ?? '').trim().toUpperCase().slice(0, 40) || 'ETH';
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(token.toLowerCase())}&vs_currencies=usd&include_24hr_change=true`,
+      { next: { revalidate: 30 } }
+    );
+    const data = await res.json();
+    const tokenKey = Object.keys(data)[0];
+    if (!tokenKey) return `❌ Token "${token}" not found on CoinGecko.`;
+    const price = data[tokenKey].usd;
+    const change = data[tokenKey].usd_24h_change?.toFixed(2);
+    const arrow = change >= 0 ? '📈' : '📉';
+    return `${arrow} **${token}**: $${price.toLocaleString()} (${change > 0 ? '+' : ''}${change}% 24h)`;
+  } catch {
+    return `❌ Failed to fetch price for ${token}. Try again.`;
+  }
+}
+
+async function handleEnsCommand(args: string): Promise<string> {
+  const name = String(args ?? '').trim().toLowerCase();
+  // Labels only: the name goes into a URL path, and "a/../../x.eth" would
+  // otherwise reach a different endpoint on that host.
+  if (!/^([a-z0-9-]{1,63}\.)+eth$/.test(name) || name.length > 255) return '❌ Please provide a valid .eth name';
+  try {
+    const res = await fetch(`https://api.ensideas.com/ens/resolve/${encodeURIComponent(name)}`, { signal: AbortSignal.timeout(8000) });
+    const data = await res.json();
+    if (data.address) {
+      return `🔍 **${name}**\n\`${data.address}\``;
+    }
+    return `❌ ENS name "${name}" not found or not resolved.`;
+  } catch {
+    return `❌ Failed to resolve ${name}.`;
+  }
+}
+
+export async function POST(req: NextRequest) {
+  // Rate limit: 30 requests per minute per IP to protect external API rate limits (CoinGecko/Etherscan)
+  const ip = getClientIP(req);
+  const rl = await checkRateLimit(ip, { max: 30, windowSec: 60, prefix: 'rl:bots' });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 });
+  }
+
+  try {
+    const { command, args } = await req.json();
+    let response = '';
+
+    switch (command) {
+      case '/price': response = await handlePriceCommand(args); break;
+      case '/ens':   response = await handleEnsCommand(args); break;
+      case '/mc':
+        response = `📊 Market cap data coming soon. Try /price ${args} for now.`;
+        break;
+      case '/gas': {
+        try {
+          const res = await fetch('https://api.etherscan.io/api?module=gastracker&action=gasoracle', { next: { revalidate: 15 } });
+          const data = await res.json();
+          if (data.result?.ProposeGasPrice) {
+            response = `⛽ **Gas Prices** (Gwei)\nSlow: ${data.result.SafeGasPrice} | Standard: ${data.result.ProposeGasPrice} | Fast: ${data.result.FastGasPrice}`;
+          } else {
+            response = '❌ Gas data unavailable.';
+          }
+        } catch { response = '❌ Failed to fetch gas prices.'; }
+        break;
+      }
+      default:
+        response = `❓ Unknown command: ${command}\nAvailable: /price <token>, /ens <name.eth>, /gas`;
+    }
+
+    return NextResponse.json({ response });
+  } catch (e) {
+    return NextResponse.json({ error: 'Command failed' }, { status: 500 });
+  }
+}

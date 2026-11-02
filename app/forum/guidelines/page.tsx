@@ -70,7 +70,7 @@ const RULES = [
     donts: [
       'Promocionar proyectos propios, tokens o NFTs sin autorización previa',
       'Publicar noticias generales de criptomonedas que ya están en otros sitios',
-      'Enviar spam con el mismo contenido en varias categorías'
+      'send spam con el mismo contenido en varias categorías'
     ],
   },
   {

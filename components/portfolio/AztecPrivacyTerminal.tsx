@@ -315,7 +315,7 @@ function DepositPanel({ log, privateKey, onSuccess }: any) {
         </div>
         <div className="flex justify-between text-black/50">
           <span>ZK Mechanism</span>
-          <span className="text-black/70">PLONK / UltraPlonk</span>
+          <span className="text-black/70">UltraHonk (Aztec v6)</span>
         </div>
         <div className="flex justify-between text-black/50">
           <span>Privacy Level</span>

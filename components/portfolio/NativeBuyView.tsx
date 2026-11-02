@@ -40,8 +40,6 @@ export function NativeBuyView({ address, onBack }: any) {
         addLog(`Target Asset: ${cryptoCurrencyCode.toUpperCase()} on ${activeNetwork.toUpperCase()}`);
         addLog(`Recipient: ${address}`);
 
-        const moonpayApiKey = process.env.NEXT_PUBLIC_MOONPAY_API_KEY;
-
         try {
             await new Promise(r => setTimeout(r, 600));
             addLog(`Preparing purchase parameters...`);
@@ -58,13 +56,18 @@ export function NativeBuyView({ address, onBack }: any) {
                 showWalletAddressForm: 'true',
             };
 
-            if (moonpayApiKey) {
-                params.apiKey = moonpayApiKey;
-            }
-
             const qs = new URLSearchParams(params).toString();
+            const moonpayUrl = `${baseUrl}?${qs}`;
+            
+            const res = await fetch('/api/internal/moonpay/sign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: moonpayUrl }),
+            });
+            const { signedUrl } = await res.json();
+
             const link = document.createElement('a');
-            link.href = `${baseUrl}?${qs}`;
+            link.href = signedUrl;
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
             document.body.appendChild(link);

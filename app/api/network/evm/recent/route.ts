@@ -264,6 +264,6 @@ export async function GET(request: Request) {
     });
   } catch (err: any) {
     console.error('[EVM Recent API]', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

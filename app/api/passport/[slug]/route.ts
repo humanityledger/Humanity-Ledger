@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { serializePassport } from '@/lib/passport/serialize';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 export async function GET(
   _req: NextRequest,

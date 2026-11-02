@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
               hexBackgroundColor: '#1F1F1F',
               logo: {
                 sourceUri: {
-                  uri: 'https://sovereign.pro/official-ledger-legendary.png',
+                  uri: 'https://sovereign.pro/logo-mark.png',
                 },
               },
               cardTitle: {

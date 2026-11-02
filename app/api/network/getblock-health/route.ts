@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getEndpointSummary, getActiveCount, getCoveredChains } from '@/lib/blockchain/getblock-registry';
 import { RpcRelayerManager } from '@/lib/blockchain/rpc-relayer';
 import { GlobalRPCRouter } from '@/lib/rpc-router';
+import { isCronAuthorized } from '@/lib/security/cronAuth';
 
 /**
  * GET /api/network/getblock-health
@@ -20,11 +21,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
     // Protección básica  solo accesible con el CRON_SECRET o en desarrollo
-    const authHeader = request.headers.get('x-cron-secret') ?? request.headers.get('authorization');
-    const isAuthorized =
-        process.env.NODE_ENV === 'development' ||
-        authHeader === process.env.CRON_SECRET ||
-        authHeader === `Bearer ${process.env.CRON_SECRET}`;
+    // "Bearer undefined" passed the old check whenever CRON_SECRET was unset.
+    const isAuthorized = isCronAuthorized(request);
 
     if (!isAuthorized) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -71,7 +69,7 @@ export async function GET(request: Request) {
     } catch (err: any) {
         console.error('[GetBlock Health API] Error:', err);
         return NextResponse.json(
-            { status: 'ERROR', error: err?.message ?? 'Unknown error' },
+            { status: 'ERROR', error: 'Health check failed' },
             { status: 500 }
         );
     }

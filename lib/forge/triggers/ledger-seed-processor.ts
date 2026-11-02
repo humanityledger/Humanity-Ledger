@@ -1,16 +1,17 @@
-﻿import { Queue } from 'bullmq';
+import { Queue } from 'bullmq';
 import { createRedisClient } from '@/lib/redis/client';
 import { FORGE_ENABLED, TIER_THRESHOLDS } from '../index';
 
 const connection = createRedisClient({ name: 'CosmicForgeQueue' });
-const forgeQueue = new Queue('forge-seed', { connection });
+const isMock = !connection || (connection as any).__isMock || (connection as any).__isBuildMock;
+const forgeQueue = isMock ? null : new Queue('forge-seed', { connection });
 
 export class LedgerSeedProcessor {
     /**
      * Call this from the main Ingestion Engine whenever a ledger event > 1M is saved.
      */
     static async tryInjectSeed(eventId: string, amountUSD: number, chain: string, timestamp: number = Date.now()) {
-        if (!FORGE_ENABLED) return;
+        if (!FORGE_ENABLED || !forgeQueue) return;
         
         // Only Narwhal and above triggers the Forge (Z-score 3.5σ implicit loosely translates to > $1M here)
         if (amountUSD < TIER_THRESHOLDS.NARWHAL) return;

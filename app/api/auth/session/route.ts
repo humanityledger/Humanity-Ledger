@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
     if (humanSession) {
       try {
         const payload = await verifyJWT(humanSession);
+        const { isSessionTokenRevoked } = await import('@/lib/security/sessionRevocation');
+        if (await isSessionTokenRevoked(humanSession)) throw new Error('revoked');
         const walletAddress = (payload.address || payload.sub) as string | undefined;
         if (walletAddress) {
           const user = await prisma.user.findUnique({
@@ -27,7 +29,8 @@ export async function GET(request: NextRequest) {
           });
           const userTransactions = await prisma.transaction.findMany({
             where: { fromAddress: walletAddress.toLowerCase(), type: 'SUBSCRIPTION_PAYMENT' },
-            orderBy: { timestamp: 'desc' }
+            orderBy: { timestamp: 'desc' },
+            take: 20
           });
           return NextResponse.json(serializeData({
             authenticated: true,
@@ -47,13 +50,6 @@ export async function GET(request: NextRequest) {
         // JWT expired or invalid  fall through
       }
     }
-
-    //  Priority 2: system_handshake cookie (raw wallet address) 
-    // [SECURITY PATCH] system_handshake is a JS-readable cookie set by the QR handshake flow.
-    // It is NOT a cryptographic proof of identity. Trusting it alone is equivalent to
-    // allowing anyone who can forge a cookie to impersonate any wallet.
-    // Removed: this block was the last remaining "blind trust" IDOR pattern.
-    // The user must have a valid signed JWT (human_session / ledger_session) to be authenticated.
 
     return NextResponse.json({ authenticated: false, user: null });
   } catch (error) {

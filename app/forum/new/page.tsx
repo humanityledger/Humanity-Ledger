@@ -238,7 +238,7 @@ function NewTopicContent() {
                   INITIALIZE BROADCAST
                 </h1>
                 <p className="text-[12px] font-mono text-gray-500 uppercase tracking-widest mt-2">
-                    Transmission hashed and signed cryptographically on Aztec Testnet.
+                    Transmission hashed and signed cryptographically on Aztec Mainnet.
                 </p>
             </div>
             <div className="flex items-center gap-4">

@@ -9,8 +9,13 @@ export async function GET(
 ) {
     // Await params as per Next.js 15+ requirements if applicable, or standard async handling
     const resolvedParams = await params;
-    const path = resolvedParams.slug.join('/');
-    const query = request.nextUrl.search;
+    // Plain path segments only: no "..", no encoded separators, nothing that
+    // could make the proxy reach a different endpoint than the API asked for.
+    if (!resolvedParams.slug.length || resolvedParams.slug.length > 8 || resolvedParams.slug.some(s => !/^[A-Za-z0-9_\-.:]{1,128}$/.test(s) || s === '.' || s === '..')) {
+        return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
+    }
+    const path = resolvedParams.slug.map(encodeURIComponent).join('/');
+    const query = request.nextUrl.search.slice(0, 512);
     
     // Construct the full URL
     // mempool.space api structure: /api/v1/...

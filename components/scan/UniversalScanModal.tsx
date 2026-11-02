@@ -302,6 +302,9 @@ export default function UniversalScanModal({
     };
   }, [isOpen, initialScanData, destroyScanner, initScanner, handleDecoded]);
 
+  const handshakeCleanupRef = useRef<(() => void) | null>(null);
+  useEffect(() => { return () => { handshakeCleanupRef.current?.(); }; }, []);
+
   // Handle PIN submission after QR scan
   const handlePinConfirm = useCallback(async () => {
     if (pinInput.length !== 4 || !pinScanData) return;
@@ -318,6 +321,7 @@ export default function UniversalScanModal({
         hasScannedRef.current = false;
         return;
       }
+      if (result.ok && result.cleanup) handshakeCleanupRef.current = result.cleanup;
       setStatus('success');
       onScanRef.current?.(pinScanData);
       setTimeout(() => onCloseRef.current(), 1400);
@@ -349,6 +353,16 @@ export default function UniversalScanModal({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // [SECURITY] Reject oversized images to prevent OOM
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (file.size > MAX_FILE_SIZE) {
+      setErrMsg('Image too large. Please use a file smaller than 10 MB.');
+      setStatus('error');
+      e.target.value = '';
+      return;
+    }
+
     setFileLoading(true);
     try {
       const decoded = await scanFileForQR(file);
@@ -398,7 +412,7 @@ export default function UniversalScanModal({
                 type="button"
                 onClick={() => setTab('camera')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
-                  tab === 'camera' ? 'bg-[#050505] text-white' : 'bg-white text-black/40 border-black/10'
+                  tab === 'camera' ? 'bg-white text-white' : 'bg-white text-black/40 border-black/10'
                 }`}
               >
                 <Camera size={13} /> Camera
@@ -407,7 +421,7 @@ export default function UniversalScanModal({
                 type="button"
                 onClick={() => setTab('file')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
-                  tab === 'file' ? 'bg-[#050505] text-white' : 'bg-white text-black/40 border-black/10'
+                  tab === 'file' ? 'bg-white text-white' : 'bg-white text-black/40 border-black/10'
                 }`}
               >
                 <Upload size={13} /> Gallery
@@ -426,6 +440,9 @@ export default function UniversalScanModal({
                   </p>
                   <p className="text-[10px] text-black/50 text-center max-w-[220px] leading-relaxed">
                     Enter the 4-digit code displayed on your desktop screen
+                  </p>
+                  <p role="note" className="text-[11px] text-[#9a2a1a] bg-[#fff1ee] border border-[#f6c9bf] rounded-xl px-3 py-2 text-center max-w-[260px] leading-relaxed">
+                    This signs a computer into your account. Only continue if you opened this code yourself on a computer in front of you.
                   </p>
                   {/* 4-box PIN input */}
                   <div className="flex gap-3 mt-1">
@@ -566,7 +583,7 @@ export default function UniversalScanModal({
               )}
               {tab === 'file' && (
                 <div className="flex flex-col items-center justify-center flex-1 p-6 gap-4">
-                  <label className="cursor-pointer flex items-center gap-2 px-6 py-3 bg-[#050505] text-white text-[10px] font-black uppercase rounded-xl">
+                  <label className="cursor-pointer flex items-center gap-2 px-6 py-3 bg-white text-white text-[10px] font-black uppercase rounded-xl">
                     {fileLoading ? <Loader2 className="animate-spin" size={13} /> : <Upload size={13} />}
                     Select image
                     <input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} disabled={fileLoading} />

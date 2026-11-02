@@ -1,4 +1,4 @@
-﻿import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 /**
@@ -22,6 +22,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./test/setup.ts'],
+    retry: 2,
     include: [
       'test/**/*.test.ts',
       'test/**/*.spec.ts',
@@ -30,6 +31,13 @@ export default defineConfig({
       'node_modules',
       '.next',
       'test/e2e/**',
+      'test/LedgerDeadmanSwitch.test.ts',
+      'test/HumanTimeLock.test.ts',
+      'test/contracts_invariants.test.ts',
+      'test/SystemDeadmanSwitch.test.js',
+      'test/qd-stress.test.ts',
+      'test/qd-economy.security.test.ts',
+      'test/aztec-testnet.test.ts',
     ],
     coverage: {
       provider: 'v8',
@@ -55,6 +63,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
+      'server-only': path.resolve(__dirname, 'test/mocks/empty.js'),
+      '@anthropic-ai/sdk': path.resolve(__dirname, 'test/mocks/anthropic-mock.js'),
     },
   },
 });

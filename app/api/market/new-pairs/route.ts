@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 //  DexScreener endpoints 
 // Discovery: Latest token profiles (often very new/hype)

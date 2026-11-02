@@ -96,10 +96,7 @@ export function TransactionHistory({ address, scannerBase, activeNetwork }: { ad
                     default: return 'https://api.etherscan.io/api';
                 }
             };
-            const baseUrl = getApiEndpoint(activeNetwork);
-            // Use apikey from env; fall back gracefully to unauthenticated (rate-limited) mode
-            const apiKey = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || '';
-            const url = `${baseUrl}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc${apiKey ? `&apikey=${apiKey}` : ''}`;
+            const url = `/api/internal/etherscan?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc`;
             const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
@@ -255,3 +252,5 @@ export function TransactionHistory({ address, scannerBase, activeNetwork }: { ad
         </div>
     );
 }
+
+

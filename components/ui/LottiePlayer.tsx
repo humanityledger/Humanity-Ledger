@@ -50,7 +50,7 @@ export const LottiePlayer = ({
                     autoplay,
                     animationData,
                     rendererSettings: {
-                        preserveAspectRatio: 'xMidYMid slice',
+                        preserveAspectRatio: 'xMidYMid meet',
                         progressiveLoad: true,
                         hideOnTransparent: true
                     }

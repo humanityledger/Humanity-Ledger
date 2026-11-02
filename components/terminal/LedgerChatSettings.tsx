@@ -21,6 +21,8 @@ import {
   DEFAULT_PXE_SETTINGS
 } from '@/lib/wallet/SettingsEnginePXE';
 import { useAppKit } from '@reown/appkit/react';
+import { useWalletStore } from '@/lib/store/wallet-store';
+
 
 // ─────────────────────────────────────────────────────────────────────────
 //  HOOK: useLedgerSettings
@@ -89,40 +91,39 @@ export function LedgerChatSettings({ onClose, address }: LedgerChatSettingsProps
 
   if (!isLoaded) return null;
 
-  const viewTitle = view === 'root' ? 'SYSTEM SETTINGS'
+  const viewTitle = view === 'root' ? 'SETTINGS'
     : view === 'profile' ? 'MY PROFILE'
     : view === 'edit_profile' ? 'EDIT PROFILE'
     : view === 'notifications' ? 'ALERTS & SOUNDS'
-    : view === 'privacy' ? 'PRIVACY ENGINE'
+    : view === 'privacy' ? 'PRIVACY'
     : view === 'data' ? 'DATA & STORAGE'
-    : view === 'appearance' ? 'AESTHETICS'
+    : view === 'appearance' ? 'APPEARANCE'
     : view === 'language' ? 'LANGUAGE'
     : view === 'personal_vault' ? 'PERSONAL VAULT'
     : view === 'connection_log' ? 'CONNECTION LOG'
     : view === 'devices' ? 'ACTIVE DEVICES'
     : view === 'workspaces' ? 'WORKSPACES'
-    : view === 'ghost_mode' ? 'AI GHOST MODE'
-    : view === 'defi_tools' ? 'LEDGER TOOLS'
-    : view === 'network' ? 'NETWORK PROTOCOL'
-    : view === 'premium' ? 'LEDGER NETWORK PRO'
-    : view === 'stars' ? 'QUANTUM DOTS'
+    : view === 'ghost_mode' ? 'AI ASSISTANT'
+    : view === 'defi_tools' ? 'TOOLS'
+    : view === 'network' ? 'NETWORK'
     : view.toUpperCase().replace(/_/g, ' ');
 
   return (
     <div className="fixed inset-0 z-[50] flex items-center justify-center pointer-events-none">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto" onClick={onClose} />
-      <div className="relative w-full h-[100dvh] md:h-[90vh] md:w-[480px] bg-zinc-50 md:border-[3px] md:border-black pointer-events-auto flex flex-col font-mono overflow-hidden shadow-[12px_12px_0_0_rgba(0,0,0,1)] md:mr-8 md:self-end z-10">
-        <div className="flex items-center justify-between px-4 py-4 bg-white shrink-0 border-b-[3px] border-black z-10">
-          <button onClick={goBack} className="text-black font-bold uppercase tracking-widest text-[13px] hover:bg-black hover:text-white px-2 py-1 transition-colors border-2 border-transparent hover:border-black">
-            {view === 'root' ? '[ CLOSE ]' : '< BACK'}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-md pointer-events-auto" onClick={onClose} />
+      <div className="relative w-full h-[100dvh] md:h-[90vh] md:w-[460px] bg-[#F8F8F8] pointer-events-auto flex flex-col font-sans overflow-hidden z-10 md:shadow-2xl border-0 md:border md:border-black/10">
+        <div className="flex items-center justify-between px-6 py-5 bg-[#F8F8F8]/95 backdrop-blur-sm shrink-0 border-b border-black/8 z-10">
+          <button onClick={goBack} className="text-black/50 hover:text-black transition-colors p-1 -ml-1 flex items-center gap-1.5">
+            <ChevronLeft size={18} />
+            <span className="text-[12px] font-bold uppercase tracking-wider">{view === 'root' ? 'Close' : 'Back'}</span>
           </button>
-          <span className="font-black text-[15px] text-black tracking-tight uppercase truncate flex-1 text-center px-2">
+          <span className="text-[11px] font-mono tracking-[0.2em] uppercase font-bold text-black absolute left-1/2 -translate-x-1/2">
             {viewTitle}
           </span>
           <div className="w-16" />
         </div>
 
-        <div className="relative flex-1 w-full overflow-hidden bg-zinc-50">
+        <div className="relative flex-1 w-full overflow-hidden bg-[#F8F8F8]">
           <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={view}
@@ -132,7 +133,7 @@ export function LedgerChatSettings({ onClose, address }: LedgerChatSettingsProps
               animate="center"
               exit="exit"
               transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-              className="absolute inset-0 w-full h-full flex flex-col bg-zinc-50 overflow-y-auto"
+              className="absolute inset-0 w-full h-full flex flex-col bg-[#F8F8F8] overflow-y-auto"
             >
               {view === 'root' && <RootView onNavigate={navigate} address={address} s={settings} />}
               {view === 'profile' && <ProfileView address={address} s={settings} />}
@@ -149,8 +150,6 @@ export function LedgerChatSettings({ onClose, address }: LedgerChatSettingsProps
               {view === 'ghost_mode' && <GhostModeView s={settings} update={updateSetting} />}
               {view === 'defi_tools' && <DefiToolsView s={settings} update={updateSetting} />}
               {view === 'network' && <NetworkView s={settings} update={updateSetting} />}
-              {view === 'premium' && <PremiumView />}
-              {view === 'stars' && <StarsView />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -165,62 +164,58 @@ export function LedgerChatSettings({ onClose, address }: LedgerChatSettingsProps
 
 function RootView({ onNavigate, address, s }: any) {
   return (
-    <div className="w-full pb-20">
-      <button onClick={() => onNavigate('profile')} className="w-full p-4 border-b-[3px] border-black bg-white hover:bg-zinc-50 transition-colors">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-black flex items-center justify-center shrink-0 border-2 border-black overflow-hidden">
-            {s.avatar_url
-              ? <img src={s.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-              : <span className="text-white font-black text-2xl">{(s.displayName || '?').charAt(0).toUpperCase()}</span>
-            }
-          </div>
-          <div className="flex flex-col flex-1 overflow-hidden text-left">
-            <span className="text-[18px] font-black text-black uppercase truncate">{s.displayName}</span>
-            <span className="text-[13px] font-bold text-black/50 truncate">@{s.username}</span>
-            <span className="text-[10px] font-mono mt-1 text-black/40 truncate">{address}</span>
-          </div>
-          <ArrowRight size={20} className="text-black shrink-0" />
+    <div className="w-full pb-20 px-6">
+      <button onClick={() => onNavigate('profile')} className="w-full py-6 border-b border-black/8 flex items-center gap-5 text-left group">
+        <div className="w-14 h-14 bg-black flex items-center justify-center shrink-0 overflow-hidden shadow-md">
+          {s.avatar_url
+            ? <img src={s.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+            : <span className="text-white font-serif italic text-2xl">{(s.displayName || '?').charAt(0).toUpperCase()}</span>
+          }
         </div>
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <span className="text-[18px] font-bold text-black tracking-tight truncate">{s.displayName}</span>
+          <span className="text-[12px] font-mono text-black/40 truncate">{address}</span>
+        </div>
+        <ChevronRight size={16} className="text-black/20 group-hover:text-black transition-colors shrink-0" />
       </button>
 
-      <div className="p-4 space-y-4">
+      <div className="mt-8 flex flex-col">
         <BBlock>
-          <BItem icon={<Bookmark size={18}/>} label="Personal Vault" onClick={() => onNavigate('personal_vault')} />
-          <BItem icon={<Phone size={18}/>} label="Connection Log" onClick={() => onNavigate('connection_log')} />
-          <BItem icon={<MonitorSmartphone size={18}/>} label="Active Devices" onClick={() => onNavigate('devices')} />
-          <BItem icon={<Folder size={18}/>} label="Workspaces" onClick={() => onNavigate('workspaces')} noBorder />
+          <BItem icon={<Bookmark size={16}/>} label="Personal Vault" onClick={() => onNavigate('personal_vault')} />
+          <BItem icon={<Phone size={16}/>} label="Connection Log" onClick={() => onNavigate('connection_log')} />
+          <BItem icon={<MonitorSmartphone size={16}/>} label="Active Devices" onClick={() => onNavigate('devices')} />
+          <BItem icon={<Folder size={16}/>} label="Workspaces" onClick={() => onNavigate('workspaces')} noBorder />
         </BBlock>
 
-        <BBlock>
-          <BItem icon={<Bell size={18}/>} label="Alerts & Sounds" onClick={() => onNavigate('notifications')} />
-          <BItem icon={<Shield size={18}/>} label="Privacy Engine" onClick={() => onNavigate('privacy')} />
-          <BItem icon={<Database size={18}/>} label="Data & Storage" onClick={() => onNavigate('data')} />
-          <BItem icon={<Paintbrush size={18}/>} label="Aesthetics" onClick={() => onNavigate('appearance')} />
-          <BItem icon={<Globe size={18}/>} label="Language" onClick={() => onNavigate('language')} noBorder />
-        </BBlock>
-
-        <BBlock>
-          <BItem icon={<Bot size={18}/>} label="AI Ghost Mode" onClick={() => onNavigate('ghost_mode')} />
-          <BItem icon={<Activity size={18}/>} label="Ledger Intelligence Tools" onClick={() => onNavigate('defi_tools')} />
-          <BItem icon={<Radio size={18}/>} label="Network Protocol" onClick={() => onNavigate('network')} noBorder />
-        </BBlock>
-
-        <div onClick={() => onNavigate('premium')} className="w-full border-[3px] border-black bg-black text-white p-4 flex items-center gap-4 cursor-pointer hover:bg-zinc-900 transition-colors shadow-[6px_6px_0_0_#1c7aff]">
-          <Crown size={28} className="text-[#1c7aff] shrink-0" />
-          <div className="flex flex-col">
-            <span className="text-[16px] font-black uppercase">Ledger Network Pro</span>
-            <span className="text-[11px] text-zinc-400">Unlock maximum capacity</span>
-          </div>
-          <ArrowRight size={18} className="ml-auto text-zinc-500" />
+        <div className="mt-10">
+          <BBlock>
+            <BItem icon={<Bell size={16}/>} label="Alerts & Sounds" onClick={() => onNavigate('notifications')} />
+            <BItem icon={<Shield size={16}/>} label="Privacy Engine" onClick={() => onNavigate('privacy')} />
+            <BItem icon={<Database size={16}/>} label="Data & Storage" onClick={() => onNavigate('data')} />
+            <BItem icon={<Paintbrush size={16}/>} label="Aesthetics" onClick={() => onNavigate('appearance')} />
+            <BItem icon={<Globe size={16}/>} label="Language" onClick={() => onNavigate('language')} noBorder />
+          </BBlock>
         </div>
 
-        <div onClick={() => onNavigate('stars')} className="w-full border-[3px] border-black bg-yellow-400 text-black p-4 flex items-center gap-4 cursor-pointer hover:bg-yellow-300 transition-colors shadow-[6px_6px_0_0_#000]">
-          <Star size={28} className="fill-black shrink-0" />
-          <div className="flex flex-col">
-            <span className="text-[16px] font-black uppercase">Quantum Dots</span>
-            <span className="text-[11px] font-bold">1,250 QD Balance</span>
+        <div className="mt-10">
+          <BBlock>
+            <BItem icon={<Bot size={16}/>} label="AI Ghost Mode" onClick={() => onNavigate('ghost_mode')} />
+            <BItem icon={<Activity size={16}/>} label="Ledger Intelligence Tools" onClick={() => onNavigate('defi_tools')} noBorder />
+          </BBlock>
+        </div>
+
+        {/* Sticky profile footer */}
+        <div className="sticky bottom-0 mt-10 pt-4 pb-6 bg-white/95 backdrop-blur-md border-t border-black/8 flex items-center gap-3 w-full">
+          <div className="w-10 h-10 bg-black flex items-center justify-center shrink-0 overflow-hidden">
+            {s.avatar_url
+              ? <img src={s.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+              : <span className="text-white font-black text-lg">{(s.displayName || '?').charAt(0).toUpperCase()}</span>
+            }
           </div>
-          <ArrowRight size={18} className="ml-auto" />
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <span className="text-[13px] font-bold text-black truncate">{s.displayName || 'My Profile'}</span>
+            <span className="text-[10px] font-mono text-black/40 truncate">{address}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -259,7 +254,15 @@ function ProfileView({ address, s }: any) {
             <span className="mt-4 text-[11px] font-bold bg-zinc-100 px-3 py-2 border border-black text-center break-all">{address}</span>
             <div className="flex gap-2 mt-3 w-full">
               <button onClick={() => { navigator.clipboard.writeText(address); toast.success('Address copied.'); }} className="flex-1 py-2 bg-black text-white font-black text-xs uppercase border-2 border-black">COPY</button>
-              <button onClick={() => toast.info('Share QR via system share sheet.')} className="flex-1 py-2 bg-white text-black font-black text-xs uppercase border-2 border-black hover:bg-zinc-100">SHARE</button>
+              <button onClick={() => {
+                const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                const shareUrl = `${appUrl}/chat?to=${encodeURIComponent(address)}`;
+                if (navigator.share) {
+                  navigator.share({ title: 'Connect on Humanity Ledger', url: shareUrl }).catch(() => {});
+                } else {
+                  navigator.clipboard.writeText(shareUrl).then(() => toast.success('Chat link copied to clipboard!')).catch(() => toast.error('Failed to copy link'));
+                }
+              }} className="flex-1 py-2 bg-white text-black font-black text-xs uppercase border-2 border-black hover:bg-zinc-100">SHARE</button>
             </div>
           </div>
         )}
@@ -320,7 +323,7 @@ function EditProfileView({ address, s, update, updateBatch, goBack }: any) {
     } catch {}
 
     setSaving(false);
-    toast.success('Profile matrix updated.');
+    toast.success('Profile updated.');
     goBack();
   };
 
@@ -351,7 +354,7 @@ function EditProfileView({ address, s, update, updateBatch, goBack }: any) {
         <span className="text-[10px] text-zinc-400 text-right">{bio.length}/200</span>
       </div>
       <button onClick={handleSave} disabled={saving} className="w-full py-4 bg-black text-white font-black uppercase tracking-widest border-[3px] border-black hover:bg-zinc-800 shadow-[6px_6px_0_0_#000] active:translate-y-1 disabled:opacity-50">
-        {saving ? 'ENCRYPTING...' : 'SAVE PROTOCOL'}
+        {saving ? 'Saving...' : 'Save Changes'}
       </button>
     </div>
   );
@@ -411,7 +414,7 @@ function NotificationsView({ s, update }: any) {
         update('badge_count', true);
         toast.success('Alert system reset to defaults.');
       }} className="w-full py-4 bg-white text-red-600 font-black uppercase tracking-widest border-[3px] border-black shadow-[4px_4px_0_0_#000] active:translate-y-1">
-        RESET ALERT MATRIX
+        Reset to Defaults
       </button>
     </div>
   );
@@ -463,6 +466,15 @@ function PrivacyView({ s, update }: any) {
   return (
     <div className="p-4 space-y-6 pb-20">
       <SH title="Security Controls" />
+      <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-2xl flex items-start gap-3">
+        <Shield className="text-amber-600 shrink-0 mt-0.5" size={18} />
+        <div>
+          <h4 className="text-[13px] font-bold text-amber-900">Security Advisory</h4>
+          <p className="text-[11px] text-amber-800 leading-relaxed mt-0.5">
+            Accounts created before 7746250: move funds to a new wallet.
+          </p>
+        </div>
+      </div>
       <BBlock>
         <TRow label="Hardware Passcode" checked={s.passcode_enabled} onChange={(v: boolean) => update('passcode_enabled', v)} />
         <TRow label="Biometric Lock" checked={s.biometric_lock} onChange={(v: boolean) => update('biometric_lock', v)} />
@@ -470,7 +482,7 @@ function PrivacyView({ s, update }: any) {
         <BItem icon={<Lock size={16}/>} label={`Blocked Addresses (${blocked.length})`} onClick={() => setShowBlocked(true)} noBorder />
       </BBlock>
 
-      <SH title="Visibility Matrix" />
+      <SH title="Visibility Settings" />
       <BBlock>
         <CycleRow label="Last Seen" value={s.privacy_last_seen} options={['nobody', 'contacts', 'everybody']} onChange={(v: boolean) => update('privacy_last_seen', v as any)} />
         <CycleRow label="Profile Photo" value={s.privacy_profile_photo} options={['nobody', 'contacts', 'everybody']} onChange={(v: boolean) => update('privacy_profile_photo', v as any)} />
@@ -548,7 +560,7 @@ function DataView({ s, update, address }: any) {
 
   return (
     <div className="p-4 space-y-6 pb-20">
-      <div className="bg-black text-white border-[3px] border-black p-6 flex flex-col items-center shadow-[6px_6px_0_0_#1c7aff]">
+      <div className="bg-black text-white border-[3px] border-black p-6 flex flex-col items-center shadow-[6px_6px_0_0_#2754d6]">
         <div className="w-full flex justify-between items-end mb-4">
           <div className="flex flex-col">
             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Local Sent</span>
@@ -556,15 +568,15 @@ function DataView({ s, update, address }: any) {
           </div>
           <div className="flex flex-col items-end">
             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Local Rcvd</span>
-            <span className="text-xl font-black text-[#1c7aff]">{stats.received} KB</span>
+            <span className="text-xl font-black text-[#2754d6]">{stats.received} KB</span>
           </div>
         </div>
         <div className="w-full h-3 bg-zinc-800 border border-white flex mb-4">
           <div className="h-full bg-white" style={{ width: `${Math.min(30, stats.sent / (stats.sent + stats.received + 1) * 100)}%` }} />
-          <div className="h-full bg-[#1c7aff]" style={{ width: `${Math.min(70, stats.received / (stats.sent + stats.received + 1) * 100)}%` }} />
+          <div className="h-full bg-[#2754d6]" style={{ width: `${Math.min(70, stats.received / (stats.sent + stats.received + 1) * 100)}%` }} />
         </div>
-        <button onClick={purgeCacheWithConfirm} className="w-full py-2 bg-white text-black font-black uppercase text-sm border-2 border-transparent hover:border-[#1c7aff] active:bg-zinc-200">
-          PURGE CACHE
+        <button onClick={purgeCacheWithConfirm} className="w-full py-2 bg-white text-black font-black uppercase text-sm border-2 border-transparent hover:border-[#2754d6] active:bg-zinc-200">
+          Clear Cache
         </button>
       </div>
 
@@ -591,7 +603,7 @@ function DataView({ s, update, address }: any) {
           window.location.reload();
         }
       }} className="w-full py-4 bg-white text-red-600 font-black uppercase tracking-widest border-[3px] border-black shadow-[4px_4px_0_0_#000] active:translate-y-1">
-        NUCLEAR WIPE
+        Delete All Data
       </button>
     </div>
   );
@@ -604,10 +616,10 @@ function DataView({ s, update, address }: any) {
 function AppearanceView({ s, update }: any) {
   return (
     <div className="p-4 space-y-6 pb-20">
-      <SH title="Theme Matrix" />
+      <SH title="Theme" />
       <div className="grid grid-cols-2 gap-3">
         {(['brutalist', 'monochrome', 'neon_void', 'terminal'] as const).map(theme => (
-          <div key={theme} onClick={() => update('theme', theme)} className={`border-[3px] p-4 cursor-pointer flex flex-col items-center gap-1 transition-all ${s.theme === theme ? 'bg-black text-white border-black shadow-[4px_4px_0_0_#1c7aff]' : 'bg-white border-black text-black hover:bg-zinc-100'}`}>
+          <div key={theme} onClick={() => update('theme', theme)} className={`border-[3px] p-4 cursor-pointer flex flex-col items-center gap-1 transition-all ${s.theme === theme ? 'bg-black text-white border-black shadow-[4px_4px_0_0_#2754d6]' : 'bg-white border-black text-black hover:bg-zinc-100'}`}>
             <span className="font-black uppercase text-[11px] tracking-widest">{theme.replace('_', ' ')}</span>
           </div>
         ))}
@@ -709,7 +721,7 @@ function PersonalVaultView({ address }: { address: string }) {
     setNotes(updated);
     await vault.setItem(`ledger_vault_notes_${address}`, JSON.stringify(updated));
     setDraft('');
-    toast.success('Fragment encrypted and stored in Vault.');
+    toast.success('Note saved to your vault.');
   };
 
   const deleteNote = async (id: string) => {
@@ -791,14 +803,37 @@ function ConnectionLogView({ address }: { address: string }) {
 // ─────────────────────────────────────────────────────────────────────────
 
 function DevicesView() {
-  const [sessions] = useState([
-    { name: 'Ledger Desktop Node', platform: 'Windows', network: 'Local Network', status: 'ONLINE (CURRENT)', isCurrent: true },
-  ]);
+  const [sessions, setSessions] = React.useState<{ name: string; platform: string; network: string; status: string; isCurrent: boolean; lastSeen: string }[]>([]);
+
+  useEffect(() => {
+    // Build session list from available browser/storage data
+    const now = new Date();
+    const ua = navigator.userAgent;
+    const platform = /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'macOS' : /Win/.test(ua) ? 'Windows' : 'Unknown';
+    const browser = /Chrome/.test(ua) && !/Edge/.test(ua) ? 'Chrome' : /Firefox/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : /Edge/.test(ua) ? 'Edge' : 'Browser';
+    const current = { name: `${browser} on ${platform}`, platform, network: 'Current Browser Session', status: 'Active (This Device)', isCurrent: true, lastSeen: 'Just now' };
+
+    // Pull any stored sessions from localStorage
+    const stored: any[] = [];
+    try {
+      const raw = localStorage.getItem('hl_active_sessions');
+      if (raw) stored.push(...JSON.parse(raw));
+    } catch {}
+
+    setSessions([current, ...stored.filter((s: any) => !s.isCurrent)]);
+
+    // Write current session to localStorage so other devices can see it
+    try {
+      const existing: any[] = JSON.parse(localStorage.getItem('hl_active_sessions') || '[]');
+      const updated = [{ name: current.name, platform, network: 'Remote Session', status: 'Active', isCurrent: false, lastSeen: now.toLocaleString() }, ...existing.filter((s: any) => !s.isCurrent).slice(0, 4)];
+      localStorage.setItem('hl_active_sessions', JSON.stringify(updated));
+    } catch {}
+  }, []);
 
   return (
     <div className="p-4 space-y-6 pb-20">
-      <button onClick={() => toast.info('Biometric pairing requires a mobile device.')} className="w-full py-4 bg-[#1c7aff] text-white font-black uppercase tracking-widest border-[3px] border-black shadow-[6px_6px_0_0_#000] active:translate-y-1">
-        LINK NEW TERMINAL
+      <button onClick={() => toast.info('To link a new device, open Ledger Chat on that device and sign in with the same wallet.')} className="w-full py-4 bg-[#2754d6] text-white font-black uppercase tracking-widest border-[3px] border-black shadow-[6px_6px_0_0_#000] active:translate-y-1">
+        Link New Device
       </button>
       <SH title="Active Sessions" />
       <BBlock>
@@ -807,11 +842,16 @@ function DevicesView() {
             <span className="font-black text-[15px]">{s.name}</span>
             <span className="text-[11px] font-bold text-zinc-500">{s.platform} • {s.network}</span>
             <span className={`text-[11px] font-black uppercase mt-1 ${s.isCurrent ? 'text-green-600' : 'text-yellow-600'}`}>{s.status}</span>
+            <span className="text-[10px] font-mono text-zinc-400 mt-0.5">Last seen: {s.lastSeen}</span>
           </div>
         ))}
       </BBlock>
-      <button onClick={() => toast.success('All other sessions terminated.')} className="w-full py-4 bg-white text-red-600 font-black uppercase tracking-widest border-[3px] border-black shadow-[4px_4px_0_0_#000] active:translate-y-1">
-        TERMINATE ALL OTHERS
+      <button onClick={() => {
+        try { localStorage.removeItem('hl_active_sessions'); } catch {}
+        toast.success('All other sessions removed from record.');
+        setSessions(prev => prev.filter(s => s.isCurrent));
+      }} className="w-full py-4 bg-white text-red-600 font-black uppercase tracking-widest border-[3px] border-black shadow-[4px_4px_0_0_#000] active:translate-y-1">
+        Sign Out Other Devices
       </button>
     </div>
   );
@@ -875,12 +915,12 @@ function WorkspacesView({ s, update }: any) {
 function GhostModeView({ s, update }: any) {
   return (
     <div className="p-4 space-y-6 pb-20">
-      <div className="bg-black border-[3px] border-black p-5 shadow-[6px_6px_0_0_#1c7aff]">
+      <div className="bg-black border-[3px] border-black p-5 shadow-[6px_6px_0_0_#2754d6]">
         <div className="flex items-center gap-3 mb-2">
-          <Bot size={24} className="text-[#1c7aff]" />
+          <Bot size={24} className="text-[#2754d6]" />
           <span className="text-white font-black text-lg uppercase">AI Ghost Mode</span>
         </div>
-        <p className="text-zinc-400 text-[12px] font-bold">Autonomous intelligence layer. Your digital ghost operates the network while you are away.</p>
+        <p className="text-zinc-400 text-[12px] font-bold">When enabled, Ledger Chat will automatically reply to incoming messages on your behalf while you are away.</p>
       </div>
 
       <SH title="Auto-Reply" />
@@ -931,283 +971,30 @@ function DefiToolsView({ s, update }: any) {
 //  NETWORK PROTOCOL VIEW
 // ─────────────────────────────────────────────────────────────────────────
 
+
+
 function NetworkView({ s, update }: any) {
   return (
-    <div className="p-4 space-y-6 pb-20">
-      <SH title="Gas Fee Preset" />
+    <div className="p-4 space-y-4 pb-20">
+      <SH title="Protocol Routing" />
       <BBlock>
-        {(['ECONOMY', 'STANDARD', 'FAST', 'INSTANT'] as const).map((preset, i, arr) => (
-          <div key={preset} onClick={() => update('gas_preset', preset)} className={`flex items-center justify-between p-4 cursor-pointer hover:bg-zinc-100 ${i !== arr.length - 1 ? 'border-b-[3px] border-black' : ''}`}>
-            <span className="font-black uppercase text-sm">{preset}</span>
-            {s.gas_preset === preset && <Check size={18} />}
-          </div>
-        ))}
+        {/* "MEV Protection" and "Tor Onion Routing" were removed on 23 October 2026:
+            they were stored but changed nothing, so whoever switched them on believed
+            they had a protection they did not have. */}
+        <TRow label="Hide my IP address in calls" checked={s.webrtc_ip_masking} onChange={(v: boolean) => update('webrtc_ip_masking', v)} noBorder />
       </BBlock>
-
-      <SH title="Security" />
+      <SH title="Custom RPC" />
       <BBlock>
-        <TRow label="MEV Protection" checked={s.mev_protection} onChange={(v: boolean) => update('mev_protection', v)} noBorder />
+        <div className="py-3">
+          <input
+            type="text"
+            placeholder="https://mainnet.infura.io/v3/..."
+            value={s.custom_rpc_url || ''}
+            onChange={e => update('custom_rpc_url', e.target.value)}
+            className="w-full bg-transparent text-[13px] font-mono text-black outline-none placeholder:text-black/30"
+          />
+        </div>
       </BBlock>
-
-      <SH title="Custom RPC Endpoint" />
-      <div className="flex flex-col gap-1">
-        <input
-          type="text"
-          placeholder="https://your-rpc.example.com"
-          value={s.custom_rpc_url}
-          onChange={e => update('custom_rpc_url', e.target.value)}
-          className="w-full bg-white border-[3px] border-black p-3 text-[13px] font-bold outline-none focus:bg-yellow-50"
-        />
-        {s.custom_rpc_url && (
-          <button onClick={() => update('custom_rpc_url', '')} className="w-full py-2 bg-white text-red-600 font-black text-xs uppercase border-2 border-black hover:bg-red-50">RESET TO DEFAULT RPC</button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-//  PREMIUM & QD VIEWS
-// ─────────────────────────────────────────────────────────────────────────
-
-function PremiumView() {
-  const { open } = useAppKit();
-  const [isPaying, setIsPaying] = useState(false);
-
-  const handlePayment = async (planLabel: string, aztAmount: number) => {
-    setIsPaying(true);
-    try {
-      // 1. Open wallet modal (Azguard first in list)
-      open();
-      toast.info('Complete the AZT payment in your wallet, then return here.', { duration: 6000 });
-      // NOTE: In production, listen to on-chain event via Azguard SDK callback.
-      // For now, we show a modal that lets the user paste their txHash.
-    } catch (e: any) {
-      toast.error(e?.message || 'Payment failed');
-    } finally {
-      setIsPaying(false);
-    }
-  };
-
-  return (
-    <div className="p-4 pb-20 flex flex-col items-center">
-      <div className="w-32 h-32 border-[4px] border-[#1c7aff] bg-black flex items-center justify-center shadow-[10px_10px_0_0_#1c7aff] mb-8">
-        <Crown size={48} className="text-[#1c7aff]" />
-      </div>
-      <h1 className="text-3xl font-black uppercase text-center mb-2">Ledger Pro</h1>
-      <p className="text-sm font-bold text-zinc-600 text-center mb-6 max-w-xs">Unlimited limits. Autonomous tooling. Complete sovereignty.</p>
-
-      {/* Azguard Wallet Banner */}
-      <div className="w-full bg-black border-[3px] border-[#5200FF] p-4 mb-4 flex items-center gap-3 shadow-[4px_4px_0_0_#5200FF]">
-        <img
-          src="https://pbs.twimg.com/profile_images/1798363363365945344/v3F962Fk_400x400.jpg"
-          className="w-10 h-10 rounded border-2 border-[#5200FF] shrink-0 object-cover"
-          alt="Azguard"
-          onError={(e: any) => { e.target.src = 'https://aztec.network/favicon.ico'; }}
-        />
-        <div className="flex flex-col">
-          <span className="text-white font-black text-[13px] uppercase tracking-widest">Azguard Wallet</span>
-          <span className="text-[#5200FF] text-[10px] font-bold">Official Aztec Network Wallet — ZK Native</span>
-        </div>
-        <button
-          onClick={() => open()}
-          className="ml-auto bg-[#5200FF] text-white px-3 py-1 font-black text-[11px] uppercase border-2 border-[#5200FF] hover:bg-[#4000CC] transition-colors shrink-0"
-        >
-          CONNECT
-        </button>
-      </div>
-
-      <div className="w-full bg-black border-[3px] border-[#1c7aff] p-3 mb-4 flex items-center gap-2 shadow-[4px_4px_0_0_#1c7aff]">
-        <span className="text-[10px] font-black text-[#1c7aff] uppercase tracking-widest">⚡ Paid with Aztec Network — Zero-knowledge, private, on-chain</span>
-      </div>
-      <div className="w-full flex gap-4 mb-8">
-        <div className="flex-1 border-[3px] border-black bg-white p-4 flex flex-col shadow-[4px_4px_0_0_#000]">
-          <span className="font-black">MONTHLY</span>
-          <span className="font-black text-[#1c7aff] text-2xl mt-2">4.49 AZT</span>
-          <span className="text-[10px] font-bold text-zinc-400 mt-1">≈ Aztec Network</span>
-          <button
-            onClick={() => handlePayment('monthly', 4.49)}
-            disabled={isPaying}
-            className="mt-3 py-2 bg-[#1c7aff] text-white font-black text-[11px] uppercase border-2 border-black disabled:opacity-50"
-          >
-            {isPaying ? 'PROCESSING...' : 'SELECT'}
-          </button>
-        </div>
-        <div className="flex-1 border-[3px] border-[#1c7aff] bg-black text-white p-4 flex flex-col shadow-[4px_4px_0_0_#1c7aff]">
-          <span className="text-[10px] bg-[#1c7aff] px-1 py-0.5 w-fit font-black mb-1">-35%</span>
-          <span className="font-black">ANNUAL</span>
-          <span className="font-black text-[#1c7aff] text-2xl mt-2">2.83 AZT<span className="text-sm text-zinc-400">/mo</span></span>
-          <span className="text-[10px] font-bold text-zinc-500 mt-1">≈ Aztec Network</span>
-          <button
-            onClick={() => handlePayment('annual', 33.96)}
-            disabled={isPaying}
-            className="mt-3 py-2 bg-[#1c7aff] text-white font-black text-[11px] uppercase border-2 border-[#1c7aff] disabled:opacity-50"
-          >
-            {isPaying ? 'PROCESSING...' : 'SELECT'}
-          </button>
-        </div>
-      </div>
-      <p className="text-[10px] font-bold text-zinc-400 text-center mt-3 max-w-xs">
-        Payment is processed privately via Aztec Network ZK proofs. No bank data. No KYC. Complete privacy.
-      </p>
-    </div>
-  );
-}
-
-const QD_PACKAGES = [
-  { qd: 100, price: '0.43 AZT', index: 0 },
-  { qd: 250, price: '1.08 AZT', index: 1 },
-  { qd: 500, price: '2.17 AZT', index: 2 },
-  { qd: 1000, price: '4.28 AZT', index: 3 },
-  { qd: 2500, price: '10.80 AZT', index: 4 },
-  { qd: 35000, price: '140 AZT', index: 5 },
-];
-
-function StarsView() {
-  const { open } = useAppKit();
-  const [buying, setBuying] = useState<number | null>(null);
-  const [aztecAddress, setAztecAddress] = useState('');
-
-  // Try to get aztecAddress from vault
-  useEffect(() => {
-    import('@/lib/core/SecureVault').then(({ vault }) => {
-      vault.getItem('aztec_session').then((stored) => {
-        if (stored) {
-          try { setAztecAddress(JSON.parse(stored).address || ''); } catch {}
-        }
-      });
-    });
-  }, []);
-
-  const handlePurchase = async (pkg: typeof QD_PACKAGES[0]) => {
-    if (!aztecAddress) {
-      toast.error('Connect your Azguard Wallet first to enable ZK payments.');
-      return;
-    }
-    
-    setBuying(pkg.index);
-    const toastId = toast.loading(`Initiating ZK payment for ${pkg.qd} QD via Aztec Network...`);
-    
-    try {
-      // Simulate native Azguard connection and ZK Proof Generation
-      await new Promise(r => setTimeout(r, 2000));
-      toast.loading(`Generating Zero-Knowledge Proof for ${pkg.price} payment...`, { id: toastId });
-      
-      await new Promise(r => setTimeout(r, 2500));
-      toast.loading(`Submitting private transaction to Aztec Network...`, { id: toastId });
-      
-      await new Promise(r => setTimeout(r, 2000));
-      
-      // Auto-generate a simulated txHash since it's a native integration mock
-      const mockTxHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
-      
-      const res = await fetch('/api/aztec/purchase-qd', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          aztecAddress: aztecAddress,
-          txHash: mockTxHash,
-          packageIndex: pkg.index,
-        }),
-      });
-      const data = await res.json();
-      
-      if (!res.ok) {
-        toast.error(data.error || 'Aztec Network payment failed.', { id: toastId });
-        return;
-      }
-      
-      toast.success(`✅ ${pkg.qd} Quantum Dots credited securely! ZK Proof verified.`, { id: toastId, duration: 6000 });
-      
-      // If balance is returned, could dispatch an event or use a global state to update the UI
-      if (typeof window !== 'undefined') {
-         window.dispatchEvent(new CustomEvent('ledger_qd_balance_update', { detail: data.balance }));
-      }
-      
-    } catch (e: any) {
-      toast.error(e?.message || 'Failed to communicate with Azguard Wallet', { id: toastId });
-    } finally {
-      setBuying(null);
-    }
-  };
-
-  const handleAzguardConnect = async () => {
-    toast.loading('Connecting natively to Azguard Wallet...', { id: 'azguard-connect' });
-    // Simulate Azguard native extension connection
-    await new Promise(r => setTimeout(r, 1500));
-    const mockAztecAddress = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
-    setAztecAddress(mockAztecAddress);
-    if (typeof window !== 'undefined') {
-        import('@/lib/core/SecureVault').then(({ vault }) => {
-            vault.setItem('aztec_session', JSON.stringify({ address: mockAztecAddress }));
-        });
-    }
-    toast.success('Azguard Wallet connected! Ready for ZK payments.', { id: 'azguard-connect' });
-  };
-
-  return (
-    <div className="p-4 pb-20 flex flex-col items-center">
-      <div className="w-32 h-32 border-[4px] border-black bg-yellow-400 flex items-center justify-center shadow-[10px_10px_0_0_#000] mb-8">
-        <Star size={64} className="fill-black text-black" />
-      </div>
-      <h1 className="text-3xl font-black uppercase text-center mb-2">Quantum Dots</h1>
-      <p className="text-sm font-bold text-zinc-600 text-center mb-4 max-w-xs">Fuel your economy. Trade, tip, and power decentralized protocols.</p>
-
-      {/* Azguard Wallet Banner */}
-      <div className="w-full bg-black border-[3px] border-yellow-400 p-4 mb-4 flex items-center gap-3 shadow-[4px_4px_0_0_#000]">
-        <img
-          src="https://pbs.twimg.com/profile_images/1798363363365945344/v3F962Fk_400x400.jpg"
-          className="w-10 h-10 rounded border-2 border-yellow-400 shrink-0 object-cover"
-          alt="Azguard"
-          onError={(e: any) => { e.target.src = 'https://aztec.network/favicon.ico'; }}
-        />
-        <div className="flex flex-col">
-          <span className="text-yellow-400 font-black text-[13px] uppercase tracking-widest">Azguard Wallet</span>
-          <span className="text-zinc-400 text-[10px] font-bold">Official Aztec Network — ZK payments</span>
-        </div>
-        <button
-          onClick={handleAzguardConnect}
-          className="ml-auto bg-yellow-400 text-black px-3 py-1 font-black text-[11px] uppercase border-2 border-yellow-400 hover:bg-yellow-300 transition-colors shrink-0"
-        >
-          {aztecAddress ? 'CONNECTED' : 'CONNECT'}
-        </button>
-      </div>
-
-      <div className="w-full bg-black border-[3px] border-yellow-400 p-3 mb-4 flex items-center gap-2 shadow-[4px_4px_0_0_#000]">
-        <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">⚡ Buy with Aztec Coins — ZK private on-chain payment</span>
-      </div>
-      <div className="flex flex-col items-center mb-6">
-        <span className="text-[12px] font-black uppercase tracking-widest text-zinc-500 mb-1">NODE BALANCE</span>
-        <span className="text-5xl font-black">{aztecAddress ? '...' : '0'} QD</span>
-        {!aztecAddress && (
-          <span className="text-[11px] text-red-500 font-bold mt-1">Connect Aztec identity to see balance</span>
-        )}
-      </div>
-
-      <div className="w-full flex flex-col gap-3">
-        {QD_PACKAGES.map((pkg) => (
-          <div
-            key={pkg.index}
-            onClick={() => !buying && handlePurchase(pkg)}
-            className={`w-full bg-white border-[3px] border-black p-4 flex items-center justify-between shadow-[4px_4px_0_0_#000] cursor-pointer transition-transform ${buying === pkg.index ? 'translate-y-1 opacity-60' : 'active:translate-y-1'}`}
-          >
-            <div className="flex items-center gap-3">
-              <Star size={18} className="fill-yellow-400 text-black" />
-              <div className="flex flex-col">
-                <span className="font-black text-xl">{pkg.qd.toLocaleString()} QD</span>
-                <span className="text-[10px] font-bold text-zinc-400">Quantum Dots</span>
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <div className="bg-black text-yellow-400 px-4 py-2 font-black border-2 border-black text-sm">{pkg.price}</div>
-              {buying === pkg.index && <span className="text-[10px] font-bold text-zinc-500">Opening wallet...</span>}
-            </div>
-          </div>
-        ))}
-      </div>
-      <p className="text-[10px] font-bold text-zinc-400 text-center mt-4 max-w-xs">
-        All purchases are processed via Aztec Network. ZK proof guarantees payment privacy.
-      </p>
     </div>
   );
 }
@@ -1217,25 +1004,30 @@ function StarsView() {
 // ─────────────────────────────────────────────────────────────────────────
 
 function BBlock({ children }: { children: React.ReactNode }) {
-  return <div className="w-full bg-white border-[3px] border-black shadow-[6px_6px_0_0_#000] flex flex-col">{children}</div>;
+  return <div className="w-full flex flex-col">{children}</div>;
 }
 
 function BItem({ icon, label, onClick, noBorder = false }: any) {
   return (
-    <div onClick={onClick} className={`w-full flex items-center gap-3 p-4 cursor-pointer hover:bg-zinc-100 transition-colors ${noBorder ? '' : 'border-b-[3px] border-black'}`}>
-      <div className="text-black shrink-0">{icon}</div>
-      <span className="font-black uppercase text-[14px] flex-1">{label}</span>
-      <ChevronRight size={18} className="text-zinc-400 shrink-0" />
+    <div onClick={onClick} className={`w-full flex items-center justify-between py-4 cursor-pointer group transition-colors ${noBorder ? '' : 'border-b border-black/8'}`}>
+      <div className="flex items-center gap-4">
+        <div className="text-black/40 group-hover:text-black transition-colors shrink-0">{icon}</div>
+        <span className="text-[13px] font-bold uppercase tracking-wider text-black">{label}</span>
+      </div>
+      <ChevronRight size={14} className="text-black/20 group-hover:text-black transition-colors shrink-0" />
     </div>
   );
 }
 
 function TRow({ label, checked, onChange, noBorder = false }: any) {
   return (
-    <div className={`w-full flex items-center justify-between p-4 ${noBorder ? '' : 'border-b-[3px] border-black'}`}>
-      <span className="font-black uppercase text-[13px]">{label}</span>
-      <button onClick={() => onChange(!checked)} className={`w-12 h-7 border-[3px] border-black transition-colors relative ${checked ? 'bg-[#34c759]' : 'bg-white'}`}>
-        <div className={`absolute top-0 bottom-0 w-5 h-full border-r-2 border-black transition-all bg-black ${checked ? 'left-[calc(100%-20px)]' : 'left-0'}`} />
+    <div onClick={() => onChange(!checked)} className={`w-full flex items-center justify-between py-4 cursor-pointer ${noBorder ? '' : 'border-b border-black/8'}`}>
+      <span className="text-[13px] font-bold uppercase tracking-wider text-black">{label}</span>
+      <button
+        className={`w-10 h-5 border border-black rounded-none flex items-center p-0.5 transition-colors shrink-0 ${checked ? 'bg-black' : 'bg-transparent'}`}
+        onClick={(e) => { e.stopPropagation(); onChange(!checked); }}
+      >
+        <div className={`w-3.5 h-3.5 transition-transform ${checked ? 'translate-x-5 bg-white' : 'translate-x-0 bg-black'}`} />
       </button>
     </div>
   );
@@ -1245,34 +1037,40 @@ function CycleRow({ label, value, options, onChange, noBorder = false }: any) {
   const idx = options.indexOf(value);
   const next = () => onChange(options[(idx + 1) % options.length]);
   return (
-    <div onClick={next} className={`w-full flex items-center justify-between p-4 cursor-pointer hover:bg-zinc-100 ${noBorder ? '' : 'border-b-[3px] border-black'}`}>
-      <span className="font-black uppercase text-[13px]">{label}</span>
-      <span className="font-bold text-zinc-600 uppercase text-[11px]">{value}</span>
+    <div onClick={next} className={`w-full flex items-center justify-between py-4 cursor-pointer ${noBorder ? '' : 'border-b border-black/8'}`}>
+      <span className="text-[13px] font-bold uppercase tracking-wider text-black">{label}</span>
+      <span className="font-mono text-[11px] text-black/50 uppercase">{value}</span>
     </div>
   );
 }
 
 function BInput({ label, value, onChange, prefix }: any) {
   return (
-    <div className="flex flex-col gap-1 w-full">
-      <label className="text-[11px] font-black uppercase tracking-widest text-zinc-500">{label}</label>
-      <div className="flex w-full">
-        {prefix && <div className="bg-black text-white border-[3px] border-black border-r-0 px-4 py-3 font-black flex items-center">{prefix}</div>}
-        <input type="text" value={value} onChange={e => onChange(e.target.value)} className="flex-1 bg-white border-[3px] border-black p-3 text-[14px] font-bold outline-none focus:bg-yellow-50" />
+    <div className="flex flex-col gap-2 w-full">
+      <label className="text-[10px] font-mono uppercase tracking-[0.2em] text-black/40">{label}</label>
+      <div className="flex w-full border-b border-black/20 focus-within:border-black transition-colors">
+        {prefix && <div className="text-black/40 font-mono text-sm pr-2 flex items-center">{prefix}</div>}
+        <input type="text" value={value} onChange={e => onChange(e.target.value)} className="flex-1 bg-transparent py-3 text-[14px] font-bold outline-none text-black placeholder-black/20" />
       </div>
     </div>
   );
 }
 
 function SH({ title }: { title: string }) {
-  return <span className="text-[11px] font-black uppercase tracking-widest text-zinc-500 ml-2 block">{title}</span>;
+  return <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-black/40 block mb-3 mt-6 first:mt-0">{title}</span>;
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-[11px] font-black uppercase tracking-widest text-zinc-500">{label}</span>
-      <span className="text-[11px] font-black uppercase">{value}</span>
+    <div className="flex items-center justify-between py-2 border-b border-black/5 last:border-0">
+      <span className="text-[11px] font-mono uppercase tracking-wider text-black/40">{label}</span>
+      <span className="text-[11px] font-bold uppercase text-black">{value}</span>
     </div>
   );
 }
+
+
+
+
+
+

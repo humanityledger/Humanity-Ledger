@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateVerificationCode } from '@/lib/auth';
 import { sendVerificationEmail } from '@/lib/email';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,7 +94,8 @@ async function verifyTurnstile(token: string | undefined, ip: string): Promise<b
 // ─────────────────────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+    // The last X-Forwarded-For hop is the one our proxy added; the first is whatever the client sent.
+    const ip = getClientIP(request);
     const body = await request.json();
 
     // ── 1. Normalize & validate email ────────────────────────────────────────
@@ -162,12 +164,14 @@ export async function POST(request: NextRequest) {
       data:  { used: true },
     });
 
-    // ── 6. Generate & persist new code ───────────────────────────────────────
+    // ── 6. Generate & persist new code (hashed with SHA-256, 10 min TTL - B-013) ──
+    const crypto = await import('crypto');
     const code      = generateVerificationCode();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const codeHash  = crypto.createHash('sha256').update(code).digest('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes (B-013)
 
     await (prisma as any).verificationCode.create({
-      data: { code, userId: user.id, expiresAt },
+      data: { code: codeHash, userId: user.id, expiresAt },
     });
 
     // ── 7. Send email ─────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 // Forced dynamic to avoid caching on Vercel/Railway
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);

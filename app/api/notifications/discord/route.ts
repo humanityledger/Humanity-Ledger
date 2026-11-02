@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         username: 'Humanity Ledger VIP',
-        avatar_url: 'https://sovereign.pro/official-ledger-legendary.png', // Optional
+        avatar_url: 'https://sovereign.pro/logo-mark.png', // Optional
         embeds: [embed],
       }),
     });
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Failed to send notification',
-        details: error.message,
+        details: 'Error details redacted',
       },
       { status: 500 }
     );

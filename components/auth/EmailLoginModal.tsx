@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { HLMark } from "@/components/shared/HLLogo";
 
 interface Props {
   isOpen: boolean;
@@ -56,7 +57,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
   // Auto-focus first code input when step changes
   useEffect(() => {
     if (step === "code") {
-      setTimeout(() => codeRefs.current[0]?.focus(), 100);
+      setTimeout(() => codeRefs.current[0]?.focus({ preventScroll: true }), 100);
     }
   }, [step]);
 
@@ -116,12 +117,12 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
         onSuccess?.();
         onClose();
         // Redirect to the authenticated terminal, not the public landing
-        window.location.replace("/terminal");
+        window.location.replace("/chat");
       }, 1800);
     } catch (err: any) {
       setError(err.message || "Invalid or expired code.");
       setCode(["", "", "", "", "", ""]);
-      codeRefs.current[0]?.focus();
+      codeRefs.current[0]?.focus({ preventScroll: true });
     } finally {
       setLoading(false);
     }
@@ -133,16 +134,16 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
     newCode[index] = char;
     setCode(newCode);
     if (char && index < 5) {
-      codeRefs.current[index + 1]?.focus();
+      codeRefs.current[index + 1]?.focus({ preventScroll: true });
     }
     if (!char && index > 0) {
-      codeRefs.current[index - 1]?.focus();
+      codeRefs.current[index - 1]?.focus({ preventScroll: true });
     }
   }
 
   function handleCodeKeyDown(index: number, e: React.KeyboardEvent) {
     if (e.key === "Backspace" && !code[index] && index > 0) {
-      codeRefs.current[index - 1]?.focus();
+      codeRefs.current[index - 1]?.focus({ preventScroll: true });
     }
   }
 
@@ -153,7 +154,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
       const newCode = [...code];
       for (let i = 0; i < 6; i++) newCode[i] = pasted[i] || "";
       setCode(newCode);
-      codeRefs.current[Math.min(pasted.length, 5)]?.focus();
+      codeRefs.current[Math.min(pasted.length, 5)]?.focus({ preventScroll: true });
     }
   }
 
@@ -170,7 +171,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
       if (!res.ok) throw new Error("Failed to resend");
       setCode(["", "", "", "", "", ""]);
       setCountdown(60);
-      codeRefs.current[0]?.focus();
+      codeRefs.current[0]?.focus({ preventScroll: true });
     } catch (err: any) {
       setError("Failed to resend. Please try again.");
     } finally {
@@ -188,7 +189,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
       {isOpen && (
         <motion.div
           key="modal-container"
-          className="fixed inset-0 z-[9000] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
+          className="fixed inset-0 z-[9000] flex items-center justify-center p-3 sm:p-4 overflow-y-auto overflow-x-hidden select-none"
         >
           {/* Backdrop */}
           <motion.div
@@ -202,47 +203,43 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
 
           {/* Modal Panel */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.97, y: 32 }}
+            initial={{ opacity: 0, scale: 0.97, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 32 }}
+            exit={{ opacity: 0, scale: 0.97, y: 16 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full max-w-[440px] bg-white sm:border border-black/10 shadow-2xl sm:rounded-2xl rounded-t-3xl sm:rounded-b-2xl relative z-10 max-h-[85vh] overflow-y-auto"
+            className="w-full max-w-[420px] bg-white border border-black/[0.06] shadow-[0_40px_100px_-30px_rgba(16,24,40,0.45)] rounded-[28px] [font-family:var(--hl-font)] antialiased relative z-10 max-h-[90vh] overflow-y-auto overflow-x-hidden my-auto"
             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-8 pt-8 pb-6 border-b border-black/8">
+            <div className="px-6 sm:px-7 pt-7 pb-5 border-b border-black/8">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2.5 mb-3">
-                      <img
-                        src="/atom_3d_silver.jpg"
-                        alt="Humanity Ledger"
-                        className="w-5 h-5 object-contain mix-blend-multiply"
-                      />
-                      <span className="text-[11px] font-black uppercase tracking-[0.2em] text-black/40">
-                        Humanity Ledger
-                      </span>
-                    </div>
-                    <h2 className="text-[22px] font-black tracking-tight text-black leading-tight">
-                      {step === "email" && "Sign in with Email"}
+                    <div className="pr-2 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <HLMark size={22} />
+                        <span className="text-[14px] font-semibold text-black/45 truncate">
+                          Humanity Ledger
+                        </span>
+                      </div>
+                    <h2 className="text-[24px] font-semibold tracking-[-0.028em] text-black leading-tight">
+                      {step === "email" && "Sign in with email"}
                       {step === "code" && "Check your inbox"}
-                      {step === "success" && "You're in"}
+                      {step === "success" && "You are in"}
                     </h2>
-                    <p className="text-[13.5px] text-black/55 font-medium mt-1.5">
-                      {step === "email" && "No password needed. We'll send you a secure 6-digit code."}
+                    <p className="text-[15px] text-black/55 mt-2 leading-relaxed break-words max-w-full">
+                      {step === "email" && "No password needed. We will send you a secure 6 digit code."}
                       {step === "code" && (
-                        <>
-                          We sent a 6-digit code to{" "}
-                          <span className="font-semibold text-black/75">{email}</span>
-                        </>
+                        <span className="block break-words">
+                          We sent a 6 digit code to{" "}
+                          <span className="font-semibold text-black/85 break-all underline decoration-black/20">{email}</span>
+                        </span>
                       )}
-                      {step === "success" && "Authentication complete. Redirecting you now…"}
+                      {step === "success" && "Authentication complete. Redirecting you now..."}
                     </p>
                   </div>
                   <button
                     onClick={onClose}
-                    className="w-8 h-8 flex items-center justify-center text-black/35 hover:text-black/70 transition-colors shrink-0 -mt-1 -mr-2"
+                    className="w-8 h-8 flex items-center justify-center text-black/35 hover:text-black/70 transition-colors shrink-0 -mt-1 -mr-1"
                     aria-label="Close"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -253,7 +250,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
               </div>
 
               {/* Body */}
-              <div className="px-8 py-7">
+              <div className="px-6 sm:px-7 py-6">
                 <AnimatePresence mode="wait">
                   {/* ── Step 1: Email input ── */}
                   {step === "email" && (
@@ -267,8 +264,8 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                       className="flex flex-col gap-4"
                     >
                       <div>
-                        <label className="block text-[12px] font-bold uppercase tracking-wider text-black/50 mb-2">
-                          Email Address
+                        <label className="block text-[13.5px] font-semibold text-black/65 mb-2">
+                          Email address
                         </label>
                         <input
                           type="email"
@@ -277,7 +274,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                           placeholder="you@example.com"
                           autoFocus
                           required
-                          className="w-full px-4 py-3 border border-black/15 text-[15px] font-medium text-black placeholder-black/30 focus:outline-none focus:border-black/50 transition-colors bg-white"
+                          className="w-full h-[52px] px-4 border border-black/[0.14] text-[15.5px] text-black placeholder-black/30 focus:outline-none focus:border-black focus:ring-4 focus:ring-black/[0.06] transition bg-white rounded-2xl"
                         />
                       </div>
 
@@ -288,7 +285,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3.5 bg-black text-white text-[14px] font-bold tracking-wide hover:bg-black/85 active:scale-[0.99] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="w-full py-3.5 bg-black text-white text-[15.5px] font-semibold hover:bg-[#26282e] active:scale-[0.99] transition-all disabled:opacity-50 flex items-center justify-center gap-2 rounded-full"
                       >
                         {loading ? (
                           <>
@@ -305,9 +302,9 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
 
                       <p className="text-[12px] text-black/40 font-medium text-center leading-relaxed">
                         By continuing, you agree to our{" "}
-                        <a href="/legal/terms" className="underline hover:text-black/70 transition-colors">Terms</a>
+                        <a href="/docs/terms" className="underline hover:text-black/70 transition-colors">Terms</a>
                         {" "}and{" "}
-                        <a href="/legal/privacy" className="underline hover:text-black/70 transition-colors">Privacy Policy</a>.
+                        <a href="/docs/privacy" className="underline hover:text-black/70 transition-colors">Privacy Policy</a>.
                       </p>
                     </motion.form>
                   )}
@@ -321,14 +318,14 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                       animate="visible"
                       exit="exit"
                       onSubmit={handleVerifyCode}
-                      className="flex flex-col gap-5"
+                      className="flex flex-col gap-5 w-full"
                     >
                       {/* 6 digit boxes */}
-                      <div>
-                        <label className="block text-[12px] font-bold uppercase tracking-wider text-black/50 mb-3">
+                      <div className="w-full">
+                        <label className="block text-[13.5px] font-semibold text-black/65 mb-3 text-center sm:text-left">
                           Verification Code
                         </label>
-                        <div className="flex gap-1.5 sm:gap-2">
+                        <div className="flex gap-1.5 sm:gap-2 w-full justify-between items-center max-w-full">
                           {code.map((digit, i) => (
                             <input
                               key={i}
@@ -341,21 +338,20 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                               onChange={(e) => handleCodeInput(i, e.target.value)}
                               onKeyDown={(e) => handleCodeKeyDown(i, e)}
                               onPaste={i === 0 ? handleCodePaste : undefined}
-                              autoFocus={i === 0}
-                              className="flex-1 aspect-square text-center text-[18px] sm:text-[22px] font-black text-black border border-black/15 focus:border-black/60 focus:outline-none transition-colors bg-white tabular-nums rounded-lg sm:rounded-xl"
+                              className="w-10 sm:w-12 h-12 sm:h-14 min-w-0 flex-1 max-w-[50px] aspect-square text-center text-[20px] sm:text-[22px] font-semibold text-black border border-black/[0.14] focus:border-black focus:ring-4 focus:ring-black/[0.06] focus:outline-none transition-all bg-white tabular-nums rounded-2xl"
                             />
                           ))}
                         </div>
                       </div>
 
                       {error && (
-                        <p className="text-[12.5px] text-red-600 font-medium">{error}</p>
+                        <p className="text-[12.5px] text-red-600 font-medium text-center">{error}</p>
                       )}
 
                       <button
                         type="submit"
                         disabled={loading || code.join("").length < 6}
-                        className="w-full py-3.5 bg-black text-white text-[14px] font-bold tracking-wide hover:bg-black/85 active:scale-[0.99] transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                        className="w-full py-3.5 bg-black text-white text-[15.5px] font-semibold hover:bg-[#26282e] active:scale-[0.99] transition-all disabled:opacity-40 flex items-center justify-center gap-2 rounded-full"
                       >
                         {loading ? (
                           <>
@@ -363,17 +359,17 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                             Verifying…
                           </>
                         ) : (
-                          "Verify & Sign In"
+                          "Verify and Sign In"
                         )}
                       </button>
 
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between pt-1">
                         <button
                           type="button"
                           onClick={() => { setStep("email"); setError(""); setCode(["","","","","",""]); }}
                           className="text-[12.5px] font-medium text-black/45 hover:text-black/70 transition-colors"
                         >
-                          ← Change email
+                          Change email
                         </button>
                         <button
                           type="button"
@@ -401,7 +397,7 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                         initial={{ scale: 0.5, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ type: "spring", stiffness: 200, damping: 14 }}
-                        className="w-14 h-14 border-2 border-black flex items-center justify-center"
+                        className="w-14 h-14 rounded-full bg-[#f2f3f5] flex items-center justify-center"
                       >
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
@@ -413,21 +409,9 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
-
-              {/* Aztec Footer Strip */}
-              <div className="px-8 py-4 border-t border-black/5 flex items-center gap-2.5">
-                <img
-                  src="/aztec-logo-black.png"
-                  alt="Aztec"
-                  className="h-4 object-contain mix-blend-multiply opacity-25"
-                />
-                <span className="text-[11px] font-medium text-black/30 uppercase tracking-wider">
-                  Secured by Aztec Network ZK Architecture
-                </span>
-              </div>
+                </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
       )}
     </AnimatePresence>
   );

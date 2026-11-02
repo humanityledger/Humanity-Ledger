@@ -26,6 +26,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
 
         return NextResponse.json(category);
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

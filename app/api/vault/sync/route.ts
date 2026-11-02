@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Uhrp } from '@/lib/vault/uhrp';
+import { createHash, timingSafeEqual } from 'crypto';
+
+const MIN_SECRET_LENGTH = 16;
+
+function digest(s: string): Buffer {
+    return createHash('sha256').update(s).digest();
+}
 
 // Secure Garbage Collector API: Pushes stale data to the Local System Vault
 // and instantly purges it from Railway's cloud DB to save space.
@@ -10,10 +17,18 @@ export async function POST(request: Request) {
         const { payload_type } = body;
 
         const vaultUrl = process.env.Private_VAULT_URL;
-        const vaultSecret = process.env.Private_VAULT_SECRET || 'Private_QUANTUM_KEY_777';
+        const vaultSecret = process.env.Private_VAULT_SECRET;
 
-        const authHeader = request.headers.get('authorization');
-        if (authHeader !== `Bearer ${vaultSecret}`) {
+        // [SECURITY A-029] Vault Secret must be configured with sufficient entropy
+        if (!vaultSecret || vaultSecret.length < MIN_SECRET_LENGTH) {
+            console.error('[VaultSync] Private_VAULT_SECRET env var not set or too short — blocking request');
+            return NextResponse.json({ error: 'Vault not configured' }, { status: 503 });
+        }
+
+        const authHeader = request.headers.get('authorization') || '';
+        const expected = `Bearer ${vaultSecret}`;
+
+        if (!timingSafeEqual(digest(authHeader), digest(expected))) {
             return NextResponse.json({ error: 'Unauthorized Vault Access' }, { status: 401 });
         }
 
@@ -108,6 +123,6 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         console.error('GC API Error:', error);
-        return NextResponse.json({ error: 'Internal GC Error', details: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal GC Error', details: 'Error details redacted' }, { status: 500 });
     }
 }

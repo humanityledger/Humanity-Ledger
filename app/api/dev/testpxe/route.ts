@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
  * No SDK imports - just raw HTTP to verify the sidecar is alive.
  */
 export async function GET() {
-  const pxeUrl = process.env.AZTEC_PXE_URL || 'https://v5.testnet.rpc.aztec-labs.com';
-  const nodeUrl = process.env.AZTEC_NODE_URL || 'https://v5.testnet.rpc.aztec-labs.com';
+  const pxeUrl = process.env.AZTEC_PXE_URL || 'https://node.aztec.network';
+  const nodeUrl = process.env.AZTEC_NODE_URL || 'https://node.aztec.network';
   
   try {
     // Test PXE connectivity with raw JSON-RPC
@@ -34,7 +34,7 @@ export async function GET() {
       nodeInfo = (await nodeInfoRes.json()).result;
       nodeBlock = (await nodeBlockRes.json()).result;
     } catch (e: any) {
-      nodeInfo = { error: e.message };
+      nodeInfo = { error: 'Internal Server Error' };
     }
 
     return NextResponse.json({
@@ -45,7 +45,7 @@ export async function GET() {
   } catch (e: any) {
     return NextResponse.json({ 
       success: false, 
-      error: e.message, 
+      error: 'Internal Server Error', 
       pxeUrl,
       hint: 'Ensure AZTEC_PXE_URL points to a running PXE sidecar.',
     }, { status: 500 });

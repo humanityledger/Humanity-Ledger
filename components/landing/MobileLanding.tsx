@@ -11,7 +11,7 @@ import { useAccount, useConnect, useSignMessage, useDisconnect, useReconnect, us
 import { reconnect as wagmiReconnect, watchAccount, getAccount, getConnectorClient } from '@wagmi/core';
 import { config as wagmiConfig } from '@/config/appkit';
 import { useAppKit } from "@reown/appkit/react";
-import { HLLogo } from "@/components/shared/HLLogo";
+import { HLLogo, HLMark } from "@/components/shared/HLLogo";
 import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { 
   Scan, MessageSquare, LogOut, MessageCircle, ScanLine, 
@@ -26,6 +26,7 @@ import { HumanityLedgerTweetFeed } from "./HumanityLedgerTweetFeed";
 import { EmailLoginModal } from "@/components/auth/EmailLoginModal";
 
 
+import { safeReturnPath } from "@/lib/security/safeRedirect";
 //  Reown AppKit + WagmiAdapter localStorage key patterns 
 // These are ALL the keys that Reown AppKit v1/v2 and its WagmiAdapter write
 // to localStorage (2025-2026). We scan ALL of them when recovering a session.
@@ -226,7 +227,7 @@ function SigningOverlay({
           <div className="w-full flex flex-col gap-3">
             <button
               onClick={onOpenWallet}
-              className="w-full py-4 rounded-2xl bg-[#050505] text-white font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all hover:bg-black/90"
+              className="w-full py-4 rounded-2xl bg-white text-white font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all hover:bg-black/90"
             >
               <Fingerprint size={16} />
               Open Wallet & Retry
@@ -246,7 +247,7 @@ function SigningOverlay({
               <a
                 href={wcDeepLink}
                 rel="noopener noreferrer"
-                className="w-full py-4 rounded-2xl bg-[#050505] text-white font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-transform select-none hover:bg-black/90"
+                className="w-full py-4 rounded-2xl bg-white text-white font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-transform select-none hover:bg-black/90"
               >
                 Open Wallet App
               </a>
@@ -254,7 +255,7 @@ function SigningOverlay({
               /* No deep-link → open the Reown AppKit modal so user picks their wallet */
               <button
                 onClick={onOpenWallet}
-                className="w-full py-4 rounded-2xl bg-[#050505] text-white font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all hover:bg-black/90"
+                className="w-full py-4 rounded-2xl bg-white text-white font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all hover:bg-black/90"
               >
                 <Fingerprint size={16} />
                 Tap to Sign &amp; Complete Login
@@ -363,7 +364,7 @@ function ConnectedScreen({
   const fmtDate   = (d: Date) => d.toLocaleDateString('en-US', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 
   return (
-    <div className="relative w-full h-full overflow-x-hidden overflow-y-auto font-sans flex flex-col bg-white selection:bg-black/10 selection:text-black" style={{ color: '#000000', minHeight: '100dvh' }}>
+    <div className="relative w-full h-full overflow-x-hidden overflow-y-auto font-sans flex flex-col bg-white selection:bg-black/10 selection:text-black" style={{ color: '#000000' }}>
       {/* Background soft ambient noise/gradient */}
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-black/[0.01] via-white to-white" />
       
@@ -388,11 +389,7 @@ function ConnectedScreen({
           )}
           
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-             <img
-               src="/system-shots/aztec-logo.png"
-               className="h-20 w-auto object-contain"
-               alt="Humanity Ledger"
-             />
+             <HLLogo size={32} theme="dark" />
           </div>
           
           <div className="w-8" />
@@ -457,14 +454,12 @@ function ConnectedScreen({
           className="w-full grid grid-cols-2 gap-4 mb-14"
         >
           {[
-            { label: 'Dashboard', href: '/terminal', icon: <LayoutDashboard size={22} strokeWidth={1.5} />, color: 'bg-[#1C1C1E] text-white', border: 'border-transparent' },
+            { label: 'App Hub', href: '/hub', icon: <LayoutDashboard size={22} strokeWidth={1.5} />, color: 'bg-[#1C1C1E] text-white', border: 'border-transparent' },
             { label: 'Link Session', action: onScan, icon: <ScanLine size={22} strokeWidth={1.5} />, color: 'bg-white text-black', border: 'border-black/10' },
-            { label: 'ZK Sandbox', href: '/sandbox', icon: <Fingerprint size={22} strokeWidth={1.5} />, color: 'bg-black text-white', border: 'border-transparent' },
+            { label: 'Ledger Chat', href: '/chat', icon: <MessageSquare size={22} strokeWidth={1.5} />, color: 'bg-[#25D366] text-white', border: 'border-transparent' },
             { label: 'Portfolio', href: '/portfolio', icon: <PieChart size={22} strokeWidth={1.5} />, color: 'bg-[#f5f5f7] text-black', border: 'border-transparent' },
-            { label: 'Markets', href: '/markets', icon: <TrendingUp size={22} strokeWidth={1.5} />, color: 'bg-[#f5f5f7] text-black', border: 'border-transparent' },
-            { label: 'Explorer', href: '/explorer', icon: <Activity size={22} strokeWidth={1.5} />, color: 'bg-[#f5f5f7] text-black', border: 'border-transparent' },
-            { label: 'LedgerChat', href: '/chat', icon: <MessageSquare size={22} strokeWidth={1.5} />, color: 'bg-[#1c7aff] text-white', border: 'border-transparent' },
-            { label: 'Studio Beta', href: '/studio/provenance', icon: <Package size={22} strokeWidth={1.5} />, color: 'bg-gradient-to-tr from-purple-500 to-indigo-600 text-white', border: 'border-transparent' },
+            { label: 'Studio', href: '/studio/provenance', icon: <Package size={22} strokeWidth={1.5} />, color: 'bg-gradient-to-tr from-purple-500 to-indigo-600 text-white', border: 'border-transparent' },
+            { label: 'Developer Sandbox', href: '/sandbox', icon: <Fingerprint size={22} strokeWidth={1.5} />, color: 'bg-black text-white', border: 'border-transparent' },
           ].map((app, i) => {
             const InnerContent = (
               <div className={`flex flex-col justify-between p-4 h-[120px] rounded-[24px] border ${app.border} ${app.color} shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer`}>
@@ -498,7 +493,7 @@ function ConnectedScreen({
             className="mt-auto flex items-center justify-center gap-3 px-8 py-4 rounded-full border border-black/10 bg-white font-mono text-[9px] uppercase tracking-[0.25em] text-black/40 hover:text-black hover:border-black/30 hover:shadow-lg transition-all duration-300"
           >
             <LogOut size={14} strokeWidth={1.5} />
-            End Session · Change Wallet
+            End Session / Change Wallet
           </motion.button>
         )}
       </main>
@@ -951,7 +946,9 @@ export function MobileLanding() {
       // connect overlay. The component re-renders with isLinked=true and shows the
       // connected header (Ledger Hub + address badge + disconnect).
       const params = new URLSearchParams(window.location.search);
-      const next = params.get('next');
+      // ?next= is unchecked input: "javascript:…" ran code on our origin and
+      // "https://…" sent a just-signed-in person to another site.
+      const next = safeReturnPath(params.get('next'), '');
       if (next && next !== '/connect' && next !== window.location.pathname) {
           console.log('[Auth] Redirecting to:', next);
           window.location.replace(next);
@@ -1388,7 +1385,7 @@ export function MobileLanding() {
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           className="font-serif text-[clamp(2.8rem,12vw,5rem)] font-normal tracking-tight text-[#0A0A0A] leading-[1.1] select-none"
         >
-          YOUR KEYS.<br />YOUR IDENTITY.
+          Your Keys.<br />Your Identity.
         </motion.h1>
         <motion.p
           initial={{ opacity: 0 }}
@@ -1396,7 +1393,7 @@ export function MobileLanding() {
           transition={{ delay: 0.3, duration: 0.6 }}
           className="mt-4 text-[10px] font-mono uppercase tracking-[0.25em] text-black/55"
         >
-          Humanity Ledger · ZK-Native · Sovereign
+          Sovereign Messaging Network
         </motion.p>
 
         {/* ── ANDROID/iOS RECOVERY BANNER ───────────────────────────────── */}
@@ -1465,18 +1462,18 @@ export function MobileLanding() {
                 } catch {}
               }
             }}
-            className="group w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-[#5200FF]/30 bg-gradient-to-r from-[#5200FF]/5 to-[#5200FF]/10 hover:from-[#5200FF]/10 hover:to-[#5200FF]/15 hover:border-[#5200FF]/50 active:scale-[0.97] transition-all duration-150 shadow-sm"
+            className="group w-full flex items-center gap-4 p-4 rounded-2xl border border-black/10 bg-white hover:border-black active:scale-[0.97] transition-all duration-150 shadow-sm"
           >
-            <div className="w-11 h-11 rounded-xl bg-[#5200FF] flex items-center justify-center p-2.5 shrink-0 shadow-lg">
-              <img src="/official-ledger-monochrome.png" alt="Connect" className="w-full h-full object-contain invert" />
+            <div className="w-11 h-11 rounded-xl bg-black flex items-center justify-center p-2 shrink-0 shadow-sm">
+              <HLMark size={28} />
             </div>
             <div className="flex-1 text-left">
               <p className="text-[14px] font-black uppercase tracking-tight text-[#050505]">Connect Wallet</p>
               <p className="text-[10px] font-mono text-[#050505]/50 uppercase tracking-widest mt-0.5">
-                MetaMask · Trust · Rainbow · WalletConnect
+                MetaMask, Trust, Rainbow, WalletConnect
               </p>
             </div>
-            <ArrowRight size={16} className="text-[#5200FF]/60 group-hover:text-[#5200FF] group-hover:translate-x-1 transition-all shrink-0" />
+            <ArrowRight size={16} className="text-black/40 group-hover:text-black group-hover:translate-x-1 transition-all shrink-0" />
           </button>
 
           {/* Divider */}
@@ -1490,7 +1487,7 @@ export function MobileLanding() {
           <WalletOption
             logo="https://www.svgrepo.com/show/513867/email-letter.svg"
             name="Sign in with Email"
-            badge="One-time code · No wallet needed"
+            badge="One-time code. No wallet needed."
             loading={false}
             onClick={() => setEmailModalOpen(true)}
             delay={0}
@@ -1498,7 +1495,7 @@ export function MobileLanding() {
 
           {/* QR Code Scanner */}
           <WalletOption
-            logo="/system-shots/aztec-logo.png"
+            logo="/favicon.png"
             name="Scan QR Code"
             badge="Link your desktop session via camera"
             loading={false}
@@ -1511,7 +1508,7 @@ export function MobileLanding() {
         </div>
 
         <p className="text-center text-[9px] font-mono text-black/55 uppercase tracking-[0.2em] mt-3 mb-0.5">
-          Secured by Humanity Ledger · ZK-Native · End to End Encrypted
+          Secured by Humanity Ledger. End-to-End Encrypted.
         </p>
       </motion.div>
 
@@ -1539,3 +1536,4 @@ export function MobileLanding() {
     </div>
   );
 }
+

@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { vi } from 'vitest';
 import { POST } from '../../app/api/passport/route';
 import { NextRequest } from 'next/server';
 import { prisma } from '../../lib/prisma';
 import { sequencer } from '../../lib/provenance/qd-sequencer';
 
 // Mock the dependencies
-vi.mock('../../lib/prisma', () => ({
-  prisma: {
+vi.mock('../../lib/prisma', () => {
+  const mockPrisma: any = {
     productPassport: {
       count: vi.fn(),
       create: vi.fn(),
@@ -14,9 +14,19 @@ vi.mock('../../lib/prisma', () => ({
     },
     user: {
       findUnique: vi.fn(),
-    }
-  }
-}));
+    },
+    $transaction: vi.fn(async (cbOrArray: any) => {
+      if (typeof cbOrArray === 'function') {
+        return cbOrArray(mockPrisma);
+      }
+      if (Array.isArray(cbOrArray)) {
+        return Promise.all(cbOrArray);
+      }
+      return cbOrArray;
+    }),
+  };
+  return { prisma: mockPrisma };
+});
 
 vi.mock('../../lib/session', () => ({
   getSession: vi.fn()
@@ -49,6 +59,7 @@ describe('Studio Provenance Plan Limits', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    process.env.ADMIN_WALLET_ADDRESS = '0x1111111111111111111111111111111111111111';
     mockGetSession = (await import('../../lib/session')).getSession;
   });
 
@@ -65,7 +76,7 @@ describe('Studio Provenance Plan Limits', () => {
   };
 
   it('allows the Owner Wallet to create infinite passports (bypasses limits)', async () => {
-    mockGetSession.mockResolvedValue({ userId: '0x78831c25c86ea2a78a6127fc2ccb95e612d87b4a' });
+    mockGetSession.mockResolvedValue({ userId: '0x1111111111111111111111111111111111111111' });
     const req = createMockRequest(validPayload);
     
     // Simulate 1000 passports already existing in DB

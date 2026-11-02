@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Resend } from 'resend';
+import { isCronAuthorized } from '@/lib/security/cronAuth';
 
-const resend = new Resend(process.env.RESEND_API_KEY || 're_123456789');
+const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_build_time');
 
 const getSender = (name: string) => {
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
@@ -39,8 +40,9 @@ const unlocks = [
 
 export async function GET(req: NextRequest) {
     try {
-        const authHeader = req.headers.get('authorization');
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        // With CRON_SECRET unset the old check accepted "Bearer undefined",
+        // which let anyone send this email to every subscriber.
+        if (!isCronAuthorized(req)) {
             return NextResponse.json({ error: 'Unauthorized CRON execution' }, { status: 401 });
         }
         
@@ -120,10 +122,10 @@ export async function GET(req: NextRequest) {
         `;
 
         // Dispatch emails parallelly (batching recommended for big lists, but okay for MVP)
-        const emailPromises = subscribers.map(sub => 
+        const emailPromises = subscribers.filter(sub => Boolean(sub.email)).map(sub => 
             resend.emails.send({
                 from: getSender('Humanity Ledger Vault'),
-                to: sub.email,
+                to: sub.email as string,
                 subject: ' Real-Time Supply Unlock Alert (Hourly Update)',
                 html: htmlContent
             }).catch(err => console.error(`[CRON] Failed to send email to ${sub.email}:`, err))

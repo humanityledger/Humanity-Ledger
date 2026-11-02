@@ -90,10 +90,10 @@ export function WalletConnectSessions() {
                 </div>
 
                 <NextLink
-                    href="/terminal?tab=chat"
+                    href="/hub"
                     className="w-full py-4 mt-4 bg-black/5 hover:bg-black/10 text-black border border-black/20 rounded-xl font-bold flex items-center justify-center gap-2 transition-all"
                 >
-                    Enter Ledger Chat
+                    Open App Hub
                 </NextLink>
 
                 <button 

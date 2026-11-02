@@ -37,10 +37,10 @@ export const AZTEC_CONTRACTS = {
   PLONK_VERIFIER: "0x1F28e4e4b8e2d5e02b7Dd3Fcf9E0EEdd44Ab3B29",
 } as const;
 
-// Aztec Sandbox PXE default endpoint (for local/testnet dev)
+// Aztec Sandbox PXE default endpoint (for local/mainnet dev)
 export const AZTEC_PXE_ENDPOINTS = {
   sandbox: 'http://localhost:8080',
-  testnet: 'https://v5.testnet.rpc.aztec-labs.com',
+  mainnet: 'https://node.aztec.network',
 } as const;
 
 // Asset IDs as defined in Aztec's asset registry

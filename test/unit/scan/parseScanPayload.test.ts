@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { vi } from 'vitest';
 import { parseScanPayload } from '@/lib/scan/parseScanPayload';
 
 describe('parseScanPayload', () => {

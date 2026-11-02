@@ -68,7 +68,7 @@ export default function BridgePage() {
       {/* Logo */}
       <div className="mb-12 flex flex-col items-center gap-3">
         <img
-          src="/official-ledger-monochrome.png"
+          src="/logo-mark.png"
           alt="Humanity Ledger"
           className="w-10 h-10 brightness-0 invert opacity-60"
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}

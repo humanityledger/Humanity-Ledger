@@ -134,11 +134,11 @@ const NODES: RoadmapNode[] = [
 
   // ─── PHASE 4: Aztec Integration & On-Chain Intelligence (Jul - Sep 2026) ─────────────
   {
-    id: 'aztectestnet',
-    title: 'Aztec V5 Testnet Live',
+    id: 'aztecmainnet',
+    title: 'Aztec Mainnet Live',
     status: 'live',
     quarter: 'Completed',
-    description: 'Connected to Aztec Labs public RPC for testnet proof delegation and state reading. Full migration to Aztec V5 Alpha Testnet RPC. QD token transfers anchored to real Aztec blocks.',
+    description: 'Connected to Aztec Labs public RPC for mainnet proof delegation and state reading. Full migration to Aztec Mainnet RPC. QD token transfers anchored to real Aztec blocks.',
     x: C4, y: 60,
   },
   {
@@ -240,12 +240,12 @@ const EDGES: RoadmapEdge[] = [
   { from: 'LedgerChat',   to: 'circuits' },
   { from: 'terminal',    to: 'passportqr' },
   // P3 → P4
-  { from: 'zksandbox',   to: 'aztectestnet' },
-  { from: 'circuits',    to: 'aztectestnet' },
+  { from: 'zksandbox',   to: 'aztecmainnet' },
+  { from: 'circuits',    to: 'aztecmainnet' },
   { from: 'enclave',     to: 'governance' },
   { from: 'passportqr',  to: 'stealth-transfers' },
   // P4 → P5
-  { from: 'aztectestnet',     to: 'hyperliquid' },
+  { from: 'aztecmainnet',     to: 'hyperliquid' },
   { from: 'governance',       to: 'hyperliquid' },
   { from: 'stealth-transfers',to: 'darkpool' },
   { from: 'alerts',           to: 'aml' },

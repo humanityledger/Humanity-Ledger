@@ -1,4 +1,0 @@
-fix(chat): resolve email user identity mismatch and add QD balance counter
-
-- api/aztec/transfer/route.ts: Added resolution of AuthUser UUID session to evm address. This fixes the "Payment failed for Whale Chat message" error for users logged in via email (whose x-verified-session-address header was a UUID instead of an EVM address).
-- components/terminal/WhaleChat.tsx: Added QD balance counter badges to the UI (desktop sidebar and mobile active chat header) so users know how much balance they have left.

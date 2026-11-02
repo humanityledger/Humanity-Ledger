@@ -23,8 +23,7 @@
     ],
     "paths": {
       "@/*": [
-        "./*",
-        "./src/*"
+        "./*"
       ]
     },
     "target": "ES2020"
@@ -43,6 +42,11 @@
     "contracts",
     "subgraph",
     "test",
+    "tests",
+    "docs",
+    "e2e",
+    "load",
+    "playwright.config.ts",
     "workers",
     "src/context",
     "hardhat.config.ts",

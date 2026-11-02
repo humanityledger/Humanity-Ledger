@@ -118,6 +118,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ address:
         return NextResponse.json({ user, stats, badges, topTopics: user.forumTopics || [], topReplies: user.forumPosts || [] });
     } catch (e: any) {
         console.error('[API] Forum Summary Error:', e);
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

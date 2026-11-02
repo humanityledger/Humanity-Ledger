@@ -14,7 +14,7 @@ Design the structured rollout of the `HumanityIdentity` (SIWE) and unified archi
 - Enclaves and specific Mini-Apps define required scopes in their manifests.
 
 ### 2.3 Network & Asset
-- **Network:** Shared Aztec Testnet (RPC: `AZTEC_TESTNET_RPC`).
+- **Network:** Shared Aztec Mainnet (RPC: `AZTEC_TESTNET_RPC`).
 - **Asset / Proof:** SNARK/STARK commitments and Golden Tickets tied definitively to `HumanityIdentity.id` rather than legacy user IDs.
 
 ## 3. Mini-App Manifests

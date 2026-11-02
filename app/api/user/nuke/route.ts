@@ -1,3 +1,4 @@
+import { getSession } from '@/lib/session';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyMessage } from 'viem';
@@ -6,6 +7,11 @@ import { RedisRateLimiter } from '@/lib/redis/rate-limiter';
 import { redisClient } from '@/lib/redis/client';
 
 export async function POST(req: Request) {
+    const session = await getSession();
+    if (!session?.userId) {
+        return new Response(JSON.stringify({ error: 'Unauthorized: Authentication required.' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     try {
         const body = await req.json();
         const { address, signature, timestamp } = body;
@@ -47,7 +53,7 @@ export async function POST(req: Request) {
                 signature: signature as `0x${string}`,
             });
         } catch (e: any) {
-            return NextResponse.json({ error: 'Cryptographic verification failed: ' + e.message }, { status: 401 });
+            return NextResponse.json({ error: 'Cryptographic verification failed' }, { status: 401 });
         }
 
         if (!isValidSignature) {
@@ -61,7 +67,9 @@ export async function POST(req: Request) {
             await prisma.$transaction(async (tx) => {
                 // Delete core relationship trees (Prisma handles some cascades, but we are explicit)
                 await tx.session.deleteMany({ where: { userId: userAddress } });
-                await tx.userSessionLog.deleteMany({ where: { userId: userAddress } });
+                if ((tx as any).userSessionLog) {
+                    await (tx as any).userSessionLog.deleteMany({ where: { userId: userAddress } });
+                }
                 await tx.blockchainTransaction.deleteMany({ where: { userId: userAddress } });
                 
                 // Finally delete the user completely
@@ -71,7 +79,11 @@ export async function POST(req: Request) {
                 }
 
                 // Record the irreversible cryptographic proof securely in General Log (Zk-Hash mapped)
-                const salt = process.env.NUKE_SALT || process.env.JWT_SECRET || 'HumanityLedger_ZeroG_Salt_777';
+                // [SECURITY] Fail closed - never use hardcoded salt for deletion commitments
+                const salt = process.env.NUKE_SALT || process.env.JWT_SECRET;
+                if (!salt) {
+                    throw new Error('NUKE_SALT not configured. Cannot create deletion commitment.');
+                }
                 const deletionCommitment = createHash('sha256').update(userAddress + salt).digest('hex');
                 
                 await tx.log.create({
@@ -122,11 +134,14 @@ export async function POST(req: Request) {
         response.cookies.delete('kyc_token');
         response.cookies.delete('system_handshake');
         response.cookies.delete('next-auth.session-token');
+        response.cookies.delete('hl_session');
+        response.cookies.delete('human.session-token');
+        response.cookies.delete('__Secure-next-auth.session-token');
 
         return response;
 
     } catch (error: any) {
-        console.error(" [LedgerFortress:Nuke] Critical Failure:", error);
+        console.error("[LedgerFortress:Nuke] Critical Failure -- details redacted");
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

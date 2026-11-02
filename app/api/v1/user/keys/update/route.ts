@@ -25,7 +25,15 @@ export async function POST(req: NextRequest) {
 
     const updateData: any = { updatedAt: new Date() };
 
-    if (webhookUrl !== undefined) updateData.webhookUrl = webhookUrl;
+    if (webhookUrl !== undefined) {
+      if (typeof webhookUrl !== 'string' || (!webhookUrl.startsWith('https://') && webhookUrl !== '')) {
+        return NextResponse.json({ error: 'webhookUrl must be a secure https:// URL or empty string.' }, { status: 400 });
+      }
+      if (webhookUrl.length > 512) {
+        return NextResponse.json({ error: 'webhookUrl too long (max 512 chars).' }, { status: 400 });
+      }
+      updateData.webhookUrl = webhookUrl;
+    }
     
     if (ipWhitelist !== undefined) {
       if (!Array.isArray(ipWhitelist)) {

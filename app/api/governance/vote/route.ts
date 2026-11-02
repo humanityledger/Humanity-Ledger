@@ -69,25 +69,12 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Check if user already voted (using generated nullifier hash)
-        const existingVote = await (prisma as any).proposalVote.findUnique({
-            where: {
-                proposalId_nullifierHash: {
-                    proposalId: body.proposalId,
-                    nullifierHash: generatedNullifier,
-                },
-            },
-        });
-
-        if (existingVote) {
-            return NextResponse.json(
-                { error: 'You have already voted on this proposal' },
-                { status: 409 }
-            );
-        }
-
-        // Record vote
-        const vote = await (prisma as any).proposalVote.create({
+        // RACE CONDITION FIX: Use DB transaction to atomically check + create
+        // Without this, two simultaneous requests could both pass the existingVote check
+        // and both insert a vote, breaking the one-vote-per-user guarantee.
+        let vote;
+        try {
+            vote = await (prisma as any).proposalVote.create({
             data: {
                 proposalId: body.proposalId,
                 nullifierHash: generatedNullifier,
@@ -98,6 +85,16 @@ export async function POST(request: NextRequest) {
                 verificationLevel: 'network_native',
             },
         });
+        } catch (createErr: any) {
+            // Prisma P2002 = unique constraint violation = duplicate vote attempt (race condition)
+            if (createErr?.code === 'P2002') {
+                return NextResponse.json(
+                    { error: 'You have already voted on this proposal' },
+                    { status: 409 }
+                );
+            }
+            throw createErr;
+        }
 
         // Update proposal vote counts
         const updateData: any = {};

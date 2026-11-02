@@ -18,8 +18,8 @@
 ## 2. DUPLICATION AUDIT
 
 1. **Identity & Auth:**
-   - *Duplication:* `NextAuth`, custom JWT (`session.ts`), SIWE (`hooks/useSIWE.ts`), and Aztec Identity (`aztec-zk-engine.ts`) all exist in parallel.
-   - *Resolution:* Consolidate entirely on SIWE + JWT for Web2/Web3 hybrid auth. Archive Aztec Identity until Aztec v5 is mainnet ready.
+   - *Duplication:* `NextAuth`, custom JWT (`session.ts`), SIWE (`hooks/useSIWE.ts`), and Sovereign Identity (`aztec-zk-engine.ts`) all exist in parallel.
+   - *Resolution:* Consolidate entirely on SIWE + JWT for Web2/Web3 hybrid auth. Archive Sovereign Identity until Aztec v5 is mainnet ready.
 2. **Database Access:**
    - *Duplication:* `lib/prisma.ts` and direct `new PrismaClient()` instantiations scattered in API routes and workers.
    - *Resolution:* Enforce singleton pattern via `lib/prisma.ts` across the codebase to prevent connection exhaustion.
@@ -67,3 +67,4 @@
 - Await Aztec v5 stability.
 - Compile Noir circuits (`target/Verifier.sol`).
 - Replace HMAC mocks with real Barretenberg verifications.
+

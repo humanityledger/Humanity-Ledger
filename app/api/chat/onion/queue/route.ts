@@ -1,3 +1,4 @@
+import { getSession } from '@/lib/session';
 /**
  * POST /api/chat/onion/queue
  *

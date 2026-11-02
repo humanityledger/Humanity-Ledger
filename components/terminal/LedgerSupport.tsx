@@ -64,7 +64,6 @@ const DOCS_LINKS = [
     { icon: <span className="font-mono font-black text-[10px]">[DEV]</span>,    label: 'API Marketplace',       href: '/developers',  desc: 'Third-party integrations and licensed data endpoint catalogue.' },
     { icon: <span className="font-mono font-black text-[10px]">[DEV]</span>,    label: 'Noir Circuits',         href: 'https://github.com/hvbr1s/noir-circuits', desc: 'Open source ZK circuit implementations powering private execution.' },
     { icon: <span className="font-mono font-black text-[10px]">[SEC]</span>,   label: 'Security Policy',       href: '/security',    desc: 'Responsible disclosure process and security architecture overview.' },
-    { icon: <span className="font-mono font-black text-[10px]">[SEC]</span>,   label: 'Bug Bounty',            href: '/security',    desc: 'Earn rewards for reporting critical vulnerabilities in the protocol.' },
     { icon: <span className="font-mono font-black text-[10px]">[SEC]</span>,   label: 'Audits',                href: '/security',    desc: 'Independent third-party audit reports and formal verification results.' },
 ];
 
@@ -92,9 +91,11 @@ export function LedgerSupport() {
         }
         setSubmitting(true);
         try {
-            await new Promise(r => setTimeout(r, 600));
+            const ticketId = typeof crypto !== 'undefined' && crypto.randomUUID 
+                ? crypto.randomUUID().slice(0, 8) 
+                : `TK-${Date.now().toString(36).toUpperCase()}`;
             const newTicket: Ticket = {
-                id: Math.floor(Math.random() * 100000).toString(),
+                id: ticketId,
                 subject, status: 'OPEN', priority,
                 createdAt: new Date().toISOString(),
             };
@@ -338,7 +339,6 @@ export function LedgerSupport() {
                                         {[
                                             { label: 'Aztec Network Docs',   href: 'https://docs.aztec.network', external: true },
                                             { label: 'Security Policy',      href: '/security',  external: false },
-                                            { label: 'Bug Bounty Program',   href: '/security',  external: false },
                                             { label: 'API Marketplace',      href: '/developers', external: false },
                                         ].map(l => (
                                             <Link key={l.label} href={l.href} target={l.external ? '_blank' : undefined} rel={l.external ? 'noopener noreferrer' : undefined} className="group flex items-center justify-between px-6 py-3.5 hover:bg-black/5/60 transition-colors">

@@ -40,8 +40,8 @@ export async function GET(request: NextRequest) {
       chainId: chainId ? parseInt(chainId) : undefined,
       chainIds: chainIds && chainIds.length > 0 ? chainIds : undefined,
       type: type || undefined,
-      limit: limit ? parseInt(limit) : 50,
-      offset: offset ? parseInt(offset) : 0,
+      limit: limit ? Math.max(1, Math.min(parseInt(limit, 10) || 50, 200)) : 50,
+      offset: offset ? Math.max(0, parseInt(offset, 10) || 0) : 0,
     });
 
     // Export as CSV if requested

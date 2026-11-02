@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({ categories, user: userRow, globalSettings });
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
 
@@ -165,6 +165,6 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
         }
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

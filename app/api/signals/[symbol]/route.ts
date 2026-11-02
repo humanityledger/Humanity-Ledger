@@ -108,7 +108,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to generate attesting signal',
+        error: 'Internal Server Error',
         timestamp: Date.now()
       },
       { status: 500 }

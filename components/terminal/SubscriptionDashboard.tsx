@@ -7,7 +7,7 @@ import { NODE_TIERS, PlanTier, PlanConfig } from '@/lib/node_infrastructure/tier
 import { useSystemAccount } from '@/hooks/useSystemAccount';
 
 // ── Owner wallet that has permanent, unlimited access ──────────────────────────
-const OWNER_WALLET = '0x78831c25c86ea2a78a6127fc2ccb95e612d87b4a';
+const OWNER_WALLET = (process.env.NEXT_PUBLIC_OWNER_WALLET || process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '').toLowerCase();
 
 interface SessionData {
     authenticated: boolean;
@@ -67,7 +67,7 @@ function getTierKey(tierStr: string): PlanTier {
 function StatusBadge({ status }: { status: string }) {
     const cfg: Record<string, { label: string; cls: string }> = {
         ACTIVE: { label: 'ACTIVE', cls: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
-        TRIALING: { label: 'TRIAL', cls: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
+        TRIALING: { label: 'TRIAL', cls: 'bg-[#25D366]/10 text-emerald-600 border-[#25D366]/20' },
         PAST_DUE: { label: 'PAST DUE', cls: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
         CANCELLED: { label: 'CANCELLED', cls: 'bg-red-500/10 text-red-500 border-red-500/20' },
         VIP: { label: 'PERMANENT ACCESS', cls: 'bg-purple-500/10 text-purple-600 border-purple-500/20' },
@@ -177,7 +177,7 @@ export function SubscriptionDashboard() {
         try {
             // Auto-provision permanent access for the owner wallet
             const currentAddr = address?.toLowerCase();
-            if (currentAddr === OWNER_WALLET) {
+            if (OWNER_WALLET && currentAddr === OWNER_WALLET) {
                 await fetch('/api/payments/provision-owner', { method: 'POST', credentials: 'include' }).catch(() => {});
             }
             const res = await fetch('/api/auth/session', { cache: 'no-store', credentials: 'include' });
@@ -486,3 +486,4 @@ export function SubscriptionDashboard() {
         </div>
     );
 }
+

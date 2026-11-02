@@ -26,13 +26,12 @@ export async function createWeb3Wallet() {
     });
 
     web3wallet = await Web3Wallet.init({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         core: core as any, // pino Logger types diverge between nested @walletconnect package versions
         metadata: {
             name: 'Ledger Portfolio',
             description: 'Sovereign System Wallet',
             url: process.env.NEXT_PUBLIC_APP_URL || 'https://www.humanidfi.com',
-            icons: ['https://www.humanidfi.com/official-ledger-monochrome.png'],
+            icons: ['https://www.humanidfi.com/logo-mark.png'],
         },
     });
 

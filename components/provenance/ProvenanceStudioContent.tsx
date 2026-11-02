@@ -52,7 +52,7 @@ const SubscriptionDashboard = dynamic(
    CONSTANTS
 ───────────────────────────────────────────── */
 // AztecScan uses /tx-effect/:hash — the /tx/ path does not exist and shows "Page does not exist"
-const EXPLORER_BASE = 'https://testnet.aztecscan.xyz/tx-effect/';
+const EXPLORER_BASE = 'https://aztecscan.xyz/tx-effect/';
 
 /* ─────────────────────────────────────────────
    TYPES
@@ -208,7 +208,7 @@ function CreateTab({ isMobile, onCreated, hasPlan, isOwner }: CreateTabProps) {
     // Charge 5 QDs for ZK Passport issuance
     const paid = await spendQDs(5, 'ZK Passport Issuance');
     if (!paid) {
-      toast.error('Insufficient QDs', { description: 'You need 5 QDs to issue a ZK Passport. Visit Aztec Identity to claim your QDs.' });
+      toast.error('Insufficient QDs', { description: 'You need 5 QDs to issue a ZK Passport. Visit Sovereign Identity to claim your QDs.' });
       return;
     }
     setCreating(true);
@@ -281,7 +281,7 @@ function CreateTab({ isMobile, onCreated, hasPlan, isOwner }: CreateTabProps) {
     const metadataStr = `StudioProvenance/v1|${passport.slug}`;
 
     try {
-      let finalTransactionPayload = {
+      const finalTransactionPayload = {
         passportSlug: passport.slug,
         metadata: metadataStr,
         creatorAddress: address,
@@ -310,26 +310,8 @@ function CreateTab({ isMobile, onCreated, hasPlan, isOwner }: CreateTabProps) {
         console.warn('Server prover unavailable, using local fallback.');
       }
 
-      // 2. Gasless Paymaster Subsidization - WITH FALLBACK
-      try {
-        console.log('Requesting Gasless Sponsor...');
-        const paymasterRes = await fetch('/api/premium/paymaster', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transactionPayload: finalTransactionPayload,
-            tier: 'FREE'
-          })
-        });
-        if (paymasterRes.ok) {
-          const paymasterData = await paymasterRes.json();
-          finalTransactionPayload = paymasterData.sponsoredTransaction;
-        } else {
-          console.log('Using standard gas estimation for free tier.');
-        }
-      } catch (e) {
-        console.warn('Paymaster unavailable, proceeding with standard gas.');
-      }
+      // 2. (A "gasless paymaster" step used to run here. /api/premium/paymaster
+      // returned a made-up signature string and sponsored nothing; retired.)
 
       setExplorerStatus('SUBMITTING');
 
@@ -340,21 +322,20 @@ function CreateTab({ isMobile, onCreated, hasPlan, isOwner }: CreateTabProps) {
         body: JSON.stringify(finalTransactionPayload)
       });
       
-      const data = await res.json();
+      // /api/aztec/anchor has no submit handler yet (it answers 405 with an
+      // empty body), so reading JSON unconditionally failed with a parse
+      // error. Say plainly that anchoring is unavailable instead.
+      const data = await res.json().catch(() => ({} as { error?: string; txHash?: string }));
+      if (res.status === 404 || res.status === 405 || res.status === 501) {
+        throw new Error('On-chain anchoring on Aztec is not available yet. The record is saved and stays unanchored.');
+      }
       if (!res.ok) throw new Error(data.error || 'Anchor failed');
-
       const aztecTxHash = data.txHash;
-
-      // 4. Register Webhook for Anchor Success
-      await fetch('/api/premium/webhooks', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({
-           webhookUrl: 'https://api.my-cryptographic-erp.com/webhooks/provenance',
-           eventTypes: ['PASSPORT_ANCHORED'],
-           tier: 'ELITE'
-         })
-      }).catch(e => console.error('Webhook registration failed silently', e));
+      if (typeof aztecTxHash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(aztecTxHash)) {
+        throw new Error('The anchor service did not return a transaction hash.');
+      }
+      // (A call here used to "register" a hard-coded webhook at a third-party
+      // domain through /api/premium/webhooks, which stored nothing. Removed.)
 
       // 5. Update passport via PATCH
       await fetch(`/api/passport/${passport.slug}/anchor`, {
@@ -981,10 +962,10 @@ function RegistryTab({ isMobile: _isMobile, refreshKey, userTier = 'FREE', isOwn
                         </p>
                       </div>
                       <a
-                        href={`https://testnet.aztecscan.xyz`}
+                        href={`https://aztecscan.xyz`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-mono text-blue-600 hover:text-blue-800 font-bold transition-colors flex items-center gap-1.5 break-all"
+                        className="text-sm font-mono text-emerald-600 hover:text-emerald-800 font-bold transition-colors flex items-center gap-1.5 break-all"
                       >
                         {truncate(p.txHash, 32)}
                         <ExternalLink size={14} className="shrink-0" />
@@ -1058,7 +1039,7 @@ function AztecTab() {
       {/* Header */}
       <div className="rounded-2xl border border-black/10 bg-white p-6">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-6 h-6 rounded-md bg-[#050505] flex items-center justify-center">
+          <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center">
             
           </div>
           <p className="text-[10px] font-black uppercase tracking-widest text-black/50">
@@ -1340,7 +1321,7 @@ function BandwidthTab() {
           className="w-12 h-6 bg-black/8 rounded-full relative border border-black/10 transition-all hover:border-black/30"
         >
           <div
-            className={`w-6 h-6 absolute top-[-1px] left-[-1px] bg-[#050505] rounded-full transition-transform duration-200 ${
+            className={`w-6 h-6 absolute top-[-1px] left-[-1px] bg-white rounded-full transition-transform duration-200 ${
               isAnnual ? 'translate-x-6' : 'translate-x-0'
             }`}
           />
@@ -1381,7 +1362,7 @@ function BandwidthTab() {
                 </div>
               )}
               {plan.elite && (
-                <div className="absolute -top-3 left-6 bg-[#050505] text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">
+                <div className="absolute -top-3 left-6 bg-white text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">
                   Maximum power
                 </div>
               )}
@@ -1440,7 +1421,7 @@ function BandwidthTab() {
                     disabled={cargando}
                     className={`w-full sm:w-auto px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
                       plan.elite
-                        ? 'bg-[#050505] text-white hover:bg-[#1a1a1a] shadow-md'
+                        ? 'bg-white text-white hover:bg-[#1a1a1a] shadow-md'
                         : 'bg-black/5 text-[#050505] border border-black/10 hover:bg-black/10'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
@@ -1539,7 +1520,8 @@ export function ProvenanceStudioContent({
       .then(data => {
         const id = data?.user?.id?.toLowerCase();
         const tier = data?.user?.tier || 'FREE';
-        const owner = id === '0x78831c25c86ea2a78a6127fc2ccb95e612d87b4a';
+        const ownerWallet = (process.env.NEXT_PUBLIC_OWNER_WALLET || process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '').toLowerCase();
+        const owner = Boolean(ownerWallet && id === ownerWallet);
         
         setUserTier(tier);
         setIsOwner(owner);
@@ -1585,7 +1567,7 @@ export function ProvenanceStudioContent({
           {initPhase === 0 ? 'Initializing Quantum Sequencer' : 'Sequencer Certified'}
         </h2>
         <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-black/40">
-          {initPhase === 0 ? 'Syncing with Aztec Testnet v5' : 'Connection Established'}
+          {initPhase === 0 ? 'Syncing with Aztec Mainnet v5' : 'Connection Established'}
         </p>
       </div>
     );
@@ -1657,7 +1639,7 @@ export function ProvenanceStudioContent({
               onClick={() => startTransition(() => setActiveTab(tab.id))}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 activeTab === tab.id
-                  ? 'bg-[#050505] text-white shadow-sm'
+                  ? 'bg-white text-white shadow-sm'
                   : 'text-black/40 hover:text-black/70'
               }`}
             >
@@ -1693,3 +1675,5 @@ export function ProvenanceStudioContent({
     </TuringShieldGate>
   );
 }
+
+

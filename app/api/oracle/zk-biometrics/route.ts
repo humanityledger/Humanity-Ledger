@@ -37,7 +37,9 @@ export async function POST(req: NextRequest) {
         await prisma.siweNonce.delete({ where: { nonce } });
 
         // 2. Verify Payload Integrity
-        const payloadHash = payload.slice(-32); // Use the tail of the base64 as a quick 'hash' for binding
+        // Real SHA-256 hash of the full payload buffer (not a slice)
+        const { createHash } = await import('crypto');
+        const payloadHash = createHash('sha256').update(Buffer.from(payload, 'base64')).digest('hex').substring(0, 32);
         const message = `[Private ZK-GATE]\nBinding biometric liveness attestation for ${address}\nPayload: ${payloadHash}\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
 
         // [SECURITY PATCH B4]: Cryptographically validate the biometric signature!

@@ -1,3 +1,4 @@
+import { getSession } from '@/lib/session';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
@@ -7,7 +8,7 @@ const DEFAULT_CATEGORIES = [
     { name: 'Humanity Ledger',  slug: 'ledger-network',  description: 'Core discussions about ledger movements, large transactions, and on-chain intelligence across all chains.', color: '#050505', orderIndex: 1 },
     { name: 'General',        slug: 'general',        description: 'General community discussions, announcements, and introductions.', color: '#0088cc', orderIndex: 2 },
     { name: 'Applications',   slug: 'applications',   description: 'Talk about dApps, DeFi protocols, tools, and ecosystem applications.', color: '#00C076', orderIndex: 3 },
-    { name: 'Testnets',       slug: 'testnets',       description: 'Testing environments, devnet updates, and testnet coordination.', color: '#F59E0B', orderIndex: 4 },
+    { name: 'Mainnets',       slug: 'mainnets',       description: 'Testing environments, devnet updates, and mainnet coordination.', color: '#F59E0B', orderIndex: 4 },
     { name: 'Noir',           slug: 'noir',           description: 'Zero-knowledge circuit development with Noir, proving systems, and ZK research.', color: '#7C3AED', orderIndex: 5 },
     { name: 'Site Feedback',  slug: 'site-feedback',  description: 'Report bugs, suggest improvements, and share feedback about Humanity Ledger.', color: '#64748B', orderIndex: 6 },
     { name: 'QDs Connect',    slug: 'qds-connect',    description: 'QDs ecosystem connectivity, integrations, and cross-platform collaboration.', color: '#EC4899', orderIndex: 7 },
@@ -72,6 +73,6 @@ export async function GET() {
 
         return NextResponse.json(categories);
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

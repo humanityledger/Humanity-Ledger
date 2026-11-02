@@ -14,7 +14,7 @@ export function EntityCard({ entity }: { entity: any }) {
   const getTierGradient = (tier: string) => {
     switch(tier) {
       case 'MEGALODON': return 'from-purple-600 to-pink-500';
-      case 'LEVIATHAN': return 'from-blue-600 to-indigo-500';
+      case 'LEVIATHAN': return 'from-emerald-600 to-indigo-500';
       case 'KRAKEN': return 'from-cyan-500 to-emerald-500';
       default: return 'from-gray-500 to-slate-400';
     }
@@ -37,7 +37,6 @@ export function EntityCard({ entity }: { entity: any }) {
          )}
 
          {/* Animating DNA/Code wireframe overlay */}
-         <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("/patron-cosmico-4k.png")', backgroundSize: '150px' }} />
 
          {/* Core Icon representing the entity essence */}
          <div className="relative z-10 w-16 h-16 rounded-2xl bg-white shadow-lg flex items-center justify-center border border-black/5 group-hover:scale-110 transition-transform duration-500">
@@ -78,7 +77,7 @@ export function EntityCard({ entity }: { entity: any }) {
         </div>
 
         {/* Action */}
-        <button className="w-full mt-2 py-3 rounded-xl bg-[#FFFFFF] border border-black/10 text-[10px] font-black uppercase tracking-widest text-[#050505] hover:bg-[#050505] hover:text-white transition-colors group/btn flex items-center justify-center gap-2">
+        <button className="w-full mt-2 py-3 rounded-xl bg-[#FFFFFF] border border-black/10 text-[10px] font-black uppercase tracking-widest text-[#050505] hover:bg-white hover:text-white transition-colors group/btn flex items-center justify-center gap-2">
            <Activity size={12} className="opacity-50 group-hover/btn:opacity-100" />
            Invoke in Vault
         </button>

@@ -73,9 +73,10 @@ export class SecureVault {
         return false;
       }
 
-      // Derive or restore master secret from sessionStorage (ephemeral — cleared on tab close)
+      // Derive or restore master secret from localStorage (persistent)
+      // In a real native app, this would be stored in Secure Enclave / Keychain.
       const MASTER_KEY = 'hl_vault_master_v2';
-      let masterSecretB64 = sessionStorage.getItem(MASTER_KEY);
+      let masterSecretB64 = localStorage.getItem(MASTER_KEY);
       let masterBytes: Uint8Array;
 
       if (masterSecretB64) {
@@ -84,7 +85,7 @@ export class SecureVault {
         // Generate new 256-bit master secret
         masterBytes = new Uint8Array(32);
         window.crypto.getRandomValues(masterBytes);
-        sessionStorage.setItem(MASTER_KEY, btoa(String.fromCharCode(...masterBytes)));
+        localStorage.setItem(MASTER_KEY, btoa(String.fromCharCode(...masterBytes)));
       }
 
       // Import as HKDF key, then derive AES-GCM key

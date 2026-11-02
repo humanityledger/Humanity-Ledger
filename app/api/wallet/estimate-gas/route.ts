@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
     } catch (error: any) {
         console.error('Gas estimation error:', error);
-        return NextResponse.json({ error: error.message || 'Failed to estimate gas' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
 

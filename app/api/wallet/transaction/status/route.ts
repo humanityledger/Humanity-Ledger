@@ -112,7 +112,7 @@ export async function GET(req: Request) {
     } catch (error: any) {
         console.error('Transaction status check error:', error);
         return NextResponse.json(
-            { error: error.message || 'Failed to check transaction status' },
+            { error: 'Internal Server Error' },
             { status: 500 }
         );
     }

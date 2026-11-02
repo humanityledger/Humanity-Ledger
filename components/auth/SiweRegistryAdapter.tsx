@@ -22,11 +22,14 @@ export function SiweRegistryAdapter({ children }: { children: React.ReactNode })
     }
 
     // Check existing session
-    fetch("/api/auth/siwe/session")
-      .then((res) => res.json())
+    fetch("/api/siwe/session", { credentials: "include" })
+      .then((res) => {
+        if (!res.ok) throw new Error("No session");
+        return res.json();
+      })
       .then((data) => {
-        if (data.authenticated) {
-          setIdentity(data.identity);
+        if (data?.address) {
+          setIdentity({ address: data.address, chainId: data.chainId });
         }
         setChecking(false);
       })
@@ -47,12 +50,12 @@ export function SiweRegistryAdapter({ children }: { children: React.ReactNode })
       const network = await provider.getNetwork();
 
       // 1. Get Nonce
-      const nonceRes = await fetch("/api/auth/nonce");
+      const nonceRes = await fetch("/api/siwe/nonce", { credentials: "include", cache: "no-store" });
       if (!nonceRes.ok) throw new Error("Failed to fetch nonce");
-      const { nonce } = await nonceRes.json();
+      const nonce = (await nonceRes.text()).trim();
 
       // 2. Create SIWE Message
-      const domain = window.location.host;
+      const domain = window.location.hostname;
       const origin = window.location.origin;
       const message = new SiweMessage({
         domain,
@@ -60,28 +63,33 @@ export function SiweRegistryAdapter({ children }: { children: React.ReactNode })
         statement: "Sign in with Ethereum to the Humanity Ledger Registry.",
         uri: origin,
         version: "1",
-        chainId: Number(network.chainId),
+        chainId: Number(network.chainId) || 1,
         nonce,
+        issuedAt: new Date().toISOString(),
       });
 
       const messageToSign = message.prepareMessage();
       const signature = await signer.signMessage(messageToSign);
 
       // 3. Verify
-      const verifyRes = await fetch("/api/auth/siwe/verify", {
+      const verifyRes = await fetch("/api/siwe/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, signature }),
+        credentials: "include",
+        body: JSON.stringify({ message: messageToSign, signature }),
       });
 
-      if (!verifyRes.ok) throw new Error("Verification failed");
+      if (!verifyRes.ok) {
+        const errData = await verifyRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Verification failed");
+      }
 
       const verifyData = await verifyRes.json();
       
       // Refresh session
-      const sessionRes = await fetch("/api/auth/siwe/session");
-      const sessionData = await sessionRes.json();
-      setIdentity(sessionData.identity);
+      const sessionRes = await fetch("/api/siwe/session", { credentials: "include" });
+      const sessionData = await sessionRes.json().catch(() => null);
+      setIdentity(sessionData || { address: verifyData.address });
       
       toast.success("SIWE Identity Verified");
 

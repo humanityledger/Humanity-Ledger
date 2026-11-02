@@ -61,18 +61,10 @@ export function InstitutionalHeader({ fixed = true, theme = 'dark' }: { fixed?: 
     const { t } = useSystemTranslation();
     const pathname = usePathname() ?? '/';
 
-    const MENU_ITEMS = [
-      { label: 'Dashboard', href: "/terminal" },
+    const MENU_ITEMS: Array<{ label: string; href: string; subItems?: Array<{ label: string; href: string }> }> = [
+      { label: 'App Hub', href: "/hub" },
       { label: 'Portfolio', href: "/portfolio" },
-      { label: 'LedgerChat', href: "/chat" },
-      { label: 'Studio', href: "/terminal?tab=studio" },
-      { label: 'Markets', href: "/terminal?tab=markets" },
-      { label: 'Roadmap', href: "/terminal?tab=humanity-ledger" },
-      { label: 'Identity', href: "/terminal?tab=gold" },
-      { label: 'TOKEN', href: "/qds" },
-      { label: 'MAP', href: "/registry" },
-      { label: 'Community', href: "#", subItems: [{ label: 'ACADEMY', href: "/academy" }, { label: 'FORUM', href: "/forum" }] },
-      { label: 'PRIVACY', href: '/privacy' }
+      { label: 'LedgerChat', href: "/chat" }
     ];
 
 

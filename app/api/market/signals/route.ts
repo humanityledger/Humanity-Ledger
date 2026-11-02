@@ -256,7 +256,7 @@ export async function GET(req: NextRequest) {
 
     } catch (err: any) {
         return NextResponse.json(
-            { error: 'Signal retrieval failed', detail: err?.message },
+            { error: 'Signal retrieval failed', detail: 'Internal error' },
             { status: 503 }
         );
     }

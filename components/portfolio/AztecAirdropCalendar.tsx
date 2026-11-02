@@ -49,7 +49,10 @@ export function AztecAirdropCalendar() {
                 const y = now.getUTCFullYear();
                 setClaimedMonths(prev => new Set(prev).add(`${y}-${m}`));
                 
-                refresh();
+                // Refresh balance on the parent components
+                if (refresh) {
+                    await refresh();
+                }
             } else {
                 toast.error(data.error || 'Failed to claim Airdrop');
             }

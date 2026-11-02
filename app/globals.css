@@ -1,14 +1,8 @@
+@import './ledger-tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');
-
-@layer utilities {
-  .font-aztec-logo {
-    font-family: 'UnifrakturMaguntia', 'Old English Text MT', serif;
-  }
-}
 
 /* 
    A11Y GLOBAL REDUCED MOTION SUPPORT (Audit A11y & Motion Compliance)
@@ -51,8 +45,15 @@
 
 /* Fix iOS Safari 100vh blank bottom space bug */
 html {
-  /* Let the browser handle global scrolling natively */
+  /* Let the browser handle global scrolling natively.
+     `clip` rather than `hidden`: with `hidden` on both html and body, body
+     becomes a scroll container that never scrolls, and every position:sticky
+     element on the site (navigation bars, docs sidebars) silently stops
+     sticking. `clip` prevents horizontal overflow the same way without
+     creating a scroll container. `hidden` stays first as the fallback for
+     browsers without `clip`. */
   overflow-x: hidden;
+  overflow-x: clip;
   /*  HARD BOUNDARY: prevents rubber-band bounce and ghost pages  */
   overscroll-behavior: none;
   background-color: #FFFFFF;
@@ -109,13 +110,6 @@ main[class*="overflow-y-auto"] > * {
   min-height: 0;
   /* Override the globals.css !important rule for min-h-screen within scroll
      containers. Scoped via parent selector so it doesn't affect normal pages. */
-}
-/* Specific override: within a bounded overflow-y-auto main, min-h-screen
-   should resolve to 100% of the scroll container, not 100dvh of the *document*.
-   This prevents ghost whitespace when content is short. */
-main[class*="overflow-y-auto"] .min-h-screen,
-main[class*="overflow-y-auto"] [class*="min-h-screen"] {
-  min-height: 100% !important;
 }
 /* CRITICAL: Direct children of bounded main that use h-full or min-h-full
    need the parent chain to have height set. Ensure the flex children fill. */
@@ -241,8 +235,10 @@ html, body {
 
     /* Prevent horizontal layout overflow  use 100% NOT 100vw.
        On Windows, 100vw includes the scrollbar width, which creates
-       phantom horizontal overflow that cuts the layout at half-screen. */
+       phantom horizontal overflow that cuts the layout at half-screen.
+       `clip` keeps position:sticky working; see the note on html above. */
     overflow-x: hidden;
+    overflow-x: clip;
     width: 100%;
     
     /* Let only the body or the master container scroll */
@@ -270,6 +266,9 @@ html, body {
        viewport but NOT the scroll extension area — white body fills that gap. */
     background-color: #FFFFFF;
     color: inherit;
+    /* CROSS-PLATFORM SYSTEM FONT: Resolves to SF Pro (iOS/macOS), Roboto (Android),
+       Segoe UI (Windows) — optimal native rendering on every platform */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   }
 
   /* 
@@ -341,34 +340,37 @@ html, body {
     max-width: 56rem !important;
   }
 
-  h1, .font-aztec-h1 {
+  /* DECORATIVE FONTS — Scoped to landing page sections only.
+     These MUST NOT bleed into Ledger Chat, Hub, or App UIs where
+     system-ui / Inter is required for readability and native feel. */
+  .font-aztec-h1 {
     font-family: 'Playfair Display', 'Arizona Serif', serif;
     font-weight: 300;
     line-height: 1.0;
     letter-spacing: -0.05em;
   }
 
-  h2, .font-aztec-h2 {
+  .font-aztec-h2 {
     font-family: 'Roboto Mono', 'Oracle Triple', monospace;
     font-weight: 500;
     line-height: 1.0;
     letter-spacing: -0.01em;
   }
 
-  h3, .font-aztec-h3 {
+  .font-aztec-h3 {
     font-family: 'Inter', 'MD Thermochrome', sans-serif;
     font-weight: 400;
     line-height: 0.95;
     letter-spacing: -0.01em;
   }
 
-  h4, .font-aztec-h4 {
+  .font-aztec-h4 {
     font-family: 'Garamond', 'Francesco', serif;
     font-weight: 400;
     line-height: 0.95;
   }
 
-  p, .font-aztec-body {
+  .font-aztec-body {
     font-family: 'Inter', 'Oracle Standard', sans-serif;
     font-weight: 500;
     line-height: 1.4;
@@ -1472,7 +1474,7 @@ html.dark h3,
 html.dark h4,
 html.dark h5,
 html.dark h6,
-html.dark span:not([class*="text-"]):not([class*="opacity-"]),
+/* html.dark span rule removed to protect button labels */
 html.dark li,
 html.dark label,
 html.dark td,
@@ -1497,8 +1499,17 @@ html.dark [class*="text-black/"] {
 }
 
 /* Ensure all min-h-screen wrappers are transparent, not white */
-html.dark .min-h-screen:not([class*="bg-[#"]):not([class*="bg-black"]):not([class*="bg-white/"]):not([class*="bg-slate"]):not([class*="bg-transparent"]) {
+html.dark .min-h-screen:not([class*="bg-[#"]):not([class*="bg-black"]):not([class*="bg-white/"]):not([class*="bg-slate"]):not([class*="bg-transparent"]):not([data-doc-page]) {
   background-color: transparent !important;
+}
+
+/* Documentation pages must ALWAYS be white — never dark */
+[data-doc-page], [data-doc-page] * {
+  --tw-bg-opacity: 1 !important;
+}
+[data-doc-page] {
+  background-color: #ffffff !important;
+  color: #050505 !important;
 }
 
 /* Section blend overlays: in dark mode they should fade to transparent/black */
@@ -1619,7 +1630,7 @@ html.dark h3,
 html.dark h4,
 html.dark h5,
 html.dark h6,
-html.dark span:not([class*="text-"]):not([class*="opacity-"]),
+/* html.dark span rule removed to protect button labels */
 html.dark li,
 html.dark label,
 html.dark td,
@@ -1738,10 +1749,17 @@ img, a, canvas, svg {
   -webkit-touch-callout: none;
 }
 
-/* 7. Force hardware-accelerated compositing on animated elements */
-.animate-pulse, .animate-spin, .animate-bounce, [class*="transition-"] {
+/* 7. Compositing hint for the looping animations only.
+   This used to match every element with a Tailwind transition-* class and
+   give it transform: translateZ(0). A transform makes an element the
+   containing block of every position:fixed descendant, so modals, menus and
+   full-screen overlays inside such an element were sized and placed
+   against it instead of the window. <body> itself carries transition-colors,
+   so every fixed overlay in the app was positioned against the body, which
+   is a scroll container: when anything scrolled it, overlays shifted off
+   screen (Ledger Studio opened cut off on the left and top). */
+.animate-pulse, .animate-spin, .animate-bounce {
   will-change: transform, opacity;
-  transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
@@ -1753,4 +1771,107 @@ img, a, canvas, svg {
   -moz-hyphens: none;
   -ms-hyphens: none;
   hyphens: none;
+}
+/* LEDGER CHAT SETTINGS ENGINE - DYNAMIC STYLES */
+
+/* --- Chat Background --- */
+html[data-chat-bg="amoled"] body {
+  background-color: #000000 !important;
+}
+html[data-chat-bg="holographic"] body {
+  background: linear-gradient(135deg, rgba(13,13,26,1) 0%, rgba(26,13,46,1) 50%, rgba(13,26,46,1) 100%) !important;
+  color: white;
+}
+html[data-chat-bg="matrix"] body {
+  background-color: #001100 !important;
+  background-image: radial-gradient(circle, rgba(0,255,0,0.15) 1px, transparent 1px) !important;
+  background-size: 20px 20px !important;
+}
+html[data-chat-bg="gradient"] body {
+  background: linear-gradient(180deg, #e3f0ff 0%, #f0e8ff 100%) !important;
+}
+
+/* --- Bubble Styles (Targets message bubbles) --- */
+html[data-bubble-style="brutalist"] .msg-bubble-sent,
+html[data-bubble-style="brutalist"] .msg-bubble-recv {
+  border-radius: 0 !important;
+  border: 2px solid black !important;
+  box-shadow: 4px 4px 0 0 black !important;
+}
+html[data-bubble-style="glass"] .msg-bubble-sent,
+html[data-bubble-style="glass"] .msg-bubble-recv {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 16px !important;
+  color: inherit !important;
+}
+html[data-bubble-style="glass"][data-theme="dark"] .msg-bubble-sent,
+html[data-bubble-style="glass"][data-theme="dark"] .msg-bubble-recv {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+html[data-bubble-style="minimal"] .msg-bubble-sent,
+html[data-bubble-style="minimal"] .msg-bubble-recv {
+  background: transparent !important;
+  border-radius: 0 !important;
+  border-bottom: 1px solid currentColor !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* --- UI Density --- */
+html.ui-relaxed .msg-bubble-sent, html.ui-relaxed .msg-bubble-recv {
+  padding: 16px 20px !important;
+  margin-bottom: 8px !important;
+}
+html.ui-compact .msg-bubble-sent, html.ui-compact .msg-bubble-recv {
+  padding: 6px 10px !important;
+  margin-bottom: 2px !important;
+  font-size: 0.9em !important;
+}
+html.ui-dense .msg-bubble-sent, html.ui-dense .msg-bubble-recv {
+  padding: 4px 8px !important;
+  margin-bottom: 0px !important;
+  font-size: 0.85em !important;
+}
+
+/* --- Watermark --- */
+html.watermark-active body::after {
+  content: "SOVEREIGN IDENTITY PROTECTED";
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  font-family: monospace;
+  font-size: 10px;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* AppKit/WalletConnect modal: no custom size overrides.
+   The default AppKit QR size works perfectly on desktop.
+   Any zoom/scale/min-width causes clipping inside the shadow DOM. */
+
+
+/* Make WalletConnect modal QR code slightly larger on Desktop for better scanning */
+@media (min-width: 768px) {
+  w3m-modal, appkit-modal {
+    transform: scale(1.15);
+    transform-origin: center center;
+  }
+}
+
+/* ============================================================
+   67% ZOOM-OUT SYSTEM FOR LANDING PAGE AND /CONNECT
+   Renders at 67% scale at 100% default Chrome zoom on desktop
+   ============================================================ */
+@media screen and (min-width: 640px) {
+  html:has(.hl-zoom-67-target),
+  html.hl-zoom-67 {
+    zoom: 0.67;
+    /* Under zoom, 100vh is the unzoomed viewport (it fills only 67% of the
+       screen). Full-height layouts divide by this to fill the real screen. */
+    --hl-zoom: 0.67;
+  }
 }

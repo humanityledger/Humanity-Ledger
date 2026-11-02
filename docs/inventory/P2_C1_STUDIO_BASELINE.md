@@ -89,9 +89,9 @@ lookup inside the same Prisma transaction as the mutation.**
 
 | Interaction | Method | Network | Status |
 |---|---|---|---|
-| Aztec Transfer (spendQDs) | POST /api/aztec/transfer | Aztec Testnet | BETA |
+| Aztec Transfer (spendQDs) | POST /api/aztec/transfer | Aztec Mainnet | BETA |
 | ZK Proof Generation | POST /api/premium/prover | Off-chain | DEMO (simulated) |
-| Provenance Anchor | POST /api/aztec/anchor | Aztec Testnet | BETA |
+| Provenance Anchor | POST /api/aztec/anchor | Aztec Mainnet | BETA |
 
 ### ZK Classification (strict)
 - `POST /api/premium/prover`: Status = **DEMO**  

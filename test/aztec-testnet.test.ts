@@ -4,9 +4,9 @@
  * ║           Quantum-Grade Integration Tests — Zero-Mock Mode                  ║
  * ╚══════════════════════════════════════════════════════════════════════════════╝
  *
- * test/aztec-testnet.test.ts
+ * test/aztec-mainnet.test.ts
  *
- * Runs against live APIs: Aztec Testnet RPC + local dev server.
+ * Runs against live APIs: Aztec Mainnet RPC + local dev server.
  * Set LEDGER_DEV_URL=http://localhost:3000 before running (or 4455 if using port override).
  *
  * Coverage:
@@ -22,7 +22,7 @@
  * 10. Explorer URL formatting
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { vi } from 'vitest';
 import { rawToQds, qdsToRaw } from '@/lib/aztec/qds-contract';
 import { deriveSecretKeyFromEvm, explorerTxUrl, explorerAddressUrl, AZTEC_EXPLORER, SPONSORED_FPC_ADDRESS } from '@/lib/aztec/client';
 
@@ -30,7 +30,7 @@ import { deriveSecretKeyFromEvm, explorerTxUrl, explorerAddressUrl, AZTEC_EXPLOR
 // Config
 // ─────────────────────────────────────────────────────────────────────────────
 
-const AZTEC_RPC_URL   = process.env.AZTEC_NODE_URL   || 'https://v5.testnet.rpc.aztec-labs.com';
+const AZTEC_RPC_URL   = process.env.AZTEC_NODE_URL   || 'https://node.aztec.network';
 const DEV_URL         = process.env.LEDGER_DEV_URL    || 'http://localhost:4455';
 const TIMEOUT_MS      = 30_000;
 
@@ -110,19 +110,19 @@ describe('Suite 2 — Wallet Derivation (deterministic)', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('Suite 3 — Explorer URL Helpers', () => {
   it('AZTEC_EXPLORER: points to correct testnet explorer', () => {
-    expect(AZTEC_EXPLORER).toBe('https://testnet.aztecscan.xyz');
+    expect(AZTEC_EXPLORER).toBe('https://aztecscan.xyz');
   });
 
   it('explorerTxUrl: generates correct URL format', () => {
     const txHash = '0xdeadbeef';
     const url = explorerTxUrl(txHash);
-    expect(url).toBe(`https://testnet.aztecscan.xyz/tx/${txHash}`);
+    expect(url).toBe(`https://aztecscan.xyz/tx/${txHash}`);
   });
 
   it('explorerAddressUrl: generates correct URL format', () => {
     const addr = '0xcafe';
     const url = explorerAddressUrl(addr);
-    expect(url).toBe(`https://testnet.aztecscan.xyz/address/${addr}`);
+    expect(url).toBe(`https://aztecscan.xyz/address/${addr}`);
   });
 
   it('SPONSORED_FPC_ADDRESS: matches canonical rc.2 address (joshc confirmed)', () => {
@@ -330,7 +330,7 @@ describe('Suite 7 — /api/test-aztec Connection Endpoint', () => {
       // rollupAddress is the canonical check — chainId may be absent from nodeInfo in v5 rc.2
       expect(body.rollupAddress).toBeDefined();
       expect(body.rollupAddress).toMatch(/^0x[0-9a-f]/i);
-      console.log(`  ✅ Aztec Testnet v5 CONNECTED!`);
+      console.log(`  ✅ Aztec Mainnet v5 CONNECTED!`);
       console.log(`  ✅ Rollup Contract: ${body.rollupAddress}`);
       console.log(`  ✅ Node Version: ${body.nodeVersion}`);
       console.log(`  ✅ Sponsored FPC: ${body.sponsoredFpc}`);
@@ -532,9 +532,9 @@ describe('Suite 11 — Aztec Address Format Validation', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUITE 12: Aztec Testnet RPC — Block Retrieval
+// SUITE 12: Aztec Mainnet RPC — Block Retrieval
 // ─────────────────────────────────────────────────────────────────────────────
-describe('Suite 12 — Aztec Testnet RPC Block Retrieval', () => {
+describe('Suite 12 — Aztec Mainnet RPC Block Retrieval', () => {
   it('Can fetch latest L2 block tips', { timeout: TIMEOUT_MS }, async () => {
     const res = await fetch(AZTEC_RPC_URL, {
       method: 'POST',

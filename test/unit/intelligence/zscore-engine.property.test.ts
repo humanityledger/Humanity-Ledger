@@ -14,7 +14,7 @@
  *   7. Division-by-zero safe when std_dev = 0
  */
 
-import { describe, it, expect } from 'vitest';
+import { vi } from 'vitest';
 import * as fc from 'fast-check';
 
 //  Z-Score Engine (extracted for testability) 

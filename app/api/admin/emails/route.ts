@@ -70,13 +70,22 @@ export async function GET(request: NextRequest) {
 
     // Exportar como CSV si se solicita
     if (exportFormat === 'csv') {
+      // CSV injection protection: prefix cells starting with =, +, -, @, tab, or CR with a single-quote
+      // so spreadsheet applications treat them as text, not formulas.
+      const sanitizeCsvCell = (value: string | null | undefined): string => {
+        const s = String(value ?? '');
+        if (/^[=+\-@\t\r]/.test(s)) return `'${s}`;
+        // Wrap in quotes and escape embedded quotes if the value contains comma/newline/quote
+        if (/[,"\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+        return s;
+      };
       const csvRows = [
         'Email,Fuente,Nombre,Estado,Fecha',
-        ...authUsers.map(u => 
-          `${u.email},AuthUser,N/A,Verified,${u.createdAt.toISOString()}`
+        ...authUsers.map(u =>
+          [sanitizeCsvCell(u.email), 'AuthUser', 'N/A', 'Verified', u.createdAt.toISOString()].join(',')
         ),
-        ...subscribers.map(s => 
-          `${s.email},EmailSubscriber,N/A,${s.subscribed ? 'Active' : 'Unsubscribed'},${s.createdAt.toISOString()}`
+        ...subscribers.map(s =>
+          [sanitizeCsvCell(s.email ?? ''), 'EmailSubscriber', 'N/A', s.subscribed ? 'Active' : 'Unsubscribed', s.createdAt.toISOString()].join(',')
         )
       ].join('\n');
 
@@ -116,7 +125,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error fetching emails:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error', details: error.message },
+      { error: 'Internal Server Error', details: 'Error details redacted' },
       { status: 500 }
     );
   }

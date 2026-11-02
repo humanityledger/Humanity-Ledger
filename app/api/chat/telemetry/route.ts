@@ -11,14 +11,9 @@ const TYPING_TTL_S   = 5;  // 5 seconds typing window
 // Middleware sets 'x-verified-session-address' from the JWT at edge level.
 // Falls back to reading the session cookie directly for non-edge environments.
 async function resolveAuthenticatedAddress(request: NextRequest): Promise<string | null> {
-    const fromHeader = request.headers.get('x-verified-session-address')
-        ?? request.headers.get('x-web3-address');
-    if (fromHeader) return fromHeader.toLowerCase();
-
     try {
-        const { getSession } = await import('@/lib/session');
-        const session = await getSession();
-        return session?.userId?.toLowerCase() ?? null;
+        const { getVerifiedCaller } = await import('@/lib/security/verifiedCaller');
+        return await getVerifiedCaller(request);
     } catch {
         return null;
     }
@@ -104,34 +99,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const peer = searchParams.get('peer');
-        const self = searchParams.get('self');
-
-        if (!peer || !isAddress(peer)) {
-            return NextResponse.json({ error: 'Invalid peer address' }, { status: 400 });
-        }
-
-        const normalizedPeer = peer.toLowerCase();
-
-        const lastSeenStr = await safeRedisGet(`chat:presence:${normalizedPeer}`);
-
-        let isTyping = false;
-        if (self && isAddress(self)) {
-            const normalizedSelf = self.toLowerCase();
-            const typingStr = await safeRedisGet(`chat:typing:${normalizedPeer}:${normalizedSelf}`);
-            isTyping = !!typingStr && typingStr !== '0';
-        }
-
-        return NextResponse.json({
-            online:   !!lastSeenStr,
-            lastSeen: lastSeenStr ? parseInt(lastSeenStr, 10) : null,
-            isTyping,
-        });
-
-    } catch (err) {
-        console.error('[Chat/Telemetry/GET]', err);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-    }
+    // Retired. This read handed anyone, signed in or not, any wallet's online
+    // status and who they were typing to. Presence now comes from
+    // /api/chat/presence (mutual contacts + "Last seen" setting) and typing
+    // travels end-to-end over XMTP.
+    void request;
+    return NextResponse.json({ error: 'Gone' }, { status: 410 });
 }

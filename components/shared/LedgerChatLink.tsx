@@ -15,7 +15,7 @@ export function LedgerChatLink() {
             <p className="text-sm font-bold text-[#888888]">Connect and talk directly with the community.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-[#050505] text-white px-6 py-3 rounded-xl text-sm font-black uppercase tracking-widest group-hover:bg-[#333333] transition-colors w-full md:w-auto justify-center">
+        <div className="flex items-center gap-2 bg-white text-white px-6 py-3 rounded-xl text-sm font-black uppercase tracking-widest group-hover:bg-[#333333] transition-colors w-full md:w-auto justify-center">
           Open Chat
         </div>
       </Link>

@@ -11,7 +11,7 @@ import {
 import { prisma } from '@/lib/prisma';
 
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 
 export async function POST(req: NextRequest) {
@@ -33,7 +33,10 @@ export async function POST(req: NextRequest) {
     // 1. MASTER SECURITY: Tier-Based Wallet Limits
     const user = await prisma.user.upsert({
         where: { walletAddress: userId },
-        create: { walletAddress: userId, tier: 'HUMAN', lastActive: new Date() },
+        // No tier here: 'HUMAN' counts as a paid tier in premium-security.ts,
+        // so creating the row with it handed paid access to anyone whose first
+        // request happened to be this one. The schema default ('FREE') applies.
+        create: { walletAddress: userId, lastActive: new Date() },
         update: { lastActive: new Date() },
         select: { id: true, tier: true }
     });
@@ -90,7 +93,12 @@ export async function POST(req: NextRequest) {
             const newWallet = await tx.watchedWallet.upsert({
                 where: { userId_address: { userId: userUuid, address } },
                 update: { label, lastValue: totalValue, metadata: metadata as any, lastCheck: new Date() },
-                create: { userId: userUuid, address, label, lastValue: totalValue, metadata: metadata as any, tags: body.tags || [] }
+                create: {
+                  userId: userUuid, address, label, lastValue: totalValue, metadata: metadata as any,
+                  tags: Array.isArray(body.tags)
+                    ? body.tags.filter((t: unknown): t is string => typeof t === 'string').slice(0, 10).map((t: string) => sanitizeInput(t).slice(0, 32))
+                    : [],
+                }
             });
 
             await tx.auditLog.create({
@@ -124,7 +132,7 @@ export async function POST(req: NextRequest) {
     console.error('[POST-WATCH-ERROR]', error);
     return NextResponse.json({ 
         error: 'Grid Resilience Active', 
-        details: error.message || 'The blockchain data was discovered, but the database synchronization failed. Your view is live but changes may not persist.',
+        details: 'Error details redacted' || 'The blockchain data was discovered, but the database synchronization failed. Your view is live but changes may not persist.',
         syncStatus: 'FAILED'
     }, { status: 500 });
   }
@@ -257,8 +265,11 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'ID required' }, { status: 400 });
     }
 
-    //  [IDENTITY FUSION] Strict cryptographically verified user
-    const userIds = [userId];
+    // Wallets are stored under the User row's id (see POST), not under the
+    // wallet address, so matching on the address never found anything and
+    // every delete answered 404.
+    const owner = await prisma.user.findUnique({ where: { walletAddress: userId }, select: { id: true } });
+    const userIds = owner ? [owner.id] : [];
 
     // First, try to find the wallet
     const wallet = await prisma.watchedWallet.findFirst({
@@ -306,7 +317,7 @@ export async function DELETE(req: NextRequest) {
   } catch (error: any) {
     console.error('[DELETE-WALLET] Critical error:', {
       name: error.name,
-      message: error.message,
+      message: 'Internal error',
       code: error.code,
       stack: error.stack
     });
@@ -314,7 +325,7 @@ export async function DELETE(req: NextRequest) {
     // Return detailed error for debugging
     return NextResponse.json({ 
       error: 'Failed to delete wallet',
-      details: error.message,
+      details: 'Error details redacted',
       code: error.code,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 });

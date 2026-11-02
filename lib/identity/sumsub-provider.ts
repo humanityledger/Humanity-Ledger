@@ -66,14 +66,21 @@ export const sumsubProvider = {
      */
     verifyWebhookSignature(payload: string, signature: string) {
         const secret = process.env.SUMSUB_WEBHOOK_SECRET || SUMSUB_SECRET_KEY;
-        const calculated = crypto
-            .createHmac('sha256', secret)
-            .update(payload)
-            .digest('hex');
-            
+        if (!secret || secret.length < 16) {
+            console.error('[SumSub] Webhook secret not configured or insufficient entropy.');
+            return false;
+        }
         try {
-            return crypto.timingSafeEqual(Buffer.from(calculated), Buffer.from(signature));
-        } catch {
+            const calculated = crypto
+                .createHmac('sha256', secret)
+                .update(payload)
+                .digest('hex');
+                
+            const hashCalculated = crypto.createHash('sha256').update(calculated).digest();
+            const hashSignature = crypto.createHash('sha256').update(signature).digest();
+            return crypto.timingSafeEqual(hashCalculated, hashSignature);
+        } catch (err) {
+            console.error('[SumSub] Webhook signature verification error:', err);
             return false;
         }
     }

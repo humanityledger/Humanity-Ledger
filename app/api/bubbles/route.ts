@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ bubbles: enriched });
   } catch (error: any) {
     console.error('Bubbles API Internal Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error', message: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error', message: 'Internal error' }, { status: 500 });
   }
 }
 

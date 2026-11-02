@@ -130,7 +130,7 @@ export function NetworkMapPanel() {
         style={{ backgroundImage: "radial-gradient(#000 1px, transparent 1px)", backgroundSize: "32px 32px" }}
       />
       {/* Ambient glows */}
-      <div className="absolute top-0 left-1/4 w-[700px] h-[700px] bg-blue-100/25 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-[700px] h-[700px] bg-emerald-100/25 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-[700px] h-[700px] bg-emerald-100/15 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute top-1/2 left-1/2 w-[500px] h-[500px] bg-violet-100/10 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
 
@@ -161,7 +161,7 @@ export function NetworkMapPanel() {
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
               <span>
                 <strong className="text-emerald-400 uppercase tracking-widest mr-2">Local Node Detected:</strong>
-                Para máxima privacidad y resistencia a la censura, recomendamos ejecutar este nodo local sobre la red <strong className="text-white">Tor</strong> o <strong className="text-white">I2P</strong>.
+                For maximum privacy and censorship resistance, we recommend running this local node over the <strong className="text-white">Tor</strong> or <strong className="text-white">I2P</strong> network.
               </span>
             </motion.div>
           )}
@@ -222,7 +222,7 @@ export function NetworkMapPanel() {
                         <Tag color="purple">Aztec PXE</Tag>
                         <Tag color="purple">WASM Prover</Tag>
                         <Tag color="purple">Barretenberg</Tag>
-                        <Tag color="purple">Honk / UltraPlonk</Tag>
+                        <Tag color="purple">UltraHonk</Tag>
                       </div>
                     </div>
                     <div className="p-4 bg-[#F9F9F9] border border-black/5 rounded-2xl">
@@ -335,7 +335,7 @@ export function NetworkMapPanel() {
                   title="Noir Circuits"
                   subtitle="WASM — Client-Side Witness Generation"
                   tags={[
-                    { text: "UltraPlonk", color: "purple" },
+                    { text: "UltraHonk", color: "purple" },
                     { text: "Honk", color: "purple" },
                     { text: "Witness Gen", color: "purple" },
                     { text: "Proof Compression", color: "purple" },
@@ -500,7 +500,7 @@ export function NetworkMapPanel() {
               SECTION 4 — DATA & INDEXING LAYER
           ══════════════════════════════════════════════════ */}
           <div className="relative flex flex-col w-full">
-            <div className="absolute -inset-8 md:-inset-12 bg-blue-50/20 backdrop-blur-md rounded-[3rem] border border-blue-100/40 shadow-[0_20px_60px_-20px_rgba(59,130,246,0.04)] z-0" />
+            <div className="absolute -inset-8 md:-inset-12 bg-emerald-50/20 backdrop-blur-md rounded-[3rem] border border-emerald-100/40 shadow-[0_20px_60px_-20px_rgba(59,130,246,0.04)] z-0" />
             <div className="relative z-10 w-full">
               <SectionHeader number="4" label="Data & Indexing Layer" />
 
@@ -712,7 +712,7 @@ export function NetworkMapPanel() {
 
                       {/* L2 Side */}
                       <div className="flex-1 w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 relative">
-                         <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Aztec Testnet (L2)</div>
+                         <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Aztec Mainnet (L2)</div>
                          
                          <div className="space-y-4">
                             <div className="bg-black/50 border border-slate-700 p-4 rounded-2xl shadow-sm hover:border-slate-500 transition-colors cursor-default relative overflow-hidden group">
@@ -738,3 +738,4 @@ export function NetworkMapPanel() {
     </div>
   );
 }
+

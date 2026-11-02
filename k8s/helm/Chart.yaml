@@ -1,8 +1,0 @@
-# Whale Alert Network  Helm Chart
-# Institutional one-command deployment
-#
-# Usage:
-#   helm repo add whale-alert https://charts.whalealert.network
-#   helm install whale-alert whale-alert/whale-alert \
-#     --namespace whale-alert --create-namespace \
-#     --set secrets.databaseUrl="postgresql://[REDACTED_DB_USER]:[REDACTED_DB_PASS]@whalealert.network

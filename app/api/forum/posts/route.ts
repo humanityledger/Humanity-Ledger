@@ -20,8 +20,18 @@ export async function POST(req: NextRequest) {
         });
 
         const body = await req.json();
-        const { content, topicId, replyToId } = body;
-        if (!content || !topicId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        const { content: rawContent, topicId, replyToId } = body;
+        if (!rawContent || !topicId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        
+        // [STORED XSS FIX] Sanitize content on write, not just on read.
+        // DOMPurify is client-only. Use server-side regex strip for script/on* handlers.
+        const content = rawContent
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/ on\w+="[^"]*"/g, '')
+            .replace(/ on\w+='[^']*'/g, '')
+            .replace(/ on\w+=\w+/g, '')
+            .replace(/javascript:/gi, '')
+            .slice(0, 10000); // Hard cap: prevent oversized post DoS
 
         const newPost = await (prisma as any).forumPost.create({
             data: {
@@ -89,6 +99,6 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json(newPost);
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

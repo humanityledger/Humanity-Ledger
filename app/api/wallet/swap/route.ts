@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     const quote = await swapService.getQuote(chainId as ChainId, fromToken, toToken, amount);
     return NextResponse.json(quote);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 

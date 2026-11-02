@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 /**
  * POST /api/aztec/restore-session
  *
- * Restores a returning user's Aztec identity session WITHOUT re-triggering
+ * Restores a returning user's Sovereign Identity session WITHOUT re-triggering
  * the airdrop. This is the idempotent "login" path for users who already
  * claimed their QDs.
  *
@@ -116,3 +116,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
   }
 }
+

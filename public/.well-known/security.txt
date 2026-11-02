@@ -1,6 +1,23 @@
-Contact: https://twitter.com/whalecosystem
-Expires: 2029-12-31T23:59:59.000Z
+Contact: mailto:security@humanidfi.com
+Expires: 2027-12-31T23:59:59.000Z
 Preferred-Languages: en, es
-Canonical: https://whalecosystem.io/.well-known/security.txt
-Policy: https://whalecosystem.io/legal/privacy
-Acknowledgments: https://whalecosystem.io/legal/terms
+Canonical: https://humanidfi.com/.well-known/security.txt
+Policy: https://humanidfi.com/security
+Hiring: https://humanidfi.com/careers
+
+# Humanity Ledger — Responsible Disclosure Policy
+#
+# We take security seriously. If you discover a vulnerability:
+#
+# 1. Email security@humanidfi.com with a clear description
+# 2. Include: affected component, steps to reproduce, impact assessment
+# 3. Do NOT publicly disclose until we've had 90 days to fix
+# 4. We will acknowledge receipt within 48 hours
+# 5. We will provide a fix timeline within 7 business days
+#
+# Scope: auth, messaging, payments, communities, API routes, smart contracts
+# Out of scope: social engineering, physical attacks, DoS/DDoS
+#
+# We currently do not offer monetary bug bounties, but we will:
+# - Credit you in our security acknowledgements (if desired)
+# - Provide a letter of recognition

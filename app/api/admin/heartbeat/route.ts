@@ -4,10 +4,14 @@ import { verifyMessage } from 'viem';
 
 export const dynamic = 'force-dynamic';
 
-// [QUANTUM AEGIS FIX] Removed NEXT_PUBLIC prefix to prevent leaking admin address to client bundle
-const ADMIN_WALLET = process.env.PRIVATE_ADMIN_WALLET || process.env.ADMIN_WALLET_ADDRESS || '0x0000000000000000000000000000000000000000'; 
-
 export async function POST(req: NextRequest) {
+    // [SECURITY] Fail immediately if admin wallet is not configured.
+    // Falling back to zero address is an invalid configuration, not a safe default.
+    const ADMIN_WALLET = process.env.PRIVATE_ADMIN_WALLET || process.env.ADMIN_WALLET_ADDRESS;
+    if (!ADMIN_WALLET) {
+        return NextResponse.json({ error: 'Admin not configured' }, { status: 503 });
+    }
+
     try {
         const { signature, timestamp } = await req.json();
         

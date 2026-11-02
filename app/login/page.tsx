@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Mail, ArrowRight, ArrowLeft, Loader2, ShieldCheck, RefreshCw } from "lucide-react";
+import { Mail, ArrowRight, ArrowLeft, Loader2, Lock, RefreshCw } from "lucide-react";
 
+import { safeReturnPath } from "@/lib/security/safeRedirect";
 // ─────────────────────────────────────────────────────────────────────────────
 // LOGIN PAGE — Email OTP flow
 //
@@ -45,8 +46,9 @@ export default function LoginPage() {
   // ── Redirect helper ──────────────────────────────────────────────────────
   const redirect = useCallback(() => {
     const params = new URLSearchParams(window.location.search);
-    const returnUrl = params.get("returnUrl") || params.get("redirect_url");
-    if (returnUrl && returnUrl.startsWith("/") && !returnUrl.startsWith("/connect")) {
+    // "//host" and "/\host" passed the old startsWith("/") check and left the site.
+    const returnUrl = safeReturnPath(params.get("returnUrl") || params.get("redirect_url"), "");
+    if (returnUrl && !returnUrl.startsWith("/connect")) {
       window.location.replace(returnUrl);
     } else {
       window.location.replace("/portfolio");
@@ -98,7 +100,7 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || "Error al enviar el código");
+        toast.error(data.error || "Error al send el código");
         return;
       }
 
@@ -138,7 +140,7 @@ export default function LoginPage() {
 
       // JWT cookies set by server. Now redirect.
       setStep("done");
-      toast.success(isNewUser ? "¡Bienvenido! Completa tu perfil." : "¡Bienvenido de vuelta!", {
+      toast.success(isNewUser ? "¡Welcome! Completa tu perfil." : "¡Welcome de vuelta!", {
         duration: 2000,
       });
 
@@ -194,7 +196,7 @@ export default function LoginPage() {
         {/* Logo / Brand */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <ShieldCheck size={24} className="text-white" />
+            <Lock size={24} className="text-white" />
           </div>
           <h1 className="text-2xl font-black uppercase tracking-tight text-black text-center">
             Humanity Ledger
@@ -241,7 +243,7 @@ export default function LoginPage() {
               {loading ? (
                 <Loader2 size={18} className="animate-spin" />
               ) : (
-                <>Enviar Código <ArrowRight size={16} /></>
+                <>send Código <ArrowRight size={16} /></>
               )}
             </button>
 
@@ -313,7 +315,7 @@ export default function LoginPage() {
                 {loading ? (
                   <Loader2 size={18} className="animate-spin" />
                 ) : (
-                  <>Verificar y Acceder <ShieldCheck size={16} /></>
+                  <>Verificar y Acceder <Lock size={16} /></>
                 )}
               </button>
             </form>
@@ -345,7 +347,7 @@ export default function LoginPage() {
         {step === "done" && (
           <div className="bg-white border-[2.5px] border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-8 flex flex-col items-center gap-4">
             <div className="w-14 h-14 bg-black flex items-center justify-center">
-              <ShieldCheck size={28} className="text-white" />
+              <Lock size={28} className="text-white" />
             </div>
             <p className="font-black text-black uppercase tracking-tight text-lg text-center">
               {isNewUser ? "¡Cuenta Verificada!" : "¡Acceso Concedido!"}

@@ -1,9 +1,0 @@
-audit: portfolio & aztec identity phase 1 fixes
-
-- Remove silent auto-airdrop Sybil attack vector from AztecNativeContext
-- StatusBadge: live node healthcheck via useAztecNodeInfo hook (ONLINE/DEGRADED/OFFLINE)
-- Remove hardcoded LIVE_BLOCK_HEIGHT=144318, now fetched live from RPC
-- useRealWalletData: QDs balance unified via AztecNativeContext (single source of truth)
-- EUR rate: live ECB XML API via /api/fx/eur-rate, replaces hardcoded 0.92 demo rate
-- HistoryPanel: Spanish text to English, en-GB locale for date grouping
-- Footer: removed hardcoded date and Modo B label, shows live block height

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 
 export const runtime = 'nodejs';
-export const revalidate = 60; // Cache 1 min
+export const dynamic = 'force-dynamic';
 
 //  The Oracle Protocol 
 // The system calculates probability vectors for major capital flows BEFORE they hit the public mempool

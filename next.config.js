@@ -88,6 +88,9 @@ if (!process.env.MORALIS_API_KEY) {
 // Force deployment trigger [SOVEREIGN SYNC]: 2026-04-21T04:15:00Z
 const nextConfig = {
     ...(process.env.IPFS_BUILD === 'true' ? { output: 'export' } : {}),
+    eslint: {
+        ignoreDuringBuilds: true,
+    },
     // [SAFARI TDZ FIX] Disable the Rust SWC Minifier. SWC is notoriously bugged
     // when it comes to ESM module scoping and let/const hoisting in Safari WebKit,
     // causing "Cannot access 'X' before initialization" errors in libraries like viem.
@@ -168,19 +171,14 @@ const nextConfig = {
             };
         }
 
-        // [AZTEC BUILD FIX] @aztec/aztec.js v0.x does not export its root path
-        // in the package.json exports field. Webpack rejects static imports with:
+        // [AZTEC BUILD FIX] @aztec/aztec.js does not export its root path
+        // in package.json exports field. Webpack rejects root imports with:
         // "Package path . is not exported from package @aztec/aztec.js".
-        // All Aztec usage in client components uses dynamic import() at runtime,
-        // so we stub the package at build time with `false` on the client.
-        // The dynamic import() calls still work in the browser via the CDN/node resolution
-        // because they are evaluated at runtime, not bundled.
-        if (!isServer) {
-            config.resolve.alias = {
-                ...config.resolve.alias,
-                '@aztec/aztec.js': false,
-            };
-        }
+        // We alias to our universal root stub on both client and server.
+        config.resolve.alias = {
+            ...config.resolve.alias,
+            '@aztec/aztec.js': path.resolve(__dirname, './lib/aztec/aztec-stub.js'),
+        };
 
         // [EPERM FIX] Prevent webpack file watcher from scanning Windows system
         // protected directories. Without this, webpack glob scans crawl UP from
@@ -192,8 +190,17 @@ const nextConfig = {
             ignored: [
                 '**/node_modules/**',
                 '**/.git/**',
-                // Windows protected user folders
-                'C:/Users/*/Documents/**',
+                // Windows protected user folders. Only the legacy junctions
+                // inside Documents are ignored, never Documents itself: this
+                // repository usually lives under Documents/GitHub, and
+                // ignoring the whole folder silently switched off hot reload,
+                // so edits did not appear until the dev server was restarted.
+                'C:/Users/*/Documents/My Music/**',
+                'C:/Users/*/Documents/My Pictures/**',
+                'C:/Users/*/Documents/My Videos/**',
+                'C:/Users/*/Documents/Mi música/**',
+                'C:/Users/*/Documents/Mis imágenes/**',
+                'C:/Users/*/Documents/Mis vídeos/**',
                 'C:/Users/*/Music/**',
                 'C:/Users/*/Videos/**',
                 'C:/Users/*/Pictures/**',
@@ -207,9 +214,16 @@ const nextConfig = {
         if (isServer) {
             config.externals = [...(config.externals || []),
                 'three', '@react-three/fiber', '@react-three/drei',
-                '@react-three/postprocessing', 'postprocessing'
+                '@react-three/postprocessing', 'postprocessing',
+                'pino-pretty', 'lokijs', 'encoding'
             ];
         }
+
+        config.resolve.fallback = {
+            ...config.resolve.fallback,
+            encoding: false,
+            'web-push': false,
+        };
 
         if (!isServer) {
             config.resolve.fallback = {
@@ -218,10 +232,12 @@ const nextConfig = {
                 readline: false,
                 os: false,
                 path: false,
-                crypto: false,
+                crypto: require.resolve('crypto-browserify'),
+                stream: require.resolve('stream-browserify'),
                 // [METAMASK SDK FIX] @wagmi/connectors embeds @metamask/sdk which tries to
                 // load the 'encoding' node built-in. Stub it out for browser bundles.
                 encoding: false,
+                'web-push': false,
             };
         }
 
@@ -271,6 +287,15 @@ const nextConfig = {
 
         // ─────────────────────────────────────────────────────────────────────
 
+        // [AZTEC V6 WALLET] The browser build of @aztec-labs/* loads WebAssembly
+        // (Barretenberg, ACVM, SQLite) and uses top-level await in its workers.
+        if (!isServer) {
+            config.experiments = {
+                ...config.experiments,
+                asyncWebAssembly: true,
+                topLevelAwait: true,
+            };
+        }
 
         return config;
     },
@@ -304,10 +329,10 @@ const nextConfig = {
     },
 
     // Moved from experimental in Next.js 15
-    // [AZTEC SERVER GUARD] All @aztec packages are ESM-only and must never be
-    // bundled by Webpack. serverExternalPackages tells Next.js to load them via
-    // native Node.js require() at runtime, bypassing the Webpack bundler entirely.
-    // This is the canonical fix for "j is not a function" and missing export errors.
+    // [AZTEC & REOWN SERVER GUARD] ESM-only and native packages must never be
+    // bundled by Webpack on the server. serverExternalPackages tells Next.js to load
+    // them via native Node.js require() at runtime, bypassing the Webpack bundler entirely.
+    // This prevents vendor-chunk missing errors (e.g. ./vendor-chunks/@reown.js).
     serverExternalPackages: [
         '@prisma/client',
         'prisma',
@@ -315,6 +340,20 @@ const nextConfig = {
         'neo4j-driver',
         'snarkjs',
         'pino',
+        'pino-pretty',
+        'lokijs',
+        'encoding',
+        '@reown',
+        '@reown/appkit',
+        '@reown/appkit-adapter-wagmi',
+        '@reown/appkit-siwe',
+        '@walletconnect',
+        '@walletconnect/ethereum-provider',
+        '@walletconnect/universal-provider',
+        '@walletconnect/sign-client',
+        '@walletconnect/utils',
+        '@walletconnect/core',
+        '@walletconnect/web3wallet',
         '@aztec/aztec.js',
         '@aztec/foundation',
         '@aztec/stdlib',
@@ -323,6 +362,20 @@ const nextConfig = {
         '@aztec/wallets',
         '@aztec/noir-contracts.js',
         '@aztec/bb.js',
+        // Aztec v6 SDK (the private payments wallet). It only ever runs in the
+        // browser (lib/aztec/wallet/client.ts loads it with dynamic imports);
+        // the server must never bundle or execute it.
+        '@aztec-labs/aztec.js',
+        '@aztec-labs/wallets',
+        '@aztec-labs/accounts',
+        '@aztec-labs/pxe',
+        '@aztec-labs/stdlib',
+        '@aztec-labs/foundation',
+        '@aztec-labs/noir-contracts.js',
+        '@aztec-labs/kv-store',
+        '@aztec-labs/bb-prover',
+        '@aztec-labs/simulator',
+        '@aztec-labs/native',
     ],
 
     experimental: {
@@ -342,13 +395,6 @@ const nextConfig = {
             : false,
     },
 
-    typescript: {
-        ignoreBuildErrors: true
-    },
-    eslint: {
-        ignoreDuringBuilds: true
-    },
-
     // External packages are defined above in experimental.serverComponentsExternalPackages
 
     env: {
@@ -361,32 +407,37 @@ const nextConfig = {
         NEXT_PUBLIC_TOKEN_CONTRACT_ADDRESS: process.env.NEXT_PUBLIC_TOKEN_CONTRACT_ADDRESS || '0x1111111111111111111111111111111111111111',
         NEXT_PUBLIC_LEDGER_CONTRACT_ADDRESS: process.env.NEXT_PUBLIC_LEDGER_CONTRACT_ADDRESS || '0x2222222222222222222222222222222222222222',
         NEXT_PUBLIC_CHAIN_ID: process.env.NEXT_PUBLIC_CHAIN_ID || '8453',
+
+        // XMTP Network: MUST be 'production' so all wallets on the live app share the same network.
+        // Default to 'production' so Railway builds work without an explicit env var.
+        NEXT_PUBLIC_XMTP_ENV: process.env.NEXT_PUBLIC_XMTP_ENV || 'production',
     },
 
     // NOTE: CSP is handled exclusively by middleware.ts (per-request, nonce-based).
     // Defining it here too would send DUPLICATE CSP headers causing the browser
     // to apply the most restrictive combination - breaking Clerk & WalletConnect.
+    //
+    // SECURITY: Content-Security-Policy-Report-Only is added here (not in middleware)
+    // so it does not interfere with the enforced CSP from middleware.ts.
+    // Report-only violations are collected at /api/security/csp-report.
+    // Reference: docs/OBSERVABILITY.md — hl_csp_violations_total
     async headers() {
         return [
             {
                 source: '/(.*)',
                 headers: [
-                    { key: 'X-Content-Type-Options',     value: 'nosniff' },
-                    { key: 'X-Frame-Options',            value: 'SAMEORIGIN' },
-                    { key: 'X-XSS-Protection',          value: '1; mode=block' },
-                    { key: 'Strict-Transport-Security',  value: 'max-age=63072000; includeSubDomains; preload' },
-                    // [WEBRTC FIX] CSP must explicitly allow:
-                    //   - blob: in connect-src for WebRTC data channels
-                    //   - blob: in media-src for getUserMedia MediaStream playback
-                    //   - wss: in connect-src for PeerJS WebSocket signaling
-                    //   - stun: and turn: schemes are handled by browser internally, NOT via CSP
-                    { key: 'Content-Security-Policy',    value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; font-src 'self' data:; connect-src 'self' https: wss: blob:; media-src 'self' blob: mediastream:; frame-src 'self' https:; worker-src 'self' blob:;" },
-                    { key: 'Referrer-Policy',            value: 'strict-origin-when-cross-origin' },
-                    // [ANDROID WEBRTC FIX] Permissions-Policy MUST be set correctly.
-                    // 'camera=*' and 'microphone=*' allow ALL origins (including iframes) to request them.
-                    // Without this, Android Chrome silently blocks getUserMedia even if the user said Allow.
-                    { key: 'Permissions-Policy', value: 'camera=*, microphone=*, geolocation=(), interest-cohort=()' },
-                    { key: 'X-DNS-Prefetch-Control',     value: 'on' },
+                    { key: 'X-Content-Type-Options',              value: 'nosniff' },
+                    { key: 'X-Frame-Options',                     value: 'DENY' },
+                    { key: 'X-XSS-Protection',                   value: '1; mode=block' },
+                    { key: 'Strict-Transport-Security',           value: 'max-age=63072000; includeSubDomains; preload' },
+                    { key: 'X-Permitted-Cross-Domain-Policies',   value: 'none' },
+                    { key: 'Referrer-Policy',                     value: 'strict-origin-when-cross-origin' },
+                    { key: 'Permissions-Policy',                  value: 'camera=(self), microphone=(self), geolocation=(), interest-cohort=()' },
+                    { key: 'X-DNS-Prefetch-Control',              value: 'off' },
+                    // [SECURITY] CSP Report-Only: collects violation reports without blocking.
+                    // Enforced CSP is set per-request by middleware.ts (nonce-based).
+                    // Reports are collected at /api/security/csp-report.
+                    { key: 'Content-Security-Policy-Report-Only', value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://aztec-testnet.drpc.org https://api.aztec.network wss:; frame-src 'none'; object-src 'none'; base-uri 'self'; report-uri /api/security/csp-report" },
                 ]
             },
             //  API routes: never cache sensitive data endpoints 
@@ -424,6 +475,25 @@ const nextConfig = {
             },
             {
                 source: '/system-shots/monochrome-illustration-science-fiction-arch-pixel-art-Devine-Lu-Linvega-2268380-wallhere.com (1).jpg',
+                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+            },
+            // Phase 1 Mainnet: Lottie JSON animations — immutable CDN cache
+            {
+                source: '/lotties/(.*)',
+                headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
+            },
+            {
+                source: '/lottie/(.*)',
+                headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
+            },
+            // Video files — long cache with revalidation
+            {
+                source: '/system-shots/(.*)\\.mp4',
+                headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=2592000' }],
+            },
+            // 3D model textures
+            {
+                source: '/textures/(.*)',
                 headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
             },
         ];

@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 
 export const runtime = 'edge';
-export const revalidate = 30; // ISR - revalidate every 30 seconds
+export const dynamic = 'force-dynamic';
 
 const CLOB_API = 'https://clob.polymarket.com';
 const GAMMA_API = 'https://gamma-api.polymarket.com';
@@ -14,7 +14,8 @@ const GAMMA_API = 'https://gamma-api.polymarket.com';
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get('category') || 'all';
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+    const rawLimit = parseInt(searchParams.get('limit') || '50', 10);
+    const limit = Math.max(1, Math.min(isNaN(rawLimit) ? 50 : rawLimit, 100));
 
     const CAT_MAP: Record<string, string> = {
         crypto: 'crypto',

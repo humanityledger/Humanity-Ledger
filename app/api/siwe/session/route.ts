@@ -5,7 +5,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const token = req.cookies.get('human_session')?.value;
+    const token = req.cookies.get('hl_session')?.value
+      ?? req.cookies.get('human_session')?.value
+      ?? req.cookies.get('ledger_session')?.value
+      ?? req.cookies.get('humanity_session')?.value;
     
     if (!token) {
       // Return 401 unauthenticated safely so AppKit knows NO session exists
@@ -14,15 +17,16 @@ export async function GET(req: NextRequest) {
 
     // Cryptographically verify session token
     const payload = await verifyJWT(token);
+    const address = (payload.walletAddress || payload.address || payload.sub) as string;
 
-    if (!payload.address) {
+    if (!address) {
        return NextResponse.json(null, { status: 401 });
     }
 
     // AppKit requires address and chainId to persist the SIWE Session natively
     return NextResponse.json({
-      address: payload.address as string,
-      chainId: payload.chainId as number,
+      address,
+      chainId: (payload.chainId as number) || 1,
     }, { status: 200 });
 
   } catch (error) {

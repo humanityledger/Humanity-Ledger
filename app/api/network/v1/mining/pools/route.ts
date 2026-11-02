@@ -1,13 +1,13 @@
-
 import { NextResponse } from 'next/server';
 
 /**
  * Mining Pool Distribution API
  * Source: mempool.space /api/v1/mining/pools/1w
- * Returns pool hashrate distribution for the last 7 days.
- * Cached for 10 minutes  block attribution data doesn't change fast.
+ * Mining Pools API
+ * Fetches the hashrate distribution among top mining pools from mempool.space.
+ * Cached dynamically via fetch next options, not full route cache.
  */
-export const revalidate = 600;
+export const dynamic = 'force-dynamic';
 
 const MEMPOOL_BASE = 'https://mempool.space/api';
 

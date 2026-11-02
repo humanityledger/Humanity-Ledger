@@ -33,6 +33,6 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ success: true, message: 'Foundation categories initialized.' });
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
