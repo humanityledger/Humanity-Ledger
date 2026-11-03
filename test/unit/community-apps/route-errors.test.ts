@@ -43,3 +43,12 @@ describe('appsRoute', () => {
     spy.mockRestore();
   });
 });
+
+describe('appsRoute with no response', () => {
+  it('answers 500 instead of nothing', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const res = await appsRoute('test', async () => undefined)();
+    expect(res.status).toBe(500);
+    spy.mockRestore();
+  });
+});

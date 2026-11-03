@@ -71,11 +71,15 @@ export function newErrorId(): string {
 /** Wrap a route handler so a thrown error becomes a named, logged JSON answer. */
 export function appsRoute<A extends unknown[]>(
   label: string,
-  handler: (...args: A) => Promise<Response>,
+  // The handlers return `auth.errorResponse`, typed as possibly undefined
+  // even though it is set whenever it is returned; a missing answer becomes a 500.
+  handler: (...args: A) => Promise<Response | undefined>,
 ): (...args: A) => Promise<Response> {
   return async (...args: A): Promise<Response> => {
     try {
-      return await handler(...args);
+      const res = await handler(...args);
+      if (res) return res;
+      throw new Error(`${label} returned no response`);
     } catch (err) {
       const info = classifyAppsError(err);
       const errorId = newErrorId();
