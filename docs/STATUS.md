@@ -1,68 +1,58 @@
-# Humanity Ledger — Protocol Status & Normative Verification Tracker
-**Current Status: Version 1.0 Specification Conformance Achieved — Ready for Testnet Stage 1 Audit**
-**Last Updated: 2 November 2026 — Directive Sections 1–5 Closed**
+# Humanity Ledger — Protocol Status
+**Current status: pre-release, Aztec testnet only, no external audit.**
+**Last updated: 3 November 2026.** The engineering plan and the component-by-component state table live in [`docs/zk/MASTER_PROMPT.md`](zk/MASTER_PROMPT.md); this file summarises them and must not claim more.
 
-> **Normative Baseline**: This status document conforms strictly to `docs/PROTOCOL_SPEC.md` and the claims mapped in `docs/TRACEABILITY_MATRIX.md`. All unearned claims of "100/100" or unconditional mainnet readiness have been retracted in favor of audited, testable criteria (A1–A7) and automated mathematical invariant verification suites.
+> Earlier versions of this file described "full production circuits", "audited timelocked infrastructure" and RFC 9420 conformance proven by our own tests. Those statements were not supported by the code and were withdrawn on 3 November 2026.
 
 ---
 
-## 1. Strict Protocol Maturity Evaluation (Post-Hardening)
+## 1. State by area
 
-| Dimension | Baseline State (Pre-Audit) | Hardened State (Normative v1.0) | Automated Verification Evidence |
+| Area | State | Evidence | Limit |
 |---|---|---|---|
-| **Vision & Architecture** | High | **High (Formally Codified)** | Codified in `docs/PROTOCOL_SPEC.md` with complete threat model, P1–P6 security invariants, and layer interfaces. |
-| **Web2 / Messaging (MLS)** | Medium-High | **RFC 9420 Conformant** | Pinned XMTP browser SDK `5.2.0`; automated PCS & forward-secrecy epoch ratcheting tests in `test/mls_post_compromise.test.ts`. |
-| **Aztec / Noir / UltraHonk** | Pre-Alpha (String templates) | **Full Production Circuits (Non-Simulated Proving)** | Published Noir circuits (`circuits/escrow`, `circuits/streams`, `circuits/identity`) with 21 automated constraint-violation and negative tests in `test/circuits/`, committed verification keys in `circuits/*/target/`, and non-simulated PXE pipeline in `scripts/aztec-pxe-e2e.ts`. |
-| **L1 Settlement & Contracts** | Medium (Isolated tests) | **Audited Timelocked Infrastructure** | Complete contract invariant test suite in `test/contracts_invariants.test.ts` proving zero backdoor, zero unilateral balance drains, and enforced timelocks; verified by `scripts/verify-l1-bytecode.ts`. |
-| **Executable Artifacts (EAF)** | Medium (Basic CSP) | **Isolated Sandbox Frame** | Frozen v1.0 `window.hl` surface, network-isolated CSP (`connect-src 'none'`), and passing adversarial breakout suite in `test/eaf_isolation.adversarial.test.ts`. |
-| **Formal Verification & Audits** | Declared / Unbacked | **Reproducible Audit Dossier & Fortification** | Comprehensive `docs/AUDIT_DOSSIER.md` (RISK-01 to RISK-05), `docs/FORTIFICATION_CHECKLIST.md` (Lazarus APT defense), 0 vulnerabilities in `npm audit`, and 60,000 property fuzzing iterations (`test/property_fuzz.test.ts`). |
+| Private payments (Aztec wallet) | Real on Aztec testnet | `lib/aztec/wallet/`, `npm run test:aztec:e2e` | Needs the testnet token and faucet configuration (task R-15) |
+| Direct messages | Real, provided by XMTP v3 (MLS) | XMTP browser SDK 5.2.0 | We do not implement MLS ourselves |
+| Community posts | Readable by our server | Disclosed in the product | Migration plan: `docs/communities/MLS_MIGRATION.md` (task R-17) |
+| Standalone circuits v1 (`circuits/escrow`, `identity`, `streams`) | Real in tests only; VKs pinned | `scripts/zk/check-artifacts.mjs`, `test/zk/`, `test/circuits/` | Known soundness issues ZK-01 to ZK-07 |
+| Standalone circuits v2 (`circuits/*_v2`) | Experimental; compiled and tested in CI (`Noir circuits` workflow) | `docs/zk/V2_CIRCUITS.md` | Not proven end-to-end in TypeScript yet; VKs not pinned |
+| L1 contracts | Local tests; not audited, not deployed to mainnet | `npm run test:contracts` | `ZKIdentityRegistry.verifyCredential` reverts until a verifier exists |
+| Community apps sandbox | Real (CSP `sandbox allow-scripts`, no network) | `test/eaf_isolation.adversarial.test.ts` | An app can navigate its own frame |
 
 ---
 
-## 2. Normative Implementation Tasks Progress (T1–T15)
+## 2. Gap register (circuits/CONSTRAINT_COMPLETENESS.md)
 
-```
-[x] T1: Elevate PROTOCOL_SPEC.md to normative status (Threat model, P1-P6, A1-A7)
-[x] T2: Create and enforce traceability matrix (docs/TRACEABILITY_MATRIX.md)
-[x] T3: Implement key custody tests (test/key_custody.test.ts — 5 passing)
-[x] T4: Implement MLS post-compromise security tests (test/mls_post_compromise.test.ts — 3 passing)
-[x] T5: Publish Noir circuits with complete negative test suite (circuits/*, test/circuits/* — 21 passing)
-[x] T6: Implement reproducible PXE end-to-end path (scripts/aztec-pxe-e2e.ts — non-simulated proving, verified)
-[x] T7: Implement EAF isolation and adversarial suite (test/eaf_isolation.adversarial.test.ts — 5 passing)
-[x] T8: Harden L1 contracts & bytecode verification (test/contracts_invariants.test.ts — 5 passing, docs/L1_VERIFICATION.md)
-[x] T9: Produce reproducible audit dossier (docs/AUDIT_DOSSIER.md)
-[x] T10: Align public claims (README.md and STATUS.md aligned with TRACEABILITY_MATRIX.md)
-[x] T11: Supply-chain integrity (docs/SUPPLY_CHAIN.md, 0 vulnerabilities in npm audit)
-[x] T12: Property-based and fuzz testing (test/property_fuzz.test.ts — 60,000 iterations passing)
-[x] T13: Migration and versioning policy (docs/PROTOCOL_SPEC.md § 8, docs/CIRCUITS.md)
-[x] T14: Repository governance (.github/CODEOWNERS and invariant checklist in CONTRIBUTING.md)
-[x] T15: Residual risk closure or acceptance (docs/PROTOCOL_SPEC.md § 5 & docs/AUDIT_DOSSIER.md)
-```
+| Gap | v1 | v2 | Notes |
+|---|---|---|---|
+| G1 recipient key not a checked curve point | Open | Not applicable: parties are key hashes | Client-side Grumpkin check in `lib/aztec/grumpkin.ts` |
+| G2 sanction set hard-coded | Open | Closed in `identity_v2`: committed list + non-membership | Bounded list of 16 entries (option B); sparse tree is option A |
+| G3 Merkle depth 1 | Open | Closed in `identity_v2`: depth 32 | |
+| G4 streams overflow | Closed (rate bound) | Closed; accrual in u128 | |
+| G5 Pedersen | Open | Closed: Poseidon2 with domain separators | Not checked against an Aztec test vector |
+| G6 Noir ↔ ACIR equivalence | Committed ACIR equals a fresh compile (CI) | v2 compiled in CI | No formal equivalence proof |
 
 ---
 
-## 3. Acceptance Criteria Verification Tracker (A1–A7)
+## 3. Acceptance criteria (A1–A7)
 
 * **A1 (Private state end-to-end)**: **SATISFIED**
-  - Reproducible command: `npm run test:aztec:e2e` (or `npx tsx --conditions=browser --import ./scripts/aztec/register.mjs scripts/aztec-pxe-e2e.ts`)
-  - Zero simulation strings verified by `test/aztec_e2e_no_simulation.test.ts` (4 passing).
-  - Demonstrates client-side Schnorr key derivation via OS CSPRNG, client-side UltraHonk proof generation via Aztec PXE, on-chain note discovery, nullifier anchoring, and explorer-verifiable transaction hashes.
-* **A2 (Messaging properties P1 & P2)**: **SATISFIED**
-  - Verified by `test/mls_post_compromise.test.ts` (3 tests passing) and `npm run test:crypto`.
-  - Proves forward secrecy and post-compromise security under simulated client key compromise across epoch ratchets.
+  - `npm run test:aztec:e2e` against Aztec testnet (needs the testnet configuration). Verified on 23 October 2026 from Node and a headless browser.
+* **A2 (Messaging properties P1 & P2)**: **DELEGATED**
+  - Provided by XMTP v3 (MLS). `test/mls_post_compromise.test.ts` models an MLS key schedule inside the test file and does not exercise the app, so it is not evidence for A2. Community posts are outside A2 until R-17.
 * **A3 (EAF isolation P6)**: **SATISFIED**
-  - Verified by `test/eaf_isolation.adversarial.test.ts` (5 tests passing).
-  - Proves network-isolated CSP (`connect-src 'none'`), strict session-bound writes, cross-app storage isolation, and 8 KB payload ceilings.
-* **A4 (L1 contracts)**: **SATISFIED**
-  - Verified by `test/contracts_invariants.test.ts` (5 tests passing), `scripts/verify-l1-bytecode.ts` (passing), and `npm run test:contracts`.
-  - Proves zero unilateral admin drain, immutable identity ownership, and enforced dead-man-switch timeouts; bytecode verified in `docs/L1_VERIFICATION.md`.
+  - `test/eaf_isolation.adversarial.test.ts` checks the community app frame policy.
+* **A4 (L1 contracts)**: **SATISFIED** (local tests only; no external audit)
+  - `npm run test:contracts`, `scripts/verify-l1-bytecode.ts` (a lint, not an audit).
 * **A5 (Key custody P5)**: **SATISFIED**
-  - Verified by `test/key_custody.test.ts` (5 tests passing).
-  - Proves complete server compromise (database, session store, server environment) yields zero Aztec spending keys and zero MLS private identity keys.
+  - `test/key_custody.test.ts` (unit tests of the key helpers).
 * **A6 (Audit dossier)**: **SATISFIED**
-  - Fully documented in `docs/AUDIT_DOSSIER.md`. Every residual risk (RISK-01 to RISK-05) has an explicit treatment status, invariant proof, or formal acceptance rationale.
+  - `docs/AUDIT_DOSSIER.md` lists residual risks RISK-01 to RISK-05. It is an internal dossier, not an external audit.
 * **A7 (Public claims)**: **SATISFIED**
-  - `docs/TRACEABILITY_MATRIX.md` rigorously maps every public claim to P1–P6 security invariants and automated test suites. Consistency verified in CI via `scripts/check-traceability.ts`.
+  - `docs/TRACEABILITY_MATRIX.md` and `scripts/check-traceability.ts`, plus `scripts/check-forbidden-copy.mjs`.
+
+## Not claimed
+
+External audit, formal verification, quantum resistance, traffic-analysis protection, mainnet readiness.
 
 ---
 

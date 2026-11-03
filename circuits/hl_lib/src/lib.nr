@@ -31,13 +31,13 @@ pub fn poseidon2_hash<let N: u32>(input: [Field; N]) -> Field {
     let mut cache_size: u32 = 0;
     for i in 0..N {
         if cache_size == 3 {
-            state = std::hash::poseidon2_permutation(state, 4);
+            state = std::hash::poseidon2_permutation(state);
             cache_size = 0;
         }
         state[cache_size] += input[i];
         cache_size += 1;
     }
-    state = std::hash::poseidon2_permutation(state, 4);
+    state = std::hash::poseidon2_permutation(state);
     state[0]
 }
 
