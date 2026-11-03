@@ -21,6 +21,7 @@ import { CommunityGovernanceView } from './CommunityGovernanceModal';
 import { ZkCommunityTreasury } from '@/components/zk/ZkCommunityTreasury';
 import { GroupPartyCall } from './GroupPartyCall';
 import { CommunityApps } from './community-apps/CommunityApps';
+import { countLabel, communityInviteUrl } from '@/lib/ui/format';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -146,7 +147,8 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
-  const [muted, setMuted] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   // Party Call state
   const [partyCallActive, setPartyCallActive] = useState(false);
@@ -310,6 +312,31 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
   };
 
   const avatarColor = '#15171c';
+  const isOwner = !!community?.ownerAddress && community.ownerAddress.toLowerCase() === myAddress?.toLowerCase();
+  const leaveCommunity = async () => {
+    if (leaving) return;
+    setLeaving(true);
+    try {
+      const res = await fetch(`/api/chat/communities/${encodeURIComponent(communityId)}/members`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(typeof body.error === 'string' && body.error ? body.error : 'Could not leave the community. Try again.');
+        return;
+      }
+      toast.success(`You left ${community?.name || 'the community'}`);
+      setShowInfoPanel(false);
+      setConfirmLeave(false);
+      onBack?.();
+    } catch {
+      toast.error('Could not reach the server. Try again.');
+    } finally {
+      setLeaving(false);
+    }
+  };
   const isAdmin = community?.ownerAddress?.toLowerCase() === myAddress?.toLowerCase()
     || community?.members?.some((m: any) => m.walletAddress?.toLowerCase() === myAddress?.toLowerCase() && (m.role === 'ADMIN' || m.role === 'MODERATOR'));
 
@@ -347,13 +374,13 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                 <p className="text-[15px] font-semibold text-[#15171c] leading-tight flex items-center gap-1.5 truncate max-w-[180px]">
                   {community?.name || 'Community'}
                   {community?.isPrivate
-                    ? <Lock size={11} className="text-black/25 shrink-0" />
-                    : <Globe size={11} className="text-black/25 shrink-0" />
+                    ? <Lock size={11} className="text-[#a3a9b4] shrink-0" aria-label="Private community" />
+                    : <Globe size={11} className="text-[#a3a9b4] shrink-0" aria-label="Public community" />
                   }
                 </p>
               )}
-              <p className="text-[12.5px] text-black/35 font-medium">
-                {community?.membersCount || community?.members?.length || 1} members
+              <p className="text-[12.5px] text-[#727a88] font-medium">
+                {countLabel(community?.membersCount || community?.members?.length || 1, 'member', 'members')}
               </p>
             </div>
           </button>
@@ -397,46 +424,44 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                     exit={{ opacity: 0, scale: 0.9 }}
                     className="absolute right-0 top-full mt-1 w-56 bg-white rounded-2xl shadow-2xl border border-black/5 py-1.5 z-50"
                   >
-                    {/* Basic actions */}
+                    {/* Conversation */}
                     {[
                       { label: 'View members', fn: () => { setShowMembersPanel(true); setShowMoreMenu(false); } },
                       { label: 'Search messages', fn: () => { setShowSearchPanel(true); setShowMoreMenu(false); } },
                       { label: 'Pinned messages', fn: () => { setShowPinnedPanel(true); setShowMoreMenu(false); } },
-                      { label: 'Party call', fn: () => { const roomId = `party-${communityId}-${Date.now()}`; setPartyCallRoomId(roomId); setPartyCallMode('voice'); setPartyCallActive(true); setPartyCallParticipants([myAddress]); setShowMoreMenu(false); toast.success('Party call started'); } },
                     ].map(({ label, fn }) => (
-                      <button key={label} onClick={fn} className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[#f2f4f7] transition-colors text-left">
+                      <button key={label} role="menuitem" onClick={fn} className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[#f2f4f7] transition-colors text-left">
                         <span className="text-[13px] font-medium text-[#15171c]">{label}</span>
                       </button>
                     ))}
 
-                    {/* Separator */}
-                    <div className="my-1 border-t border-black/[0.05]" />
+                    <div className="my-1 border-t border-black/[0.05]" role="separator" />
 
-                    {/* Advanced sections */}
+                    {/* Community. Group calls, the treasury and mute are left out on
+                        purpose: the call route does not exist yet, the treasury is a
+                        local simulation, and mute was not saved or applied. */}
                     {[
-                      { label: 'Group Treasury', tab: 'treasury' as const },
-                      { label: 'Governance & Votes', tab: 'governance' as const },
-                      { label: 'Analytics & Activity', tab: 'analytics' as const },
-                    ].map(({ label, tab }) => (
-                      <button key={tab} onClick={() => { setActiveTab(tab); setShowMoreMenu(false); }} className={`w-full flex items-center justify-between px-4 py-2.5 hover:bg-[#f2f4f7] transition-colors text-left ${activeTab === tab ? 'bg-[#f2f4f7] font-semibold' : ''}`}>
+                      { label: 'Governance', tab: 'governance' as const, show: true },
+                      { label: 'Analytics', tab: 'analytics' as const, show: isAdmin },
+                      { label: 'Community settings', tab: 'settings' as const, show: true },
+                    ].filter(i => i.show).map(({ label, tab }) => (
+                      <button key={tab} role="menuitem" onClick={() => { setActiveTab(tab); setShowMoreMenu(false); }} className={`w-full flex items-center justify-between px-4 py-2.5 hover:bg-[#f2f4f7] transition-colors text-left ${activeTab === tab ? 'bg-[#f2f4f7]' : ''}`}>
                         <span className="text-[13px] font-medium text-[#15171c]">{label}</span>
                       </button>
                     ))}
-
-                    {/* Separator */}
-                    <div className="my-1 border-t border-black/[0.05]" />
-
-                    {/* Settings & utilities */}
-                    {[
-                      { label: 'Group Settings', fn: () => { setActiveTab('settings'); setShowMoreMenu(false); } },
-                      { label: muted ? 'Unmute' : 'Mute notifications', fn: () => { setMuted(m=>!m); toast.success(muted ? 'Unmuted' : 'Muted'); setShowMoreMenu(false); } },
-                      { label: 'Copy invite link', fn: () => { navigator.clipboard.writeText(`https://humanidfi.com/join/${community?.joinCode}`); toast.success('Invite link copied!'); setShowMoreMenu(false); } },
-                      { label: 'Refresh', fn: () => { fetchPosts(); fetchCommunity(); setShowMoreMenu(false); toast.success('Refreshed'); } },
-                    ].map(({ label, fn }) => (
-                      <button key={label} onClick={fn} className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[#f2f4f7] transition-colors text-left">
-                        <span className="text-[13px] font-medium text-[#15171c]">{label}</span>
+                    {communityInviteUrl(community?.joinCode) && (
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          const url = communityInviteUrl(community?.joinCode);
+                          if (url) navigator.clipboard.writeText(url).then(() => toast.success('Invite link copied'), () => toast.error('Could not copy the link'));
+                          setShowMoreMenu(false);
+                        }}
+                        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[#f2f4f7] transition-colors text-left"
+                      >
+                        <span className="text-[13px] font-medium text-[#15171c]">Copy invite link</span>
                       </button>
-                    ))}
+                    )}
                   </motion.div>
                 </>
               )}
@@ -863,7 +888,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                   <div className="text-center">
                     <h2 className="text-[20px] font-semibold text-[#15171c] leading-tight">{community.name}</h2>
                     <p className="text-[13px] text-black/40 mt-0.5">
-                      {community.membersCount || community.members?.length || 1} members · {community.isPrivate ? 'Private' : 'Public'}
+                      {countLabel(community.membersCount || community.members?.length || 1, 'member', 'members')} · {community.isPrivate ? 'Private' : 'Public'}
                     </p>
                   </div>
                   {community.description && (
@@ -874,8 +899,6 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                   <div className="flex items-center gap-2 mt-2">
                     {[
                       { label: 'Message', fn: () => { setActiveTab('chat'); setShowInfoPanel(false); } },
-                      { label: 'Call', fn: () => { const roomId = `party-${communityId}-${Date.now()}`; setPartyCallRoomId(roomId); setPartyCallMode('voice'); setPartyCallActive(true); setPartyCallParticipants([myAddress]); setShowInfoPanel(false); } },
-                      { label: muted ? 'Unmute' : 'Mute', fn: () => { setMuted(m=>!m); toast.success(muted ? 'Unmuted' : 'Muted'); } },
                       { label: 'Search', fn: () => { setShowInfoPanel(false); setShowSearchPanel(true); } },
                     ].map(({ label, fn }) => (
                       <button
@@ -894,8 +917,11 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                   {[
                     { label: 'Members', value: `${community.membersCount || community.members?.length || 1}`, fn: () => { setShowInfoPanel(false); setShowMembersPanel(true); } },
                     { label: 'Pinned messages', value: '', fn: () => { setShowInfoPanel(false); setShowPinnedPanel(true); } },
-                    { label: 'Group Settings', value: '', fn: () => { setActiveTab('settings'); setShowInfoPanel(false); } },
-                    { label: 'Copy invite link', value: '', fn: () => { navigator.clipboard.writeText(`https://humanidfi.com/join/${community.joinCode}`); toast.success('Invite link copied!'); } },
+                    { label: 'Community settings', value: '', fn: () => { setActiveTab('settings'); setShowInfoPanel(false); } },
+                    ...(communityInviteUrl(community.joinCode) ? [{ label: 'Copy invite link', value: '', fn: () => {
+                      const url = communityInviteUrl(community.joinCode);
+                      if (url) navigator.clipboard.writeText(url).then(() => toast.success('Invite link copied'), () => toast.error('Could not copy the link'));
+                    } }] : []),
                   ].map(({ label, value, fn }) => (
                     <button key={label} onClick={fn} className="w-full flex items-center justify-between px-4 py-3.5 bg-white rounded-2xl hover:bg-[#f7f8fa] transition-colors text-left">
                       <span className="flex-1 text-[15px] font-medium text-[#15171c]">{label}</span>
@@ -905,21 +931,30 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                   ))}
                 </div>
 
-                {/* Leave group */}
-                <div className="px-4 pb-8">
-                  <button
-                    onClick={() => {
-                      if (confirm('Leave this group? You will lose access to future messages.')) {
-                        toast.success('You left the group');
-                        setShowInfoPanel(false);
-                        onBack?.();
-                      }
-                    }}
-                    className="w-full py-3.5 bg-white rounded-2xl text-[#d93036] font-semibold text-[15px] hover:bg-red-50 transition-colors"
-                  >
-                    Leave Group
-                  </button>
-                </div>
+                {/* Leave. The owner cannot leave (the server refuses it): they
+                    delete the community from its settings instead. */}
+                {!isOwner && (
+                  <div className="px-4 pb-8">
+                    {confirmLeave ? (
+                      <div className="bg-white rounded-2xl p-4" role="alertdialog" aria-labelledby="leave-title">
+                        <p id="leave-title" className="text-[14.5px] font-semibold text-[#15171c]">Leave {community.name}?</p>
+                        <p className="text-[13px] text-[#727a88] mt-1 leading-relaxed">You will stop seeing its posts and chat. You can join again with an invite link.</p>
+                        <div className="flex gap-2 mt-4">
+                          <button type="button" onClick={() => setConfirmLeave(false)} disabled={leaving} className="flex-1 h-10 rounded-xl bg-[#f2f4f7] text-[14px] font-medium text-[#15171c] hover:bg-[#e9edef] disabled:opacity-50">Cancel</button>
+                          <button type="button" onClick={leaveCommunity} disabled={leaving} className="flex-1 h-10 rounded-xl bg-[#d93036] text-[14px] font-semibold text-white hover:bg-[#c02a2f] disabled:opacity-50">{leaving ? 'Leaving' : 'Leave'}</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmLeave(true)}
+                        className="w-full py-3.5 bg-white rounded-2xl text-[#d93036] font-semibold text-[15px] hover:bg-red-50 transition-colors"
+                      >
+                        Leave community
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </motion.div>
           </>

@@ -8,7 +8,6 @@ import {
   PanInfo,
 } from "framer-motion";
 import { Archive, BellOff, Trash2, Pin, CheckCheck } from "lucide-react";
-import { useDynamicIsland } from "@/lib/store/dynamic-island-store";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -113,7 +112,6 @@ export default function SwipeableConversationRow({
   isMuted = false,
 }: SwipeableConversationRowProps) {
   const controls = useAnimation();
-  const { setState: setIslandState } = useDynamicIsland();
   const [revealSide, setRevealSide] = useState<RevealSide>("none");
   const [isDragging, setIsDragging] = useState(false);
   const [isPastDeepThreshold, setIsPastDeepThreshold] = useState(false);
@@ -136,25 +134,8 @@ export default function SwipeableConversationRow({
     (actionId: string, actionLabel: string, callback?: () => void) => {
       callback?.();
 
-      // Trigger the floating Dynamic Island notification
-      setIslandState(
-        "notification",
-        {
-          title: `${actionLabel} · ${displayName}`,
-          subtitle: "Conversation updated",
-          color:
-            actionId === "archive"
-              ? "#3b82f6"
-              : actionId === "mute"
-              ? "#6b7280"
-              : actionId === "delete"
-              ? "#ef4444"
-              : actionId === "pin"
-              ? "#f59e0b"
-              : "#10b981",
-        },
-        2200
-      );
+      // Feedback comes from the action itself (a toast). The Dynamic Island is
+      // kept for live activity (calls, recording), not for confirming a tap.
 
       // Snap row back to center with spring
       controls.start({
@@ -164,7 +145,7 @@ export default function SwipeableConversationRow({
       setRevealSide("none");
       setIsPastDeepThreshold(false);
     },
-    [controls, displayName, setIslandState]
+    [controls]
   );
 
   // -------------------------------------------------------------------------

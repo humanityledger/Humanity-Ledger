@@ -36,6 +36,7 @@
     "studio:check": "node scripts/studio-check.mjs",
     "lint": "next lint",
     "check:copy": "node scripts/check-forbidden-copy.mjs",
+    "check:chrome": "node scripts/check-chat-chrome.mjs",
     "audit": "slither . --print human-summary",
     "audit:prepare": "slither . --print human-summary --exclude-dependencies --solc-remaps \"@openzeppelin=node_modules/@openzeppelin\"",
     "migrate:deploy": "prisma migrate deploy",

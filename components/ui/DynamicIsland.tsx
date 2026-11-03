@@ -1,306 +1,214 @@
 "use client";
 
+/**
+ * The Dynamic Island: one capsule at the top of the app for live activity.
+ * It only says what its caller knows. A call shows "Calling", "Ringing" or
+ * "Connecting" until it connects, then the time since it connected. A
+ * recording shows its own elapsed time. There are no simulated waveforms,
+ * progress bars or network-health dots.
+ *
+ * Tap or Enter/Space expands and collapses it; Escape collapses it.
+ */
+
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
-import { Phone, PhoneOff, Mic, Shield, Wallet, Loader2, Bell, CheckCircle2, ChevronRight } from 'lucide-react';
-import { usePathname, useRouter } from 'next/navigation';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
+import { useDynamicIsland, type DynamicIslandPayload } from '@/lib/store/dynamic-island-store';
+import { Phone, PhoneOff, Wallet, Loader2, Bell, CheckCircle2, ChevronRight } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+
+const ISLAND_ALLOWLIST = ['/chat', '/portfolio', '/studio', '/settings', '/hub', '/ledger', '/terminal', '/scan', '/passport'];
+
+function formatElapsed(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+}
+
+/** Ticks once a second while `since` is set, so the shown time stays current. */
+function useElapsed(since: number | undefined): string | null {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!since) return;
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [since]);
+  return since ? formatElapsed(now - since) : null;
+}
+
+function safeIcon(src: string | undefined): string | null {
+  if (!src) return null;
+  if (src.startsWith('data:image/')) return src;
+  if (src.startsWith('/') && !src.startsWith('//')) return src;
+  return null;
+}
+
+function callLabel(p: DynamicIslandPayload | undefined, elapsed: string | null): string {
+  if (p?.subtitle && !p.phase) return p.subtitle; // group calls set their own line
+  switch (p?.phase) {
+    case 'ringing': return 'Incoming call';
+    case 'connecting': return 'Connecting';
+    case 'active': return elapsed ?? 'Connected';
+    case 'calling':
+    default: return 'Calling';
+  }
+}
 
 export function DynamicIsland() {
   const { activeState, payload, expanded, setExpanded, dismiss } = useDynamicIsland();
   const pathname = usePathname();
-  const router = useRouter();
+  const elapsed = useElapsed(
+    activeState === 'recording' ? payload?.startedAt
+      : activeState === 'calling' && payload?.phase === 'active' ? payload?.startedAt
+      : undefined,
+  );
 
-  // ✅ Hooks MUST come before any conditional return (React Rules of Hooks)
-  // Local timer for calls/recording
-  const [timer, setTimer] = useState(0);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (activeState === 'calling' || activeState === 'recording') {
-      setTimer(0);
-      interval = setInterval(() => setTimer(t => t + 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [activeState]);
-
-  // L3 enforcement: Island lives in App layer only.
-  const ISLAND_ALLOWLIST = [
-    '/chat', '/portfolio', '/studio', '/settings', 
-    '/hub', '/ledger', '/terminal', '/scan', '/passport'
-  ];
   const isAppRoute = ISLAND_ALLOWLIST.some(r => pathname?.startsWith(r));
   if (!isAppRoute) return null;
 
-  const formatTime = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
+  const toggle = () => { if (activeState !== 'idle') setExpanded(!expanded); };
+  const open = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    payload?.onOpen?.();
+    dismiss();
   };
 
-  const handleTap = () => {
-    if (activeState === 'idle') return;
-    setExpanded(!expanded);
-  };
-
-  const handleAction = () => {
-    if (activeState === 'notification') {
-      router.push('/chat');
-      dismiss();
-    }
-  };
-
-  // Dimensions based on state
   let width = 200;
   let height = 36;
-  let borderRadius = 20;
-
   if (activeState !== 'idle') {
     width = expanded ? 340 : 200;
-    height = expanded ? 80 : 36;
-    if (activeState === 'notification' && expanded) height = 90;
-    if (activeState === 'tx_processing' && expanded) height = 100;
+    height = expanded ? 64 : 36;
+    if (activeState === 'notification' && expanded) height = 72;
   }
 
+  const title = payload?.title?.trim() || '';
+  const iconSrc = safeIcon(payload?.icon);
+  // What a screen reader hears; the capsule itself is a live region.
+  const spoken =
+    activeState === 'calling' ? `${callLabel(payload, elapsed)}${title ? `, ${title}` : ''}`
+    : activeState === 'recording' ? `Recording${elapsed ? `, ${elapsed}` : ''}`
+    : [title, payload?.subtitle].filter(Boolean).join('. ');
+
   return (
-    <div className="fixed top-2 md:top-4 left-0 right-0 z-[9999] flex justify-center pointer-events-none">
-      <AnimatePresence>
-        {activeState !== 'idle' && (
-          <motion.div
-            layout
-            onClick={handleTap}
-            initial={{ y: -50, opacity: 0, scale: 0.9 }}
-            animate={{ 
-              y: 0, 
-              opacity: 1, 
-              scale: 1,
-              width, 
-              height,
-              borderRadius
-            }}
-            exit={{ y: -50, opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 400, 
-              damping: 30,
-              mass: 0.8
-            }}
-            className="relative bg-black text-white overflow-hidden shadow-2xl flex items-center pointer-events-auto cursor-pointer"
-            style={{
-              boxShadow: '0 10px 40px -10px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1) inset'
-            }}
-          >
-            <AnimatePresence mode="wait">
-              {activeState === 'calling' && (
-            <motion.div 
-              key="calling"
-              initial={{ opacity: 0, scale: 0.9 }} 
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="w-full h-full flex items-center justify-between px-4"
+    <MotionConfig reducedMotion="user">
+      <div className="fixed top-2 md:top-3 left-0 right-0 z-[9999] flex justify-center pointer-events-none" role="status" aria-live="polite" aria-atomic="true">
+        <span className="sr-only">{activeState === 'idle' ? '' : spoken}</span>
+        <AnimatePresence>
+          {activeState !== 'idle' && (
+            <motion.div
+              layout
+              role="button"
+              tabIndex={0}
+              aria-expanded={expanded}
+              aria-label={spoken || 'Activity'}
+              onClick={toggle}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+                if (e.key === 'Escape' && expanded) { e.preventDefault(); setExpanded(false); }
+              }}
+              initial={{ y: -40, opacity: 0, scale: 0.92 }}
+              animate={{ y: 0, opacity: 1, scale: 1, width, height, borderRadius: 22 }}
+              exit={{ y: -40, opacity: 0, scale: 0.92, transition: { duration: 0.18 } }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30, mass: 0.8 }}
+              className="relative max-w-[calc(100vw-24px)] bg-[#0b0c0e] text-white overflow-hidden flex items-center pointer-events-auto cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              style={{ boxShadow: '0 10px 32px -10px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.08)' }}
             >
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
-                  <Phone size={12} fill="currentColor" />
-                </div>
-                {expanded && (
-                  <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col">
-                    <span className="text-[11px] font-bold text-white/50 uppercase tracking-widest">Active Call</span>
-                    <span className="text-[13px] font-medium text-white">{payload?.title || 'Unknown Peer'}</span>
+              <AnimatePresence mode="wait" initial={false}>
+                {activeState === 'calling' && (
+                  <motion.div key="calling" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full flex items-center justify-between gap-3 px-3.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-6 h-6 rounded-full bg-[#30a46c]/20 text-[#3dd68c] flex items-center justify-center shrink-0" aria-hidden="true">
+                        <Phone size={12} strokeWidth={2.25} />
+                      </span>
+                      {expanded ? (
+                        <span className="flex flex-col min-w-0">
+                          <span className="text-[13px] font-medium truncate">{title || 'Call'}</span>
+                          <span className="text-[12px] text-white/60 tabular-nums">{callLabel(payload, elapsed)}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[12.5px] text-white/80 truncate">{title || 'Call'}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {!expanded && <span className="text-[12.5px] tabular-nums text-[#3dd68c]">{callLabel(payload, elapsed)}</span>}
+                      {expanded && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.dispatchEvent(new CustomEvent('ledger_end_active_call'));
+                            dismiss();
+                          }}
+                          className="w-8 h-8 rounded-full bg-[#e5484d] hover:bg-[#d93036] flex items-center justify-center text-white transition-colors active:scale-95"
+                          aria-label="End call"
+                        >
+                          <PhoneOff size={14} strokeWidth={2} />
+                        </button>
+                      )}
+                    </div>
                   </motion.div>
                 )}
-              </div>
-              <div className="flex items-center gap-2">
-                {expanded && (
-                   <div className="flex gap-1 items-center mr-2 h-4">
-                     {[...Array(5)].map((_, i) => (
-                       <motion.div 
-                         key={i} 
-                         animate={{ height: [4, 12, 4] }} 
-                         transition={{ repeat: Infinity, duration: 1, delay: i * 0.1 }}
-                         className="w-[2px] bg-green-400 rounded-full" 
-                       />
-                     ))}
-                   </div>
-                )}
-                <span className="text-[13px] font-mono text-green-400 font-bold">{formatTime(timer)}</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.dispatchEvent(new CustomEvent('ledger_end_active_call'));
-                    dismiss();
-                  }}
-                  className="w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white ml-1.5 transition-all active:scale-90 shadow-sm"
-                  title="Hang up call"
-                >
-                  <PhoneOff size={11} />
-                </button>
-              </div>
-            </motion.div>
-          )}
 
-          {activeState === 'recording' && (
-            <motion.div 
-              key="recording"
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="w-full h-full flex items-center justify-between px-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
-                {expanded && (
-                  <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[12px] font-mono uppercase tracking-widest text-white/70">
-                    Recording Audio
-                  </motion.span>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex gap-[2px] items-center h-4">
-                   {[...Array(8)].map((_, i) => (
-                     <motion.div 
-                       key={i} 
-                       animate={{ height: [3, Math.random() * 12 + 4, 3] }} 
-                       transition={{ repeat: Infinity, duration: 0.5, delay: i * 0.05 }}
-                       className="w-[2px] bg-red-500 rounded-full" 
-                     />
-                   ))}
-                </div>
-                <span className="text-[13px] font-mono text-red-500 font-bold">{formatTime(timer)}</span>
-              </div>
-            </motion.div>
-          )}
-
-          {activeState === 'syncing' && (
-            <motion.div 
-              key="syncing"
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="w-full h-full flex items-center justify-between px-4"
-            >
-              <div className="flex items-center gap-3">
-                <Loader2 size={14} className="text-emerald-400 animate-spin" />
-                {expanded && (
-                  <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col">
-                    <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest">Network Sync</span>
-                    <span className="text-[12px] font-medium text-white/70">Connecting to Aztec L2...</span>
+                {activeState === 'recording' && (
+                  <motion.div key="recording" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full flex items-center justify-between gap-3 px-4">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-[#e5484d] animate-pulse motion-reduce:animate-none shrink-0" aria-hidden="true" />
+                      <span className="text-[12.5px] text-white/85 truncate">{expanded && title ? `Recording for ${title}` : 'Recording'}</span>
+                    </div>
+                    {elapsed && <span className="text-[12.5px] tabular-nums text-[#ff8b8b] shrink-0">{elapsed}</span>}
                   </motion.div>
                 )}
-              </div>
-              {!expanded && <span className="text-[11px] font-mono text-emerald-400 font-bold tracking-widest">SYNC</span>}
-            </motion.div>
-          )}
 
-          {activeState === 'wallet_connected' && (
-            <motion.div 
-              key="wallet"
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="w-full h-full flex items-center justify-between px-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-white">
-                  <Wallet size={12} />
-                </div>
-                {expanded ? (
-                  <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col">
-                    <span className="text-[11px] font-bold text-white/50 uppercase tracking-widest">Wallet Linked</span>
-                    <span className="text-[13px] font-medium text-white">{payload?.title || '0x...'}</span>
+                {(activeState === 'syncing' || activeState === 'tx_processing') && (
+                  <motion.div key="working" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full flex items-center gap-2.5 px-4 min-w-0">
+                    <Loader2 size={14} className="text-white/80 animate-spin motion-reduce:animate-none shrink-0" aria-hidden="true" />
+                    <span className="flex flex-col min-w-0">
+                      <span className="text-[12.5px] font-medium truncate">{title || 'Working'}</span>
+                      {expanded && payload?.subtitle && <span className="text-[12px] text-white/60 truncate">{payload.subtitle}</span>}
+                    </span>
                   </motion.div>
-                ) : (
-                  <span className="text-[12px] font-mono font-bold">Linked</span>
                 )}
-              </div>
-              <CheckCircle2 size={16} className="text-white" />
-            </motion.div>
-          )}
 
-          {activeState === 'notification' && (
-            <motion.div 
-              key="notification"
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="w-full h-full flex items-center justify-between px-4 w-full"
-            >
-              <div className="flex items-center gap-3 w-full">
-                <div className="w-8 h-8 rounded-full bg-emerald-600 shrink-0 flex items-center justify-center overflow-hidden">
-                   {payload?.icon ? <img src={payload.icon} className="w-full h-full object-cover" /> : <Bell size={14} className="text-white" />}
-                </div>
-                <div className="flex flex-col flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-bold text-white truncate">{payload?.title || 'New Message'}</span>
-                    {!expanded && <div className="w-2 h-2 rounded-full bg-[#25D366]" />}
-                  </div>
-                  {expanded && (
-                    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[13px] text-white/70 truncate mt-1">
-                      {payload?.subtitle || 'Tap to view'}
-                    </motion.span>
-                  )}
-                </div>
-              </div>
-              {expanded && (
-                <button onClick={handleAction} className="ml-2 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0 hover:bg-white/20 transition-colors">
-                  <ChevronRight size={16} className="text-white" />
-                </button>
-              )}
-            </motion.div>
-          )}
+                {(activeState === 'tx_success' || activeState === 'wallet_connected') && (
+                  <motion.div key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full flex items-center gap-2.5 px-4 min-w-0">
+                    {activeState === 'wallet_connected'
+                      ? <Wallet size={14} className="text-white/85 shrink-0" aria-hidden="true" />
+                      : <CheckCircle2 size={14} className="text-[#3dd68c] shrink-0" aria-hidden="true" />}
+                    <span className="flex flex-col min-w-0">
+                      <span className="text-[12.5px] font-medium truncate">{title || 'Done'}</span>
+                      {expanded && payload?.subtitle && <span className="text-[12px] text-white/60 truncate">{payload.subtitle}</span>}
+                    </span>
+                  </motion.div>
+                )}
 
-          {activeState === 'tx_processing' && (
-            <motion.div 
-              key="tx_processing"
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="w-full h-full flex flex-col justify-center px-4"
-            >
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-3">
-                  <Shield size={16} className="text-[#25D366]" />
-                  <span className="text-[13px] font-bold text-white">{expanded ? 'Zero-Knowledge Proof' : 'Proving...'}</span>
-                </div>
-                <Loader2 size={14} className="text-[#25D366] animate-spin" />
-              </div>
-              {expanded && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 w-full">
-                  <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                    <motion.div 
-                      className="h-full bg-[#25D366]"
-                      animate={{ width: ['0%', '100%'] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    />
-                  </div>
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-white/50 mt-2 text-center">Generating SNARK</p>
-                </motion.div>
-              )}
-            </motion.div>
-          )}
-          
-          {activeState === 'tx_success' && (
-            <motion.div 
-              key="tx_success"
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="w-full h-full flex items-center justify-between px-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-white text-black flex items-center justify-center">
-                  <CheckCircle2 size={14} />
-                </div>
-                <span className="text-[13px] font-bold text-white">Verified</span>
-              </div>
+                {activeState === 'notification' && (
+                  <motion.div key="notification" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full flex items-center gap-2.5 px-3">
+                    <span className="w-7 h-7 rounded-full bg-white/10 shrink-0 flex items-center justify-center overflow-hidden" aria-hidden="true">
+                      {iconSrc ? <img src={iconSrc} alt="" className="w-full h-full object-cover" /> : <Bell size={13} className="text-white/85" />}
+                    </span>
+                    <span className="flex flex-col flex-1 min-w-0">
+                      <span className="text-[13px] font-medium truncate">{title || 'New message'}</span>
+                      {expanded && payload?.subtitle && <span className="text-[12.5px] text-white/65 truncate">{payload.subtitle}</span>}
+                    </span>
+                    {expanded && payload?.onOpen && (
+                      <button
+                        type="button"
+                        onClick={open}
+                        className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0 hover:bg-white/20 transition-colors"
+                        aria-label={title ? `Open chat with ${title}` : 'Open'}
+                      >
+                        <ChevronRight size={16} className="text-white" />
+                      </button>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      </div>
+    </MotionConfig>
   );
 }
-

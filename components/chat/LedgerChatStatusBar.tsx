@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { LocalContact } from '@/lib/wallet/localAddressBook';
 
@@ -289,10 +290,11 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
             </div>
             {/* Close */}
             <button
-              className="absolute top-6 right-6 text-white/60 hover:text-white text-2xl font-black"
+              className="absolute top-6 right-6 w-10 h-10 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors"
               onClick={closeViewModal}
+              aria-label="Close"
             >
-              ✕
+              <X size={22} strokeWidth={2} />
             </button>
             {/* Status Content */}
             <div className="flex flex-col items-center gap-6 px-8 max-w-sm text-center">

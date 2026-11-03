@@ -4,6 +4,7 @@ import { requireWallet } from '@/lib/security/requireWallet';
 import { resolveCommunityAccess, appVisibleTo } from '@/lib/community-apps/access';
 import { buildAppDocument } from '@/lib/community-apps/sdk';
 import { APP_FRAME_CSP } from '@/lib/community-apps/framePolicy';
+import { classifyAppsError, newErrorId } from '@/lib/community-apps/routeErrors';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,18 @@ function headers(): HeadersInit {
   };
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string; appId: string }> }) {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string; appId: string }> }) {
+  try {
+    return await render(req, ctx);
+  } catch (err) {
+    const info = classifyAppsError(err);
+    const errorId = newErrorId();
+    console.error(`[community-apps] frame GET ${info.code} errorId=${errorId}`, err);
+    return page(info.status, `This app could not be loaded. Error ID ${errorId}.`);
+  }
+}
+
+async function render(req: NextRequest, { params }: { params: Promise<{ id: string; appId: string }> }) {
   const auth = await requireWallet(req);
   if (auth.errorResponse) return page(401, 'Sign in to Ledger Chat to open this app.');
   const { id, appId } = await params;

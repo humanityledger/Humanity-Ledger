@@ -4,6 +4,7 @@ import { requireWallet } from '@/lib/security/requireWallet';
 import {
   resolveCommunityAccess, appSummary, appVisibleTo, MAX_PUBLISHED_APPS,
 } from '@/lib/community-apps/access';
+import { appsRoute } from '@/lib/community-apps/routeErrors';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,17 +22,17 @@ async function load(req: NextRequest, ctx: Ctx) {
 }
 
 /** The app with its source, for "View code". */
-export async function GET(req: NextRequest, ctx: Ctx) {
+export const GET = appsRoute('app GET', async (req: NextRequest, ctx: Ctx) => {
   const r = await load(req, ctx);
   if ('error' in r) return r.error;
   return NextResponse.json(
     { app: { ...appSummary(r.app, r.access), html: r.app.html, prompt: r.app.creatorAddress.toLowerCase() === r.access.caller ? r.app.prompt : undefined } },
     { headers: { 'Cache-Control': 'no-store' } },
   );
-}
+});
 
 /** { action: 'publish' | 'unpublish' } or { title }. Creator only. */
-export async function PATCH(req: NextRequest, ctx: Ctx) {
+export const PATCH = appsRoute('app PATCH', async (req: NextRequest, ctx: Ctx) => {
   const r = await load(req, ctx);
   if ('error' in r) return r.error;
   const { access, app } = r;
@@ -56,10 +57,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   const updated = await (prisma as any).communityApp.update({ where: { id: app.id }, data });
   return NextResponse.json({ app: appSummary(updated, access) });
-}
+});
 
 /** Removes the app and all of its data. Creator, owner, admins, moderators. */
-export async function DELETE(req: NextRequest, ctx: Ctx) {
+export const DELETE = appsRoute('app DELETE', async (req: NextRequest, ctx: Ctx) => {
   const r = await load(req, ctx);
   if ('error' in r) return r.error;
   const { access, app } = r;
@@ -68,4 +69,4 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   }
   await (prisma as any).communityApp.delete({ where: { id: app.id } });
   return NextResponse.json({ ok: true });
-}
+});

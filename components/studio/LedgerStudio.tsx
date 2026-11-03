@@ -667,17 +667,32 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
       </div>
 
       <div className="p-3 border-t border-[#eceef2] shrink-0">
-        {usage?.configured && usage.usage && (
-          <button type="button" onClick={() => setSettingsTab('usage')} className="w-full mb-2 text-left">
-            <div className="flex justify-between text-[11.5px] text-[#727a88] mb-1">
-              <span>{t.today} · {plan === 'pro' ? t.pro : t.free}</span>
-              <span className="tabular-nums">{Math.min(100, Math.round((usage.usage.todayUsd / Math.max(usage.usage.plan.dailyBudgetUsd, 0.0001)) * 100))}%</span>
-            </div>
-            <div className="h-1.5 rounded-full bg-[#e4e7ec] overflow-hidden">
-              <div className="h-full bg-[#15171c]" style={{ width: `${Math.min(100, (usage.usage.todayUsd / Math.max(usage.usage.plan.dailyBudgetUsd, 0.0001)) * 100)}%` }} />
-            </div>
-          </button>
-        )}
+        {usage?.configured && usage.usage && (() => {
+          // Every number here comes from the server meter (/api/studio/usage).
+          const u = usage.usage;
+          const pct = Math.min(100, Math.round((u.todayUsd / Math.max(u.plan.dailyBudgetUsd, 0.0001)) * 100));
+          const resets = new Date(u.resetsDayAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const blocked = !u.meteringAvailable || u.freeCapacityReached || pct >= 100;
+          return (
+            <button
+              type="button"
+              onClick={() => setSettingsTab('usage')}
+              className="w-full mb-2 text-left rounded-lg -mx-1 px-1 py-0.5 hover:bg-[#eceef2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#15171c]"
+              aria-label={`${t.today}: ${pct}%. ${t.resetsAt} ${resets}`}
+            >
+              <div className="flex justify-between text-[11.5px] text-[#727a88] mb-1">
+                <span>{t.today} · {plan === 'pro' ? t.pro : t.free}</span>
+                <span className="tabular-nums">{pct}%</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-[#e4e7ec] overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+                <div className={`h-full ${blocked ? 'bg-[#d93036]' : 'bg-[#15171c]'}`} style={{ width: `${pct}%` }} />
+              </div>
+              <p className={`mt-1 text-[11px] tabular-nums ${blocked ? 'text-[#b42318]' : 'text-[#727a88]'}`}>
+                {!u.meteringAvailable ? t.errMetering : u.freeCapacityReached ? t.errFreeCapacity : `${t.resetsAt} ${resets}`}
+              </p>
+            </button>
+          );
+        })()}
         <div className="flex gap-1">
           <button type="button" onClick={() => setSettingsTab('general')} className="flex-1 h-9 px-2.5 rounded-lg flex items-center gap-2 text-[13px] text-[#2b2f36] hover:bg-[#eceef2]"><Settings size={15} /> {t.settings}</button>
           <button type="button" onClick={() => setSettingsTab('connectors')} aria-label={t.connectors} title={t.connectors} className="w-9 h-9 rounded-lg flex items-center justify-center text-[#2b2f36] hover:bg-[#eceef2]"><Plug size={15} /></button>

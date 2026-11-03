@@ -56,3 +56,35 @@
   white-space: nowrap;
   letter-spacing: 0.3em;
 }
+
+/* ── Chat colour themes ────────────────────────────────────────────────────
+   Values come from lib/chat/themes.ts (contrast-tested) and are set as
+   custom properties on the element that carries data-chat-theme: the
+   conversation container in LedgerChatV2 and the Appearance preview. Only the
+   conversation canvas changes; the chrome around it keeps the light tokens.
+   "default" adds nothing, so Classic is exactly the original look. Styles
+   with their own fixed colours (Minimal is unboxed, Terminal is neon on
+   black) are left as they are. */
+[data-chat-theme]:not([data-chat-theme="default"]) .msg-bubble-sent:not(.msg-bubble-plain):not(.msg-bubble-fixed) {
+  background: var(--lc-accent) !important;
+  color: var(--lc-on-accent) !important;
+  border-color: transparent !important;
+}
+[data-chat-theme]:not([data-chat-theme="default"]) .msg-bubble-recv:not(.msg-bubble-plain):not(.msg-bubble-fixed) {
+  background: var(--lc-bubble-received) !important;
+  color: var(--lc-text-primary) !important;
+  border-color: var(--lc-border) !important;
+}
+/* Fixed greys inside a received bubble follow the theme, so a dark theme
+   never puts dark text on a dark bubble. */
+[data-chat-theme]:not([data-chat-theme="default"]) .msg-bubble-recv:not(.msg-bubble-fixed) .text-\[\#15171c\] { color: var(--lc-text-primary) !important; }
+[data-chat-theme]:not([data-chat-theme="default"]) .msg-bubble-recv:not(.msg-bubble-fixed) .text-\[\#727a88\],
+[data-chat-theme]:not([data-chat-theme="default"]) .msg-bubble-recv:not(.msg-bubble-fixed) .text-\[\#a3a9b4\] { color: var(--lc-text-muted) !important; }
+[data-chat-theme]:not([data-chat-theme="default"]) .msg-bubble-recv:not(.msg-bubble-fixed) .bg-\[\#f2f4f7\] { background: color-mix(in srgb, var(--lc-text-primary) 8%, transparent) !important; }
+[data-chat-theme]:not([data-chat-theme="default"]) .msg-bubble-recv:not(.msg-bubble-fixed) .bg-\[\#15171c\] { background: var(--lc-text-primary) !important; }
+/* Minimal bubbles have no box: their text sits on the canvas. */
+[data-chat-theme]:not([data-chat-theme="default"]) .msg-bubble-plain { color: var(--lc-text-primary) !important; }
+/* Time and ticks under a message sit on the canvas. */
+[data-chat-theme]:not([data-chat-theme="default"]) .msg-meta .msg-time,
+[data-chat-theme]:not([data-chat-theme="default"]) .msg-meta .msg-tick { color: var(--lc-meta) !important; }
+[data-chat-theme]:not([data-chat-theme="default"]) .msg-meta .msg-read { color: var(--lc-read) !important; }

@@ -6,6 +6,7 @@ import {
 } from '@/lib/community-apps/access';
 import { APP_TEMPLATES, findTemplate } from '@/lib/community-apps/templates';
 import { generationConfigured } from '@/lib/community-apps/generate';
+import { appsRoute } from '@/lib/community-apps/routeErrors';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,7 @@ export const dynamic = 'force-dynamic';
  *      templates and whether apps can be written from a description here.
  * POST { templateId } adds a built-in app as a draft of the caller's.
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = appsRoute('apps GET', async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const auth = await requireWallet(req);
   if (auth.errorResponse) return auth.errorResponse;
   const { id } = await params;
@@ -44,9 +45,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     },
     { headers: { 'Cache-Control': 'no-store' } },
   );
-}
+});
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = appsRoute('apps POST', async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const auth = await requireWallet(req);
   if (auth.errorResponse) return auth.errorResponse;
   const { id } = await params;
@@ -79,4 +80,4 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     },
   });
   return NextResponse.json({ app: appSummary(app, access) }, { status: 201 });
-}
+});

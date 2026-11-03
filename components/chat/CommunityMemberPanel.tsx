@@ -6,6 +6,7 @@ import {
   Users, Award, Lock, MessageCircle, X, Search, Link,
   Crown, ChevronDown, MoreVertical, Ban, Trash2
 } from 'lucide-react';
+import { communityInviteUrl } from '@/lib/ui/format';
 
 // ─── TYPES ──────────────────────────────────────────────────────────────────
 
@@ -286,9 +287,9 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
   };
 
   const copyInvite = () => {
-    const link = `https://humanidfi.com/join/${community?.joinCode || 'demo-code'}`;
-    navigator.clipboard.writeText(link);
-    toast.success('Invite link copied!');
+    const link = communityInviteUrl(community?.joinCode);
+    if (!link) { toast.error('This community has no invite link yet'); return; }
+    navigator.clipboard.writeText(link).then(() => toast.success('Invite link copied'), () => toast.error('Could not copy the link'));
   };
 
   return (
@@ -411,7 +412,7 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
               <div className="flex items-center gap-2">
                 <div className="flex-1 bg-white border border-black/10 rounded-xl px-3 py-2.5 flex items-center overflow-hidden">
                   <span className="text-[13px] font-mono text-black/50 truncate">
-                    humanidfi.com/join/{community?.joinCode || 'demo-code'}
+                    {(communityInviteUrl(community?.joinCode) || 'No invite link yet').replace(/^https?:\/\//, '')}
                   </span>
                 </div>
                 <button 

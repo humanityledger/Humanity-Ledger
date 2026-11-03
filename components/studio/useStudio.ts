@@ -49,6 +49,10 @@ export interface UsageInfo {
     plan: { id: StudioPlanId; label: string; dailyBudgetUsd: number; monthlyBudgetUsd: number; maxFileMb: number; maxConnectors: number };
     todayUsd: number; monthUsd: number; todayTokens: number; monthTokens: number; monthSearches: number; monthRequests: number;
     remainingTodayUsd: number; remainingMonthUsd: number; resetsDayAt: string; resetsMonthAt: string;
+    /** False when the server could not read the meter (turns are refused then). */
+    meteringAvailable: boolean;
+    /** Free plan: the shared daily ceiling for all free wallets is spent. */
+    freeCapacityReached: boolean;
   };
 }
 

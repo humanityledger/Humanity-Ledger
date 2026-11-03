@@ -3,13 +3,7 @@ import React, {
   useState, useEffect, useRef, useCallback, useMemo
 } from 'react';
 import dynamic from 'next/dynamic';
-import {
-  Send, Plus, MapPin, CircleDollarSign, Smile, BarChart2,
-  Image as ImgIcon, Mic, Hash, CheckCircle, X, Reply,
-  Play, Pause, Pin, Search, Users, ChevronDown, Film,
-  MoreVertical, Copy, Trash2, ThumbsUp, Heart, Laugh,
-  AlertCircle, Lock, Volume2, Globe, Shield, ExternalLink, Zap, FileText
-} from 'lucide-react';
+import { Send, Plus, MapPin, CircleDollarSign, Smile, BarChart2, Image as ImgIcon, Mic, Hash, CheckCircle, X, Reply, Play, Pause, Pin, Search, Users, ChevronDown, Film, MoreVertical, Copy, Trash2, ThumbsUp, Heart, Laugh, AlertCircle, Lock, Volume2, Globe, Shield, ExternalLink, Zap, FileText, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { NativeCryptoSendModal } from './NativeCryptoSendModal';
 const ZkMoneyModal = dynamic(() => import('./ZkMoneyModal').then(m => m.ZkMoneyModal), { ssr: false });
@@ -1073,7 +1067,9 @@ export function CommunityChatView({
                                 <div className="w-2.5 h-2.5 border-[1.5px] border-black/30 border-t-[#1C1C1E] rounded-full animate-spin" />
                               )}
                               {me && !msg.isOptimistic && (
-                                <span className="text-[#53bdeb] text-[12px] font-bold leading-none select-none">✓✓</span>
+                                /* Posted to the server. Community posts have no read receipts,
+                                   so this is one tick ("sent"), not a blue double tick. */
+                                <Check size={12} strokeWidth={2.25} className="text-[#667781]" aria-label="Sent" />
                               )}
                             </div>
                           </div>

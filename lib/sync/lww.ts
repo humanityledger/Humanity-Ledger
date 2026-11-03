@@ -44,7 +44,7 @@ const DISAPPEARING = new Set(['off', '5s', '10s', '30s', '1m', '5m', '1h', '24h'
  * arbitrary keys into another device's storage.
  */
 const KEY_RULES: Array<{ re: RegExp; ok: (v: SyncValue) => boolean }> = [
-  { re: new RegExp(`^(muted|locked|archived|fav):${PEER}$`), ok: v => v === true || v === null },
+  { re: new RegExp(`^(muted|locked|archived|fav|pinned):${PEER}$`), ok: v => v === true || v === null },
   { re: new RegExp(`^disappearing:${PEER}$`), ok: v => v === null || (typeof v === 'string' && DISAPPEARING.has(v)) },
   { re: new RegExp(`^(cleared|read):${PEER}$`), ok: v => v === null || (typeof v === 'number' && Number.isFinite(v) && v >= 0) },
   // Chat settings; the field name is checked against the settings schema by the receiver.

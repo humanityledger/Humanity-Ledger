@@ -64,12 +64,13 @@ import { SendTipModal } from '@/components/chat/SendTipModal';
 import { ScheduleMessageSheet } from '@/components/chat/ScheduleMessageSheet';
 import SwipeableConversationRow from '@/components/chat/SwipeableConversationRow';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
-import { ThemePickerSheet, THEME_PALETTES, applyThemePalette, type ThemePalette } from '@/components/chat/ThemePickerSheet';
+import { ThemePickerSheet, chatThemeStyle } from '@/components/chat/ThemePickerSheet';
+import { CHAT_THEMES, findChatTheme, isChatThemeId, type ChatTheme } from '@/lib/chat/themes';
+import { BUBBLE_STYLES, isBubbleStyleId } from '@/lib/chat/bubbleStyles';
 import { InChatSearch } from '@/components/chat/InChatSearch';
 import { WallpaperPickerSheet, WALLPAPER_OPTIONS, type WallpaperOption } from '@/components/chat/WallpaperPickerSheet';
 const ZkMoneyModal = dynamic(() => import('@/components/chat/ZkMoneyModal').then(m => m.ZkMoneyModal), { ssr: false });
 const ZkWalletPanel = dynamic(() => import('@/components/zk/ZkWalletPanel').then(m => m.ZkWalletPanel), { ssr: false });
-import { ZkNotificationBell } from '@/components/zk/ZkNotificationBell';
 const ZkStreamManager = dynamic(() => import('@/components/zk/ZkStreamManager').then(m => m.ZkStreamManager), { ssr: false });
 const ZkInvoiceModal = dynamic(() => import('@/components/zk/ZkInvoiceModal').then(m => m.ZkInvoiceModal), { ssr: false });
 import { encodeStreamPayload } from '@/lib/zk/zkStreaming';
@@ -217,19 +218,19 @@ export const formatMessagePreview = (content: string): string => {
     return entry ? callEntryLabel(entry) : 'Call';
   }
   if (cleanContent.startsWith('__CALL_OFFER__:')) {
-    return cleanContent.includes(':video') ? '📹 Video Call' : '📞 Voice Call';
+    return cleanContent.includes(':video') ? 'Video call' : 'Voice call';
   }
-  if (cleanContent.startsWith('__AUDIO__')) return '🎙️ Voice Note';
-  if (cleanContent.startsWith('[LOCATION]')) return '📍 Location';
-  if (cleanContent.startsWith('[ATTACHMENT')) return '📎 Attachment';
-  if (cleanContent.startsWith('[GIF]')) return '🖼️ GIF';
-  if (cleanContent.startsWith('__POLL__')) return '📊 Poll';
-  if (cleanContent.startsWith('__PAYMENT__')) return '💸 Payment';
+  if (cleanContent.startsWith('__AUDIO__')) return 'Voice message';
+  if (cleanContent.startsWith('[LOCATION]')) return 'Location';
+  if (cleanContent.startsWith('[ATTACHMENT')) return 'Attachment';
+  if (cleanContent.startsWith('[GIF]')) return 'GIF';
+  if (cleanContent.startsWith('__POLL__')) return 'Poll';
+  if (cleanContent.startsWith('__PAYMENT__')) return 'Payment';
   if (cleanContent.startsWith('__PIN__') || cleanContent.startsWith('__REVOKE__') || cleanContent.startsWith('__READ__') || cleanContent.startsWith('__TYPING__')) {
-    return 'System Message';
+    return 'System message';
   }
 
-  return isBurn ? `🔥 ${cleanContent}` : cleanContent;
+  return isBurn ? `Disappearing: ${cleanContent}` : cleanContent;
 };
 
 export const parseMessageText = (text: string, isMe: boolean) => {
@@ -255,7 +256,8 @@ import { MessageBubble, StickerPicker } from '../chat/MessageBubble';
 import { PinPrompt } from '@/components/chat/pin/PinPrompt';
 import { IncomingCallScreen, OutgoingCallScreen, AudioCallStage, CallControls } from '@/components/chat/call/CallScreens';
 import { Archive, ArchiveRestore, ChevronLeft, ChevronUp, ChevronDown, MessageSquare, Plus, ArrowUp, WifiOff, Pin, Check, ScanQrCode, Camera, FileText, Sticker, ListChecks, CreditCard, Receipt, Waves, Navigation, Timer, Info, LoaderCircle, Minimize2, Mail, ShieldCheck, Reply, Forward, Pencil, Flag, MessagesSquare, Globe } from 'lucide-react';
-import { Sparkles as StudioIcon } from 'lucide-react';
+import { Sparkles as StudioIcon, MoreHorizontal, SquarePen, Palette, BellOff } from 'lucide-react';
+import { shortAddress as formatAddress } from '@/lib/ui/format';
 
 // Ledger Studio (AI workspace). Loaded only when opened; never sees encrypted
 // chats unless the person sends something there themselves.
@@ -784,10 +786,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   // ─── UI Maturity: Theme picker, pin, mute, per-conv wallpaper ────────────
   const [showThemePicker, setShowThemePicker] = useState(false);
-  const [chatThemeId, setChatThemeId] = useState<string>(() => {
-    if (typeof window === 'undefined') return 'default';
-    return localStorage.getItem('ledger_chat_theme_id') || 'default';
-  });
+  // One source of truth: the `chat_theme` setting (synced across devices by
+  // pxeEngine). A theme picked with the old picker lived only in this
+  // browser's localStorage; it is moved into the setting once, then removed.
+  useEffect(() => {
+    if (!pxeLoaded) return;
+    let legacy: string | null = null;
+    try { legacy = localStorage.getItem('ledger_chat_theme_id'); } catch {}
+    if (!legacy) return;
+    try { localStorage.removeItem('ledger_chat_theme_id'); } catch {}
+    if (isChatThemeId(legacy) && (!ledgerSettings?.chat_theme || ledgerSettings.chat_theme === 'default')) {
+      updateBatch({ chat_theme: legacy });
+    }
+  }, [pxeLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  const chatThemeId = isChatThemeId(ledgerSettings?.chat_theme) ? ledgerSettings.chat_theme : 'default';
+  const chatTheme = findChatTheme(chatThemeId);
   const [pinnedPeers, setPinnedPeers] = useState<Set<string>>(new Set());
   const [mutedPeers, setMutedPeers] = useState<Set<string>>(new Set());
 
@@ -819,23 +832,57 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
 
-  const togglePin = useCallback((peer: string) => {
-    setPinnedPeers(prev => {
-      const next = new Set(prev);
-      const key = peer.toLowerCase();
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
+  // Pinned and muted chats live in the per-account device store
+  // (lib/sync/deviceState.ts): saved across reloads, synced to the account's
+  // other devices, and written through to `ledger_muted_<peer>`, which is the
+  // key the notification code actually checks. Before this, the swipe actions
+  // only changed React state, so a muted chat still rang and pins vanished on reload.
+  const readMutedFallback = useCallback((): Set<string> => {
+    const out = new Set<string>();
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i) || '';
+        if (k.startsWith('ledger_muted_')) out.add(k.slice('ledger_muted_'.length).toLowerCase());
+      }
+    } catch {}
+    return out;
   }, []);
+  const refreshPinMute = useCallback(() => {
+    const store = address ? getDeviceStore(address) : null;
+    setPinnedPeers(new Set(store ? store.peersWhere('pinned') : []));
+    setMutedPeers(store ? new Set(store.peersWhere('muted')) : readMutedFallback());
+  }, [address, readMutedFallback]);
+  useEffect(() => { refreshPinMute(); }, [refreshPinMute]);
+  useEffect(() => {
+    if (!address) return;
+    const me = address.toLowerCase();
+    const onSync = (e: Event) => {
+      const d = (e as CustomEvent<DeviceSyncEventDetail>).detail;
+      if (d?.account === me && d.keys.some(k => k.startsWith('pinned:') || k.startsWith('muted:'))) refreshPinMute();
+    };
+    window.addEventListener(DEVICE_SYNC_EVENT, onSync);
+    return () => window.removeEventListener(DEVICE_SYNC_EVENT, onSync);
+  }, [address, refreshPinMute]);
+
+  const togglePin = useCallback((peer: string) => {
+    const key = peer.toLowerCase();
+    const on = !pinnedPeers.has(key);
+    setPinnedPeers(prev => { const next = new Set(prev); if (on) next.add(key); else next.delete(key); return next; });
+    if (address) setSynced(address, { [`pinned:${key}`]: on ? true : null });
+    toast.success(on ? 'Pinned' : 'Unpinned');
+  }, [address, pinnedPeers]);
 
   const toggleMute = useCallback((peer: string) => {
-    setMutedPeers(prev => {
-      const next = new Set(prev);
-      const key = peer.toLowerCase();
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  }, []);
+    const key = peer.toLowerCase();
+    const on = !mutedPeers.has(key);
+    setMutedPeers(prev => { const next = new Set(prev); if (on) next.add(key); else next.delete(key); return next; });
+    if (address && getDeviceStore(address)) {
+      setSynced(address, { [`muted:${key}`]: on ? true : null });
+    } else {
+      try { if (on) localStorage.setItem(`ledger_muted_${key}`, '1'); else localStorage.removeItem(`ledger_muted_${key}`); } catch {}
+    }
+    toast.success(on ? 'Muted' : 'Unmuted');
+  }, [address, mutedPeers]);
   const lastTypingTimeRef = useRef<number>(0);
   const [isLocked, setIsLocked] = useState(false); // Inactivity lock
   const [showSearch, setShowSearch] = useState(false); // search bar toggle
@@ -852,6 +899,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [lockedChatPeer, setLockedChatPeer] = useState<string | null>(null);
   // The overflow menu in the conversation header.
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const [showSidebarMore, setShowSidebarMore] = useState(false);
   const [gifResults, setGifResults] = useState<string[]>([]); // GIF URLs
   const [linkPreview, setLinkPreview] = useState<{ url: string, title: string, description: string, image?: string } | null>(null);
 
@@ -879,12 +927,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
 
 
+  // The island shows the call as it really is: ringing, connecting, or
+  // active with a duration counted from the moment it connected.
+  const callStartedAtRef = useRef<number | null>(null);
+  const recordingStartedAtRef = useRef<number | null>(null);
   useEffect(() => {
     const island = useDynamicIsland.getState();
+    if (callState === 'active') { if (!callStartedAtRef.current) callStartedAtRef.current = Date.now(); }
+    else if (callState === 'idle') callStartedAtRef.current = null;
+    if (isRecording) { if (!recordingStartedAtRef.current) recordingStartedAtRef.current = Date.now(); }
+    else recordingStartedAtRef.current = null;
     if (callState === 'active' || callState === 'calling' || callState === 'ringing' || callState === 'connecting') {
-      island.setState('calling', { title: getDisplayName(activePeer || '') });
+      island.setState('calling', { title: getDisplayName(activePeer || ''), phase: callState, startedAt: callStartedAtRef.current ?? undefined });
     } else if (isRecording) {
-      island.setState('recording', { title: getDisplayName(activePeer || '') });
+      island.setState('recording', { title: getDisplayName(activePeer || ''), startedAt: recordingStartedAtRef.current ?? undefined });
     } else {
       if (island.activeState === 'calling' || island.activeState === 'recording') {
         island.dismiss();
@@ -3986,10 +4042,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     icon: '/favicon.ico'
                   });
                 }
-                if (!dnd) {
+                if (!dnd && !mutedPeer && notifEnabled) {
+                  const peerForIsland = String(msgConvPeer || '');
+                  const hidePreview = !!(ledgerSettings as any)?.hide_notification_content;
                   useDynamicIsland.getState().setState('notification', {
-                    title: shortAddr(msgConvPeer || 'Unknown'),
-                    subtitle: formatMessagePreview(content),
+                    title: resolveContactName(address || '', peerForIsland) || formatAddress(peerForIsland) || 'New message',
+                    subtitle: hidePreview ? 'New message' : formatMessagePreview(content),
+                    onOpen: peerForIsland ? () => { setActiveCommunity(null); setSidebarTab('chats'); setActivePeer(peerForIsland); setShowList(false); } : undefined,
                   }, 4000);
                 }
               }
@@ -4582,7 +4641,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         const botMsg = {
           id: `bot-${Date.now()}`,
           senderInboxId: '__bot__',
-          content: `🤖 ${botResponse}`,
+          content: botResponse,
           sentAtNs: Date.now() + 1,
           conversationId: `dm-${activePeer?.toLowerCase()}`
         };
@@ -5274,38 +5333,94 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
         {/* ── Sidebar Header ── */}
         <div className="px-4 py-3 border-b border-[#e4e7ec] bg-white flex flex-col gap-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}>
-          {/* Top row: Identity + Quick Actions */}
-          <div className="flex items-center justify-between">
-            <button type="button" className="flex items-center gap-2.5 min-w-0 rounded-xl -ml-1 px-1 py-1 hover:bg-[#f2f4f7] transition-colors text-left" onClick={() => setShowFullSettings(true)} aria-label="Your profile and settings">
-              <Avatar address={effectiveAddress} isMe={true} size={38} />
-              <div className="flex flex-col min-w-0">
-                <span className="text-[15px] font-semibold text-[#15171c] truncate max-w-[140px]">{getDisplayName(effectiveAddress)}</span>
-                <span className="text-[12px] text-[#727a88] tabular-nums">{shortAddr(effectiveAddress)}</span>
-              </div>
+          {/* Top row: identity on the left, three actions on the right. Everything
+              else lives in the "More" menu so the name never gets squeezed. */}
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              className="flex items-center gap-2.5 min-w-0 flex-1 rounded-xl -ml-1 px-1 py-1 hover:bg-[#f2f4f7] transition-colors text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c]"
+              onClick={() => setShowFullSettings(true)}
+              aria-label="Your profile and settings"
+              title={effectiveAddress || undefined}
+            >
+              <Avatar address={effectiveAddress} isMe={true} size={36} />
+              <span className="flex flex-col min-w-0">
+                <span className="text-[15px] font-semibold text-[#15171c] truncate leading-tight">
+                  {chatName.trim() || formatAddress(effectiveAddress)}
+                </span>
+                <span className="text-[12px] text-[#727a88] truncate leading-tight mt-0.5 tabular-nums">
+                  {chatName.trim() ? formatAddress(effectiveAddress) : 'Add your name'}
+                </span>
+              </span>
             </button>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setStudioOpen({})} className="relative w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Ledger Studio" aria-label="Ledger Studio">
-                <StudioIcon size={17} />
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setStudioOpen({})}
+                className="w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c]"
+                title="Ledger Studio"
+                aria-label="Open Ledger Studio"
+              >
+                <StudioIcon size={17} strokeWidth={1.75} />
               </button>
-              <ZkNotificationBell />
-              <button onClick={() => setShowZkWallet(true)} className="relative w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Private wallet" aria-label="Private wallet">
-                <Lock size={16} />
-              </button>
-              <button onClick={() => setShowContactRequests(true)} className="relative w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Contact requests" aria-label="Contact requests">
-                <Bell size={18} />
+              <button
+                type="button"
+                onClick={() => setShowContactRequests(true)}
+                className="relative w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c]"
+                title="Contact requests"
+                aria-label={pendingRequestCount > 0 ? `Contact requests, ${pendingRequestCount} new` : 'Contact requests'}
+              >
+                <Bell size={17} strokeWidth={1.75} />
                 {pendingRequestCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#e5484d] ring-2 ring-white" aria-label="New requests"></span>
+                  <span className="absolute top-0.5 left-[19px] min-w-[16px] h-4 px-1 rounded-full bg-[#e5484d] text-white text-[10px] font-semibold leading-4 text-center tabular-nums ring-2 ring-white" aria-hidden="true">
+                    {pendingRequestCount > 9 ? '9+' : pendingRequestCount}
+                  </span>
                 )}
               </button>
-              <button onClick={() => setShowCreateGroup(true)} className="w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="New group" aria-label="New group">
-                <Users size={18} />
-              </button>
-              <button onClick={() => setShowThemePicker(true)} className="w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Change theme" aria-label="Change theme">
-                <span className="text-[16px] leading-none select-none">🎨</span>
-              </button>
-              <button onClick={() => setShowFullSettings(true)} className="w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Settings" aria-label="Settings">
-                <Settings size={18} />
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowSidebarMore(v => !v)}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center text-[#15171c] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c] ${showSidebarMore ? 'bg-[#eff1f4]' : 'hover:bg-[#f2f4f7]'}`}
+                  title="More"
+                  aria-label="More"
+                  aria-haspopup="menu"
+                  aria-expanded={showSidebarMore}
+                >
+                  <MoreHorizontal size={18} strokeWidth={1.75} />
+                </button>
+                {showSidebarMore && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowSidebarMore(false)} aria-hidden="true" />
+                    <div
+                      role="menu"
+                      aria-label="More"
+                      onKeyDown={e => { if (e.key === 'Escape') setShowSidebarMore(false); }}
+                      className="absolute right-0 top-10 z-50 w-60 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] p-1.5"
+                    >
+                      {[
+                        { label: 'New chat', icon: <SquarePen size={16} strokeWidth={1.75} />, onClick: () => document.getElementById('ledger-new-chat-input')?.focus() },
+                        { label: 'New group', icon: <Users size={16} strokeWidth={1.75} />, onClick: () => setShowCreateGroup(true) },
+                        { label: 'Private wallet (testnet)', icon: <Lock size={16} strokeWidth={1.75} />, onClick: () => setShowZkWallet(true) },
+                        { label: 'Appearance', icon: <Palette size={16} strokeWidth={1.75} />, onClick: () => setShowThemePicker(true) },
+                        { label: 'Settings', icon: <Settings size={16} strokeWidth={1.75} />, onClick: () => setShowFullSettings(true) },
+                      ].map((item, i) => (
+                        <button
+                          key={item.label}
+                          type="button"
+                          role="menuitem"
+                          autoFocus={i === 0}
+                          onClick={() => { setShowSidebarMore(false); item.onClick(); }}
+                          className="w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[14px] text-[#15171c] hover:bg-[#f2f4f7] focus:bg-[#f2f4f7] outline-none transition-colors text-left"
+                        >
+                          <span className="text-[#475061]" aria-hidden="true">{item.icon}</span>
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -5439,17 +5554,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         {peerStatus.status === 'online' && activePeer?.toLowerCase() === conv.peerAddress.toLowerCase() && (
                           <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#1f9d55] border-2 border-white" aria-label="Online" />
                         )}
-                        {isPinned && (
-                          <span className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-[#f59e0b] border-2 border-white flex items-center justify-center" aria-label="Pinned">
-                            <span className="text-[6px] text-white font-black">📌</span>
-                          </span>
-                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1 mb-0.5">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <p className={`text-[15px] font-semibold truncate ${isMuted ? 'text-[#a3a9b4]' : 'text-[#15171c]'}`}>{displayLabel}</p>
-                            {isMuted && <span className="text-[10px] text-[#a3a9b4]">🔕</span>}
+                            {isMuted && <BellOff size={13} strokeWidth={1.9} className="text-[#a3a9b4] shrink-0" aria-label="Muted" />}
+                            {isPinned && <Pin size={12} strokeWidth={2} className="text-[#a3a9b4] shrink-0 rotate-45" aria-label="Pinned" />}
                           </div>
                           {conv.lastMessage && (
                             <span className={`text-[12px] shrink-0 tabular-nums ${conv.unreadCount && !isMuted ? 'text-[#1f9d55] font-medium' : 'text-[#a3a9b4]'}`}>
@@ -5609,7 +5720,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </div>
 
               <div className="flex items-center gap-0.5 shrink-0">
-                <ZkNotificationBell />
                 <button type="button" onClick={() => handleStartCall('video')} className="w-10 h-10 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Video call" aria-label="Video call">
                   <Video size={20} strokeWidth={1.8} />
                 </button>
@@ -5635,8 +5745,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         {[
                           { label: 'Contact info', icon: <Info size={17} strokeWidth={1.8} />, onClick: () => setShowContactInfo(true) },
                           { label: 'Search in chat', icon: <Search size={17} strokeWidth={1.8} />, onClick: () => { setShowSearch(true); setSearchQuery(''); setSearchIndex(0); } },
-                          { label: 'Chat wallpaper', icon: <span className="text-[15px] leading-none">🖼️</span>, onClick: () => setShowWallpaperPicker(true) },
-                          { label: 'Change theme', icon: <span className="text-[15px] leading-none">🎨</span>, onClick: () => setShowThemePicker(true) },
+                          { label: 'Wallpaper', icon: <ImageIcon size={17} strokeWidth={1.8} />, onClick: () => setShowWallpaperPicker(true) },
+                          { label: 'Appearance', icon: <Palette size={17} strokeWidth={1.8} />, onClick: () => setShowThemePicker(true) },
                           { label: 'Save contact', icon: <UserPlus size={17} strokeWidth={1.8} />, onClick: () => { setSaveContactName(getDisplayName(activePeer!)); setShowSaveContactModal(true); } },
                           { label: isSecretChat ? 'Turn off secret chat' : 'Secret chat', icon: <Flame size={17} strokeWidth={1.8} />, onClick: () => setIsSecretChat(!isSecretChat) },
                           { label: 'Private wallet', icon: <ShieldCheck size={17} strokeWidth={1.8} />, onClick: () => setShowZkWallet(v => !v) },
@@ -5718,7 +5828,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             />
 
             {/* Dynamic Chat Background */}
-            <div className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f7f8fa]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={{ ...(isSecretChat ? {} : (activePeer && convWallpapers[activePeer.toLowerCase()] ? { background: convWallpapers[activePeer.toLowerCase()] } : bgStyle)), fontFamily, fontSize: `${fontSizePx}px`, ...(ledgerSettings?.anti_screenshot && screenShielded ? { filter: 'blur(18px)', transition: 'filter 120ms ease' } : { transition: 'filter 160ms ease' }) }}>
+            <div data-chat-theme={isSecretChat ? 'default' : chatTheme.id} className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f7f8fa]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={{ ...(isSecretChat ? {} : chatThemeStyle(chatTheme)), ...(isSecretChat ? {} : (activePeer && convWallpapers[activePeer.toLowerCase()] ? { background: convWallpapers[activePeer.toLowerCase()] } : chatTheme.id !== 'default' ? { background: chatTheme.canvas } : bgStyle)), fontFamily, fontSize: `${fontSizePx}px`, ...(ledgerSettings?.anti_screenshot && screenShielded ? { filter: 'blur(18px)', transition: 'filter 120ms ease' } : { transition: 'filter 160ms ease' }) }}>
               {/* Matrix Rain Effect Layer */}
               {chatBackground === 'matrix' && (
                 <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,255,0,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -6285,7 +6395,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </div>
               <h1 className="text-[24px] md:text-[28px] font-bold tracking-[-0.03em] text-[#15171c] mb-2">Ledger Chat</h1>
               <p className="text-[15px] text-[#727a88] leading-relaxed max-w-[320px]">
-                Private. Encrypted. Yours. Select a chat or start a new one.
+                Select a chat, or start a new one with a name, an @username or a wallet address.
               </p>
               <div className="flex gap-3 mt-6">
                 <button
@@ -6305,27 +6415,40 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   New group
                 </button>
               </div>
-              <div className="mt-8 w-full grid grid-cols-2 gap-2.5 text-left max-w-sm">
+              {/* What Ledger Chat does, in words the code backs up. Each line is
+                  scoped: direct messages are MLS end to end; community posts are
+                  stored by the server, and the card says so. */}
+              <ul className="mt-8 w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-left max-w-[440px]">
                 {[
-                  { emoji: '🔐', title: 'End-to-end encrypted', text: 'Messages live only on your devices.' },
-                  { emoji: '💸', title: 'Wallet payments', text: 'Send tokens directly from chat.' },
-                  { emoji: '👥', title: 'Communities', text: 'Channels, roles, and invite links.' },
-                  { emoji: '🎨', title: 'Fully customizable', text: '8 themes, 12 wallpapers, 7 bubble styles.' },
-                ].map((f, idx) => (
-                  <motion.div
-                    key={f.title}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 28, delay: idx * 0.06 }}
-                    className="bg-white rounded-2xl p-4 border border-[#e4e7ec] hover:shadow-sm transition-shadow"
-                  >
-                    <span className="text-[22px] mb-2 block">{f.emoji}</span>
-                    <p className="text-[13px] font-semibold text-[#15171c]">{f.title}</p>
-                    <p className="text-[12px] text-[#727a88] leading-snug mt-0.5">{f.text}</p>
-                  </motion.div>
-                ))}
-              </div>
-              <p className="mt-6 text-[12px] text-[#a3a9b4]">Powered by XMTP and Aztec Network</p>
+                  { icon: <Lock size={16} strokeWidth={1.75} />, title: 'Encrypted direct messages', text: 'One-to-one chats use MLS end-to-end encryption through XMTP.' },
+                  { icon: <Users size={16} strokeWidth={1.75} />, title: 'Communities', text: 'Channels, roles, invite links and apps. Community posts are stored on our server.' },
+                  ...((ledgerSettings as any)?.payments_enabled !== false ? [{ icon: <Wallet size={16} strokeWidth={1.75} />, title: 'Payments', text: 'Send tokens from your wallet without leaving the chat.' }] : []),
+                  { icon: <Palette size={16} strokeWidth={1.75} />, title: 'Appearance', text: `${CHAT_THEMES.length} themes, ${WALLPAPER_OPTIONS.length} wallpapers and ${BUBBLE_STYLES.length} bubble styles.`, onClick: () => setShowThemePicker(true) },
+                ].map((f, idx) => {
+                  const body = (
+                    <>
+                      <span className="w-8 h-8 rounded-lg bg-[#f2f4f7] text-[#15171c] flex items-center justify-center mb-2.5" aria-hidden="true">{f.icon}</span>
+                      <span className="block text-[13.5px] font-semibold text-[#15171c]">{f.title}</span>
+                      <span className="block text-[12.5px] text-[#5b6271] leading-snug mt-0.5">{f.text}</span>
+                    </>
+                  );
+                  return (
+                    <motion.li
+                      key={f.title}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ type: 'spring', stiffness: 320, damping: 30, delay: idx * 0.04 }}
+                    >
+                      {'onClick' in f && f.onClick ? (
+                        <button type="button" onClick={f.onClick} className="w-full h-full text-left bg-white rounded-2xl p-4 border border-[#e4e7ec] hover:border-[#c9ced6] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]">{body}</button>
+                      ) : (
+                        <div className="h-full bg-white rounded-2xl p-4 border border-[#e4e7ec]">{body}</div>
+                      )}
+                    </motion.li>
+                  );
+                })}
+              </ul>
+              <p className="mt-6 text-[12px] text-[#727a88]">Messaging by XMTP · Private wallet on the Aztec testnet</p>
             </div>
           </div>
         )}
@@ -7227,17 +7350,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         document.body
       )}
 
-      {/* ── Theme Picker Sheet ────────────────────────────────────────────── */}
+      {/* ── Appearance (theme + bubbles) ───────────────────────────────────── */}
       <ThemePickerSheet
         open={showThemePicker}
-        currentThemeId={chatThemeId}
-        onSelect={(palette: ThemePalette) => {
-          setChatThemeId(palette.id);
-          localStorage.setItem('ledger_chat_theme_id', palette.id);
-          applyThemePalette(palette);
-          setShowThemePicker(false);
+        currentThemeId={chatTheme.id}
+        currentBubbleStyle={bubbleStyle}
+        onSelectTheme={(t: ChatTheme) => {
+          updateBatch({ chat_theme: t.id });
         }}
+        onSelectBubbleStyle={(id: string) => { if (isBubbleStyleId(id)) updateBatch({ bubble_style: id }); }}
         onClose={() => setShowThemePicker(false)}
+        onOpenWallpaper={activePeer ? () => setShowWallpaperPicker(true) : undefined}
       />
 
       {/* ── Wallpaper Picker Sheet ────────────────────────────────────────── */}

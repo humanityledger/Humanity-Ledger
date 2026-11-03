@@ -215,10 +215,10 @@ export function PinnedMessagesPanel({
 
   const addr = (a: string) => `${a?.slice(0, 6)}...${a?.slice(-4)}`;
   const preview = (c: string) => {
-    if (c.startsWith('__PAYMENT__::')) return '💸 Crypto payment';
-    if (c.startsWith('__AUDIO__')) return '🎤 Voice message';
-    if (c.startsWith('__MEDIA__')) return '📷 Media';
-    if (c.startsWith('__POLL__')) return '📊 Poll';
+    if (c.startsWith('__PAYMENT__::')) return 'Payment';
+    if (c.startsWith('__AUDIO__')) return 'Voice message';
+    if (c.startsWith('__MEDIA__')) return 'Photo or video';
+    if (c.startsWith('__POLL__')) return 'Poll';
     return c.replace(/<[^>]+>/g, '').slice(0, 80);
   };
 

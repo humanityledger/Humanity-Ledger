@@ -1,287 +1,280 @@
 "use client";
 
-import React, { useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Check, X } from "lucide-react";
+/**
+ * Appearance: the conversation's colour theme and bubble style, with a live
+ * preview drawn by the same classes and theme rules the conversation uses
+ * (lib/chat/bubbleStyles.ts, lib/chat/themes.ts, app/ledger-chat-settings.css),
+ * so what you pick here is what the chat shows.
+ *
+ * A centred dialog on desktop, a bottom sheet on phones. Changes apply at
+ * once and are saved as the `chat_theme` and `bubble_style` settings.
+ */
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Theme palette definitions
-// ─────────────────────────────────────────────────────────────────────────────
+import React, { useCallback, useEffect, useId, useRef } from "react";
+import { motion, AnimatePresence, MotionConfig } from "framer-motion";
+import { Check, CheckCheck, Image as ImageIcon, X } from "lucide-react";
+import { CHAT_THEMES, chatThemeVars, findChatTheme, type ChatTheme } from "@/lib/chat/themes";
+import { BUBBLE_STYLES, bubbleClasses } from "@/lib/chat/bubbleStyles";
 
-export interface ThemePalette {
-  id: string;
-  label: string;
-  /** Emoji or symbol that represents the theme visually */
-  symbol: string;
-  /** Own-message bubble color (hex) */
-  accent: string;
-  /** Secondary accent for gradients */
-  accentDark: string;
-  /** Chat area background */
-  bgChat: string;
-  /** Sidebar / surface background */
-  bgSurface: string;
-  /** Primary text color */
-  textPrimary: string;
-  /** Secondary / muted text color */
-  textMuted: string;
-  /** Received bubble background */
-  bubbleReceived: string;
-  /** Border / divider color */
-  border: string;
-}
-
-export const THEME_PALETTES: ThemePalette[] = [
-  {
-    id: "default",
-    label: "Classic",
-    symbol: "⬜",
-    accent: "#15171c",
-    accentDark: "#000000",
-    bgChat: "#f7f8fa",
-    bgSurface: "#ffffff",
-    textPrimary: "#15171c",
-    textMuted: "#727a88",
-    bubbleReceived: "#ffffff",
-    border: "#e4e7ec",
-  },
-  {
-    id: "midnight",
-    label: "Midnight",
-    symbol: "🌑",
-    accent: "#6c63ff",
-    accentDark: "#4b44cc",
-    bgChat: "#0d0d14",
-    bgSurface: "#13131f",
-    textPrimary: "#e8e9f0",
-    textMuted: "#6b6e85",
-    bubbleReceived: "#1e1e2e",
-    border: "#2a2a3e",
-  },
-  {
-    id: "ocean",
-    label: "Ocean",
-    symbol: "🌊",
-    accent: "#0ea5e9",
-    accentDark: "#0284c7",
-    bgChat: "#f0f9ff",
-    bgSurface: "#ffffff",
-    textPrimary: "#0c4a6e",
-    textMuted: "#60a5d8",
-    bubbleReceived: "#e0f2fe",
-    border: "#bae6fd",
-  },
-  {
-    id: "forest",
-    label: "Forest",
-    symbol: "🌲",
-    accent: "#16a34a",
-    accentDark: "#15803d",
-    bgChat: "#f0fdf4",
-    bgSurface: "#ffffff",
-    textPrimary: "#14532d",
-    textMuted: "#4ade80",
-    bubbleReceived: "#dcfce7",
-    border: "#bbf7d0",
-  },
-  {
-    id: "rose",
-    label: "Rose",
-    symbol: "🌹",
-    accent: "#e11d48",
-    accentDark: "#be123c",
-    bgChat: "#fff1f2",
-    bgSurface: "#ffffff",
-    textPrimary: "#881337",
-    textMuted: "#fb7185",
-    bubbleReceived: "#ffe4e6",
-    border: "#fecdd3",
-  },
-  {
-    id: "amber",
-    label: "Amber",
-    symbol: "🔆",
-    accent: "#d97706",
-    accentDark: "#b45309",
-    bgChat: "#fffbeb",
-    bgSurface: "#ffffff",
-    textPrimary: "#78350f",
-    textMuted: "#fbbf24",
-    bubbleReceived: "#fef3c7",
-    border: "#fde68a",
-  },
-  {
-    id: "violet",
-    label: "Violet",
-    symbol: "💜",
-    accent: "#7c3aed",
-    accentDark: "#6d28d9",
-    bgChat: "#f5f3ff",
-    bgSurface: "#ffffff",
-    textPrimary: "#2e1065",
-    textMuted: "#a78bfa",
-    bubbleReceived: "#ede9fe",
-    border: "#ddd6fe",
-  },
-  {
-    id: "amoled",
-    label: "AMOLED",
-    symbol: "⬛",
-    accent: "#22c55e",
-    accentDark: "#16a34a",
-    bgChat: "#000000",
-    bgSurface: "#000000",
-    textPrimary: "#f8fafc",
-    textMuted: "#64748b",
-    bubbleReceived: "#0a0a0a",
-    border: "#1a1a1a",
-  },
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CSS variable injection
-// ─────────────────────────────────────────────────────────────────────────────
-
-export function applyThemePalette(palette: ThemePalette) {
-  if (typeof document === "undefined") return;
-  const root = document.documentElement;
-  root.style.setProperty("--lc-accent", palette.accent);
-  root.style.setProperty("--lc-accent-dark", palette.accentDark);
-  root.style.setProperty("--lc-bg-chat", palette.bgChat);
-  root.style.setProperty("--lc-bg-surface", palette.bgSurface);
-  root.style.setProperty("--lc-text-primary", palette.textPrimary);
-  root.style.setProperty("--lc-text-muted", palette.textMuted);
-  root.style.setProperty("--lc-bubble-received", palette.bubbleReceived);
-  root.style.setProperty("--lc-border", palette.border);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ThemePickerSheet Component
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface ThemePickerSheetProps {
+export interface ThemePickerSheetProps {
   open: boolean;
   currentThemeId: string;
-  onSelect: (palette: ThemePalette) => void;
+  currentBubbleStyle: string;
+  onSelectTheme: (theme: ChatTheme) => void;
+  onSelectBubbleStyle: (styleId: string) => void;
   onClose: () => void;
+  /** Shown only while a chat is open: wallpaper is set per chat. */
+  onOpenWallpaper?: () => void;
+}
+
+/** The variables a theme sets, as an inline style. */
+export function chatThemeStyle(theme: ChatTheme): React.CSSProperties {
+  return chatThemeVars(theme) as unknown as React.CSSProperties;
+}
+
+/** Arrow keys move the selection inside a radio group, as the ARIA pattern expects. */
+function useRadioKeys<T extends { id: string }>(items: readonly T[], current: string, select: (item: T) => void, columns: number) {
+  return useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const i = Math.max(0, items.findIndex(x => x.id === current));
+    const step: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: columns, ArrowUp: -columns };
+    let next: number | null = null;
+    if (e.key in step) next = (i + step[e.key] + items.length) % items.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = items.length - 1;
+    if (next === null) return;
+    e.preventDefault();
+    select(items[next]);
+    const el = e.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]')[next];
+    el?.focus();
+  }, [items, current, select, columns]);
+}
+
+function Preview({ theme, bubbleStyle }: { theme: ChatTheme; bubbleStyle: string }) {
+  const sent = bubbleClasses(bubbleStyle, true);
+  const recv = bubbleClasses(bubbleStyle, false);
+  const pad = 'px-3.5 py-2';
+  return (
+    <div
+      data-chat-theme={theme.id}
+      style={{ ...chatThemeStyle(theme), backgroundColor: theme.canvas }}
+      className="relative h-full w-full overflow-hidden flex flex-col justify-end gap-1 px-4 py-5 md:px-6 md:py-6"
+      aria-hidden="true"
+    >
+      <div className="flex justify-center mb-3">
+        <span className="px-3 py-1 bg-white border border-[#e6e8ec] rounded-full text-[12px] font-medium text-[#727a88]">Today</span>
+      </div>
+      <div className="flex flex-col items-start max-w-[78%]">
+        <div className={`${recv} ${pad}`}>
+          <p className="text-[14.5px] leading-[1.45]">Did the transfer land?</p>
+        </div>
+        <div className="msg-meta flex items-center gap-1.5 mt-1 px-1">
+          <span className="msg-time text-[12px] tabular-nums text-[#a3a9b4]">09:41</span>
+        </div>
+      </div>
+      <div className="flex flex-col items-end self-end max-w-[78%] mt-1">
+        <div className={`${sent} ${pad}`}>
+          <p className="text-[14.5px] leading-[1.45]">Yes, a minute ago. Thank you!</p>
+        </div>
+        <div className="msg-meta flex items-center gap-1.5 mt-1 px-1">
+          <span className="msg-time text-[12px] tabular-nums text-[#a3a9b4]">09:42</span>
+          <span className="msg-read text-[#15171c]"><CheckCheck size={14} strokeWidth={2} /></span>
+        </div>
+      </div>
+      <div className="hidden md:flex flex-col items-start max-w-[78%] mt-1">
+        <div className={`${recv} ${pad}`}>
+          <button type="button" tabIndex={-1} className="flex items-stretch gap-2 mb-1.5 -mx-1 px-2 py-1.5 rounded-xl text-left bg-[#f2f4f7]">
+            <span className="w-[3px] rounded-full shrink-0 bg-[#15171c]" />
+            <span className="flex flex-col min-w-0">
+              <span className="text-[12.5px] font-medium text-[#15171c]">Reply</span>
+              <span className="text-[13px] truncate text-[#727a88]">Yes, a minute ago. Thank you!</span>
+            </span>
+          </button>
+          <p className="text-[14.5px] leading-[1.45]">Perfect, see you later.</p>
+        </div>
+        <div className="msg-meta flex items-center gap-1.5 mt-1 px-1">
+          <span className="msg-time text-[12px] tabular-nums text-[#a3a9b4]">09:43</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ThemeSwatch({ theme }: { theme: ChatTheme }) {
+  return (
+    <span className="block w-full h-12 rounded-lg overflow-hidden relative" style={{ backgroundColor: theme.canvas, boxShadow: `inset 0 0 0 1px ${theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(16,24,40,0.08)'}` }} aria-hidden="true">
+      <span className="absolute left-2 top-2 h-3.5 w-[46%] rounded-full" style={{ backgroundColor: theme.received, boxShadow: `inset 0 0 0 1px ${theme.border}` }} />
+      <span className="absolute right-2 bottom-2 h-3.5 w-[40%] rounded-full" style={{ backgroundColor: theme.accent }} />
+    </span>
+  );
 }
 
 export function ThemePickerSheet({
   open,
   currentThemeId,
-  onSelect,
+  currentBubbleStyle,
+  onSelectTheme,
+  onSelectBubbleStyle,
   onClose,
+  onOpenWallpaper,
 }: ThemePickerSheetProps) {
-  const handleSelect = useCallback(
-    (palette: ThemePalette) => {
-      applyThemePalette(palette);
-      onSelect(palette);
-    },
-    [onSelect]
-  );
+  const theme = findChatTheme(currentThemeId);
+  const style = BUBBLE_STYLES.some(s => s.id === currentBubbleStyle) ? currentBubbleStyle : 'default';
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  // Held in a ref so a new onClose each render does not re-run the focus effect.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  const onThemeKeys = useRadioKeys(CHAT_THEMES, theme.id, onSelectTheme, 2);
+  const onStyleKeys = useRadioKeys(BUBBLE_STYLES, style, (s) => onSelectBubbleStyle(s.id), 2);
+
+  // Escape closes; focus goes into the dialog and back to where it came from.
+  useEffect(() => {
+    if (!open) return;
+    returnFocusRef.current = (document.activeElement as HTMLElement) ?? null;
+    const t = window.setTimeout(() => {
+      dialogRef.current?.querySelector<HTMLElement>('[role="radio"][aria-checked="true"]')?.focus();
+    }, 30);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.stopPropagation(); onCloseRef.current(); }
+      if (e.key === 'Tab' && dialogRef.current) {
+        const f = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]):not([tabindex="-1"]), [role="radio"][tabindex="0"]'));
+        if (f.length === 0) return;
+        const first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('keydown', onKey, true);
+      returnFocusRef.current?.focus?.();
+    };
+  }, [open]);
 
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
-
-          {/* Sheet */}
-          <motion.div
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[28px] shadow-2xl max-h-[85vh] overflow-y-auto"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", stiffness: 380, damping: 32 }}
-          >
-            {/* Handle bar */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 rounded-full bg-[#e4e7ec]" />
-            </div>
-
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#f2f4f7]">
-              <div>
-                <h2 className="text-[20px] font-bold text-[#15171c] leading-none">
-                  Themes
-                </h2>
-                <p className="text-[13px] text-[#727a88] mt-1">
-                  Choose your color palette
-                </p>
+    <MotionConfig reducedMotion="user">
+      <AnimatePresence>
+        {open && (
+          <div className="fixed inset-0 z-[70] flex items-end md:items-center justify-center md:p-6">
+            <motion.div
+              className="absolute inset-0 bg-[rgba(16,24,40,0.36)]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              onClick={onClose}
+              aria-hidden="true"
+            />
+            <motion.div
+              ref={dialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={titleId}
+              className="relative w-full md:w-[min(880px,100%)] h-[min(92dvh,760px)] md:h-[min(600px,calc(100dvh-48px))] bg-white rounded-t-[24px] md:rounded-[24px] shadow-[0_32px_64px_-16px_rgba(16,24,40,0.28)] overflow-hidden flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_360px]"
+              initial={{ y: 24, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 24, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 36 }}
+              style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            >
+              {/* Preview: top on phones, left on desktop */}
+              <div className="h-[38%] min-h-[200px] md:h-auto md:min-h-0 border-b md:border-b-0 md:border-r border-[#eceef2] shrink-0">
+                <Preview theme={theme} bubbleStyle={style} />
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-9 h-9 rounded-full bg-[#f2f4f7] flex items-center justify-center text-[#475061] hover:bg-[#e4e7ec] transition-colors"
-                aria-label="Close"
-              >
-                <X size={18} strokeWidth={2} />
-              </button>
-            </div>
 
-            {/* Grid */}
-            <div className="grid grid-cols-2 gap-3 p-5 pb-10">
-              {THEME_PALETTES.map((palette) => {
-                const isActive = palette.id === currentThemeId;
-                return (
-                  <motion.button
-                    key={palette.id}
+              {/* Controls */}
+              <div className="flex-1 min-h-0 flex flex-col">
+                <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-[#f2f4f7]">
+                  <div className="min-w-0">
+                    <h2 id={titleId} className="text-[17px] font-semibold text-[#15171c] leading-tight">Appearance</h2>
+                    <p className="text-[12.5px] text-[#727a88] mt-0.5">Changes apply right away.</p>
+                  </div>
+                  <button
                     type="button"
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => handleSelect(palette)}
-                    className={`relative rounded-2xl p-4 border-2 text-left transition-all ${
-                      isActive
-                        ? "border-[#15171c] shadow-md"
-                        : "border-transparent shadow-sm hover:border-[#e4e7ec]"
-                    }`}
-                    style={{ backgroundColor: palette.bgSurface }}
+                    onClick={onClose}
+                    className="w-9 h-9 rounded-full bg-[#f2f4f7] flex items-center justify-center text-[#475061] hover:bg-[#e4e7ec] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]"
+                    aria-label="Close"
                   >
-                    {/* Preview swatch strip */}
-                    <div
-                      className="w-full h-10 rounded-xl mb-3 overflow-hidden flex"
-                      style={{ backgroundColor: palette.bgChat }}
-                    >
-                      <div
-                        className="h-full flex-1"
-                        style={{ backgroundColor: palette.bubbleReceived }}
-                      />
-                      <div
-                        className="h-full w-[45%]"
-                        style={{ backgroundColor: palette.accent }}
-                      />
-                    </div>
+                    <X size={17} strokeWidth={2} />
+                  </button>
+                </div>
 
-                    {/* Label row */}
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="text-[14px] font-semibold" style={{ color: palette.textPrimary }}>
-                          {palette.symbol} {palette.label}
-                        </span>
-                      </div>
-                      {isActive && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="w-5 h-5 rounded-full bg-[#15171c] flex items-center justify-center"
-                        >
-                          <Check size={11} strokeWidth={3} className="text-white" />
-                        </motion.div>
-                      )}
+                <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col gap-6">
+                  <section aria-labelledby={`${titleId}-theme`}>
+                    <h3 id={`${titleId}-theme`} className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#727a88] mb-2.5">Theme</h3>
+                    <div role="radiogroup" aria-labelledby={`${titleId}-theme`} className="grid grid-cols-2 gap-2.5" onKeyDown={onThemeKeys}>
+                      {CHAT_THEMES.map(t => {
+                        const selected = t.id === theme.id;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            tabIndex={selected ? 0 : -1}
+                            onClick={() => onSelectTheme(t)}
+                            className={`group relative rounded-xl p-2 text-left transition-[box-shadow,background-color] duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c] ${selected ? 'bg-[#f7f8fa] shadow-[inset_0_0_0_2px_#15171c]' : 'bg-white shadow-[inset_0_0_0_1px_#e4e7ec] hover:shadow-[inset_0_0_0_1px_#c9ced6]'}`}
+                          >
+                            <ThemeSwatch theme={t} />
+                            <span className="mt-2 flex items-center justify-between gap-2 px-0.5">
+                              <span className="text-[13px] font-medium text-[#15171c] truncate">{t.label}</span>
+                              {selected && (
+                                <span className="w-4 h-4 rounded-full bg-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
+                                  <Check size={10} strokeWidth={3} className="text-white" />
+                                </span>
+                              )}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+                  </section>
+
+                  <section aria-labelledby={`${titleId}-bubbles`}>
+                    <h3 id={`${titleId}-bubbles`} className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#727a88] mb-2.5">Bubbles</h3>
+                    <div role="radiogroup" aria-labelledby={`${titleId}-bubbles`} className="grid grid-cols-2 gap-2" onKeyDown={onStyleKeys}>
+                      {BUBBLE_STYLES.map(b => {
+                        const selected = b.id === style;
+                        return (
+                          <button
+                            key={b.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            tabIndex={selected ? 0 : -1}
+                            onClick={() => onSelectBubbleStyle(b.id)}
+                            className={`h-10 px-3 rounded-xl text-[13.5px] font-medium flex items-center justify-between gap-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c] ${selected ? 'bg-[#15171c] text-white' : 'bg-[#f2f4f7] text-[#15171c] hover:bg-[#e9ecf0]'}`}
+                          >
+                            <span className="truncate">{b.label}</span>
+                            {selected && <Check size={14} strokeWidth={2.5} aria-hidden="true" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  {onOpenWallpaper && (
+                    <section>
+                      <button
+                        type="button"
+                        onClick={() => { onClose(); onOpenWallpaper(); }}
+                        className="w-full h-11 px-3.5 rounded-xl bg-white shadow-[inset_0_0_0_1px_#e4e7ec] hover:shadow-[inset_0_0_0_1px_#c9ced6] flex items-center gap-3 text-left transition-shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]"
+                      >
+                        <ImageIcon size={16} strokeWidth={1.75} className="text-[#475061]" aria-hidden="true" />
+                        <span className="flex-1 text-[14px] text-[#15171c]">Wallpaper for this chat</span>
+                      </button>
+                      <p className="mt-1.5 text-[12px] text-[#727a88] px-0.5">A chat wallpaper replaces the theme background in that chat.</p>
+                    </section>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </MotionConfig>
   );
 }

@@ -29,7 +29,7 @@ import { wipeLocalChatData } from '@/lib/settings/localWipe';
 import { loadBlockList, saveBlockList } from '@/lib/chat/blockList';
 import { downscaleAvatar, pushPublicProfile } from '@/lib/chat/profileSync';
 import { WALLPAPER_OPTIONS } from './WallpaperPickerSheet';
-import { THEME_PALETTES, applyThemePalette } from './ThemePickerSheet';
+import { CHAT_THEMES, findChatTheme } from '@/lib/chat/themes';
 
 function downloadSettingsBackup(): void {
   const data = exportableLocalStorage();
@@ -1003,7 +1003,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <Row
                   icon={<Palette size={18} />}
                   label="Color theme"
-                  value={THEME_PALETTES.find(p => p.id === (settings.chat_theme || 'default'))?.label || 'Classic'}
+                  value={findChatTheme(settings.chat_theme).label}
                   onTap={() => setModal('color_theme')}
                 />
                 <Row
@@ -1546,36 +1546,32 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {modal === 'color_theme' && (
                 <div className="px-6 pb-6">
                   <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">Color theme</h3>
-                  <p className="text-[13px] text-[#727a88] mb-5">Curated palettes that transform your entire messaging aesthetic.</p>
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    {THEME_PALETTES.map(p => {
-                      const isSel = (settings.chat_theme || 'default') === p.id;
+                  <p className="text-[13px] text-[#727a88] mb-5">Colours for your conversations: the background and both kinds of bubble.</p>
+                  <div className="grid grid-cols-2 gap-3 mb-4" role="radiogroup" aria-label="Color theme">
+                    {CHAT_THEMES.map(p => {
+                      const isSel = findChatTheme(settings.chat_theme).id === p.id;
                       return (
                         <button
                           type="button"
+                          role="radio"
+                          aria-checked={isSel}
                           key={p.id}
                           onClick={() => {
-                            applyThemePalette(p);
                             updateSetting('chat_theme', p.id as any);
-                            updateSetting('accent_color', p.accent as any);
                             setModal(null);
-                            toast.success(`Theme applied: ${p.label}`);
                           }}
-                          className={`p-3.5 rounded-2xl border-2 text-left transition-all ${
-                            isSel ? 'border-[#15171c] shadow-md' : 'border-transparent bg-[#f2f4f7]'
+                          className={`p-2.5 rounded-2xl text-left transition-shadow ${
+                            isSel ? 'bg-[#f7f8fa] shadow-[inset_0_0_0_2px_#15171c]' : 'bg-white shadow-[inset_0_0_0_1px_#e4e7ec] hover:shadow-[inset_0_0_0_1px_#c9ced6]'
                           }`}
-                          style={{ backgroundColor: p.bgSurface }}
                         >
-                          <div className="w-full h-8 rounded-lg mb-2 flex overflow-hidden" style={{ backgroundColor: p.bgChat }}>
-                            <div className="h-full flex-1" style={{ backgroundColor: p.bubbleReceived }} />
-                            <div className="h-full w-[45%]" style={{ backgroundColor: p.accent }} />
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-[13px] font-semibold" style={{ color: p.textPrimary }}>
-                              {p.symbol} {p.label}
-                            </span>
-                            {isSel && <Check size={14} className="text-[#15171c]" />}
-                          </div>
+                          <span className="block w-full h-10 rounded-lg mb-2 relative overflow-hidden" style={{ backgroundColor: p.canvas }} aria-hidden="true">
+                            <span className="absolute left-2 top-2 h-3 w-[46%] rounded-full" style={{ backgroundColor: p.received, boxShadow: `inset 0 0 0 1px ${p.border}` }} />
+                            <span className="absolute right-2 bottom-2 h-3 w-[40%] rounded-full" style={{ backgroundColor: p.accent }} />
+                          </span>
+                          <span className="flex items-center justify-between px-0.5">
+                            <span className="text-[13px] font-medium text-[#15171c]">{p.label}</span>
+                            {isSel && <Check size={14} className="text-[#15171c]" aria-hidden="true" />}
+                          </span>
                         </button>
                       );
                     })}

@@ -13,6 +13,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, Plus, X, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppFrame } from './AppFrame';
+import { ErrorState } from '../ErrorState';
 
 interface Identity { id: string; label: string }
 interface AppSummary {
@@ -64,16 +65,50 @@ function lang(): 'es' | 'en' {
   return navigator.language?.toLowerCase().startsWith('es') ? 'es' : 'en';
 }
 
+/** A failed request, with what the server said about it (routeErrors.ts). */
+class ApiError extends Error {
+  constructor(message: string, readonly status: number, readonly code?: string, readonly errorId?: string, readonly problems?: unknown) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, { cache: 'no-store', ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) } });
+  let res: Response;
+  try {
+    res = await fetch(url, { cache: 'no-store', ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) } });
+  } catch {
+    throw new ApiError('Could not reach the server. Check your connection.', 0, 'NETWORK');
+  }
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err: any = new Error(body.error || `Request failed (${res.status}).`);
-    err.status = res.status;
-    err.problems = body.problems;
-    throw err;
+    const fallback = res.status === 401 ? 'Your session has ended. Sign in again.'
+      : res.status === 403 ? 'You do not have access to this.'
+      : res.status === 404 ? 'This was not found.'
+      : res.status === 429 ? 'Too many requests. Wait a moment and try again.'
+      : 'Something went wrong on the server.';
+    throw new ApiError(typeof body.error === 'string' && body.error ? body.error : fallback, res.status, body.code, body.errorId, body.problems);
   }
   return body as T;
+}
+
+/** Title and explanation for the Apps list failing to load. */
+function describeLoadError(e: ApiError): { title: string; message: string } {
+  switch (e.code) {
+    case 'APPS_NOT_PROVISIONED':
+    case 'APPS_CLIENT_OUTDATED':
+      return {
+        title: 'Apps are not set up on this server',
+        message: 'The server is missing the storage for community apps. Whoever runs it can add it; nothing in this community is lost.',
+      };
+    case 'DATABASE_UNAVAILABLE':
+      return { title: 'The server cannot reach its database', message: 'This is usually brief. Try again in a moment.' };
+    case 'NETWORK':
+      return { title: 'You appear to be offline', message: 'Apps will load when your connection is back.' };
+    default:
+      if (e.status === 401) return { title: 'Your session has ended', message: 'Sign in again to see this community\'s apps.' };
+      return { title: 'Apps could not load', message: e.message };
+  }
 }
 
 function useElapsed(running: boolean) {
@@ -96,7 +131,7 @@ const label = 'font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--hl-
 export function CommunityApps({ communityId, communityName }: CommunityAppsProps) {
   const base = `/api/chat/communities/${encodeURIComponent(communityId)}/apps`;
   const [data, setData] = useState<ListResponse | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<ApiError | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const L = useMemo(lang, []);
@@ -107,11 +142,16 @@ export function CommunityApps({ communityId, communityName }: CommunityAppsProps
       setData(d);
       setLoadError(null);
       return d;
-    } catch (e: any) {
-      setLoadError(e.message);
+    } catch (e) {
+      setLoadError(e instanceof ApiError ? e : new ApiError('Apps could not load.', 0));
       return null;
     }
   }, [base]);
+  // A missing table will not fix itself in 30 s: stop polling until a manual retry.
+  const pollRef = useRef(true);
+  useEffect(() => {
+    pollRef.current = !(loadError && (loadError.code === 'APPS_NOT_PROVISIONED' || loadError.code === 'APPS_CLIENT_OUTDATED'));
+  }, [loadError]);
 
   useEffect(() => {
     load().then(d => {
@@ -119,7 +159,7 @@ export function CommunityApps({ communityId, communityName }: CommunityAppsProps
       const first = d.apps.find(a => a.status === 'published');
       setSelection(prev => prev ?? (first && typeof window !== 'undefined' && window.innerWidth >= 768 ? { kind: 'app', id: first.id } : null));
     });
-    const t = setInterval(() => { if (document.visibilityState === 'visible') load(); }, 30_000);
+    const t = setInterval(() => { if (pollRef.current && document.visibilityState === 'visible') load(); }, 30_000);
     return () => clearInterval(t);
   }, [load]);
 
@@ -173,7 +213,16 @@ export function CommunityApps({ communityId, communityName }: CommunityAppsProps
               {[0, 1, 2].map(i => <div key={i} className="h-12 rounded-[var(--hl-radius)] bg-[var(--hl-bg-muted)] animate-pulse motion-reduce:animate-none" />)}
             </div>
           )}
-          {loadError && <p className="px-4 text-[13px] text-[var(--hl-ink-3)]">{loadError}</p>}
+          {loadError && !data && (
+            <>
+              {/* Phones see only this column, so the full explanation goes here;
+                  on wider screens it is in the detail pane beside it. */}
+              <div className="md:hidden flex justify-center px-6 pt-10">
+                <ErrorState {...describeLoadError(loadError)} errorId={loadError.errorId} onRetry={load} />
+              </div>
+              <p className="hidden md:block px-4 text-[13px] text-[var(--hl-ink-4)]">Unavailable</p>
+            </>
+          )}
 
           {data && (
             <>
@@ -211,6 +260,9 @@ export function CommunityApps({ communityId, communityName }: CommunityAppsProps
           />
         ) : (
           <div className="flex-1 flex items-center justify-center px-6">
+            {loadError && !data ? (
+              <ErrorState {...describeLoadError(loadError)} errorId={loadError.errorId} onRetry={load} />
+            ) : (
             <div className="max-w-sm text-center">
               <p className="text-[15px] font-semibold text-[var(--hl-ink)]">Apps for {communityName}</p>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--hl-ink-3)]">
@@ -222,6 +274,7 @@ export function CommunityApps({ communityId, communityName }: CommunityAppsProps
                 </button>
               )}
             </div>
+            )}
           </div>
         )}
       </section>

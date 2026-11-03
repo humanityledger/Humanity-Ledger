@@ -120,7 +120,7 @@ export function LedgerChatCallHistory({
       <div className="flex-1 overflow-y-auto">
         {callHistory.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-black/30 px-8">
-            <span className="text-6xl">🐋</span>
+            <span className="w-14 h-14 rounded-full bg-[#eff1f4] text-[#727a88] flex items-center justify-center" aria-hidden="true"><Phone size={22} strokeWidth={1.7} /></span>
             <p className="text-[15px] font-medium text-center">
               No calls yet.<br />Start a call to see it here.
             </p>

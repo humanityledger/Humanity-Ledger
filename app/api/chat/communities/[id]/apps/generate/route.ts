@@ -6,6 +6,7 @@ import { resolveCommunityAccess, appSummary, MAX_DRAFTS_PER_MEMBER } from '@/lib
 import {
   generateApp, GenerationFailedError, GenerationUnavailableError,
 } from '@/lib/community-apps/generate';
+import { appsRoute } from '@/lib/community-apps/routeErrors';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -19,7 +20,7 @@ const MAX_REQUEST = 2000;
  * caller's draft. With appId: revises one of the caller's own apps in place
  * and bumps its version; its data is kept.
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = appsRoute('generate POST', async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const auth = await requireWallet(req);
   if (auth.errorResponse) return auth.errorResponse;
   const { id } = await params;
@@ -95,4 +96,4 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     console.error('[community apps generate]', e);
     return NextResponse.json({ error: 'The app could not be written. Try again.' }, { status: 500 });
   }
-}
+});

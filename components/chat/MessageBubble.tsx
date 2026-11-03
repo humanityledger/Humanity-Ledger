@@ -4,8 +4,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
 import {
   Forward, MapPin, Clock, Phone, PhoneMissed, PhoneIncoming, PhoneOutgoing, Video, Check, CheckCheck, Lock, LockOpen, ExternalLink,
-  Heart, Waves, FileText, BarChart3, Wallet, Bot, Download, MessagesSquare, Users, Info,
+  Heart, Waves, FileText, BarChart3, Wallet, Bot, Download, MessagesSquare, Users, Info, Flame, Plus,
 } from 'lucide-react';
+import { bubbleClasses } from '@/lib/chat/bubbleStyles';
 import { toast } from 'sonner';
 import { decodeCallEntry, callEntryLabel, formatDuration, CALL_LOG_PREFIX } from '@/lib/chat/callLog';
 import { parseZkPaymentPayload, parseEscrowPayload, ZkPaymentResult, ZkEscrowState } from '@/lib/zk/zkMoney';
@@ -590,9 +591,10 @@ const TapbackPicker = React.memo(({ isMe, onReact, onClose }: {
           role="menuitem"
           aria-label="More reactions"
           onClick={() => setShowMore(v => !v)}
-          className={`w-10 h-10 flex items-center justify-center text-[18px] rounded-full transition-all duration-150 ${showMore ? 'bg-[#f2f4f7] rotate-45' : 'hover:bg-[#f2f4f7]'}`}
+          aria-expanded={showMore}
+          className={`w-10 h-10 flex items-center justify-center text-[#475061] rounded-full transition-all duration-150 ${showMore ? 'bg-[#f2f4f7] rotate-45' : 'hover:bg-[#f2f4f7]'}`}
         >
-          ➕
+          <Plus size={18} strokeWidth={1.9} aria-hidden="true" />
         </button>
       </div>
     </motion.div>
@@ -774,39 +776,8 @@ export const MessageBubble = React.memo(({
   const density = typeof window !== 'undefined' ? ((window as any).__ledger_bubble_style || bubbleStyle || 'default') : (bubbleStyle || 'default');
   const padding = density === 'compact' ? 'px-3 py-1.5' : density === 'wide' ? 'px-4 py-3' : 'px-3.5 py-2';
 
-  // ── Bubble style variants ────────────────────────────────────────────────
-  const textBubble = (() => {
-    switch (density) {
-      case 'glass':
-        return isMe
-          ? 'msg-bubble-sent backdrop-blur-md bg-black/70 text-white rounded-[20px] rounded-br-[6px] border border-white/10 shadow-lg'
-          : 'msg-bubble-recv backdrop-blur-md bg-white/80 text-[#15171c] border border-white/60 rounded-[20px] rounded-bl-[6px] shadow';
-      case 'gradient':
-        return isMe
-          ? 'msg-bubble-sent bg-gradient-to-br from-[#1d1f24] via-[#15171c] to-[#2d2f36] text-white rounded-[20px] rounded-br-[6px] shadow-md'
-          : 'msg-bubble-recv bg-white text-[#15171c] border border-[#e6e8ec] rounded-[20px] rounded-bl-[6px]';
-      case 'rounded':
-        return isMe
-          ? 'msg-bubble-sent bg-[#15171c] text-white rounded-[24px]'
-          : 'msg-bubble-recv bg-white text-[#15171c] border border-[#e6e8ec] rounded-[24px]';
-      case 'minimal':
-        return isMe
-          ? 'msg-bubble-sent bg-transparent text-[#15171c] border-b border-[#15171c]/20 rounded-none pb-1'
-          : 'msg-bubble-recv bg-transparent text-[#15171c] border-b border-[#e6e8ec] rounded-none pb-1';
-      case 'brutalist':
-        return isMe
-          ? 'msg-bubble-sent bg-[#15171c] text-white rounded-none border-2 border-[#15171c] shadow-[3px_3px_0px_#000]'
-          : 'msg-bubble-recv bg-white text-[#15171c] rounded-none border-2 border-[#15171c] shadow-[3px_3px_0px_#e4e7ec]';
-      case 'cyberpunk':
-        return isMe
-          ? 'msg-bubble-sent bg-[#0a0a0a] text-[#39ff14] rounded-[4px] border border-[#39ff14]/60 shadow-[0_0_8px_rgba(57,255,20,0.25)]'
-          : 'msg-bubble-recv bg-[#111] text-[#00d4ff] rounded-[4px] border border-[#00d4ff]/50 shadow-[0_0_8px_rgba(0,212,255,0.2)]';
-      default:
-        return isMe
-          ? 'msg-bubble-sent bg-[#15171c] text-white rounded-[20px] rounded-br-[6px]'
-          : 'msg-bubble-recv bg-white text-[#15171c] border border-[#e6e8ec] rounded-[20px] rounded-bl-[6px]';
-    }
-  })();
+  // Bubble style variants live in lib/chat/bubbleStyles.ts (shared with the Appearance preview).
+  const textBubble = bubbleClasses(density, isMe);
 
   const readReceipts = typeof window === 'undefined' || (window as any).__ledger_read_receipts !== false;
 
@@ -1097,7 +1068,7 @@ export const MessageBubble = React.memo(({
           </div>
 
           {/* Time and delivery */}
-          <div className={`flex items-center gap-1.5 mt-1 px-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
+          <div className={`msg-meta flex items-center gap-1.5 mt-1 px-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
             {msg.viaServer && (
               <span className="inline-flex items-center gap-1 text-[12px] text-[#9a6a12]" title="This message went through our server because an encrypted connection was not available. Our server could read it.">
                 <LockOpen size={11} strokeWidth={2} aria-hidden="true" /> Not end to end encrypted
@@ -1109,15 +1080,15 @@ export const MessageBubble = React.memo(({
                 title={`This message disappears in ${formatBurnRemaining(secondsLeft)}`}
                 aria-label={`Disappears in ${formatBurnRemaining(secondsLeft)}`}
               >
-                🔥 {formatBurnRemaining(secondsLeft)}
+                <Flame size={11} strokeWidth={2} className="inline -mt-0.5 mr-0.5" aria-hidden="true" />{formatBurnRemaining(secondsLeft)}
               </span>
             )}
-            <span className="text-[12px] tabular-nums text-[#a3a9b4]">
+            <span className="msg-time text-[12px] tabular-nums text-[#a3a9b4]">
               {new Date(sentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
             {isMe && !msg.failed && (
               <span
-                className={msg.status === 'read' && readReceipts ? 'text-[#15171c]' : 'text-[#a3a9b4]'}
+                className={msg.status === 'read' && readReceipts ? 'msg-read text-[#15171c]' : 'msg-tick text-[#a3a9b4]'}
                 aria-label={msg.status === 'scheduled' ? 'Scheduled' : msg.status === 'read' && readReceipts ? 'Read' : msg.status === 'delivered' ? 'Delivered' : 'Sent'}
               >
                 {msg.status === 'scheduled'

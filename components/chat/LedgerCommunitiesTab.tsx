@@ -1,6 +1,7 @@
 'use client';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Plus, Link2, Users, Globe, Lock, ChevronRight, LoaderCircle } from 'lucide-react';
+import { countLabel } from '@/lib/ui/format';
 import { toast } from 'sonner';
 import { SectionLabel, EmptyState, PrimaryButton, SecondaryButton, SearchField, Sheet, tintFor } from './ui/kit';
 
@@ -46,9 +47,12 @@ function CommunityRow({ c, onOpen }: { c: Community; onOpen: () => void }) {
               ? <Lock size={12} strokeWidth={2} className="text-[#a3a9b4] shrink-0" aria-label="Private" />
               : <Globe size={12} strokeWidth={2} className="text-[#a3a9b4] shrink-0" aria-label="Public" />}
           </span>
-          <span className="block text-[13.5px] text-[#727a88] truncate mt-0.5">
-            {members} {members === 1 ? 'member' : 'members'}{c.myRole === 'ADMIN' ? ', you are an admin' : ''}{c.description ? `. ${c.description}` : ''}
+          <span className="block text-[13px] text-[#727a88] truncate mt-0.5 tabular-nums">
+            {countLabel(members, 'member', 'members')}{c.myRole === 'ADMIN' ? ' · Admin' : c.myRole === 'MODERATOR' ? ' · Moderator' : ''}
           </span>
+          {c.description && (
+            <span className="block text-[13px] text-[#727a88] truncate">{c.description}</span>
+          )}
         </span>
         <ChevronRight size={16} strokeWidth={1.8} className="text-[#c9ced6] shrink-0" aria-hidden="true" />
       </button>

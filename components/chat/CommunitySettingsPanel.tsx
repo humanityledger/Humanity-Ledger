@@ -6,6 +6,7 @@ import {
   Settings, Users, Award, Lock, Trash2, Edit, Save, Share, Image as ImgIcon,
   MessageCircle, BarChart, Clock, Zap, UserPlus, Hash, CreditCard, ChevronRight, Check, MessageSquare, Globe
 } from 'lucide-react';
+import { communityInviteUrl } from '@/lib/ui/format';
 import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -212,8 +213,9 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
   };
 
   const copyInvite = () => {
-    navigator.clipboard.writeText(`https://humanidfi.com/join/${community?.joinCode}`);
-    toast.success('Invite link copied!');
+    const link = communityInviteUrl(community?.joinCode);
+    if (!link) { toast.error('This community has no invite link yet'); return; }
+    navigator.clipboard.writeText(link).then(() => toast.success('Invite link copied'), () => toast.error('Could not copy the link'));
   };
 
   if (!community) return <div className="p-8 text-center text-[#727a88]">Loading settings...</div>;
@@ -337,13 +339,13 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
             onClick={copyInvite}
             title="Click to copy invite"
           >
-            <QRCodeSVG value={`https://humanidfi.com/join/${community?.joinCode || ''}`} size={76} level="M" />
+            <QRCodeSVG value={communityInviteUrl(community?.joinCode) || ''} size={76} level="M" />
           </div>
           <div className="flex-1 w-full flex flex-col justify-center gap-2">
             <div className="flex items-center gap-2">
               <input
                 readOnly
-                value={`https://humanidfi.com/join/${community?.joinCode || ''}`}
+                value={communityInviteUrl(community?.joinCode) || ''}
                 className="flex-1 px-4 py-2.5 bg-[#f2f4f7] rounded-xl text-[13px] font-mono text-[#15171c] outline-none border border-black/[0.04]"
               />
               <button

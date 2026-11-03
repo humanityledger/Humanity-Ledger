@@ -1052,7 +1052,7 @@ export function TuringShieldGate({
                     <div className="w-full bg-red-50 rounded-2xl p-5 mb-5 text-center">
                       <p className="text-[13px] font-semibold text-red-600 mb-1">Access temporarily suspended</p>
                       <p className="text-[12.5px] text-[#d93036]/80 leading-relaxed">
-                        Too many incorrect PINs. For your protection, access is paused for 15 minutes.
+                        Too many incorrect PINs. For your protection, PIN entry is paused until the timer ends.
                       </p>
                       {lockoutCountdown > 0 && (
                         <p className="text-[22px] font-semibold text-[#d93036] mt-3 tabular-nums">

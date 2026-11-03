@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { resolveCommunityAccess, appVisibleTo, memberIdentity } from '@/lib/community-apps/access';
+import { appsRoute } from '@/lib/community-apps/routeErrors';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,7 @@ async function load(req: NextRequest, ctx: Ctx) {
  * it), plus the caller's context. Member entries carry the member's app
  * identity, never the address. Deleted entries come back with value null.
  */
-export async function GET(req: NextRequest, ctx: Ctx) {
+export const GET = appsRoute('state GET', async (req: NextRequest, ctx: Ctx) => {
   const r = await load(req, ctx);
   if ('error' in r) return r.error;
   const { access, app } = r;
@@ -79,10 +80,10 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     },
     { headers: { 'Cache-Control': 'no-store' } },
   );
-}
+});
 
 /** { scope: 'shared' | 'mine', key, value }  value null deletes. Members only. */
-export async function POST(req: NextRequest, ctx: Ctx) {
+export const POST = appsRoute('state POST', async (req: NextRequest, ctx: Ctx) => {
   const r = await load(req, ctx);
   if ('error' in r) return r.error;
   const { access, app } = r;
@@ -121,4 +122,4 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     select: { updatedAt: true },
   });
   return NextResponse.json({ ok: true, at: row.updatedAt.toISOString() });
-}
+});

@@ -129,10 +129,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     // Network connectivity Dynamic Island
     const handleOffline = () => {
-      useDynamicIsland.getState().setState('syncing', { title: 'No Connection', subtitle: 'Reconnecting...' });
+      useDynamicIsland.getState().setState('syncing', { title: 'You are offline', subtitle: 'Waiting for the network to come back' });
     };
     const handleOnline = () => {
-      useDynamicIsland.getState().setState('tx_success', { title: 'Back Online' }, 2000);
+      useDynamicIsland.getState().setState('tx_success', { title: 'Back online' }, 2000);
     };
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);

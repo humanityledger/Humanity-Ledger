@@ -225,6 +225,9 @@ export class DeviceStateStore {
         case 'fav':
           this.kv.setItem('ledger_favourites', JSON.stringify(this.peersWhere('fav')));
           break;
+        case 'pinned':
+          this.kv.setItem(`ledger_pinned_${this.legacyAccount}`, JSON.stringify(this.peersWhere('pinned')));
+          break;
       }
     } catch { /* storage unavailable */ }
   }

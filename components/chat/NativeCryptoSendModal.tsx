@@ -234,7 +234,7 @@ export function NativeCryptoSendModal({
               <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
                 <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-[13px] font-semibold text-amber-900 mb-1">⚠️ Verify the address carefully</p>
+                  <p className="text-[13px] font-semibold text-amber-900 mb-1">Verify the address carefully</p>
                   <p className="text-[12.5px] text-amber-700 leading-relaxed">
                     Crypto transactions are <strong>irreversible</strong>. Always double-check the recipient address before sending. We cannot recover funds sent to the wrong address.
                   </p>

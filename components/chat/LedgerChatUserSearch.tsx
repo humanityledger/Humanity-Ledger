@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, UserPlus, ShieldCheck, MapPin, Check, Clock, MessageCircle } from 'lucide-react';
+import { Search, X, UserPlus, ShieldCheck, MapPin, Check, Clock, MessageCircle, AlertCircle, UserX } from 'lucide-react';
 import { getLocalContacts, saveLocalContact } from '@/lib/wallet/localAddressBook';
 import { toast } from 'sonner';
 
@@ -197,7 +197,7 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                 exit={{ opacity: 0 }}
                 className="h-full flex flex-col items-center justify-center gap-3 p-8 text-center"
               >
-                <span className="text-3xl">⚠️</span>
+                <AlertCircle size={28} strokeWidth={1.75} className="text-[#d93036]" aria-hidden="true" />
                 <p className="text-[13px] font-medium text-[#d93036]">{error}</p>
               </motion.div>
             ) : query.length === 0 ? (
@@ -220,7 +220,7 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                 exit={{ opacity: 0 }}
                 className="h-full flex flex-col items-center justify-center gap-3 p-8 text-center"
               >
-                <span className="text-4xl">🐋</span>
+                <UserX size={28} strokeWidth={1.75} className="text-[#a3a9b4]" aria-hidden="true" />
                 <p className="text-[14px] font-medium text-black/50">No users found for "<strong>{query}</strong>"</p>
                 <p className="text-[12px] text-black/30">Try searching by wallet address (0x...) or exact username.</p>
               </motion.div>
