@@ -58,6 +58,32 @@ try {
     console.warn('[EPERM Guard] Failed to patch fs:', patchErr.message);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// [NODE-FETCH ESM INTERCEPTOR & CROSS-FETCH PATCH]
+// node-fetch v3 is pure ESM. When CommonJS libraries (e.g. @walletconnect, cross-fetch)
+// call require('node-fetch'), Node.js throws ERR_REQUIRE_ESM and crashes SSR.
+// We patch cross-fetch files to use globalThis.fetch and intercept any residual calls.
+// ─────────────────────────────────────────────────────────────────────────────
+try {
+    require('./scripts/cross-fetch-patch.js');
+} catch (e) {
+    console.warn('[Fetch Bridge] Failed to execute cross-fetch-patch:', e.message);
+}
+try {
+    const Module = require('module');
+    const _origModuleLoad = Module._load;
+    const ponyfill = require('./lib/cross-fetch-ponyfill.js');
+    Module._load = function patchedModuleLoad(request, parent, isMain) {
+        if (request === 'node-fetch' || request === 'node-fetch/src/index.js') {
+            return ponyfill;
+        }
+        return _origModuleLoad.apply(this, arguments);
+    };
+    console.log('[Fetch Bridge] Module._load patched — node-fetch calls redirected to native fetch.');
+} catch (e) {
+    console.warn('[Fetch Bridge] Failed to patch Module._load:', e.message);
+}
+
 //  Automatic Lottie Animation Sync 
 try {
     const fs = require('fs');
@@ -134,6 +160,8 @@ const nextConfig = {
 
         config.resolve.alias = {
             ...config.resolve.alias,
+            'cross-fetch': path.resolve(__dirname, './lib/cross-fetch-ponyfill.js'),
+            'node-fetch': path.resolve(__dirname, './lib/cross-fetch-ponyfill.js'),
             '@react-native-async-storage/async-storage': false,
             'porto': false,
             'porto/internal': false,

@@ -232,7 +232,7 @@ export async function getSession(req?: any): Promise<SessionPayload | null> {
     }
 
     // Priority 2: Transparent fallback & migration for active legacy sessions
-    const legacyCookies = ['ledger_session', 'human_session', 'humanity_session', 'human.access-token'];
+    const legacyCookies = ['ledger_session', 'human_session', 'humanity_session', 'siwe_session', 'human.access-token'];
     for (const name of legacyCookies) {
         const legacyVal = cookieStore.get(name)?.value;
         if (legacyVal) {

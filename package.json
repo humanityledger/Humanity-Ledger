@@ -63,7 +63,7 @@
     "helm:upgrade": "helm upgrade ledger-alert k8s/helm --namespace ledger-alert --reuse-values",
     "helm:uninstall": "helm uninstall ledger-alert --namespace ledger-alert",
     "prepare": "node -e \"process.exit(0)\"",
-    "postinstall": "node -e \"process.exit(0)\"",
+    "postinstall": "node scripts/cross-fetch-patch.js",
     "aztec:setup": "node --conditions=browser --import ./scripts/aztec/register.mjs scripts/aztec/setup-testnet.mjs",
     "aztec:e2e": "node --conditions=browser --import ./scripts/aztec/register.mjs scripts/aztec/e2e-testnet.mjs"
   },
