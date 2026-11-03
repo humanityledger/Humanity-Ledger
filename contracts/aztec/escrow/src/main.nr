@@ -40,7 +40,7 @@ contract PrivateEscrow {
             storage::storage,
         },
         messages::delivery::MessageDelivery,
-        note::note_getter_options::NoteGetterOptions,
+        note::{note_getter_options::NoteGetterOptions, note_interface::NoteProperties},
         protocol::{
             abis::function_selector::FunctionSelector,
             address::AztecAddress,
