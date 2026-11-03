@@ -1,5 +1,6 @@
 "use client";
 
+import Link from 'next/link';
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -302,9 +303,9 @@ export function EmailLoginModal({ isOpen, onClose, onSuccess }: Props) {
 
                       <p className="text-[12px] text-black/40 font-medium text-center leading-relaxed">
                         By continuing, you agree to our{" "}
-                        <a href="/docs/terms" className="underline hover:text-black/70 transition-colors">Terms</a>
+                        <Link href="/docs/terms" className="underline hover:text-black/70 transition-colors">Terms</Link>
                         {" "}and{" "}
-                        <a href="/docs/privacy" className="underline hover:text-black/70 transition-colors">Privacy Policy</a>.
+                        <Link href="/docs/privacy" className="underline hover:text-black/70 transition-colors">Privacy Policy</Link>.
                       </p>
                     </motion.form>
                   )}

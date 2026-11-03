@@ -17,6 +17,7 @@
  * can no longer route a button to an older simulated modal.
  */
 
+import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -211,9 +212,9 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
             <p className="px-1 pb-2 text-center text-[11.5px] leading-relaxed text-black/40">
               Proofs are made on this device and sent to the Aztec test network. Our server never sees your keys, your
               balances or who you pay.{' '}
-              <a href="/docs/zero-knowledge" className="underline underline-offset-2">
+              <Link href="/docs/zero-knowledge" className="underline underline-offset-2">
                 How it works
-              </a>
+              </Link>
             </p>
           </>
         )}
