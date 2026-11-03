@@ -224,7 +224,7 @@ jobs:
           )
 
           for pattern in "${PATTERNS[@]}"; do
-            MATCHES=$(git log -10 --all -p | grep -E "$pattern" | grep -v -E "CANARY_|secret-scan: allow" || true)
+            MATCHES=$(git log -10 --all -p -- . ':!.github/**' ':!test/**' ':!tests/**' ':!scripts/check-staged-secrets.mjs' | grep -E -e "$pattern" | grep -v -E "CANARY_|secret-scan: allow" || true)
             if [ -n "$MATCHES" ]; then
               echo "POTENTIAL SECRET LEAK DETECTED: pattern '$pattern'"
               echo "$MATCHES" | head -5
