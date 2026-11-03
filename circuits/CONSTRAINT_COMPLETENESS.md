@@ -192,6 +192,14 @@ tests in `test/circuits/streams_rate_bound.test.ts`.
 
 ### 4.3 Withdrawal Replay Prevention
 
+> **Correction (3 November 2026): this analysis is wrong; see ZK-01.** It
+> assumes `withdrawn_amount` reflects earlier withdrawals, but it is a free
+> private input. A recipient can always declare `withdrawn_amount = 0` and
+> claim 600, 599, 598, ... against one accrual: each total is different, so
+> each nullifier is new. `test/circuits/streams_zk01_known_issue.test.ts`
+> reproduces it with real proofs. `circuits/streams_v2` fixes it by chaining
+> state (`old_state -> new_state`) with a verifier that stores the current state.
+
 Each withdrawal emits a nullifier `Pedersen(stream_commitment, new_total_withdrawn)`. The nullifier is a function of the cumulative withdrawn amount after this withdrawal, not of the withdrawal index. This means:
 
 * The same `new_total_withdrawn` value produces the same nullifier.
@@ -203,34 +211,48 @@ Each withdrawal emits a nullifier `Pedersen(stream_commitment, new_total_withdra
 
 ## 5. Cross-Circuit Gaps and Open Pre-Audit Items
 
-| # | Gap | Circuit | Severity | Planned Resolution |
-|---|---|---|---|---|
-| G1 | `recipient_pubkey` treated as Field, not validated Grumpkin point | escrow, streams | Medium | Add Grumpkin point validation or restrict to Npk type |
-| G2 | Sanction set hardcoded, not dynamic public input | identity | Medium | Redesign to Merkle-committed dynamic set |
-| G3 | Merkle tree depth is 1 (2-node path) | identity | High for production | Extend to depth 32 before mainnet |
-| G4 | `u64` overflow in accrual multiplication | streams | **CLOSED** | `rate_per_second <= MAX_RATE` constraint added to circuit (commit after `783df711`). Test coverage: `test/circuits/streams_rate_bound.test.ts`. |
-| G5 | Hash function is Pedersen, not Poseidon2 | all three | Low (both collision resistant over BN254) | Migrate to Poseidon2 for alignment with Aztec native note model |
-| G6 | No formal equivalence check between Noir source and compiled ACIR | all three | High for production | Pre-audit priority: constraint equivalence verification |
+Updated 3 November 2026. "v1" are the pinned circuits above; "v2" are the experimental crates `circuits/*_v2` (details: `docs/zk/V2_CIRCUITS.md`).
+
+| # | Gap | Circuit | Severity | v1 | v2 |
+|---|---|---|---|---|---|
+| G1 | `recipient_pubkey` treated as Field, not validated Grumpkin point | escrow, streams | Medium | Open | Not applicable: parties are key hashes bound to a secret. Client-side curve check: `lib/aztec/grumpkin.ts` |
+| G2 | Sanction set hardcoded, not dynamic public input | identity | Medium | Open | **Closed** in `identity_v2`: list committed by public `sanction_root`, non-membership checked (16 entries; `docs/zk/SANCTION_NON_MEMBERSHIP.md`) |
+| G3 | Merkle tree depth is 1 (2-node path) | identity | High for production | Open | **Closed** in `identity_v2`: depth 32 |
+| G4 | `u64` overflow in accrual multiplication | streams | **CLOSED** | `rate_per_second <= MAX_RATE` (`test/circuits/streams_rate_bound.test.ts`) | **CLOSED**; accrual also computed in u128 |
+| G5 | Hash function is Pedersen, not Poseidon2 | all three | Low (both collision resistant over BN254) | Open | **Closed**: Poseidon2 with domain separators (`circuits/hl_lib`) |
+| G6 | No formal equivalence check between Noir source and compiled ACIR | all three | High for production | CI checks the committed ACIR equals a fresh compile (`.github/workflows/aztec-ci.yml`). Formal equivalence: open | Compiled in CI; formal equivalence: open |
+
+Soundness findings from the 3 November review (`docs/zk/MASTER_PROMPT.md`):
+
+| # | Finding | v1 | v2 |
+|---|---|---|---|
+| ZK-01 | Streams accepts repeated claims of one accrual | Open (reproduced) | Fixed by state chaining (needs a verifier that stores state) |
+| ZK-02 | No payout address among public inputs | Open | Fixed: `payout_address`, `domain` public |
+| ZK-03 | Escrow claim needs the sender's secret | Open | Fixed: recipient secret claims, sender refunds after deadline |
+| ZK-04 | No domain separation | Open | Fixed |
+| ZK-05 | Anonymity set of two | Open | Fixed (depth 32) |
+| ZK-06 | Prover-chosen timestamps | Open | Deadline committed; current time still checked by the verifier |
+| ZK-07 | Verifier did not pin the VK | Fixed (`lib/zk/prover.ts`) | VKs reported by CI, not pinned yet |
 
 ---
 
 ## 6. Reproducible VK Integrity Verification
 
-The following script confirms that a clean rebuild of any circuit produces a
-verification key with the same SHA256 hash as the committed artifact:
+`nargo compile` produces ACIR, not a verification key, so hashing a file after
+compiling (as this section used to suggest) checked nothing. The checks are:
 
 ```bash
-# Requires: nargo (Noir toolchain), sha256sum
-cd circuits/escrow && nargo compile && sha256sum target/escrow.vk.json
-cd circuits/identity && nargo compile && sha256sum target/identity.vk.json
-cd circuits/streams && nargo compile && sha256sum target/streams.vk.json
+# Committed ACIR equals a fresh compile (also run in CI, workflow "Noir circuits")
+for c in escrow identity streams; do (cd circuits/$c && nargo compile); done
+git diff --exit-code -- circuits/*/target/zk_*.json
+
+# Binary VKs match the hashes pinned in lib/aztec/verifier.ts; with npm
+# dependencies installed, the VKs are also re-derived from the ACIR with bb.js
+node scripts/zk/check-artifacts.mjs
 ```
 
-Compare output against `docs/VK_MONITORING.md` which records the anchored
-on-chain VK hashes for each circuit at commit `783df711`.
-
-The automated test `test/aztec_vk_integrity.test.ts` performs the equivalent
-comparison at runtime without requiring `nargo` to be installed locally.
+No on-chain VK registry exists. `docs/VK_MONITORING.md` describes the current
+mechanism.
 
 ---
 

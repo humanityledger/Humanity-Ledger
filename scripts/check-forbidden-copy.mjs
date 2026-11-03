@@ -71,6 +71,8 @@ function scanClaims(file) {
   lines.forEach((line, i) => {
     // In code, comments are not user-facing; JSX comments ({/* */}) neither.
     if (isCode && isCommentLine(line)) return;
+    // The retraction register quotes withdrawn claims on purpose.
+    if (/\bRETRACTED\b/.test(line)) return;
     for (const re of CLAIMS) {
       if (re.test(line)) findings.push(`${rel}:${i + 1}  claim ${re}  ${line.trim().slice(0, 120)}`);
     }

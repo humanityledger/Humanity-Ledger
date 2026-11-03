@@ -1729,9 +1729,9 @@ model CommunityPost {
   communityId    String
   channelId      String?
   authorAddress  String
-  content        String   // ENCRYPTED CIPHERTEXT (AES-256-GCM or MLS payload)
+  content        String   // READABLE BY THE SERVER today (not encrypted). Migration: docs/communities/MLS_MIGRATION.md
   title          String?
-  contentHtml    String?  // ENCRYPTED HTML CIPHERTEXT
+  contentHtml    String?  // READABLE BY THE SERVER today (not encrypted)
   likes          Int      @default(0)
   createdAt      DateTime @default(now())
   

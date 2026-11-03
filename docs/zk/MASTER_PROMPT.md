@@ -2,9 +2,9 @@
 
 3 de noviembre de 2026 · Stefan Antonio Cirisanu
 
-> **Estado de ejecución:** la fase 0 (R-01 a R-06) se implementó en la rama `claude/zk-master-prompt-phase0`. Las fases 1 y 2 siguen abiertas. Las referencias a "097b51d5" describen el código antes de esa rama.
-
 Este es el prompt maestro único para el trabajo ZK y de mensajería de Humanity Ledger. Integra los dos prompts del 3 de noviembre, contrastados línea a línea con el commit 097b51d5 de `humanityledger/Humanity-Ledger`. El anexo C muestra dónde quedó cada una de sus secciones. Lo más grave no estaba en ninguno de los dos: el circuito de streams permite cobrar muchas veces el mismo devengo, y la "integridad de VK" no está ligada a las claves reales.
+
+> **Estado de ejecución (3 nov, 22:00):** fase 0 (R-01 a R-06) hecha y verificada en el PC. Después se integró el paquete de cierre de gaps (anexo D) y se añadieron los circuitos v2 (R-18), que compilan y pasan 36 tests en la CI con nargo 1.0.0. Todo está en la rama [`claude/zk-master-prompt-phase0`](https://github.com/humanityledger/Humanity-Ledger/compare/main...claude/zk-master-prompt-phase0?expand=1), pendiente de PR y fusión, y este documento está en el repositorio como `docs/zk/MASTER_PROMPT.md`. Siguen abiertas las fases 1 (contratos aztec-nr) y 2, y R-17 (comunidades).
 
 ## Cómo usarlo
 
@@ -43,21 +43,21 @@ Esta tabla es la única fuente para describir el proyecto hacia fuera; usa el vo
 
 | Componente | Estado | Qué falta para subir de estado |
 | --- | --- | --- |
-| Monedero privado (`lib/aztec/wallet/`): shield, envío privado, unshield con `Token` y `SponsoredFPC` | Real en testnet | Unificar paquetes en `@aztec-labs/*` 6.0.0; log reproducible (GAP-12) |
+| Monedero privado (`lib/aztec/wallet/`): shield, envío privado, unshield con `Token` y `SponsoredFPC` | Real en testnet; comprueba la curva Grumpkin antes del SDK (`lib/aztec/grumpkin.ts`) | Unificar paquetes en `@aztec-labs/*` 6.0.0; publicar la configuración de testnet (R-15) |
 | DM 1 a 1 por XMTP v3 (MLS de OpenMLS) | Real, de un tercero | Decir "XMTP (MLS)", no "MLS propio" |
-| Publicaciones de comunidad | Texto legible en la base de datos (F2-02) | Grupos MLS de XMTP o cifrado en cliente |
-| Circuitos escrow, identity, streams | Real solo en tests, con fallos de solidez (ZK-01 a ZK-07) | Corregir o sustituir por contratos aztec-nr |
-| Probador `lib/zk/prover.ts` | Real solo en tests (Node) | Versión para Web Worker; VK fijada |
-| VK binarias `target/vk` | Reales (bb 5.3.0) | Ninguno; borrar los JSON inventados |
-| `*.vk.json` y "VK Lifecycle Enforcer" | Simulado | Hashear la VK binaria; registro real o retirarlo |
+| Publicaciones de comunidad | Texto legible en la base de datos (F2-02) | Grupos MLS de XMTP (R-17, `docs/communities/MLS_MIGRATION.md`) |
+| Circuitos v1 (escrow, identity, streams) | Real solo en tests; VK fijadas; fallos ZK-01 a ZK-06 | Sustituir por v2 o por contratos aztec-nr |
+| Circuitos v2 (`circuits/*_v2`) | Experimental: compilan y pasan tests en CI; corrigen ZK-01 a ZK-05 y G2, G3, G5 | Pruebas UltraHonk en TypeScript, fijar VK, verificador que guarde estado (R-18) |
+| Probador `lib/zk/prover.ts` | Real solo en tests (Node); VK fijada | Versión para Web Worker (R-16) |
+| VK binarias y `*.vk.json` | Reales y fijadas en código | Ninguno |
 | `zkMoney.ts` | Demo local | Sustituir por el monedero real o retirar |
-| `zkCompliance.ts` (solvencia, claves de visión) | `Simulado: la "prueba" de solvencia son bytes aleatorios con prefijo 0xsolv_ y una VK de texto fijo` | Circuito real o retirar de la UI |
-| `realTx.ts` → `/api/passport`, indexador | Simulado (hashes inventados) | Borrar; usar `txHash` del SDK |
-| `aztec-zk-engine.ts` → `AztecPrivacyTerminal` | Simulado (Aztec Connect 2023) | Retirar el componente o recablearlo al monedero |
+| `zkCompliance.ts` (solvencia) | Simulado (bytes aleatorios `0xsolv_`) | Retirar de la UI (R-14) |
+| `realTx.ts`, `aztec-zk-engine.ts` | Retirados | — |
 | `HumanityTimeLockVault`, `LedgerDeadmanSwitch` | Código Solidity sin auditar ni desplegar | Auditoría (H-037); revisar que `isTriggered` no bloquee el segundo token |
-| `ZKIdentityRegistry.sol` | Simulado (verificación comentada) | No desplegar así; verificador Honk real |
-| Sandbox de apps de comunidad ("EAF") | Real (CSP `sandbox allow-scripts`, sin red) | Nombrarlo por lo que es |
-| Menú contextual de mensajes | No existe | Sección del menú contextual |
+| `ZKIdentityRegistry.sol` | Revierte siempre (`VerifierNotConnected`) | Verificador Honk real |
+| Registro de VK on-chain | No existe | Contrato con retardo (R-19) |
+| Sandbox de apps de comunidad | Real (CSP `sandbox allow-scripts`, sin red) | — |
+| Menú contextual de mensajes | No existe | R-12 |
 
 ## Reglas técnicas por capa
 
@@ -171,6 +171,8 @@ Escrow y streams deben reescribirse como contratos aztec-nr, no envolver los cir
 - `claim_escrow(sender_secret, …)` reproduce ZK-03 dentro del contrato.
 - La ampliación de identity a profundidad 32 con Pedersen no hace falta en Aztec: si la credencial es una nota emitida por el emisor, el kernel prueba su existencia en el árbol de notas de toda la red, y el conjunto de anonimato pasa a ser todas las notas, no 2 ni 2^32.
 
+**Correcciones de API tras la investigación del 3 de noviembre** (detalle y fuentes en `docs/zk/AZTEC_NR_V6_NOTES.md`): el estado privado por usuario es `Owned<PrivateSet<Nota, Context>, Context>` con `.at(owner)`; el nulificador manual es `push_nullifier_unsafe`; la clave de nulificador se pide con `request_nhk_app` (antes `nsk`); para "una vez por ámbito" existe `SingleUseClaim`; un contrato con claves se despliega con `publicKeys` en `deploy` (ya no hay `deployWithPublicKeys`); aztec-nr v6 se toma de `aztec-labs-eng/aztec-nr` y se compila y prueba con `aztec compile` y `aztec test`.
+
 ### Diseño del escrow
 
 Cada escrow crea dos notas con el mismo `escrow_id` secreto: una de cobro para el receptor y otra de devolución para el emisor. Cobrar y devolver publican el mismo nulificador de liquidación, así que solo uno de los dos puede ocurrir.
@@ -192,41 +194,49 @@ El receptor solo puede cobrar mientras la transacción entre antes del plazo; el
 - **Custodia:** el contrato debe poder tener saldo privado (contrato con claves propias) o custodiar en público, que revela el importe al cobrar. Confirmar el patrón en los contratos de ejemplo de `noir-contracts` v6 antes de elegir.
 
 ```rust
-// Esqueleto con la forma de aztec-nr v6. NO compilado: fijar imports, tipos de Token
-// y el accesor de la cabecera ancla contra la versión exacta del SDK (6.0.0).
+// Esqueleto con la API de aztec-nr v6.0.0 (docs/zk/AZTEC_NR_V6_NOTES.md). NO compilado.
+// Sin confirmar: campo del timestamp en BlockHeader y nombres de transferencia del token.
 use aztec::macros::aztec;
 
 #[aztec]
 pub contract PrivateEscrow {
-    use aztec::messages::delivery::MessageDelivery;
+    use aztec::{
+        macros::{functions::{external, initializer}, storage::storage},
+        messages::delivery::MessageDelivery,
+        protocol::{address::AztecAddress, hash::poseidon2_hash_with_separator},
+        state_vars::{Owned, PrivateSet},
+    };
+
+    global SEP_SETTLED: u32 = 0x45534331; // separador propio
 
     #[storage]
     struct Storage<Context> {
-        claims: Map<AztecAddress, PrivateSet<EscrowNote, Context>, Context>,
-        refunds: Map<AztecAddress, PrivateSet<EscrowNote, Context>, Context>,
+        claims: Owned<PrivateSet<EscrowNote, Context>, Context>,
+        refunds: Owned<PrivateSet<EscrowNote, Context>, Context>,
     }
 
     #[external("private")]
     fn create(recipient: AztecAddress, token: AztecAddress, amount: u128, deadline: u64, authwit_nonce: Field) {
-        // 1. Token: transferencia privada emisor -> contrato, autorizada con authwit.
-        // 2. escrow_id aleatorio; nota de cobro para recipient y nota de devolucion para el emisor.
-        //    Ambas con .deliver(MessageDelivery::onchain_constrained()).
+        let sender = self.msg_sender();
+        // 1. self.call(Token::at(token).transfer_in_private(sender, self.address, amount, authwit_nonce));
+        // 2. escrow_id aleatorio; notas con el mismo escrow_id:
+        //    self.storage.claims.at(recipient).insert(nota).deliver(MessageDelivery::onchain_constrained());
+        //    self.storage.refunds.at(sender).insert(nota).deliver(MessageDelivery::onchain_constrained());
     }
 
     #[external("private")]
     fn claim(escrow_id: Field) {
-        // Consume la nota de cobro del llamante (su clave nulifica la nota).
-        // set_expiration_timestamp(note.deadline).
-        // push_nullifier(hash con separador SETTLED de escrow_id).
-        // Token: amount al receptor.
+        // pop_notes en claims.at(self.msg_sender()) filtrando por escrow_id
+        // self.context.set_expiration_timestamp(note.deadline);
+        // self.context.push_nullifier_unsafe(poseidon2_hash_with_separator([escrow_id], SEP_SETTLED));
+        // transferencia privada al receptor
     }
 
     #[external("private")]
     fn refund(escrow_id: Field) {
-        // Consume la nota de devolucion del llamante.
-        // assert(timestamp del bloque ancla >= note.deadline).
-        // push_nullifier(hash con separador SETTLED de escrow_id).
-        // Token: amount de vuelta al emisor.
+        // pop_notes en refunds.at(self.msg_sender())
+        // assert(timestamp de self.context.get_anchor_block_header() >= note.deadline);
+        // mismo nulificador de liquidación; transferencia privada de vuelta al emisor
     }
 }
 ```
@@ -237,7 +247,7 @@ El estado es una nota `StreamNote { receptor, emisor, ritmo, inicio, total, reti
 
 ### Identidad
 
-Credencial = nota emitida por el emisor de identidad al usuario. Una función privada la lee sin consumirla y publica `hash(SEP_SCOPE, secreto_app, scope)` como nulificador por ámbito. Las sanciones se aplican al emitir la credencial.
+Credencial = nota emitida por el emisor de identidad en `Owned<PrivateImmutable<CredentialNote>>`, que se lee sin anularse. El uso único por ámbito se hace con `Map<Scope, Owned<SingleUseClaim>>` y `.claim()`, que emite un nulificador derivado de la clave del usuario y del ámbito, sin esquema propio. Las sanciones se comprueban al emitir y, si la lista cambia después, con la lista comprometida de `identity_v2` (`docs/zk/SANCTION_NON_MEMBERSHIP.md`).
 
 ## Menú contextual de mensajes, nivel Signal
 
@@ -299,6 +309,14 @@ GAP-03 (desplegar `ZKIdentityRegistry` para anclar VK) se descarta: ese contrato
 | R-16 | 2 | Probador en Web Worker, solo si se mantiene el camino B | Prueba en Safari iOS sin bloquear la interfaz | Regla del probador 6 | GAP-08 |
 
 Si se elige el camino B (mantener los circuitos sueltos), R-08 a R-10 se aplican a ellos con las mismas pruebas de ataque, y R-16 pasa a fase 1.
+
+**Tareas añadidas el 3 de noviembre (noche), con el paquete de cierre de gaps:**
+
+| ID | Fase | Tarea | Hecho cuando | Cierra | Estado |
+| --- | --- | --- | --- | --- | --- |
+| R-17 | 2 | Comunidades en grupos MLS de XMTP, un grupo por canal, bandera por comunidad (`docs/communities/MLS_MIGRATION.md`) | Un volcado de la base no contiene publicaciones de comunidades migradas | F2-02; `CLM-MSG-COMMUNITY` | Diseño |
+| R-18 | 1 | Circuitos v2 (`circuits/*_v2`, `circuits/hl_lib`): Poseidon2, identidad de profundidad 32 con sanciones comprometidas, escrow con cobro y devolución, streams con estado encadenado | `nargo test` en CI; después, pruebas UltraHonk en TypeScript y VK fijadas | ZK-01 a ZK-05; G2, G3, G5 | Compila y pasa 36 tests en CI |
+| R-19 | 2 | Registro de VK on-chain con retardo, solo si se mantiene el camino B | El cliente lee el registro antes de probar | `docs/VK_MONITORING.md` §4 | Sin empezar |
 
 Fuera de ZK siguen abiertos y bloquean el lanzamiento de enero: F2-02 (comunidades en texto legible), `@ts-nocheck` en `middleware.ts` y `LedgerChatV2.tsx`, la CI en rojo y la rotación de los secretos expuestos en el historial público (nota del 3-nov).
 
@@ -454,3 +472,22 @@ Cada sección de los dos prompts del 3 de noviembre está integrada aquí, corre
 | P2 §4C | Privacidad en las acciones del menú | Menú contextual | Corregida (portapapeles, detalles reales) |
 | P2 §5 | Checklist de 6 comandos | Bucle de verificación | Integrado con rutas relativas, Node 22 y comprobación de artefactos |
 | P2 §5 | `--no-verify`, `git add -A`, push a `main` en dos remotos | Bucle de verificación | Descartado: desactiva el escaneo de secretos; rama y PR |
+
+## Anexo D · Paquete de cierre de gaps (3 nov, noche)
+
+Cada elemento del paquete "Production Gap Closure Package" quedó integrado en el repositorio; los que chocaban con el código se integraron corregidos.
+
+| Elemento del paquete | Dónde está ahora | Cómo quedó |
+| --- | --- | --- |
+| `identity/src/main_v2_depth32.nr` (G3) | `circuits/identity_v2` | Corregido: el original quitaba las sanciones y dejaba `sanction_root` sin usar, sus tests estaban vacíos y el `should_fail` vacío habría fallado. Ahora: profundidad 32, lista comprometida, separación de dominio y 11 tests reales |
+| `escrow/src/main_poseidon2.nr` (G5) | `circuits/escrow_v2` + `circuits/hl_lib` | Corregido: dependía de una librería no declarada y mantenía ZK-02 y ZK-03. Ahora: Poseidon2 sobre la permutación de la librería estándar, cobro del receptor, devolución, liquidación única; 13 tests |
+| `streams/src/main_poseidon2.nr` (G5) | `circuits/streams_v2` | No venía en el paquete; escrito con el estado encadenado que corrige ZK-01; 8 tests |
+| `lib/aztec/grumpkin_validation.ts` (G1) | `lib/aztec/grumpkin.ts` + monedero | No venía en el paquete; implementado con la ecuación real (y² = x³ − 17) y conectado a la validación de direcciones |
+| `SANCTION_NON_MEMBERSHIP_DESIGN.md` (G2) | `docs/zk/SANCTION_NON_MEMBERSHIP.md` | Opción B implementada; el "timelock de 14 días existente" no existe y se corrige |
+| `COMMUNITIES_MLS_MIGRATION.md` | `docs/communities/MLS_MIGRATION.md` (R-17) | Corregido: usa los grupos de XMTP que ya existen en `lib/xmtp/groups.ts`; la interfaz encrypt/decrypt del paquete no existe en el SDK |
+| `DUAL_IMPLEMENTATION_CLARIFICATION.md` | `docs/zk/IMPLEMENTATIONS.md` | Corregido: `contracts/aztec/` no existe; la dualidad era una afirmación del dossier antiguo |
+| `STATUS_UPDATE_SNIPPET.md` | `docs/STATUS.md` | Corregido: el fragmento declaraba G3 y G5 cerrados sin compilar. `STATUS.md` se reescribió y A2 pasa a "delegado en XMTP" |
+| Checklist: `TRACEABILITY_MATRIX.md`, `VK_MONITORING.md`, `CONSTRAINT_COMPLETENESS.md`, dossier | Actualizados | La matriz pasa `check:traceability`; `VK_MONITORING.md` deja de describir un registro inexistente |
+| G6 equivalencia Noir ↔ ACIR | CI "Noir circuits" | El ACIR commiteado se compara con una compilación nueva; la equivalencia formal sigue abierta |
+| `additional_tests_and_helpers.ts` | — | No venía en el paquete |
+| No-afirmaciones (auditoría, verificación formal, cuántica, tráfico, mainnet) | README, `STATUS.md` | Se mantienen como no-afirmaciones |

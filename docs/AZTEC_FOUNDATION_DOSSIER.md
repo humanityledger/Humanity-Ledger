@@ -67,6 +67,8 @@ No VK registry is deployed on any network.
 
 ## 5. Direction, and our questions
 
+Meanwhile, v2 standalone circuits (`circuits/*_v2`) fix ZK-01 to ZK-05 with Poseidon2 and domain separation, a depth-32 identity tree, a committed sanction list, recipient-authorised escrow claims with sender refunds, and state chaining for streams. They compile and pass 36 tests in CI with nargo 1.0.0 but are not pinned and have no deployed verifier ([`docs/zk/V2_CIRCUITS.md`](zk/V2_CIRCUITS.md)).
+
 We plan to express escrow and streams as aztec-nr v6 contracts with notes, so that note ownership and the network's nullifier tree replace our hand-written state handling. For the escrow, two notes (claim for the recipient, refund for the sender) share one settlement nullifier; the claim sets `set_expiration_timestamp(deadline)` and the refund checks the anchor block timestamp against the deadline.
 
 1. Is that an idiomatic way to express "claim before the deadline, refund after it"?

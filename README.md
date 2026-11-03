@@ -21,7 +21,7 @@ The state of every component, in one vocabulary (real on testnet, real in tests 
 
 1. **Private payments (real on testnet).** `lib/aztec/wallet/` runs an Aztec PXE in the browser with a Schnorr account whose keys are derived from a signature by the user's EVM wallet. It shields, sends privately and unshields with the standard `Token` contract, paying fees through `SponsoredFPC`.
 2. **Direct messages (real, provided by XMTP).** One-to-one messages travel over XMTP v3, which uses MLS (RFC 9420). Humanity Ledger does not implement MLS itself.
-3. **Communities (server-readable).** Community posts and community channel messages are stored in PostgreSQL by the application server and are readable by it. The interface says so. Moving communities to MLS groups is open work.
+3. **Communities (server-readable).** Community posts and community channel messages are stored in PostgreSQL by the application server and are readable by it. The interface says so. Moving communities to XMTP MLS groups is planned in [`docs/communities/MLS_MIGRATION.md`](docs/communities/MLS_MIGRATION.md) (task R-17).
 4. **Standalone Noir circuits (experimental).** `circuits/escrow`, `circuits/identity` and `circuits/streams` compile with nargo 1.0.0 and prove with Barretenberg in tests. They are not used by the app and have known soundness issues (section 5).
 
 ```
@@ -49,7 +49,7 @@ The state of every component, in one vocabulary (real on testnet, real in tests 
 
 | Directory | What it holds |
 |---|---|
-| `circuits/` | Three experimental standalone Noir circuits, their ACIR artifacts (`target/zk_*.json`), binary verification keys (`target/vk`) and metadata (`target/*.vk.json`) |
+| `circuits/` | Experimental standalone Noir circuits: v1 (`escrow`, `identity`, `streams`, pinned VKs) and v2 (`*_v2`, shared `hl_lib`, not pinned) |
 | `contracts/` | Solidity contracts (Cancun EVM). Not audited |
 | `lib/aztec/` | Aztec wallet (PXE, keys, tokens) and the VK pinning checks (`verifier.ts`) |
 | `lib/zk/` | `prover.ts`: Node-only UltraHonk proving and verification for the standalone circuits |
@@ -83,7 +83,7 @@ The three circuits use `pedersen_hash` and compile with nargo 1.0.0. The binary 
 | `identity` | `0xcd02d2407de202d61e1a03c360633a9b0cdd8fe4b4d67b007cce108990632194` |
 | `streams` | `0xa79000bf70441f02ce5ec092f15771e93dfc3d990977a33de9991795bc374346` |
 
-Known soundness issues, documented in [`docs/zk/MASTER_PROMPT.md`](docs/zk/MASTER_PROMPT.md):
+Known soundness issues of v1, documented in [`docs/zk/MASTER_PROMPT.md`](docs/zk/MASTER_PROMPT.md):
 
 * **ZK-01 (critical):** the streams circuit does not chain state, so the same accrual can be claimed many times. `test/circuits/streams_zk01_known_issue.test.ts` reproduces it.
 * **ZK-02 (critical):** escrow and streams proofs are not bound to the address that receives the funds.
@@ -91,7 +91,9 @@ Known soundness issues, documented in [`docs/zk/MASTER_PROMPT.md`](docs/zk/MASTE
 * **ZK-04, ZK-05:** the identity circuit lacks domain separation and has an anonymity set of two.
 * **ZK-06, ZK-07:** timestamps are chosen by the prover; verification must use the pinned VK (now enforced in `lib/zk/prover.ts`).
 
-The plan is to replace escrow, streams and identity with aztec-nr contracts (tasks R-08 to R-10), not to deploy these circuits.
+**v2 circuits (experimental).** `circuits/escrow_v2`, `circuits/identity_v2` and `circuits/streams_v2` (with the shared `circuits/hl_lib`) fix ZK-01 to ZK-05 and close gaps G2 (committed sanction list), G3 (depth-32 identity tree) and G5 (Poseidon2 with domain separators). They compile and pass their tests in CI (workflow "Noir circuits") but are not pinned and need a verifier that stores state: see [`docs/zk/V2_CIRCUITS.md`](docs/zk/V2_CIRCUITS.md).
+
+The long-term plan is to replace escrow, streams and identity with aztec-nr contracts (tasks R-08 to R-10; API notes in [`docs/zk/AZTEC_NR_V6_NOTES.md`](docs/zk/AZTEC_NR_V6_NOTES.md)), not to deploy any of these circuits.
 
 ---
 
@@ -128,6 +130,7 @@ npm ci
 # Circuits: types, tests, and that the committed artifacts are the compiled ones
 for c in escrow identity streams; do (cd circuits/$c && nargo check && nargo test); done
 node scripts/zk/check-artifacts.mjs
+for c in hl_lib escrow_v2 identity_v2 streams_v2; do (cd circuits/$c && nargo test); done
 
 # Proving, VK pinning and the ZK-01 reproduction
 npx vitest run test/unit/aztec/circuit-proving.test.ts test/zk/ test/circuits/ test/aztec_vk_integrity.test.ts
