@@ -15,6 +15,7 @@
 | Community posts | Readable by our server | Disclosed in the product | Migration plan: `docs/communities/MLS_MIGRATION.md` (task R-17) |
 | Standalone circuits v1 (`circuits/escrow`, `identity`, `streams`) | Real in tests only; VKs pinned | `scripts/zk/check-artifacts.mjs`, `test/zk/`, `test/circuits/` | Known soundness issues ZK-01 to ZK-07 |
 | Standalone circuits v2 (`circuits/*_v2`) | Experimental; compiled and tested in CI (`Noir circuits` workflow) | `docs/zk/V2_CIRCUITS.md` | Not proven end-to-end in TypeScript yet; VKs not pinned |
+| aztec-nr contracts (`contracts/aztec/`) | Compile with Aztec 6.0.0 in CI; fixed after review | `docs/zk/AZTEC_CONTRACTS_REVIEW.md` | No TXE tests, no deployment; private custody needs contract keys |
 | L1 contracts | Local tests; not audited, not deployed to mainnet | `npm run test:contracts` | `ZKIdentityRegistry.verifyCredential` reverts until a verifier exists |
 | Community apps sandbox | Real (CSP `sandbox allow-scripts`, no network) | `test/eaf_isolation.adversarial.test.ts` | An app can navigate its own frame |
 

@@ -2,11 +2,11 @@
 
 Los circuitos v2 corrigen en los circuitos sueltos los hallazgos ZK-01 a ZK-05 y cierran los gaps G2, G3 y G5 de `circuits/CONSTRAINT_COMPLETENESS.md`. Viven en crates nuevos (`circuits/escrow_v2`, `circuits/identity_v2`, `circuits/streams_v2`, con la librería común `circuits/hl_lib`), así que los circuitos v1 y sus VK fijadas no cambian.
 
-**Estado:** experimentales. Se compilan y se prueban con `nargo test` en la CI (workflow "Noir circuits"), que también deriva sus VK con Barretenberg y las publica como artefacto. No tienen VK fijada, no los usa la app y no hay verificador desplegado. El plan de largo plazo sigue siendo el camino A del prompt maestro: contratos aztec-nr (R-08 a R-10). Los v2 son el camino B, útil para pruebas rápidas y para un verificador fuera de Aztec.
+**Estado:** experimentales. Se compilan y se prueban con `nargo test` en la CI (workflow "Noir circuits"), que también deriva sus VK con Barretenberg y las compara con los hashes fijados en `scripts/zk/v2-vks.mjs`. Las VK no están commiteadas, no los usa la app y no hay verificador desplegado. El plan de largo plazo sigue siendo el camino A del prompt maestro: contratos aztec-nr (R-08 a R-10). Los v2 son el camino B, útil para pruebas rápidas y para un verificador fuera de Aztec.
 
 ## Resultado en CI (3 nov 2026, run 41713400769, nargo 1.0.0 y bb.js 5.3.0)
 
-| Crate | Tests | Opcodes ACIR | VK SHA-256 (reportada, no fijada) | Cabecera VK |
+| Crate | Tests | Opcodes ACIR | VK SHA-256 (fijada en `scripts/zk/v2-vks.mjs`) | Cabecera VK |
 |---|---|---|---|---|
 | `hl_lib` | 4 | — | — | — |
 | `escrow_v2` | 13 | 43 | `0xb020ec025e2429fd10b56112ffd8b78463931bf479704e8e4dfb51468a7edbf4` | 2^12 filas, 15 entradas públicas (7 + 8) |

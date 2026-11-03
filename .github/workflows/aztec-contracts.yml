@@ -51,7 +51,7 @@ jobs:
           for dir in contracts/aztec/*/; do
             [ -f "$dir/Nargo.toml" ] || continue
             echo "::group::$dir"
-            (cd "$dir" && aztec compile)
+            (cd "$dir" && rm -rf target && aztec compile && ls -la target)
             echo "::endgroup::"
           done
 

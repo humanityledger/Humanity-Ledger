@@ -6,11 +6,11 @@
 |---|---|---|---|
 | Circuitos v1 | `circuits/escrow`, `circuits/identity`, `circuits/streams` | Real en tests; VK fijadas en `lib/aztec/verifier.ts`; hallazgos ZK-01 a ZK-07 | Referencia histórica y pruebas de CI. No deben custodiar valor |
 | Circuitos v2 | `circuits/*_v2`, `circuits/hl_lib` | Experimental; compilados y probados en CI | Corrigen ZK-01 a ZK-05 y G2, G3, G5 en el camino B |
-| Contratos aztec-nr | (no existen todavía) | Plan R-08 a R-10 | Destino recomendado (camino A) |
+| Contratos aztec-nr | `contracts/aztec/escrow`, `streams`, `identity` | Compilan con Aztec 6.0.0 en CI; corregidos tras la revisión `AZTEC_CONTRACTS_REVIEW.md`; sin tests TXE ni despliegue | Destino recomendado (camino A) |
 
 ## Corrección al paquete de cierre de gaps
 
-El documento "Dual Implementation Clarification" del paquete del 3 de noviembre decía que había contratos Aztec en `contracts/aztec/` con Poseidon2 y un árbol de profundidad 32. Esa ruta no existe en el repositorio y no hay ningún crate de tipo `contract`. La afirmación venía de una versión anterior del dossier de Aztec, que ya se corrigió.
+El documento "Dual Implementation Clarification" del paquete del 3 de noviembre daba por hecho que `contracts/aztec/` existía con Poseidon2 y profundidad 32. Cuando se escribió, no existía. El commit `6c009e5a` (3 nov, 19:54) añadió esos contratos; su revisión encontró fallos que bloqueaban fondos (`AZTEC_CONTRACTS_REVIEW.md`), ya corregidos. La "dualidad" queda resuelta así: los contratos son el destino; los circuitos v1 y v2 son pruebas fuera de Aztec.
 
 ## Regla para cambiar la canónica
 
