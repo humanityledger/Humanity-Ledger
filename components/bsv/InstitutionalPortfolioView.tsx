@@ -17,7 +17,6 @@ import { useRealWalletData } from '@/hooks/useRealWalletData';
 import { QRCodeSVG } from 'qrcode.react';
 import { MetaMaskNetworkSelector } from '@/components/portfolio/MetaMaskNetworkSelector';
 import { QuantumHoldingsEngine } from '@/components/portfolio/QuantumHoldingsEngine';
-import { AztecPrivacyTerminal } from '@/components/portfolio/AztecPrivacyTerminal';
 import { AztecIdentityCard } from '@/components/portfolio/AztecIdentityCard';
 import { SecurityAllowances } from '@/components/portfolio/SecurityAllowances';
 import { ContractDeployerView } from '@/components/portfolio/ContractDeployerView';
@@ -106,7 +105,7 @@ export function InstitutionalPortfolioView() {
 
     
     // We keep 'HOME' as the main view, and overlay modals for actions
-    const [view, setView] = useState<'HOME'|'NETWORK'|'CREATE'|'SHIELD'|'SECURITY'|'DEPLOY'|'MEMPOOL'|'SMART_ACCOUNT'|'OMNICHAIN'|'SWAP'|'BRIDGE'|'BUY'|'SEND'|'QDS'>('HOME');
+    const [view, setView] = useState<'HOME'|'NETWORK'|'CREATE'|'SECURITY'|'DEPLOY'|'MEMPOOL'|'SMART_ACCOUNT'|'OMNICHAIN'|'SWAP'|'BRIDGE'|'BUY'|'SEND'|'QDS'>('HOME');
     
     // Modal states for full universal capability
     const [showReceive, setShowReceive] = useState(false);
@@ -251,7 +250,6 @@ export function InstitutionalPortfolioView() {
                 {/* Embedded older views for deep protocol interactions */}
                 {view === 'NETWORK' && <NetworkView key="network" onBack={() => setView('HOME')} />}
 
-                {view === 'SHIELD' && <AztecPrivacyTerminal key="shield" onBack={() => setView('HOME')} />}
                 {view === 'SECURITY' && <SecurityAllowances key="security" onBack={() => setView('HOME')} />}
                 {view === 'DEPLOY' && <ContractDeployerView key="deploy" onBack={() => setView('HOME')} />}
                 {view === 'MEMPOOL' && <TransactionManagerView key="mempool" onBack={() => setView('HOME')} />}

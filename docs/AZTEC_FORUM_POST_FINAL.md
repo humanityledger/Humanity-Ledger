@@ -26,7 +26,7 @@ Humanity Ledger is an open source cryptographic protocol that composes client lo
 
 The protocol operates entirely within Aztec's programmable privacy model. Private state transitions are expressed as Noir circuits compiled to ACIR (Abstract Circuit Intermediate Representation) and proven by the Barretenberg UltraHonk backend inside a browser Web Worker. The resulting proofs are submitted to the Aztec testnet, where the sequencer verifies them against on chain anchored verification keys without ever observing private inputs. This is the defining property of Aztec that makes this protocol possible: privacy is not enforced by policy; it is enforced by arithmetic.
 
-This post documents the current engineering state of the monorepo at canonical commit `783df711`: three production Noir circuits with their complete constraint invariants, the RFC 9420 MLS epoch ratchet implementation via XMTP, the Ephemeral Application Framework (EAF) sandbox boundary, the verification key lifecycle state machine, and an explicit catalog of what this protocol does not claim.
+This post documents the current engineering state of the monorepo at canonical commit `783df711`: three experimental Noir circuits with their constraint invariants (later found to have soundness issues; see docs/zk/MASTER_PROMPT.md), the RFC 9420 MLS epoch ratchet implementation via XMTP, the Ephemeral Application Framework (EAF) sandbox boundary, the verification key lifecycle state machine, and an explicit catalog of what this protocol does not claim.
 
 ***
 
@@ -116,7 +116,7 @@ For mainnet, an unsolved design question exists regarding how to provide first u
 
 ## 3. Noir Circuits: Complete Constraint Invariants
 
-The monorepo contains three production Noir circuits compiled with committed verification key artifacts at `circuits/*/target/*.vk.json`. Tests in `test/circuits/` cover both valid witness paths and deliberate constraint violation cases (negative tests). Every constraint listed below is enforced by the ACIR constraint system, not by application layer validation.
+The monorepo contains three experimental Noir circuits compiled with committed verification key artifacts at `circuits/*/target/*.vk.json`. Tests in `test/circuits/` cover both valid witness paths and deliberate constraint violation cases (negative tests). Every constraint listed below is enforced by the ACIR constraint system, not by application layer validation.
 
 The complete pre-audit constraint analysis, including known under-constrained regions and planned mitigations, is documented in `circuits/CONSTRAINT_COMPLETENESS.md`.
 

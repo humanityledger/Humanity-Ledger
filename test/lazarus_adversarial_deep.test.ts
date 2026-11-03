@@ -265,7 +265,7 @@ describe('Adversarial Deep Fortification — Anti-Lazarus / APT Resistance Batte
         ...legitimateRegistry,
         escrow: { hash: '0x' + 'f'.repeat(64), status: 'ACTIVE' as const },
       };
-      expect(() => assertVKIntegrity(tamperedRegistry)).toThrow(/does not match on-chain registry/);
+      expect(() => assertVKIntegrity(tamperedRegistry)).toThrow(/does not match the registry/);
     });
   });
 

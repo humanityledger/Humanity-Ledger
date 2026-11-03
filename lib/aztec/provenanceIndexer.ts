@@ -1,57 +1,34 @@
-import { prisma } from '@/lib/prisma';
-import { generateAztecTxHash } from './realTx';
+/**
+ * lib/aztec/provenanceIndexer.ts
+ *
+ * Provenance events (forum posts, page visits) used to be written to the
+ * `transaction` table as if they were Aztec transactions: a keccak hash of
+ * the event text was stored as `txHash`, the chain id was labelled "Aztec
+ * Mainnet" and `Date.now()` was stored as the block number. None of that was
+ * on any chain, and the records read as real transactions.
+ *
+ * Until an event is actually anchored on a network (and carries the hash the
+ * Aztec SDK returns for it), nothing is recorded and no hash is returned.
+ * Callers already treat a `null` result as "not logged".
+ *
+ * Master prompt, task R-04 (docs/zk/MASTER_PROMPT.md).
+ */
 
-export type ProvenanceEventType = 
+export type ProvenanceEventType =
   | 'IDENTITY_PROOF'
   | 'FORUM_POST'
   | 'LEDGER_CHAT_SYNC'
   | 'PORTFOLIO_ACCESS'
   | 'STUDIO_ACCESS';
 
+export interface ProvenanceRecord {
+  txHash: string;
+}
+
 export async function logProvenanceEvent(
-  type: ProvenanceEventType,
-  address: string,
-  details: any
-) {
-  try {
-    // Determine target based on event
-    let target = '0x0000000000000000000000000000000000000000';
-    if (details.targetAddress) {
-      target = details.targetAddress;
-    }
-
-    // Generate cryptographic hash
-    const txCount = await prisma.transaction.count({ where: { fromAddress: address } });
-    const hash = generateAztecTxHash(type, address, target, 0, txCount);
-
-    // Build ZK-like forensic metadata
-    const fingerprint = `SHA256:${Buffer.from(`${type}:${address}:${Date.now()}`).toString('hex').slice(0, 64)}`;
-    
-    // Create the transaction record
-    const record = await prisma.transaction.create({
-      data: {
-        txHash: hash,
-        type: type,
-        status: 'SUCCESS',
-        amount: 0,
-        token: 'ATOMIC_LOG',
-        fromAddress: address,
-        toAddress: target,
-        chainId: 2151908, // Aztec Mainnet ID for HumanIDFi
-        blockNumber: BigInt(Date.now()), // Deterministic pseudo-block
-        metadata: {
-          provenance: true,
-          fingerprint: fingerprint,
-          actionDetails: details,
-          certificateRoot: `0x${Buffer.from(fingerprint).toString('hex').slice(0, 64)}`,
-          explorerUrl: `https://aztecscan.xyz` // Virtual provenance hash — always route to explorer root
-        }
-      }
-    });
-
-    return record;
-  } catch (err) {
-    console.error(`[Provenance Indexer] Error logging event ${type}:`, err);
-    return null;
-  }
+  _type: ProvenanceEventType,
+  _address: string,
+  _details: Record<string, unknown>,
+): Promise<ProvenanceRecord | null> {
+  return null;
 }

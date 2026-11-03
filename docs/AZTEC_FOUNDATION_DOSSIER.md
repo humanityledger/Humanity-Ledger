@@ -1,188 +1,85 @@
-# Aztec Foundation — Technical Integration & Product Validation Dossier
-## Protocol: Humanity Ledger | Target: Aztec Foundation Technical and Ecosystem Team
-**Date:** November 2026  
-**Repository:** [https://github.com/humanityledger/Humanity-Ledger](https://github.com/humanityledger/Humanity-Ledger)  
-**Canon Commit (main):** `b30a3251`  
-**Current Protocol Maturity:** Testnet Stage 1 — UltraHonk Proving Pipeline & Audit Verified  
+# Humanity Ledger — Technical Dossier for the Aztec Ecosystem
+
+**Date:** 3 November 2026
+**Repository:** [github.com/humanityledger/Humanity-Ledger](https://github.com/humanityledger/Humanity-Ledger)
+**Status:** Pre-release. Aztec testnet only. No external audit.
+**Engineering plan and full state table:** [`docs/zk/MASTER_PROMPT.md`](zk/MASTER_PROMPT.md) (Spanish)
 
 ---
 
-## 1. Executive Summary
+## 1. Summary
 
-Humanity Ledger is an open source cryptographic protocol coupling end to end encrypted group messaging conforming to Messaging Layer Security (MLS, RFC 9420) with **client side zero knowledge proof generation powered by Aztec Network's Private Execution Environment (PXE) and UltraHonk proving system**.
+Humanity Ledger is a messaging application (Ledger Chat). Direct messages go over XMTP v3, which uses MLS (RFC 9420); we do not implement MLS ourselves. Private payments use an Aztec PXE in the browser with the standard `Token` and `SponsoredFPC` contracts on Aztec testnet.
 
-This dossier is prepared for the Aztec Foundation Technical and Ecosystem team to facilitate a rigorous, reproducible technical review of our Aztec integration, Noir circuits, client side proving architecture, and security boundaries.
+We also wrote three standalone Noir circuits (escrow, identity, streams). They compile with nargo 1.0.0 and prove with Barretenberg in our tests, but a review on 3 November 2026 found soundness issues in all three (section 4). We are not asking anyone to rely on them. We would value guidance on rewriting them as aztec-nr contracts.
 
-### Core Value Proposition
-- **Sovereign Client Execution:** User private balances, witness generation, and transaction notes never touch any backend server or RPC relay unshielded. Proving is executed inside the client's local PXE (`@aztec-labs/aztec.js`).
-- **Cryptographic Non Simulated Proving:** We prohibit mocked cryptographic primitives. Continuous integration enforces a strict non simulation test requirement (`test/aztec_e2e_no_simulation.test.ts`) banning synthetic random fields (`Fr.random()`) or dummy proof strings in production test paths.
-- **Auditable Hybrid Architecture:** Off chain private state transitions via Aztec UltraHonk, combined with verifiable Layer 1 EVM dispute resolution and timelocked vaults (`HumanityTimeLockVault`, `LedgerDeadmanSwitch`).
+An earlier version of this dossier pointed to commit `783df711` and described the circuits as production circuits; they did not compile then. That description was wrong.
 
 ---
 
-## 2. Aztec Integration Architecture
+## 2. What can be verified today
 
-```
-+-------------------------------------------------------------------------+
-|                        Client Device (Browser / Desktop)                |
-|                                                                         |
-|  +--------------------+        +-------------------------------------+  |
-|  | MLS Messaging      |        | Aztec Private Execution (PXE)       |  |
-|  | (RFC 9420 / XMTP)  |        | - Local Witness Generation          |  |
-|  +--------------------+        | - UltraHonk Client Prover           |  |
-|                                | - Note Discovery & Key Store        |  |
-|                                +-------------------------------------+  |
-|                                                   |                     |
-|                                                   v                     |
-|                                      +-------------------------+        |
-|                                      | Noir Circuits (BN254)   |        |
-|                                      | - Escrow Release        |        |
-|                                      | - Anonymous Identity    |        |
-|                                      | - Payment Streams       |        |
-|                                      +-------------------------+        |
-+---------------------------------------------------|---------------------+
-                                                    |
-                                      Private Tx / Shielded Proof
-                                                    |
-                                                    v
-                                    +-------------------------------+
-                                    | Aztec Network Testnet         |
-                                    | - Sequencer / Prover Pool     |
-                                    | - Rollup State Tree           |
-                                    +-------------------------------+
-                                                    |
-                                            Batch Settlement
-                                                    |
-                                                    v
-                                    +-------------------------------+
-                                    | Ethereum L1 Settlement        |
-                                    | - Rollup & Fast Inbox         |
-                                    | - HumanityTimeLockVault       |
-                                    +-------------------------------+
-```
+| Component | State | How to check |
+|---|---|---|
+| Browser wallet: shield, private send, unshield (`lib/aztec/wallet/`) | Real on Aztec testnet | `npm run test:aztec:e2e`. It needs our testnet token and faucet addresses, which are not yet published in the repository (task R-15) |
+| Circuits compile and their tests pass | Real, nargo 1.0.0 | `cd circuits/escrow && nargo test` (same for identity, streams) |
+| Committed artifacts are the compiled ones and the VKs are pinned | Real | `node scripts/zk/check-artifacts.mjs` |
+| UltraHonk proving and verification with the pinned VK | Real in tests only (Node) | `npx vitest run test/unit/aztec/circuit-proving.test.ts test/zk/` |
+| ZK-01 reproduction (streams double claim) | Documented | `npx vitest run test/circuits/streams_zk01_known_issue.test.ts` |
+| Direct messages | Real, provided by XMTP | XMTP browser SDK 5.2.0 |
+| Community posts | Readable by our server | Disclosed in the product |
 
-### 2.1 Noir Circuits Deployed
-The repository implements three specialized Noir circuits in `circuits/`, fully compiled to ACIR bytecode (`target/zk_*.json`) with production binary verification keys (`target/vk`, 3,680 bytes each) generated via `@aztec/bb.js` (Barretenberg v5.3.0) and committed integrity hashes (`target/*.vk.json`):
+Pinned verification keys (SHA-256 of `circuits/<c>/target/vk`, @aztec/bb.js 5.3.0):
 
-1. **Private Escrow Release Circuit (`circuits/escrow/src/main.nr`):**
-   - **ACIR Bytecode:** `circuits/escrow/target/zk_escrow.json` (125,485 bytes)
-   - **UltraHonk VK Hash:** `0x4e3cc4c8ce03607dcb2b98bd50c0d31084300634ee8f70f4674919682eb915c2`
-   - **Invariants:** 
-     - Commitment binding: $C = \mathcal{H}(s_{\mathrm{sender}}, \mathrm{pk}_{\mathrm{recipient}}, a, \sigma)$
-     - Temporal boundary: $t \le t_{\mathrm{deadline}}$
-     - Nullifier uniqueness: $\mathrm{nf} = \mathcal{H}(s_{\mathrm{sender}}, \sigma)$
-     - Value bounding: $0 < a \le 10^{15}$ (overflow & negative value protection)
-     - Non zero identity: $s_{\mathrm{sender}} \ne 0 \land \mathrm{pk}_{\mathrm{recipient}} \ne 0$
-   - **Verification:** 7 nargo native unit tests (including 6 negative constraint tests) passing.
+| Circuit | VK SHA-256 |
+|---|---|
+| escrow | `0x4e3cc4c8ce03607dcb2b98bd50c0d31084300634ee8f70f4674919682eb915c2` |
+| identity | `0xcd02d2407de202d61e1a03c360633a9b0cdd8fe4b4d67b007cce108990632194` |
+| streams | `0xa79000bf70441f02ce5ec092f15771e93dfc3d990977a33de9991795bc374346` |
 
-2. **Anonymous Identity & Compliance Circuit (`circuits/identity/src/main.nr`):**
-   - **ACIR Bytecode:** `circuits/identity/target/zk_identity.json`
-   - **UltraHonk VK Hash:** `0xcd02d2407de202d61e1a03c360633a9b0cdd8fe4b4d67b007cce108990632194`
-   - **Invariants:**
-     - Sanction screening without disclosing nationality: $j \notin \{j_{\mathrm{sanctioned1}}, j_{\mathrm{sanctioned2}}\}$
-     - Merkle membership of identity secret within authorized identity tree.
-     - Sybil resistance via scoped nullifier: $\mathrm{nf}_{\mathrm{scoped}} = \mathcal{H}(s_{\mathrm{id}}, \mathrm{scope})$.
-   - **Verification:** 8 nargo native unit tests passing.
-
-3. **Continuous Payment Stream Circuit (`circuits/streams/src/main.nr`):**
-   - **ACIR Bytecode:** `circuits/streams/target/zk_streams.json`
-   - **UltraHonk VK Hash:** `0xa79000bf70441f02ce5ec092f15771e93dfc3d990977a33de9991795bc374346`
-   - **Invariants:**
-     - Temporal monotonicity: $t \ge t_{\mathrm{start}}$
-     - Accrual constraint: $(w + c) \le (t - t_{\mathrm{start}}) \cdot r$
-     - Allocation ceiling: $(w + c) \le A_{\mathrm{total}}$
-     - Unique nullifier per withdrawal state transition.
-   - **Verification:** 13 nargo native unit tests passing.
-
-### 2.2 Client Side Verification Key (VK) Lifecycle Enforcer
-In accordance with Invariant P4 (Private State Integrity), `lib/aztec/verifier.ts` asserts that local circuit verification keys match on chain registered hashes anchored under a 14 day timelock before client proof synthesis:
-- **`ACTIVE`:** Proof synthesis permitted if local canonical SHA-256 matches on chain commitment.
-- **`DEPRECATED`:** Proving permitted with console deprecation warning and migration banner.
-- **`RETIRED` / `HASH MISMATCH`:** Client side proof synthesis is unconditionally blocked.
-
-### 2.3 Aztec PXE Testnet Pipeline
-Implemented in `scripts/aztec-pxe-e2e.ts`:
-- Derives ephemeral `EmbeddedWallet` Schnorr keys from OS CSPRNG (`crypto.randomBytes`).
-- Connects to Aztec Node (`node.aztec.network`).
-- Issues faucet minting, executes `transfer_to_private` (shielding), `transfer` (private to private), and `transfer_to_public` (unshielding).
-- Tested against Aztec Testnet contracts (`SponsoredFPCContract`, `TokenContract`).
+No VK registry is deployed on any network.
 
 ---
 
-## 3. Reproducible Verification & Test Evidence
+## 3. What was removed or corrected in this revision
 
-The Aztec Foundation engineering team can independently verify all test batteries in less than 60 seconds from a clean checkout:
-
-```bash
-# 1. Clone repository
-git clone https://github.com/humanityledger/Humanity-Ledger.git
-cd Humanity-Ledger
-
-# 2. Verify UltraHonk Proving Pipeline & Noir Circuit Invariants
-npx vitest run test/unit/aztec/circuit-proving.test.ts test/aztec_vk_integrity.test.ts test/aztec_e2e_no_simulation.test.ts test/circuits/
-
-# 3. Verify Key Custody & MLS Post Compromise Security
-npx vitest run test/key_custody.test.ts test/mls_post_compromise.test.ts
-
-# 4. Verify L1 Smart Contract Invariants (Cancun Hardhat Runtime)
-npm run test:contracts
-
-# 5. Run L1 Anti Backdoor Bytecode Verifier & Traceability CI Checker
-npx tsx scripts/verify-l1-bytecode.ts
-npm run check:traceability
-
-# 6. Run Full Property Based Fuzzing (60,000 iterations)
-npx vitest run test/property_fuzz.test.ts
-
-# 7. Run Full Unit, Security & Proving Suite (1,280 tests across 77 files)
-npm run test:run
-```
-
-### Verification Results Summary (Commit `b30a3251`)
-| Test Battery | Target Area | Result | Status |
-|---|---|---|---|
-| **UltraHonk E2E Proving Pipeline** (`test/unit/aztec/circuit-proving.test.ts`) | Real ACIR + Barretenberg 5.3.0 Prover | 16/16 passed | ✅ VERIFIED |
-| **Non Simulated Proving** (`test/aztec_e2e_no_simulation.test.ts`) | Aztec PXE Pipeline Invariants | 3/3 passed | ✅ VERIFIED |
-| **VK Lifecycle Integrity** (`test/aztec_vk_integrity.test.ts`) | Real Barretenberg SHA-256 VKs | 8/8 passed | ✅ VERIFIED |
-| **Noir Escrow Circuit** (`test/circuits/escrow.test.ts`) | Temporal & value invariants + UltraHonk proof | 9/9 passed | ✅ VERIFIED |
-| **Noir Identity Circuit** (`test/circuits/identity.test.ts`) | Compliance & Merkle proof + UltraHonk proof | 8/8 passed | ✅ VERIFIED |
-| **Noir Streams Circuit** (`test/circuits/streams.test.ts`) | Accrual & capacity bounds + UltraHonk proof | 7/7 passed | ✅ VERIFIED |
-| **Key Custody** (`test/key_custody.test.ts`) | Zero server key knowledge | 5/5 passed | ✅ VERIFIED |
-| **MLS Security** (`test/mls_post_compromise.test.ts`) | RFC 9420 PCS & epoch ratchet | 6/6 passed | ✅ VERIFIED |
-| **Contract Invariants** (`test/contracts_invariants.test.ts`) | L1 Timelock & Registry | 5/5 passed | ✅ VERIFIED |
-| **High Capacity Fuzzing** (`test/property_fuzz.test.ts`) | 60k iterations property fuzz | 6/6 suites passed | ✅ VERIFIED |
-| **Full Vitest Suite** (`npm run test:run`) | Entire codebase unit/integration/proving | **1,277 / 1,280 passed** (77 files) | ✅ VERIFIED |
+- The `*.vk.json` files used to carry invented Plonk-style fields (`circuitSize: 1024`, `qM`, `sigma1`, an "ACTIVE_REGISTERED" L1 anchoring). They now carry only values read from the real VK and toolchain.
+- The VK "integrity" check hashed that JSON. It now hashes the binary VK and compares it with constants in code.
+- `verifyProof` derived the VK from whatever bytecode was on disk. It now rejects an artifact that does not produce the pinned VK.
+- Modules that produced fabricated transaction hashes (`lib/aztec/realTx.ts`) or targeted Aztec Connect v1 (`lib/aztec-zk-engine.ts`) were deleted.
+- `ZKIdentityRegistry.verifyCredential` accepted any proof (the verifier call was commented out). It now always reverts.
 
 ---
 
-## 4. Transparent Boundaries & Explicit Non Claims
+## 4. Known soundness issues in the standalone circuits
 
-We adhere to a policy of total technical honesty. In our documentation (`README.md`, `docs/PROTOCOL_SPEC.md`), we publish explicit **Non Claims**:
-
-1. **No Quantum Immunity Claim for Classical Primitives:** While the protocol uses hybrid post compromise ratchets and defense in depth isolation, we explicitly state that underlying elliptic curve cryptography (BN254 curve in Aztec UltraHonk, secp256k1 on Ethereum L1, Curve25519) remains vulnerable to Shor's algorithm on cryptanalytically relevant quantum computers (CRQC).
-2. **No Metadata Privacy Claim for Network Topology:** MLS guarantees message payload confidentiality and post compromise security, but does not obscure network packet headers, IP transport timings, or graph communication frequency.
-3. **Testnet Stage 1 Status:** Humanity Ledger is currently deployed on Aztec Testnet and Polygon Amoy / Base testnets. It is NOT presented as mainnet production ready until Aztec reaches mainnet stability and formal external audits are complete.
-
----
-
-## 5. Proposed Collaboration and Validation Agenda
-
-We invite the Aztec Foundation team to collaborate on the following milestone initiatives:
-
-1. **Client Side Proving Optimization (Browser & Mobile WASM):**
-   - Benchmark and optimize UltraHonk proof generation memory footprint and latency inside mobile Safari and low end Chromium devices.
-   - Profile `@aztec-labs/aztec.js` Web Worker proof pipelines under constrained hardware (4 GB RAM devices).
-2. **Sponsored Fee Abstraction for Private Micro Settlement:**
-   - Implement native Paymaster and Sponsored Fee Payment mechanisms for gasless private note generation in consumer chat flows.
-3. **Note Discovery and State Synchronization:**
-   - Evaluate Aztec's latest note tagging and viewing key scanning strategies to minimize initial sync latency on client launch.
-4. **Formal Circuit Review:**
-   - Joint security review of `circuits/escrow`, `circuits/identity`, and `circuits/streams` ahead of our external audit cycle.
+| ID | Severity | Issue |
+|---|---|---|
+| ZK-01 | Critical | Streams: `withdrawn_amount` is a free private input and the nullifier is `H(commitment, withdrawn + claim)`, so the same accrual can be claimed many times with `withdrawn = 0` |
+| ZK-02 | Critical | Escrow and streams: no payout address among the public inputs, so a proof can be front-run |
+| ZK-03 | High | Escrow: claiming requires the sender's secret (a bearer instrument); no refund path |
+| ZK-04 | High | Identity: leaf and nullifier are both 2-input Pedersen hashes with no domain separation; a scope equal to the jurisdiction code reveals the leaf |
+| ZK-05 | High | Identity: depth-1 tree (anonymity set of two); the jurisdiction is a free witness |
+| ZK-06 | Medium | Timestamps are chosen by the prover |
+| ZK-07 | Medium | Verification did not pin the VK (fixed in this revision) |
 
 ---
 
-## 6. Engineering Contacts
-- **Protocol Engineering and Inquiries:** `humanityledger@icloud.com`
-- **Lead Developer and Protocol Architect:** Stefan Antonio Cirisanu (`humanityledger@icloud.com`)
-- **Repository:** `https://github.com/humanityledger/Humanity-Ledger`
-- **Branch:** `main` (Commit `783df711`)
+## 5. Direction, and our questions
+
+We plan to express escrow and streams as aztec-nr v6 contracts with notes, so that note ownership and the network's nullifier tree replace our hand-written state handling. For the escrow, two notes (claim for the recipient, refund for the sender) share one settlement nullifier; the claim sets `set_expiration_timestamp(deadline)` and the refund checks the anchor block timestamp against the deadline.
+
+1. Is that an idiomatic way to express "claim before the deadline, refund after it"?
+2. What pattern do you recommend for a contract that must hold a private balance?
+
+---
+
+## 6. Non-claims
+
+1. No quantum resistance (BN254, secp256k1 and Curve25519 are classical).
+2. No traffic-analysis protection.
+3. Testnet only; no external audit; not production ready.
+
+## 7. Contact
+
+Stefan Antonio Cirisanu · `humanityledger@icloud.com`

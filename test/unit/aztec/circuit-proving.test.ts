@@ -1,10 +1,11 @@
 /**
  * test/unit/aztec/circuit-proving.test.ts
  *
- * Real Aztec UltraHonk Proving & Soundness Test Suite for Humanity Ledger.
- * Closes the proving gap against Nyx Wallet by asserting real Noir ACVM witness execution,
- * UltraHonk proof generation, verification, and negative constraint enforcement
- * across all three production circuits (escrow, identity, streams).
+ * Real UltraHonk proving for the three experimental standalone circuits
+ * (escrow, identity, streams): ACIR execution with noir_js, proof generation and
+ * verification with Barretenberg, and the constraint violations each circuit
+ * rejects. Each case proves a single action in isolation; the circuits have
+ * known soundness issues across actions (docs/zk/MASTER_PROMPT.md, ZK-01..ZK-07).
  */
 
 import { describe, it, expect, afterAll } from 'vitest';
@@ -19,7 +20,7 @@ import {
   type StreamsWitness,
 } from '../../../lib/zk/prover';
 
-describe('Aztec UltraHonk Circuit Proving & Verification Pipeline (Closing Gap vs Nyx)', () => {
+describe('UltraHonk proving for the standalone Noir circuits', () => {
   afterAll(async () => {
     await destroyZkEngine();
   });
@@ -113,7 +114,7 @@ describe('Aztec UltraHonk Circuit Proving & Verification Pipeline (Closing Gap v
   describe('Anonymous Identity & Compliance Circuit (zk_identity)', () => {
     const validIdentityWitness: IdentityWitness = {
       identity_secret: '12345',
-      jurisdiction_code: 840, // Non-sanctioned
+      jurisdiction_code: '840', // Non-sanctioned
       merkle_leaf_sibling: '67890',
       is_left: true,
       expected_merkle_root: '0x2a65b513ce830604250f5cb08ce7a88129aad8d03e1bb2742b625b22020cbd94',
@@ -134,7 +135,7 @@ describe('Aztec UltraHonk Circuit Proving & Verification Pipeline (Closing Gap v
     it('rejects identity from SANCTIONED_JURISDICTION_1 (999)', async () => {
       const sanctionedWitness: IdentityWitness = {
         ...validIdentityWitness,
-        jurisdiction_code: 999,
+        jurisdiction_code: '999',
       };
 
       await expect(proveIdentity(sanctionedWitness)).rejects.toThrow(/Cannot satisfy constraint/i);
@@ -143,7 +144,7 @@ describe('Aztec UltraHonk Circuit Proving & Verification Pipeline (Closing Gap v
     it('rejects identity from SANCTIONED_JURISDICTION_2 (998)', async () => {
       const sanctionedWitness: IdentityWitness = {
         ...validIdentityWitness,
-        jurisdiction_code: 998,
+        jurisdiction_code: '998',
       };
 
       await expect(proveIdentity(sanctionedWitness)).rejects.toThrow(/Cannot satisfy constraint/i);

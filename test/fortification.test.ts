@@ -125,13 +125,16 @@ describe('Humanity Ledger — 300-Item Fortification Checklist Automated Verific
         const vk = JSON.parse(fs.readFileSync(vkPath, 'utf8'));
         expect(vk.provingSystem).toBe('UltraHonk');
         expect(vk.curve).toBe('BN254');
-        expect(vk.vkHash.startsWith('0x')).toBe(true);
+        expect(vk.vkSha256).toMatch(/^0x[0-9a-f]{64}$/);
       }
     });
 
-    it('Item 43: Circuit registry mandates 14-day timelock delay', () => {
-      const escrowVk = JSON.parse(fs.readFileSync(path.join(root, 'circuits/escrow/target/escrow.vk.json'), 'utf8'));
-      expect(escrowVk.l1Anchoring.timelockDelaySeconds).toBe(1209600); // 14 days
+    it('Item 43: VK metadata does not claim an on-chain registry that does not exist', () => {
+      for (const name of ['escrow', 'streams', 'identity']) {
+        const vk = JSON.parse(fs.readFileSync(path.join(root, `circuits/${name}/target/${name}.vk.json`), 'utf8'));
+        expect(vk.onChainRegistry).toBeNull();
+        expect(vk.l1Anchoring).toBeUndefined();
+      }
     });
 
     it('Item 47: Pinned documentation of Noir and Barretenberg versions in CIRCUITS.md', () => {

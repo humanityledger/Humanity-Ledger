@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
             meta: {
                 source: "Binance/CoinGecko Real-time Feed",
                 latency: "24ms",
-                status: "100% Real Market Data"
+                status: "ok"
             }
         });
     } catch (error) {

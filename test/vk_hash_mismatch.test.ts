@@ -23,7 +23,7 @@ describe('VK HASH_MISMATCH Unconditional Block', () => {
     };
 
     // assertVKIntegrity must throw — local hash does not match on-chain
-    expect(() => assertVKIntegrity(registry)).toThrow(/does not match on-chain registry/);
+    expect(() => assertVKIntegrity(registry)).toThrow(/does not match the registry/);
   });
 
   it('HASH_MISMATCH.2: A RETIRED VK unconditionally blocks proof synthesis, no override path exists', () => {
@@ -81,7 +81,7 @@ describe('VK HASH_MISMATCH Unconditional Block', () => {
     };
 
     expect(() => assertVKIntegrity(registryMissingStreams)).toThrow(
-      'Circuit "streams" is not registered in the on-chain registry.',
+      'Circuit "streams" is not in the registry.',
     );
   });
 });

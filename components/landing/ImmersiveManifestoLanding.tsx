@@ -578,7 +578,7 @@ export function ImmersiveManifestoLanding({ onOpenScanner }: ImmersiveManifestoL
                   <p className="text-[14px] text-[#1C1C1E]/60 font-medium leading-relaxed">{f.desc}</p>
                 </div>
                 <div className="mt-6 pt-4 border-t border-black/[0.06] flex items-center gap-1 text-[11px] font-bold text-[#1C1C1E]/70 group-hover:text-[#1C1C1E] transition-colors">
-                  <span>Audited on Aztec</span>
+                  <span>Built on Aztec</span>
                   <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
                 </div>
               </motion.div>

@@ -1,171 +1,107 @@
 /**
  * scripts/benchmark-proof-gen.ts
  *
- * Automated Proof Generation & ACIR Execution Benchmarking Suite.
- * Measures UltraHonk proof generation latency, witness synthesis time,
- * and proof compression metrics across configured iterations.
+ * Measures real UltraHonk proving time for the standalone circuits through
+ * lib/zk/prover.ts (pinned VK, real ACIR, Barretenberg WASM).
  *
  * Usage:
- *   npx tsx scripts/benchmark-proof-gen.ts --circuit escrow --iterations 20
+ *   npx tsx scripts/benchmark-proof-gen.ts --circuit escrow --iterations 5
  *
- * Authority: docs/PROOF_BENCHMARKS.md & PROTOCOL_SPEC.md §4
+ * Earlier versions fell back to a "calibrated" loop of SHA-256 hashes and
+ * printed a fixed proof size when proving failed, which reported numbers that
+ * had nothing to do with proving. This version measures proving or exits 1.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { performance } from 'node:perf_hooks';
-import crypto from 'node:crypto';
+import {
+  proveEscrow,
+  proveIdentity,
+  proveStreams,
+  destroyZkEngine,
+  type UltraHonkProofResult,
+} from '../lib/zk/prover';
 
-interface BenchmarkConfig {
-  circuit: string;
-  iterations: number;
-}
+type Circuit = 'escrow' | 'identity' | 'streams';
 
-function parseArgs(): BenchmarkConfig {
+// Valid witnesses shared with test/unit/aztec/circuit-proving.test.ts.
+const RUNNERS: Record<Circuit, () => Promise<UltraHonkProofResult>> = {
+  escrow: () =>
+    proveEscrow({
+      sender_secret: '12345',
+      recipient_pubkey: '67890',
+      amount: '1000',
+      salt: '999',
+      escrow_commitment: '0x1d73346def6ef00fe9c6e6165cbdebcd739d1b43ea7f025529c040d4843080a5',
+      nullifier: '0x1485a879df7717201348b608c7af55d2c6a630ff8ae6f05181d80d6f315b8f2a',
+      deadline: '1800000000',
+      current_timestamp: '1750000000',
+    }),
+  identity: () =>
+    proveIdentity({
+      identity_secret: '12345',
+      jurisdiction_code: '840',
+      merkle_leaf_sibling: '67890',
+      is_left: true,
+      expected_merkle_root: '0x2a65b513ce830604250f5cb08ce7a88129aad8d03e1bb2742b625b22020cbd94',
+      scope: '42',
+      scoped_nullifier: '0x1a8fc5ddd747d00a29190989f1034e8687f254fb13286c425e8c72ba0233ab95',
+    }),
+  streams: () =>
+    proveStreams({
+      sender_secret: '12345',
+      recipient_pubkey: '67890',
+      total_allocation: '10000',
+      rate_per_second: '10',
+      start_time: '1000',
+      withdrawn_amount: '200',
+      claim_amount: '300',
+      salt: '999',
+      stream_commitment: '0x1dd07dd799d46a7e7fd63ba40116b21fb43535c17177d811bda7f771aaece6d9',
+      current_time: '1060',
+      stream_nullifier: '0x13f5958db040e7cd4d94916477e781197eab5361b87b8894c4670b0865ad97cc',
+    }),
+};
+
+function parseArgs(): { circuit: Circuit; iterations: number } {
   const args = process.argv.slice(2);
-  let circuit = 'escrow';
-  let iterations = 10;
-
+  let circuit: Circuit = 'escrow';
+  let iterations = 5;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--circuit' && args[i + 1]) {
-      circuit = args[i + 1];
-      i++;
-    } else if (args[i] === '--iterations' && args[i + 1]) {
-      iterations = parseInt(args[i + 1], 10) || 10;
-      i++;
-    }
+    if (args[i] === '--circuit' && args[i + 1]) circuit = args[++i] as Circuit;
+    else if (args[i] === '--iterations' && args[i + 1]) iterations = parseInt(args[++i], 10) || 5;
   }
-
+  if (!(circuit in RUNNERS)) {
+    console.error(`Unknown circuit "${circuit}". Use escrow, identity or streams.`);
+    process.exit(1);
+  }
   return { circuit, iterations };
 }
 
-function calculatePercentile(sorted: number[], p: number): number {
-  if (sorted.length === 0) return 0;
-  const index = Math.ceil((p / 100) * sorted.length) - 1;
-  return sorted[Math.max(0, Math.min(index, sorted.length - 1))];
-}
+const percentile = (sorted: number[], p: number) =>
+  sorted[Math.max(0, Math.min(Math.ceil((p / 100) * sorted.length) - 1, sorted.length - 1))];
 
-async function runBenchmark() {
+async function main() {
   const { circuit, iterations } = parseArgs();
+  console.log(`Circuit: ${circuit} · iterations: ${iterations} · host: ${process.platform}/${process.arch} · node ${process.version}`);
 
-  console.log('===============================================================');
-  console.log('Humanity Ledger — UltraHonk Proof Generation Benchmark Runner');
-  console.log('===============================================================');
-  console.log(`Target Circuit : ${circuit}`);
-  console.log(`Iterations     : ${iterations}`);
-  console.log(`Timestamp      : ${new Date().toISOString()}`);
-  console.log('---------------------------------------------------------------\n');
-
-  const root = process.cwd();
-  const circuitDir = path.join(root, 'circuits', circuit);
-  const acirPath = path.join(circuitDir, 'target', `${circuit}.json`);
-  const vkPath = path.join(circuitDir, 'target', `${circuit}.vk.json`);
-
-  if (!fs.existsSync(circuitDir)) {
-    console.error(`[ERROR] Circuit directory not found: ${circuitDir}`);
-    process.exit(1);
+  const times: number[] = [];
+  let proofBytes = 0;
+  for (let i = 1; i <= iterations; i++) {
+    const result = await RUNNERS[circuit]();
+    if (!result.isValid) throw new Error('Barretenberg rejected its own proof');
+    times.push(result.provingTimeMs);
+    proofBytes = result.proof.length;
+    console.log(`  run ${i}: ${result.provingTimeMs} ms`);
   }
 
-  const timesMs: number[] = [];
-  let proofSizeBytes = 0;
-
-  if (fs.existsSync(acirPath)) {
-    console.log(`[STATUS] Compiled ACIR artifact detected: ${acirPath}`);
-    console.log('[STATUS] Initializing @noir-lang/noir_js & UltraHonkBackend...\n');
-
-    try {
-      const { UltraHonkBackend } = await import('@noir-lang/backend_barretenberg');
-      const { Noir } = await import('@noir-lang/noir_js');
-
-      const circuitJson = JSON.parse(fs.readFileSync(acirPath, 'utf8'));
-      const backend = new UltraHonkBackend(circuitJson.bytecode);
-      const noir = new Noir(circuitJson);
-
-      for (let i = 1; i <= iterations; i++) {
-        const t0 = performance.now();
-        // Sample witness generation with domain-specific inputs
-        const witness = await noir.execute({
-          sender_secret: `0x${crypto.randomBytes(31).toString('hex').padStart(64, '0')}`,
-          recipient_pubkey: `0x${crypto.randomBytes(31).toString('hex').padStart(64, '0')}`,
-          amount: 1000,
-          salt: `0x${crypto.randomBytes(31).toString('hex').padStart(64, '0')}`,
-        });
-        const proof = await backend.generateProof(witness.witness);
-        const elapsed = performance.now() - t0;
-        timesMs.push(elapsed);
-        proofSizeBytes = proof.proof.length;
-
-        process.stdout.write(`  Iteration [${i}/${iterations}]: ${elapsed.toFixed(1)}ms\n`);
-      }
-    } catch (err) {
-      console.warn(`[WARN] Native UltraHonk proving failed, falling back to calibration: ${(err as Error).message}`);
-    }
-  }
-
-  // Fallback calibration benchmark if ACIR JSON is not yet compiled
-  if (timesMs.length === 0) {
-    console.log(`[STATUS] ACIR JSON not compiled for "${circuit}" (nargo required).`);
-    console.log(`[STATUS] Running calibrated cryptographic execution benchmark on host hardware...\n`);
-
-    // Load VK artifact if present
-    if (fs.existsSync(vkPath)) {
-      const vkJson = JSON.parse(fs.readFileSync(vkPath, 'utf8'));
-      console.log(`[OK] Loaded committed VK artifact: ${vkJson.vkHash.slice(0, 22)}...`);
-      console.log(`[OK] Circuit size: ${vkJson.circuitSize ?? 1024} gates, curve: ${vkJson.curve ?? 'BN254'}\n`);
-    }
-
-    const gateCount = circuit === 'escrow' ? 8000 : circuit === 'streams' ? 6500 : 5000;
-
-    for (let i = 1; i <= iterations; i++) {
-      const t0 = performance.now();
-
-      // Calibrated computational workload representing circuit constraint synthesis
-      let acc = crypto.randomBytes(32);
-      for (let g = 0; g < gateCount; g++) {
-        const hash = crypto.createHash('sha256').update(acc).update(Buffer.from([g & 0xff])).digest();
-        acc = hash;
-      }
-
-      const elapsed = performance.now() - t0;
-      timesMs.push(elapsed);
-      proofSizeBytes = 1728; // Standard compressed UltraHonk proof size
-
-      process.stdout.write(`  Iteration [${i}/${iterations}]: ${elapsed.toFixed(2)}ms\n`);
-    }
-  }
-
-  // Summary statistics
-  const sorted = [...timesMs].sort((a, b) => a - b);
-  const min = sorted[0];
-  const max = sorted[sorted.length - 1];
-  const avg = timesMs.reduce((a, b) => a + b, 0) / timesMs.length;
-  const p50 = calculatePercentile(sorted, 50);
-  const p95 = calculatePercentile(sorted, 95);
-  const p99 = calculatePercentile(sorted, 99);
-
-  console.log('\n===============================================================');
-  console.log('Proof Generation Benchmark Summary');
-  console.log('===============================================================');
-  console.log(`Total Samples : ${timesMs.length}`);
-  console.log(`Min Latency   : ${min.toFixed(2)} ms`);
-  console.log(`Max Latency   : ${max.toFixed(2)} ms`);
-  console.log(`Mean Latency  : ${avg.toFixed(2)} ms`);
-  console.log(`p50 Latency   : ${p50.toFixed(2)} ms`);
-  console.log(`p95 Latency   : ${p95.toFixed(2)} ms`);
-  console.log(`p99 Latency   : ${p99.toFixed(2)} ms`);
-  console.log(`Proof Size    : ~${proofSizeBytes} bytes`);
-  console.log('---------------------------------------------------------------');
-
-  const TARGET_P95_MS = 8000;
-  if (p95 < TARGET_P95_MS) {
-    console.log(`[PASS] p95 latency (${p95.toFixed(1)}ms) satisfies mobile SLA (< ${TARGET_P95_MS}ms).`);
-  } else {
-    console.warn(`[WARN] p95 latency (${p95.toFixed(1)}ms) exceeds SLA ceiling (${TARGET_P95_MS}ms).`);
-  }
-  console.log('===============================================================\n');
+  const sorted = [...times].sort((a, b) => a - b);
+  const mean = times.reduce((a, b) => a + b, 0) / times.length;
+  console.log(`min ${sorted[0]} ms · mean ${mean.toFixed(0)} ms · p50 ${percentile(sorted, 50)} ms · max ${sorted.at(-1)} ms`);
+  console.log(`proof size ${proofBytes} bytes (includes the first run's WASM start-up in run 1)`);
+  await destroyZkEngine();
 }
 
-runBenchmark().catch((err) => {
-  console.error('[FATAL] Benchmark failed:', err);
+main().catch(async (err) => {
+  console.error('Benchmark failed:', (err as Error).message);
+  await destroyZkEngine();
   process.exit(1);
 });

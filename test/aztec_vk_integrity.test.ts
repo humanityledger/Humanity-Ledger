@@ -57,7 +57,7 @@ describe('Task T6 / Invariant P4 — Aztec Verification Key Integrity & Lifecycl
       identity: { hash: getLocalVKHash('identity'), status: 'ACTIVE' },
     };
 
-    expect(() => assertVKIntegrity(registry)).toThrow(/does not match on-chain registry/);
+    expect(() => assertVKIntegrity(registry)).toThrow(/does not match the registry/);
   });
 
   it('assertVKIntegrity throws when an active circuit is missing from the on-chain registry', () => {
@@ -68,7 +68,7 @@ describe('Task T6 / Invariant P4 — Aztec Verification Key Integrity & Lifecycl
     };
 
     expect(() => assertVKIntegrity(partialRegistry)).toThrow(
-      'Circuit "streams" is not registered in the on-chain registry.',
+      'Circuit "streams" is not in the registry.',
     );
   });
 

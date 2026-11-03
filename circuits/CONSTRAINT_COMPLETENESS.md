@@ -7,6 +7,16 @@
 **Proving backend:** Barretenberg UltraHonk over BN254  
 **Hash function in all three circuits:** `pedersen_hash` (Aztec standard over BN254)
 
+> **Update, 3 November 2026.** A review of the circuits found soundness
+> issues that this analysis did not cover, because it examined each proof in
+> isolation: ZK-01 (streams accepts repeated claims of the same accrual),
+> ZK-02 (no payout address among the public inputs), ZK-03 (escrow claims need
+> the sender's secret), ZK-04 and ZK-05 (identity domain separation and an
+> anonymity set of two), ZK-06 (prover-chosen timestamps) and ZK-07 (verifier
+> did not pin the VK; fixed). Details and the plan to replace these circuits
+> with aztec-nr contracts: [`docs/zk/MASTER_PROMPT.md`](../docs/zk/MASTER_PROMPT.md).
+> The circuits are experimental and must not hold value.
+
 > This document lists every constraint enforced in each circuit, the type of
 > each constraint, its corresponding positive and negative tests, and an honest
 > account of regions that are potentially under-constrained or not yet formally

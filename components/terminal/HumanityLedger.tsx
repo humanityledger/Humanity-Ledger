@@ -206,7 +206,7 @@ const NODES: RoadmapNode[] = [
     title: 'Aztec Mainnet Alpha',
     status: 'planned',
     quarter: 'Dec 2026',
-    description: 'Full production deployment on Aztec Mainnet. CoreLedger contract, private Token, and the first institutional Dark Pool liquidity pool live. Audited circuits only.',
+    description: 'Full production deployment on Aztec Mainnet. CoreLedger contract, private Token, and the first institutional Dark Pool liquidity pool live. Only circuits that have passed an external audit.',
     x: C6, y: 100,
   },
   {

@@ -34,6 +34,7 @@ export default defineConfig({
       'test/LedgerDeadmanSwitch.test.ts',
       'test/HumanTimeLock.test.ts',
       'test/contracts_invariants.test.ts',
+      'test/ZKIdentityRegistry.test.ts',
       'test/SystemDeadmanSwitch.test.js',
       'test/qd-stress.test.ts',
       'test/qd-economy.security.test.ts',
