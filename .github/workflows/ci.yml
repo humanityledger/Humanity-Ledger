@@ -2,7 +2,7 @@ name: CI — Typecheck, Lint & Secret Scan
 
 on:
   push:
-    branches: [main, 'feature/**']
+    branches: [main, 'feature/**', 'claude/**']
   pull_request:
     branches: [main]
 

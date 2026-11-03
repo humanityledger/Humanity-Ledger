@@ -1,0 +1,78 @@
+# Aztec contracts CI (contracts/aztec/*).
+#
+# Compiles every aztec-nr contract with the Aztec 6.0.0 toolchain and reports
+# whether the committed artifacts match a fresh compile. On claude/** branches
+# it commits refreshed artifacts back to the branch, so an agent without the
+# toolchain can change contract sources and still keep source and artifacts in
+# sync. On main and pull requests it only checks.
+
+name: Aztec contracts
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'contracts/aztec/**'
+      - '.github/workflows/aztec-contracts.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'contracts/aztec/**'
+
+permissions:
+  contents: write
+
+jobs:
+  compile:
+    name: aztec compile (6.0.0)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the Aztec 6.0.0 toolchain
+        run: |
+          set -euo pipefail
+          curl -fsSL https://install.aztec.network -o /tmp/install-aztec.sh
+          VERSION=6.0.0 NON_INTERACTIVE=1 bash /tmp/install-aztec.sh </dev/null
+          for d in "$HOME/.aztec/bin" "$HOME/.aztec/current/bin" "$HOME/.aztec/versions/6.0.0/bin"; do
+            [ -d "$d" ] && echo "$d" >> "$GITHUB_PATH"
+          done
+          ls -la "$HOME/.aztec" || true
+
+      - name: Toolchain versions
+        run: |
+          aztec --version || true
+          which aztec
+
+      - name: Compile every contract
+        run: |
+          set -euo pipefail
+          for dir in contracts/aztec/*/; do
+            [ -f "$dir/Nargo.toml" ] || continue
+            echo "::group::$dir"
+            (cd "$dir" && aztec compile)
+            echo "::endgroup::"
+          done
+
+      - name: Committed artifacts vs fresh compile
+        run: |
+          git status --short contracts/aztec
+          git diff --stat -- contracts/aztec || true
+
+      - name: Commit refreshed artifacts (claude/** branches only)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/claude/')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add contracts/aztec/*/target/*.json
+          if git diff --cached --quiet; then
+            echo "Artifacts already match the sources."
+          else
+            git commit -m "chore(aztec): recompile contracts/aztec artifacts with Aztec 6.0.0 (CI)"
+            git push
+          fi
+
+      - name: Fail on main or PRs if artifacts are stale
+        if: github.event_name != 'push' || !startsWith(github.ref, 'refs/heads/claude/')
+        run: git diff --exit-code -- contracts/aztec
