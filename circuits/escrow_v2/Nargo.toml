@@ -1,0 +1,8 @@
+[package]
+name = "zk_escrow_v2"
+type = "bin"
+authors = ["Humanity Ledger Protocol"]
+compiler_version = "1.0.0"
+
+[dependencies]
+hl_lib = { path = "../hl_lib" }

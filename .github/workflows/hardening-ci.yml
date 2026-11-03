@@ -210,22 +210,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify VK artifacts exist and are valid JSON
-        run: |
-          for circuit in escrow streams identity; do
-            VK_PATH="circuits/${circuit}/target/${circuit}.vk.json"
-            if [ ! -f "$VK_PATH" ]; then
-              echo "MISSING: $VK_PATH"
-              exit 1
-            fi
-            # Validate JSON structure
-            node -e "
-              const vk = require('./${VK_PATH}');
-              if (!vk.circuit || !vk.vkHash || !vk.provingSystem) {
-                console.error('INVALID VK structure in ${VK_PATH}');
-                process.exit(1);
-              }
-              console.log('[OK] ${circuit} VK: hash=' + vk.vkHash.slice(0,18) + '...');
-            "
-          done
-          echo "[PASS] All 3 VK artifacts present and valid."
+      - name: Verify VK artifacts match the pinned hashes
+        run: node scripts/zk/check-artifacts.mjs --fast

@@ -1,0 +1,7 @@
+[package]
+name = "hl_lib"
+type = "lib"
+authors = ["Humanity Ledger Protocol"]
+compiler_version = "1.0.0"
+
+[dependencies]

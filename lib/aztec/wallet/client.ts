@@ -19,6 +19,7 @@
 
 import { AZTEC_WALLET_CONFIG, FAUCET_AMOUNT, assertTestNetwork, isWalletConfigured, tokenConfig, type TokenKey } from './config';
 import { deriveAccountKeys, WALLET_TYPED_DATA } from './keys';
+import { isValidAztecAddress } from '../grumpkin';
 import { parseUnits } from './amounts';
 import { loadLocalActivity, mergeActivity, upsertActivity, type Activity, type ActivityKind } from './history';
 
@@ -333,6 +334,8 @@ class PrivateWallet {
   /** Format check, then a check that the address is a point on the curve, so a typo cannot burn funds. */
   private async validAddress(value: string) {
     if (!isAztecAddress(value)) throw new Error('That is not an Aztec address. It starts with 0x and has 64 characters after it.');
+    // Curve check without the SDK (gap G1); the SDK check below stays as a second opinion.
+    if (!isValidAztecAddress(value)) throw new Error('That Aztec address is not valid. Check it and try again.');
     const addr = this.sdk!.AztecAddress.fromStringUnsafe(value.trim());
     if (!(await addr.isValid())) throw new Error('That Aztec address is not valid. Check it and try again.');
     return addr;

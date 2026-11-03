@@ -1,84 +1,112 @@
-name: Private Aztec CI
+# Noir circuits CI.
+#
+# Replaces the old "Private Aztec CI", which installed Noir 0.36 and Aztec CLI
+# 0.67 (both incompatible with the code) and ran every step with `|| true`, so
+# it could not fail. Master prompt: docs/zk/MASTER_PROMPT.md (bucle de
+# verificación, paso 1).
+
+name: Noir circuits
 
 on:
   push:
-    branches: [ "aztec-integration-v1", "claude/sync-and-hardening" ]
+    branches: [main, 'claude/**']
   pull_request:
-    branches: [ "aztec-integration-v1", "claude/sync-and-hardening" ]
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
-  build-and-test:
+  noir:
+    name: nargo 1.0.0 — check, test, compile
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22'
-
-      - name: Install Aztec CLI & Aztec Nargo
+      - name: Install nargo 1.0.0
         run: |
-          npm install -g @aztec/cli@0.67.0
-          # Setup aztec-nargo
-          curl -L https://raw.githubusercontent.com/noir-lang/noirup/main/install | bash
-          export PATH="$HOME/.nargo/bin:$PATH"
-          noirup -v 0.36.0
+          curl -fsSL https://raw.githubusercontent.com/noir-lang/noirup/main/install | bash
+          "$HOME/.nargo/bin/noirup" --version 1.0.0
+          echo "$HOME/.nargo/bin" >> "$GITHUB_PATH"
 
-      - name: Start Aztec Sandbox
+      - name: nargo version
+        run: nargo --version
+
+      - name: Check and test every crate in circuits/
         run: |
-          docker run -d -p 8080:8080 -p 8081:8081 --name aztec-sandbox aztecprotocol/aztec-sandbox:0.67.0
-          sleep 15
-
-      - name: Compile Noir Circuits
-        run: |
-          # Setup path for nargo
-          export PATH="$HOME/.nargo/bin:$PATH"
-          
-          # Install bb (Barretenberg) which is now required for vk and solidity verifier generation
-          curl -L https://raw.githubusercontent.com/AztecProtocol/barretenberg/master/cpp/scripts/bberg_pkg.sh | bash
-          export PATH="$HOME/.bb:$PATH"
-          
-          # Locate circuits directory (supports both standard circuits/ and legacy noir-projects/circuits/)
-          CIRCUITS_ROOT="circuits"
-          if [ -d "noir-projects/circuits" ]; then
-            CIRCUITS_ROOT="noir-projects/circuits"
-          fi
-          cd "$CIRCUITS_ROOT"
-
-          # Iterate over all circuit directories
-          for dir in */; do
-            if [ -f "$dir/Nargo.toml" ]; then
-              echo "Compiling $dir"
-              cd "$dir"
-              
-              # Standard compilation
-              aztec-nargo compile || true
-              
-              # New Noir updates for Verifier generation if program.json exists
-              if [ -f "./target/program.json" ]; then
-                bb write_vk -b ./target/program.json -o ./target --oracle_hash keccak || true
-                bb write_solidity_verifier -k ./target/vk -o ./target/Verifier.sol || true
-              fi
-              
-              cd ..
-            fi
+          set -euo pipefail
+          for dir in circuits/*/; do
+            [ -f "$dir/Nargo.toml" ] || continue
+            echo "::group::$dir"
+            (cd "$dir" && nargo check && nargo test)
+            echo "::endgroup::"
           done
 
-      - name: Run Aztec TXE Contract Tests
+      - name: Committed ACIR of the pinned circuits equals a fresh compile
         run: |
-          echo "Executing TXE tests for smart contracts..."
-          export PATH="$HOME/.nargo/bin:$PATH"
-          if [ -d "aztec-contracts" ]; then
-            cd aztec-contracts
-            aztec-nargo test --silence-warnings || true
-            cd ..
-          fi
+          set -euo pipefail
+          for c in escrow identity streams; do
+            tmp="$(mktemp -d)"
+            cp -r "circuits/$c" "$tmp/"
+            rm -rf "$tmp/$c/target"
+            (cd "$tmp/$c" && nargo compile)
+            fresh="$(jq -r .bytecode "$tmp/$c/target/zk_$c.json")"
+            committed="$(jq -r .bytecode "circuits/$c/target/zk_$c.json")"
+            if [ "$fresh" != "$committed" ]; then
+              echo "::error::circuits/$c: committed ACIR differs from a fresh compile"
+              exit 1
+            fi
+            echo "ok  $c: committed ACIR matches"
+          done
 
-      - name: Security Scan (noir-audit)
+      - name: Compile the experimental v2 circuits
         run: |
-          echo "Executing zero-knowledge security scan targeting nullifier collisions and PXE state..."
-          # Insert noir audit tool integration
+          set -euo pipefail
+          for c in escrow_v2 identity_v2 streams_v2; do
+            (cd "circuits/$c" && nargo compile && nargo info)
+          done
 
-      - name: Stop Aztec Sandbox
-        run: docker stop aztec-sandbox
+      - name: Pinned VK hashes (no npm needed)
+        run: node scripts/zk/check-artifacts.mjs --fast
+
+      - name: Keep compiled v2 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-acir
+          path: circuits/*_v2/target/*.json
+          retention-days: 14
+
+  vk:
+    name: Barretenberg — re-derive pinned VKs, derive v2 VKs
+    needs: noir
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: v2-acir
+          path: circuits
+
+      - name: Pinned VKs re-derived from the committed ACIR
+        run: node scripts/zk/check-artifacts.mjs
+
+      - name: VKs of the v2 circuits (reported, not pinned)
+        run: node scripts/zk/v2-vks.mjs
+
+      - name: Keep v2 VKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-vks
+          path: circuits/*_v2/target/vk*
+          retention-days: 14
