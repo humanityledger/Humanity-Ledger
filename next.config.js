@@ -165,6 +165,11 @@ const nextConfig = {
             '@react-native-async-storage/async-storage': false,
             'porto': false,
             'porto/internal': false,
+            '@x402/core/client': false,
+            '@x402/evm/exact/client': false,
+            '@x402/evm/upto/client': false,
+            '@x402/svm/exact/client': false,
+            '@x402/evm': false,
             ...(wcEthProvider ? { '@walletconnect/ethereum-provider': wcEthProvider } : {}),
             // [PRISMA GUARD] Prevent @prisma/client from leaking into client bundles.
             // serverExternalPackages handles this for Server Components, but this alias
