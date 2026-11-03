@@ -4,7 +4,7 @@
 
 Este es el prompt maestro único para el trabajo ZK y de mensajería de Humanity Ledger. Integra los dos prompts del 3 de noviembre, contrastados línea a línea con el commit 097b51d5 de `humanityledger/Humanity-Ledger`. El anexo C muestra dónde quedó cada una de sus secciones. Lo más grave no estaba en ninguno de los dos: el circuito de streams permite cobrar muchas veces el mismo devengo, y la "integridad de VK" no está ligada a las claves reales.
 
-> **Estado de ejecución (3 nov, 22:00):** fase 0 (R-01 a R-06) hecha y verificada en el PC. Después se integró el paquete de cierre de gaps (anexo D) y se añadieron los circuitos v2 (R-18), que compilan y pasan 36 tests en la CI con nargo 1.0.0. Todo está en la rama [`claude/zk-master-prompt-phase0`](https://github.com/humanityledger/Humanity-Ledger/compare/main...claude/zk-master-prompt-phase0?expand=1), pendiente de PR y fusión, y este documento está en el repositorio como `docs/zk/MASTER_PROMPT.md`. Siguen abiertas las fases 1 (contratos aztec-nr) y 2, y R-17 (comunidades).
+> **Estado de ejecución (3 nov, 23:30):** fase 0 (R-01 a R-06) hecha. Paquete de cierre de gaps integrado (anexo D) y circuitos v2 (R-18) con VK fijadas en CI. R-08 a R-10: otra sesión añadió los contratos aztec-nr en `contracts/aztec/` (commit `6c009e5a`). Al revisarlos aparecieron fallos que bloqueaban fondos: no había reembolso ni cancelación posibles y `pop_notes` sin selector destruía notas. Están corregidos y los contratos compilan de verdad con Aztec 6.0.0 en CI (`docs/zk/AZTEC_CONTRACTS_REVIEW.md`); faltan los tests TXE y desplegar el contrato con claves. La provenance ya no finge un anclaje en Aztec. Todo está fusionado en `main` y el documento está en el repositorio como `docs/zk/MASTER_PROMPT.md`. Siguen abiertas R-07, R-11 a R-17 y R-19.
 
 ## Cómo usarlo
 
@@ -179,11 +179,11 @@ Cada escrow crea dos notas con el mismo `escrow_id` secreto: una de cobro para e
 
 ```mermaid
 flowchart TD
-  C["create · emisor<br/>Token pasa al contrato (authwit)"] --> N1["Nota de cobro<br/>propietario: receptor"]
+  C["deposit · emisor<br/>Token pasa al contrato (authwit)"] --> N1["Nota de cobro<br/>propietario: receptor"]
   C --> N2["Nota de devolución<br/>propietario: emisor"]
   N1 --> CL["claim · receptor<br/>la transacción expira en el plazo"]
   N2 --> RF["refund · emisor<br/>bloque ancla ≥ plazo"]
-  CL -- antes del plazo --> S["Nulificador de liquidación<br/>hash(SETTLED, escrow_id): el segundo en llegar falla"]
+  CL -- antes del plazo --> S["Nulificador de liquidación<br/>el segundo en llegar falla"]
   RF -- después del plazo --> S
 ```
 
