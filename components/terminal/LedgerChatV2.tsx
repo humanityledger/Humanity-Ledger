@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { shortAddr } from '@/lib/utils';
 import { formatQd } from '@/lib/qd';
@@ -113,12 +113,12 @@ export interface LedgerChatProps {
 }
 
 function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: boolean; size?: number }) {
-  const [savedAvatar, setSavedAvatar] = React.useState<string>(() => {
+  const [savedAvatar, setSavedAvatar] = useState<string>(() => {
     if (typeof window === 'undefined') return '';
     return localStorage.getItem('ledger_avatar') || '';
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.avatarUrl !== undefined) setSavedAvatar(detail.avatarUrl);
@@ -127,7 +127,7 @@ function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: 
     return () => window.removeEventListener('ledger_settings_update', handler);
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isMe && address && typeof window !== 'undefined') {
       // Show the saved photo at once, then refresh it so a new photo appears.
       const cacheKey = 'peer_avatar_' + address.toLowerCase();
@@ -342,7 +342,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   // Conversation wallpaper. Every option stays light and quiet so messages
   // keep their contrast; the default is the app's neutral background.
-  const bgStyle = React.useMemo((): React.CSSProperties => {
+  const bgStyle = useMemo((): React.CSSProperties => {
     switch (chatBackground) {
       case 'minimal': return { background: '#ffffff' };
       case 'dots': return {
@@ -784,7 +784,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   // ─── UI Maturity: Theme picker, pin, mute, per-conv wallpaper ────────────
   const [showThemePicker, setShowThemePicker] = useState(false);
-  const [chatThemeId, setChatThemeId] = React.useRef<string>('default');
+  const [chatThemeId, setChatThemeId] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'default';
+    return localStorage.getItem('ledger_chat_theme_id') || 'default';
+  });
   const [pinnedPeers, setPinnedPeers] = useState<Set<string>>(new Set());
   const [mutedPeers, setMutedPeers] = useState<Set<string>>(new Set());
 
@@ -796,7 +799,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     } catch { return {}; }
   });
 
-  const setConvWallpaper = React.useCallback((peer: string, bg: string) => {
+  const setConvWallpaper = useCallback((peer: string, bg: string) => {
     setConvWallpapers(prev => {
       const next = { ...prev, [peer.toLowerCase()]: bg };
       localStorage.setItem('ledger_conv_wallpapers', JSON.stringify(next));
@@ -816,7 +819,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
 
-  const togglePin = React.useCallback((peer: string) => {
+  const togglePin = useCallback((peer: string) => {
     setPinnedPeers(prev => {
       const next = new Set(prev);
       const key = peer.toLowerCase();
@@ -825,7 +828,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     });
   }, []);
 
-  const toggleMute = React.useCallback((peer: string) => {
+  const toggleMute = useCallback((peer: string) => {
     setMutedPeers(prev => {
       const next = new Set(prev);
       const key = peer.toLowerCase();
@@ -7227,9 +7230,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       {/* ── Theme Picker Sheet ────────────────────────────────────────────── */}
       <ThemePickerSheet
         open={showThemePicker}
-        currentThemeId={chatThemeId.current}
+        currentThemeId={chatThemeId}
         onSelect={(palette: ThemePalette) => {
-          chatThemeId.current = palette.id;
+          setChatThemeId(palette.id);
+          localStorage.setItem('ledger_chat_theme_id', palette.id);
           applyThemePalette(palette);
           setShowThemePicker(false);
         }}

@@ -158,8 +158,8 @@ function getSanitizedDatabaseUrl(): string | undefined {
     try {
         const urlObj = new URL(rawUrl);
         
-        // Fallback: If we detect the public proxy domain on Railway, rewrite to internal domain
-        if (urlObj.hostname.includes('proxy.rlwy.net')) {
+        // Fallback: If we detect the public proxy domain on Railway and running inside Railway, rewrite to internal domain
+        if (process.env.RAILWAY_ENVIRONMENT && urlObj.hostname.includes('proxy.rlwy.net')) {
             urlObj.hostname = 'postgres.railway.internal';
             urlObj.port = '5432';
         }
