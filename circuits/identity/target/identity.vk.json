@@ -10,7 +10,7 @@
     "scoped_nullifier"
   ],
   "circuitSize": 2048,
-  "vkHash": "0x44d18fa792c01826f59b6579be4053ae897d2e06c3f0b263b65cb4659187da42",
+  "vkHash": "0xcd02d2407de202d61e1a03c360633a9b0cdd8fe4b4d67b007cce108990632194",
   "verificationKey": {
     "n": 2048,
     "numPublicInputs": 3,

@@ -231,4 +231,19 @@ describe('T3 / T5 — Noir Anonymous Identity & Compliance Invariants & Negative
 
     expect(() => verifyIdentityCircuit(witness, pubInputs)).toThrow('scoped nullifier mismatch');
   });
+
+  it('Real UltraHonk Execution: Solves Noir ACIR witness and generates valid proof', async () => {
+    const { proveIdentity } = await import('../../lib/zk/prover');
+    const result = await proveIdentity({
+      identity_secret: '12345',
+      jurisdiction_code: 840,
+      merkle_leaf_sibling: '67890',
+      is_left: true,
+      expected_merkle_root: '0x2a65b513ce830604250f5cb08ce7a88129aad8d03e1bb2742b625b22020cbd94',
+      scope: '42',
+      scoped_nullifier: '0x1a8fc5ddd747d00a29190989f1034e8687f254fb13286c425e8c72ba0233ab95',
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.proof).toBeInstanceOf(Uint8Array);
+  }, 120000);
 });

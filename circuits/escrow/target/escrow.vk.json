@@ -11,7 +11,7 @@
     "current_timestamp"
   ],
   "circuitSize": 1024,
-  "vkHash": "0x2e8f19da5c0882e36b80d4400e2380f7aa9580b8529f7cefa5c2c9d09c693a15",
+  "vkHash": "0x4e3cc4c8ce03607dcb2b98bd50c0d31084300634ee8f70f4674919682eb915c2",
   "verificationKey": {
     "n": 1024,
     "numPublicInputs": 4,

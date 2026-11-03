@@ -20,10 +20,10 @@ fn main(
     merkle_leaf_sibling: Field,
     is_left: bool,
 
-    // Public inputs
-    pub expected_merkle_root: Field,
-    pub scope: Field,
-    pub scoped_nullifier: Field
+    // Public inputs — Noir 1.x syntax
+    expected_merkle_root: pub Field,
+    scope: pub Field,
+    scoped_nullifier: pub Field
 ) {
     // 1. Compliance check: Sanctions screening without revealing actual country
     assert(jurisdiction_code != SANCTIONED_JURISDICTION_1);
@@ -47,4 +47,109 @@ fn main(
     // 5. Derive unique scoped nullifier to prevent double claims within scope
     let calculated_nullifier = pedersen_hash([identity_secret, scope]);
     assert(calculated_nullifier == scoped_nullifier);
+}
+
+#[test]
+fn test_valid_identity() {
+    let secret = 12345;
+    let jurisdiction: u32 = 840;
+    let sibling = 67890;
+    let is_left = true;
+    let scope = 42;
+
+    let leaf = pedersen_hash([secret, jurisdiction as Field]);
+    let root = pedersen_hash([leaf, sibling]);
+    let nullifier = pedersen_hash([secret, scope]);
+
+
+    main(secret, jurisdiction, sibling, is_left, root, scope, nullifier);
+}
+
+#[test(should_fail)]
+fn test_sanctioned_jurisdiction_1() {
+    let secret = 12345;
+    let jurisdiction: u32 = 999;
+    let sibling = 67890;
+    let is_left = true;
+    let scope = 42;
+
+    let leaf = pedersen_hash([secret, jurisdiction as Field]);
+    let root = pedersen_hash([leaf, sibling]);
+    let nullifier = pedersen_hash([secret, scope]);
+
+    main(secret, jurisdiction, sibling, is_left, root, scope, nullifier);
+}
+
+#[test(should_fail)]
+fn test_sanctioned_jurisdiction_2() {
+    let secret = 12345;
+    let jurisdiction: u32 = 998;
+    let sibling = 67890;
+    let is_left = true;
+    let scope = 42;
+
+    let leaf = pedersen_hash([secret, jurisdiction as Field]);
+    let root = pedersen_hash([leaf, sibling]);
+    let nullifier = pedersen_hash([secret, scope]);
+
+    main(secret, jurisdiction, sibling, is_left, root, scope, nullifier);
+}
+
+#[test(should_fail)]
+fn test_zero_jurisdiction() {
+    let secret = 12345;
+    let jurisdiction: u32 = 0;
+    let sibling = 67890;
+    let is_left = true;
+    let scope = 42;
+
+    let leaf = pedersen_hash([secret, jurisdiction as Field]);
+    let root = pedersen_hash([leaf, sibling]);
+    let nullifier = pedersen_hash([secret, scope]);
+
+    main(secret, jurisdiction, sibling, is_left, root, scope, nullifier);
+}
+
+#[test(should_fail)]
+fn test_zero_identity_secret() {
+    let secret = 0;
+    let jurisdiction: u32 = 840;
+    let sibling = 67890;
+    let is_left = true;
+    let scope = 42;
+
+    let leaf = pedersen_hash([secret, jurisdiction as Field]);
+    let root = pedersen_hash([leaf, sibling]);
+    let nullifier = pedersen_hash([secret, scope]);
+
+    main(secret, jurisdiction, sibling, is_left, root, scope, nullifier);
+}
+
+#[test(should_fail)]
+fn test_tampered_merkle_root() {
+    let secret = 12345;
+    let jurisdiction: u32 = 840;
+    let sibling = 67890;
+    let is_left = true;
+    let scope = 42;
+
+    let forged_root = 0xdeadbeef;
+    let nullifier = pedersen_hash([secret, scope]);
+
+    main(secret, jurisdiction, sibling, is_left, forged_root, scope, nullifier);
+}
+
+#[test(should_fail)]
+fn test_tampered_scoped_nullifier() {
+    let secret = 12345;
+    let jurisdiction: u32 = 840;
+    let sibling = 67890;
+    let is_left = true;
+    let scope = 42;
+
+    let leaf = pedersen_hash([secret, jurisdiction as Field]);
+    let root = pedersen_hash([leaf, sibling]);
+    let forged_nullifier = 0xbad000;
+
+    main(secret, jurisdiction, sibling, is_left, root, scope, forged_nullifier);
 }

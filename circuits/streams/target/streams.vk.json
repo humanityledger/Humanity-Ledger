@@ -10,7 +10,7 @@
     "stream_nullifier"
   ],
   "circuitSize": 2048,
-  "vkHash": "0x5a18c092dbce2b33918a5bf8e8071869e96e5792444b055963be5708846c98aa",
+  "vkHash": "0xa79000bf70441f02ce5ec092f15771e93dfc3d990977a33de9991795bc374346",
   "verificationKey": {
     "n": 2048,
     "numPublicInputs": 3,

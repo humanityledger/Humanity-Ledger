@@ -243,4 +243,20 @@ describe('T3 / T5 — Noir Escrow Circuit Constraint Invariants & Negative Tests
 
     expect(() => verifyEscrowCircuit(witness, pubInputs)).toThrow('nullifier mismatch');
   });
+
+  it('Real UltraHonk Execution: Solves Noir ACIR witness and generates valid proof', async () => {
+    const { proveEscrow } = await import('../../lib/zk/prover');
+    const result = await proveEscrow({
+      sender_secret: '12345',
+      recipient_pubkey: '67890',
+      amount: '1000',
+      salt: '999',
+      escrow_commitment: '0x1d73346def6ef00fe9c6e6165cbdebcd739d1b43ea7f025529c040d4843080a5',
+      nullifier: '0x1485a879df7717201348b608c7af55d2c6a630ff8ae6f05181d80d6f315b8f2a',
+      deadline: '1800000000',
+      current_timestamp: '1750000000',
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.proof).toBeInstanceOf(Uint8Array);
+  }, 120000);
 });

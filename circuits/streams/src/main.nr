@@ -33,9 +33,9 @@ fn main(
     salt: Field,
 
     // Public inputs
-    pub stream_commitment: Field,
-    pub current_time: u64,
-    pub stream_nullifier: Field
+    stream_commitment: pub Field,
+    current_time: pub u64,
+    stream_nullifier: pub Field
 ) {
     // 1. Enforce temporal monotonicity & strictly positive parameters
     assert(current_time >= start_time);
@@ -80,4 +80,373 @@ fn main(
         new_total_withdrawn as Field
     ]);
     assert(calculated_nullifier == stream_nullifier);
+}
+
+#[test]
+fn test_valid_stream_withdrawal() {
+    let sender = 12345;
+    let recipient = 67890;
+    let total_alloc: u64 = 10000;
+    let rate: u64 = 10;
+    let start: u64 = 1000;
+    let withdrawn: u64 = 200;
+    let claim: u64 = 300;
+    let salt = 999;
+    let now: u64 = 1060;
+
+    let commitment = pedersen_hash([
+        sender,
+        recipient,
+        total_alloc as Field,
+        rate as Field,
+        start as Field,
+        salt
+    ]);
+    let new_total = withdrawn + claim;
+    let nullifier = pedersen_hash([commitment, new_total as Field]);
+
+    main(
+        sender, recipient, total_alloc, rate, start, withdrawn, claim, salt,
+        commitment, now, nullifier
+    );
+}
+
+#[test]
+fn test_max_rate_boundary() {
+    let sender = 12345;
+    let recipient = 67890;
+    let total_alloc: u64 = MAX_RATE;
+    let rate: u64 = MAX_RATE;
+    let start: u64 = 1000;
+    let withdrawn: u64 = 0;
+    let claim: u64 = MAX_RATE;
+    let salt = 999;
+    let now: u64 = 1001; // 1 second elapsed -> accrued = MAX_RATE
+
+    let commitment = pedersen_hash([
+        sender,
+        recipient,
+        total_alloc as Field,
+        rate as Field,
+        start as Field,
+        salt
+    ]);
+    let new_total = withdrawn + claim;
+    let nullifier = pedersen_hash([commitment, new_total as Field]);
+
+    main(
+        sender, recipient, total_alloc, rate, start, withdrawn, claim, salt,
+        commitment, now, nullifier
+    );
+}
+
+#[test(should_fail)]
+fn test_time_before_start() {
+    let sender = 12345;
+    let recipient = 67890;
+    let total_alloc: u64 = 10000;
+    let rate: u64 = 10;
+    let start: u64 = 1000;
+    let withdrawn: u64 = 0;
+    let claim: u64 = 100;
+    let salt = 999;
+    let now: u64 = 999; // Before start
+
+    let commitment = pedersen_hash([
+        sender,
+        recipient,
+        total_alloc as Field,
+        rate as Field,
+        start as Field,
+        salt
+    ]);
+    let new_total = withdrawn + claim;
+    let nullifier = pedersen_hash([commitment, new_total as Field]);
+
+    main(
+        sender, recipient, total_alloc, rate, start, withdrawn, claim, salt,
+        commitment, now, nullifier
+    );
+}
+
+#[test(should_fail)]
+fn test_zero_claim_amount() {
+    let sender = 12345;
+    let recipient = 67890;
+    let total_alloc: u64 = 10000;
+    let rate: u64 = 10;
+    let start: u64 = 1000;
+    let withdrawn: u64 = 100;
+    let claim: u64 = 0; // Zero claim
+    let salt = 999;
+    let now: u64 = 1060;
+
+    let commitment = pedersen_hash([
+        sender,
+        recipient,
+        total_alloc as Field,
+        rate as Field,
+        start as Field,
+        salt
+    ]);
+    let new_total = withdrawn + claim;
+    let nullifier = pedersen_hash([commitment, new_total as Field]);
+
+    main(
+        sender, recipient, total_alloc, rate, start, withdrawn, claim, salt,
+        commitment, now, nullifier
+    );
+}
+
+#[test(should_fail)]
+fn test_zero_rate_per_second() {
+    let sender = 12345;
+    let recipient = 67890;
+    let total_alloc: u64 = 10000;
+    let rate: u64 = 0; // Zero rate
+    let start: u64 = 1000;
+    let withdrawn: u64 = 0;
+    let claim: u64 = 100;
+    let salt = 999;
+    let now: u64 = 1060;
+
+    let commitment = pedersen_hash([
+        sender,
+        recipient,
+        total_alloc as Field,
+        rate as Field,
+        start as Field,
+        salt
+    ]);
+    let new_total = withdrawn + claim;
+    let nullifier = pedersen_hash([commitment, new_total as Field]);
+
+    main(
+        sender, recipient, total_alloc, rate, start, withdrawn, claim, salt,
+        commitment, now, nullifier
+    );
+}
+
+#[test(should_fail)]
+fn test_zero_total_allocation() {
+    let sender = 12345;
+    let recipient = 67890;
+    let total_alloc: u64 = 0; // Zero allocation
+    let rate: u64 = 10;
+    let start: u64 = 1000;
+    let withdrawn: u64 = 0;
+    let claim: u64 = 100;
+    let salt = 999;
+    let now: u64 = 1060;
+
+    let commitment = pedersen_hash([
+        sender,
+        recipient,
+        total_alloc as Field,
+        rate as Field,
+        start as Field,
+        salt
+    ]);
+    let new_total = withdrawn + claim;
+    let nullifier = pedersen_hash([commitment, new_total as Field]);
+
+    main(
+        sender, recipient, total_alloc, rate, start, withdrawn, claim, salt,
+        commitment, now, nullifier
+    );
+}
+
+#[test(should_fail)]
+fn test_excessive_rate() {
+    let sender = 12345;
+    let recipient = 67890;
+    let total_alloc: u64 = 1_000_000_000_000_000_000;
+    let rate: u64 = MAX_RATE + 1; // Exceeds MAX_RATE
+    let start: u64 = 1000;
+    let withdrawn: u64 = 0;
+    let claim: u64 = 100;
+    let salt = 999;
+    let now: u64 = 1060;
+
+    let commitment = pedersen_hash([
+        sender,
+        recipient,
+        total_alloc as Field,
+        rate as Field,
+        start as Field,
+        salt
+    ]);
+    let new_total = withdrawn + claim;
+    let nullifier = pedersen_hash([commitment, new_total as Field]);
+
+    main(
+        sender, recipient, total_alloc, rate, start, withdrawn, claim, salt,
+        commitment, now, nullifier
+    );
+}
+
+#[test(should_fail)]
+fn test_zero_sender_secret() {
+    let sender = 0; // Zero secret
+    let recipient = 67890;
+    let total_alloc: u64 = 10000;
+    let rate: u64 = 10;
+    let start: u64 = 1000;
+    let withdrawn: u64 = 200;
+    let claim: u64 = 300;
+    let salt = 999;
+    let now: u64 = 1060;
+
+    let commitment = pedersen_hash([
+        sender,
+        recipient,
+        total_alloc as Field,
+        rate as Field,
+        start as Field,
+        salt
+    ]);
+    let new_total = withdrawn + claim;
+    let nullifier = pedersen_hash([commitment, new_total as Field]);
+
+    main(
+        sender, recipient, total_alloc, rate, start, withdrawn, claim, salt,
+        commitment, now, nullifier
+    );
+}
+
+#[test(should_fail)]
+fn test_zero_recipient_pubkey() {
+    let sender = 12345;
+    let recipient = 0; // Zero recipient
+    let total_alloc: u64 = 10000;
+    let rate: u64 = 10;
+    let start: u64 = 1000;
+    let withdrawn: u64 = 200;
+    let claim: u64 = 300;
+    let salt = 999;
+    let now: u64 = 1060;
+
+    let commitment = pedersen_hash([
+        sender,
+        recipient,
+        total_alloc as Field,
+        rate as Field,
+        start as Field,
+        salt
+    ]);
+    let new_total = withdrawn + claim;
+    let nullifier = pedersen_hash([commitment, new_total as Field]);
+
+    main(
+        sender, recipient, total_alloc, rate, start, withdrawn, claim, salt,
+        commitment, now, nullifier
+    );
+}
+
+#[test(should_fail)]
+fn test_claim_exceeds_accrued() {
+    let sender = 12345;
+    let recipient = 67890;
+    let total_alloc: u64 = 10000;
+    let rate: u64 = 10;
+    let start: u64 = 1000;
+    let withdrawn: u64 = 0;
+    let claim: u64 = 500; // 500 > 200 accrued (20 * 10)
+    let salt = 999;
+    let now: u64 = 1020;
+
+    let commitment = pedersen_hash([
+        sender,
+        recipient,
+        total_alloc as Field,
+        rate as Field,
+        start as Field,
+        salt
+    ]);
+    let new_total = withdrawn + claim;
+    let nullifier = pedersen_hash([commitment, new_total as Field]);
+
+    main(
+        sender, recipient, total_alloc, rate, start, withdrawn, claim, salt,
+        commitment, now, nullifier
+    );
+}
+
+#[test(should_fail)]
+fn test_claim_exceeds_total_allocation() {
+    let sender = 12345;
+    let recipient = 67890;
+    let total_alloc: u64 = 1000;
+    let rate: u64 = 100;
+    let start: u64 = 1000;
+    let withdrawn: u64 = 800;
+    let claim: u64 = 300; // 800 + 300 = 1100 > 1000 total_alloc
+    let salt = 999;
+    let now: u64 = 1100; // elapsed = 100, accrued = 10000 >= 1100
+
+    let commitment = pedersen_hash([
+        sender,
+        recipient,
+        total_alloc as Field,
+        rate as Field,
+        start as Field,
+        salt
+    ]);
+    let new_total = withdrawn + claim;
+    let nullifier = pedersen_hash([commitment, new_total as Field]);
+
+    main(
+        sender, recipient, total_alloc, rate, start, withdrawn, claim, salt,
+        commitment, now, nullifier
+    );
+}
+
+#[test(should_fail)]
+fn test_tampered_commitment() {
+    let sender = 12345;
+    let recipient = 67890;
+    let total_alloc: u64 = 10000;
+    let rate: u64 = 10;
+    let start: u64 = 1000;
+    let withdrawn: u64 = 200;
+    let claim: u64 = 300;
+    let salt = 999;
+    let now: u64 = 1060;
+
+    let forged_commitment = 0xdeadbeef;
+    let new_total = withdrawn + claim;
+    let nullifier = pedersen_hash([forged_commitment, new_total as Field]);
+
+    main(
+        sender, recipient, total_alloc, rate, start, withdrawn, claim, salt,
+        forged_commitment, now, nullifier
+    );
+}
+
+#[test(should_fail)]
+fn test_tampered_nullifier() {
+    let sender = 12345;
+    let recipient = 67890;
+    let total_alloc: u64 = 10000;
+    let rate: u64 = 10;
+    let start: u64 = 1000;
+    let withdrawn: u64 = 200;
+    let claim: u64 = 300;
+    let salt = 999;
+    let now: u64 = 1060;
+
+    let commitment = pedersen_hash([
+        sender,
+        recipient,
+        total_alloc as Field,
+        rate as Field,
+        start as Field,
+        salt
+    ]);
+    let forged_nullifier = 0xbad000;
+
+    main(
+        sender, recipient, total_alloc, rate, start, withdrawn, claim, salt,
+        commitment, now, forged_nullifier
+    );
 }

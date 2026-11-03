@@ -290,4 +290,23 @@ describe('T3 / T5 — Noir Continuous Stream Circuit Constraint Invariants & Neg
       'recipient_pubkey must not be zero',
     );
   });
+
+  it('Real UltraHonk Execution: Solves Noir ACIR witness and generates valid proof', async () => {
+    const { proveStreams } = await import('../../lib/zk/prover');
+    const result = await proveStreams({
+      sender_secret: '12345',
+      recipient_pubkey: '67890',
+      total_allocation: '10000',
+      rate_per_second: '10',
+      start_time: '1000',
+      withdrawn_amount: '200',
+      claim_amount: '300',
+      salt: '999',
+      stream_commitment: '0x1dd07dd799d46a7e7fd63ba40116b21fb43535c17177d811bda7f771aaece6d9',
+      current_time: '1060',
+      stream_nullifier: '0x13f5958db040e7cd4d94916477e781197eab5361b87b8894c4670b0865ad97cc',
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.proof).toBeInstanceOf(Uint8Array);
+  }, 120000);
 });
