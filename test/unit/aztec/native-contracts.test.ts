@@ -85,24 +85,21 @@ describe('Aztec v6.0.0 Native Contracts Pipeline', () => {
       expect(fnNames).toContain('constructor');
       expect(fnNames).toContain('create_stream');
       expect(fnNames).toContain('withdraw');
-      expect(fnNames).toContain('cancel');
+      // cancel() was removed: it could never succeed (see contracts/aztec/streams).
+      expect(fnNames).not.toContain('cancel');
       expect(fnNames).toContain('get_token');
 
       const createFn = artifact.functions.find(f => f.name === 'create_stream');
       const withdrawFn = artifact.functions.find(f => f.name === 'withdraw');
-      const cancelFn = artifact.functions.find(f => f.name === 'cancel');
 
       expect(createFn?.custom_attributes).toContain('abi_private');
       expect(withdrawFn?.custom_attributes).toContain('abi_private');
-      expect(cancelFn?.custom_attributes).toContain('abi_private');
 
       expect(createFn?.is_unconstrained).toBe(false);
       expect(withdrawFn?.is_unconstrained).toBe(false);
-      expect(cancelFn?.is_unconstrained).toBe(false);
 
       expect(createFn?.bytecode.length).toBeGreaterThan(50000);
       expect(withdrawFn?.bytecode.length).toBeGreaterThan(50000);
-      expect(cancelFn?.bytecode.length).toBeGreaterThan(50000);
     });
 
     it('verifies IdentityCredential compiled artifact with valid UltraHonk bytecode', () => {
@@ -121,6 +118,8 @@ describe('Aztec v6.0.0 Native Contracts Pipeline', () => {
       expect(fnNames).toContain('update_root');
       expect(fnNames).toContain('assert_valid_root');
       expect(fnNames).toContain('verify_and_claim');
+      expect(fnNames).toContain('update_sanction_root');
+      expect(fnNames).toContain('assert_valid_sanction_root');
       expect(fnNames).toContain('get_current_root');
       expect(fnNames).toContain('get_issuer');
 

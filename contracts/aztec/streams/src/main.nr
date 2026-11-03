@@ -35,8 +35,14 @@
 //   [SEC-S4] U128 OVERFLOW PROTECTION — All arithmetic uses u128. Intermediate
 //            products are bounded to u128::MAX.
 //
-//   [SEC-S5] SENDER-ONLY CANCEL — cancel() checks note.sender == caller.
-//            Recipient cannot cancel to deny sender refund.
+//   [SEC-S5] NO CANCEL (removed 3 Nov 2026) — the first version's cancel()
+//            popped notes from the sender's set, where no stream note exists,
+//            so it could never succeed. A sender cancel needs its own note and
+//            a nullifier shared with withdrawals; open design question (R-09).
+//
+//   [SEC-S10] ONE STREAM PER CALL — withdraw selects the note by `salt` (the
+//            stream id) with limit 1. The first version popped up to 16 notes
+//            and used the first, destroying the recipient's other streams.
 //
 //   [SEC-S6] TOKEN CUSTODY — Tokens pulled and transferred via private token calls.
 //
@@ -65,6 +71,7 @@ contract PaymentStream {
             traits::{Deserialize, Packable, Serialize, ToField},
         },
         state_vars::{Owned, PrivateSet, PublicImmutable},
+        utils::comparison::Comparator,
     };
     use std::cmp::Eq;
 
@@ -141,14 +148,18 @@ contract PaymentStream {
 
     /// Withdraw accrued tokens from the recipient's active stream.
     #[external("private")]
-    fn withdraw(amount: u128) {
+    fn withdraw(salt: Field, amount: u128) {
         let recipient = self.msg_sender();
         let anchor_ts = self.context.get_anchor_block_header().timestamp() as u64;
 
         // Bound transaction lifetime to prevent replay in distant blocks
         self.context.set_expiration_timestamp(anchor_ts + 1800);
 
-        let notes = self.storage.stream_notes.at(recipient).pop_notes(NoteGetterOptions::new());
+        let notes = self.storage.stream_notes.at(recipient).pop_notes(
+            NoteGetterOptions::new()
+                .select(StreamNote::properties().salt, Comparator.EQ, salt)
+                .set_limit(1),
+        );
         assert(notes.len() > 0, "PaymentStream: no active stream note found");
 
         let note = notes.get_unchecked(0);
@@ -186,45 +197,6 @@ contract PaymentStream {
             TRANSFER_IN_PRIVATE_SELECTOR,
             [self.context.this_address().to_field(), recipient.to_field(), amount as Field, 0],
         );
-    }
-
-    /// Cancel stream and refund unaccrued remainder to sender.
-    #[external("private")]
-    fn cancel() {
-        let caller = self.msg_sender();
-        let anchor_ts = self.context.get_anchor_block_header().timestamp() as u64;
-
-        let notes = self.storage.stream_notes.at(caller).pop_notes(NoteGetterOptions::new());
-        assert(notes.len() > 0, "PaymentStream: stream not found");
-
-        let note = notes.get_unchecked(0);
-        assert(note.sender == caller, "PaymentStream: not stream sender");
-
-        let elapsed = (anchor_ts - note.start) as u128;
-        let accrued = elapsed * note.rate;
-        let total_claimable = if accrued > note.total { note.total } else { accrued };
-        let recipient_amount = total_claimable - note.withdrawn;
-        let sender_refund = note.total - total_claimable;
-
-        let token_addr = self.storage.token.read();
-
-        // Release accrued tokens to recipient if any pending
-        if recipient_amount > 0 {
-            let _ = self.context.call_private_function(
-                token_addr,
-                TRANSFER_IN_PRIVATE_SELECTOR,
-                [self.context.this_address().to_field(), note.recipient.to_field(), recipient_amount as Field, 0],
-            );
-        }
-
-        // Refund remaining unaccrued balance to creator
-        if sender_refund > 0 {
-            let _ = self.context.call_private_function(
-                token_addr,
-                TRANSFER_IN_PRIVATE_SELECTOR,
-                [self.context.this_address().to_field(), caller.to_field(), sender_refund as Field, 0],
-            );
-        }
     }
 
     // ─── Utility ─────────────────────────────────────────────────────────────

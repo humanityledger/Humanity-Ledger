@@ -41,7 +41,7 @@ contract IdentityCredential {
     // ─── Imports ─────────────────────────────────────────────────────────────
     use aztec::{
         macros::{
-            functions::{external, initializer, view},
+            functions::{external, initializer, only_self, view},
             storage::storage,
         },
         protocol::{
@@ -63,6 +63,13 @@ contract IdentityCredential {
     global SANCTION_SY_SYRIA: u32 = 760; // Syrian Arab Republic
     global SANCTION_CU_CUBA: u32 = 192; // Republic of Cuba
 
+    // G2: governance-updatable sanction list, committed by `sanction_root`.
+    // The four constants above stay as a floor (option C of
+    // docs/zk/SANCTION_NON_MEMBERSHIP.md); the committed list adds to them
+    // without redeploying. The list is zero-padded to SANCTION_SLOTS entries.
+    global SANCTION_SLOTS: u32 = 16;
+    global DOM_SEP__SANCTION_LIST: u32 = 461728390;
+
     // ─── Storage ─────────────────────────────────────────────────────────────
     #[storage]
     struct Storage<Context> {
@@ -72,6 +79,7 @@ contract IdentityCredential {
 
         /// Publicly committed identity Merkle tree root.
         current_root: PublicMutable<Field, Context>,
+        sanction_root: PublicMutable<Field, Context>,
 
         /// Master identity authority / issuer address.
         issuer: PublicImmutable<AztecAddress, Context>,
@@ -80,8 +88,9 @@ contract IdentityCredential {
     // ─── Constructor ─────────────────────────────────────────────────────────
     #[initializer]
     #[external("public")]
-    fn constructor(initial_root: Field, issuer_address: AztecAddress) {
+    fn constructor(initial_root: Field, initial_sanction_root: Field, issuer_address: AztecAddress) {
         self.storage.current_root.write(initial_root);
+        self.storage.sanction_root.write(initial_sanction_root);
         self.storage.issuer.initialize(issuer_address);
     }
 
@@ -97,8 +106,26 @@ contract IdentityCredential {
         self.storage.current_root.write(new_root);
     }
 
-    /// Public assertion to bind private proofs against canonical contract root state.
+    /// Replace the committed sanction list root. Only callable by the issuer.
     #[external("public")]
+    fn update_sanction_root(new_root: Field) {
+        let caller = self.msg_sender();
+        assert(caller == self.storage.issuer.read(), "IdentityCredential: only issuer can update sanctions");
+        self.storage.sanction_root.write(new_root);
+    }
+
+    /// Checks the sanction list a private proof used is the current one.
+    /// Only this contract may call it (enqueued from verify_and_claim).
+    #[external("public")]
+    #[only_self]
+    fn assert_valid_sanction_root(expected_root: Field) {
+        assert(self.storage.sanction_root.read() == expected_root, "IdentityCredential: sanction list outdated");
+    }
+
+    /// Public assertion to bind private proofs against canonical contract root state.
+    /// Only this contract may call it (enqueued from verify_and_claim).
+    #[external("public")]
+    #[only_self]
     fn assert_valid_root(expected_root: Field) {
         let active_root = self.storage.current_root.read();
         assert(active_root == expected_root, "IdentityCredential: root mismatch or expired");
@@ -136,6 +163,7 @@ contract IdentityCredential {
         salt: Field,
         leaf_index: u32,
         siblings: [Field; 32],
+        sanction_list: [Field; SANCTION_SLOTS],
     ) {
         let caller = self.msg_sender();
 
@@ -149,6 +177,12 @@ contract IdentityCredential {
         assert(jurisdiction != SANCTION_SY_SYRIA, "IdentityCredential: OFAC/FATF sanctioned jurisdiction [SY]");
         assert(jurisdiction != SANCTION_CU_CUBA, "IdentityCredential: OFAC/FATF sanctioned jurisdiction [CU]");
         assert(jurisdiction > 0, "IdentityCredential: invalid null jurisdiction");
+
+        // Committed, updatable sanction list (G2): not a member of it either.
+        for i in 0..SANCTION_SLOTS {
+            assert(sanction_list[i] != jurisdiction as Field, "IdentityCredential: sanctioned jurisdiction");
+        }
+        let sanction_root = poseidon2_hash_with_separator(sanction_list, DOM_SEP__SANCTION_LIST);
 
         // 3. Compute identity commitment: H(caller, secret)
         let identity_commitment = poseidon2_hash_with_separator(
@@ -188,6 +222,7 @@ contract IdentityCredential {
 
         // 6. Enqueue public assertion that the proven root matches active contract state
         self.enqueue_self.assert_valid_root(merkle_root);
+        self.enqueue_self.assert_valid_sanction_root(sanction_root);
 
         // 7. [SEC-I1] & [SEC-I2] Consume SingleUseClaim for this caller in this scope
         // This emits a deterministic nullifier tied to (scope_id, caller, contract).
