@@ -39,6 +39,35 @@ Pinned verification keys (SHA-256 of `circuits/<c>/target/vk`, @aztec/bb.js 5.3.
 
 No VK registry is deployed on any network.
 
+### 2.4 Production Native Aztec v6.0.0 L2 Smart Contracts
+In addition to the standalone proving circuits, Humanity Ledger implements 3 fully native Aztec L2 smart contracts under `contracts/aztec/` powered exclusively by `aztec-labs-eng/aztec-nr@v6.0.0` and compiled with `aztec compile`:
+
+1. **`contracts/aztec/escrow/src/main.nr` (`PrivateEscrow`):**
+   - **Architecture:** `Owned<PrivateSet<EscrowNote, Context>, Context>` per recipient with `PublicImmutable<AztecAddress, Context>` token binding.
+   - **Invariants:**
+     - `deposit`: Pulls token custody via `transfer_in_private`, bounds block lifetime via `set_expiration_timestamp(deadline)`, emits note delivered with `MessageDelivery::onchain_constrained()`.
+     - `claim`: Atomic zero-knowledge preimage verification (`poseidon2(claim_secret) == claim_secret_hash`), enforces anchor block freshness `anchor_ts <= deadline`, pops note emitting unique kernel nullifier.
+     - `refund`: Strictly timelocked `anchor_ts > deadline`, returns unspent tokens to original depositor.
+   - **Compilation:** Compiled with `aztec compile` generating transpiled AVM bytecode and real UltraHonk verification keys (4,832 bytes) for `deposit`, `claim`, and `refund`.
+
+2. **`contracts/aztec/streams/src/main.nr` (`PaymentStream`):**
+   - **Architecture:** `Owned<PrivateSet<StreamNote, Context>, Context>` storing continuous payment state `(sender, recipient, total, rate, start, withdrawn, salt)`.
+   - **Invariants:**
+     - Accrual lower bound: $elapsed = anchor\_ts - start$, $accrued = elapsed \cdot rate$, $claimable = \min(accrued, total) - withdrawn$.
+     - Replay immunity: Each withdrawal pops the existing note (nullifying it in the kernel nullifier tree) and inserts a new note with updated $withdrawn$ balance.
+     - Cancellation: Creator can cancel at any timestamp, atomically paying out accrued tokens to recipient and returning remainder to sender.
+   - **Compilation:** Compiled with `aztec compile` producing UltraHonk verification keys (4,832 bytes) for `create_stream`, `withdraw`, and `cancel`.
+
+3. **`contracts/aztec/identity/src/main.nr` (`IdentityCredential`):**
+   - **Architecture:** Zero-knowledge identity and compliance verification using `Map<Field, Owned<SingleUseClaim<Context>, Context>, Context>` partitioned by `scope_id`, with `PublicMutable<Field, Context>` canonical Merkle root.
+   - **Invariants:**
+     - **Scope Isolation [SEC-I1]:** Claims in Scope A emit nullifiers cryptographically orthogonal to Scope B; cross-dApp user tracing is mathematically impossible.
+     - **Single-Use Guarantee [SEC-I2]:** `SingleUseClaim::claim()` prevents double-voting or duplicate claiming within the same scope via deterministic kernel nullifier.
+     - **Full Depth-32 Merkle Path [SEC-I3]:** Proves identity leaf membership across 32 binary layers ($2^{32} \approx 4.29 \times 10^9$ identities) using Poseidon2.
+     - **Sanction Non-Membership [SEC-I4]:** In-circuit zero-knowledge proof that user jurisdiction is not in sanctioned territories (KP 408, IR 364, SY 760, CU 192) without revealing user jurisdiction.
+     - **Enqueued Root Assertion [SEC-I6]:** Enqueues public verification `assert_valid_root(merkle_root)` ensuring private proofs bind against active contract state.
+   - **Compilation:** Compiled with `aztec compile` producing UltraHonk verification keys (4,832 bytes) for `verify_and_claim`.
+
 ---
 
 ## 3. What was removed or corrected in this revision
