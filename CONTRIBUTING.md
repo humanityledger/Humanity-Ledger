@@ -84,7 +84,7 @@ Before submitting a pull request, verify that every item on this checklist is sa
 - [ ] **No Unsubstantiated Claims:** No assertions of production readiness, formal verification, or quantum resistance unless supported by documented artifacts and passing test suites.
 - [ ] **Prohibition of Synthetic Proof Simulation:** No usage of `Fr.random()`, `mockWorkerProof`, `simulatedNullifier`, or synthetic proof tokens in production test paths. Enforced by `test/aztec_e2e_no_simulation.test.ts` and `node scripts/forbidden-patterns.mjs`.
 - [ ] **Automated Test Battery Passing:**
-  * Full test suite: `npm run test:run` (1,094 tests · 64 files · 0 failures)
+  * Full test suite: `npm run test:run` (must finish with 0 failures)
   * Noir circuit constraint tests: `npx vitest run test/circuits/`
   * Streams rate bound (Gap G4 closure): `npx vitest run test/circuits/streams_rate_bound.test.ts`
   * PXE boundary and MLS lockfile: `npx vitest run test/pxe_boundary_security.test.ts`

@@ -8,7 +8,7 @@ Proving Architecture:   UltraHonk over BN254 (Barretenberg WASM)
 Execution Environment:  Aztec Private Execution Environment (PXE)
 Messaging Protocol:     RFC 9420 Messaging Layer Security (MLS)
 L1 Target:              Ethereum Cancun EVM (Solidity 0.8.28)
-Verification Status:    1,094 passing assertions · 64 test suites · 60,000 property fuzzing iterations
+Release Stage:          Pre-release · Aztec testnet only · no external audit concluded
 Monorepo Baseline:      Commit 806d6d69 (November 2026)
 Specification:          docs/PROTOCOL_SPEC.md
 Constraint Analysis:    circuits/CONSTRAINT_COMPLETENESS.md
@@ -21,7 +21,9 @@ Aztec Review Dossier:   docs/AZTEC_FOUNDATION_DOSSIER.md
 
 Humanity Ledger implements a dual layer architecture designed for sovereign client execution and asynchronous state settlement.
 
-The protocol operates under an untrusted relay assumption: neither intermediate transport nodes, backend indexing services, nor network operators are granted access to private execution witnesses, spending keys, or unencrypted communication state.
+The protocol operates under an untrusted relay assumption for direct messages and private execution: neither intermediate transport nodes, backend indexing services, nor network operators are granted access to private execution witnesses, spending keys, or the plaintext of one-to-one messages, which travel over MLS.
+
+> **Current exception.** Community posts and community channel messages are stored by the application server in PostgreSQL and are readable by it. The interface says so. Moving communities to MLS groups is open work.
 
 1. **Client Execution Layer:** Private state transitions, note discovery, and witness generation execute strictly within the client Private Execution Environment (PXE). Proof synthesis is performed locally using the UltraHonk polynomial interactive oracle proof system over the BN254 elliptic curve via Barretenberg compiled to WebAssembly.
 2. **Asynchronous Settlement Layer:** State commitments, nullifier emissions, and dispute resolutions settle to Aztec Testnet and Ethereum Layer 1 timelocked contracts (`HumanityTimeLockVault`, `LedgerDeadmanSwitch`).
@@ -75,7 +77,7 @@ This topology guarantees atomic compilation and synchronization between Noir con
 | `lib/security/` | Cryptographic Hardening | TypeScript / Node Crypto | Constant time primitives, memory zeroization buffers, and iframe security guards |
 | `lib/community-apps/` | Sandbox Runtime | TypeScript / HTML5 | Ephemeral Application Framework providing isolated execution with sealed network egress |
 | `scripts/` | Tooling and Verification CI | TypeScript / Node.js | Real Aztec PXE pipelines, Layer 1 bytecode verification, and traceability assertions |
-| `test/` | Automated Test Harness | Vitest / Hardhat | 1,094 unit and integration tests, Noir constraint violations, and 60,000 fuzz iterations |
+| `test/` | Automated Test Harness | Vitest / Hardhat | Unit, integration and adversarial tests, Noir constraint violations, and property fuzzing |
 | `docs/` | Normative Specifications | Markdown | Protocol specifications, formal traceability matrix, and external audit dossiers |
 
 ---
@@ -212,7 +214,7 @@ npx vitest run test/property_fuzz.test.ts
 npm run test:run
 ```
 
-**Verified Test Metric:** 1,094 / 1,094 tests passing · 64 test files · 43 / 43 Hardhat contract invariants passing · 0 traceability contradictions · 0 bytecode backdoor signatures · 0 dependencies with known vulnerabilities.
+**Test results** are not maintained by hand in this file, because they change with every commit. Run `npx vitest run`, `npx hardhat test` and `npm audit --omit=dev` locally, or read the latest CI run, for current numbers.
 
 ---
 

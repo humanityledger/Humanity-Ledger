@@ -212,7 +212,11 @@ export async function sendWelcomeEmail(email: string, name?: string): Promise<vo
  * Send support message to admin
  */
 export async function sendSupportEmail(message: string, section: string, senderEmail?: string, senderName?: string): Promise<void> {
-  const adminEmail = process.env.SUPPORT_INBOX || 'josejordan20222@gmail.com';
+  const adminEmail = process.env.SUPPORT_INBOX;
+  if (!adminEmail) {
+    console.error('[support] SUPPORT_INBOX is not set; the support message was not sent.');
+    throw new Error('Support inbox is not configured');
+  }
   // Every field below comes from the support form: escape before it goes into HTML.
   const safeSection = escapeHtml(String(section).toUpperCase());
   const safeName = escapeHtml(senderName || 'Anonymous User');

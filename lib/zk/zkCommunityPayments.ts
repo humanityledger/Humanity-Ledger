@@ -4,7 +4,7 @@
  * Treasury management, subscription gates, tipping, creator revenue sharing,
  * bounties, and channel subscriptions. All private via Aztec Network notes.
  *
- * Stefan Antonio Cirisanu — Humanity Ledger × Aztec Network / Harry Bridge (Hazbobo)
+ * Humanity Ledger × Aztec Network / Harry Bridge (Hazbobo)
  */
 
 import { formatZkTag, SupportedToken, getCommunityTreasury } from './zkMoney';

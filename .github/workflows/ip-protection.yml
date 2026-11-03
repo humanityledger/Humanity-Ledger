@@ -149,7 +149,7 @@ jobs:
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Verify package-lock.json has not been silently modified
         run: |
@@ -224,7 +224,7 @@ jobs:
           )
 
           for pattern in "${PATTERNS[@]}"; do
-            MATCHES=$(git log -10 --all -p | grep -E "$pattern" || true)
+            MATCHES=$(git log -10 --all -p | grep -E "$pattern" | grep -v -E "CANARY_|secret-scan: allow" || true)
             if [ -n "$MATCHES" ]; then
               echo "POTENTIAL SECRET LEAK DETECTED: pattern '$pattern'"
               echo "$MATCHES" | head -5

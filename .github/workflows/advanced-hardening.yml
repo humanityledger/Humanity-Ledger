@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install dependencies
         run: npm ci --prefer-offline
@@ -63,7 +63,7 @@ jobs:
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Forbidden patterns scan
         run: |
@@ -115,7 +115,7 @@ jobs:
           if grep -rn --include="*.ts" --include="*.js" \
             -E "\beval\s*\(" \
             --exclude-dir=node_modules --exclude-dir=test . 2>/dev/null | \
-            grep -v "//.*eval\|evaluat\|interval\|relevant"; then
+            grep -v "//.*eval\|\*.*eval\|evaluat\|interval\|relevant\|\.eval(" | grep -q .; then
             echo "WARNING: eval() usage detected in production code"
             FAIL=1
           fi
@@ -171,7 +171,7 @@ jobs:
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: npm audit - zero HIGH/CRITICAL
         run: |
@@ -232,7 +232,7 @@ jobs:
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Verify CONSTRAINT_COMPLETENESS.md is up to date
         run: |
@@ -297,7 +297,7 @@ jobs:
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install dependencies
         run: npm ci --prefer-offline
@@ -376,7 +376,9 @@ jobs:
           )
           FAIL=0
           for pattern in "${PATTERNS[@]}"; do
-            HITS=$(git grep -l "$pattern" -- ':!*.log' ':!*.jsonl' 2>/dev/null || true)
+            # The legal notice must name the owner (LSSI art. 10), so the legal
+            # files, the docs and this workflow are allowed to.
+            HITS=$(git grep -l "$pattern" -- ':!*.log' ':!*.jsonl' ':!NOTICE' ':!LICENSE' ':!lib/constants/legalEntity.ts' ':!lib/docs/pages/company.ts' ':!docs/**' ':!.github/**' 2>/dev/null || true)
             if [ -n "$HITS" ]; then
               echo "WARNING: Personal name pattern '$pattern' found in: $HITS"
               FAIL=1

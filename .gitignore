@@ -25,6 +25,10 @@ ts-debug.log*
 
 # local env files
 .env*.local
+# Every env file except committed examples (3 Nov 2026: real keys were
+# found in the public history under .env, .env.local and .env.railway).
+.env.*
+!.env.*.example
 .env
 .env.railway
 .env.production.template

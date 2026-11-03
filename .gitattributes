@@ -24,6 +24,18 @@ NOTICE          export-subst
 *.woff2 binary
 *.ttf   binary
 *.eot   binary
+*.mp4   binary
+*.mov   binary
+*.webm  binary
+*.mp3   binary
+*.wav   binary
+*.ogg   binary
+*.pdf   binary
+*.exe   binary
+*.dmg   binary
+*.zip   binary
+*.wasm  binary
+*.riv   binary
 
 #  LINGUIST OVERRIDES 
 # Prevents GitHub from showing language statistics that reveal tech stack

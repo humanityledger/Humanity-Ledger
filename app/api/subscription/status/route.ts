@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 
-const OWNER_EMAILS = [
-  'humanityledger@gmail.com',
-  'josemanx2000@gmail.com'
-];
+// Accounts with unlimited access are configured on the server, never in the
+// source: OWNER_EMAILS="a@example.com,b@example.com". Empty means none.
+const OWNER_EMAILS = (process.env.OWNER_EMAILS || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,7 +25,7 @@ export async function GET(req: NextRequest) {
     const userEmail = session.email;
 
     // 1. Check if user is the owner (unlimited access)
-    if (userEmail && OWNER_EMAILS.includes(userEmail)) {
+    if (userEmail && OWNER_EMAILS.includes(String(userEmail).toLowerCase())) {
       return NextResponse.json({
         isPremium: true,
         tier: 'OWNER',

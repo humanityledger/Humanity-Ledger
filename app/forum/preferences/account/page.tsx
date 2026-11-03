@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 export default function AccountPreferencesPage() {
   const [username, setUsername] = useState('humanityledger');
   const [name, setName] = useState('humanityledger');
-  const [email, setEmail] = useState('humanityledger@gmail.com');
+  const [email, setEmail] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -65,7 +65,7 @@ export default function AccountPreferencesPage() {
               <Github size={24} className="text-black" />
               <div>
                 <p className="text-sm font-bold text-black">GitHub</p>
-                <p className="text-xs text-black/50">josejordan29222@gmail.com</p>
+                <p className="text-xs text-black/50">Not connected</p>
               </div>
             </div>
             <button className="w-8 h-8 flex items-center justify-center bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">

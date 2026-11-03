@@ -69,7 +69,7 @@
     "aztec:e2e": "node --conditions=browser --import ./scripts/aztec/register.mjs scripts/aztec/e2e-testnet.mjs"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.22.2"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.3.0",

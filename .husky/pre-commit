@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
+node scripts/check-staged-secrets.mjs
 node scripts/forbidden-patterns.mjs
 npm run test:run

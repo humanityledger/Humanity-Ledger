@@ -3,7 +3,7 @@
  * Ledger Chat — Full Native Integration Layer (10,000% complete)
  *
  * Designed in active collaboration with Aztec Network / Harry Bridge (Hazbobo).
- * Stefan Antonio Cirisanu — Humanity Ledger / Ledger Chat
+ * Humanity Ledger / Ledger Chat
  *
  * Architecture:
  * - Humanity Ledger sovereign identity → zk.money handle (zk:<tag>)

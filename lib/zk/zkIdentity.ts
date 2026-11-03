@@ -4,7 +4,7 @@
  * Maps EVM wallet addresses to Aztec spending keys and readable zk.money handles.
  * Enables sovereign identity resolution across Humanity Ledger and Aztec Network.
  *
- * Stefan Antonio Cirisanu — Humanity Ledger × Aztec Network / Harry Bridge
+ * Humanity Ledger × Aztec Network / Harry Bridge
  */
 
 import { formatZkTag, validateZkHandle, resolveZkTag, getZkTransactionHistory } from './zkMoney';
