@@ -282,12 +282,17 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
   useEffect(() => {
     fetchCommunity();
     fetchPosts();
-    // Posts change rarely; only refresh while the tab is visible.
-    refreshRef.current = setInterval(() => { if (document.visibilityState === 'visible') fetchPosts(); }, 6000);
+  }, [fetchCommunity, fetchPosts]);
+
+  // Posts change rarely: refresh them only while the Posts tab is the one on
+  // screen and the browser tab is visible. The chat tab polls its own messages.
+  useEffect(() => {
+    if (activeTab !== 'posts') return;
+    refreshRef.current = setInterval(() => { if (document.visibilityState === 'visible') fetchPosts(); }, 10_000);
     return () => {
       if (refreshRef.current) clearInterval(refreshRef.current);
     };
-  }, [fetchCommunity, fetchPosts]);
+  }, [activeTab, fetchPosts]);
 
   // ── Like handler ────────────────────────────────────────────────────────────
   const handleLike = (postId: string) => {

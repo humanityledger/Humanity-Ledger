@@ -3,8 +3,6 @@
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { shortAddr } from '@/lib/utils';
-import { formatQd } from '@/lib/qd';
 import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Smile, Paperclip, BarChart2, Wallet, Flame, Heart, Image as ImageIcon, Map as MapIcon, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
@@ -170,7 +168,7 @@ function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: 
   );
 }
 
-const shortAddr = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
+const shortAddr = (addr: string) => formatAddress(addr);
 
 export const formatMessagePreview = (content: string): string => {
   if (typeof content !== 'string') return 'Message';
@@ -1309,6 +1307,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   
   // Track last direct message poll time to avoid re-delivering
   const directMsgSinceRef = useRef(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  // Legacy server-stored direct messages are read once per session (see syncGlobal).
+  const legacyDirectReadRef = useRef(false);
   // Cache canReceiveMessages result per address to skip redundant network lookups
   const canReceiveCache = useRef<Map<string, boolean>>(new Map());
   // Track if initClient is already in-flight to prevent double-calls on mobile
@@ -3313,9 +3313,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       try {
         if (address) await syncOfflineQueue(client, address);
         
-        try {
+        // /api/chat/direct no longer accepts new messages (POST answers 410:
+        // direct messages go over MLS only). Its GET can only hand back
+        // messages stored before that change, so it is read once per session
+        // instead of every few seconds by every open client.
+        if (!legacyDirectReadRef.current) try {
+          legacyDirectReadRef.current = true;
           const directHeaders: Record<string, string> = {};
-          if (address) directHeaders['x-web3-address'] = address;
           const directRes = await fetch(`/api/chat/direct?since=${directMsgSinceRef.current}`, {
             credentials: 'include',
             headers: directHeaders
@@ -3456,14 +3460,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // A tab in the background polls every 30 s instead of every few seconds.
     // Background tabs are most of the open tabs at any moment, and at the
     // foreground rate each one cost the database the same as an active user.
+    // The XMTP stream below delivers messages in real time; this sync is the
+    // safety net for a stream that dropped. Every 10 s in the foreground (was
+    // 4 s) and every 60 s in the background (was 30 s).
     let lastHiddenSync = 0;
     const globalPoll = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-        if (Date.now() - lastHiddenSync < 30_000) return;
+        if (Date.now() - lastHiddenSync < 60_000) return;
         lastHiddenSync = Date.now();
       }
       syncGlobal();
-    }, 4000);
+    }, 10_000);
 
     // ─── GLOBAL XMTP STREAM ────────────────────────────────────────────────────
     // DEDUPLICATION CONTRACT:
@@ -3845,12 +3852,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 mappedContent = parts.slice(1).join('__::');
                 burnAtNs = sentAtNs + (seconds * 1000);
               }
-            }
-
-            // Phase 5: Intercept Payment Signals for Auto-Sync
-            if (typeof mappedContent === 'string' && false /* __PAYMENT__ bubbles are rendered */) {
-              // Reconcile balance from server because the sender just transferred QDs to our address
-              refreshBalanceRef.current().catch(() => {});
             }
 
             const mappedMsg = {
@@ -4478,13 +4479,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
     fetchHistorical(true);
 
-    // Fallback polling for the active conversation history
-    const pollId = setInterval(() => fetchHistorical(false), 12000);
+    // Fallback for the open conversation's history. The stream and the global
+    // sync already cover it; this catches anything both missed. 30 s, visible
+    // tabs only (was 12 s, always).
+    const pollId = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      fetchHistorical(false);
+    }, 30_000);
 
     const fetchFriendRequests = async () => {
       if (!address) return;
       try {
-        const res = await fetch('/api/chat/contacts/request?direction=incoming', { headers: { 'x-web3-address': address } });
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+        const res = await fetch('/api/chat/contacts/request?direction=incoming', { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
           if (data.requests) setPendingRequestCount(data.requests.length);
@@ -4492,7 +4499,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       } catch (e) {}
     };
     fetchFriendRequests();
-    const reqPollId = setInterval(fetchFriendRequests, 10000);
+    const reqPollId = setInterval(fetchFriendRequests, 30_000);
 
     return () => {
       cancelled = true;
@@ -4620,7 +4627,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }).catch(() => {});
         toast.success(`Presence updated to ${mode.toUpperCase()}`);
       }
-      setMessage('');
       setInputText('');
       setShowBotSuggestions(false);
       return;
@@ -4646,7 +4652,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           conversationId: `dm-${activePeer?.toLowerCase()}`
         };
         setMessages((prev: any[]) => [...prev, cmdMsg, botMsg].sort((a, b) => a.sentAtNs - b.sentAtNs));
-        setMessage('');
+        setInputText('');
         setShowBotSuggestions(false);
         return; 
       }

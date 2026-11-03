@@ -722,7 +722,7 @@ export function CommunityChatView({
         lastHiddenFetch = Date.now();
       }
       fetchMessages(true);
-    }, 3000);
+    }, 5000);
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };

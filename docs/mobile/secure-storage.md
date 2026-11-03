@@ -1,5 +1,17 @@
-# Native Keychain & Keystore Secure Enclave Storage
+# Native key storage (planned, not built)
 
-On native iOS and Android clients:
-- XMTP private keys and session tokens are stored in the OS Keychain (iOS) and Android Keystore via `@capacitor-community/secure-storage-plugin`.
-- Hardware-backed encryption ensures keys are inaccessible even if the device filesystem is inspected.
+Status on 3 Nov 2026: **not implemented.** There is no iOS or Android project in
+this repository yet (no `capacitor.config.*`, no `ios/` or `android/`), and no
+code imports `@capacitor/*`. The plugin named below is not a dependency.
+
+The plan for the native apps:
+
+- Keep XMTP database keys and session tokens in the iOS Keychain and the
+  Android Keystore, through a maintained secure-storage plugin for Capacitor,
+  never in WebView `localStorage`.
+- Prefer hardware-backed keys (Secure Enclave / StrongBox) where the device has
+  them, and say in the interface when it does not.
+
+Until the native apps exist, the web app keeps these values in the browser
+(IndexedDB and the encrypted vault in `lib/core/SecureVault.ts`), which a
+compromised device or browser extension can read.
