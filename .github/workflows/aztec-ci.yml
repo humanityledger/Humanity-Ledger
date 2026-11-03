@@ -101,8 +101,19 @@ jobs:
       - name: Pinned VKs re-derived from the committed ACIR
         run: node scripts/zk/check-artifacts.mjs
 
-      - name: VKs of the v2 circuits (reported, not pinned)
+      - name: VKs of the v2 circuits (compared with the pins)
         run: node scripts/zk/v2-vks.mjs
+
+      - name: ZK and contract tests (vitest, real proving)
+        run: >
+          npx vitest run
+          test/zk
+          test/circuits
+          test/unit/aztec/circuit-proving.test.ts
+          test/unit/aztec/grumpkin.test.ts
+          test/unit/aztec/native-contracts.test.ts
+          test/aztec_vk_integrity.test.ts
+          test/vk_hash_mismatch.test.ts
 
       - name: Keep v2 VKs
         uses: actions/upload-artifact@v4
