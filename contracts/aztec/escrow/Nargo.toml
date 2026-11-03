@@ -1,0 +1,14 @@
+[package]
+name = "private_escrow"
+type = "contract"
+authors = ["Humanity Ledger Protocol"]
+compiler_version = ">=1.0.0"
+
+# ─── Dependencies ────────────────────────────────────────────────────────────
+# CRITICAL: Use aztec-labs-eng/aztec-nr NOT AztecProtocol/aztec-nr
+# AztecProtocol/aztec-nr has no v6 tags. Mixing repos duplicates the `aztec`
+# crate and causes "No matching impl found" errors at compile time.
+# ─────────────────────────────────────────────────────────────────────────────
+[dependencies]
+aztec = { git = "https://github.com/aztec-labs-eng/aztec-nr", tag = "v6.0.0", directory = "aztec" }
+uint_note = { git = "https://github.com/aztec-labs-eng/aztec-nr", tag = "v6.0.0", directory = "uint-note" }
