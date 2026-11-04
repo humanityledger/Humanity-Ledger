@@ -21,6 +21,7 @@ export const EXTERNAL_LINKS = {
     releases: "https://github.com/humanityledger/Humanity-Ledger/releases",
   },
   linkedin: "https://es.linkedin.com/company/humanity-ledger",
+  x: "https://x.com/humanityledger",
   aztec: "https://aztec.network",
   xmtp: "https://xmtp.org",
   email: "mailto:humanityledger@icloud.com",

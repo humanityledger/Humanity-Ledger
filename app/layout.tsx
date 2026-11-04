@@ -2,7 +2,7 @@
 
 import { headers } from 'next/headers'
 
-import { Inter, IBM_Plex_Mono } from 'next/font/google'
+import { Inter, IBM_Plex_Mono, Instrument_Serif } from 'next/font/google'
 
 // app/globals-compiled.css is no longer imported here. It is a Tailwind
 // build of globals.css produced by `build:railway`, so importing it next to
@@ -54,6 +54,16 @@ const inter = Inter({
 const aztecFont = Inter({
   subsets: ['latin'],
   variable: '--font-aztec-serif',
+  display: 'swap',
+})
+
+// Editorial display face for headings on the public pages (landing, docs,
+// /connect, footer). Body text stays Inter.
+const displaySerif = Instrument_Serif({
+  subsets: ['latin'],
+  weight: '400',
+  style: ['normal', 'italic'],
+  variable: '--font-display',
   display: 'swap',
 })
 
@@ -310,7 +320,7 @@ export default async function RootLayout({
 
   return (
 
-    <html lang="en" className={`light bg-white ${inter.variable} ${aztecFont.variable} ${plexMono.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang="en" className={`light bg-white ${inter.variable} ${aztecFont.variable} ${plexMono.variable} ${displaySerif.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
 
       <head>
         <meta charSet="utf-8" />

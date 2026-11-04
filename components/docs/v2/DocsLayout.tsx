@@ -9,6 +9,8 @@ import { DocsHeader } from "./DocsHeader";
 import { DocsNav } from "./DocsNav";
 import { Toc } from "./Toc";
 import { Blocks } from "./Blocks";
+import { ImmersiveField } from "@/components/immersive/ImmersiveField";
+import { SiteFooter } from "@/components/landing/v2/SiteFooter";
 import s from "./Docs.module.css";
 
 /**
@@ -76,6 +78,7 @@ export function DocsLayout({ current, page, group, before, after, extraToc, meta
 
   return (
     <div className={s.root} data-docs-root>
+      <ImmersiveField variant="quiet" />
       <DocsHeader current={current} />
 
       <div className={s.body}>
@@ -151,6 +154,7 @@ export function DocsLayout({ current, page, group, before, after, extraToc, meta
 
         <Toc items={toc} />
       </div>
+      <SiteFooter />
     </div>
   );
 }
