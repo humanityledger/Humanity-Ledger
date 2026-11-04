@@ -11,7 +11,7 @@
 | Re-derivation from ACIR | `scripts/zk/check-artifacts.mjs` (bb.js 5.3.0) | The VK is what Barretenberg derives from the committed bytecode |
 | Committed ACIR equals source | CI workflow "Noir circuits" | The bytecode is what nargo 1.0.0 compiles from `src/main.nr` |
 | Pinned verifier | `lib/zk/prover.ts` (`verifyProof`) | A swapped artifact makes verification return false |
-| Lifecycle check against a caller-supplied registry | `assertVKIntegrity` in `lib/aztec/verifier.ts` | ACTIVE / DEPRECATED (warns) / RETIRED (blocks). No registry is read from a chain |
+| Lifecycle check against a registry | `assertVKIntegrity` / `assertVKIntegrityOnChain` in `lib/aztec/verifier.ts` | ACTIVE / DEPRECATED (warns) / RETIRED (blocks). The on-chain registry (§4) is not deployed |
 
 ## 2. Pinned hashes (v1 circuits)
 
@@ -30,6 +30,17 @@ The v2 circuits (`circuits/*_v2`) are not pinned. CI derives their VKs and print
 3. Update `PINNED_VK_SHA256`, `vkSha256`, `vkBytes` and `vkHeader` in the same commit.
 4. `node scripts/zk/check-artifacts.mjs` must pass; CI runs it.
 
-## 4. What an on-chain registry would need (not built)
+## 4. On-chain registry (written and tested, not deployed)
 
-A registry contract that stores `(circuit, vkSha256, status)` behind a delay, events on queue and execution, and a client that reads it before proving. Until it exists, documentation must not refer to "anchored" or "registered" VKs.
+`contracts/ZKVerificationKeyRegistry.sol` stores, per circuit id `keccak256("hl.<circuit>.<version>")`, the SHA-256 of the binary VK and its status:
+
+- a new hash is proposed by the owner and can be executed by anyone after the timelock, which is at least one day;
+- revocation is immediate, so it can only make verification fail closed;
+- ownership is `Ownable2Step`;
+- the initial set is written in the constructor.
+
+Hardhat tests are in `test/ZKVerificationKeyRegistry.test.ts`, run by `npm run test:contracts` in the System Core workflow.
+
+`lib/aztec/verifier.ts` reads it through `readVKRegistry` and `assertVKIntegrityOnChain`. A revoked key maps to RETIRED and an unregistered circuit counts as missing. With no registry configured (`ZK_VK_REGISTRY_ADDRESS`, `ZK_VK_REGISTRY_RPC_URL`) the check throws instead of passing.
+
+`scripts/zk/deploy-vk-registry.ts` deploys it with the v1 pins. Nothing has been deployed yet, so documentation must still not refer to "anchored" or "registered" VKs.
