@@ -1,5 +1,5 @@
 /**
- * scripts/aztec/e2e-escrow-testnet.ts
+ * scripts/aztec/e2e-escrow-testnet.mts
  *
  * End-to-end run of a keyed PrivateEscrow on Aztec testnet, with throwaway
  * accounts paid by the sponsored FPC and a fresh test token, so it needs no
@@ -14,7 +14,7 @@
  *   5. the recipient claims with the claim secret;
  *   6. check the balances, and that a second claim is refused.
  *
- *   node --conditions=browser --import tsx --import ./scripts/aztec/register.mjs scripts/aztec/e2e-escrow-testnet.ts
+ *   node --conditions=browser --import tsx --import ./scripts/aztec/register.mjs scripts/aztec/e2e-escrow-testnet.mts
  *
  * Prints every transaction hash and writes them to e2e-escrow-receipt.json
  * (and the GitHub step summary). The escrow secret and the claim secret are
@@ -31,7 +31,7 @@ import { SponsoredFPCContract } from '@aztec-labs/noir-contracts.js/SponsoredFPC
 import { TokenContract } from '@aztec-labs/noir-contracts.js/Token';
 import { openTmpStore } from '@aztec-labs/kv-store/deprecated/indexeddb';
 import { EmbeddedWallet } from '@aztec-labs/wallets/embedded';
-import { KEYED_ARTIFACT_PATHS, computeKeyedInstance, loadKeyedArtifact } from '../../lib/aztec/keyed-deploy';
+import { KEYED_ARTIFACT_PATHS, computeKeyedInstance, loadKeyedArtifact } from '../../lib/aztec/keyed-deploy.ts';
 
 const registry = JSON.parse(fs.readFileSync('deployments/aztec-testnet.json', 'utf8'));
 const NODE_URL = process.env.AZTEC_NODE_URL || registry.network.nodeUrl;

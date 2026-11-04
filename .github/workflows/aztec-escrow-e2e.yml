@@ -10,7 +10,7 @@ on:
   push:
     branches: ['claude/**']
     paths:
-      - 'scripts/aztec/e2e-escrow-testnet.ts'
+      - 'scripts/aztec/e2e-escrow-testnet.mts'
       - '.github/workflows/aztec-escrow-e2e.yml'
 
 permissions:
@@ -32,7 +32,7 @@ jobs:
           cache: npm
       - run: npm ci --include=dev
       - name: Keyed escrow, deposit and claim on testnet
-        run: node --conditions=browser --import tsx --import ./scripts/aztec/register.mjs scripts/aztec/e2e-escrow-testnet.ts
+        run: node --conditions=browser --import tsx --import ./scripts/aztec/register.mjs scripts/aztec/e2e-escrow-testnet.mts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
