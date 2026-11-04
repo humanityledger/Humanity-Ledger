@@ -33,6 +33,7 @@ export const RELEASES: Release[] = [
       { kind: "improved", text: "When signing in fails, the page says why instead of always saying the signature was declined." },
       { kind: "improved", text: "The message menu adds quick reactions, private and regular payments, message details and keyboard navigation. Deleting for everyone is now described as a request, because other apps can keep a copy." },
       { kind: "improved", text: "Pinch to zoom works on every page." },
+      { kind: "improved", text: "A new look for the home page, sign in, documentation and Ledger Chat: a living background that responds to your cursor, a frosted navigation bar with menus, editorial headings and a fuller footer with our X, GitHub and LinkedIn." },
       { kind: "security", text: "Screens that showed simulated cryptography were removed or say what is missing: the solvency check, the setup ceremony, the age proof and payment streams, which ran only in your browser and moved no money." },
       { kind: "new", text: "A legal notice, and a content and copyright page explaining how to report illegal content and how our code is licensed." },
       { kind: "improved", text: "Terms, Privacy Policy, Cookie Policy and risk disclosure rewritten to match the code: who provides the service, every cookie we set, and what the private payments wallet can and cannot do." },

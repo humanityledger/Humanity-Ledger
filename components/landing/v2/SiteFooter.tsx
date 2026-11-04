@@ -72,7 +72,7 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
       { label: "GitHub", href: EXTERNAL_LINKS.github.org, external: true },
       { label: "LinkedIn", href: EXTERNAL_LINKS.linkedin, external: true },
       { label: "Built on Aztec", href: EXTERNAL_LINKS.aztec, external: true },
-      { label: "Messaging by XMTP", href: EXTERNAL_LINKS.xmtp, external: true },
+      { label: "XMTP", href: EXTERNAL_LINKS.xmtp, external: true },
     ],
   },
 ];
