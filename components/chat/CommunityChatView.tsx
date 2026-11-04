@@ -1147,15 +1147,33 @@ export function CommunityChatView({
                 transform: contextMenu.x ? 'none' : 'translate(-50%,-50%)',
                 zIndex: 9999,
               }}
-              className="bg-white/98 backdrop-blur-xl rounded-2xl shadow-2xl border border-black/8 py-1.5 w-52 overflow-hidden">
+              role="menu"
+              aria-label="Message actions"
+              ref={(el: HTMLDivElement | null) => { if (el && !el.contains(document.activeElement)) (el.querySelector('[role="menuitem"]') as HTMLElement | null)?.focus(); }}
+              onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
+                if (e.key === 'Escape') { e.preventDefault(); setContextMenu(null); return; }
+                if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+                e.preventDefault();
+                const items = Array.from(e.currentTarget.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
+                const i = items.indexOf(document.activeElement as HTMLElement);
+                items[e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length]?.focus();
+              }}
+              className="bg-white/98 backdrop-blur-xl rounded-2xl shadow-2xl border border-black/8 py-1.5 w-56 overflow-hidden">
               {[
                 { label: 'Reply', icon: Reply, fn: () => { setReplyTo(contextMenu.msg); setContextMenu(null); } },
                 { label: 'Copy text', icon: Copy, fn: () => { navigator.clipboard.writeText(contextMenu.msg.content); toast.success('Copied to clipboard'); setContextMenu(null); } },
                 { label: 'React', icon: Smile, fn: () => { setEmojiPickerFor(contextMenu.msg.id); setContextMenu(null); } },
+                ...(!isMe(contextMenu.msg) && /^0x[0-9a-fA-F]{40}$/.test(contextMenu.msg.authorAddress || '')
+                  ? [
+                      // Private payments go to an Aztec address, which the sender enters in the wallet.
+                      { label: 'Send private payment', icon: Shield, fn: () => { setContextMenu(null); setShowZkModal(true); } },
+                      { label: 'Send payment', icon: CircleDollarSign, fn: () => { setCryptoRecipient(contextMenu.msg.authorAddress); setContextMenu(null); setShowCryptoModal(true); } },
+                    ]
+                  : []),
               ].map(({ label, icon: Icon, fn }) => (
-                <button key={label} onClick={fn}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-black/[0.04] text-left transition-colors">
-                  <Icon size={15} className="text-black/40 shrink-0" />
+                <button key={label} role="menuitem" type="button" onClick={fn}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-black/[0.04] focus-visible:bg-black/[0.06] focus-visible:outline-none text-left transition-colors">
+                  <Icon size={16} className="text-black/60 shrink-0" aria-hidden="true" />
                   <span className="text-[13px] font-medium text-[#1C1C1E]">{label}</span>
                 </button>
               ))}

@@ -1,6 +1,6 @@
 # Revisión de los contratos aztec-nr (`contracts/aztec/`)
 
-**Fecha:** 3 de noviembre de 2026. **Revisa:** el commit `6c009e5a`, que añadió `PrivateEscrow`, `PaymentStream` e `IdentityCredential` (tareas R-08 a R-10 del prompt maestro). **Estado tras la revisión:** compilan con Aztec 6.0.0 en la CI (workflow "Aztec contracts", que además regenera sus artefactos en ramas `claude/**`). No hay tests TXE todavía, ni despliegue.
+**Fecha:** 3 de noviembre de 2026. **Revisa:** el commit `6c009e5a`, que añadió `PrivateEscrow`, `PaymentStream` e `IdentityCredential` (tareas R-08 a R-10 del prompt maestro). **Estado tras la revisión:** compilan con Aztec 6.0.0 en la CI (workflow "Aztec contracts", que además regenera sus artefactos en ramas `claude/**`). Desde el 4 de noviembre tienen 30 tests TXE que pasan en CI (escrow 10, identity 11, streams 9) contra un token solo de pruebas (`contracts/aztec/test_token`). Hay un camino de despliegue con claves (`lib/aztec/keyed-deploy.ts`, `scripts/aztec/deploy-keyed.ts`), sin ejecutar contra testnet. No hay despliegue.
 
 ## Hallazgos y correcciones
 
@@ -17,7 +17,7 @@
 
 ## Límites que siguen abiertos
 
-1. **Custodia.** Escrow y streams guardan saldo privado del token. Para gastarlo, el PXE que ejecuta `claim`, `refund` o `withdraw` tiene que poder gastar las notas del contrato. Eso exige desplegar el contrato con claves (`publicKeys` en `deploy`) y compartirlas con las partes, como el Escrow de aztec-standards. No está construido.
+1. **Custodia.** Escrow y streams guardan saldo privado del token. Para gastarlo, el PXE que ejecuta `claim`, `refund` o `withdraw` tiene que poder gastar las notas del contrato. Eso exige desplegar el contrato con claves (`publicKeys` en `deploy`) y compartirlas con las partes, como el Escrow de aztec-standards. Construido en `lib/aztec/keyed-deploy.ts` y `scripts/aztec/deploy-keyed.ts`, y probado en TXE con el alcance del contrato (`with_additional_scopes`). Falta ejecutarlo contra testnet.
 2. **Llamadas al token por selector crudo** (`call_private_function` con `transfer_in_private((Field),(Field),u128,Field)`). Funciona si el token de referencia mantiene esa firma; la interfaz tipada `Token::at(..)` sería más robusta (riesgo de crate duplicado, ver `AZTEC_NR_V6_NOTES.md`).
-3. **Sin tests TXE.** La CI prueba que compilan, no que se comportan. Los tests deben incluir: dos escrows del mismo receptor (AZ-03), reembolso tras el plazo (AZ-01), cobro y reembolso compitiendo (AZ-02), plazo a más de 24 h (AZ-04).
+3. **Tests TXE (hechos el 4 nov).** Antes la CI solo probaba que compilaban. Los tests deben incluir: dos escrows del mismo receptor (AZ-03), reembolso tras el plazo (AZ-01), cobro y reembolso compitiendo (AZ-02), plazo a más de 24 h (AZ-04).
 4. **Afirmaciones del commit original que no se sostienen** ("Production Native", "Lazarus Group adversary", "sanction non-membership" con cuatro constantes, "cancelación en cualquier momento"): retiradas del dossier.

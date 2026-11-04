@@ -4,7 +4,24 @@
 
 Este es el prompt maestro único para el trabajo ZK y de mensajería de Humanity Ledger. Integra los dos prompts del 3 de noviembre, contrastados línea a línea con el commit 097b51d5 de `humanityledger/Humanity-Ledger`. El anexo C muestra dónde quedó cada una de sus secciones. Lo más grave no estaba en ninguno de los dos: el circuito de streams permite cobrar muchas veces el mismo devengo, y la "integridad de VK" no está ligada a las claves reales.
 
-> **Estado de ejecución (3 nov, 23:30):** fase 0 (R-01 a R-06) hecha. Paquete de cierre de gaps integrado (anexo D) y circuitos v2 (R-18) con VK fijadas en CI. R-08 a R-10: otra sesión añadió los contratos aztec-nr en `contracts/aztec/` (commit `6c009e5a`). Al revisarlos aparecieron fallos que bloqueaban fondos: no había reembolso ni cancelación posibles y `pop_notes` sin selector destruía notas. Están corregidos y los contratos compilan de verdad con Aztec 6.0.0 en CI (`docs/zk/AZTEC_CONTRACTS_REVIEW.md`); faltan los tests TXE y desplegar el contrato con claves. La provenance ya no finge un anclaje en Aztec. Todo está fusionado en `main` y el documento está en el repositorio como `docs/zk/MASTER_PROMPT.md`. Siguen abiertas R-07, R-11 a R-17 y R-19.
+> **Estado de ejecución (4 nov, 06:30):** fases 0 y 0-B hechas y verificadas en CI; fase 1 avanzada. Lo nuevo desde el 3 nov:
+> - Los 30 tests TXE de los contratos aztec-nr pasan con Aztec 6.0.0 en CI: escrow 10, identity 11, streams 9. Usan un token solo de pruebas, `contracts/aztec/test_token`.
+> - Hay despliegue con claves: `lib/aztec/keyed-deploy.ts` y `scripts/aztec/deploy-keyed.ts`. No se ha ejecutado contra testnet.
+> - El registro de VK on-chain con retardo está escrito, con tests de Hardhat, y `verifier.ts` lo consulta (R-19). No está desplegado.
+> - Hay probador en Web Worker sin módulos de Node (R-16), y comprobación de salud de testnet a diario (R-15).
+> - Se retiraron de la interfaz la solvencia, la ceremonia MPC, la prueba de edad y los streams que eran falsos (R-14).
+> - El menú de mensajes ya tiene reacciones, pagos, detalles y teclado, y avisa honestamente al borrar (R-12).
+> - Pasan a verde los workflows de IP Protection, Circuit Constraint Coverage, Hardhat (que ahora es una puerta real) y Lighthouse contra la app real. Security & Compliance se verifica en este ciclo.
+> - `middleware.ts` ya no tiene `@ts-nocheck`. Se quitó `backend_barretenberg`, y un workflow regenera el lockfile (R-07, parcial).
+>
+> Siguen abiertas:
+> - R-11: prueba manual en testnet con dos cuentas.
+> - R-13: falta el códec de reacciones de XMTP.
+> - R-17: necesita una migración de Prisma y decidir la bandera por comunidad.
+> - R-07: queda la duplicación de wagmi, viem y `@aztec/*` frente a `@aztec-labs/*`.
+> - El `@ts-nocheck` de `LedgerChatV2.tsx`.
+>
+> El detalle está en `claude/fase1-ci-hardening-2026-11-04.md`, en el proyecto.
 
 ## Cómo usarlo
 
@@ -48,16 +65,16 @@ Esta tabla es la única fuente para describir el proyecto hacia fuera; usa el vo
 | Publicaciones de comunidad | Texto legible en la base de datos (F2-02) | Grupos MLS de XMTP (R-17, `docs/communities/MLS_MIGRATION.md`) |
 | Circuitos v1 (escrow, identity, streams) | Real solo en tests; VK fijadas; fallos ZK-01 a ZK-06 | Sustituir por v2 o por contratos aztec-nr |
 | Circuitos v2 (`circuits/*_v2`) | Experimental: compilan y pasan tests en CI; corrigen ZK-01 a ZK-05 y G2, G3, G5 | Pruebas UltraHonk en TypeScript, fijar VK, verificador que guarde estado (R-18) |
-| Probador `lib/zk/prover.ts` | Real solo en tests (Node); VK fijada | Versión para Web Worker (R-16) |
+| Probador `lib/zk/prover.ts` y `lib/zk/browser-prover.ts` (Web Worker) | Real solo en tests; VK fijada; la versión de navegador no usa módulos de Node (`test/zk/browser-prover.test.ts`) | Probarlo en Safari iOS; no está conectado a ninguna pantalla |
 | VK binarias y `*.vk.json` | Reales y fijadas en código | Ninguno |
 | `zkMoney.ts` | Demo local | Sustituir por el monedero real o retirar |
-| `zkCompliance.ts` (solvencia) | Simulado (bytes aleatorios `0xsolv_`) | Retirar de la UI (R-14) |
+| `zkCompliance.ts`, `zkMpc.ts`, Gold Registry, prueba de edad, streams en `localStorage` | Retirados de la UI (R-14); `createShieldedStream` solo funciona en modo demo | — |
 | `realTx.ts`, `aztec-zk-engine.ts` | Retirados | — |
 | `HumanityTimeLockVault`, `LedgerDeadmanSwitch` | Código Solidity sin auditar ni desplegar | Auditoría (H-037); revisar que `isTriggered` no bloquee el segundo token |
 | `ZKIdentityRegistry.sol` | Revierte siempre (`VerifierNotConnected`) | Verificador Honk real |
-| Registro de VK on-chain | No existe | Contrato con retardo (R-19) |
+| Registro de VK on-chain (`contracts/ZKVerificationKeyRegistry.sol`) | Real solo en tests (Hardhat); `assertVKIntegrityOnChain` lo lee y falla si no está configurado | Desplegarlo con una multisig como propietaria (`scripts/zk/deploy-vk-registry.ts`) |
 | Sandbox de apps de comunidad | Real (CSP `sandbox allow-scripts`, sin red) | — |
-| Menú contextual de mensajes | No existe | R-12 |
+| Menú contextual de mensajes | Real: reacciones, responder, hilo, copiar (aviso en temporales), reenviar, pago privado y pago, detalles, editar, pedir borrado, denunciar; teclado y movimiento reducido | Reacciones como tipo de contenido XMTP (R-13) |
 
 ## Reglas técnicas por capa
 
@@ -316,9 +333,9 @@ Si se elige el camino B (mantener los circuitos sueltos), R-08 a R-10 se aplican
 | --- | --- | --- | --- | --- | --- |
 | R-17 | 2 | Comunidades en grupos MLS de XMTP, un grupo por canal, bandera por comunidad (`docs/communities/MLS_MIGRATION.md`) | Un volcado de la base no contiene publicaciones de comunidades migradas | F2-02; `CLM-MSG-COMMUNITY` | Diseño |
 | R-18 | 1 | Circuitos v2 (`circuits/*_v2`, `circuits/hl_lib`): Poseidon2, identidad de profundidad 32 con sanciones comprometidas, escrow con cobro y devolución, streams con estado encadenado | `nargo test` en CI; después, pruebas UltraHonk en TypeScript y VK fijadas | ZK-01 a ZK-05; G2, G3, G5 | Compila y pasa 36 tests en CI |
-| R-19 | 2 | Registro de VK on-chain con retardo, solo si se mantiene el camino B | El cliente lee el registro antes de probar | `docs/VK_MONITORING.md` §4 | Sin empezar |
+| R-19 | 2 | Registro de VK on-chain con retardo, solo si se mantiene el camino B | El cliente lee el registro antes de probar | `docs/VK_MONITORING.md` §4 | Contrato y lectura hechos, con tests; sin desplegar |
 
-Fuera de ZK siguen abiertos y bloquean el lanzamiento de enero: F2-02 (comunidades en texto legible), `@ts-nocheck` en `middleware.ts` y `LedgerChatV2.tsx`, la CI en rojo y la rotación de los secretos expuestos en el historial público (nota del 3-nov).
+Fuera de ZK siguen abiertos y bloquean el lanzamiento de enero: F2-02 (comunidades en texto legible), `@ts-nocheck` en `LedgerChatV2.tsx` y la rotación de los secretos expuestos en el historial público (nota del 3-nov), incluidas las contraseñas de base de datos que estaban en `docker-compose.yml`.
 
 ## Bucle de verificación antes de cada commit
 

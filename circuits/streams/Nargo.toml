@@ -2,6 +2,6 @@
 name = "zk_streams"
 type = "bin"
 authors = ["Humanity Ledger Protocol Core"]
-compiler_version = ">=0.30.0"
+compiler_version = "1.0.0"
 
 [dependencies]

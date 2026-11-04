@@ -7,10 +7,9 @@ export function ZoomWrapper({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
 
     useEffect(() => {
-        const viewport = document.querySelector('meta[name="viewport"]');
-        if (viewport) {
-            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover');
-        }
+        // The viewport meta is owned by `export const viewport` in app/layout.tsx.
+        // This used to overwrite it with maximum-scale=1 and user-scalable=0,
+        // which blocks pinch zoom (WCAG 1.4.4) on every page.
 
         const isZoomTarget =
             pathname === '/' ||

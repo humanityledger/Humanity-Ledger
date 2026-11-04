@@ -4,7 +4,7 @@
  *
  * For each standalone circuit (escrow, identity, streams), checks that three
  * things agree:
- *   1. the SHA-256 pinned in lib/aztec/verifier.ts (PINNED_VK_SHA256),
+ *   1. the SHA-256 pinned in lib/zk/vk-pins.ts (PINNED_VK_SHA256),
  *   2. `vkSha256` in circuits/<c>/target/<c>.vk.json,
  *   3. the SHA-256 of the binary VK circuits/<c>/target/vk,
  * and, unless --fast is given, that Barretenberg (@aztec/bb.js) derives exactly
@@ -28,12 +28,12 @@ const fast = process.argv.includes('--fast');
 const sha = (bytes) => '0x' + createHash('sha256').update(bytes).digest('hex');
 
 function readPins() {
-  const src = readFileSync(resolve(root, 'lib/aztec/verifier.ts'), 'utf8');
+  const src = readFileSync(resolve(root, 'lib/zk/vk-pins.ts'), 'utf8');
   const block = src.slice(src.indexOf('PINNED_VK_SHA256'));
   const pins = {};
   for (const c of CIRCUITS) {
     const m = block.match(new RegExp(`${c}:\\s*'(0x[0-9a-f]{64})'`));
-    if (!m) throw new Error(`No pinned hash for "${c}" in lib/aztec/verifier.ts`);
+    if (!m) throw new Error(`No pinned hash for "${c}" in lib/zk/vk-pins.ts`);
     pins[c] = m[1];
   }
   return pins;

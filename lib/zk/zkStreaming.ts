@@ -149,7 +149,15 @@ export interface CreateStreamParams {
   memo?: string;
 }
 
+/**
+ * Local simulation only: no tokens move and nothing reaches Aztec. It is
+ * refused outside NEXT_PUBLIC_ZK_MODE=demo, like executeShieldedPayment in
+ * zkMoney.ts. The real stream contract is contracts/aztec/streams.
+ */
 export function createShieldedStream(params: CreateStreamParams): ZkPaymentStream {
+  if (process.env.NEXT_PUBLIC_ZK_MODE !== 'demo') {
+    throw new Error('Payment streams are not available yet: the Aztec stream contract is not deployed.');
+  }
   const deposit = parseFloat(params.depositAmount);
   const duration = Math.max(60, params.durationSeconds);
   const ratePerSec = (deposit / duration).toFixed(8);

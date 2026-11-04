@@ -65,7 +65,7 @@ unconstrained fn setup() -> Setup {
     let mut env = TestEnvironment::new();
     let sender = env.create_contract_account();
     let recipient = env.create_contract_account();
-    let token = env.deploy("../test_token/TestToken").without_initializer();
+    let token = env.deploy("../test_token/@test_token/TestToken").without_initializer();
     let streams = env.deploy("PaymentStream").with_public_initializer(
         sender,
         PaymentStream::interface().constructor(token),

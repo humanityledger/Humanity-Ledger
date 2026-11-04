@@ -67,7 +67,8 @@
     "prepare": "node -e \"process.exit(0)\"",
     "postinstall": "node scripts/cross-fetch-patch.js",
     "aztec:setup": "node --conditions=browser --import ./scripts/aztec/register.mjs scripts/aztec/setup-testnet.mjs",
-    "aztec:e2e": "node --conditions=browser --import ./scripts/aztec/register.mjs scripts/aztec/e2e-testnet.mjs"
+    "aztec:e2e": "node --conditions=browser --import ./scripts/aztec/register.mjs scripts/aztec/e2e-testnet.mjs",
+    "aztec:health": "tsx scripts/testnet-health-check.ts"
   },
   "engines": {
     "node": ">=22.22.2"
@@ -114,7 +115,6 @@
     "@neon/env": "1.6.4",
     "@noble/curves": "1.9.7",
     "@noble/hashes": "1.8.0",
-    "@noir-lang/backend_barretenberg": "0.36.0",
     "@noir-lang/noir_js": "1.0.0-beta.22",
     "@noir-lang/noirc_abi": "1.0.0-beta.22",
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
