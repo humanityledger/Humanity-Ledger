@@ -1,7 +1,8 @@
 # Aztec contracts CI (contracts/aztec/*).
 #
 # Compiles every aztec-nr contract with the Aztec 6.0.0 toolchain and reports
-# whether the committed artifacts match a fresh compile. On claude/** branches
+# whether the committed artifacts match a fresh compile, then runs the TXE
+# tests of every contract that has src/test.nr. On claude/** branches
 # it commits refreshed artifacts back to the branch, so an agent without the
 # toolchain can change contract sources and still keep source and artifacts in
 # sync. On main and pull requests it only checks.
@@ -76,3 +77,16 @@ jobs:
       - name: Fail on main or PRs if artifacts are stale
         if: github.event_name != 'push' || !startsWith(github.ref, 'refs/heads/claude/')
         run: git diff --exit-code -- contracts/aztec
+
+      # TXE tests (src/test.nr of each contract). They deploy compiled
+      # artifacts, including ../test_token, so they run after every crate has
+      # been compiled.
+      - name: TXE tests (aztec test)
+        run: |
+          set -euo pipefail
+          for dir in contracts/aztec/*/; do
+            [ -f "$dir/src/test.nr" ] || continue
+            echo "::group::aztec test $dir"
+            (cd "$dir" && aztec test)
+            echo "::endgroup::"
+          done

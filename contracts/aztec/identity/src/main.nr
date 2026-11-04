@@ -36,8 +36,10 @@
 
 use aztec::macros::aztec;
 
+mod test;
+
 #[aztec]
-contract IdentityCredential {
+pub contract IdentityCredential {
     // ─── Imports ─────────────────────────────────────────────────────────────
     use aztec::{
         macros::{
