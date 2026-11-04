@@ -12,13 +12,14 @@
  * paid by the sponsored FPC, as in scripts/aztec/e2e-testnet.mjs. The
  * contract secret is written to .aztec-keyed.local.json (gitignored) and
  * must be handed to the escrow/stream parties out of band; it is never
- * printed. Not run against a live network yet.
+ * printed. The same deployment path is exercised on testnet by
+ * scripts/aztec/e2e-escrow-testnet.mts.
  */
 import fs from 'node:fs';
 import { createAztecNodeClient } from '@aztec-labs/aztec.js/node';
 import { Fr, Fq } from '@aztec-labs/aztec.js/fields';
 import { AztecAddress } from '@aztec-labs/aztec.js/addresses';
-import { Contract, getContractInstanceFromInstantiationParams } from '@aztec-labs/aztec.js/contracts';
+import { Contract, DeployMethod, getContractInstanceFromInstantiationParams } from '@aztec-labs/aztec.js/contracts';
 import { SponsoredFeePaymentMethod } from '@aztec-labs/aztec.js/fee';
 import { NO_FROM } from '@aztec-labs/aztec.js/account';
 import { SponsoredFPCContract } from '@aztec-labs/noir-contracts.js/SponsoredFPC';
@@ -58,15 +59,15 @@ async function main() {
   // Universal deployment (deployer zero), so the address depends only on the
   // artifact, constructor arguments, salt and keys.
   const expected = await computeKeyedInstance(artifact, { secretKey, salt, token });
-  const deployment = Contract.deployWithPublicKeys(expected.publicKeys, wallet, artifact, [token]);
-  const deployed = await deployment.send({
-    from: account.address,
-    fee,
-    contractAddressSalt: salt,
-    universalDeploy: true,
-    wait: { timeout: 900 },
-  });
-  const address = deployed.address ?? deployed.contract?.address;
+  // aztec.js 6.0.0: keys, salt and universal deployment are instantiation
+  // options of DeployMethod.create (there is no Contract.deployWithPublicKeys).
+  const deployment = DeployMethod.create(
+    wallet,
+    { artifact, args: [token], postDeployCtor: (instance: any, w: any) => Contract.at(instance.address, artifact, w) },
+    { salt, publicKeys: expected.publicKeys, universalDeploy: true },
+  );
+  const deployed: any = await deployment.send({ from: account.address, fee, wait: { timeout: 900 } } as any);
+  const address = deployed.instance?.address ?? deployed.contract?.address;
   if (!address || !AztecAddress.fromStringUnsafe(address.toString()).equals(expected.instance.address)) {
     throw new Error('Deployed address does not match the keyed instance computed locally');
   }

@@ -1,9 +1,8 @@
 // scripts/aztec/deploy-contracts-testnet.mjs
 //
-// Deploys the three native Aztec v6.0.0 contracts to Aztec Testnet:
-//   1. IdentityCredential (Identity claims with scope-isolated single-use nullifiers)
-//   2. PrivateEscrow (Shielded multi-asset peer-to-peer conditional lockups)
-//   3. PaymentStream (Real-time confidential micro-streaming)
+// Deploys IdentityCredential (scope-isolated single-use claims) to Aztec
+// testnet. PrivateEscrow and PaymentStream hold private balances and must be
+// deployed with keys instead: see scripts/aztec/deploy-keyed.ts.
 //
 // Uses the admin account and sponsored FPC already configured in .aztec-testnet.local.json.
 
@@ -56,8 +55,6 @@ log('Admin account address:', adminAddress.toString());
 
 if (!state.nativeContracts) state.nativeContracts = {};
 
-const usdcAddress = AztecAddress.fromStringUnsafe(state.tokens.USDC.address);
-log('Using zkUSDC for Escrow & Streams:', usdcAddress.toString());
 
 // -----------------------------------------------------------------------------
 // 1. Deploy IdentityCredential
@@ -89,55 +86,18 @@ if (state.nativeContracts.IdentityCredential && (await node.getContract(AztecAdd
 }
 
 // -----------------------------------------------------------------------------
-// 2. Deploy PrivateEscrow
+// PrivateEscrow and PaymentStream are NOT deployed here.
+//
+// They hold private token balances: deposits become token notes owned by the
+// contract itself. A contract deployed with Contract.deploy() has no public
+// keys, so no PXE can ever nullify those notes and every deposit is locked.
+// The instances this script deployed on 4 November 2026 had that problem and
+// are marked "do-not-use" in deployments/aztec-testnet.json.
+//
+// Deploy them with keys, one instance per agreement, using
+// scripts/aztec/deploy-keyed.ts (lib/aztec/keyed-deploy.ts explains custody).
 // -----------------------------------------------------------------------------
-if (state.nativeContracts.PrivateEscrow && (await node.getContract(AztecAddress.fromStringUnsafe(state.nativeContracts.PrivateEscrow.address)))) {
-  log('PrivateEscrow already deployed at:', state.nativeContracts.PrivateEscrow.address);
-} else {
-  log('Loading PrivateEscrow artifact...');
-  const escrowRaw = JSON.parse(fs.readFileSync(path.join(ROOT, 'contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json'), 'utf8'));
-  const escrowArtifact = loadContractArtifact(escrowRaw);
-  
-  log('Deploying PrivateEscrow bound to zkUSDC ...');
-  const escrowDeploy = Contract.deploy(wallet, escrowArtifact, [usdcAddress]);
-  const escrowDeployed = await escrowDeploy.send({ from: adminAddress, fee, wait: { timeout: 900 } });
-  const escrowAddress = (escrowDeployed.address ?? escrowDeployed.contract?.address).toString();
-  log('PrivateEscrow deployed at:', escrowAddress);
-  
-  state.nativeContracts.PrivateEscrow = {
-    address: escrowAddress,
-    artifactName: 'PrivateEscrow',
-    token: usdcAddress.toString(),
-    deployedAt: new Date().toISOString()
-  };
-  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2) + '\n');
-}
 
-// -----------------------------------------------------------------------------
-// 3. Deploy PaymentStream
-// -----------------------------------------------------------------------------
-if (state.nativeContracts.PaymentStream && (await node.getContract(AztecAddress.fromStringUnsafe(state.nativeContracts.PaymentStream.address)))) {
-  log('PaymentStream already deployed at:', state.nativeContracts.PaymentStream.address);
-} else {
-  log('Loading PaymentStream artifact...');
-  const streamRaw = JSON.parse(fs.readFileSync(path.join(ROOT, 'contracts/aztec/streams/target/payment_stream-PaymentStream.json'), 'utf8'));
-  const streamArtifact = loadContractArtifact(streamRaw);
-  
-  log('Deploying PaymentStream bound to zkUSDC ...');
-  const streamDeploy = Contract.deploy(wallet, streamArtifact, [usdcAddress]);
-  const streamDeployed = await streamDeploy.send({ from: adminAddress, fee, wait: { timeout: 900 } });
-  const streamAddress = (streamDeployed.address ?? streamDeployed.contract?.address).toString();
-  log('PaymentStream deployed at:', streamAddress);
-  
-  state.nativeContracts.PaymentStream = {
-    address: streamAddress,
-    artifactName: 'PaymentStream',
-    token: usdcAddress.toString(),
-    deployedAt: new Date().toISOString()
-  };
-  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2) + '\n');
-}
-
-log('All 3 Aztec Native Contracts successfully verified and stored!');
+log('IdentityCredential is deployed. Escrow and streams: use scripts/aztec/deploy-keyed.ts.');
 await wallet.stop();
 process.exit(0);

@@ -1,6 +1,6 @@
 # Humanity Ledger — Technical Dossier for the Aztec Ecosystem
 
-**Date:** 4 November 2026
+**Date:** 4 November 2026 (updated 16:30 CET)
 **Repository:** [github.com/humanityledger/Humanity-Ledger](https://github.com/humanityledger/Humanity-Ledger)
 **Status:** Pre-release. Aztec testnet only. No external audit. Not affiliated with the Aztec Foundation.
 **Engineering plan and full state table:** [`docs/zk/MASTER_PROMPT.md`](zk/MASTER_PROMPT.md) (Spanish)
@@ -11,7 +11,7 @@
 
 Humanity Ledger is a messaging application (Ledger Chat). Direct messages go over XMTP v3, which uses MLS (RFC 9420); we do not implement MLS ourselves. Private payments use an Aztec PXE in the browser with the standard `Token` contract (our test tokens zkUSDC, zkDAI and zkETH, which have no value) and `SponsoredFPC` on Aztec testnet. Private transfers hide the amount and the parties; shielding and unshielding are public steps.
 
-For escrow, payment streams and identity we wrote three aztec-nr v6 contracts (section 2.1). They compile with Aztec 6.0.0, pass 30 TXE tests in CI, and on 4 November 2026 were successfully deployed and verified on Aztec Testnet (documented with live addresses in `docs/AZTEC_TESTNET_DEPLOYMENTS.md`). We would value a review of their design (section 5).
+For escrow, payment streams and identity we wrote three aztec-nr v6 contracts (section 2.1). They compile with Aztec 6.0.0 and pass 30 TXE tests in CI. On 4 November 2026 one instance of each was deployed on Aztec testnet (`docs/AZTEC_TESTNET_DEPLOYMENTS.md`); the escrow and stream instances were deployed without public keys and must not receive deposits (section 2.1). We would value a review of their design (section 5).
 
 We first wrote three standalone Noir circuits for the same purposes. A review on 3 November 2026 found soundness issues in all three (section 4). They remain in the repository as tested reference code; nothing relies on them.
 
@@ -28,8 +28,9 @@ An earlier version of this dossier pointed to commit `783df711` and described th
 | Committed artifacts are the compiled ones and the VKs are pinned | Real | `node scripts/zk/check-artifacts.mjs` |
 | UltraHonk proving and verification with the pinned VK | Real in tests only (Node) | `npx vitest run test/unit/aztec/circuit-proving.test.ts test/zk/` |
 | ZK-01 reproduction (streams double claim) | Documented | `npx vitest run test/circuits/streams_zk01_known_issue.test.ts` |
-| aztec-nr contracts (escrow, streams, identity) | Compile with Aztec 6.0.0; 30 TXE tests pass in CI; deployed on Aztec Testnet | See [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](AZTEC_TESTNET_DEPLOYMENTS.md) for live contract addresses, class IDs and verification hashes |
+| aztec-nr contracts (escrow, streams, identity) | Compile with Aztec 6.0.0; 30 TXE tests pass in CI; one instance of each on testnet, checked daily against the node; escrow and stream instances are keyless (do not use) | See [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](AZTEC_TESTNET_DEPLOYMENTS.md) for live contract addresses, class IDs and verification hashes |
 | Browser (Web Worker) prover for the standalone circuits | Real in tests only; not used by any page | `npx vitest run test/zk/browser-prover.test.ts` |
+| Keyed `PrivateEscrow` end to end (deploy with keys, deposit with authwit, claim) | Real on Aztec testnet, 4 November 2026 | Workflow "Aztec escrow e2e (testnet)"; hashes in `docs/AZTEC_TESTNET_DEPLOYMENTS.md` |
 | Unit and integration tests | 1,332 passing in CI on 4 November 2026 (they mock external services such as the database, Redis and RPC providers where needed) | `npm run test:run` |
 | Direct messages | Real, provided by XMTP | XMTP browser SDK 5.2.0 |
 | Community posts | Readable by our server | Disclosed in the product; migration to XMTP MLS groups is planned (`docs/communities/MLS_MIGRATION.md`) |
@@ -48,18 +49,18 @@ A VK registry contract with a timelock exists (`contracts/ZKVerificationKeyRegis
 
 Three contracts written against `aztec-labs-eng/aztec-nr@v6.0.0`: `PrivateEscrow`, `PaymentStream` and `IdentityCredential`. They compile with Aztec 6.0.0 in CI (workflow "Aztec contracts") and pass 30 TXE tests there (escrow 10, identity 11, streams 9), using a test-only token (`contracts/aztec/test_token`).
 
-On 4 November 2026, all three contracts were deployed to the live Aztec Testnet (Sepolia L1, chain ID 11155111, rollup 679261766) and verified via ClientIVC UltraHonk proof generation. Full deployment receipts, class IDs and query verification instructions are in [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](AZTEC_TESTNET_DEPLOYMENTS.md):
-- `IdentityCredential`: `0x174e4652dd027f6de9dfe025d46fbfc4378039f19e67c53a34803a8079db56f0`
-- `PrivateEscrow`: `0x1d88555bead4ba81d1f93a16dd8366b5659d062928af1e57f94a75e08d343097` (bound to `zkUSDC`)
-- `PaymentStream`: `0x0567a641e6e8e10b99bbe9f7c0787763b7ef6cfc75ef7e2c59d55dd754e2c895` (bound to `zkUSDC`)
+On 4 November 2026 one instance of each was deployed on Aztec testnet (Sepolia L1, chain ID 11155111, rollup 679261766). The node confirms that each runs the class compiled from this repository. The `PrivateEscrow` and `PaymentStream` instances were deployed with `Contract.deploy()`, so they carry the default public keys: tokens sent to them could never be spent. They are marked do-not-use, and escrows and streams are deployed with keys, one instance per agreement (`scripts/aztec/deploy-keyed.ts`). A keyed escrow has run end to end on testnet: keyed deployment, deposit with an authwit (tx `0x10700502…5f13`, block 18445) and claim by the recipient (tx `0x10fb36c0…23f2`, block 18447), reproducible by the workflow "Aztec escrow e2e (testnet)". Addresses, class IDs and how to check them are in [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](AZTEC_TESTNET_DEPLOYMENTS.md):
+- `IdentityCredential`: `0x174e4652dd027f6de9dfe025d46fbfc4378039f19e67c53a34803a8079db56f0` (placeholder roots until the issuer sets real ones)
+- `PrivateEscrow`: `0x1d88555bead4ba81d1f93a16dd8366b5659d062928af1e57f94a75e08d343097` (bound to `zkUSDC`; keyless, do not use)
+- `PaymentStream`: `0x0567a641e6e8e10b99bbe9f7c0787763b7ef6cfc75ef7e2c59d55dd754e2c895` (bound to `zkUSDC`; keyless, do not use)
 
 A review on 3 November 2026 found that the first version could not refund an escrow or cancel a stream (both popped notes from the sender's set, which had none), and that `pop_notes` without a selector destroyed a user's other escrows and streams. These are fixed; the findings, fixes and open limits (contract keys for private custody, raw-selector token calls) are in [`docs/zk/AZTEC_CONTRACTS_REVIEW.md`](zk/AZTEC_CONTRACTS_REVIEW.md).
 
 | Contract | What it does | State |
 |---|---|---|
-| `PrivateEscrow` | Claim note for the recipient, refund note for the sender, one settlement nullifier | Deployed on Aztec Testnet at `0x1d88555bead4ba81d1f93a16dd8366b5659d062928af1e57f94a75e08d343097`; 10 TXE tests passing |
-| `PaymentStream` | Stream note re-created on each withdrawal (fixes the ZK-01 pattern); accrual from the anchor block | Deployed on Aztec Testnet at `0x0567a641e6e8e10b99bbe9f7c0787763b7ef6cfc75ef7e2c59d55dd754e2c895`; 9 TXE tests passing |
-| `IdentityCredential` | Depth-32 membership, fixed and committed sanction lists, `SingleUseClaim` per scope | Deployed on Aztec Testnet at `0x174e4652dd027f6de9dfe025d46fbfc4378039f19e67c53a34803a8079db56f0`; 11 TXE tests passing |
+| `PrivateEscrow` | Claim note for the recipient, refund note for the sender, one settlement nullifier | 10 TXE tests passing; testnet instance `0x1d88…3097` is keyless (do not use) |
+| `PaymentStream` | Stream note re-created on each withdrawal (fixes the ZK-01 pattern); accrual from the anchor block | 9 TXE tests passing; no sender cancel; testnet instance `0x0567…c895` is keyless (do not use) |
+| `IdentityCredential` | Depth-32 membership, fixed and committed sanction lists, `SingleUseClaim` per scope | 11 TXE tests passing; on testnet at `0x174e…56f0` with placeholder roots |
 
 ## 3. What was removed or corrected in this revision
 
