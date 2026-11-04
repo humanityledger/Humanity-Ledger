@@ -67,7 +67,8 @@
     "prepare": "node -e \"process.exit(0)\"",
     "postinstall": "node scripts/cross-fetch-patch.js",
     "aztec:setup": "node --conditions=browser --import ./scripts/aztec/register.mjs scripts/aztec/setup-testnet.mjs",
-    "aztec:e2e": "node --conditions=browser --import ./scripts/aztec/register.mjs scripts/aztec/e2e-testnet.mjs"
+    "aztec:e2e": "node --conditions=browser --import ./scripts/aztec/register.mjs scripts/aztec/e2e-testnet.mjs",
+    "aztec:health": "tsx scripts/testnet-health-check.ts"
   },
   "engines": {
     "node": ">=22.22.2"

@@ -453,7 +453,7 @@ export function humanError(err: any): string {
   if (/user (rejected|denied)|rejected the request|denied message signature/i.test(msg)) return 'You declined the signature in your wallet.';
   if (/Balance too low|not enough|insufficient/i.test(msg)) return 'Your balance is too low for this amount.';
   if (/timeout/i.test(msg)) return 'The network took too long to confirm. It may still go through; check again in a minute.';
-  if (/Failed to fetch|NetworkError|ECONNREFUSED/i.test(msg)) return 'Could not reach the Aztec test network. Check your connection and try again.';
+  if (/Failed to fetch|fetch failed|NetworkError|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(msg)) return 'Could not reach the Aztec test network. Check your connection and try again.';
   if (/internal error/i.test(msg)) return 'Your wallet reported an internal signing error. Try switching networks or restarting your wallet.';
   return msg.length > 220 ? msg.slice(0, 220) + '…' : msg;
 }

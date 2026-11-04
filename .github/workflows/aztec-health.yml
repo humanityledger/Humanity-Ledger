@@ -1,0 +1,30 @@
+# Daily check that the Aztec test network the wallet uses is reachable and
+# still matches lib/aztec/sequencer/networks.ts (task R-15). Read-only.
+
+name: Aztec testnet health
+
+on:
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'scripts/testnet-health-check.ts'
+      - 'lib/aztec/sequencer/**'
+      - '.github/workflows/aztec-health.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # tsx only: the check uses fetch and repository code, no SDK.
+      - run: npx --yes tsx@4.19.2 scripts/testnet-health-check.ts
