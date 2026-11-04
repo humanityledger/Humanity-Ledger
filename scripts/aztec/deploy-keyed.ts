@@ -37,7 +37,7 @@ async function main() {
   if (!(CONTRACT in KEYED_ARTIFACT_PATHS)) throw new Error('CONTRACT must be escrow or streams');
 
   const artifact = loadKeyedArtifact(JSON.parse(fs.readFileSync(KEYED_ARTIFACT_PATHS[CONTRACT], 'utf8')));
-  const token = AztecAddress.fromString(TOKEN);
+  const token = AztecAddress.fromStringUnsafe(TOKEN);
   const secretKey = Fr.random();
   const salt = Fr.random();
 
@@ -67,7 +67,7 @@ async function main() {
     wait: { timeout: 900 },
   });
   const address = deployed.address ?? deployed.contract?.address;
-  if (!address || !AztecAddress.fromString(address.toString()).equals(expected.instance.address)) {
+  if (!address || !AztecAddress.fromStringUnsafe(address.toString()).equals(expected.instance.address)) {
     throw new Error('Deployed address does not match the keyed instance computed locally');
   }
 

@@ -14,7 +14,8 @@ const artifactOf = (c: 'escrow' | 'streams') =>
   loadKeyedArtifact(JSON.parse(fs.readFileSync(path.join(root, KEYED_ARTIFACT_PATHS[c]), 'utf8')));
 
 describe('keyed deployment (escrow, streams)', () => {
-  const token = AztecAddress.fromBigInt(0x1234n);
+  // Any valid field element works as the token argument here: the address is not called.
+  const token = AztecAddress.fromStringUnsafe('0x' + '1234'.padStart(64, '0'));
 
   for (const c of ['escrow', 'streams'] as const) {
     it(`${c}: the instance commits to keys derived from the secret`, async () => {
