@@ -32,7 +32,9 @@ import escrowVK from '../../circuits/escrow/target/escrow.vk.json';
 import streamsVK from '../../circuits/streams/target/streams.vk.json';
 import identityVK from '../../circuits/identity/target/identity.vk.json';
 
-export type CircuitName = 'escrow' | 'identity' | 'streams';
+import { PINNED_VK_SHA256, CIRCUITS, type CircuitName } from '../zk/vk-pins';
+
+export { PINNED_VK_SHA256, CIRCUITS, type CircuitName };
 export type VKStatus = 'ACTIVE' | 'DEPRECATED' | 'RETIRED';
 
 export interface VKRecord {
@@ -54,19 +56,7 @@ export interface VKMetadata {
   [key: string]: unknown;
 }
 
-/**
- * SHA-256 of each binary VK (`target/vk`), produced by @aztec/bb.js 5.3.0 from
- * the ACIR compiled by nargo 1.0.0. Changing a circuit means recompiling,
- * regenerating the VK (scripts/zk/check-artifacts.mjs --write) and updating
- * these constants in the same commit.
- */
-export const PINNED_VK_SHA256: Readonly<Record<CircuitName, string>> = Object.freeze({
-  escrow: '0x4e3cc4c8ce03607dcb2b98bd50c0d31084300634ee8f70f4674919682eb915c2',
-  identity: '0xcd02d2407de202d61e1a03c360633a9b0cdd8fe4b4d67b007cce108990632194',
-  streams: '0xa79000bf70441f02ce5ec092f15771e93dfc3d990977a33de9991795bc374346',
-});
-
-export const CIRCUITS: readonly CircuitName[] = Object.freeze(['escrow', 'identity', 'streams']);
+// The pins themselves live in lib/zk/vk-pins.ts (browser-safe), re-exported above.
 
 /** Metadata files (`target/<c>.vk.json`). They describe the VK; they are not the VK. */
 export const LOCAL_CIRCUIT_VKS: Readonly<Record<CircuitName, VKMetadata>> = Object.freeze({
