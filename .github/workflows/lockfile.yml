@@ -1,0 +1,67 @@
+# Keeps package-lock.json in sync with package.json (task R-07).
+#
+# On claude/** branches, when package.json changes, it regenerates the lock
+# with --package-lock-only (existing resolutions are kept where they still
+# satisfy package.json) and commits it back, so an agent without registry
+# access can change dependencies. On main and pull requests it only checks
+# that `npm ci` accepts the lock. Every run reports duplicated copies of the
+# packages R-07 tracks.
+
+name: Lockfile
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths: ['package.json', 'package-lock.json', '.github/workflows/lockfile.yml']
+  pull_request:
+    branches: [main]
+    paths: ['package.json', 'package-lock.json']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Regenerate package-lock.json (claude/** only)
+        if: github.event_name != 'pull_request' && startsWith(github.ref, 'refs/heads/claude/')
+        run: npm install --package-lock-only --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+
+      - name: npm ci accepts the lock
+        run: npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+
+      - name: Duplicated packages tracked by R-07
+        run: |
+          {
+            echo "### Installed copies (R-07)"
+            for p in wagmi viem ethers @noble/curves @noble/hashes vitest @aztec-labs/aztec.js @aztec/aztec.js; do
+              n="$(npm ls "$p" --all --parseable 2>/dev/null | sort -u | wc -l)"
+              v="$(npm ls "$p" --all 2>/dev/null | grep -oE "$p@[^ ]+" | sort -u | tr '\n' ' ')"
+              echo "- \`$p\`: $n install path(s): $v"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit the regenerated lock (claude/** only)
+        if: github.event_name != 'pull_request' && startsWith(github.ref, 'refs/heads/claude/')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lock already in sync."
+          else
+            git commit -m "chore(deps): regenerate package-lock.json (CI)"
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
