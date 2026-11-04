@@ -96,10 +96,10 @@ contract HumanityOmnichainBridge is Ownable {
      */
     function lzReceive(
         Origin calldata _origin,
-        bytes32 _guid,
+        bytes32 /* _guid */,
         bytes calldata _message,
-        address _executor,
-        bytes calldata _extraData
+        address /* _executor */,
+        bytes calldata /* _extraData */
     ) external payable {
         // [ABYSMAL SECURITY CHECK]
         if (msg.sender != address(lzEndpoint)) revert UnauthorizedEndpoint();

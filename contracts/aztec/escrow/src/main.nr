@@ -31,8 +31,10 @@
 
 use aztec::macros::aztec;
 
+mod test;
+
 #[aztec]
-contract PrivateEscrow {
+pub contract PrivateEscrow {
     use aztec::{
         macros::{
             functions::{external, initializer, view},

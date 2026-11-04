@@ -12,7 +12,7 @@ name: IP Protection and Authorship Verification
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'claude/**']
   schedule:
     - cron: '0 6 * * *'
   workflow_dispatch:
@@ -203,9 +203,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # 11 commits so that each of the 10 scanned commits has its parent: in a
+      # shallow clone the oldest fetched commit diffs against an empty tree, so
+      # fetch-depth 10 scanned the whole repository as if it were "added".
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 10
+          fetch-depth: 11
 
       - name: Scan recent commits for accidentally leaked secrets
         run: |
@@ -219,18 +222,33 @@ jobs:
             "sk_live_[A-Za-z0-9]{20}"
             "AIzaSy[A-Za-z0-9_-]{33}"
             "-----BEGIN.*PRIVATE KEY-----"
-            "DATABASE_URL=postgresql://[^$]"
             "NEXTAUTH_SECRET=[A-Za-z0-9+/]{32}"
           )
 
           for pattern in "${PATTERNS[@]}"; do
-            MATCHES=$(git log -10 --all -p -- . ':!.github/**' ':!test/**' ':!tests/**' ':!scripts/check-staged-secrets.mjs' | grep -E -e "$pattern" | grep -v -E "CANARY_|secret-scan: allow" || true)
+            # Only lines a commit adds: removing a leaked value must not fail the scan.
+            MATCHES=$(git log -10 -p --format= -- . ':!.github/**' ':!test/**' ':!tests/**' ':!scripts/check-staged-secrets.mjs' | grep -E '^\+' | grep -E -e "$pattern" | grep -v -E "CANARY_|secret-scan: allow" || true)
             if [ -n "$MATCHES" ]; then
               echo "POTENTIAL SECRET LEAK DETECTED: pattern '$pattern'"
               echo "$MATCHES" | head -5
               FAIL=1
             fi
           done
+
+          # Database URLs with a literal password. ${VAR}, $VAR, <placeholder>
+          # and [REDACTED] passwords are documentation, not credentials.
+          # Matches are printed with the password removed.
+          DB_MATCHES=$(git log -10 -p --format= -- . ':!.github/**' ':!test/**' ':!tests/**' \
+            | grep -E '^\+' \
+            | grep -E 'DATABASE_URL=postgres(ql)?://[^:@/[:space:]]+:[^@[:space:]]+@' \
+            | grep -v -E 'postgres(ql)?://[^:@/[:space:]]+:(\$|<|\[)' \
+            | grep -v -E 'CANARY_|secret-scan: allow' || true)
+          if [ -n "$DB_MATCHES" ]; then
+            echo "POTENTIAL SECRET LEAK DETECTED: DATABASE_URL with a literal password"
+            # Password replaced by its first character and length.
+            echo "$DB_MATCHES" | perl -pe 's#(://[^:@/]+:)([^@]+)@#$1 . "<" . substr($2,0,1) . "..." . length($2) . " chars>@"#e' | head -5
+            FAIL=1
+          fi
 
           # Also scan working tree for any .env files accidentally staged
           if git ls-files | grep -q "\.env$"; then

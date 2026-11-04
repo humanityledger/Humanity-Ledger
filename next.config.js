@@ -349,31 +349,14 @@ const nextConfig = {
         // The minifier just picks whatever letter is free: `I`, `Ce`, `_`, `j`...
         // the letter changes every build but the crash is always the same bug.
         //
-        // Layer 1: disable scope hoisting — breaks the circular-dep TDZ mechanism
-        // Layer 2: Terser with reserved names — defence-in-depth against any
-        //          remaining name collisions in non-concatenated chunks
+        // Scope hoisting is disabled to break the circular-dependency TDZ
+        // mechanism. Minification stays off as well (it was switched off while
+        // diagnosing the crash), so no minimizer is configured: the previous
+        // TerserPlugin entry was never used and made `npm run build` require a
+        // devDependency, which fails under NODE_ENV=production installs.
         if (!dev) {
             config.optimization.concatenateModules = false;
-            
-            // Disable minification entirely to stop mangling variables to 'T', 'j', etc.
-            // This will either fix a Terser/SWC mangling bug OR reveal the exact original variable name in the TDZ crash.
             config.optimization.minimize = false;
-
-            const TerserPlugin = require('terser-webpack-plugin');
-            config.optimization.minimizer = [
-                new TerserPlugin({
-                    terserOptions: {
-                        mangle: {
-                            // Reserve common single-char names as extra safety net
-                            reserved: ['_', '__', '___', '$', '$$', 'Ce', 'I', 'j'],
-                        },
-                        compress: {
-                            passes: 2,
-                        },
-                    },
-                    parallel: 4,
-                }),
-            ];
         }
 
 
@@ -391,6 +374,12 @@ const nextConfig = {
 
         return config;
     },
+    // Metadata (title, description, Open Graph) is a static object in
+    // app/layout.tsx. Next 15 streams it into <body> for user agents that are
+    // not on its bot list, so Lighthouse and many link-preview crawlers saw a
+    // page with no meta description. Rendering it in <head> for every client
+    // costs nothing here because nothing in it is fetched.
+    htmlLimitedBots: /.*/,
     trailingSlash: isExtension,
     distDir: isExtension ? 'out' : '.next',
 

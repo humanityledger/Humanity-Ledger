@@ -1,19 +1,31 @@
+# Lighthouse CI.
+#
+# Audits the real Next.js app (`next start`) with the assertions in
+# lighthouserc.json. Previously lhci ran without a config file, so it picked
+# ./public as a static site, audited three loose HTML files with the full
+# lighthouse:recommended preset (every audit an error) and failed on pages
+# that are not the product.
+
 name: Lighthouse CI
 
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
   push:
-    branches: [ "main" ]
+    branches: [main, 'claude/**']
+
+permissions:
+  contents: read
 
 jobs:
   lighthouse:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
@@ -32,4 +44,25 @@ jobs:
       - name: Run Lighthouse CI
         run: |
           npm install -g @lhci/cli@0.14.x
-          lhci autorun
+          lhci autorun --config=./lighthouserc.json
+        env:
+          JWT_SECRET: test_secret_key_minimum_32_characters_long_for_ci
+          ENCLAVE_PIN_PEPPER: test_pepper_secret_minimum_32_chars
+          ENCLAVE_PIN_SECRET: test_pin_secret_minimum_32_chars
+
+      - name: Scores
+        if: always()
+        run: |
+          for f in .lighthouseci/lhr-*.json; do
+            [ -f "$f" ] || continue
+            jq -r '"\(.finalDisplayedUrl): " + ([.categories[] | "\(.id)=\(.score)"] | join(" "))' "$f"
+            jq -r '[.audits[] | select(.score != null and .score < 0.9 and (.scoreDisplayMode=="binary" or .scoreDisplayMode=="numeric")) | "  \(.id) \(.score)"] | .[]' "$f" | head -40
+          done
+
+      - name: Keep reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          retention-days: 14

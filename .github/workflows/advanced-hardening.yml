@@ -3,7 +3,7 @@ name: Advanced Security Hardening Suite
 # Runs on every push and PR to main/develop, plus daily at 05:00 UTC
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, 'claude/**']
   pull_request:
     branches: [main, develop]
   schedule:
@@ -284,7 +284,7 @@ jobs:
         run: |
           npm ci --prefer-offline
           npx vitest run test/circuit_invariants.adversarial.test.ts --reporter=verbose 2>&1
-          npx vitest run test/streams_rate_bound.test.ts --reporter=verbose 2>&1
+          npx vitest run test/circuits/streams_rate_bound.test.ts --reporter=verbose 2>&1
 
   # --- Job 5: PXE boundary and key material security -----------------------
   pxe-key-security:

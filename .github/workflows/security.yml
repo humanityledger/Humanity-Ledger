@@ -5,7 +5,7 @@ name: Security & Compliance
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, 'claude/**']
   pull_request:
     branches: [main]
   schedule:
@@ -77,10 +77,24 @@ jobs:
       - name: Install CycloneDX CLI
         run: npm install -g @cyclonedx/cyclonedx-npm
 
+      # The installed tree has known invalid/extraneous entries (peer ranges,
+      # duplicated wagmi/viem/react; tracked as R-07 in docs/zk/MASTER_PROMPT.md).
+      # `npm ls` reports them; the SBOM is still generated from the real tree,
+      # and the problems are listed in the job summary instead of hiding them.
+      - name: Report dependency-tree problems (R-07)
+        run: |
+          npm ls --all --omit=optional >/dev/null 2> npm-ls-problems.txt || true
+          n="$(grep -c 'npm error \(invalid\|missing\|extraneous\)' npm-ls-problems.txt || true)"
+          echo "### npm ls: ${n} tree problems (R-07)" >> "$GITHUB_STEP_SUMMARY"
+          grep 'npm error \(invalid\|missing\|extraneous\)' npm-ls-problems.txt | sort -u | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY" || true
+
       - name: Generate CycloneDX SBOM
         run: |
-          cyclonedx-npm --output-file sbom.json --output-format json
-          echo "SBOM generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> sbom.json
+          set -euo pipefail
+          cyclonedx-npm --ignore-npm-errors --output-file sbom.json --output-format JSON
+          # The file must stay valid JSON: no text appended after it.
+          jq -e '.bomFormat == "CycloneDX" and (.components | length > 0)' sbom.json
+          echo "components: $(jq '.components | length' sbom.json)"
 
       - name: Compute SBOM SHA-256 integrity hash
         run: |
@@ -177,8 +191,11 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      # NODE_ENV=production is set for the job, which makes npm omit
+      # devDependencies; the build needs them (typescript for tsconfig paths,
+      # tailwind/postcss), so they are included explicitly.
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps --ignore-scripts
+        run: npm ci --legacy-peer-deps --ignore-scripts --include=dev
 
       - name: Generate Prisma client
         run: npx prisma generate

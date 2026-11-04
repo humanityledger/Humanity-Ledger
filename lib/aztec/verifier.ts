@@ -12,8 +12,12 @@
  * 3. Against a registry the caller supplies, the local hash matches and the
  *    circuit is not RETIRED (DEPRECATED only warns).
  *
- * What it does NOT do: there is no on-chain VK registry deployed. Callers that
- * pass a "registry" today build it themselves; it is not read from any chain.
+ * 4. Against the on-chain registry (contracts/ZKVerificationKeyRegistry.sol,
+ *    task R-19), read through `readVKRegistry` / `assertVKIntegrityOnChain`.
+ *    The contract is written and tested but NOT deployed to any network yet,
+ *    so `assertVKIntegrityOnChain` throws until ZK_VK_REGISTRY_ADDRESS and
+ *    ZK_VK_REGISTRY_RPC_URL point at a deployment. It never falls back to
+ *    "accepted".
  *
  * Earlier versions hashed the JSON metadata (which held invented Plonk-style
  * fields) instead of the binary VK, so the "integrity" check never touched the
@@ -23,6 +27,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { ethers } from 'ethers';
 import escrowVK from '../../circuits/escrow/target/escrow.vk.json';
 import streamsVK from '../../circuits/streams/target/streams.vk.json';
 import identityVK from '../../circuits/identity/target/identity.vk.json';
@@ -188,4 +193,82 @@ export function assertVKIntegrity(
   }
 
   return results;
+}
+
+// ─── On-chain registry (contracts/ZKVerificationKeyRegistry.sol) ───────────
+
+/** Minimal ABI of ZKVerificationKeyRegistry used by the off-chain check. */
+export const VK_REGISTRY_ABI = [
+  'function getVK(bytes32 circuitId) view returns (bytes32 vkHash, uint8 status, uint64 activatedAt)',
+  'function isAccepted(bytes32 circuitId, bytes32 vkHash) view returns (bool)',
+] as const;
+
+/** Registry status codes (enum Status in the contract). */
+const REGISTRY_STATUS = { NONE: 0, ACTIVE: 1, REVOKED: 2 } as const;
+
+/** Circuit id used by the registry: keccak256("hl.<circuit>.<version>"). */
+export function circuitRegistryId(circuit: CircuitName, version = 'v1'): string {
+  return ethers.id(`hl.${circuit}.${version}`);
+}
+
+/** Reads one registry entry; injectable so the mapping can be tested without a chain. */
+export type RegistryReader = (circuitId: string) => Promise<{ vkHash: string; status: number }>;
+
+export interface RegistryLocation {
+  rpcUrl: string;
+  address: string;
+}
+
+/** A reader backed by a JSON-RPC endpoint. */
+export function rpcRegistryReader({ rpcUrl, address }: RegistryLocation): RegistryReader {
+  if (!ethers.isAddress(address)) {
+    throw new Error('[VK REGISTRY] The registry address is not a valid address.');
+  }
+  const contract = new ethers.Contract(address, VK_REGISTRY_ABI, new ethers.JsonRpcProvider(rpcUrl));
+  return async (circuitId) => {
+    const [vkHash, status] = await contract.getVK(circuitId);
+    return { vkHash: String(vkHash), status: Number(status) };
+  };
+}
+
+/**
+ * Builds the registry map `assertVKIntegrity` expects from the on-chain
+ * records. A circuit that was never registered is left out (so the integrity
+ * check reports it as missing); a revoked key maps to RETIRED.
+ */
+export async function readVKRegistry(
+  reader: RegistryReader,
+  version = 'v1',
+): Promise<Record<string, OnChainCircuitRecord>> {
+  const registry: Record<string, OnChainCircuitRecord> = {};
+  for (const circuit of CIRCUITS) {
+    const { vkHash, status } = await reader(circuitRegistryId(circuit, version));
+    if (status === REGISTRY_STATUS.ACTIVE) registry[circuit] = { hash: vkHash, status: 'ACTIVE' };
+    else if (status === REGISTRY_STATUS.REVOKED) registry[circuit] = { hash: vkHash, status: 'RETIRED' };
+  }
+  return registry;
+}
+
+/**
+ * Checks the local VKs against the on-chain registry. Throws when no
+ * registry is configured: absence of a registry is not a pass.
+ */
+export async function assertVKIntegrityOnChain(
+  options: { reader?: RegistryReader; location?: RegistryLocation } = {},
+): Promise<VKRecord[]> {
+  let reader = options.reader;
+  if (!reader) {
+    const location = options.location ?? {
+      rpcUrl: process.env.ZK_VK_REGISTRY_RPC_URL ?? '',
+      address: process.env.ZK_VK_REGISTRY_ADDRESS ?? '',
+    };
+    if (!location.rpcUrl || !location.address) {
+      throw new Error(
+        '[VK REGISTRY] No on-chain VK registry is configured (ZK_VK_REGISTRY_ADDRESS, ZK_VK_REGISTRY_RPC_URL). ' +
+          'The registry contract is not deployed yet.',
+      );
+    }
+    reader = rpcRegistryReader(location);
+  }
+  return assertVKIntegrity(await readVKRegistry(reader));
 }

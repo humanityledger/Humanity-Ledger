@@ -28,7 +28,7 @@ services:
       - "5432:5432"
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       - POSTGRES_DB=humanity_ledger
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -48,7 +48,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/humanity_ledger
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/humanity_ledger
       - REDIS_URL=redis://redis:6379
       - NODE_ENV=production
     depends_on:

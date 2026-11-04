@@ -55,8 +55,10 @@
 
 use aztec::macros::aztec;
 
+mod test;
+
 #[aztec]
-contract PaymentStream {
+pub contract PaymentStream {
     use aztec::{
         macros::{
             functions::{external, initializer, view},

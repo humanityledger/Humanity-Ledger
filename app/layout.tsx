@@ -219,9 +219,9 @@ export const viewport = {
 
   initialScale: 1,
 
-  maximumScale: 1,
-
-  userScalable: false,
+  // Pinch zoom stays enabled: maximumScale 1 / userScalable false blocked
+  // zooming, which fails WCAG 1.4.4 (Resize text) and the Lighthouse
+  // meta-viewport audit.
   viewportFit: 'cover',
 
   interactiveWidget: 'resizes-content',

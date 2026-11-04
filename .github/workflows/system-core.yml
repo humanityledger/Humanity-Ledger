@@ -32,14 +32,23 @@ jobs:
 
       - run: npm ci --legacy-peer-deps
 
-      - name:  Compile Contracts
-        run: npx hardhat compile
+      # Fails on any compiler warning in our own contracts, so warnings cannot
+      # pile up unnoticed (DoD: hardhat compile clean).
+      - name:  Compile Contracts (no warnings)
+        run: |
+          set -o pipefail
+          npx hardhat compile --force 2>&1 | tee hardhat-compile.log
+          if grep -A1 'Warning:' hardhat-compile.log | grep -E -- '--> contracts/' ; then
+            echo "::error::Solidity compiler warnings in contracts/ (listed above)"
+            exit 1
+          fi
 
-      - name:  Run HumanTimeLock Tests
-        run: npx hardhat test test/HumanTimeLock.test.ts --network hardhat || true
-
-      - name:  Run Legacy SystemDeadmanSwitch Tests
-        run: npx hardhat test test/SystemDeadmanSwitch.test.js --network hardhat || true
+      # The curated suite (package.json test:contracts) runs with
+      # TS_NODE_TRANSPILE_ONLY, as the TS files use mocha globals without
+      # @types/mocha. Previously each step ended in `|| true`, so the job
+      # passed even though no test had run.
+      - name:  Contract tests
+        run: npm run test:contracts
 
       - name:  Gas Report
         run: REPORT_GAS=true npx hardhat test --network hardhat
