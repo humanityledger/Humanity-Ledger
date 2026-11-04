@@ -24,7 +24,7 @@ import fs from 'node:fs';
 import { createAztecNodeClient, waitForTx } from '@aztec-labs/aztec.js/node';
 import { Fr, Fq } from '@aztec-labs/aztec.js/fields';
 import { AztecAddress } from '@aztec-labs/aztec.js/addresses';
-import { Contract, getContractInstanceFromInstantiationParams, NO_WAIT } from '@aztec-labs/aztec.js/contracts';
+import { Contract, DeployMethod, getContractInstanceFromInstantiationParams, NO_WAIT } from '@aztec-labs/aztec.js/contracts';
 import { SponsoredFeePaymentMethod } from '@aztec-labs/aztec.js/fee';
 import { NO_FROM } from '@aztec-labs/aztec.js/account';
 import { SponsoredFPCContract } from '@aztec-labs/noir-contracts.js/SponsoredFPC';
@@ -112,7 +112,7 @@ async function main() {
 
   // A fresh test token, administered by the throwaway sender.
   const tokenDeploy = await TokenContract.deploy(wa, sender, 'HL e2e test token', 'HLT', 6).send({ from: sender, fee, wait: { timeout: 900 } });
-  const tokenAddr: AztecAddress = (tokenDeploy as any).address ?? (tokenDeploy as any).contract?.address;
+  const tokenAddr: AztecAddress = (tokenDeploy as any).instance?.address ?? (tokenDeploy as any).contract?.address;
   receipt.steps.push({ step: 'deploy test token', detail: tokenAddr.toString() });
   log('token', tokenAddr.toString());
   const tokenInstance = await node.getContract(tokenAddr);
@@ -129,16 +129,16 @@ async function main() {
   const secretKey = Fr.random();
   const salt = Fr.random();
   const expected = await computeKeyedInstance(artifact, { secretKey, salt, token: tokenAddr });
-  const deployment = Contract.deployWithPublicKeys(expected.publicKeys, wa, artifact, [tokenAddr]);
-  const escrowDeployed: any = await deployment.send({
-    from: sender,
-    fee,
-    contractAddressSalt: salt,
-    universalDeploy: true,
-    skipClassPublication: true,
-    wait: { timeout: 900 },
-  });
-  const escrowAddr = AztecAddress.fromStringUnsafe((escrowDeployed.address ?? escrowDeployed.contract?.address).toString());
+  // aztec.js 6.0.0: keys, salt and universal deployment are instantiation
+  // options of DeployMethod.create; the class is already published on testnet.
+  const deployment = DeployMethod.create(
+    wa,
+    { artifact, args: [tokenAddr], postDeployCtor: (instance: any, w: any) => Contract.at(instance.address, artifact, w) },
+    { salt, publicKeys: expected.publicKeys, universalDeploy: true },
+  );
+  const escrowDeployed: any = await deployment.send({ from: sender, fee, skipClassPublication: true, wait: { timeout: 900 } } as any);
+  if (escrowDeployed.receipt?.txHash) receipt.steps.push({ step: 'deploy keyed PrivateEscrow (tx)', txHash: escrowDeployed.receipt.txHash.toString(), block: Number(escrowDeployed.receipt.blockNumber) });
+  const escrowAddr = AztecAddress.fromStringUnsafe((escrowDeployed.instance?.address ?? escrowDeployed.contract?.address).toString());
   check('escrow address is the keyed instance computed locally', escrowAddr.equals(expected.instance.address), escrowAddr.toString());
   receipt.steps.push({ step: 'deploy keyed PrivateEscrow', detail: escrowAddr.toString() });
   const onchain = await node.getContract(escrowAddr);
@@ -149,8 +149,8 @@ async function main() {
   await wa.registerContract(expected.instance, artifact, secretKey);
   await wb.registerContract(expected.instance, artifact, secretKey);
   await wb.registerSender(sender, 'sender');
-  const escrowA: any = await Contract.at(escrowAddr, artifact, wa);
-  const escrowB: any = await Contract.at(escrowAddr, artifact, wb);
+  const escrowA: any = Contract.at(escrowAddr, artifact, wa);
+  const escrowB: any = Contract.at(escrowAddr, artifact, wb);
 
   // Deposit: the sender authorises the escrow to pull AMOUNT.
   const claimSecret = Fr.random();
