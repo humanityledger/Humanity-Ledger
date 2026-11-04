@@ -45,7 +45,7 @@ test/
 
 ## 3. Test Execution Reference
 
-### Full Test Battery (1,076 Vitest Tests)
+### Full Test Battery (1,332 Vitest tests, CI 4 Nov 2026)
 ```bash
 npm run test:run
 ```
