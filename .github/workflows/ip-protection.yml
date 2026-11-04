@@ -12,7 +12,7 @@ name: IP Protection and Authorship Verification
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'claude/**']
   schedule:
     - cron: '0 6 * * *'
   workflow_dispatch:
