@@ -59,7 +59,7 @@
       "tracksCurrentArtifact": false
     },
     {
-      "name": "PrivateEscrow (keyed, end-to-end run)",
+      "name": "PrivateEscrow v1 (keyed, end-to-end run)",
       "address": "0x1e03bcfe5c8b325ffb5a6252b25f3cd9126960d009734dbfbf9d93173ec1d182",
       "classId": "0x1e8340e05494363e696ad4f474ee2fdc88250887d69ce2c81706967ad84351d0",
       "artifact": "contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json",
@@ -69,9 +69,94 @@
       "deployedOn": "2026-11-04",
       "note": "Deployed by the workflow 'Aztec escrow e2e (testnet)', run 41865790651: keyed universal deployment, deposit (tx 0x10700502\u20265f13, block 18445) and claim (tx 0x10fb36c0\u202623f2, block 18447). Custodies a throwaway test token; settled. Shows the per-agreement pattern with the first PrivateEscrow class (before the deposit-expiration fix); not an instance for new deposits.",
       "tracksCurrentArtifact": false
+    },
+    {
+      "name": "PrivateEscrow v2 (keyed, end-to-end run)",
+      "address": "0x062677942994e9d9bbc4bd9c47094b1e90d81caf3716867fb88098d144c191b9",
+      "classId": "0x163f855efb404a868d60e9ebd2352fd8317c54bc054561348c1cf764b2cdf873",
+      "artifact": "contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json",
+      "holdsPrivateBalance": true,
+      "keyed": true,
+      "status": "reference",
+      "tracksCurrentArtifact": true,
+      "deployedOn": "2026-11-04",
+      "note": "Current PrivateEscrow class (deposit expiration bounded by the deadline), published with this deployment. Workflow 'Aztec escrow e2e (testnet)' run 41881180186: one escrow claimed, one refunded after its deadline; empty afterwards. A reference instance, not one for new deposits: each agreement gets its own keyed instance."
+    },
+    {
+      "name": "PaymentStream v2 (keyed, end-to-end run)",
+      "address": "0x2a56c0d41aefa6a6eaae89611be7aaab3ac0aad91faf10fec26277ca9e689f1b",
+      "classId": "0x2de5fa9bcca0762779eeb30892cabdc550db12a0a755840a79ada60ecbf8783e",
+      "artifact": "contracts/aztec/streams/target/payment_stream-PaymentStream.json",
+      "holdsPrivateBalance": true,
+      "keyed": true,
+      "status": "reference",
+      "tracksCurrentArtifact": true,
+      "deployedOn": "2026-11-04",
+      "note": "Current PaymentStream class (overflow-free accrual, no self-streams), published with this deployment. Run 41881180186: stream of 20 test tokens created, 5 withdrawn within accrual. A reference instance, not one for new streams."
     }
   ],
   "e2eRuns": [
+    {
+      "workflow": "Aztec escrow e2e (testnet)",
+      "run": 41881180186,
+      "date": "2026-11-04",
+      "escrow": "0x062677942994e9d9bbc4bd9c47094b1e90d81caf3716867fb88098d144c191b9",
+      "stream": "0x2a56c0d41aefa6a6eaae89611be7aaab3ac0aad91faf10fec26277ca9e689f1b",
+      "token": "0x014a90a8181c93a034f217831e353752081d4a10c462eaafd57e7d26725e02d8",
+      "sender": "0x2847e99bf22c86a646213430bfa57a9a642365e49a4189c45b71615a7eef3930",
+      "recipient": "0x0c140258bd622e4a12cf4419dc2dca5ac3dbf473fb654036370fae76223211e1",
+      "transactions": [
+        {
+          "step": "mint to sender (public)",
+          "txHash": "0x061fab448efe7f45f81c9cc3fc86aaaf8ed56bfb6bced67cb28932840b296e9c",
+          "block": 18527
+        },
+        {
+          "step": "shield 90 into sender private balance",
+          "txHash": "0x003f1172a7792ae034f050767981448e8b0b9c6d0cf2298dbb6eae8d5852f1db",
+          "block": 18528
+        },
+        {
+          "step": "escrow 1: deposit 25, deadline +2 h (authwit)",
+          "txHash": "0x0b0e0a4fb040f9a25675b35d4371b41cf563a305564d0980150d21667a74a284",
+          "block": 18531
+        },
+        {
+          "step": "escrow 2: deposit 10, deadline +7 min (authwit)",
+          "txHash": "0x2953da19194fdc716e9437d40a8a6dc85a3432290ae7c9a5db872972c2321da1",
+          "block": 18533
+        },
+        {
+          "step": "escrow 1: claim by the recipient",
+          "txHash": "0x26fae63291c3644cb43cb36bd2a4f7c6cba4dc0e14673093f821f4da696e8680",
+          "block": 18535
+        },
+        {
+          "step": "stream: create 20 at 10,000 units/s (authwit)",
+          "txHash": "0x1deacfd33ff0d45950ad5de1254b9f1809c0711cb323387cf3f71539d902d96b",
+          "block": 18538
+        },
+        {
+          "step": "stream: withdraw 5 within accrual",
+          "txHash": "0x04911e1af621aa648be48416fce752aadd7fe617fc25cb042204b869e99df3cc",
+          "block": 18540
+        },
+        {
+          "step": "escrow 2: refund to the sender after the deadline",
+          "txHash": "0x1b2a358c6ce8c236a473b4af4b142a71d30f7e42a968065c600bd7fa46b4a0f0",
+          "block": 18542
+        }
+      ],
+      "checks": [
+        "each instance's address equals the keyed instance computed locally; the node returns its keys and the committed class",
+        "sender private balance 90 -> 55 after both deposits -> 35 after the stream -> 45 after the refund; recipient 25 after the claim -> 30 after the withdrawal",
+        "escrow 2 refund before the deadline refused ('deadline not reached')",
+        "escrow 1 second claim refused ('escrow not found')",
+        "escrow 1 refund by the sender refused (by the deadline check, since its deadline had not passed)",
+        "stream withdrawal of the whole total refused ('insufficient accrued balance')",
+        "escrow 2 claim after the deadline refused (with a wrong claim secret, so this check shows the secret check; the deadline check on claims is covered by TXE tests)"
+      ]
+    },
     {
       "workflow": "Aztec escrow e2e (testnet)",
       "run": 41865790651,

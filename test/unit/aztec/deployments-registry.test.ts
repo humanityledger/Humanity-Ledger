@@ -28,7 +28,7 @@ interface Entry {
   artifact: string;
   holdsPrivateBalance: boolean;
   keyed: boolean;
-  status: 'active' | 'do-not-use' | 'settled';
+  status: 'active' | 'reference' | 'do-not-use' | 'settled';
   tracksCurrentArtifact: boolean;
 }
 
