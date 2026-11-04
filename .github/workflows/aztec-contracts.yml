@@ -91,10 +91,13 @@ jobs:
       - name: TXE tests (aztec test)
         if: always() && steps.compile.outcome == 'success'
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          failed=""
           for dir in contracts/aztec/*/; do
             [ -f "$dir/src/test.nr" ] || continue
             echo "::group::aztec test $dir"
-            (cd "$dir" && aztec test)
+            (cd "$dir" && aztec test) || failed="$failed $dir"
             echo "::endgroup::"
           done
+          # Every crate is tested even when an earlier one fails.
+          if [ -n "$failed" ]; then echo "::error::TXE tests failed in:$failed"; exit 1; fi

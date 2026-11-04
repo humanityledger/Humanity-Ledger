@@ -73,7 +73,7 @@ unconstrained fn setup() -> Setup {
     // Contract accounts: deposit needs the sender's authwit for the token pull.
     let sender = env.create_contract_account();
     let recipient = env.create_contract_account();
-    let token = env.deploy("../test_token/TestToken").without_initializer();
+    let token = env.deploy("../test_token/@test_token/TestToken").without_initializer();
     let escrow = env.deploy("PrivateEscrow").with_public_initializer(
         sender,
         PrivateEscrow::interface().constructor(token),
