@@ -97,7 +97,7 @@ jobs:
 
           # Search for our unique MAX_RATE circuit constant
           RESULTS_MAXRATE=$(curl -s \
-            "https://api.github.com/search/code?q=MAX_RATE+humanity+ledger+noir&per_page=20" \
+            "https://api.github.com/search/code?q=MAX_RATE+humanity+ledger+extension:nr&per_page=20" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             | jq -r '.items[]? | select(.repository.full_name != "humanityledger/Humanity-Ledger") | "FOREIGN REPO: \(.repository.full_name) | File: \(.path) | \(.html_url)"' \
@@ -124,8 +124,23 @@ jobs:
           echo "$RESULTS_MAXRATE" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      # Findings go to the job summary as a warning. Issues are disabled in this
+      # repository, so the issue step may fail; it must not turn a review
+      # request into a red build.
+      - name: Report possible clones
+        if: steps.search.outputs.HAS_CLONES == 'true'
+        run: |
+          echo "::warning::Possible copies of Humanity Ledger identifiers found; review the job summary."
+          {
+            echo "### Possible copies (review by hand; code search is fuzzy)"
+            echo '```'
+            echo "${{ steps.search.outputs.CLONE_DETAILS }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Create issue if IP clones detected
         if: steps.search.outputs.HAS_CLONES == 'true'
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
