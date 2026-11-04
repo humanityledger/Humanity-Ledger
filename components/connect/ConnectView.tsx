@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { HLLogo } from "@/components/shared/HLLogo";
 import { LivePhone } from "@/components/landing/v2/PhoneShowcase";
+import { ImmersiveField } from "@/components/immersive/ImmersiveField";
 import s from "./ConnectView.module.css";
 
 /**
@@ -144,7 +145,7 @@ function Option({
 function Choose(p: ConnectViewProps) {
   return (
     <>
-      <h1 className={s.title}>Sign in to Ledger Chat</h1>
+      <h1 className={s.title}>Sign in to <em>Ledger Chat</em></h1>
       <p className={s.subtitle}>Connect the wallet you want to use as your account.</p>
 
       <div className={s.options}>
@@ -190,7 +191,7 @@ function QrStage(p: ConnectViewProps) {
         <ArrowLeft size={16} strokeWidth={1.75} aria-hidden="true" />
         Back
       </button>
-      <h1 className={s.title}>Sign in with your phone</h1>
+      <h1 className={s.title}>Sign in <em>with your phone</em></h1>
       <p className={s.subtitle}>Use a phone where you are already signed in to Ledger Chat.</p>
 
       <div className={s.qrCard}>
@@ -269,7 +270,7 @@ function Signing(p: ConnectViewProps) {
       <span className={`${s.statusIcon} ${s.statusNeutral}`} aria-hidden="true">
         <KeyRound size={22} strokeWidth={1.75} />
       </span>
-      <h1 className={s.title}>Confirm it is you</h1>
+      <h1 className={s.title}>Confirm <em>it is you</em></h1>
       <p className={s.subtitle}>
         Your wallet will ask you to sign a message. Signing is free and does not send a transaction.
       </p>
@@ -362,6 +363,7 @@ export function ConnectView(props: ConnectViewProps) {
 
   return (
     <div className={s.root} data-stage={stage}>
+      <ImmersiveField variant="page" />
       <main className={s.panel}>
         <div className={s.panelTop}>
           <Link href="/" aria-label="Humanity Ledger home" className={s.brand}>
@@ -394,7 +396,7 @@ export function ConnectView(props: ConnectViewProps) {
 
         <div className={s.aboutHead}>
           <h2 id="connect-about-title" className={s.aboutTitle}>
-            Private messages and payments, tied to your wallet.
+            Private messages and payments, <em>tied to your wallet.</em>
           </h2>
           <p className={s.aboutLead}>
             Your wallet address is your account, so there is no phone number to share and no password to forget.

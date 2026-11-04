@@ -26,6 +26,8 @@ import { HLLogo } from "@/components/shared/HLLogo";
 import { RemoteLottie } from "@/components/ui/RemoteLottie";
 import { HeroMap } from "./HeroMap";
 import { SiteFooter } from "./SiteFooter";
+import { ImmersiveField } from "@/components/immersive/ImmersiveField";
+import { SiteNav } from "@/components/immersive/SiteNav";
 import { PhoneShowcase, phoneShowcaseStyles } from "./PhoneShowcase";
 import s from "./Landing.module.css";
 
@@ -44,50 +46,6 @@ import s from "./Landing.module.css";
  *   "Unencrypted fallback ... prohibited"  a readable relay path exists and is disclosed
  *   "zero network fees"                    messaging is free; private payments carry an Aztec fee
  */
-
-const NAV = [
-  { href: "#ledger-chat", label: "Ledger Chat" },
-  { href: "#how-it-works", label: "How it works" },
-  { href: "#payments", label: "Payments" },
-  { href: "#download", label: "Download" },
-  { href: "/docs/overview", label: "Documentation" },
-];
-
-function Nav() {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  return (
-    <header className={`${s.nav} ${scrolled ? s.navScrolled : ""}`}>
-      <div className={`${s.wrap} ${s.navInner}`}>
-        <Link href="/" className={s.navBrand} aria-label="Humanity Ledger home">
-          <HLLogo size={32} />
-        </Link>
-        <nav className={s.navLinks} aria-label="Main">
-          {NAV.map((n) => (
-            <a key={n.href} href={n.href}>
-              {n.label}
-            </a>
-          ))}
-        </nav>
-        <div className={s.navActions}>
-          <Link href="/connect" className={`${s.btn} ${s.btnSm} ${s.btnGhost} ${s.navSecondary}`}>
-            Sign in
-          </Link>
-          <Link href="/chat" className={`${s.btn} ${s.btnSm} ${s.btnPrimary}`}>
-            <span className={s.labelLong}>Open Ledger Chat</span>
-            <span className={s.labelShort}>Open app</span>
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
 
 /* ── Vignettes ─────────────────────────────────────────────────────────── */
 
@@ -405,14 +363,15 @@ const UPDATES = [
 export function HumanityLanding() {
   return (
     <div className={s.page}>
-      <Nav />
+      <ImmersiveField variant="page" />
+      <SiteNav />
 
       <main className={`${s.wrap} ${s.stack}`}>
         {/* Hero */}
-        <section className={`${s.card} ${s.hero}`} aria-labelledby="hero-title">
+        <section className={`${s.card} ${s.open} ${s.hero}`} aria-labelledby="hero-title">
           <div>
             <h1 id="hero-title" className={s.h1}>
-              The private messenger you completely control.
+              The private messenger <em>you completely control.</em>
             </h1>
             <p className={s.lead}>
               Message privately, join communities and send digital assets, without giving anyone your phone number.
@@ -448,11 +407,11 @@ export function HumanityLanding() {
         </section>
 
         {/* Introducing Ledger Chat */}
-        <section id="ledger-chat" className={`${s.card} ${s.reveal}`} aria-labelledby="intro-title">
+        <section id="ledger-chat" data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="intro-title">
           <div className={s.sectionHead}>
             <p className={s.eyebrow}>Ledger Chat</p>
             <h2 id="intro-title" className={s.h2}>
-              Introducing Ledger Chat.
+              Introducing <em>Ledger Chat.</em>
             </h2>
             <p className={s.lead}>
               Ledger Chat brings the privacy of a decentralized network to a messenger that feels as simple as the ones
@@ -480,7 +439,7 @@ export function HumanityLanding() {
           <div className={s.sectionHead}>
             <p className={s.eyebrow}>Ledger Chat in your hand</p>
             <h2 id="hand-title" className={s.h2}>
-              Messages, calls and payments. One private place.
+              Messages, calls and payments. <em>One private place.</em>
             </h2>
             <p className={s.lead}>
               A conversation, a voice call, a video call and a payment, the way they look on your phone. Keep scrolling
@@ -490,11 +449,11 @@ export function HumanityLanding() {
           <PhoneShowcase />
         </section>
         {/* How it works */}
-        <section id="how-it-works" className={`${s.card} ${s.reveal}`} aria-labelledby="steps-title">
+        <section id="how-it-works" data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="steps-title">
           <div className={s.sectionHead}>
             <p className={s.eyebrow}>How it works</p>
             <h2 id="steps-title" className={s.h2}>
-              Start communicating in 60 seconds.
+              Start communicating <em>in 60 seconds.</em>
             </h2>
             <p className={s.lead}>Anyone can set up a private identity and start a conversation straight away.</p>
           </div>
@@ -512,10 +471,10 @@ export function HumanityLanding() {
         </section>
 
         {/* What you can do */}
-        <section className={`${s.card} ${s.reveal}`} aria-labelledby="tiles-title">
+        <section data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="tiles-title">
           <div className={s.sectionHead}>
             <h2 id="tiles-title" className={s.h2}>
-              More than messages.
+              More than <em>messages.</em>
             </h2>
             <p className={s.lead}>
               The conversation is where people already agree on things. Ledger Chat lets them settle them there too.
@@ -523,7 +482,7 @@ export function HumanityLanding() {
           </div>
           <div className={s.tiles}>
             {TILES.map(({ icon: Icon, title, text }) => (
-              <div key={title} className={s.tile}>
+              <div key={title} className={s.tile} data-glow>
                 <span className={s.tileIcon} aria-hidden="true">
                   <Icon size={19} strokeWidth={1.75} />
                 </span>
@@ -535,12 +494,12 @@ export function HumanityLanding() {
         </section>
 
         {/* Payments */}
-        <section id="payments" className={`${s.card} ${s.reveal}`} aria-labelledby="pay-title">
+        <section id="payments" data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="pay-title">
           <div className={s.split}>
             <div>
               <p className={s.eyebrow}>Aztec Network and zk.money</p>
               <h2 id="pay-title" className={s.h2}>
-                Confidential payments, powered by Aztec.
+                Confidential payments, <em>powered by Aztec.</em>
               </h2>
               <p className={s.lead}>
                 Humanity Ledger brings zk.money back inside the app. Payments are proven on your own device, so balances
@@ -577,10 +536,10 @@ export function HumanityLanding() {
         </section>
 
         {/* Comparison */}
-        <section className={`${s.card} ${s.reveal}`} aria-labelledby="compare-title">
+        <section data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="compare-title">
           <div className={s.sectionHead}>
             <h2 id="compare-title" className={s.h2}>
-              Why Ledger Chat is different.
+              Why Ledger Chat <em>is different.</em>
             </h2>
             <p className={s.lead}>
               Most messengers are paid for with attention and data. Ledger Chat is built around privacy instead of
@@ -639,10 +598,10 @@ export function HumanityLanding() {
         </section>
 
         {/* Experience */}
-        <section className={`${s.card} ${s.reveal}`} aria-labelledby="exp-title">
+        <section data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="exp-title">
           <div className={s.sectionHead}>
             <h2 id="exp-title" className={s.h2}>
-              Decentralization does not have to mean friction.
+              Decentralization does not have to <em>mean friction.</em>
             </h2>
             <p className={s.lead}>
               Privacy is a right, but people only keep using what is easy. We hid the machinery so you can concentrate on
@@ -651,7 +610,7 @@ export function HumanityLanding() {
           </div>
           <div className={s.tiles} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
             {EXPERIENCE.map(({ icon: Icon, title, text }) => (
-              <div key={title} className={s.tile}>
+              <div key={title} className={s.tile} data-glow>
                 <span className={s.tileIcon} aria-hidden="true">
                   <Icon size={19} strokeWidth={1.75} />
                 </span>
@@ -663,10 +622,10 @@ export function HumanityLanding() {
         </section>
 
         {/* Features */}
-        <section className={`${s.card} ${s.reveal}`} aria-labelledby="features-title">
+        <section data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="features-title">
           <div className={s.sectionHead}>
             <h2 id="features-title" className={s.h2}>
-              Everything you expect from a messenger.
+              Everything you expect <em>from a messenger.</em>
             </h2>
             <p className={s.lead}>
               All the everyday features of a modern messenger, without advertising trackers or behavioural profiling.
@@ -683,10 +642,10 @@ export function HumanityLanding() {
         </section>
 
         {/* Platforms */}
-        <section id="download" className={`${s.card} ${s.reveal}`} aria-labelledby="platforms-title">
+        <section id="download" data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="platforms-title">
           <div className={s.sectionHead}>
             <h2 id="platforms-title" className={s.h2}>
-              Use it wherever you are.
+              Use it <em>wherever you are.</em>
             </h2>
             <p className={s.lead}>
               Ledger Chat runs in any modern browser today. Your conversations follow you to every device you link.
@@ -734,11 +693,11 @@ export function HumanityLanding() {
         </section>
 
         {/* Updates */}
-        <section className={`${s.card} ${s.reveal}`} aria-labelledby="updates-title">
+        <section data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="updates-title">
           <div className={`${s.sectionHead} ${s.headRow}`} style={{ maxWidth: "none" }}>
             <div style={{ maxWidth: 680 }}>
               <h2 id="updates-title" className={s.h2}>
-                Recent improvements.
+                Recent <em>improvements.</em>
               </h2>
               <p className={s.lead}>Ledger Chat ships improvements continuously. These are the most recent.</p>
             </div>
@@ -758,12 +717,12 @@ export function HumanityLanding() {
         </section>
 
         {/* Closing */}
-        <section className={`${s.card} ${s.closing} ${s.reveal}`} aria-labelledby="closing-title">
+        <section className={`${s.card} ${s.open} ${s.closing} ${s.reveal}`} aria-labelledby="closing-title">
           <div className={s.closingMark}>
             <HLLogo variant="mark" size={64} />
           </div>
           <h2 id="closing-title" className={s.h2}>
-            Start a private conversation.
+            Start a <em>private conversation.</em>
           </h2>
           <p className={s.lead}>
             Ledger Chat is free, open to anyone and private by default. It runs in your browser, with nothing to install.

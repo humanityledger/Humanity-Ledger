@@ -1,3 +1,5 @@
+/* The colophon at the bottom of every public page. See SiteFooter.tsx. */
+
 .footer,
 .footer *,
 .footer *::before,
@@ -14,19 +16,20 @@
 
 .footer.footer a,
 .footer.footer button {
-  /* auto, not 0: auto is the initial value and keeps a flex item from
-     being squeezed below its content. */
   min-height: auto;
 }
 
 .footer {
+  position: relative;
   font-family: var(--hl-font);
   color: var(--hl-ink);
   -webkit-font-smoothing: antialiased;
-  padding: 56px 0 max(40px, env(safe-area-inset-bottom, 0px));
+  padding: 72px 0 max(28px, env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
 }
 
 .wrap {
+  position: relative;
   width: 100%;
   max-width: 1240px;
   margin-inline: auto;
@@ -43,72 +46,104 @@
 
 .top {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 40px;
-  padding-bottom: 40px;
-  border-bottom: 1px solid var(--hl-border);
+  gap: 48px;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1000px) {
   .top {
-    grid-template-columns: minmax(0, 1.3fr) repeat(4, minmax(0, 1fr));
-    gap: 32px;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr);
+    gap: 48px;
+    align-items: start;
   }
 }
 
-.brand {
+.lead {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  max-width: 300px;
+  gap: 28px;
 }
 
-.tagline {
+.display.display {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--hl-ink-3);
-}
-
-.social {
-  display: flex;
-  gap: 8px;
-}
-
-.social a {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid var(--hl-border);
-  background: var(--hl-bg);
-  display: grid;
-  place-items: center;
-  color: var(--hl-ink-2);
-  transition: color var(--hl-dur-fast) var(--hl-ease), border-color var(--hl-dur-fast) var(--hl-ease);
-}
-
-.social a:hover {
+  font-family: var(--hl-font-display);
+  font-size: clamp(44px, 5.4vw, 72px);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
   color: var(--hl-ink);
-  border-color: var(--hl-border-strong);
+}
+
+.ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 13px;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--hl-dur-fast) var(--hl-ease), transform var(--hl-dur-fast) var(--hl-ease);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+/* Doubled class: host pages (the docs) set `a { color: inherit }` at a
+   higher specificity than a single class. */
+.btnPrimary.btnPrimary {
+  background: var(--hl-primary);
+  color: var(--hl-ink-inverse);
+}
+
+.btnPrimary.btnPrimary:hover {
+  background: var(--hl-primary-hover);
+}
+
+.btnGhost {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(16, 24, 40, 0.09);
+  color: var(--hl-ink);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.btnGhost:hover {
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .cols {
-  display: contents;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px 24px;
 }
 
-@media (max-width: 899px) {
+@media (min-width: 640px) {
   .cols {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 32px 24px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1000px) {
+  .cols {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    padding-top: 10px;
   }
 }
 
 .col h2 {
-  margin: 0 0 14px;
-  font-size: 14px;
+  margin: 0 0 16px;
+  font-size: 11.5px;
   font-weight: 600;
-  color: var(--hl-ink);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--hl-ink-3);
 }
 
 .col ul {
@@ -117,31 +152,129 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .col a {
-  font-size: 14px;
-  color: var(--hl-ink-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--hl-ink);
   text-decoration: none;
-  transition: color var(--hl-dur-fast) var(--hl-ease);
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size var(--hl-dur) var(--hl-ease), color var(--hl-dur-fast) var(--hl-ease);
 }
 
 .col a:hover {
+  background-size: 100% 1px;
+}
+
+.col a:focus-visible,
+.legal a:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid var(--hl-focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.ext {
+  opacity: 0.5;
+}
+
+/* The wordmark. Set in the display face across the whole width; the light
+   behind it is the same blue as the living field. */
+.mark {
+  position: relative;
+  margin-top: 72px;
+  padding: 0 max(16px, env(safe-area-inset-left, 0px));
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+.markGlow {
+  position: absolute;
+  inset: -10% -10% -30%;
+  background:
+    radial-gradient(40% 70% at 22% 70%, rgba(39, 84, 214, 0.2), transparent 70%),
+    radial-gradient(36% 60% at 80% 60%, rgba(122, 162, 255, 0.22), transparent 72%);
+  filter: blur(10px);
+}
+
+.markWord {
+  position: relative;
+  display: block;
+  font-size: clamp(56px, 13.4vw, 210px);
+  line-height: 0.86;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
   color: var(--hl-ink);
+  background: linear-gradient(180deg, #15171c 0%, #15171c 62%, rgba(21, 23, 28, 0.55) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  /* Room for the descenders of y and g inside the clipped background. */
+  padding-bottom: 0.22em;
+  margin-bottom: -0.16em;
 }
 
 .bottom {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   padding-top: 28px;
+  margin-top: 28px;
+  border-top: 1px solid rgba(16, 24, 40, 0.09);
+}
+
+.bottomRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--hl-ink-2);
+}
+
+.legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+}
+
+.legal a {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--hl-ink-2);
+  text-decoration: none;
+}
+
+.legal a:hover {
+  color: var(--hl-ink);
 }
 
 .fine {
   margin: 0;
-  max-width: 820px;
-  font-size: 13px;
+  max-width: 860px;
+  font-size: 12.5px;
   line-height: 1.6;
   color: var(--hl-ink-3);
   text-wrap: pretty;

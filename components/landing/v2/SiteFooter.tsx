@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Github, Linkedin } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { HLLogo } from "@/components/shared/HLLogo";
 import { EXTERNAL_LINKS } from "@/lib/constants/links";
 import { LEGAL_ENTITY } from "@/lib/constants/legalEntity";
@@ -9,9 +9,15 @@ import s from "./SiteFooter.module.css";
 /**
  * SiteFooter — the footer for every public page.
  *
- * Headings are plain sentence case. The fine print at the bottom states the
- * product's real stage, because the footer is where careful readers look for
- * exactly that.
+ * Built like an editorial colophon: a display line and the two actions that
+ * matter, five columns of links, the Humanity Ledger wordmark set very large
+ * over the living background, and a bottom bar with the legal links. The
+ * fine print about the product's real stage stays, because the footer is
+ * where careful readers look for exactly that.
+ *
+ * "Built on Aztec" is a text link to aztec.network. The Aztec logo is not
+ * drawn here: it belongs to the Aztec Foundation and is used only from their
+ * official brand files, under their brand terms (aztec.network/brand).
  */
 
 interface FooterLink {
@@ -26,6 +32,7 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
     links: [
       { label: "Ledger Chat", href: "/chat" },
       { label: "How it works", href: "/#how-it-works" },
+      { label: "Private payments", href: "/#payments" },
       { label: "Download", href: "/#download" },
       { label: "Network status", href: "/status" },
     ],
@@ -34,6 +41,7 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
     title: "Developers",
     links: [
       { label: "Documentation", href: "/docs/overview" },
+      { label: "Architecture", href: "/docs/architecture" },
       { label: "Whitepaper", href: "/docs/whitepaper" },
       { label: "Developer hub", href: "/developers" },
       { label: "Source code", href: EXTERNAL_LINKS.github.repo, external: true },
@@ -49,28 +57,47 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
     ],
   },
   {
-    title: "Legal",
+    title: "Trust",
     links: [
-      { label: "Legal notice", href: "/docs/legal-notice" },
-      { label: "Privacy Policy", href: "/docs/privacy" },
-      { label: "Terms of Service", href: "/docs/terms" },
-      { label: "Cookie Policy", href: "/docs/cookies" },
-      { label: "Risk disclosure", href: "/docs/disclaimer" },
       { label: "Security audits", href: "/docs/audits" },
       { label: "Report a vulnerability", href: "/docs/bug-bounty" },
+      { label: "Risk disclosure", href: "/docs/disclaimer" },
+      { label: "Content policy", href: "/docs/content-policy" },
+    ],
+  },
+  {
+    title: "Community",
+    links: [
+      { label: "X", href: EXTERNAL_LINKS.x, external: true },
+      { label: "GitHub", href: EXTERNAL_LINKS.github.org, external: true },
+      { label: "LinkedIn", href: EXTERNAL_LINKS.linkedin, external: true },
+      { label: "Built on Aztec", href: EXTERNAL_LINKS.aztec, external: true },
+      { label: "XMTP", href: EXTERNAL_LINKS.xmtp, external: true },
     ],
   },
 ];
 
-function FooterLinkItem({ link }: { link: FooterLink }) {
+const LEGAL: FooterLink[] = [
+  { label: "Legal notice", href: "/docs/legal-notice" },
+  { label: "Privacy", href: "/docs/privacy" },
+  { label: "Terms", href: "/docs/terms" },
+  { label: "Cookies", href: "/docs/cookies" },
+];
+
+function FooterLinkItem({ link, className }: { link: FooterLink; className?: string }) {
   if (link.external) {
     return (
-      <a href={link.href} target="_blank" rel="noopener noreferrer">
+      <a href={link.href} target="_blank" rel="noopener noreferrer" className={className}>
         {link.label}
+        <ArrowUpRight size={12} strokeWidth={2} aria-hidden="true" className={s.ext} />
       </a>
     );
   }
-  return <Link href={link.href}>{link.label}</Link>;
+  return (
+    <Link href={link.href} className={className}>
+      {link.label}
+    </Link>
+  );
 }
 
 export function SiteFooter() {
@@ -78,20 +105,20 @@ export function SiteFooter() {
     <footer className={s.footer}>
       <div className={s.wrap}>
         <div className={s.top}>
-          <div className={s.brand}>
-            <Link href="/" aria-label="Humanity Ledger home" style={{ width: "fit-content" }}>
-              <HLLogo size={32} />
-            </Link>
-            <p className={s.tagline}>
-              Private messaging and payments, tied to the wallet you already hold. Ledger Chat is our first application.
+          <div className={s.lead}>
+            <p className={`${s.display} hl-display`}>
+              Talk freely.
+              <br />
+              <em>Pay privately.</em>
             </p>
-            <div className={s.social}>
-              <a href={EXTERNAL_LINKS.github.repo} target="_blank" rel="noopener noreferrer" aria-label="Humanity Ledger on GitHub">
-                <Github size={17} strokeWidth={1.75} />
-              </a>
-              <a href={EXTERNAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" aria-label="Humanity Ledger on LinkedIn">
-                <Linkedin size={17} strokeWidth={1.75} />
-              </a>
+            <div className={s.ctas}>
+              <Link href="/chat" className={`${s.btn} ${s.btnPrimary}`}>
+                Open Ledger Chat
+                <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
+              </Link>
+              <Link href="/docs/overview" className={`${s.btn} ${s.btnGhost}`}>
+                Read the documentation
+              </Link>
             </div>
           </div>
 
@@ -110,16 +137,37 @@ export function SiteFooter() {
             ))}
           </div>
         </div>
+      </div>
 
+      {/* The wordmark, set across the full width over the living field. */}
+      <div className={s.mark} aria-hidden="true">
+        <div className={s.markGlow} />
+        <span className={`${s.markWord} hl-display`}>
+          Humanity <em>Ledger</em>
+        </span>
+      </div>
+
+      <div className={s.wrap}>
         <div className={s.bottom}>
+          <div className={s.bottomRow}>
+            <span className={s.copy}>
+              <HLLogo size={20} variant="mark" />© 2026 {LEGAL_ENTITY.tradingName}
+            </span>
+            <nav className={s.legal} aria-label="Legal">
+              {LEGAL.map((l) => (
+                <FooterLinkItem key={l.label} link={l} />
+              ))}
+            </nav>
+          </div>
           <p className={s.fine}>
             Ledger Chat is in early access. Our contracts have not been independently audited, and private payments run
             only on the Aztec test network with tokens that have no value. Please do not rely on the service to protect
             information or funds you cannot afford to lose.
           </p>
           <p className={s.fine}>
-            © 2026 {LEGAL_ENTITY.name}, trading as {LEGAL_ENTITY.tradingName}. Not a bank, broker, exchange or financial
-            institution, and nothing on this site is financial advice. Not affiliated with Humanity Protocol or Ledger SAS.
+            {LEGAL_ENTITY.name}, trading as {LEGAL_ENTITY.tradingName}. Not a bank, broker, exchange or financial
+            institution, and nothing on this site is financial advice. Not affiliated with Humanity Protocol, Ledger SAS
+            or the Aztec Foundation.
           </p>
         </div>
       </div>

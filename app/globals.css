@@ -1,4 +1,5 @@
 @import './ledger-tokens.css';
+@import './hl-immersive.css';
 
 @tailwind base;
 @tailwind components;

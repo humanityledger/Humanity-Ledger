@@ -1,0 +1,97 @@
+/**
+ * app/hl-immersive.css
+ *
+ * Shared pieces of the immersive design language, used by the landing, the
+ * documentation, /connect, the footer and Ledger Chat:
+ *
+ *   .hl-glass       frosted panel (navigation, cards over the living field)
+ *   [data-glow]     a soft spotlight and brighter rim that follow the cursor
+ *                   inside the element (positions set by ImmersiveField)
+ *   .hl-display     the editorial display face for headings
+ *   .hl-display em  the italic accent inside a heading
+ *
+ * Everything degrades: no backdrop-filter means a more opaque panel; touch
+ * screens and reduced motion get no spotlight.
+ */
+
+:root {
+  --hl-glass-bg: rgba(255, 255, 255, 0.58);
+  --hl-glass-bg-strong: rgba(255, 255, 255, 0.78);
+  --hl-glass-border: rgba(255, 255, 255, 0.75);
+  --hl-glass-edge: rgba(16, 24, 40, 0.07);
+  --hl-glass-blur: 22px;
+  --hl-glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 12px 40px -16px rgba(16, 24, 40, 0.22),
+    0 2px 6px rgba(16, 24, 40, 0.04);
+  --hl-glow-color: rgba(39, 84, 214, 0.11);
+  --hl-glow-rim: rgba(39, 84, 214, 0.38);
+}
+
+.hl-glass {
+  background: var(--hl-glass-bg);
+  border: 1px solid var(--hl-glass-border);
+  box-shadow: var(--hl-glass-shadow), 0 0 0 1px var(--hl-glass-edge);
+  backdrop-filter: blur(var(--hl-glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--hl-glass-blur)) saturate(180%);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .hl-glass {
+    background: var(--hl-glass-bg-strong);
+  }
+}
+
+/* Cursor spotlight. The element keeps its own background; the light is a
+   pseudo-element above it, below its content. Put data-glow only on
+   elements that are not themselves absolutely positioned. */
+[data-glow] {
+  position: relative;
+  isolation: isolate;
+  --gx: 50%;
+  --gy: -200px;
+}
+
+[data-glow]::before,
+[data-glow]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--hl-dur-slow) var(--hl-ease);
+  /* -1 inside the element's own stacking context (isolation above): painted
+     over its background, under all of its content. */
+  z-index: -1;
+}
+
+[data-glow]::before {
+  background: radial-gradient(420px circle at var(--gx) var(--gy), var(--hl-glow-color), transparent 62%);
+}
+
+/* The rim: a 1px ring lit only near the cursor. */
+[data-glow]::after {
+  padding: 1px;
+  background: radial-gradient(260px circle at var(--gx) var(--gy), var(--hl-glow-rim), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  [data-glow]:hover::before,
+  [data-glow]:hover::after {
+    opacity: 1;
+  }
+}
+
+.hl-display {
+  font-family: var(--hl-font-display);
+  font-weight: 400;
+  letter-spacing: -0.012em;
+  line-height: 1.02;
+}
+
+.hl-display em {
+  font-style: italic;
+  letter-spacing: -0.005em;
+}

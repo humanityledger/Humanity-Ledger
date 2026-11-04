@@ -87,7 +87,7 @@ export default function OpenLetterPage() {
                 <strong className="block text-slate-900 font-bold text-lg">humanityledger</strong>
                 <span className="text-slate-500 text-sm">Founder, Humanity Ledger</span>
                 <div className="mt-2 flex gap-3">
-                  <a href="https://twitter.com/humanityledger" target="_blank" rel="noreferrer" className="text-sm text-[#0088cc] font-medium hover:underline">@humanityledger</a>
+                  <a href="https://x.com/humanityledger" target="_blank" rel="noreferrer" className="text-sm text-[#0088cc] font-medium hover:underline">@humanityledger</a>
                   <a href="https://github.com/humanityledger" target="_blank" rel="noreferrer" className="text-sm text-[#0088cc] font-medium hover:underline">GitHub</a>
                 </div>
               </div>

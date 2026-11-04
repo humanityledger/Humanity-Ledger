@@ -45,11 +45,13 @@
 }
 
 .root {
-  --doc-header: 60px;
+  --doc-header: 76px;
   --doc-ink: #2c313b;
+  position: relative;
   font-family: var(--hl-font);
   color: var(--hl-ink);
-  background: var(--hl-bg);
+  /* The living field (ImmersiveField, quiet variant) paints the background. */
+  background: transparent;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -76,17 +78,21 @@
   top: 0;
   z-index: 40;
   height: var(--doc-header);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: saturate(1.6) blur(12px);
-  -webkit-backdrop-filter: saturate(1.6) blur(12px);
-  border-bottom: 1px solid var(--hl-border);
+  padding: 10px max(12px, env(safe-area-inset-right, 0px)) 6px max(12px, env(safe-area-inset-left, 0px));
 }
 
+/* A floating glass bar, the same as the site navigation. */
 .headerInner {
   height: 100%;
   max-width: 1480px;
   margin: 0 auto;
-  padding: 0 max(24px, env(safe-area-inset-right, 0px)) 0 max(24px, env(safe-area-inset-left, 0px));
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.06), 0 12px 36px -18px rgba(16, 24, 40, 0.25);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  padding: 0 16px 0 16px;
   display: grid;
   /* The side columns never shrink below their content, so the search box
      gives way first and nothing overlaps. */
@@ -303,6 +309,8 @@
 /* ── Layout ─────────────────────────────────────────────────────────────── */
 
 .body {
+  position: relative;
+  z-index: 1;
   flex: 1;
   width: 100%;
   max-width: 1480px;
@@ -338,7 +346,6 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 28px 16px 48px 20px;
-  border-right: 1px solid var(--hl-border);
   scrollbar-width: thin;
   scrollbar-color: var(--hl-border-strong) transparent;
 }
@@ -480,6 +487,11 @@
 .main {
   min-width: 0;
   padding: 40px 56px 96px;
+  /* The reading surface: near-opaque white over the field, for contrast. */
+  margin: 8px 8px 24px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.05), 0 24px 60px -36px rgba(16, 24, 40, 0.3);
 }
 
 @media (max-width: 1023px) {
@@ -491,6 +503,8 @@
 @media (max-width: 640px) {
   .main {
     padding: 24px 20px 72px;
+    margin: 4px 0 16px;
+    border-radius: 20px;
   }
 }
 
@@ -521,10 +535,11 @@
 
 .title {
   margin: 0;
-  font-size: clamp(28px, 4.2vw, 38px);
-  line-height: 1.14;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-family: var(--hl-font-display);
+  font-size: clamp(38px, 5vw, 56px);
+  line-height: 1.02;
+  font-weight: 400;
+  letter-spacing: -0.02em;
   color: var(--hl-ink);
   text-wrap: balance;
 }
