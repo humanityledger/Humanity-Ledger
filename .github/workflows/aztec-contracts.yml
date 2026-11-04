@@ -30,6 +30,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install the Aztec 6.0.0 toolchain
         run: |
@@ -47,6 +49,7 @@ jobs:
           which aztec
 
       - name: Compile every contract
+        id: compile
         run: |
           set -euo pipefail
           for dir in contracts/aztec/*/; do
@@ -61,8 +64,11 @@ jobs:
           git status --short contracts/aztec
           git diff --stat -- contracts/aztec || true
 
+      # Runs even if the TXE tests fail: the artifacts only depend on the
+      # sources compiling. Rebases first, as the branch may have moved since
+      # checkout.
       - name: Commit refreshed artifacts (claude/** branches only)
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/claude/')
+        if: always() && steps.compile.outcome == 'success' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/claude/')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -71,17 +77,19 @@ jobs:
             echo "Artifacts already match the sources."
           else
             git commit -m "chore(aztec): recompile contracts/aztec artifacts with Aztec 6.0.0 (CI)"
-            git push
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
 
       - name: Fail on main or PRs if artifacts are stale
-        if: github.event_name != 'push' || !startsWith(github.ref, 'refs/heads/claude/')
+        if: always() && steps.compile.outcome == 'success' && (github.event_name != 'push' || !startsWith(github.ref, 'refs/heads/claude/'))
         run: git diff --exit-code -- contracts/aztec
 
       # TXE tests (src/test.nr of each contract). They deploy compiled
       # artifacts, including ../test_token, so they run after every crate has
       # been compiled.
       - name: TXE tests (aztec test)
+        if: always() && steps.compile.outcome == 'success'
         run: |
           set -euo pipefail
           for dir in contracts/aztec/*/; do
