@@ -23,7 +23,7 @@ export default function Providers({ children, initialState, cookies }: { childre
     }, []);
 
     return (
-        <SessionProvider>
+        <SessionProvider refetchOnWindowFocus={false}>
             <AppProvider>
                 <ClientWeb3Provider cookies={cookies || null}>
                     <SettingsProvider>

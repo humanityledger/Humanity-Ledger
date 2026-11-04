@@ -324,11 +324,20 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     // Keying everyone on IP alone throttled whole offices, universities and
     // mobile carriers (many people behind one carrier-grade NAT address) at
     // 150 requests a minute between them, and a chat tab alone makes ~30.
-    earlySession = await extractSessionAddress(req);
-    const rateLimitRes = earlySession
-      ? applyRateLimit('u:' + earlySession, 600)
-      : applyRateLimit('ip:' + clientIp, 150);
-    if (rateLimitRes) return rateLimitRes;
+    // In development or local testing, do not throttle localhost so HMR, fast-refresh,
+    // and tests don't exhaust the 150 req/min limit. Also exempt /api/auth/session so NextAuth
+    // polling never triggers 429 CLIENT_FETCH_ERROR.
+    const isDev = process.env.NODE_ENV === 'development';
+    const isLocalhost = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === 'localhost';
+    if (!isDev || !isLocalhost) {
+      if (!pathname.startsWith('/api/auth/session')) {
+        earlySession = await extractSessionAddress(req);
+        const rateLimitRes = earlySession
+          ? applyRateLimit('u:' + earlySession, 600)
+          : applyRateLimit('ip:' + clientIp, 150);
+        if (rateLimitRes) return rateLimitRes;
+      }
+    }
 
     // B-015: Strict CSRF check on API mutations (webhooks excluded: they are
     // server-to-server and verify their own signatures). Academy routes are
