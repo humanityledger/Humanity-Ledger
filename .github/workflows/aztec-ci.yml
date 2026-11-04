@@ -112,6 +112,7 @@ jobs:
           test/unit/aztec/circuit-proving.test.ts
           test/unit/aztec/grumpkin.test.ts
           test/unit/aztec/native-contracts.test.ts
+          test/unit/aztec/keyed-deploy.test.ts
           test/aztec_vk_integrity.test.ts
           test/vk_hash_mismatch.test.ts
 

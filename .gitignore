@@ -171,5 +171,6 @@ _to_delete/
 
 # Aztec test network operator secrets (admin of the test tokens). Never commit.
 .aztec-testnet.local.json
+.aztec-keyed.local.json
 
 .lighthouseci/
