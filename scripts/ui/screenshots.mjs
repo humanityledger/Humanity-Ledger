@@ -40,15 +40,42 @@ for (const [vpName, viewport] of VIEWPORTS) {
     await page.waitForTimeout(1500);
     // Above the fold, with the cursor over the page.
     await page.screenshot({ path: path.join(out, `${name}-${vpName}-fold.png`) });
-    // Scroll through once so lazy sections render, then capture the page.
-    await page.evaluate(async () => {
-      for (let y = 0; y < document.body.scrollHeight; y += 700) { window.scrollTo(0, y); await new Promise(r => setTimeout(r, 120)); }
-      window.scrollTo(0, document.body.scrollHeight);
-    });
-    await page.waitForTimeout(800);
+    // The app shell scrolls inside an element, not the window: find the
+    // biggest scroller, walk it once so lazy sections render, then capture
+    // the middle and the end (the footer).
+    const scrollTo = async (frac) => page.evaluate(async (f) => {
+      const all = [document.scrollingElement, ...document.querySelectorAll('*')];
+      let best = document.scrollingElement, max = 0;
+      for (const el of all) {
+        if (!el) continue;
+        const d = el.scrollHeight - el.clientHeight;
+        const st = getComputedStyle(el).overflowY;
+        if (d > max && (el === document.scrollingElement || st === 'auto' || st === 'scroll')) { max = d; best = el; }
+      }
+      if (f === 'walk') {
+        for (let y = 0; y < max; y += 700) { best.scrollTop = y; await new Promise(r => setTimeout(r, 90)); }
+        return max;
+      }
+      best.scrollTop = Math.round(max * f);
+      return max;
+    }, frac);
+    await scrollTo('walk');
+    await scrollTo(0.5);
+    await page.waitForTimeout(700);
+    await page.screenshot({ path: path.join(out, `${name}-${vpName}-mid.png`) });
+    await scrollTo(1);
+    await page.waitForTimeout(900);
     await page.screenshot({ path: path.join(out, `${name}-${vpName}-end.png`) });
-    if (vpName === 'desktop') {
-      await page.screenshot({ path: path.join(out, `${name}-${vpName}-full.png`), fullPage: true });
+    // Hover the first card spotlight, if any, for the glow check.
+    const glow = await page.$('[data-glow]');
+    if (glow && vpName === 'desktop') {
+      await glow.scrollIntoViewIfNeeded();
+      const b = await glow.boundingBox();
+      if (b) {
+        await page.mouse.move(b.x + b.width * 0.3, b.y + Math.min(160, b.height / 2));
+        await page.waitForTimeout(900);
+        await page.screenshot({ path: path.join(out, `${name}-${vpName}-glow.png`) });
+      }
     }
     report.push({ page: name, viewport: vpName, finalUrl: page.url(), errors });
     await page.close();

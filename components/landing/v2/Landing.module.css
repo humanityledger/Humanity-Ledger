@@ -451,6 +451,8 @@
 .heroMap {
   width: 122%;
   margin-left: -6%;
+  /* The map art has a white ground; multiply lets the living field show. */
+  mix-blend-mode: multiply;
 }
 
 @media (max-width: 1023px) {

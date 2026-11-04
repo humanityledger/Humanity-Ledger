@@ -35,9 +35,9 @@ export interface ImmersiveFieldProps {
 }
 
 const SETTINGS: Record<Variant, { spacing: number; base: number; lens: number; radius: number }> = {
-  page: { spacing: 15, base: 0.16, lens: 0.55, radius: 240 },
-  app: { spacing: 17, base: 0.08, lens: 0.3, radius: 200 },
-  quiet: { spacing: 18, base: 0.06, lens: 0.22, radius: 180 },
+  page: { spacing: 15, base: 0.22, lens: 0.6, radius: 260 },
+  app: { spacing: 16, base: 0.14, lens: 0.45, radius: 220 },
+  quiet: { spacing: 17, base: 0.1, lens: 0.35, radius: 220 },
 };
 
 // Cheap smooth value noise, enough for a slow "breathing" of the lattice.
@@ -86,10 +86,12 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
     let last = 0;
     let idleFrames = 0;
 
+    // Sizes in the element's own CSS pixels. The landing, /connect and /chat
+    // are zoomed on desktop (html.hl-zoom-67), where getBoundingClientRect and
+    // pointer coordinates are in zoomed pixels; `toLocal` converts.
     const resize = () => {
-      const r = root.getBoundingClientRect();
-      w = Math.max(1, Math.round(r.width));
-      h = Math.max(1, Math.round(r.height));
+      w = Math.max(1, root.clientWidth);
+      h = Math.max(1, root.clientHeight);
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
@@ -175,8 +177,10 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
 
     const onMove = (e: PointerEvent) => {
       const r = root.getBoundingClientRect();
-      target.x = e.clientX - r.left;
-      target.y = e.clientY - r.top;
+      const kx = r.width > 0 ? w / r.width : 1;
+      const ky = r.height > 0 ? h / r.height : 1;
+      target.x = (e.clientX - r.left) * kx;
+      target.y = (e.clientY - r.top) * ky;
       if (!target.on) {
         target.on = true;
         if (lens.k < 0.01) {
@@ -190,8 +194,10 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
       const el = (e.target as Element | null)?.closest?.("[data-glow]") as HTMLElement | null;
       if (el) {
         const b = el.getBoundingClientRect();
-        el.style.setProperty("--gx", `${e.clientX - b.left}px`);
-        el.style.setProperty("--gy", `${e.clientY - b.top}px`);
+        const ex = b.width > 0 ? el.offsetWidth / b.width : 1;
+        const ey = b.height > 0 ? el.offsetHeight / b.height : 1;
+        el.style.setProperty("--gx", `${(e.clientX - b.left) * ex}px`);
+        el.style.setProperty("--gy", `${(e.clientY - b.top) * ey}px`);
       }
     };
     const onLeave = () => {
