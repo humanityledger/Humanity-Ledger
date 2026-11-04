@@ -378,10 +378,13 @@ export default function ConnectPage() {
         }
         const nonce = (await nonceRes.text()).trim();
 
+        // EIP-4361 requires the EIP-55 checksummed address; some connectors
+        // report it in lower case, and SiweMessage then refuses to build.
+        const { getAddress } = await import("viem");
         const siwe = new SiweMessage({
           // The server checks the domain without the port.
           domain: window.location.hostname,
-          address,
+          address: getAddress(address),
           statement: "Sign in to Humanity Ledger.",
           uri: window.location.origin,
           version: "1",
@@ -412,11 +415,23 @@ export default function ConnectPage() {
         setAuthStatus("failed");
         signingRef.current = false;
       } catch (e: unknown) {
-        const m = (e as { message?: string })?.message?.toLowerCase() ?? "";
+        const raw = (e as { shortMessage?: string; message?: string })?.shortMessage
+          || (e as { message?: string })?.message
+          || "";
+        const m = raw.toLowerCase();
+        // Every failure used to fall back to "declined or timed out", which
+        // hid the real cause (network error, timeout, a wallet that cannot
+        // sign). Show what happened, without anything secret in it.
         setSignError(
           m.includes("rejected") || m.includes("denied") || m.includes("cancel")
             ? "You declined the signature in your wallet. Nothing was charged and nothing was sent."
-            : null,
+            : m.includes("timeout") || m.includes("aborted")
+              ? "The server took too long to answer. Check your connection and try again."
+              : m.includes("failed to fetch") || m.includes("network")
+                ? "Could not reach Humanity Ledger. Check your connection and try again."
+                : raw
+                  ? `Sign-in failed: ${raw.slice(0, 160)}`
+                  : null,
         );
         setAuthStatus("failed");
         signingRef.current = false;

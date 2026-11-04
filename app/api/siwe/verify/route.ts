@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SiweMessage } from 'siwe';
+import { SiweMessage, SiweErrorType } from 'siwe';
 import { prisma } from '@/lib/prisma';
 import { getRedisClient } from '@/lib/redis';
 import { logger } from '@/lib/logger';
-import { openNonce, resolveSiweDomainForVerification, consumeNonceLocally } from '@/lib/security/siweNonce';
+import { openNonce, resolveSiweDomainForVerification, consumeNonceLocally, NONCE_TTL_SEC } from '@/lib/security/siweNonce';
+import { verifyContractWalletSiwe } from '@/lib/security/siweContractWallet';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,21 +20,24 @@ export async function POST(req: NextRequest) {
     // Single-use nonce enforcement:
     // 1. In-memory local consume check (prevents replay during Redis outages)
     if (!consumeNonceLocally(nonce)) {
-      logger.warn({ nonce }, '[SIWE] Nonce replay detected locally');
+      logger.warn('[SIWE] Nonce replay detected locally');
       return NextResponse.json({ ok: false, error: 'Nonce expired or already used.' }, { status: 401 });
     }
 
-    // 2. Distributed Redis check (prevents replay across multiple replicas)
+    // 2. Distributed single-use check across replicas. The nonce cookie is
+    //    MAC-sealed, so the server already knows it issued this nonce; Redis
+    //    only has to record that it has now been used. SET NX succeeds once.
+    //    Before, verify required the nonce to have been *stored* in Redis when
+    //    it was issued: whenever that write failed (Redis connecting after a
+    //    cold start, a blip, or the in-memory fallback on another replica),
+    //    every sign-in failed with "Nonce expired or already used".
     try {
       const redis = await getRedisClient();
-      const nonceKey = `siwe:nonce:${nonce}`;
-      const stored = await redis.get(nonceKey);
-      if (!stored) {
-        logger.warn({ nonce }, 'SIWE nonce missing or already consumed in Redis');
+      const firstUse = await redis.set(`siwe:used:${nonce}`, '1', 'EX', NONCE_TTL_SEC, 'NX');
+      if (firstUse === null) {
+        logger.warn('[SIWE] Nonce replay detected in Redis');
         return NextResponse.json({ ok: false, error: 'Nonce expired or already used.' }, { status: 401 });
       }
-      // Single-use: delete immediately
-      await redis.del(nonceKey);
     } catch (err) {
       logger.warn({ err }, 'Redis nonce check failed — local in-memory registry protected nonce');
     }
@@ -47,10 +51,26 @@ export async function POST(req: NextRequest) {
     }
     
     // `suppressExceptions` ensures verification results are captured gracefully
-    const { data: fields, error: siweErr } = await siweMessage.verify(
+    let { data: fields, error: siweErr } = await siweMessage.verify(
       { signature, nonce, domain },
       { suppressExceptions: true },
     );
+
+    // Smart-contract wallets (Safe, Coinbase Smart Wallet, Argent...) sign with
+    // ERC-1271 / ERC-6492, which the EOA check above cannot verify. Only when
+    // everything but the signature matched, ask the wallet's own chain.
+    if (siweErr && (siweErr as any)?.type === SiweErrorType.INVALID_SIGNATURE) {
+      const ok = await verifyContractWalletSiwe({
+        chainId: siweMessage.chainId,
+        address: siweMessage.address,
+        message: typeof message === 'string' ? message : siweMessage.prepareMessage(),
+        signature,
+      });
+      if (ok) {
+        fields = siweMessage;
+        siweErr = undefined as any;
+      }
+    }
 
     if (siweErr) {
       logger.error(
@@ -65,21 +85,27 @@ export async function POST(req: NextRequest) {
         {
           ok: false,
           error:
-            type === 'Domain does not match provided domain'
+            type === SiweErrorType.DOMAIN_MISMATCH
               ? 'Domain mismatch between the signed message and this server.'
-              : type === 'Nonce does not match provided nonce'
+              : type === SiweErrorType.NONCE_MISMATCH
                 ? 'Nonce mismatch — request a new sign-in.'
-                : 'Invalid signature.',
+                : type === SiweErrorType.EXPIRED_MESSAGE
+                  ? 'Signature challenge expired — request a new sign-in.'
+                  : type === SiweErrorType.NOT_YET_VALID_MESSAGE
+                    ? 'Signature not yet valid — check your device clock.'
+                    : 'Invalid signature.',
           detail: type ?? 'unknown',
         },
         { status: 401 },
       );
     }
-    
-    // Supported chains (Ethereum mainnet=1, Polygon=137, Arbitrum=42161, Optimism=10, Base=8453, Sepolia=11155111, Base Sepolia=84532)
-    const ALLOWED_CHAINS = [1, 10, 137, 8453, 42161, 11155111, 84532];
-    if (fields.chainId && !ALLOWED_CHAINS.includes(fields.chainId)) {
-      return NextResponse.json({ ok: false, error: 'Unsupported chain. Please connect to Ethereum or Base.' }, { status: 401 });
+
+    // Any EVM chain id is accepted. An EOA signature does not depend on the
+    // chain, and the wallet modal offers chains (BNB, Linea, Avalanche,
+    // zkSync, World Chain, ...) that an older allow-list here rejected with
+    // "Unsupported chain", so wallets on those networks could not sign in.
+    if (!Number.isSafeInteger(fields.chainId) || fields.chainId <= 0) {
+      return NextResponse.json({ ok: false, error: 'The signed message has no valid chain id.' }, { status: 401 });
     }
 
     if (fields.nonce !== nonce) {

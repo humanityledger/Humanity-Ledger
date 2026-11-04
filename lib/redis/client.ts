@@ -18,7 +18,18 @@ function createMockRedis(name?: string) {
     return {
         on: () => {},
         get: async (k: string) => memoryStore.get(k) ?? null,
-        set: async (k: string, v: any) => { memoryStore.set(k, v); return 'OK'; },
+        // Honours NX and EX like Redis, so single-use markers (SET key 1 EX ttl NX)
+        // behave the same with or without a real server.
+        set: async (k: string, v: any, ...args: any[]) => {
+            const flags = args.map((a) => String(a).toUpperCase());
+            if (flags.includes('NX') && memoryStore.has(k)) return null;
+            memoryStore.set(k, v);
+            const ex = flags.indexOf('EX');
+            if (ex !== -1 && Number(args[ex + 1]) > 0) {
+                setTimeout(() => memoryStore.delete(k), Number(args[ex + 1]) * 1000).unref?.();
+            }
+            return 'OK';
+        },
         setex: async (k: string, s: number, v: any) => {
             memoryStore.set(k, v);
             setTimeout(() => memoryStore.delete(k), s * 1000);
