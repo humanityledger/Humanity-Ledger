@@ -1,0 +1,69 @@
+# Screenshots of the public surfaces for design review. On claude/** pushes
+# that touch the UI, builds the app, captures desktop and mobile shots, and
+# pushes them to the orphan branch `ui-shots` under <short sha>/.
+
+name: UI screenshots
+
+on:
+  push:
+    branches: ['claude/**']
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'lib/docs/**'
+      - 'scripts/ui/**'
+      - '.github/workflows/ui-shots.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ui-shots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci --legacy-peer-deps
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_ZK_MODE: testnet
+          JWT_SECRET: test_secret_key_minimum_32_characters_long_for_ci
+          ENCLAVE_PIN_PEPPER: test_pepper_secret_minimum_32_chars
+          ENCLAVE_PIN_SECRET: test_pin_secret_minimum_32_chars
+      - name: Playwright
+        run: npm install --no-save --no-audit --no-fund playwright@1.49.1 && npx playwright install --with-deps chromium
+      - name: Capture
+        env:
+          JWT_SECRET: test_secret_key_minimum_32_characters_long_for_ci
+          ENCLAVE_PIN_PEPPER: test_pepper_secret_minimum_32_chars
+          ENCLAVE_PIN_SECRET: test_pin_secret_minimum_32_chars
+        run: |
+          npx next start -p 3100 > next.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3100/ >/dev/null && break; sleep 2; done
+          node scripts/ui/screenshots.mjs http://localhost:3100 "shots/${GITHUB_SHA::8}"
+      - name: Publish to the ui-shots branch
+        run: |
+          set -e
+          dir="shots/${GITHUB_SHA::8}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          tmp="$(mktemp -d)"; cp -r "$dir" "$tmp/"
+          if git ls-remote --exit-code origin ui-shots >/dev/null 2>&1; then
+            git fetch origin ui-shots --depth 1 && git checkout -q -B ui-shots FETCH_HEAD
+          else
+            git checkout -q --orphan ui-shots && git rm -rfq . && git clean -fdq
+          fi
+          rm -rf "${GITHUB_SHA::8}"; cp -r "$tmp/${GITHUB_SHA::8}" .
+          git add "${GITHUB_SHA::8}"
+          git commit -qm "ui shots ${GITHUB_SHA::8}"
+          git push -q origin ui-shots
