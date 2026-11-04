@@ -54,7 +54,7 @@
     "ledger:keepalive": "bash scripts/keep-ledger-alive.sh",
     "deploy:system": "npx hardhat run scripts/deploy-system.ts --network base",
     "deploy:system:testnet": "npx hardhat run scripts/deploy-system.ts --network baseGoerli",
-    "test:contracts": "cross-env TS_NODE_TRANSPILE_ONLY=1 hardhat test test/contracts_invariants.test.ts test/HumanTimeLock.test.ts test/LedgerDeadmanSwitch.test.ts test/ZKIdentityRegistry.test.ts --network hardhat",
+    "test:contracts": "cross-env TS_NODE_TRANSPILE_ONLY=1 hardhat test test/contracts_invariants.test.ts test/HumanTimeLock.test.ts test/LedgerDeadmanSwitch.test.ts test/ZKIdentityRegistry.test.ts test/ZKVerificationKeyRegistry.test.ts --network hardhat",
     "test:deadman": "npx hardhat test test/LedgerDeadmanSwitch.test.ts --network hardhat",
     "test:timelock": "npx hardhat test test/HumanTimeLock.test.ts --network hardhat",
     "test:gas": "REPORT_GAS=true npx hardhat test --network hardhat",
