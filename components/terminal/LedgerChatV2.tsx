@@ -751,6 +751,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, []);
 
   const [contextMenu, setContextMenu] = useState<{ id: string, content: string, x: number, y: number } | null>(null);
+  const [msgDetails, setMsgDetails] = useState<any | null>(null);
 
   // ─── Phase 4: Ecosystem Features ─────────────────────────────────────────────
   const [archivedPeers, setArchivedPeers] = useState<Set<string>>(new Set());
@@ -5925,6 +5926,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                               executeSend(`__REVOKE__${id}`);
                             } else {
                               setContextMenu({ id, content, x: e?.clientX ?? 0, y: e?.clientY ?? 0 });
+                              // Short haptic tick on touch devices, skipped when the user asks for reduced motion.
+                              try {
+                                if (typeof navigator !== 'undefined' && 'vibrate' in navigator && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) navigator.vibrate(8);
+                              } catch {}
                             }
                           }}
                           onOpenLightbox={(url) => setLightboxImg(url)}
@@ -6850,20 +6855,54 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                <div
                  role="menu"
                  aria-label="Message actions"
-                 className="absolute bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)] p-1.5 min-w-[200px] flex flex-col animate-in fade-in zoom-in-95 duration-150"
+                 ref={(el) => { if (el && !el.contains(document.activeElement)) (el.querySelector('[role="menuitem"]') as HTMLElement | null)?.focus(); }}
+                 className="absolute bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)] p-1.5 min-w-[220px] max-h-[calc(100vh-16px)] overflow-y-auto flex flex-col motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-150"
                  style={{
-                   top: Math.max(8, Math.min(contextMenu.y, window.innerHeight - 380)),
-                   left: Math.max(8, Math.min(contextMenu.x, window.innerWidth - 216)),
+                   top: Math.max(8, Math.min(contextMenu.y, window.innerHeight - 520)),
+                   left: Math.max(8, Math.min(contextMenu.x, window.innerWidth - 236)),
                  }}
                  onClick={e => e.stopPropagation()}
+                 onKeyDown={(e) => {
+                   if (e.key === 'Escape') { e.preventDefault(); setContextMenu(null); return; }
+                   if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
+                   e.preventDefault();
+                   const items = Array.from(e.currentTarget.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
+                   const i = items.indexOf(document.activeElement as HTMLElement);
+                   const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1
+                     : e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
+                   items[next]?.focus();
+                 }}
                >
+                 {/* Quick reactions. Sent as a __REACT__ message (the format every
+                     Ledger Chat client already reads), not as the XMTP reaction
+                     content type: that codec is not installed yet. */}
+                 <div className="flex items-center justify-between gap-1 px-1.5 pb-1.5 mb-1 border-b border-[#eceef2]" aria-label="React">
+                   {['👍', '❤️', '😂', '😮', '😢', '🙏'].map((emoji) => (
+                     <button
+                       key={emoji}
+                       role="menuitem"
+                       type="button"
+                       aria-label={`React with ${emoji}`}
+                       onClick={() => { executeSend(`__REACT__${contextMenu.id}__::${emoji}`); setContextMenu(null); }}
+                       className="w-9 h-9 rounded-full text-[19px] leading-none hover:bg-[#f2f4f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#15171c] transition-colors"
+                     >
+                       {emoji}
+                     </button>
+                   ))}
+                 </div>
                  <button role="menuitem" type="button" onClick={() => { setReplyingTo({ id: contextMenu.id, content: contextMenu.content }); setContextMenu(null); setTimeout(() => inputRef.current?.focus(), 100); }} className={item}>
                    <Reply size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Reply
                  </button>
                  <button role="menuitem" type="button" onClick={() => { setThreadParentId(contextMenu.id); setContextMenu(null); }} className={item}>
                    <MessagesSquare size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Reply in thread
                  </button>
-                 <button role="menuitem" type="button" onClick={() => { navigator.clipboard.writeText(contextMenu.content.replace(/^\[.*?\]/, '')); toast.success('Copied'); setContextMenu(null); }} className={item}>
+                 <button role="menuitem" type="button" onClick={() => {
+                   navigator.clipboard.writeText(contextMenu.content.replace(/^\[.*?\]/, '').replace(/^__BURN_\d+__::/, ''));
+                   // A disappearing message is removed from this chat, but a pasted copy is not.
+                   if (/^__BURN_\d+__::/.test(contextMenu.content)) toast.success('Copied. This message disappears from the chat; the copy you paste elsewhere does not.');
+                   else toast.success('Copied');
+                   setContextMenu(null);
+                 }} className={item}>
                    <Copy size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Copy
                  </button>
                  <button role="menuitem" type="button" title="Opens Ledger Studio with this message in the composer. Nothing is sent until you press send there." onClick={() => {
@@ -6875,6 +6914,23 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                  </button>
                  <button role="menuitem" type="button" onClick={() => { setForwardMsg({ id: contextMenu.id, content: contextMenu.content }); setContextMenu(null); }} className={item}>
                    <Forward size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Forward
+                 </button>
+                 {!mine && activePeer && (
+                   <>
+                     <button role="menuitem" type="button" title="Private payment on the Aztec test network, signed in your browser." onClick={() => { setContextMenu(null); setShowZkModal(true); }} className={item}>
+                       <ShieldCheck size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Send private payment
+                     </button>
+                     <button role="menuitem" type="button" title="Payment from your Ethereum wallet. You sign it in your wallet." onClick={() => { setContextMenu(null); setShowWalletTransfer(true); }} className={item}>
+                       <CreditCard size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Send payment
+                     </button>
+                   </>
+                 )}
+                 <button role="menuitem" type="button" onClick={() => {
+                   const m = messages.find(x => x.id === contextMenu.id);
+                   setMsgDetails({ id: contextMenu.id, sender: m?.senderAddress, sentAt: m?.sentAtNs || m?.sentAt || m?.sent, conversationId: m?.conversationId });
+                   setContextMenu(null);
+                 }} className={item}>
+                   <Info size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Details
                  </button>
                  <button role="menuitem" type="button" onClick={() => { executeSend(`__PIN__${contextMenu.id}`); setContextMenu(null); }} className={item}>
                    <Pin size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Pin
@@ -6890,7 +6946,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                  <div className="h-px bg-[#eceef2] my-1 mx-2" />
                  {mine ? (
                    <button role="menuitem" type="button" onClick={() => { setMessages(prev => prev.filter(m => m.id !== contextMenu.id)); executeSend(`__REVOKE__${contextMenu.id}`); setContextMenu(null); }} className={`${item} text-[#d93036]`}>
-                     <Trash2 size={16} strokeWidth={1.8} /> Delete for everyone
+                     <Trash2 size={16} strokeWidth={1.8} /> <span className="flex flex-col"><span>Ask to delete for everyone</span><span className="text-[11.5px] text-[#8a1f23]">Hidden here and in Ledger Chat apps; other apps and saved copies may keep it</span></span>
                    </button>
                  ) : (
                    <button role="menuitem" type="button" onClick={() => { reportMessage(contextMenu.id, contextMenu.content); }} className={`${item} text-[#d93036]`}>
@@ -6900,6 +6956,24 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                </div>
              );
            })()}
+         </div>,
+         document.body
+       ) : null}
+
+       {/* Message details */}
+       {(msgDetails && typeof document !== 'undefined')
+         ? createPortal(
+         <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/30 p-4" onClick={() => setMsgDetails(null)} onKeyDown={(e) => { if (e.key === 'Escape') setMsgDetails(null); }}>
+           <div role="dialog" aria-modal="true" aria-labelledby="msg-details-title" className="bg-white rounded-2xl shadow-xl border border-[#e4e7ec] w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+             <h2 id="msg-details-title" className="text-[16px] font-semibold text-[#15171c] mb-3">Message details</h2>
+             <dl className="text-[13.5px] text-[#3b404a] space-y-2">
+               <div><dt className="font-medium text-[#15171c]">Sent</dt><dd>{msgDetails.sentAt ? new Date(Number(msgDetails.sentAt) || msgDetails.sentAt).toLocaleString() : 'Unknown'}</dd></div>
+               <div><dt className="font-medium text-[#15171c]">From</dt><dd className="font-mono break-all">{msgDetails.sender || 'Unknown'}</dd></div>
+               <div><dt className="font-medium text-[#15171c]">Encryption</dt><dd>End-to-end encrypted with MLS through XMTP. Only the members of this conversation can read it.</dd></div>
+               <div><dt className="font-medium text-[#15171c]">Message id</dt><dd className="font-mono break-all">{msgDetails.id}</dd></div>
+             </dl>
+             <button type="button" autoFocus onClick={() => setMsgDetails(null)} className="mt-4 w-full py-2.5 rounded-xl bg-[#15171c] text-white text-[14px] font-semibold">Close</button>
+           </div>
          </div>,
          document.body
        ) : null}
