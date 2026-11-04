@@ -1,7 +1,8 @@
-# End-to-end run of a keyed PrivateEscrow on Aztec testnet: throwaway
-# accounts paid by the sponsored FPC, a fresh test token, deposit with authwit,
-# claim with the claim secret. No secrets; every transaction hash goes to the
-# job summary and to the e2e-escrow-receipt artifact.
+# End-to-end run of keyed PrivateEscrow and PaymentStream instances on Aztec
+# testnet: throwaway accounts paid by the sponsored FPC, a fresh test token;
+# escrow claim before the deadline and refund after it, stream withdrawal
+# bounded by accrual. No secrets; every transaction hash goes to the job
+# summary and to the e2e-escrow-receipt artifact.
 
 name: Aztec escrow e2e (testnet)
 
@@ -31,7 +32,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --include=dev
-      - name: Keyed escrow, deposit and claim on testnet
+      - name: Keyed escrow (claim, refund) and stream (withdraw) on testnet
         run: node --conditions=browser --import tsx --import ./scripts/aztec/register.mjs scripts/aztec/e2e-escrow-testnet.mts
       - uses: actions/upload-artifact@v4
         if: always()
