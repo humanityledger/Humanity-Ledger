@@ -127,7 +127,7 @@ The harness executes six invariant testing engines in continuous rotation.
 ### Engine 6: Interleaved Full Battery Sweeps
 
 **Cadence:** every 30 minutes, an automated trigger invokes the complete test battery
-(`npm run test:run`, 1,332 tests in CI on 4 Nov 2026) to confirm that sustained system stress introduces zero state
+(`npm run test:run`, 1,338 tests in CI on 4 Nov 2026) to confirm that sustained system stress introduces zero state
 regressions into the main test suite.
 
 ---

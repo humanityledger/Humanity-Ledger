@@ -2,7 +2,7 @@
 
 **Document Reference:** HL-ARCH-SEC-2026.1  
 **Target Audience:** Aztec Foundation, zero-knowledge protocol researchers, security auditors  
-**Verification Baseline:** 1,332 unit and integration tests passing (CI, 4 Nov 2026) • 0 TypeScript compilation errors  
+**Verification Baseline:** 1,338 unit and integration tests passing (CI, 4 Nov 2026) • 0 TypeScript compilation errors  
 **Date:** 2 November 2026  
 **Canonical Commit:** `c8ecf97d`
 
@@ -25,7 +25,7 @@ decommissioned more than 200 unused legacy API endpoints.
 | Metric | Value |
 |---|---|
 | TypeScript strict compilation (`tsc --noEmit`) | 0 errors |
-| Vitest unit and integration test suite | 1,332 passing (CI, 4 Nov 2026) |
+| Vitest unit and integration test suite | 1,338 passing (CI, 4 Nov 2026) |
 | Hardhat contract invariant tests | 43 / 43 passing |
 | Property fuzz iterations | 60,000 |
 | npm audit vulnerabilities | 0 |
@@ -162,7 +162,7 @@ User-generated community applications execute inside sandboxed iframes governed 
 | Test Category | Command | Result |
 |---|---|---|
 | TypeScript strict compilation | `tsc --noEmit` | 0 errors |
-| Vitest unit and integration | `npm run test:run` | 1,332 passing (CI, 4 Nov 2026) |
+| Vitest unit and integration | `npm run test:run` | 1,338 passing (CI, 4 Nov 2026) |
 | Hardhat L1 contract invariants | `npm run test:contracts` | 43 / 43 passing |
 | Property fuzz (60,000 iterations) | `npm run test:run` | PASSING |
 | Forbidden pattern scan | `node scripts/forbidden-patterns.mjs` | 0 violations |

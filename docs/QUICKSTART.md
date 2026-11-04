@@ -69,7 +69,7 @@ http://localhost:3000
 Before making any code modifications, verify that the local environment reproduces the baseline test passes:
 
 ```bash
-# Execute unit and integration test suite (1,332 tests in CI on 4 Nov 2026)
+# Execute unit and integration test suite (1,338 tests in CI on 4 Nov 2026)
 npm run test:run
 
 # Execute L1 smart contract invariant suite (43 Hardhat tests)

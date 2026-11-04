@@ -19,7 +19,7 @@ is mapped to automated test suites that run synchronously on every local commit 
 2. **Non-Simulated Proving (A1)**: CI tripwires fail immediately if synthetic mock proofs, random field elements (`Fr.random`), or fake nullifiers are detected in production test paths.
 3. **High-Capacity Property Fuzzing (T12)**: 60,000 iterations exploring edge cases across fund conservation, signature parsing, constant-time comparison, memory zeroization, and sandbox payload ceilings.
 4. **L1 Settlement Invariants (A4)**: Automated EVM Cancun execution proving absence of administrative drain routes, timelock bypasses, or identity hijacking.
-5. **Pre-Commit Enforcement**: The pre-commit hook executes the full Vitest battery (1,332 tests in CI on 4 Nov 2026) (~22–25 seconds) before any commit can be created.
+5. **Pre-Commit Enforcement**: The pre-commit hook executes the full Vitest battery (1,338 tests in CI on 4 Nov 2026) (~22–25 seconds) before any commit can be created.
 
 ---
 
@@ -45,7 +45,7 @@ test/
 
 ## 3. Test Execution Reference
 
-### Full Test Battery (1,332 Vitest tests, CI 4 Nov 2026)
+### Full Test Battery (1,338 Vitest tests, CI 4 Nov 2026)
 ```bash
 npm run test:run
 ```

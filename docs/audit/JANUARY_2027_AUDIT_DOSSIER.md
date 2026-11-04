@@ -108,7 +108,7 @@ The audit scope encompasses:
 > Items marked `[x]` are verified at the current canonical commit (`c8ecf97d`, 2 November 2026).
 
 - [x] Zero forbidden security patterns across codebase (`node scripts/forbidden-patterns.mjs`).
-- [x] Unit, cryptographic, and resilience tests passing (`npm run test:run`: 1,332 passing in CI on 4 Nov 2026).
+- [x] Unit, cryptographic, and resilience tests passing (`npm run test:run`: 1,338 passing in CI on 4 Nov 2026).
 - [x] L1 contract invariant tests passing (`npm run test:contracts`: 43 / 43).
 - [x] Property fuzz suite passing (60,000 iterations, `test/property_fuzz.test.ts`).
 - [x] npm dependency audit clean (`npm audit`: 0 vulnerabilities).

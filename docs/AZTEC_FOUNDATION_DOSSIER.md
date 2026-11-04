@@ -31,7 +31,7 @@ An earlier version of this dossier pointed to commit `783df711` and described th
 | aztec-nr contracts (escrow, streams, identity) | Compile with Aztec 6.0.0; 32 TXE tests pass in CI; keyed escrow and stream instances of the current classes ran end to end on testnet; the first escrow and stream instances (4 Nov, morning) are keyless (do not use); all checked daily against the node | See [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](AZTEC_TESTNET_DEPLOYMENTS.md) for live contract addresses, class IDs and verification hashes |
 | Browser (Web Worker) prover for the standalone circuits | Real in tests only; not used by any page | `npx vitest run test/zk/browser-prover.test.ts` |
 | Keyed `PrivateEscrow` and `PaymentStream`, current classes, end to end (escrow claim and refund after the deadline, stream withdrawal bounded by accrual) | Real on Aztec testnet, 4 November 2026 (run 41881180186, blocks 18528 to 18542) | Workflow "Aztec escrow e2e (testnet)"; hashes in `docs/AZTEC_TESTNET_DEPLOYMENTS.md` |
-| Unit and integration tests | 1,332 passing in CI on 4 November 2026 (they mock external services such as the database, Redis and RPC providers where needed) | `npm run test:run` |
+| Unit and integration tests | 1,338 passing in CI on 4 November 2026 (they mock external services such as the database, Redis and RPC providers where needed) | `npm run test:run` |
 | Direct messages | Real, provided by XMTP | XMTP browser SDK 5.2.0 |
 | Community posts | Readable by our server | Disclosed in the product; migration to XMTP MLS groups is planned (`docs/communities/MLS_MIGRATION.md`) |
 
