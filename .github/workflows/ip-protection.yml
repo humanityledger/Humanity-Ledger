@@ -245,7 +245,8 @@ jobs:
             | grep -v -E 'CANARY_|secret-scan: allow' || true)
           if [ -n "$DB_MATCHES" ]; then
             echo "POTENTIAL SECRET LEAK DETECTED: DATABASE_URL with a literal password"
-            echo "$DB_MATCHES" | sed -E 's#(://[^:@/]+:)[^@]+@#\1<removed>@#' | head -5
+            # Password replaced by its first character and length.
+            echo "$DB_MATCHES" | perl -pe 's#(://[^:@/]+:)([^@]+)@#$1 . "<" . substr($2,0,1) . "..." . length($2) . " chars>@"#e' | head -5
             FAIL=1
           fi
 

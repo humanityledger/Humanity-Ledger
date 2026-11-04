@@ -20,7 +20,7 @@ global ONE_YEAR: u64 = 365 * 24 * 3600;
 
 struct Setup {
     env: TestEnvironment,
-    contract: AztecAddress,
+    credential: AztecAddress,
     issuer: AztecAddress,
     user: AztecAddress,
     root: Field,
@@ -57,17 +57,17 @@ unconstrained fn setup(jurisdiction: u32, extra_sanction: Field) -> Setup {
     let user = env.create_light_account();
     let expiry = env.last_block_timestamp() + ONE_YEAR;
     let root = credential_root(user, jurisdiction, expiry);
-    let contract = env.deploy("IdentityCredential").with_public_initializer(
+    let credential = env.deploy("IdentityCredential").with_public_initializer(
         issuer,
         IdentityCredential::interface().constructor(root, sanction_root(sanction_list(extra_sanction)), issuer),
     );
-    Setup { env, contract, issuer, user, root, expiry }
+    Setup { env, credential, issuer, user, root, expiry }
 }
 
 unconstrained fn claim(s: Setup, scope: Field, jurisdiction: u32, expiry: u64, list: [Field; 16]) {
     let _ = s.env.call_private(
         s.user,
-        IdentityCredential::at(s.contract).verify_and_claim(
+        IdentityCredential::at(s.credential).verify_and_claim(
             scope,
             s.root,
             SECRET,
@@ -87,7 +87,7 @@ unconstrained fn valid_credential_claims_once_per_scope() {
     claim(s, 1, SPAIN, s.expiry, sanction_list(250));
     // A different scope is a separate claim.
     claim(s, 2, SPAIN, s.expiry, sanction_list(250));
-    assert(s.env.view_public(IdentityCredential::at(s.contract).get_current_root()) == s.root);
+    assert(s.env.view_public(IdentityCredential::at(s.credential).get_current_root()) == s.root);
 }
 
 #[test(should_fail)]
@@ -113,33 +113,33 @@ unconstrained fn committed_sanction_list_rejects_a_member() {
 #[test(should_fail_with = "sanction list outdated")]
 unconstrained fn proof_against_an_old_sanction_list_fails_after_an_update() {
     let s = setup(SPAIN, 250);
-    s.env.call_public(s.issuer, IdentityCredential::at(s.contract).update_sanction_root(sanction_root(sanction_list(251))));
+    s.env.call_public(s.issuer, IdentityCredential::at(s.credential).update_sanction_root(sanction_root(sanction_list(251))));
     claim(s, 1, SPAIN, s.expiry, sanction_list(250));
 }
 
 #[test]
 unconstrained fn claim_against_the_updated_sanction_list_succeeds() {
     let s = setup(SPAIN, 250);
-    s.env.call_public(s.issuer, IdentityCredential::at(s.contract).update_sanction_root(sanction_root(sanction_list(251))));
+    s.env.call_public(s.issuer, IdentityCredential::at(s.credential).update_sanction_root(sanction_root(sanction_list(251))));
     claim(s, 1, SPAIN, s.expiry, sanction_list(251));
 }
 
 #[test(should_fail_with = "only issuer can update sanctions")]
 unconstrained fn only_the_issuer_updates_the_sanction_list() {
     let s = setup(SPAIN, 250);
-    s.env.call_public(s.user, IdentityCredential::at(s.contract).update_sanction_root(1));
+    s.env.call_public(s.user, IdentityCredential::at(s.credential).update_sanction_root(1));
 }
 
 #[test(should_fail_with = "only issuer can update root")]
 unconstrained fn only_the_issuer_updates_the_root() {
     let s = setup(SPAIN, 250);
-    s.env.call_public(s.user, IdentityCredential::at(s.contract).update_root(1));
+    s.env.call_public(s.user, IdentityCredential::at(s.credential).update_root(1));
 }
 
 #[test(should_fail_with = "root mismatch or expired")]
 unconstrained fn proof_against_a_replaced_root_fails() {
     let s = setup(SPAIN, 250);
-    s.env.call_public(s.issuer, IdentityCredential::at(s.contract).update_root(0x123));
+    s.env.call_public(s.issuer, IdentityCredential::at(s.credential).update_root(0x123));
     claim(s, 1, SPAIN, s.expiry, sanction_list(250));
 }
 
@@ -148,7 +148,7 @@ unconstrained fn wrong_secret_is_not_a_member() {
     let s = setup(SPAIN, 250);
     let _ = s.env.call_private(
         s.user,
-        IdentityCredential::at(s.contract).verify_and_claim(
+        IdentityCredential::at(s.credential).verify_and_claim(
             1, s.root, SECRET + 1, SPAIN, s.expiry, SALT, 0, [0; 32], sanction_list(250),
         ),
     );
@@ -161,11 +161,11 @@ unconstrained fn expired_credential_fails() {
     let user = env.create_light_account();
     let expiry = env.last_block_timestamp() + 10;
     let root = credential_root(user, SPAIN, expiry);
-    let contract = env.deploy("IdentityCredential").with_public_initializer(
+    let credential = env.deploy("IdentityCredential").with_public_initializer(
         issuer,
         IdentityCredential::interface().constructor(root, sanction_root(sanction_list(250)), issuer),
     );
     env.mine_block_at(expiry + 100);
-    let s = Setup { env, contract, issuer, user, root, expiry };
+    let s = Setup { env, credential, issuer, user, root, expiry };
     claim(s, 1, SPAIN, expiry, sanction_list(250));
 }
