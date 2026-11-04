@@ -8,9 +8,18 @@
   },
   "sponsoredFpc": "0x2d8fff82a3b0c15d0a89169e7d8d043e079ab94d52031f1de1e4972ebad169d3",
   "tokens": {
-    "zkUSDC": { "address": "0x0753220b168733678aec0b69efd3866127babba191e98383740f5ec4cd3566a5", "decimals": 6 },
-    "zkDAI": { "address": "0x187223e54a0492d76ef6f08d4a5dc0ac5428e59e588a09d65ffd42c22ac149f9", "decimals": 18 },
-    "zkETH": { "address": "0x1d612bbb8f52e5e5b3390528664a6af4e262eb47362d6675b23c835d20cd339e", "decimals": 18 }
+    "zkUSDC": {
+      "address": "0x0753220b168733678aec0b69efd3866127babba191e98383740f5ec4cd3566a5",
+      "decimals": 6
+    },
+    "zkDAI": {
+      "address": "0x187223e54a0492d76ef6f08d4a5dc0ac5428e59e588a09d65ffd42c22ac149f9",
+      "decimals": 18
+    },
+    "zkETH": {
+      "address": "0x1d612bbb8f52e5e5b3390528664a6af4e262eb47362d6675b23c835d20cd339e",
+      "decimals": 18
+    }
   },
   "contracts": [
     {
@@ -45,6 +54,57 @@
       "status": "do-not-use",
       "deployedOn": "2026-11-04",
       "note": "Deployed without public keys; same consequence as the PrivateEscrow instance above. Streams must use a keyed instance."
+    },
+    {
+      "name": "PrivateEscrow (keyed, end-to-end run)",
+      "address": "0x1e03bcfe5c8b325ffb5a6252b25f3cd9126960d009734dbfbf9d93173ec1d182",
+      "classId": "0x1e8340e05494363e696ad4f474ee2fdc88250887d69ce2c81706967ad84351d0",
+      "artifact": "contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json",
+      "holdsPrivateBalance": true,
+      "keyed": true,
+      "status": "active",
+      "deployedOn": "2026-11-04",
+      "note": "Deployed by the workflow 'Aztec escrow e2e (testnet)', run 41865790651: keyed universal deployment, deposit (tx 0x10700502\u20265f13, block 18445) and claim (tx 0x10fb36c0\u202623f2, block 18447). Custodies a throwaway test token; settled. Shows the per-agreement pattern; not an instance for new deposits."
+    }
+  ],
+  "e2eRuns": [
+    {
+      "workflow": "Aztec escrow e2e (testnet)",
+      "run": 41865790651,
+      "date": "2026-11-04",
+      "escrow": "0x1e03bcfe5c8b325ffb5a6252b25f3cd9126960d009734dbfbf9d93173ec1d182",
+      "token": "0x2c67d69fbfd215119869f848e9958566789e71b31f1982c5cbe839ab9f251d93",
+      "sender": "0x019eec31bbc5a541d09455c2aa05264ecf713b692fe42f32f28794a06704cc55",
+      "recipient": "0x1abd63935a72a735b930e48a07739c5349af3cf1eab8a91af2df00b66c17e27d",
+      "transactions": [
+        {
+          "step": "mint to sender (public)",
+          "txHash": "0x09cd9e7fbd665619c52d47048f24d9957c91b02d40d8bd878857fb0c9c9e2bf8",
+          "block": 18442
+        },
+        {
+          "step": "shield into sender private balance",
+          "txHash": "0x140773382d81907e5ebbe311cdbe53766e5b95ab546e14cd5b7cba4a8f34210c",
+          "block": 18443
+        },
+        {
+          "step": "deposit into keyed escrow (authwit)",
+          "txHash": "0x10700502f17d393476d27f019601318ccbe371baea056968f858e318e0815f13",
+          "block": 18445
+        },
+        {
+          "step": "claim by recipient",
+          "txHash": "0x10fb36c09b2fcb05ba68269ccd9d579d5cc3e00feb6c8d280359cfb7022223f2",
+          "block": 18447
+        }
+      ],
+      "checks": [
+        "escrow address equals the keyed instance computed locally",
+        "instance on the node carries its own public keys",
+        "sender private balance 60 -> 35 after deposit",
+        "recipient private balance 25 after claim",
+        "a second claim is refused: 'PrivateEscrow: escrow not found'"
+      ]
     }
   ]
 }

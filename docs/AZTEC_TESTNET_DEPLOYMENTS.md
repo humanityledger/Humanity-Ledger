@@ -12,6 +12,21 @@
 **Sponsored Fee Payment Contract (FPC):** `0x2d8fff82a3b0c15d0a89169e7d8d043e079ab94d52031f1de1e4972ebad169d3`  
 **Date of Deployment:** 4 November 2026  
 
+## Keyed PrivateEscrow, end to end (4 November 2026)
+
+The workflow [Aztec escrow e2e (testnet)](../.github/workflows/aztec-escrow-e2e.yml) ([`scripts/aztec/e2e-escrow-testnet.mts`](../scripts/aztec/e2e-escrow-testnet.mts)) runs the escrow as it is meant to be used, with throwaway accounts paid by the Sponsored FPC and a fresh test token, so anyone can repeat it without our keys. Run 41865790651 passed every check:
+
+| Step | Transaction | Block |
+| --- | --- | --- |
+| Mint to the sender (public) | `0x09cd9e7fbd665619c52d47048f24d9957c91b02d40d8bd878857fb0c9c9e2bf8` | 18442 |
+| Shield into the sender's private balance | `0x140773382d81907e5ebbe311cdbe53766e5b95ab546e14cd5b7cba4a8f34210c` | 18443 |
+| Deposit into a keyed `PrivateEscrow` (authwit for the token pull) | `0x10700502f17d393476d27f019601318ccbe371baea056968f858e318e0815f13` | 18445 |
+| Claim by the recipient with the claim secret | `0x10fb36c09b2fcb05ba68269ccd9d579d5cc3e00feb6c8d280359cfb7022223f2` | 18447 |
+
+- The escrow instance `0x1e03bcfe5c8b325ffb5a6252b25f3cd9126960d009734dbfbf9d93173ec1d182` is a universal deployment of the published `PrivateEscrow` class with public keys derived from a fresh secret; its address equals the one computed locally from that secret (`lib/aztec/keyed-deploy.ts`), and the node returns those keys.
+- Both parties registered the escrow with its secret. The sender's private balance went from 60 to 35 test tokens, the recipient's to 25, and a second claim was refused (`PrivateEscrow: escrow not found`).
+- The escrow and claim secrets were never printed or stored.
+
 ---
 
 ## 1. Native Aztec v6.0.0 Contracts
