@@ -203,9 +203,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # 11 commits so that each of the 10 scanned commits has its parent: in a
+      # shallow clone the oldest fetched commit diffs against an empty tree, so
+      # fetch-depth 10 scanned the whole repository as if it were "added".
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 10
+          fetch-depth: 11
 
       - name: Scan recent commits for accidentally leaked secrets
         run: |
@@ -219,12 +222,15 @@ jobs:
             "sk_live_[A-Za-z0-9]{20}"
             "AIzaSy[A-Za-z0-9_-]{33}"
             "-----BEGIN.*PRIVATE KEY-----"
-            "DATABASE_URL=postgresql://[^$]"
+            # user:password@ with a literal password; ${VAR}, <placeholder> and
+            # [REDACTED] forms are documentation, not credentials.
+            'DATABASE_URL=postgres(ql)?://[^:@/$[:space:]]+:[^@$<[[:space:]]+@'
             "NEXTAUTH_SECRET=[A-Za-z0-9+/]{32}"
           )
 
           for pattern in "${PATTERNS[@]}"; do
-            MATCHES=$(git log -10 --all -p -- . ':!.github/**' ':!test/**' ':!tests/**' ':!scripts/check-staged-secrets.mjs' | grep -E -e "$pattern" | grep -v -E "CANARY_|secret-scan: allow" || true)
+            # Only lines a commit adds: removing a leaked value must not fail the scan.
+            MATCHES=$(git log -10 -p --format= -- . ':!.github/**' ':!test/**' ':!tests/**' ':!scripts/check-staged-secrets.mjs' | grep -E '^\+' | grep -E -e "$pattern" | grep -v -E "CANARY_|secret-scan: allow" || true)
             if [ -n "$MATCHES" ]; then
               echo "POTENTIAL SECRET LEAK DETECTED: pattern '$pattern'"
               echo "$MATCHES" | head -5
