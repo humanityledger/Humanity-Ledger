@@ -1,0 +1,50 @@
+{
+  "$comment": "Machine-readable record of what Humanity Ledger has deployed on Aztec testnet. Checked against the live node by .github/workflows/aztec-deployments.yml (test/live/aztec-deployments.live.test.ts). docs/AZTEC_TESTNET_DEPLOYMENTS.md is the human-readable version of this file.",
+  "network": {
+    "name": "Aztec testnet (Alpha V6, Tierra)",
+    "nodeUrl": "https://aztec-testnet.drpc.org",
+    "l1ChainId": 11155111,
+    "rollupVersion": 679261766
+  },
+  "sponsoredFpc": "0x2d8fff82a3b0c15d0a89169e7d8d043e079ab94d52031f1de1e4972ebad169d3",
+  "tokens": {
+    "zkUSDC": { "address": "0x0753220b168733678aec0b69efd3866127babba191e98383740f5ec4cd3566a5", "decimals": 6 },
+    "zkDAI": { "address": "0x187223e54a0492d76ef6f08d4a5dc0ac5428e59e588a09d65ffd42c22ac149f9", "decimals": 18 },
+    "zkETH": { "address": "0x1d612bbb8f52e5e5b3390528664a6af4e262eb47362d6675b23c835d20cd339e", "decimals": 18 }
+  },
+  "contracts": [
+    {
+      "name": "IdentityCredential",
+      "address": "0x174e4652dd027f6de9dfe025d46fbfc4378039f19e67c53a34803a8079db56f0",
+      "classId": "0x2d3cef07dd06a489ccc524334c38e694f27d5757059d485cb04e20983d3d68ad",
+      "artifact": "contracts/aztec/identity/target/identity_credential-IdentityCredential.json",
+      "holdsPrivateBalance": false,
+      "keyed": false,
+      "status": "active",
+      "deployedOn": "2026-11-04",
+      "note": "Deployed with placeholder roots (identity 0x12345678, sanctions 0x87654321): no member can claim until the issuer sets a real identity root."
+    },
+    {
+      "name": "PrivateEscrow",
+      "address": "0x1d88555bead4ba81d1f93a16dd8366b5659d062928af1e57f94a75e08d343097",
+      "classId": "0x1e8340e05494363e696ad4f474ee2fdc88250887d69ce2c81706967ad84351d0",
+      "artifact": "contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json",
+      "holdsPrivateBalance": true,
+      "keyed": false,
+      "status": "do-not-use",
+      "deployedOn": "2026-11-04",
+      "note": "Deployed without public keys. Tokens deposited here become notes owned by a contract that has no nullifier key, so no PXE can ever spend them: deposits would be locked. Escrows must use a keyed instance (scripts/aztec/deploy-keyed.ts)."
+    },
+    {
+      "name": "PaymentStream",
+      "address": "0x0567a641e6e8e10b99bbe9f7c0787763b7ef6cfc75ef7e2c59d55dd754e2c895",
+      "classId": "0x07c8ec07c1c067cc3ddad361337a2418c48bbf818317792972d68ce1ed70186d",
+      "artifact": "contracts/aztec/streams/target/payment_stream-PaymentStream.json",
+      "holdsPrivateBalance": true,
+      "keyed": false,
+      "status": "do-not-use",
+      "deployedOn": "2026-11-04",
+      "note": "Deployed without public keys; same consequence as the PrivateEscrow instance above. Streams must use a keyed instance."
+    }
+  ]
+}

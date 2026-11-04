@@ -1,0 +1,40 @@
+# Checks deployments/aztec-testnet.json against the live Aztec testnet node:
+# each recorded contract exists, runs the recorded class (tied to the
+# committed artifact by test/unit/aztec/deployments-registry.test.ts) and
+# carries public keys exactly when the record says so. Read-only, no secrets.
+
+name: Aztec testnet deployments
+
+on:
+  schedule:
+    - cron: '41 7 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'deployments/**'
+      - 'contracts/aztec/*/target/**'
+      - 'test/live/aztec-deployments.live.test.ts'
+      - 'test/unit/aztec/deployments-registry.test.ts'
+      - '.github/workflows/aztec-deployments.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --include=dev --ignore-scripts
+      - name: Record matches the committed artifacts (offline)
+        run: npx vitest run test/unit/aztec/deployments-registry.test.ts
+      - name: Record matches the live node
+        env:
+          AZTEC_VERIFY_DEPLOYMENTS: '1'
+        run: npx vitest run test/live/aztec-deployments.live.test.ts --retry=0
