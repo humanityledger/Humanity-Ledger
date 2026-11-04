@@ -1,125 +1,59 @@
 "use client";
 
-import React, { useState } from 'react';
-import { ShieldCheck, ShieldAlert, Key, Zap, Building } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
+import { Building, ShieldQuestion } from 'lucide-react';
 
-// Simulating data mapping from GraphQL/Prisma 
-const GOLD_CANDIDATES = [
-  { id: 'binance', name: 'Binance Global', type: 'Exchange', typeLabel: 'Beginner-Friendly / Futures', reserveUsd: 115000000000, features: ['High Liquidity', 'Copy Attesting'] },
-  { id: 'uniswap', name: 'Uniswap', type: 'DEX', typeLabel: 'Decentralised Exchange', reserveUsd: 3500000000, features: ['AMM', 'Permissionless', 'Liquidity Pools'] },
-  { id: 'ledger', name: 'Ledger Nano', type: 'Wallet', typeLabel: 'Hardware Wallet', reserveUsd: 0, features: ['Cold Storage', 'EAL5+ Secure Element'] },
-  { id: 'aave', name: 'Aave', type: 'Lending', typeLabel: 'DeFi Lending Protocol', reserveUsd: 12000000000, features: ['Overcollateralised', 'Flash Loans', 'Yield'] },
+// A plain directory. The previous version showed "Solvency Verified" and
+// reserve figures for these platforms after a setTimeout, with no contract
+// call, no proof and no data source behind it (R-14 in
+// docs/zk/MASTER_PROMPT.md). Nothing here is verified, so nothing is shown as
+// verified.
+const PLATFORMS = [
+  { id: 'binance', name: 'Binance', typeLabel: 'Centralised exchange', features: ['Spot', 'Futures'] },
+  { id: 'uniswap', name: 'Uniswap', typeLabel: 'Decentralised exchange', features: ['AMM', 'Permissionless'] },
+  { id: 'ledger', name: 'Ledger Nano', typeLabel: 'Hardware wallet', features: ['Cold storage'] },
+  { id: 'aave', name: 'Aave', typeLabel: 'DeFi lending protocol', features: ['Overcollateralised loans'] },
 ];
 
 export default function GoldRegistryPage() {
-  const [verifying, setVerifying] = useState<string | null>(null);
-  const [verifiedList, setVerifiedList] = useState<Record<string, boolean>>({});
-
-  const triggerOnChainPing = (id: string, name: string) => {
-    setVerifying(id);
-    
-    // Simulate smart contract Ping to SystemValidator.sol
-    setTimeout(() => {
-      setVerifiedList(prev => ({ ...prev, [id]: true }));
-      setVerifying(null);
-    }, 2500);
-  };
-
   return (
-    <div className="min-h-screen bg-transparent text-[#050505] p-12">
-      <header className="mb-14">
-         <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 text-indigo-600 block mb-3">System Authority Hub</span>
-         <h1 className="text-5xl font-black tracking-tighter uppercase italic">System Gold Registry</h1>
-         <p className="mt-4 text-sm font-medium tracking-wide opacity-50 max-w-xl leading-relaxed">
-           We do not publish "reviews". We perform cryptographic audits. Execute an on-chain ping to verify platform solvency and reserve thresholds directly from the blockchain.
-         </p>
+    <div className="min-h-screen bg-transparent text-[#050505] p-6 md:p-12">
+      <header className="mb-10">
+        <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase">Platform directory</h1>
+        <p className="mt-4 text-sm font-medium tracking-wide opacity-60 max-w-xl leading-relaxed">
+          A list of platforms for reference. Humanity Ledger does not verify their reserves or solvency:
+          there is no proof-of-reserves check behind this page. Use each platform&apos;s own published
+          attestations and audits.
+        </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-6 max-w-[2560px] text-left">
-         {GOLD_CANDIDATES.map((node) => {
-           const isVerified = verifiedList[node.id];
-           const isSimulating = verifying === node.id;
-
-           return (
-             <div key={node.id} className={`bg-white p-6 border rounded-[2rem] shadow-lg transition-all ${isVerified ? 'border-green-500/30 shadow-green-500/5' : 'border-black/5 hover:border-black/10'}`}>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                   
-                   {/* Info Block */}
-                   <div className="flex items-center gap-6">
-                      <div className="w-16 h-16 bg-white/20 backdrop-blur-md border border-black/5 rounded-2xl flex items-center justify-center">
-                         <Building size={24} className="opacity-30" />
-                      </div>
-                      <div>
-                         <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
-                            {node.name}
-                            {isVerified && <ShieldCheck size={18} className="text-green-500" />}
-                         </h2>
-                         <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mt-1">{node.typeLabel}</p>
-                         <div className="flex gap-2 mt-3">
-                            {node.features.map(f => (
-                              <span key={f} className="text-[8px] font-mono font-bold uppercase tracking-widest bg-black/5 px-2 py-1 rounded-sm opacity-60">
-                                {f}
-                              </span>
-                            ))}
-                         </div>
-                      </div>
-                   </div>
-
-                   {/* Verification Action Block */}
-                   <div className="flex flex-col items-end gap-3 min-w-[200px]">
-                      {isVerified ? (
-                        <div className="w-full lg:w-1/3 bg-white/40 backdrop-blur-xl border border-black/10 rounded-3xl p-8 flex flex-col justify-between">
-                           <span className="text-[9px] font-black uppercase tracking-widest text-green-600 block mb-1">
-                              Solvency Verified
-                           </span>
-                           {node.reserveUsd > 0 && (
-                             <span className="font-mono text-sm text-green-700">
-                                Reserves: ${(node.reserveUsd / 1000000000).toFixed(2)}B
-                             </span>
-                           )}
-                        </div>
-                      ) : (
-                        <button 
-                          onClick={() => triggerOnChainPing(node.id, node.name)}
-                          disabled={isSimulating}
-                          className="w-full bg-white text-white px-6 py-4 rounded-xl flex items-center justify-center gap-3 hover:bg-[#111] transition-colors disabled:opacity-50"
-                        >
-                           {isSimulating ? (
-                             <Zap size={14} className="animate-pulse text-indigo-400" />
-                           ) : (
-                             <Key size={14} className="opacity-50" />
-                           )}
-                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                             {isSimulating ? 'Pinging Node...' : 'Verify Solvency'}
-                           </span>
-                        </button>
-                      )}
-                   </div>
-
+      <div className="grid grid-cols-1 gap-4 max-w-4xl text-left">
+        {PLATFORMS.map((p) => (
+          <div key={p.id} className="bg-white p-6 border border-black/10 rounded-2xl">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 border border-black/10 rounded-xl flex items-center justify-center">
+                  <Building size={20} className="opacity-50" aria-hidden="true" />
                 </div>
-
-                <AnimatePresence>
-                   {isVerified && (
-                     <motion.div 
-                       initial={{ opacity: 0, height: 0 }}
-                       animate={{ opacity: 1, height: 'auto' }}
-                       className="mt-6 pt-6 border-t border-black/5"
-                     >
-                        <a 
-                          href={`https://bridge.system.network/go/${node.id}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="block w-full text-center py-4 bg-white/20 backdrop-blur-md hover:bg-white/40 border border-black/5 text-[#050505] font-black uppercase text-[11px] tracking-[0.3em] rounded-xl transition-colors"
-                        >
-                           Open bridge
-                        </a>
-                     </motion.div>
-                   )}
-                </AnimatePresence>
-             </div>
-           );
-         })}
+                <div>
+                  <h2 className="text-lg font-black uppercase tracking-tight">{p.name}</h2>
+                  <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mt-1">{p.typeLabel}</p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {p.features.map((f) => (
+                      <span key={f} className="text-[10px] font-mono font-bold uppercase tracking-widest bg-black/5 px-2 py-1 rounded-sm">
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-2 text-xs font-semibold text-black/70">
+                <ShieldQuestion size={16} aria-hidden="true" />
+                Reserves: not verified by Humanity Ledger
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import {
   Settings, ChevronRight, Eye, EyeOff, Copy, Check,
   ExternalLink, RefreshCw, AlertTriangle, Zap, Lock, Key,
   BarChart3, Layers, Waves, FileText, QrCode,
-  X, Sparkles, Globe, ArrowUpRight, ArrowDownLeft, Clock, Cpu, Server
+  X, Sparkles, Globe, ArrowUpRight, ArrowDownLeft, Clock, Server
 } from 'lucide-react';
 import { getShieldedBalances, syncBalanceFromAztec, calculatePrivacyScore, getZkTransactionHistory, ZkShieldedBalance } from '@/lib/zk/zkMoney';
 import { getIdentity, createIdentity, updateIdentity, ZkIdentity } from '@/lib/zk/zkIdentity';
@@ -17,7 +17,6 @@ import { ZkBridgePortal } from './ZkBridgePortal';
 import { ZkPrivacyScore } from './ZkPrivacyScore';
 import { ZkStreamManager } from './ZkStreamManager';
 import { ZkShieldModal } from './ZkShieldModal';
-import { ZkMpcCeremony } from './ZkMpcCeremony';
 import { ZkSequencerDashboard } from './ZkSequencerDashboard';
 
 interface ZkSettingsPanelProps {
@@ -25,7 +24,7 @@ interface ZkSettingsPanelProps {
   onClose: () => void;
 }
 
-type SettingsTab = 'overview' | 'identity' | 'keys' | 'privacy' | 'streams' | 'bridge' | 'mpc' | 'sequencer';
+type SettingsTab = 'overview' | 'identity' | 'keys' | 'privacy' | 'streams' | 'bridge' | 'sequencer';
 
 export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) {
   const [tab, setTab] = useState<SettingsTab>('overview');
@@ -100,7 +99,6 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
     { key: 'privacy', label: 'Privacy', icon: <Lock size={15} /> },
     { key: 'streams', label: 'Streams', icon: <Waves size={15} /> },
     { key: 'bridge', label: 'Bridge', icon: <Layers size={15} /> },
-    { key: 'mpc', label: 'MPC Setup', icon: <Cpu size={15} /> },
     { key: 'sequencer', label: 'Sequencer & V6', icon: <Server size={15} /> },
   ];
 
@@ -483,11 +481,6 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
             {/* ─── Bridge Tab ──────────────────────────────────────────────────── */}
             {tab === 'bridge' && (
               <ZkBridgePortal userAddress={userAddress} />
-            )}
-
-            {/* ─── MPC Ceremony Coordinator Tab ───────────────────────────────── */}
-            {tab === 'mpc' && (
-              <ZkMpcCeremony userAddress={userAddress} className="border-0 shadow-none" />
             )}
 
             {/* ─── Sequencer & V6 Dashboard Tab ────────────────────────────────── */}
