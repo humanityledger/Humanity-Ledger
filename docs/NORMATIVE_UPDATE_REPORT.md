@@ -165,7 +165,7 @@ All were resolved:
 | P6: EAF Isolated Execution (A3) | `eaf_isolation.test` | 5 / 5 passing |
 | Property Fuzz (T12) | `property_fuzz.test` | 60,000 iterations passing |
 | Dependency Audit (T11) | `npm audit` | 0 vulnerabilities |
-| Full Test Suite | `npm run test:run` | 1,076 / 1,076 passing |
+| Full Test Suite | `npm run test:run` | 1,332 passing (CI, 4 Nov 2026) |
 
 The Humanity Ledger protocol has achieved strict technical conformance with Normative Specification
 Version 1.0, closing the gap between architectural design, low-level implementation, and user

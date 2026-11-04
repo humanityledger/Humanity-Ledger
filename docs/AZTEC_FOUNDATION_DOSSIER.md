@@ -1,17 +1,19 @@
 # Humanity Ledger — Technical Dossier for the Aztec Ecosystem
 
-**Date:** 3 November 2026
+**Date:** 4 November 2026
 **Repository:** [github.com/humanityledger/Humanity-Ledger](https://github.com/humanityledger/Humanity-Ledger)
-**Status:** Pre-release. Aztec testnet only. No external audit.
+**Status:** Pre-release. Aztec testnet only. No external audit. Not affiliated with the Aztec Foundation.
 **Engineering plan and full state table:** [`docs/zk/MASTER_PROMPT.md`](zk/MASTER_PROMPT.md) (Spanish)
 
 ---
 
 ## 1. Summary
 
-Humanity Ledger is a messaging application (Ledger Chat). Direct messages go over XMTP v3, which uses MLS (RFC 9420); we do not implement MLS ourselves. Private payments use an Aztec PXE in the browser with the standard `Token` and `SponsoredFPC` contracts on Aztec testnet.
+Humanity Ledger is a messaging application (Ledger Chat). Direct messages go over XMTP v3, which uses MLS (RFC 9420); we do not implement MLS ourselves. Private payments use an Aztec PXE in the browser with the standard `Token` contract (our test tokens zkUSDC, zkDAI and zkETH, which have no value) and `SponsoredFPC` on Aztec testnet. Private transfers hide the amount and the parties; shielding and unshielding are public steps.
 
-We also wrote three standalone Noir circuits (escrow, identity, streams). They compile with nargo 1.0.0 and prove with Barretenberg in our tests, but a review on 3 November 2026 found soundness issues in all three (section 4). We are not asking anyone to rely on them. We would value guidance on rewriting them as aztec-nr contracts.
+For escrow, payment streams and identity we wrote three aztec-nr v6 contracts (section 2.1). They compile with Aztec 6.0.0 and pass 30 TXE tests in CI, but they are not deployed. We would value a review of their design (section 5).
+
+We first wrote three standalone Noir circuits for the same purposes. A review on 3 November 2026 found soundness issues in all three (section 4). They remain in the repository as tested reference code; nothing relies on them.
 
 An earlier version of this dossier pointed to commit `783df711` and described the circuits as production circuits; they did not compile then. That description was wrong.
 
@@ -26,8 +28,11 @@ An earlier version of this dossier pointed to commit `783df711` and described th
 | Committed artifacts are the compiled ones and the VKs are pinned | Real | `node scripts/zk/check-artifacts.mjs` |
 | UltraHonk proving and verification with the pinned VK | Real in tests only (Node) | `npx vitest run test/unit/aztec/circuit-proving.test.ts test/zk/` |
 | ZK-01 reproduction (streams double claim) | Documented | `npx vitest run test/circuits/streams_zk01_known_issue.test.ts` |
+| aztec-nr contracts (escrow, streams, identity) | Compile with Aztec 6.0.0; 30 TXE tests pass in CI; not deployed | Workflow "Aztec contracts"; locally `aztec compile && aztec test` in each `contracts/aztec/<c>` (compile `test_token` first) |
+| Browser (Web Worker) prover for the standalone circuits | Real in tests only; not used by any page | `npx vitest run test/zk/browser-prover.test.ts` |
+| Unit and integration tests | 1,332 passing in CI on 4 November 2026 (they mock external services such as the database, Redis and RPC providers where needed) | `npm run test:run` |
 | Direct messages | Real, provided by XMTP | XMTP browser SDK 5.2.0 |
-| Community posts | Readable by our server | Disclosed in the product |
+| Community posts | Readable by our server | Disclosed in the product; migration to XMTP MLS groups is planned (`docs/communities/MLS_MIGRATION.md`) |
 
 Pinned verification keys (SHA-256 of `circuits/<c>/target/vk`, @aztec/bb.js 5.3.0):
 
@@ -39,7 +44,7 @@ Pinned verification keys (SHA-256 of `circuits/<c>/target/vk`, @aztec/bb.js 5.3.
 
 A VK registry contract with a timelock exists (`contracts/ZKVerificationKeyRegistry.sol`, Hardhat tests) and `lib/aztec/verifier.ts` can read it, but it is not deployed on any network.
 
-### 2.4 aztec-nr v6 contracts (`contracts/aztec/`)
+### 2.1 aztec-nr v6 contracts (`contracts/aztec/`)
 
 Three contracts written against `aztec-labs-eng/aztec-nr@v6.0.0`: `PrivateEscrow`, `PaymentStream` and `IdentityCredential`. They compile with Aztec 6.0.0 in CI (workflow "Aztec contracts") and pass 30 TXE tests there (escrow 10, identity 11, streams 9), using a test-only token (`contracts/aztec/test_token`). Nothing is deployed; the keyed deployment they need for private custody (`scripts/aztec/deploy-keyed.ts`) has not been run on testnet yet.
 
@@ -77,12 +82,14 @@ A review on 3 November 2026 found that the first version could not refund an esc
 
 ## 5. Direction, and our questions
 
-Meanwhile, v2 standalone circuits (`circuits/*_v2`) fix ZK-01 to ZK-05 with Poseidon2 and domain separation, a depth-32 identity tree, a committed sanction list, recipient-authorised escrow claims with sender refunds, and state chaining for streams. They compile and pass 36 tests in CI with nargo 1.0.0 but are not pinned and have no deployed verifier ([`docs/zk/V2_CIRCUITS.md`](zk/V2_CIRCUITS.md)).
+Meanwhile, v2 standalone circuits (`circuits/*_v2`) fix ZK-01 to ZK-05 with Poseidon2 and domain separation, a depth-32 identity tree, a committed sanction list, recipient-authorised escrow claims with sender refunds, and state chaining for streams. They compile and pass 36 tests in CI with nargo 1.0.0, and their VK hashes are pinned in CI (`scripts/zk/v2-vks.mjs`), but they have no deployed verifier that stores their state ([`docs/zk/V2_CIRCUITS.md`](zk/V2_CIRCUITS.md)).
 
-We plan to express escrow and streams as aztec-nr v6 contracts with notes, so that note ownership and the network's nullifier tree replace our hand-written state handling. For the escrow, two notes (claim for the recipient, refund for the sender) share one settlement nullifier; the claim sets `set_expiration_timestamp(deadline)` and the refund checks the anchor block timestamp against the deadline.
+Our direction is the aztec-nr contracts of section 2.1, so that note ownership and the network's nullifier tree replace hand-written state handling. In `PrivateEscrow`, two copies of one note (a claim note for the recipient, a refund note for the sender) publish the same settlement nullifier, so only one of claim and refund can land. The claim requires `anchor timestamp <= deadline` and sets `set_expiration_timestamp(min(deadline, anchor + 1 hour))`; the refund requires `anchor timestamp > deadline`. Escrow and stream balances are token notes owned by the contract, so the contract is deployed with public keys derived from a secret that the parties register in their PXE (`lib/aztec/keyed-deploy.ts`).
 
-1. Is that an idiomatic way to express "claim before the deadline, refund after it"?
-2. What pattern do you recommend for a contract that must hold a private balance?
+1. Is the shared settlement nullifier, with those timestamp checks, an idiomatic way to express "claim before the deadline, refund after it"?
+2. Is a keyed deployment whose secret is shared with the parties the pattern you recommend for a contract that holds a private balance, or is there a better one?
+3. Our contracts call the token through a raw `transfer_in_private` selector to avoid depending on a token crate. Is depending on the standard Token contract's interface preferred?
+4. `PaymentStream` has no sender cancel: the sender holds no note. What would you use for a cancel that races safely with withdrawals?
 
 ---
 
