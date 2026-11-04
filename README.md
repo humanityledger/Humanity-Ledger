@@ -13,8 +13,6 @@ Engineering plan:       docs/zk/MASTER_PROMPT.md
 Aztec review dossier:   docs/AZTEC_FOUNDATION_DOSSIER.md
 ```
 
-The state of every component, in one vocabulary (real on testnet, real in tests only, local demo, simulated, retired), is the table "Estado real por componente" in [`docs/zk/MASTER_PROMPT.md`](docs/zk/MASTER_PROMPT.md). This README does not claim more than that table.
-
 ---
 
 ## 1. Architecture
