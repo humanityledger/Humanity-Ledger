@@ -9,4 +9,31 @@
 import { register } from 'node:module';
 import 'fake-indexeddb/auto';
 
+// Node 20 polyfill for ECMAScript 2024 Set methods required by @aztec-labs/pxe
+if (!Set.prototype.intersection) {
+  Set.prototype.intersection = function (other) {
+    const res = new Set();
+    for (const elem of this) {
+      if (other.has(elem)) res.add(elem);
+    }
+    return res;
+  };
+}
+if (!Set.prototype.union) {
+  Set.prototype.union = function (other) {
+    const res = new Set(this);
+    for (const elem of other) res.add(elem);
+    return res;
+  };
+}
+if (!Set.prototype.difference) {
+  Set.prototype.difference = function (other) {
+    const res = new Set();
+    for (const elem of this) {
+      if (!other.has(elem)) res.add(elem);
+    }
+    return res;
+  };
+}
+
 register('./json-loader.mjs', import.meta.url);

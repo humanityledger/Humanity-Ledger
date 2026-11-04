@@ -2,7 +2,7 @@
   "name": "humanity-ledger",
   "version": "1.0.0",
   "private": true,
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT OR Apache-2.0",
   "author": "Humanity Ledger <humanityledger@icloud.com> (https://github.com/humanityledger)",
   "scripts": {
     "dev": "next dev",
