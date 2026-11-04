@@ -2,6 +2,8 @@
 
 > **Date**: 2025-10-20  
 > **Status**: Decided
+>
+> **Note (4 Nov 2026):** the `/prove` route described below was never built. The browser PXE runs inside the Aztec SDK's embedded wallet (`lib/aztec/wallet/client.ts`), and the standalone-circuit Web Worker prover (`lib/zk/prover.worker.ts`) is not wired into any page.
 
 ## Question
 
@@ -43,7 +45,7 @@ Server (no ZK state)
 | `lib/aztec/transfer.ts` | Private token transfer via `TokenContract` |
 | `lib/aztec/bridge.ts` | L1→L2 bridge with L1 receipt validation |
 | `lib/aztec/node.ts` | Aztec node health + fallback |
-| `public/workers/prover.worker.js` | Web Worker for proof generation |
+| `lib/zk/prover.worker.ts` | Web Worker for the standalone circuits (tests only; replaced the `0x` stub `public/workers/prover.worker.js` on 4 Nov 2026) |
 
 ## Testnet Gate
 

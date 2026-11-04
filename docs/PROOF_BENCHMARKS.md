@@ -76,7 +76,7 @@ npx tsx scripts/benchmark-proof-gen.ts --circuit escrow --iterations 50
 
 ```typescript
 // Target script — to be implemented when nargo is available
-import { UltraHonkBackend } from '@noir-lang/backend_barretenberg';
+import { Barretenberg, UltraHonkBackend } from '@aztec/bb.js'; // @noir-lang/backend_barretenberg was removed (R-07)
 import { Noir } from '@noir-lang/noir_js';
 import { readFileSync } from 'fs';
 

@@ -55,10 +55,7 @@ These have been eradicated in favor of verifiable system behavior:
 Humanity Ledger integrates the Aztec Network proving stack to provide programmable privacy and
 non-custodial asset management.
 
-- **Client-Side Proving via Web Worker:** Proof computation is executed in `public/workers/prover.worker.js`
-  inside isolated Web Worker threads. Pages serving proof generation are configured with
-  `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` to enable
-  multi-threaded WebAssembly execution.
+- **Client-Side Proving:** Private payment proofs are generated in the user's browser by the Aztec SDK's embedded PXE (`lib/aztec/wallet/client.ts`). For the standalone Noir circuits there is a Web Worker prover (`lib/zk/prover.worker.ts`, `lib/zk/browser-prover.ts`), real in tests only and not wired into any page. The earlier `public/workers/prover.worker.js` was a stub that returned `0x` and was removed on 4 November 2026. The middleware sets `Cross-Origin-Opener-Policy` / `Cross-Origin-Embedder-Policy` only for paths under `/prove`, and no such page exists yet, so no page runs cross-origin isolated today.
 - **Noir Circuit Invariants:**
   - `zk_escrow`: Conditional escrow releases governed by authorized witness (`authwit`) cryptographic
     signatures with timeout fallback.

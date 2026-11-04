@@ -35,7 +35,7 @@ export const DOCS_CONTENT = [
     title: "Cryptographic Proving Systems",
     content: [
       "Private token transfers and identity proofs utilize Aztec's Noir programming language and Barretenberg proving system.",
-      "Client-side proofs are computed in dedicated Web Workers to ensure responsive UI performance during constraint generation and witness calculation.",
+      "Private payment proofs are computed in your browser by the Aztec SDK, so witnesses and spending keys never reach our servers. A Web Worker prover for the standalone Noir circuits exists and is tested, but no page uses it yet.",
       "Mainnet execution is strictly gated behind formal security audits and legal compliance attestations.",
     ],
   },

@@ -371,7 +371,7 @@ Categories identified:
 |---|---|---|
 | `@aztec/aztec.js`, `@aztec/pxe`, etc. | Aztec SDK | Pre-release / heavy — version compatibility critical |
 | `snarkjs` | ZK proving | Referenced but circuit files missing — silent mock |
-| `@noir-lang/noir_js`, `@noir-lang/backend_barretenberg` | Noir proving | Installed, circuits not connected |
+| `@noir-lang/noir_js`, `@aztec/bb.js` | Noir proving | Used by `lib/zk/prover.ts` and `lib/zk/browser-prover.ts` (tests only); `@noir-lang/backend_barretenberg` removed on 4 Nov 2026 |
 | `@worldcoin/idkit` | Identity | External dependency on World |
 | `@xmtp/browser-sdk` | Messaging | Dependency on XMTP network |
 | `@ledgerhq/hw-app-eth`, `@ledgerhq/hw-transport-webhid` | Hardware wallet | WebHID — browser-only |

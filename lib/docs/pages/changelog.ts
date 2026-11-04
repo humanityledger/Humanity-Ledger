@@ -27,6 +27,13 @@ export const RELEASES: Release[] = [
     title: "Not yet released",
     note: "In the repository, waiting for the next deployment.",
     changes: [
+      { kind: "fixed", text: "Signing in at /connect works with wallets on any network the wallet list offers (BNB Chain, Linea, Avalanche, zkSync, World Chain and others), which were refused as unsupported." },
+      { kind: "fixed", text: "Signing in works on both humanidfi.com and www.humanidfi.com, and no longer fails when the server's cache missed the moment you asked to sign in." },
+      { kind: "fixed", text: "Smart contract wallets (Safe, Coinbase Smart Wallet and similar) can sign in." },
+      { kind: "improved", text: "When signing in fails, the page says why instead of always saying the signature was declined." },
+      { kind: "improved", text: "The message menu adds quick reactions, private and regular payments, message details and keyboard navigation. Deleting for everyone is now described as a request, because other apps can keep a copy." },
+      { kind: "improved", text: "Pinch to zoom works on every page." },
+      { kind: "security", text: "Screens that showed simulated cryptography were removed or say what is missing: the solvency check, the setup ceremony, the age proof and payment streams, which ran only in your browser and moved no money." },
       { kind: "new", text: "A legal notice, and a content and copyright page explaining how to report illegal content and how our code is licensed." },
       { kind: "improved", text: "Terms, Privacy Policy, Cookie Policy and risk disclosure rewritten to match the code: who provides the service, every cookie we set, and what the private payments wallet can and cannot do." },
       { kind: "improved", text: "Older pages that described a token, open source licensing or guarantees the product does not offer now lead to the matching documentation page." },

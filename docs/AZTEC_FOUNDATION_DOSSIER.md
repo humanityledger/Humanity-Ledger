@@ -37,19 +37,19 @@ Pinned verification keys (SHA-256 of `circuits/<c>/target/vk`, @aztec/bb.js 5.3.
 | identity | `0xcd02d2407de202d61e1a03c360633a9b0cdd8fe4b4d67b007cce108990632194` |
 | streams | `0xa79000bf70441f02ce5ec092f15771e93dfc3d990977a33de9991795bc374346` |
 
-No VK registry is deployed on any network.
+A VK registry contract with a timelock exists (`contracts/ZKVerificationKeyRegistry.sol`, Hardhat tests) and `lib/aztec/verifier.ts` can read it, but it is not deployed on any network.
 
 ### 2.4 aztec-nr v6 contracts (`contracts/aztec/`)
 
-Three contracts written against `aztec-labs-eng/aztec-nr@v6.0.0`: `PrivateEscrow`, `PaymentStream` and `IdentityCredential`. They compile with Aztec 6.0.0 in CI (workflow "Aztec contracts"); there are no TXE tests yet and nothing is deployed.
+Three contracts written against `aztec-labs-eng/aztec-nr@v6.0.0`: `PrivateEscrow`, `PaymentStream` and `IdentityCredential`. They compile with Aztec 6.0.0 in CI (workflow "Aztec contracts") and pass 30 TXE tests there (escrow 10, identity 11, streams 9), using a test-only token (`contracts/aztec/test_token`). Nothing is deployed; the keyed deployment they need for private custody (`scripts/aztec/deploy-keyed.ts`) has not been run on testnet yet.
 
-A review on 3 November 2026 found that the first version could not refund an escrow or cancel a stream (both popped notes from the sender's set, which had none), and that `pop_notes` without a selector destroyed a user's other escrows and streams. These are fixed; the findings, fixes and open limits (contract keys for private custody, raw-selector token calls, missing TXE tests) are in [`docs/zk/AZTEC_CONTRACTS_REVIEW.md`](zk/AZTEC_CONTRACTS_REVIEW.md).
+A review on 3 November 2026 found that the first version could not refund an escrow or cancel a stream (both popped notes from the sender's set, which had none), and that `pop_notes` without a selector destroyed a user's other escrows and streams. These are fixed; the findings, fixes and open limits (contract keys for private custody, raw-selector token calls) are in [`docs/zk/AZTEC_CONTRACTS_REVIEW.md`](zk/AZTEC_CONTRACTS_REVIEW.md).
 
 | Contract | What it does | State |
 |---|---|---|
-| `PrivateEscrow` | Claim note for the recipient, refund note for the sender, one settlement nullifier | Compiles; needs contract keys and TXE tests |
-| `PaymentStream` | Stream note re-created on each withdrawal (fixes the ZK-01 pattern); accrual from the anchor block | Compiles; no sender cancel |
-| `IdentityCredential` | Depth-32 membership, fixed and committed sanction lists, `SingleUseClaim` per scope | Compiles; needs TXE tests |
+| `PrivateEscrow` | Claim note for the recipient, refund note for the sender, one settlement nullifier | Compiles; 10 TXE tests (claim, refund after deadline, single settlement, isolation); not deployed |
+| `PaymentStream` | Stream note re-created on each withdrawal (fixes the ZK-01 pattern); accrual from the anchor block | Compiles; 9 TXE tests (partial withdrawals, accrual cap, isolation); no sender cancel; not deployed |
+| `IdentityCredential` | Depth-32 membership, fixed and committed sanction lists, `SingleUseClaim` per scope | Compiles; 11 TXE tests (one claim per scope, sanctions, issuer-only updates); not deployed |
 
 ## 3. What was removed or corrected in this revision
 

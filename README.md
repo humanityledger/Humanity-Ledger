@@ -67,7 +67,9 @@ The state of every component, in one vocabulary (real on testnet, real in tests 
 | Wallet keys never leave the device | `test/key_custody.test.ts`, `test/pxe_boundary_security.test.ts` | Unit tests of the key helpers, not an end-to-end audit |
 | MLS forward secrecy and post-compromise security | Provided by XMTP | `test/mls_post_compromise.test.ts` models an MLS key schedule inside the test file; it does not exercise the app or XMTP |
 | Standalone circuits reject the cases their asserts cover | `test/circuits/`, `test/unit/aztec/circuit-proving.test.ts` (real proving) | Each test proves one withdrawal in isolation; ZK-01 shows the streams circuit accepts repeated claims |
-| Verification keys are pinned | `test/zk/vk-pinning.test.ts`, `scripts/zk/check-artifacts.mjs` | No on-chain VK registry exists |
+| Verification keys are pinned | `test/zk/vk-pinning.test.ts`, `scripts/zk/check-artifacts.mjs` | The on-chain VK registry (`contracts/ZKVerificationKeyRegistry.sol`) is tested but not deployed |
+| aztec-nr contracts settle once, refund after the deadline, isolate escrows and streams | 30 TXE tests in `contracts/aztec/*/src/test.nr` (Aztec 6.0.0, CI) | Run against a test-only token in TXE; not deployed |
+| Sign-in (SIWE) rejects replays, forged nonces and foreign domains | `test/auth/siwe-routes.test.ts` (real route handlers and signatures) | Domain comes from `NEXT_PUBLIC_APP_URL` / `NEXT_PUBLIC_DOMAIN` |
 | Community apps cannot reach the network or the parent window | `test/eaf_isolation.adversarial.test.ts` | Checks the frame policy; an app can still navigate its own frame |
 | L1 contract invariants | `npm run test:contracts` | Local Hardhat tests; no external audit |
 
@@ -75,7 +77,7 @@ The state of every component, in one vocabulary (real on testnet, real in tests 
 
 ## 4. Noir circuits (experimental)
 
-The three circuits use `pedersen_hash` and compile with nargo 1.0.0. The binary verification keys were generated with @aztec/bb.js 5.3.0 and their SHA-256 hashes are pinned in `lib/aztec/verifier.ts`.
+The three circuits use `pedersen_hash` and compile with nargo 1.0.0. The binary verification keys were generated with @aztec/bb.js 5.3.0 and their SHA-256 hashes are pinned in `lib/zk/vk-pins.ts` (re-exported by `lib/aztec/verifier.ts`).
 
 | Circuit | Pinned VK SHA-256 |
 |---|---|

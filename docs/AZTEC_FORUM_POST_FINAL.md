@@ -1,5 +1,14 @@
 # Humanity Ledger and Ledger Chat: Engineering State Report at Commit 783df711
 
+> **Correction (4 November 2026).** This post describes the state at commit `783df711` and several of its statements are not true. The current state is in [`docs/STATUS.md`](STATUS.md). In particular:
+> - No proof from the standalone Noir circuits is submitted to the Aztec testnet.
+> - No verification key is anchored on chain. A timelocked VK registry contract exists and is tested (`contracts/ZKVerificationKeyRegistry.sol`), but it is not deployed.
+> - What runs on the testnet is the private wallet. Its proofs are generated in the browser by the Aztec SDK.
+> - The standalone circuits have known soundness issues, ZK-01 to ZK-07 (`docs/zk/MASTER_PROMPT.md`). Their Web Worker prover is real in tests only and not used by any page.
+> - Direct-message security (MLS, RFC 9420) is provided by XMTP. We do not implement it ourselves.
+> - The aztec-nr contracts that replace the circuits pass 30 TXE tests in CI (`contracts/aztec/`). They are not deployed.
+
+
 ***
 
 ## What This Post Is Not

@@ -1,6 +1,6 @@
 # Humanity Ledger — Protocol Status
 **Current status: pre-release, Aztec testnet only, no external audit.**
-**Last updated: 3 November 2026.** The engineering plan and the component-by-component state table live in [`docs/zk/MASTER_PROMPT.md`](zk/MASTER_PROMPT.md); this file summarises them and must not claim more.
+**Last updated: 4 November 2026.** The engineering plan and the component-by-component state table live in [`docs/zk/MASTER_PROMPT.md`](zk/MASTER_PROMPT.md); this file summarises them and must not claim more.
 
 > Earlier versions of this file described "full production circuits", "audited timelocked infrastructure" and RFC 9420 conformance proven by our own tests. Those statements were not supported by the code and were withdrawn on 3 November 2026.
 
@@ -14,8 +14,11 @@
 | Direct messages | Real, provided by XMTP v3 (MLS) | XMTP browser SDK 5.2.0 | We do not implement MLS ourselves |
 | Community posts | Readable by our server | Disclosed in the product | Migration plan: `docs/communities/MLS_MIGRATION.md` (task R-17) |
 | Standalone circuits v1 (`circuits/escrow`, `identity`, `streams`) | Real in tests only; VKs pinned | `scripts/zk/check-artifacts.mjs`, `test/zk/`, `test/circuits/` | Known soundness issues ZK-01 to ZK-07 |
-| Standalone circuits v2 (`circuits/*_v2`) | Experimental; compiled and tested in CI (`Noir circuits` workflow) | `docs/zk/V2_CIRCUITS.md` | Not proven end-to-end in TypeScript yet; VKs not pinned |
-| aztec-nr contracts (`contracts/aztec/`) | Compile with Aztec 6.0.0 in CI; fixed after review | `docs/zk/AZTEC_CONTRACTS_REVIEW.md` | No TXE tests, no deployment; private custody needs contract keys |
+| Standalone circuits v2 (`circuits/*_v2`) | Experimental; compiled and tested in CI (`Noir circuits` workflow); VK hashes pinned in `scripts/zk/v2-vks.mjs` | `docs/zk/V2_CIRCUITS.md` | No deployed verifier stores their state yet |
+| aztec-nr contracts (`contracts/aztec/`) | Compile with Aztec 6.0.0 and pass 30 TXE tests in CI (escrow 10, identity 11, streams 9) | `docs/zk/AZTEC_CONTRACTS_REVIEW.md`, workflow "Aztec contracts" | Not deployed; keyed deployment (`scripts/aztec/deploy-keyed.ts`) not yet run on testnet |
+| On-chain VK registry (`contracts/ZKVerificationKeyRegistry.sol`) | Real in tests only (Hardhat) | `test/ZKVerificationKeyRegistry.test.ts`, `test/zk/vk-registry-onchain.test.ts` | Not deployed; `assertVKIntegrityOnChain` throws until it is |
+| Browser prover (`lib/zk/browser-prover.ts`, Web Worker) | Real in tests only; no Node built-ins; pinned VK | `test/zk/browser-prover.test.ts` | Not wired into any screen |
+| Sign-in (SIWE at `/connect`) | Real: sealed single-use nonce, any EVM chain, www/apex domain, ERC-1271/6492 wallets | `test/auth/siwe-routes.test.ts` (real route handlers and signatures) | Needs `NEXT_PUBLIC_APP_URL` or `NEXT_PUBLIC_DOMAIN` set in production |
 | L1 contracts | Local tests; not audited, not deployed to mainnet | `npm run test:contracts` | `ZKIdentityRegistry.verifyCredential` reverts until a verifier exists |
 | Community apps sandbox | Real (CSP `sandbox allow-scripts`, no network) | `test/eaf_isolation.adversarial.test.ts` | An app can navigate its own frame |
 
@@ -68,8 +71,8 @@ npx vitest run test/key_custody.test.ts
 # 2. MLS post-compromise security P2 (Epoch ratcheting)
 npx vitest run test/mls_post_compromise.test.ts
 
-# 3. Noir circuits & UltraHonk constraint tests (21 tests)
-npx vitest run test/circuits/
+# 3. Noir circuits & UltraHonk constraint tests
+npx vitest run test/circuits/ test/zk/
 
 # 4. Aztec PXE zero simulation static verification
 npx vitest run test/aztec_e2e_no_simulation.test.ts
@@ -99,8 +102,18 @@ npx vitest run test/property_fuzz.test.ts
 npm run test:crypto
 npm run test:scan
 
-# 13. Supply-chain security audit (0 vulnerabilities verified)
+# 13. Supply-chain security audit
 npm audit
+
+# 14. Sign-in routes (SIWE) with real signatures
+npx vitest run test/auth/
+
+# 15. aztec-nr contracts: compile and TXE tests (needs the Aztec 6.0.0 toolchain)
+(cd contracts/aztec/test_token && aztec compile)
+for c in escrow identity streams; do (cd contracts/aztec/$c && aztec compile && aztec test); done
+
+# 16. L1 contracts including the VK registry
+npm run test:contracts
 ```
 
 ---
@@ -113,9 +126,9 @@ npm audit
 |---|---|---|---|
 | 1.1 | Verification logs committed | ✅ DONE | `docs/verification-logs/` |
 | 2.1 | Client-side VK hash assertion | ✅ DONE | `docs/VK_MONITORING.md`, `lib/aztec/verifier.ts` |
-| 2.1 | 60-second VK detectability | ✅ DOCUMENTED | `docs/VK_MONITORING.md` §6 |
+| 2.1 | 60-second VK detectability | ❌ WITHDRAWN (3 Nov): there is no alert path; VK changes are caught by CI pins | `docs/VK_MONITORING.md` §1 |
 | 2.2 | Proof generation benchmarks | ✅ DONE | `docs/PROOF_BENCHMARKS.md` |
-| 2.3 | DEPRECATED/RETIRED VK client behavior | ✅ DONE | `docs/VK_MONITORING.md` §4 |
+| 2.3 | DEPRECATED/RETIRED VK client behavior | ✅ DONE (registry tested, not deployed) | `docs/VK_MONITORING.md` §4, `lib/aztec/verifier.ts` |
 | 2.4 | Sequencer censorship fallback | ✅ DONE | `docs/SEQUENCER_RESILIENCE.md` |
 | 3.1 | `docs/AUDIT_SCOPE.md` | ✅ DONE | `docs/AUDIT_SCOPE.md` |
 | 3.2 | SBOM generation command | ✅ DONE | `docs/SUPPLY_CHAIN.md` §3 |

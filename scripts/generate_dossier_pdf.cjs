@@ -277,7 +277,7 @@ const htmlContent = `<!DOCTYPE html>
   </p>
   <ul>
     <li>
-      <strong>Client-Side PXE Proving:</strong> Proof computation is offloaded to <code>public/workers/prover.worker.js</code> in isolated Web Worker threads. Pages serving proof generation are configured with Cross-Origin Opener Policy (<code>same-origin</code>) and Cross-Origin Embedder Policy (<code>require-corp</code>) to enable high-performance multi-threaded WebAssembly execution.
+      <strong>Client-Side Proving:</strong> Private payment proofs are generated in the user's browser by the Aztec SDK's embedded PXE. The standalone Noir circuits have a Web Worker prover (<code>lib/zk/prover.worker.ts</code>), real in tests only and not wired into any page.
     </li>
     <li>
       <strong>Noir Smart Contract Invariants:</strong>

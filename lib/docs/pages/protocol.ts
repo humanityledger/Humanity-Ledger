@@ -245,7 +245,7 @@ export const whitepaper: DocPage = {
     { t: "h2", text: "2. Identity and sessions", id: "identity" },
     {
       t: "p",
-      text: "Authentication follows EIP-4361. The client requests a single use nonce from the server, which also stores it in a short lived cookie. The client constructs a Sign in with Ethereum message containing the domain, the address, the nonce, the issue time and the chain, and the wallet signs it. The server recovers the signer, checks that it matches the address in the message, and checks the domain and the nonce before issuing a session.",
+      text: "Authentication follows EIP-4361. The client requests a nonce from the server, which returns it together with a cookie sealed by the server and valid for ten minutes, so only a nonce the server issued can be used. The client constructs a Sign in with Ethereum message containing the domain, the address, the nonce, the issue time and the chain, and the wallet signs it. The server checks the domain against its configured address (with or without `www.`), checks the nonce and its age, marks the nonce as used so it cannot be used twice, and recovers the signer, which must match the address in the message. Smart contract wallets are checked on their own chain (ERC-1271 and ERC-6492). Any EVM chain is accepted, since a wallet signature does not depend on the chain.",
     },
     {
       t: "p",

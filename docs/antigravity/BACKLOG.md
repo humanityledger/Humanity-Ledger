@@ -259,7 +259,7 @@ Pilar = hoy + (100 − hoy) × (peso de tareas "Hecha" ÷ peso total del pilar).
 | --- | --- | --- | --- | --- | --- |
 | H-001 | Decidir dónde viven las claves Aztec: cartera externa o PXE en el navegador | `docs/zk/architecture.md` | Decisión documentada | P0 | Pendiente |
 | H-002 | Fijar versiones estables exactas de `@aztec/*` (hoy `^6.0.0-nightly`) | `package.json` | Sin nightly ni rangos | P0 | Pendiente |
-| H-003 | Borrar `@noir-lang/backend_barretenberg` y `lib/zk/NoirClientProver.ts` | `package.json`, `lib/zk/` | Build verde sin ellos | P1 | Pendiente |
+| H-003 | Borrar `@noir-lang/backend_barretenberg` y `lib/zk/NoirClientProver.ts` | `package.json`, `lib/zk/` | Build verde sin ellos | P1 | Hecho (4 nov): el paquete se quitó y `NoirClientProver.ts` ya no existía |
 | H-004 | Borrar `lib/aztec/pxe/sidecar.ts`: un PXE en el servidor contradice la no custodia | `lib/aztec/pxe/sidecar.ts` | Ningún PXE en el servidor | P0 | Pendiente |
 | H-005 | Actualizar `aztec-ci.yml` de `@aztec/cli@0.67.0` a la versión fijada, con red local en CI | `.github/workflows/aztec-ci.yml` | El job de Aztec pasa con la versión correcta | P0 | Pendiente |
 | H-006 | `lib/aztec/wallet.ts`: conexión de cartera o creación de cuenta | nuevo `lib/aztec/wallet.ts` | Prueba e2e: cuenta nueva con dirección Aztec visible | P0 | Pendiente |
@@ -269,7 +269,7 @@ Pilar = hoy + (100 − hoy) × (peso de tareas "Hecha" ÷ peso total del pilar).
 | H-010 | El PXE del receptor descubre la nota y la UI actualiza el saldo | `lib/aztec/` | El saldo de Bob sube tras el pago de Alice | P0 | Pendiente |
 | H-011 | Estado real de la transacción (pendiente, minada, fallida) desde el nodo | `lib/aztec/` | Estados reflejados en la UI | P1 | Pendiente |
 | H-012 | Progreso honesto de la prueba (tiempo transcurrido); borrar `PROOF_STEPS` | `lib/zk/zkMoney.ts` L38–48 | `grep PROOF_STEPS` vacío | P1 | Pendiente |
-| H-013 | Prover en un Web Worker, en una ruta `/prove` con COOP/COEP | nuevo worker | La UI no se congela durante la prueba | P1 | Pendiente |
+| H-013 | Prover en un Web Worker, en una ruta `/prove` con COOP/COEP | nuevo worker | La UI no se congela durante la prueba | P1 | En curso (4 nov): `lib/zk/prover.worker.ts` existe y está probado; falta conectarlo a una pantalla y probarlo en Safari iOS |
 | H-014 | Medir y publicar tiempos de prueba en 3 dispositivos | `docs/zk/benchmarks.md` | Tabla con dispositivo, hilos y segundos | P2 | Pendiente |
 | H-015 | Puente L1→L2 estándar (TokenPortal + TokenBridge, `claim_private`) | contratos estándar | Prueba e2e en red local | P1 | Pendiente |
 | H-016 | Retiro L2→L1 con mensaje de salida y consumo en L1 | contratos estándar | Prueba e2e en red local | P2 | Pendiente |
@@ -284,7 +284,7 @@ Pilar = hoy + (100 − hoy) × (peso de tareas "Hecha" ÷ peso total del pilar).
 | H-025 | Facturas: solicitud firmada con referencia; pagada solo al detectar la transferencia | `lib/zk/zkInvoice.ts` | Una factura no se marca pagada sin transferencia | P2 | Pendiente |
 | H-026 | Propinas sobre la transferencia real | `SendTipModal.tsx` | La propina mueve fondos reales en testnet | P2 | Pendiente |
 | H-027 | Retirar la tesorería de comunidad en localStorage hasta tener una multifirma real | `ZkCommunityTreasury.tsx` | Componente retirado o tras flag apagado | P1 | Pendiente |
-| H-028 | Retirar `ZkComplianceModal` simulado hasta tener diseño legal | `components/zk/ZkComplianceModal.tsx` | No visible en producción | P1 | Pendiente |
+| H-028 | Retirar `ZkComplianceModal` simulado hasta tener diseño legal | `components/zk/ZkComplianceModal.tsx` | No visible en producción | P1 | Hecho (4 nov): el modal ya no existía; `lib/zk/zkCompliance.ts` se borró |
 | H-029 | Retirar `ZkMpcCeremony` (no hay ceremonia real) | `components/zk/ZkMpcCeremony.tsx` | No visible en producción | P1 | Pendiente |
 | H-030 | Retirar o conectar a métricas reales el panel del secuenciador | `ZkSequencerDashboard.tsx` | Sin datos aleatorios | P1 | Pendiente |
 | H-031 | Retirar la puntuación de privacidad inventada | `ZkPrivacyScore.tsx`, `calculatePrivacyScore` | No visible en producción | P1 | Pendiente |

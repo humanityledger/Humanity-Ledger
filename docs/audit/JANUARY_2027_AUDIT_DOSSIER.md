@@ -49,8 +49,7 @@ The audit scope encompasses:
 ### 2.3 Zero-Knowledge Proofs and Aztec L2
 
 - **Language:** Noir (Aztec ecosystem).
-- **Prover Architecture:** Dedicated Web Worker (`public/workers/prover.worker.js`) on the client
-  device; private witnesses never traverse the server or React rendering.
+- **Prover Architecture:** Private payment proofs are generated in the user's browser by the Aztec SDK's embedded PXE (`lib/aztec/wallet/client.ts`). For the standalone Noir circuits there is a Web Worker prover (`lib/zk/prover.worker.ts`, `lib/zk/browser-prover.ts`), real in tests only and not wired into any page. The earlier `public/workers/prover.worker.js` was a stub that returned `0x` and was removed on 4 November 2026.
 - **Origin Isolation:** `Cross-Origin-Opener-Policy: same-origin` and
   `Cross-Origin-Embedder-Policy: require-corp` on `/prove`.
 - **Circuits:**

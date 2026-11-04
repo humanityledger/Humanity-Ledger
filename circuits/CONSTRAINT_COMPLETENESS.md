@@ -246,13 +246,14 @@ compiling (as this section used to suggest) checked nothing. The checks are:
 for c in escrow identity streams; do (cd circuits/$c && nargo compile); done
 git diff --exit-code -- circuits/*/target/zk_*.json
 
-# Binary VKs match the hashes pinned in lib/aztec/verifier.ts; with npm
+# Binary VKs match the hashes pinned in lib/zk/vk-pins.ts; with npm
 # dependencies installed, the VKs are also re-derived from the ACIR with bb.js
 node scripts/zk/check-artifacts.mjs
 ```
 
-No on-chain VK registry exists. `docs/VK_MONITORING.md` describes the current
-mechanism.
+An on-chain VK registry contract is written and tested but not deployed
+(`contracts/ZKVerificationKeyRegistry.sol`). `docs/VK_MONITORING.md` describes
+the current mechanism.
 
 ---
 

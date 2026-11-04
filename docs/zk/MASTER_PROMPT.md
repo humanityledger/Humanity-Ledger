@@ -4,14 +4,15 @@
 
 Este es el prompt maestro único para el trabajo ZK y de mensajería de Humanity Ledger. Integra los dos prompts del 3 de noviembre, contrastados línea a línea con el commit 097b51d5 de `humanityledger/Humanity-Ledger`. El anexo C muestra dónde quedó cada una de sus secciones. Lo más grave no estaba en ninguno de los dos: el circuito de streams permite cobrar muchas veces el mismo devengo, y la "integridad de VK" no está ligada a las claves reales.
 
-> **Estado de ejecución (4 nov, 06:30):** fases 0 y 0-B hechas y verificadas en CI; fase 1 avanzada. Lo nuevo desde el 3 nov:
+> **Estado de ejecución (4 nov, 09:00):** fases 0 y 0-B hechas y verificadas en CI; fase 1 avanzada. Lo nuevo desde el 3 nov:
 > - Los 30 tests TXE de los contratos aztec-nr pasan con Aztec 6.0.0 en CI: escrow 10, identity 11, streams 9. Usan un token solo de pruebas, `contracts/aztec/test_token`.
 > - Hay despliegue con claves: `lib/aztec/keyed-deploy.ts` y `scripts/aztec/deploy-keyed.ts`. No se ha ejecutado contra testnet.
 > - El registro de VK on-chain con retardo está escrito, con tests de Hardhat, y `verifier.ts` lo consulta (R-19). No está desplegado.
 > - Hay probador en Web Worker sin módulos de Node (R-16), y comprobación de salud de testnet a diario (R-15).
 > - Se retiraron de la interfaz la solvencia, la ceremonia MPC, la prueba de edad y los streams que eran falsos (R-14).
 > - El menú de mensajes ya tiene reacciones, pagos, detalles y teclado, y avisa honestamente al borrar (R-12).
-> - Pasan a verde los workflows de IP Protection, Circuit Constraint Coverage, Hardhat (que ahora es una puerta real) y Lighthouse contra la app real. Security & Compliance se verifica en este ciclo.
+> - Todos los workflows están en verde en `main`: IP Protection, Security & Compliance, Circuit Constraint Coverage, Hardhat (que ahora es una puerta real) y Lighthouse contra la app real.
+> - El inicio de sesión SIWE en `/connect` rechazaba carteras válidas: redes como BNB o Linea, `www.`, una escritura de Redis fallida y carteras de contrato. Está corregido y probado con firmas reales (`test/auth/siwe-routes.test.ts`).
 > - `middleware.ts` ya no tiene `@ts-nocheck`. Se quitó `backend_barretenberg`, y un workflow regenera el lockfile (R-07, parcial).
 >
 > Siguen abiertas:
