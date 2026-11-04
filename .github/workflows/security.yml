@@ -191,8 +191,11 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      # NODE_ENV=production is set for the job, which makes npm omit
+      # devDependencies; the build needs them (typescript for tsconfig paths,
+      # tailwind/postcss), so they are included explicitly.
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps --ignore-scripts
+        run: npm ci --legacy-peer-deps --ignore-scripts --include=dev
 
       - name: Generate Prisma client
         run: npx prisma generate
