@@ -1,5 +1,5 @@
 {
-  "$comment": "Machine-readable record of what Humanity Ledger has deployed on Aztec testnet. Checked against the live node by .github/workflows/aztec-deployments.yml (test/live/aztec-deployments.live.test.ts). docs/AZTEC_TESTNET_DEPLOYMENTS.md is the human-readable version of this file.",
+  "$comment": "Machine-readable record of what Humanity Ledger has deployed on Aztec testnet. Checked against the live node by .github/workflows/aztec-deployments.yml (test/live/aztec-deployments.live.test.ts). docs/AZTEC_TESTNET_DEPLOYMENTS.md is the human-readable version of this file. Entries with tracksCurrentArtifact=true must match the artifact committed today; older entries keep the class they were deployed with, which the live check still confirms on the node.",
   "network": {
     "name": "Aztec testnet (Alpha V6, Tierra)",
     "nodeUrl": "https://aztec-testnet.drpc.org",
@@ -31,7 +31,8 @@
       "keyed": false,
       "status": "active",
       "deployedOn": "2026-11-04",
-      "note": "Deployed with placeholder roots (identity 0x12345678, sanctions 0x87654321): no member can claim until the issuer sets a real identity root."
+      "note": "Deployed with placeholder roots (identity 0x12345678, sanctions 0x87654321): no member can claim until the issuer sets a real identity root.",
+      "tracksCurrentArtifact": true
     },
     {
       "name": "PrivateEscrow",
@@ -42,7 +43,8 @@
       "keyed": false,
       "status": "do-not-use",
       "deployedOn": "2026-11-04",
-      "note": "Deployed without public keys. Tokens deposited here become notes owned by a contract that has no nullifier key, so no PXE can ever spend them: deposits would be locked. Escrows must use a keyed instance (scripts/aztec/deploy-keyed.ts)."
+      "note": "Deployed without public keys. Tokens deposited here become notes owned by a contract that has no nullifier key, so no PXE can ever spend them: deposits would be locked. Escrows must use a keyed instance (scripts/aztec/deploy-keyed.ts).",
+      "tracksCurrentArtifact": false
     },
     {
       "name": "PaymentStream",
@@ -53,7 +55,8 @@
       "keyed": false,
       "status": "do-not-use",
       "deployedOn": "2026-11-04",
-      "note": "Deployed without public keys; same consequence as the PrivateEscrow instance above. Streams must use a keyed instance."
+      "note": "Deployed without public keys; same consequence as the PrivateEscrow instance above. Streams must use a keyed instance.",
+      "tracksCurrentArtifact": false
     },
     {
       "name": "PrivateEscrow (keyed, end-to-end run)",
@@ -62,9 +65,10 @@
       "artifact": "contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json",
       "holdsPrivateBalance": true,
       "keyed": true,
-      "status": "active",
+      "status": "settled",
       "deployedOn": "2026-11-04",
-      "note": "Deployed by the workflow 'Aztec escrow e2e (testnet)', run 41865790651: keyed universal deployment, deposit (tx 0x10700502\u20265f13, block 18445) and claim (tx 0x10fb36c0\u202623f2, block 18447). Custodies a throwaway test token; settled. Shows the per-agreement pattern; not an instance for new deposits."
+      "note": "Deployed by the workflow 'Aztec escrow e2e (testnet)', run 41865790651: keyed universal deployment, deposit (tx 0x10700502\u20265f13, block 18445) and claim (tx 0x10fb36c0\u202623f2, block 18447). Custodies a throwaway test token; settled. Shows the per-agreement pattern with the first PrivateEscrow class (before the deposit-expiration fix); not an instance for new deposits.",
+      "tracksCurrentArtifact": false
     }
   ],
   "e2eRuns": [

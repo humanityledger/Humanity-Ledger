@@ -103,6 +103,12 @@ pub contract PrivateEscrow {
         assert(deadline > anchor_ts, "PrivateEscrow: deadline in the past");
         assert(escrow_id != 0, "PrivateEscrow: zero escrow id");
 
+        // The deposit must land before its own deadline: otherwise a delayed
+        // transaction would create an escrow that is already refundable and
+        // never claimable.
+        let latest = anchor_ts + MAX_TX_LIFETIME;
+        self.context.set_expiration_timestamp(if deadline < latest { deadline } else { latest });
+
         let token_addr = self.storage.token.read();
         let _ = self.context.call_private_function(
             token_addr,

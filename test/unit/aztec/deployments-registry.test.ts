@@ -2,9 +2,10 @@
  * deployments/aztec-testnet.json is the record we point reviewers to. These
  * checks run offline on every CI run:
  *
- *   - the class ID recorded for each contract is the one computed from the
- *     committed artifact, so the source in this repository is the code that
- *     was deployed;
+ *   - for each contract that tracks the current artifact, the recorded class
+ *     ID is the one computed from the committed artifact, so the source in
+ *     this repository is the code that was deployed (older instances keep the
+ *     class they were deployed with; the live test confirms it on the node);
  *   - a contract that holds private token balances is never marked active
  *     unless it was deployed with public keys (see lib/aztec/keyed-deploy.ts:
  *     without keys its token notes can never be spent).
@@ -27,7 +28,8 @@ interface Entry {
   artifact: string;
   holdsPrivateBalance: boolean;
   keyed: boolean;
-  status: 'active' | 'do-not-use';
+  status: 'active' | 'do-not-use' | 'settled';
+  tracksCurrentArtifact: boolean;
 }
 
 async function classIdOf(artifactPath: string): Promise<string> {
@@ -55,7 +57,12 @@ describe('deployments/aztec-testnet.json', () => {
     }
   });
 
-  for (const e of entries) {
+  it('at least one entry is checked against the current artifacts', () => {
+    const current = entries.filter((e) => e.tracksCurrentArtifact);
+    expect(current.length).toBeGreaterThan(0);
+  });
+
+  for (const e of entries.filter((x) => x.tracksCurrentArtifact)) {
     it(`${e.name}: the recorded class ID is the one computed from the committed artifact`, async () => {
       expect(await classIdOf(e.artifact)).toBe(e.classId);
     });
