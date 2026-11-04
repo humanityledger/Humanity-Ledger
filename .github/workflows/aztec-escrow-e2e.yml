@@ -31,6 +31,17 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --include=dev
+      - name: SDK surface used by the script
+        run: |
+          node --conditions=browser --input-type=module -e "
+          const c = await import('@aztec-labs/aztec.js/contracts');
+          console.log('contracts exports:', Object.keys(c).sort().join(', '));
+          console.log('Contract statics:', Object.getOwnPropertyNames(c.Contract).join(', '));
+          const t = await import('@aztec-labs/noir-contracts.js/Token');
+          console.log('TokenContract.deploy:', t.TokenContract.deploy.toString().slice(0, 600));
+          console.log('TokenContract statics:', Object.getOwnPropertyNames(t.TokenContract).join(', '));
+          if (c.DeployMethod) console.log('DeployMethod ctor:', c.DeployMethod.toString().slice(0, 900));
+          " || true
       - name: Keyed escrow, deposit and claim on testnet
         run: node --conditions=browser --import tsx --import ./scripts/aztec/register.mjs scripts/aztec/e2e-escrow-testnet.mts
       - uses: actions/upload-artifact@v4
