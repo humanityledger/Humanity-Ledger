@@ -95,12 +95,14 @@
   transform: scale(0.98);
 }
 
-.btnPrimary {
+/* Doubled class: host pages (the docs) set `a { color: inherit }` at a
+   higher specificity than a single class. */
+.btnPrimary.btnPrimary {
   background: var(--hl-primary);
   color: var(--hl-ink-inverse);
 }
 
-.btnPrimary:hover {
+.btnPrimary.btnPrimary:hover {
   background: var(--hl-primary-hover);
 }
 
@@ -217,7 +219,9 @@
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  padding-bottom: 0.06em;
+  /* Room for the descenders of y and g inside the clipped background. */
+  padding-bottom: 0.22em;
+  margin-bottom: -0.16em;
 }
 
 .bottom {

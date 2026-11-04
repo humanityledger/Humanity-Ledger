@@ -251,8 +251,9 @@
 /* ── Cards ──────────────────────────────────────────────────── */
 
 .stack {
+  /* No z-index: a stacking context here would stop the hero map from
+     blending (multiply) with the living field behind the page. */
   position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
