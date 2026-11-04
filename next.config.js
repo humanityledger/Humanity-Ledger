@@ -374,6 +374,12 @@ const nextConfig = {
 
         return config;
     },
+    // Metadata (title, description, Open Graph) is a static object in
+    // app/layout.tsx. Next 15 streams it into <body> for user agents that are
+    // not on its bot list, so Lighthouse and many link-preview crawlers saw a
+    // page with no meta description. Rendering it in <head> for every client
+    // costs nothing here because nothing in it is fetched.
+    htmlLimitedBots: /.*/,
     trailingSlash: isExtension,
     distDir: isExtension ? 'out' : '.next',
 

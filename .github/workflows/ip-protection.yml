@@ -222,9 +222,6 @@ jobs:
             "sk_live_[A-Za-z0-9]{20}"
             "AIzaSy[A-Za-z0-9_-]{33}"
             "-----BEGIN.*PRIVATE KEY-----"
-            # user:password@ with a literal password; ${VAR}, <placeholder> and
-            # [REDACTED] forms are documentation, not credentials.
-            'DATABASE_URL=postgres(ql)?://[^:@/$[:space:]]+:[^@$<[[:space:]]+@'
             "NEXTAUTH_SECRET=[A-Za-z0-9+/]{32}"
           )
 
@@ -237,6 +234,20 @@ jobs:
               FAIL=1
             fi
           done
+
+          # Database URLs with a literal password. ${VAR}, $VAR, <placeholder>
+          # and [REDACTED] passwords are documentation, not credentials.
+          # Matches are printed with the password removed.
+          DB_MATCHES=$(git log -10 -p --format= -- . ':!.github/**' ':!test/**' ':!tests/**' \
+            | grep -E '^\+' \
+            | grep -E 'DATABASE_URL=postgres(ql)?://[^:@/[:space:]]+:[^@[:space:]]+@' \
+            | grep -v -E 'postgres(ql)?://[^:@/[:space:]]+:(\$|<|\[)' \
+            | grep -v -E 'CANARY_|secret-scan: allow' || true)
+          if [ -n "$DB_MATCHES" ]; then
+            echo "POTENTIAL SECRET LEAK DETECTED: DATABASE_URL with a literal password"
+            echo "$DB_MATCHES" | sed -E 's#(://[^:@/]+:)[^@]+@#\1<removed>@#' | head -5
+            FAIL=1
+          fi
 
           # Also scan working tree for any .env files accidentally staged
           if git ls-files | grep -q "\.env$"; then
