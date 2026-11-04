@@ -9,7 +9,8 @@
  *   - its current class ID is the recorded one (which the offline test
  *     test/unit/aztec/deployments-registry.test.ts ties to the artifact);
  *   - the class itself is published on the node;
- *   - it carries public keys exactly when the record says it is keyed.
+ *   - it carries its own public keys (anything but PublicKeys.default())
+ *     exactly when the record says it is keyed.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -37,12 +38,14 @@ describe.skipIf(!LIVE)(`Aztec testnet deployments (${NODE_URL})`, () => {
       const { createAztecNodeClient } = await import('@aztec-labs/aztec.js/node');
       const { AztecAddress } = await import('@aztec-labs/aztec.js/addresses');
       const { Fr } = await import('@aztec-labs/aztec.js/fields');
+      const { PublicKeys } = await import('@aztec-labs/stdlib/keys');
       const node = createAztecNodeClient(NODE_URL, { maxBatchSize: 3 });
 
       const instance = await node.getContract(AztecAddress.fromStringUnsafe(e.address));
       expect(instance, `${e.name}: no instance at ${e.address}`).toBeTruthy();
       const classId = instance!.currentContractClassId.toString();
-      const keyed = !instance!.publicKeys.isEmpty();
+      // A contract deployed without keys carries PublicKeys.default(), not zeros.
+      const keyed = !instance!.publicKeys.equals(PublicKeys.default());
       const cls = await node.getContractClass(Fr.fromString(e.classId));
       report.push(`${e.name}: instance found; class ${classId === e.classId ? 'matches' : `DIFFERS (${classId})`}; class published: ${cls ? 'yes' : 'no'}; public keys: ${keyed ? 'yes' : 'no'}`);
       console.log(report.at(-1));

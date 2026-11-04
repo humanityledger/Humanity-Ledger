@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Fr } from '@aztec-labs/aztec.js/fields';
 import { AztecAddress } from '@aztec-labs/aztec.js/addresses';
+import { PublicKeys } from '@aztec-labs/stdlib/keys';
 import { KEYED_ARTIFACT_PATHS, computeKeyedInstance, loadKeyedArtifact } from '../../../lib/aztec/keyed-deploy';
 
 const root = path.resolve(__dirname, '../../..');
@@ -26,6 +27,9 @@ describe('keyed deployment (escrow, streams)', () => {
 
       expect(a.instance.publicKeys.equals(a.publicKeys)).toBe(true);
       expect(a.publicKeys.isEmpty()).toBe(false);
+      // Not the default keys a plain Contract.deploy() uses: with those, the
+      // contract's token notes could never be spent.
+      expect(a.publicKeys.equals(PublicKeys.default())).toBe(false);
       // Deterministic: parties can recompute the address from the shared secret.
       expect(a.instance.address.equals(again.instance.address)).toBe(true);
       // A different secret gives a different address, so a keyless or
