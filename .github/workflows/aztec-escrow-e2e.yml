@@ -40,7 +40,7 @@ jobs:
           const t = await import('@aztec-labs/noir-contracts.js/Token');
           console.log('TokenContract.deploy:', t.TokenContract.deploy.toString().slice(0, 600));
           console.log('TokenContract statics:', Object.getOwnPropertyNames(t.TokenContract).join(', '));
-          if (c.DeployMethod) console.log('DeployMethod ctor:', c.DeployMethod.toString().slice(0, 900));
+          console.log('DeployMethod.create:', c.DeployMethod.create.toString().slice(0, 2500)); const src = c.DeployMethod.toString(); const i = src.indexOf('constructor(wallet'); console.log('DeployMethod constructor:', src.slice(i, i + 2500)); for (const k of ['send','getInstance','request']) { const j = src.indexOf(k + '('); console.log('DeployMethod.' + k + ':', src.slice(j, j + 1200)); } console.log('UniversalDeployMethod:', c.UniversalDeployMethod.toString().slice(0, 1500));
           " || true
       - name: Keyed escrow, deposit and claim on testnet
         run: node --conditions=browser --import tsx --import ./scripts/aztec/register.mjs scripts/aztec/e2e-escrow-testnet.mts
