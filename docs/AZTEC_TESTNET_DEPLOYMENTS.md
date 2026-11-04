@@ -12,7 +12,31 @@
 **Sponsored Fee Payment Contract (FPC):** `0x2d8fff82a3b0c15d0a89169e7d8d043e079ab94d52031f1de1e4972ebad169d3`  
 **Date of Deployment:** 4 November 2026  
 
-## Keyed PrivateEscrow, end to end (4 November 2026)
+## Current classes: keyed PrivateEscrow and PaymentStream, end to end (4 November 2026)
+
+The same workflow, after two contract fixes (`PrivateEscrow.deposit` can no longer land after its own deadline; `PaymentStream` accrual can no longer overflow u128 and lock a stream), published both classes and ran run 41881180186, all checks passing:
+
+| Contract | Instance (keyed) | Class |
+| --- | --- | --- |
+| `PrivateEscrow` | `0x062677942994e9d9bbc4bd9c47094b1e90d81caf3716867fb88098d144c191b9` | `0x163f855efb404a868d60e9ebd2352fd8317c54bc054561348c1cf764b2cdf873` |
+| `PaymentStream` | `0x2a56c0d41aefa6a6eaae89611be7aaab3ac0aad91faf10fec26277ca9e689f1b` | `0x2de5fa9bcca0762779eeb30892cabdc550db12a0a755840a79ada60ecbf8783e` |
+
+| Step | Transaction | Block |
+| --- | --- | --- |
+| Shield 90 test tokens into the sender's private balance | `0x003f1172a7792ae034f050767981448e8b0b9c6d0cf2298dbb6eae8d5852f1db` | 18528 |
+| Escrow 1: deposit 25, deadline in 2 h (authwit) | `0x0b0e0a4fb040f9a25675b35d4371b41cf563a305564d0980150d21667a74a284` | 18531 |
+| Escrow 2: deposit 10, deadline in 7 min (authwit) | `0x2953da19194fdc716e9437d40a8a6dc85a3432290ae7c9a5db872972c2321da1` | 18533 |
+| Escrow 1: claim by the recipient | `0x26fae63291c3644cb43cb36bd2a4f7c6cba4dc0e14673093f821f4da696e8680` | 18535 |
+| Stream: create 20 at 10,000 units/s (authwit) | `0x1deacfd33ff0d45950ad5de1254b9f1809c0711cb323387cf3f71539d902d96b` | 18538 |
+| Stream: withdraw 5, within accrual | `0x04911e1af621aa648be48416fce752aadd7fe617fc25cb042204b869e99df3cc` | 18540 |
+| Escrow 2: refund to the sender after the deadline | `0x1b2a358c6ce8c236a473b4af4b142a71d30f7e42a968065c600bd7fa46b4a0f0` | 18542 |
+
+- Balances were checked after every step: sender 90 → 55 → 35 → 45, recipient 25 → 30.
+- Refused, as expected: a refund of escrow 2 before its deadline (`deadline not reached`); a second claim of escrow 1 (`escrow not found`); a withdrawal of the whole stream total (`insufficient accrued balance`).
+- Two further refusals hold for a narrower reason than their labels suggest, and we say so: the sender's refund of escrow 1 failed on the deadline check (its deadline had not passed), and the claim of escrow 2 after its deadline was sent with a wrong claim secret, so it shows the secret check. The deadline check on claims is covered by the TXE tests.
+- These two instances are reference runs, not addresses for new deposits: each agreement gets its own keyed instance, and the throwaway keys of this run were discarded.
+
+## First keyed PrivateEscrow, end to end (4 November 2026)
 
 The workflow [Aztec escrow e2e (testnet)](../.github/workflows/aztec-escrow-e2e.yml) ([`scripts/aztec/e2e-escrow-testnet.mts`](../scripts/aztec/e2e-escrow-testnet.mts)) runs the escrow as it is meant to be used, with throwaway accounts paid by the Sponsored FPC and a fresh test token, so anyone can repeat it without our keys. Run 41865790651 passed every check:
 

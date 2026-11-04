@@ -185,3 +185,40 @@ unconstrained fn start_in_the_future_fails() {
         PaymentStream::at(s.streams).create_stream(s.recipient, TOTAL, RATE, s.env.last_block_timestamp() + 1000, 1, 1),
     );
 }
+
+// SEC-S11: with a rate so large that elapsed * rate overflows u128, the
+// stream is still withdrawable once fully accrued.
+#[test]
+unconstrained fn a_huge_rate_does_not_lock_the_stream() {
+    let mut env = TestEnvironment::new();
+    let sender = env.create_contract_account();
+    let recipient = env.create_contract_account();
+    let token = env.deploy("../test_token/@test_token/TestToken").without_initializer();
+    let streams = env.deploy("PaymentStream").with_public_initializer(
+        sender,
+        PaymentStream::interface().constructor(token),
+    );
+    let big: u128 = 0x80000000000000000000000000000000; // 2^127
+    mint(env, token, sender, big);
+    let start = env.last_block_timestamp();
+    add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, big, 21));
+    env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, big, big, start, 7, 21));
+    env.mine_block_at(start + 10); // 10 * 2^127 > u128::MAX
+    env.call_private_opts(
+        recipient,
+        CallPrivateOptions::new().with_additional_scopes([streams]),
+        PaymentStream::at(streams).withdraw(7, big),
+    );
+    assert(balance(env, token, recipient) == big);
+}
+
+#[test(should_fail_with = "self-stream forbidden")]
+unconstrained fn a_stream_to_oneself_fails() {
+    let s = setup();
+    let start = s.env.last_block_timestamp();
+    add_private_authwit_from_call(s.env, s.sender, s.streams, transfer_call(s.token, s.sender, s.streams, TOTAL, 31));
+    s.env.call_private(
+        s.sender,
+        PaymentStream::at(s.streams).create_stream(s.sender, TOTAL, RATE, start, 9, 31),
+    );
+}

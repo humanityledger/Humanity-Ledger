@@ -51,6 +51,10 @@
 //   [SEC-S8] RATE & TOTAL POSITIVE — Both asserted > 0 at stream creation.
 //
 //   [SEC-S9] EXPIRATION BOUNDING — set_expiration_timestamp bounds inclusion window.
+//
+//   [SEC-S11] OVERFLOW-FREE ACCRUAL (4 Nov 2026) — accrual is capped before
+//            multiplying, so a large rate can no longer overflow u128 and lock
+//            a stream. create_stream also refuses a stream to oneself.
 // ══════════════════════════════════════════════════════════════════════════════
 
 use aztec::macros::aztec;
@@ -122,6 +126,7 @@ pub contract PaymentStream {
         let sender = self.msg_sender();
         let anchor_ts = self.context.get_anchor_block_header().timestamp() as u64;
 
+        assert(sender != recipient, "PaymentStream: self-stream forbidden");
         assert(total > 0, "PaymentStream: zero total");
         assert(rate > 0, "PaymentStream: zero rate");
         assert(start <= anchor_ts, "PaymentStream: start in future");
@@ -166,10 +171,17 @@ pub contract PaymentStream {
 
         let note = notes.get_unchecked(0);
 
-        // Conservative accrual computation
+        // Conservative accrual, capped at the total without overflow: once
+        // elapsed > total / rate the stream is fully accrued, and below that
+        // bound elapsed * rate <= total. Multiplying first could overflow u128
+        // for a large rate and make every later withdrawal fail, locking the
+        // stream's funds (SEC-S11).
         let elapsed = (anchor_ts - note.start) as u128;
-        let accrued = elapsed * note.rate;
-        let total_claimable = if accrued > note.total { note.total } else { accrued };
+        let total_claimable = if elapsed > note.total / note.rate {
+            note.total
+        } else {
+            elapsed * note.rate
+        };
         let claimable = total_claimable - note.withdrawn;
 
         assert(amount > 0, "PaymentStream: zero withdrawal");
