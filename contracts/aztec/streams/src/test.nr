@@ -325,3 +325,55 @@ unconstrained fn a_cancel_from_a_stale_copy_fails_with_funds_left() {
     assert(balance(s.env, s.token, s.streams) == TOTAL);
     cancel(s, s.sender, 1);
 }
+
+// SEC-S13: stream_view returns the live state to either party and skips the
+// sender's stale copies.
+unconstrained fn view(s: Setup, owner: AztecAddress, salt: Field) -> crate::PaymentStream::StreamView {
+    s.env.execute_utility_opts(
+        ExecuteUtilityOptions::new().with_from(owner),
+        PaymentStream::at(s.streams).stream_view(owner, salt),
+    )
+}
+
+#[test]
+unconstrained fn stream_view_shows_the_live_state_to_both_parties() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    s.env.mine_block_at(start + 30);
+    for owner in [s.recipient, s.sender] {
+        let v = view(s, owner, 1);
+        assert(v.found & v.live);
+        assert(v.note.index == 0);
+        assert(v.note.total == TOTAL);
+        assert((v.available >= 30) & (v.available <= 32));
+    }
+    assert(!view(s, s.recipient, 2).found);
+}
+
+#[test]
+unconstrained fn stream_view_skips_the_senders_stale_copy() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    s.env.mine_block_at(start + 30);
+    withdraw(s, 1, 20);
+    let v = view(s, s.sender, 1);
+    assert(v.found & v.live);
+    assert(v.note.index == 1);
+    assert(v.note.withdrawn == 20);
+    let r = view(s, s.recipient, 1);
+    assert(r.live & (r.note.index == 1));
+}
+
+#[test]
+unconstrained fn stream_view_shows_a_cancelled_stream_as_not_live() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    s.env.mine_block_at(start + 30);
+    withdraw(s, 1, 20);
+    s.env.mine_block_at(start + 60);
+    cancel(s, s.sender, 1);
+    let r = view(s, s.recipient, 1);
+    assert(r.found & !r.live & (r.available == 0));
+    let v = view(s, s.sender, 1);
+    assert(v.found & !v.live);
+}

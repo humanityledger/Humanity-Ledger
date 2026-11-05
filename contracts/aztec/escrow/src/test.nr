@@ -213,3 +213,52 @@ unconstrained fn deposit_without_authwit_fails() {
         PrivateEscrow::at(s.escrow).deposit(s.recipient, AMOUNT, s.env.last_block_timestamp() + LOCK, 5, 1, 99),
     );
 }
+
+// escrow_view: the terms come from the note, and settlement is visible to the
+// party whose copy survives it.
+unconstrained fn view(s: Setup, owner: AztecAddress, escrow_id: Field) -> crate::PrivateEscrow::EscrowView {
+    s.env.execute_utility_opts(
+        ExecuteUtilityOptions::new().with_from(owner),
+        PrivateEscrow::at(s.escrow).escrow_view(owner, escrow_id),
+    )
+}
+
+#[test]
+unconstrained fn escrow_view_shows_the_stored_terms_to_both_parties() {
+    let s = setup();
+    let deadline = deposit(s, 1, 11);
+    let secret_hash = poseidon2_hash_with_separator([CLAIM_SECRET], DOM_SEP__CLAIM_SECRET);
+    for owner in [s.recipient, s.sender] {
+        let v = view(s, owner, 1);
+        assert(v.found & !v.settled);
+        assert(v.note.escrow_id == 1);
+        assert(v.note.sender == s.sender);
+        assert(v.note.recipient == s.recipient);
+        assert(v.note.amount == AMOUNT);
+        assert(v.note.deadline == deadline);
+        assert(v.note.claim_secret_hash == secret_hash);
+    }
+    assert(!view(s, s.recipient, 2).found);
+}
+
+#[test]
+unconstrained fn escrow_view_reports_a_claimed_escrow_as_settled_to_the_sender() {
+    let s = setup();
+    let _ = deposit(s, 1, 11);
+    claim(s, 1, CLAIM_SECRET);
+    let sender_view = view(s, s.sender, 1);
+    assert(sender_view.found & sender_view.settled);
+    // The recipient's copy was consumed by the claim.
+    assert(!view(s, s.recipient, 1).found);
+}
+
+#[test]
+unconstrained fn escrow_view_reports_a_refunded_escrow_as_settled_to_the_recipient() {
+    let s = setup();
+    let deadline = deposit(s, 1, 11);
+    s.env.mine_block_at(deadline + 1);
+    refund(s, 1);
+    let recipient_view = view(s, s.recipient, 1);
+    assert(recipient_view.found & recipient_view.settled);
+    assert(!view(s, s.sender, 1).found);
+}

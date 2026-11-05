@@ -10,9 +10,10 @@
 // accrued tokens at any time. Each withdrawal pops the old StreamNote and
 // emits a new one with updated `withdrawn` — preserving stream continuity.
 //
-// Accrual formula (all arithmetic in u128 to prevent overflow):
-//   accrued = (anchor_ts - start) * rate
-//   claimable = min(accrued, total) - withdrawn
+// Accrual, measured at the anchor block (all arithmetic in u128, SEC-S11):
+//   accrued   = total                      if elapsed > total / rate
+//             = elapsed * rate             otherwise
+//   claimable = accrued - withdrawn
 //
 // ══════════════════════════════════════════════════════════════════════════════
 // SECURITY PROPERTIES
@@ -32,10 +33,11 @@
 //            the anchor timestamp. Accrual is conservative: recipient cannot
 //            claim unaccrued tokens.
 //
-//   [SEC-S4] U128 OVERFLOW PROTECTION — All arithmetic uses u128. Intermediate
-//            products are bounded to u128::MAX.
+//   [SEC-S4] U128 ARITHMETIC — superseded by SEC-S11: the first version
+//            multiplied before capping and could overflow.
 //
-//   [SEC-S5] NO CANCEL (removed 3 Nov 2026) — the first version's cancel()
+//   [SEC-S5] NO CANCEL (3 Nov 2026, superseded by SEC-S12) — the first
+//            version's cancel()
 //            popped notes from the sender's set, where no stream note exists,
 //            so it could never succeed. A sender cancel needs its own note and
 //            a nullifier shared with withdrawals; open design question (R-09).
@@ -64,6 +66,13 @@
 //            measured at the anchor block and a cancel must land within
 //            600 s of it, so an old anchor withholds at most 600 * rate from
 //            the recipient. Closes the SEC-S5 gap above.
+//
+//   [SEC-S13] STREAM VIEW (5 Nov 2026) — stream_view, a utility function run
+//            in the caller's PXE and never proven, returns the live state of
+//            a stream for either party: the state whose nullifier has not
+//            been emitted. The sender's older copies stay in its PXE (they
+//            cannot be nullified without the recipient) and the view skips
+//            them, so a client never shows a stale state.
 // ══════════════════════════════════════════════════════════════════════════════
 
 use aztec::macros::aztec;
@@ -79,7 +88,11 @@ pub contract PaymentStream {
             storage::storage,
         },
         messages::delivery::MessageDelivery,
-        note::{note_getter_options::{NoteGetterOptions, SortOrder}, note_interface::NoteProperties},
+        note::{
+            note_getter_options::{NoteGetterOptions, SortOrder}, note_interface::NoteProperties,
+            note_viewer_options::NoteViewerOptions,
+        },
+        oracle::nullifiers::check_nullifier_exists,
         protocol::{
             abis::function_selector::FunctionSelector,
             address::AztecAddress,
@@ -116,6 +129,18 @@ pub contract PaymentStream {
         pub salt: Field,
         /// State index: 0 at creation, +1 on every withdrawal.
         pub index: u32,
+    }
+
+    /// What stream_view returns. `live` is true when `note` is the current
+    /// state (its state nullifier has not been emitted); `available` is what
+    /// the recipient could withdraw at the latest block the PXE knows. `note`
+    /// is all zeros when `found` is false.
+    #[derive(Deserialize, Serialize)]
+    pub struct StreamView {
+        pub found: bool,
+        pub live: bool,
+        pub available: u128,
+        pub note: StreamNote,
     }
 
     // ─── Storage ─────────────────────────────────────────────────────────────
@@ -317,5 +342,70 @@ pub contract PaymentStream {
                 [self.context.this_address().to_field(), sender.to_field(), to_sender as Field, 0],
             );
         }
+    }
+
+    /// The live state of stream `salt` as `owner`'s PXE holds it: the
+    /// recipient's stream note, or else the newest of the sender's copies whose
+    /// state nullifier has not been emitted (SEC-S13). After a cancel or a
+    /// full withdrawal no state is live and the newest copy is returned with
+    /// `live == false`. Never proven: it informs the client and authorises
+    /// nothing. The nullifier checks tell the node which nullifiers this
+    /// client is interested in, as any note sync does.
+    #[external("utility")]
+    unconstrained fn stream_view(owner: AztecAddress, salt: Field) -> StreamView {
+        let own = self.storage.stream_notes.at(owner).view_notes(
+            NoteViewerOptions::new().select(StreamNote::properties().salt, Comparator.EQ, salt).set_limit(1),
+        );
+        let notes = if own.len() > 0 {
+            own
+        } else {
+            self.storage.sender_copies.at(owner).view_notes(
+                NoteViewerOptions::new()
+                    .select(StreamNote::properties().salt, Comparator.EQ, salt)
+                    .sort(StreamNote::properties().index, SortOrder.DESC),
+            )
+        };
+        let mut view = StreamView {
+            found: false,
+            live: false,
+            available: 0,
+            note: StreamNote {
+                sender: AztecAddress::zero(),
+                recipient: AztecAddress::zero(),
+                total: 0,
+                rate: 0,
+                start: 0,
+                withdrawn: 0,
+                salt: 0,
+                index: 0,
+            },
+        };
+        for i in 0..notes.len() {
+            if !view.live {
+                let note = notes.get_unchecked(i);
+                let spent = check_nullifier_exists(
+                    poseidon2_hash_with_separator(
+                        [note.salt, note.sender.to_field(), note.recipient.to_field(), note.index as Field],
+                        DOM_SEP__STREAM_STATE,
+                    ),
+                );
+                if !view.found | !spent {
+                    let now = self.context.timestamp();
+                    let elapsed = if now > note.start { (now - note.start) as u128 } else { 0 };
+                    let accrued = if elapsed > note.total / note.rate {
+                        note.total
+                    } else {
+                        elapsed * note.rate
+                    };
+                    view = StreamView {
+                        found: true,
+                        live: !spent,
+                        available: if spent { 0 } else { accrued - note.withdrawn },
+                        note,
+                    };
+                }
+            }
+        }
+        view
     }
 }
