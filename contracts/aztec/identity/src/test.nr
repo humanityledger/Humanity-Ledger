@@ -169,7 +169,7 @@ unconstrained fn only_the_issuer_revokes() {
 // SEC-I9: two-step rotation.
 #[test]
 unconstrained fn the_issuer_rotates_in_two_steps() {
-    let s = setup(SPAIN, 250);
+    let mut s = setup(SPAIN, 250);
     let next = s.env.create_light_account();
     s.env.call_public(s.issuer, IdentityCredential::at(s.credential).propose_issuer(next));
     assert(s.env.view_public(IdentityCredential::at(s.credential).get_issuer()) == s.issuer);
@@ -180,7 +180,7 @@ unconstrained fn the_issuer_rotates_in_two_steps() {
 
 #[test(should_fail_with = "only issuer can update root")]
 unconstrained fn the_old_issuer_loses_its_rights_after_a_rotation() {
-    let s = setup(SPAIN, 250);
+    let mut s = setup(SPAIN, 250);
     let next = s.env.create_light_account();
     s.env.call_public(s.issuer, IdentityCredential::at(s.credential).propose_issuer(next));
     s.env.call_public(next, IdentityCredential::at(s.credential).accept_issuer());
@@ -189,7 +189,7 @@ unconstrained fn the_old_issuer_loses_its_rights_after_a_rotation() {
 
 #[test(should_fail_with = "only the pending issuer can accept")]
 unconstrained fn only_the_proposed_address_accepts() {
-    let s = setup(SPAIN, 250);
+    let mut s = setup(SPAIN, 250);
     let next = s.env.create_light_account();
     s.env.call_public(s.issuer, IdentityCredential::at(s.credential).propose_issuer(next));
     s.env.call_public(s.user, IdentityCredential::at(s.credential).accept_issuer());
