@@ -1,0 +1,39 @@
+# Read-only checks against Aztec Alpha (mainnet): the node is the network
+# this build is pinned to, there is no sponsored fee payer, whether our
+# committed classes are published, and every instance in
+# deployments/aztec-mainnet.json. No keys, no transactions, no value moved.
+
+name: Aztec mainnet preflight
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'deployments/aztec-mainnet.json'
+      - 'lib/aztec/fees.ts'
+      - 'lib/aztec/sequencer/networks.ts'
+      - 'contracts/aztec/*/target/**'
+      - 'test/live/aztec-mainnet-preflight.live.test.ts'
+      - '.github/workflows/aztec-mainnet-preflight.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --include=dev --ignore-scripts
+      - name: Alpha mainnet, read-only
+        env:
+          AZTEC_MAINNET_PREFLIGHT: '1'
+        run: npx vitest run test/live/aztec-mainnet-preflight.live.test.ts --retry=0
