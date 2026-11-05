@@ -123,7 +123,7 @@ export async function verifyAgreementInvite(raw: string, o: VerifyOptions): Prom
   const { instance } = await computeKeyedInstance(o.artifacts[kind], {
     secretKey: Fr.fromString(inv.contractSecret),
     salt: Fr.fromString(inv.salt),
-    token: AztecAddress.fromString(inv.token),
+    token: AztecAddress.fromStringUnsafe(inv.token),
   });
   if (!same(instance.currentContractClassId.toString(), inv.classId)) {
     return { ok: false, reason: 'artifact does not produce the claimed class' };

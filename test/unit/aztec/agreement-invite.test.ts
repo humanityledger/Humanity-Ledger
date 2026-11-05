@@ -27,8 +27,8 @@ let valid: Record<string, unknown>;
 beforeAll(async () => {
   const secret = new Fr(0x5ec2e7n);
   const salt = new Fr(0x5a17n);
-  const { instance } = await computeKeyedInstance(artifacts.escrow, { secretKey: secret, salt, token: AztecAddress.fromString(token) });
-  const s = await computeKeyedInstance(artifacts.streams, { secretKey: secret, salt, token: AztecAddress.fromString(token) });
+  const { instance } = await computeKeyedInstance(artifacts.escrow, { secretKey: secret, salt, token: AztecAddress.fromStringUnsafe(token) });
+  const s = await computeKeyedInstance(artifacts.streams, { secretKey: secret, salt, token: AztecAddress.fromStringUnsafe(token) });
   opts = {
     artifacts,
     allowedClassIds: { escrow: [instance.currentContractClassId.toString()], streams: [s.instance.currentContractClassId.toString()] },
