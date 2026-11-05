@@ -30,6 +30,7 @@
 import { Fr } from '@aztec-labs/aztec.js/fields';
 import { AztecAddress } from '@aztec-labs/aztec.js/addresses';
 import { Contract, DeployMethod } from '@aztec-labs/aztec.js/contracts';
+import { randomField } from './random';
 import { computeKeyedInstance, type KeyedContract, type loadKeyedArtifact } from './keyed-deploy';
 import {
   verifyAgreementInvite,
@@ -94,8 +95,8 @@ export const claimSecretHash = (claimSecret: Fr) => poseidon2WithSeparator([clai
 
 /** Keyed universal deployment of a fresh instance, registered with its secret in the sender's wallet. */
 async function deployKeyed(c: OpenCommon) {
-  const secretKey = Fr.random();
-  const salt = Fr.random();
+  const secretKey = randomField();
+  const salt = randomField();
   const expected = await computeKeyedInstance(c.artifact, { secretKey, salt, token: c.token });
   const deployment = DeployMethod.create(
     c.sender.wallet,
@@ -110,7 +111,7 @@ async function deployKeyed(c: OpenCommon) {
 }
 
 async function authwit(c: OpenCommon, caller: AztecAddress, amount: bigint) {
-  const nonce = Fr.random();
+  const nonce = randomField();
   const pull = c.tokenContract.methods.transfer_in_private(c.sender.address, caller, amount, nonce);
   let witness: any;
   try {
@@ -125,8 +126,8 @@ async function authwit(c: OpenCommon, caller: AztecAddress, amount: bigint) {
 export async function openEscrow(c: OpenCommon & { amount: bigint; deadline: number }): Promise<Opened<EscrowInvite>> {
   const d = await deployKeyed(c);
   const contract = Contract.at(d.address, c.artifact, c.sender.wallet) as AnyInteraction;
-  const claimSecret = Fr.random();
-  const escrowId = Fr.random();
+  const claimSecret = randomField();
+  const escrowId = randomField();
   const w = await authwit(c, d.address, c.amount);
   const sent = await contract.methods
     .deposit(c.recipient, c.amount, BigInt(c.deadline), await claimSecretHash(claimSecret), escrowId, w.nonce)
@@ -156,7 +157,7 @@ export async function openStream(
 ): Promise<Opened<StreamInvite>> {
   const d = await deployKeyed(c);
   const contract = Contract.at(d.address, c.artifact, c.sender.wallet) as AnyInteraction;
-  const streamSalt = Fr.random();
+  const streamSalt = randomField();
   const w = await authwit(c, d.address, c.total);
   const sent = await contract.methods
     .create_stream(c.recipient, c.total, c.rate, BigInt(c.start), streamSalt, w.nonce)
