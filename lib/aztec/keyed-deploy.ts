@@ -17,7 +17,8 @@
  * only nullified through the contract's functions.
  *
  * Verified by test/unit/aztec/keyed-deploy.test.ts (deterministic addresses,
- * keys bound to the instance). Not run against a live network yet.
+ * keys bound to the instance), and on Aztec testnet by
+ * scripts/aztec/e2e-escrow-testnet.mts (workflow "Aztec escrow e2e (testnet)").
  */
 import { Fr } from '@aztec-labs/aztec.js/fields';
 import { AztecAddress } from '@aztec-labs/aztec.js/addresses';
