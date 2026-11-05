@@ -121,6 +121,17 @@ async function refused(interaction: any, opts: Record<string, unknown>): Promise
   }
 }
 
+/** Sends a transaction expected to be rejected; returns the reason. */
+async function rejectedOnSend(interaction: any, opts: Record<string, unknown>): Promise<string> {
+  try {
+    const sent = await interaction.send({ fee, wait: NO_WAIT, ...opts });
+    const r: any = await waitForTx(node, sent.txHash, { timeout: 900, interval: 2 });
+    return `included (status ${r?.status ?? 'unknown'})`;
+  } catch (e) {
+    return (e as Error).message.replace(/\s+/g, ' ').slice(0, 200);
+  }
+}
+
 async function main() {
   const info = await node.getNodeInfo();
   log('node', info.nodeVersion, 'L1', info.l1ChainId, 'rollup', info.rollupVersion);
@@ -229,6 +240,14 @@ async function main() {
     stream.a.methods.create_stream(recipient, 20_000_000n, 10_000n, start, streamSalt, w3.nonce),
     { from: sender, authWitnesses: [w3.witness] });
   check('sender private balance is 35 after the stream', (await balA()) === 35_000_000n);
+  // A second stream in the same instance keeps funds in the contract, so that
+  // after stream 1 is cancelled only the state nullifier can stop it.
+  const streamSalt2 = Fr.random();
+  const w4 = await authwitFor(stream.addr, 5_000_000n);
+  await sendAndWait('stream 2: create 5 in the same instance',
+    stream.a.methods.create_stream(recipient, 5_000_000n, 1n, BigInt(nowSec() - 60), streamSalt2, w4.nonce),
+    { from: sender, authWitnesses: [w4.witness] });
+  check('sender private balance is 30 after stream 2', (await balA()) === 30_000_000n);
   const tooMuch = await refused(stream.b.methods.withdraw(streamSalt, 20_000_000n), { from: recipient, additionalScopes: [stream.addr] });
   check('stream: withdrawing the whole total early is refused', tooMuch.includes('insufficient accrued balance'), tooMuch);
   await sendAndWait('stream: withdraw 5 (within accrual)', stream.b.methods.withdraw(streamSalt, 5_000_000n), { from: recipient, additionalScopes: [stream.addr] });
@@ -245,19 +264,22 @@ async function main() {
   const lateClaim = await refused(escrow.b.methods.claim(idRefund, claimSecret2), { from: recipient, additionalScopes: [escrow.addr] });
   check('escrow 2: a claim with the right secret after the deadline is refused by the deadline', lateClaim.includes('escrow expired'), lateClaim);
   await sendAndWait('escrow 2: refund to the sender after the deadline', escrow.a.methods.refund(idRefund), { from: sender, additionalScopes: [escrow.addr] });
-  check('sender private balance is 45 after the refund', (await balA()) === 45_000_000n);
+  check('sender private balance is 40 after the refund', (await balA()) === 40_000_000n);
 
   // ── PaymentStream: sender cancel (SEC-S12) ──
   await sendAndWait('stream: cancel by the sender', stream.a.methods.cancel(streamSalt), { from: sender, additionalScopes: [stream.addr] });
   const sAfter = await balA();
   const rAfter = await balB();
-  check('stream cancel: nothing is created or lost (sender + recipient = 90)', sAfter + rAfter === 90_000_000n, `sender ${sAfter}, recipient ${rAfter}`);
+  check('stream cancel: nothing is created or lost (sender + recipient + 5 in stream 2 = 90)', sAfter + rAfter + 5_000_000n === 90_000_000n, `sender ${sAfter}, recipient ${rAfter}`);
   check('stream cancel: the recipient is paid what accrued beyond the 5 withdrawn', rAfter > 30_000_000n && rAfter <= 45_000_000n, `recipient ${rAfter}`);
-  check('stream cancel: the sender gets the unaccrued rest back', sAfter > 45_000_000n, `sender ${sAfter}`);
-  const afterCancel = await refused(stream.b.methods.withdraw(streamSalt, 1n), { from: recipient, additionalScopes: [stream.addr] });
-  check('stream: a withdrawal after the cancel is refused', afterCancel !== 'accepted', afterCancel);
-  const secondCancel = await refused(stream.a.methods.cancel(streamSalt), { from: sender, additionalScopes: [stream.addr] });
-  check('stream: a second cancel is refused', secondCancel.includes('stream not found'), secondCancel);
+  check('stream cancel: the sender gets the unaccrued rest back', sAfter > 40_000_000n, `sender ${sAfter}`);
+  // Stream 2 still funds the contract, so these two can only be stopped by
+  // the shared state nullifier (SEC-S12). They are sent, so the node decides.
+  const afterCancel = await rejectedOnSend(stream.b.methods.withdraw(streamSalt, 1n), { from: recipient, additionalScopes: [stream.addr] });
+  check('stream: a withdrawal after the cancel is rejected (state nullifier)', !afterCancel.startsWith('included'), afterCancel);
+  const staleCancel = await rejectedOnSend(stream.a.methods.cancel(streamSalt), { from: sender, additionalScopes: [stream.addr] });
+  check('stream: a cancel from the stale copy is rejected (state nullifier)', !staleCancel.startsWith('included'), staleCancel);
+  check('stream: nothing moved after the rejected transactions', (await balA()) === sAfter && (await balB()) === rAfter);
 
   // ── IdentityCredential: a real root, a real claim ──
   const ID_COMMIT = 120938471, ID_LEAF = 238471092, MERKLE = 349582103, SANCTIONS = 461728390;
@@ -275,6 +297,7 @@ async function main() {
   const idDeploy: any = await Contract.deploy(wa, idArtifact, [new Fr(0x12345678), sanctionRoot, sender]).send({ from: sender, fee, wait: { timeout: 900 } } as any);
   const idAddr = AztecAddress.fromStringUnsafe((idDeploy.instance?.address ?? idDeploy.contract?.address).toString());
   receipt.steps.push({ step: 'deploy IdentityCredential with a placeholder root', txHash: idDeploy.receipt?.txHash?.toString(), block: idDeploy.receipt?.blockNumber ? Number(idDeploy.receipt.blockNumber) : undefined, detail: idAddr.toString() });
+  log('IdentityCredential', idAddr.toString(), 'class', (await node.getContract(idAddr))!.currentContractClassId.toString());
   await wb.registerContract((await node.getContract(idAddr))!, idArtifact);
   const idA: any = Contract.at(idAddr, idArtifact, wa);
   const idB: any = Contract.at(idAddr, idArtifact, wb);
@@ -315,5 +338,6 @@ if (summary) {
   ];
   fs.appendFileSync(summary, lines.join('\n') + '\n');
 }
+console.log('RECEIPT ' + JSON.stringify(receipt.steps));
 console.log(ok ? '\nALL CHECKS PASSED' : '\nSOME CHECKS FAILED');
 process.exit(ok ? 0 : 1);

@@ -296,3 +296,32 @@ unconstrained fn only_the_sender_can_cancel() {
     s.env.mine_block_at(start + 40);
     cancel(s, s.recipient, 1);
 }
+
+// With a second stream funding the same instance, a withdrawal after a cancel
+// can only be stopped by the shared state nullifier, not by an empty balance.
+#[test(should_fail)]
+unconstrained fn a_withdrawal_after_cancel_fails_with_funds_left() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    let _ = open(s, 2, 12);
+    s.env.mine_block_at(start + 40);
+    cancel(s, s.sender, 1);
+    assert(balance(s.env, s.token, s.streams) == TOTAL);
+    withdraw(s, 1, 10);
+}
+
+// After a withdrawal the sender holds copies at index 0 and 1. Once index 1 is
+// cancelled, the stale index-0 copy cannot cancel again: its state nullifier
+// was emitted by the withdrawal. Stream 2 keeps funds in the contract.
+#[test(should_fail)]
+unconstrained fn a_cancel_from_a_stale_copy_fails_with_funds_left() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    let _ = open(s, 2, 12);
+    s.env.mine_block_at(start + 30);
+    withdraw(s, 1, 20);
+    s.env.mine_block_at(start + 60);
+    cancel(s, s.sender, 1);
+    assert(balance(s.env, s.token, s.streams) == TOTAL);
+    cancel(s, s.sender, 1);
+}

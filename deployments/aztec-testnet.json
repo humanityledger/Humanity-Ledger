@@ -31,8 +31,8 @@
       "keyed": false,
       "status": "active",
       "deployedOn": "2026-11-04",
-      "note": "Deployed with placeholder roots (identity 0x12345678, sanctions 0x87654321): no member can claim until the issuer sets a real identity root.",
-      "tracksCurrentArtifact": true
+      "note": "Deployed with placeholder roots (identity 0x12345678, sanctions 0x87654321): no member can claim until the issuer sets a real identity root. Its class predates the expiry bound (SEC-I7) and the root guard of 5 Nov 2026.",
+      "tracksCurrentArtifact": false
     },
     {
       "name": "PrivateEscrow",
@@ -90,9 +90,9 @@
       "holdsPrivateBalance": true,
       "keyed": true,
       "status": "reference",
-      "tracksCurrentArtifact": true,
+      "tracksCurrentArtifact": false,
       "deployedOn": "2026-11-04",
-      "note": "Current PaymentStream class (overflow-free accrual, no self-streams), published with this deployment. Run 41881180186: stream of 20 test tokens created, 5 withdrawn within accrual. A reference instance, not one for new streams."
+      "note": "Current PaymentStream class (overflow-free accrual, no self-streams), published with this deployment. Run 41881180186: stream of 20 test tokens created, 5 withdrawn within accrual. A reference instance, not one for new streams. Superseded on 5 Nov 2026 by the class with sender cancel (SEC-S12)."
     }
   ],
   "e2eRuns": [

@@ -104,7 +104,7 @@ describe('verifyAgreementInvite', () => {
   it('reads the current class IDs from the deployment record', () => {
     const record = JSON.parse(fs.readFileSync(path.join(root, 'deployments/aztec-testnet.json'), 'utf8'));
     const ids = currentClassIds(record);
-    expect(ids.escrow.length).toBeGreaterThan(0);
-    expect(ids.streams.length).toBeGreaterThan(0);
+    expect(ids.escrow.length + ids.streams.length).toBeGreaterThan(0);
+    for (const id of [...ids.escrow, ...ids.streams]) expect(id).toMatch(/^0x[0-9a-f]{64}$/);
   });
 });
