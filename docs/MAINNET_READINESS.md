@@ -8,6 +8,14 @@
 - Aztec's own words on Alpha: live but early, bugs (including critical ones) expected. Earlier coverage of the Alpha launch quoted the team: deposit only funds you can afford to lose.
 - Alpha has **no Sponsored FPC**. Fees are paid in Fee Juice, from the account's balance or by claiming Fee Juice bridged from L1 in the same transaction (`FeeJuicePaymentMethodWithClaim`). `PrivateFeePaymentMethod` and `PublicFeePaymentMethod` are deprecated and do not work on Alpha. Source: [Paying Fees](https://docs.aztec.network/developers/docs/aztec-js/how_to_pay_fees).
 
+## First preflight against Alpha (5 November 2026)
+
+Workflow "Aztec mainnet preflight", run 42040311011, read-only against `https://aztec-mainnet.drpc.org`:
+
+- node 6.0.0, L1 chain 1, rollup version 2070860440: no drift from `lib/aztec/sequencer/networks.ts`;
+- no contract at the testnet's sponsored fee payer address: fees on Alpha are paid in Fee Juice;
+- the classes of our committed artifacts are not published on Alpha: PrivateEscrow `0x1fc9702de2946be7308126990f4cf3b8a3fbe9a4c53dc072d9ccb95bf9f04b5e`, PaymentStream `0x1fd6afbe0bffe6a7cb675927dedc0aed886a46bf7c6d58edc32854af073701f2`, IdentityCredential `0x1be813182640bfe08c2dea56bc3f96a7192b380a8dadc8210fc27ae0867e6c06`. The same classes run on testnet (run 42030688268).
+
 ## Gates
 
 | # | Gate | State on 5 Nov 2026 | How to check |
