@@ -32,7 +32,7 @@ All of this can be checked without our help.
 | --- | --- | --- |
 | Direct messages | XMTP v3 (MLS, RFC 9420), browser SDK 5.2.0 | `lib/xmtp/` |
 | Private payments in the chat | Shield, private transfer and unshield on Aztec testnet with the standard Token contract and the Sponsored FPC; test tokens zkUSDC, zkDAI, zkETH. Shield and unshield are public; private transfers hide amount and parties | `scripts/aztec/e2e-testnet.mjs`, `docs/AZTEC_FOUNDATION_DOSSIER.md` |
-| `PrivateEscrow`, `PaymentStream`, `IdentityCredential` (aztec-nr v6.0.0) | 49 TXE tests pass in CI (escrow 10, identity 20, streams 19) | Workflow "Aztec contracts"; `contracts/aztec/*/src/test.nr` |
+| `PrivateEscrow`, `PaymentStream`, `IdentityCredential` (aztec-nr v6.0.0) | 55 TXE tests pass in CI (escrow 13, identity 20, streams 22) | Workflow "Aztec contracts"; `contracts/aztec/*/src/test.nr` |
 | Escrow and stream on testnet | Keyed instances (one per agreement), run end to end: escrow claim, escrow refund after the deadline, stream withdrawal bounded by accrual, sender cancel; identity claim against a real depth-32 root, a claim within a replaced root's grace period, issuer rotation; an escrow opened and accepted through the client library | Workflow "Aztec escrow e2e (testnet)"; transaction hashes in `docs/AZTEC_TESTNET_DEPLOYMENTS.md` |
 | Deployment record | Every recorded instance is checked daily against the testnet node: instance present, class equal to the committed artifact, keys present when required | `deployments/aztec-testnet.json`, workflow "Aztec testnet deployments" |
 | Application test suite | 1,338 tests pass in CI; they mock external services (database, Redis, RPC) where needed | `npm run test:run`, workflow "Security & Compliance" |

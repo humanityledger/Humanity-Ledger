@@ -74,6 +74,8 @@ export interface Opened<I extends AgreementInvite> {
   raw: string;
   contract: AnyInteraction;
   txHashes: { deploy?: string; fund?: string };
+  /** Blocks the deploy and funding transactions landed in, when the receipt reports them. */
+  blocks: { deploy?: number; fund?: number };
 }
 
 // The export path of poseidon2HashWithSeparator differs between foundation
@@ -93,6 +95,11 @@ async function poseidon2WithSeparator(inputs: Fr[], sep: number): Promise<Fr> {
 
 export const claimSecretHash = (claimSecret: Fr) => poseidon2WithSeparator([claimSecret], DOM_SEP__CLAIM_SECRET);
 
+const blockOf = (sent: any): number | undefined => {
+  const b = sent?.receipt?.blockNumber ?? sent?.blockNumber;
+  return b === undefined || b === null ? undefined : Number(b);
+};
+
 /** Keyed universal deployment of a fresh instance, registered with its secret in the sender's wallet. */
 async function deployKeyed(c: OpenCommon) {
   const secretKey = randomField();
@@ -107,7 +114,7 @@ async function deployKeyed(c: OpenCommon) {
   const address = AztecAddress.fromStringUnsafe((res.instance?.address ?? res.contract?.address).toString());
   if (!address.equals(expected.instance.address)) throw new Error('deployed address differs from the keyed instance computed locally');
   await c.sender.wallet.registerContract(expected.instance, c.artifact, secretKey);
-  return { secretKey, salt, expected, address, deployTx: res.receipt?.txHash?.toString() as string | undefined };
+  return { secretKey, salt, expected, address, deployTx: res.receipt?.txHash?.toString() as string | undefined, deployBlock: blockOf(res) };
 }
 
 async function authwit(c: OpenCommon, caller: AztecAddress, amount: bigint) {
@@ -148,7 +155,7 @@ export async function openEscrow(c: OpenCommon & { amount: bigint; deadline: num
     amount: c.amount.toString(),
     deadline: c.deadline,
   };
-  return { invite, raw: JSON.stringify(invite), contract, txHashes: { deploy: d.deployTx, fund: sent?.receipt?.txHash?.toString() ?? sent?.txHash?.toString() } };
+  return { invite, raw: JSON.stringify(invite), contract, txHashes: { deploy: d.deployTx, fund: sent?.receipt?.txHash?.toString() ?? sent?.txHash?.toString() }, blocks: { deploy: d.deployBlock, fund: blockOf(sent) } };
 }
 
 /** Opens a payment stream: its own keyed PaymentStream instance, funded with `total`. */
@@ -178,7 +185,7 @@ export async function openStream(
     rate: c.rate.toString(),
     start: c.start,
   };
-  return { invite, raw: JSON.stringify(invite), contract, txHashes: { deploy: d.deployTx, fund: sent?.receipt?.txHash?.toString() ?? sent?.txHash?.toString() } };
+  return { invite, raw: JSON.stringify(invite), contract, txHashes: { deploy: d.deployTx, fund: sent?.receipt?.txHash?.toString() ?? sent?.txHash?.toString() }, blocks: { deploy: d.deployBlock, fund: blockOf(sent) } };
 }
 
 export type Accepted =
@@ -204,4 +211,94 @@ export async function acceptInvite(recipient: Party, raw: string, opts: Omit<Ver
   await recipient.wallet.registerContract(instance, artifact, Fr.fromString(inv.contractSecret));
   await recipient.wallet.registerSender?.(AztecAddress.fromStringUnsafe(inv.sender), 'agreement peer');
   return { ok: true, invite: inv, kind, contract: Contract.at(instance.address, artifact, recipient.wallet) };
+}
+
+// ─── Confirming an agreement against the contract's own notes ─────────────────
+//
+// verifyAgreementInvite proves that the invitation names a genuine instance
+// of the audited class. It cannot prove that the deposit behind it matches
+// the invitation's amount, deadline or claim secret: those fields are the
+// sender's word. escrow_view and stream_view (utility functions, run in the
+// receiver's PXE) return what the contract actually stored, and the
+// functions below compare it with the invitation. A client shows an
+// agreement as confirmed only when the list of mismatches is empty.
+
+type Decoded = unknown;
+
+const big = (x: Decoded): bigint => {
+  if (typeof x === 'bigint') return x;
+  if (typeof x === 'number' || typeof x === 'boolean') return BigInt(x);
+  if (typeof x === 'string') return BigInt(x);
+  const o = x as { toBigInt?: () => bigint; toString?: () => string } | null;
+  if (o?.toBigInt) return o.toBigInt();
+  if (o && typeof (o as any).inner !== 'undefined') return big((o as any).inner);
+  if (o?.toString) return BigInt(o.toString());
+  throw new Error('unexpected value in view result');
+};
+const sameValue = (a: Decoded, b: Decoded) => big(a) === big(b);
+
+export interface EscrowView {
+  found: boolean;
+  settled: boolean;
+  note: { escrow_id: Decoded; sender: Decoded; recipient: Decoded; amount: Decoded; deadline: Decoded; claim_secret_hash: Decoded };
+}
+
+export interface StreamView {
+  found: boolean;
+  live: boolean;
+  available: Decoded;
+  note: { sender: Decoded; recipient: Decoded; total: Decoded; rate: Decoded; start: Decoded; withdrawn: Decoded; salt: Decoded; index: Decoded };
+}
+
+/** Fields of the invitation that the stored escrow note contradicts; empty when they agree. */
+export function escrowMismatches(view: EscrowView, invite: EscrowInvite, claimSecretHashValue: Decoded): string[] {
+  if (!view.found) return ['escrow not found in your notes'];
+  const out: string[] = [];
+  const n = view.note;
+  if (!sameValue(n.escrow_id, invite.escrowId)) out.push('escrowId');
+  if (!sameValue(n.sender, invite.sender)) out.push('sender');
+  if (!sameValue(n.recipient, invite.recipient)) out.push('recipient');
+  if (!sameValue(n.amount, invite.amount)) out.push('amount');
+  if (!sameValue(n.deadline, invite.deadline)) out.push('deadline');
+  if (!sameValue(n.claim_secret_hash, claimSecretHashValue)) out.push('claimSecret');
+  if (view.settled) out.push('already settled');
+  return out;
+}
+
+/** Fields of the invitation that the stored stream state contradicts; empty when they agree. */
+export function streamMismatches(view: StreamView, invite: StreamInvite): string[] {
+  if (!view.found) return ['stream not found in your notes'];
+  const out: string[] = [];
+  const n = view.note;
+  if (!sameValue(n.salt, invite.streamSalt)) out.push('streamSalt');
+  if (!sameValue(n.sender, invite.sender)) out.push('sender');
+  if (!sameValue(n.recipient, invite.recipient)) out.push('recipient');
+  if (!sameValue(n.total, invite.total)) out.push('total');
+  if (!sameValue(n.rate, invite.rate)) out.push('rate');
+  if (!sameValue(n.start, invite.start)) out.push('start');
+  if (!view.live) out.push('stream no longer live');
+  return out;
+}
+
+/**
+ * Reads the accepted agreement from the contract (utility call, local to the
+ * receiver's PXE) and returns the fields that contradict the invitation.
+ * Call it after acceptInvite; the PXE may need a block or two to discover
+ * the notes, so "not found" right after a deposit can be transient.
+ */
+// simulate() returns the value, or { result, ... } when metadata is requested.
+const unwrap = <T>(r: any): T => (r && typeof r === 'object' && 'result' in r && !('found' in r) ? r.result : r) as T;
+
+export async function confirmAgreement(me: Party, accepted: Extract<Accepted, { ok: true }>): Promise<string[]> {
+  const inv = accepted.invite;
+  if (inv.type === 'hl.escrow_invite') {
+    const view = unwrap<EscrowView>(
+      await accepted.contract.methods.escrow_view(me.address, Fr.fromString(inv.escrowId)).simulate({ from: me.address }),
+    );
+    return escrowMismatches(view, inv, await claimSecretHash(Fr.fromString(inv.claimSecret)));
+  }
+  const view = unwrap<StreamView>(
+    await accepted.contract.methods.stream_view(me.address, Fr.fromString(inv.streamSalt)).simulate({ from: me.address }),
+  );
+  return streamMismatches(view, inv);
 }

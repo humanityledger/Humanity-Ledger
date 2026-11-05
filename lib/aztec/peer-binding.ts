@@ -115,3 +115,39 @@ export function memoryPeerBindingStore(): PeerBindingStore {
     },
   };
 }
+
+/**
+ * Browser store: pins persist per device in localStorage under `prefix`.
+ * Every pin is also kept in memory, so when storage is blocked (private mode,
+ * site data disabled) a pin still holds for the session and a later,
+ * different announcement is still reported as a conflict.
+ */
+export function localStoragePeerBindingStore(prefix = 'hl.aztec_peer.', storage?: Storage): PeerBindingStore {
+  const memory = new Map<string, string>();
+  const ls = (): Storage | undefined => {
+    try {
+      return storage ?? (typeof localStorage !== 'undefined' ? localStorage : undefined);
+    } catch {
+      return undefined;
+    }
+  };
+  return {
+    async get(k) {
+      try {
+        const v = ls()?.getItem(prefix + k);
+        if (v) return v;
+      } catch {
+        /* fall back to memory */
+      }
+      return memory.get(k);
+    },
+    async set(k, v) {
+      memory.set(k, v);
+      try {
+        ls()?.setItem(prefix + k, v);
+      } catch {
+        /* kept in memory only */
+      }
+    },
+  };
+}

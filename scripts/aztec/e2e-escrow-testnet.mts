@@ -45,7 +45,7 @@ import { TokenContract } from '@aztec-labs/noir-contracts.js/Token';
 import { openTmpStore } from '@aztec-labs/kv-store/deprecated/indexeddb';
 import { EmbeddedWallet } from '@aztec-labs/wallets/embedded';
 import { KEYED_ARTIFACT_PATHS, computeKeyedInstance, loadKeyedArtifact } from '../../lib/aztec/keyed-deploy.ts';
-import { openEscrow, acceptInvite } from '../../lib/aztec/agreements.ts';
+import { openEscrow, acceptInvite, confirmAgreement, escrowMismatches, type EscrowView, type StreamView } from '../../lib/aztec/agreements.ts';
 import { currentClassIds } from '../../lib/aztec/agreement-invite.ts';
 
 const registry = JSON.parse(fs.readFileSync('deployments/aztec-testnet.json', 'utf8'));
@@ -139,6 +139,14 @@ async function rejectedOnSend(interaction: any, opts: Record<string, unknown>): 
   }
 }
 
+// Utility calls run in the caller's PXE; simulate() returns the decoded value
+// (or { result } when metadata is requested).
+async function view<T>(interaction: any, from: AztecAddress): Promise<T> {
+  const r = await interaction.simulate({ from });
+  return (r && typeof r === 'object' && 'result' in r && !('found' in r) ? r.result : r) as T;
+}
+const big = (x: any): bigint => (typeof x === 'bigint' ? x : typeof x === 'number' || typeof x === 'boolean' ? BigInt(x) : x?.toBigInt ? x.toBigInt() : BigInt(x.toString()));
+
 async function main() {
   const info = await node.getNodeInfo();
   log('node', info.nodeVersion, 'L1', info.l1ChainId, 'rollup', info.rollupVersion);
@@ -228,6 +236,14 @@ async function main() {
     escrow.a.methods.deposit(recipient, 10_000_000n, BigInt(refundDeadline), await poseidon2WithSeparator([claimSecret2], DOM_SEP__CLAIM_SECRET), idRefund, w2.nonce),
     { from: sender, authWitnesses: [w2.witness] });
   check('sender private balance is 55 after both deposits', (await balA()) === 55_000_000n);
+  // escrow_view: the terms as the contract stored them, for each party.
+  const ev = async (c: any, owner: AztecAddress, id: Fr) => view<EscrowView>(c.methods.escrow_view(owner, id), owner);
+  const rv1 = await ev(escrow.b, recipient, idClaim);
+  check('escrow_view: the recipient reads the stored amount, deadline and claim hash',
+    rv1.found && !rv1.settled && big(rv1.note.amount) === 25_000_000n && big(rv1.note.claim_secret_hash) === claimHash.toBigInt(),
+    `found ${rv1.found}, amount ${big(rv1.note.amount)}`);
+  const sv1 = await ev(escrow.a, sender, idClaim);
+  check('escrow_view: the sender reads its refund copy', sv1.found && !sv1.settled && big(sv1.note.recipient) === recipient.toBigInt());
   const early = await refused(escrow.a.methods.refund(idRefund), { from: sender, additionalScopes: [escrow.addr] });
   check('escrow 2: refund before the deadline is refused', early.includes('deadline not reached'), early);
 
@@ -237,6 +253,8 @@ async function main() {
   check('escrow 1: a second claim is refused', again.includes('escrow not found'), again);
   const lateRefund = await refused(escrow.a.methods.refund(idClaim), { from: sender, additionalScopes: [escrow.addr] });
   check('escrow 1: a refund before its deadline is refused', lateRefund.includes('deadline not reached'), lateRefund);
+  const sv1b = await ev(escrow.a, sender, idClaim);
+  check('escrow_view: after the claim, the sender sees escrow 1 as settled', sv1b.found && sv1b.settled);
 
   // ── PaymentStream: accrual-bounded withdrawal ──
   const stream = await deployKeyed('streams', 'PaymentStream');
@@ -259,6 +277,15 @@ async function main() {
   check('stream: withdrawing the whole total early is refused', tooMuch.includes('insufficient accrued balance'), tooMuch);
   await sendAndWait('stream: withdraw 5 (within accrual)', stream.b.methods.withdraw(streamSalt, 5_000_000n), { from: recipient, additionalScopes: [stream.addr] });
   check('recipient private balance is 30 after the withdrawal', (await balB()) === 30_000_000n);
+  // stream_view (SEC-S13): the sender now holds copies at index 0 and 1 and
+  // the view returns the live one.
+  const sw = async (c: any, owner: AztecAddress) => view<StreamView>(c.methods.stream_view(owner, streamSalt), owner);
+  const sView = await sw(stream.a, sender);
+  check('stream_view: the sender sees the live state (index 1, 5 withdrawn), not its stale copy',
+    sView.found && sView.live && big(sView.note.index) === 1n && big(sView.note.withdrawn) === 5_000_000n,
+    `live ${sView.live}, index ${big(sView.note.index)}`);
+  const rView = await sw(stream.b, recipient);
+  check('stream_view: the recipient sees the same state and a positive available amount', rView.live && big(rView.note.index) === 1n && big(rView.available) > 0n);
 
   // ── Escrow 2: refund once the deadline has passed ──
   const waitS = refundDeadline + 150 - nowSec();
@@ -290,6 +317,8 @@ async function main() {
   // a_cancel_from_a_stale_copy_fails_with_funds_left covers the nullifier case.
   check('stream: a cancel from the stale copy is rejected', !staleCancel.startsWith('included'), staleCancel);
   check('stream: nothing moved after the rejected transactions', (await balA()) === sAfter && (await balB()) === rAfter);
+  const rDone = await sw(stream.b, recipient);
+  check('stream_view: after the cancel the recipient sees the stream as not live', rDone.found && !rDone.live && big(rDone.available) === 0n);
 
   // ── IdentityCredential: a real root, a real claim ──
   const ID_COMMIT = 120938471, ID_LEAF = 238471092, MERKLE = 349582103, SANCTIONS = 461728390;
@@ -347,11 +376,16 @@ async function main() {
     amount: 3_000_000n,
     deadline: nowSec() + 7200,
   });
-  receipt.steps.push({ step: 'agreement: openEscrow (keyed deploy + deposit 3)', txHash: opened.txHashes.fund, detail: opened.invite.instanceAddress });
+  receipt.steps.push({ step: 'agreement: openEscrow, keyed deploy', txHash: opened.txHashes.deploy, block: opened.blocks.deploy, detail: opened.invite.instanceAddress });
+  receipt.steps.push({ step: 'agreement: openEscrow, deposit 3', txHash: opened.txHashes.fund, block: opened.blocks.fund });
   log('agreement escrow', opened.invite.instanceAddress, 'deploy', opened.txHashes.deploy, 'deposit', opened.txHashes.fund);
+  // The run tests the committed artifact, whose class the deployment record
+  // lists only after this run; it is accepted alongside the record's current classes.
+  const streamClass = (await computeKeyedInstance(streamArtifact, { secretKey: Fr.random(), salt: Fr.random(), token: tokenAddr })).instance.currentContractClassId;
+  const recorded = currentClassIds(record);
   const verifyOpts = {
     artifacts: { escrow: escrowArtifact, streams: streamArtifact },
-    allowedClassIds: currentClassIds(record),
+    allowedClassIds: { escrow: [...recorded.escrow, escrowClass.toString()], streams: [...recorded.streams, streamClass.toString()] },
     allowedTokens: [tokenAddr.toString()],
     peer: sender.toString(),
   };
@@ -361,6 +395,18 @@ async function main() {
   const acc = await acceptInvite({ wallet: wb, address: recipient }, opened.raw, verifyOpts);
   check('agreement: the genuine invitation is verified and registered', acc.ok, acc.ok ? acc.invite.instanceAddress : acc.reason);
   if (acc.ok && acc.invite.type === 'hl.escrow_invite') {
+    // The receiver confirms the invitation against the stored note; the
+    // recipient's PXE may need a moment to discover it.
+    let mismatches: string[] = ['not checked'];
+    for (let i = 0; i < 6; i++) {
+      mismatches = await confirmAgreement({ wallet: wb, address: recipient }, acc);
+      if (!mismatches.includes('escrow not found in your notes')) break;
+      await sleep(20_000);
+    }
+    check('agreement: the stored escrow note confirms every field of the invitation', mismatches.length === 0, mismatches.join(', ') || 'all fields match');
+    const stored = await view<EscrowView>(acc.contract.methods.escrow_view(recipient, Fr.fromString(acc.invite.escrowId)), recipient);
+    const lie = escrowMismatches(stored, { ...acc.invite, amount: '30000000' }, await poseidon2WithSeparator([Fr.fromString(acc.invite.claimSecret)], DOM_SEP__CLAIM_SECRET));
+    check('agreement: an invitation that overstates the amount is caught by the stored note', lie.length === 1 && lie[0] === 'amount', lie.join(', '));
     const before = await balB();
     await sendAndWait('agreement: the recipient claims with the secret from the invitation',
       acc.contract.methods.claim(Fr.fromString(acc.invite.escrowId), Fr.fromString(acc.invite.claimSecret)),

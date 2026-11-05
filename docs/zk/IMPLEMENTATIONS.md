@@ -6,7 +6,7 @@
 |---|---|---|---|
 | Circuitos v1 | `circuits/escrow`, `circuits/identity`, `circuits/streams` | Real en tests; VK fijadas en `lib/zk/vk-pins.ts`; hallazgos ZK-01 a ZK-07 | Referencia histórica y pruebas de CI. No deben custodiar valor |
 | Circuitos v2 | `circuits/*_v2`, `circuits/hl_lib` | Experimental; compilados y probados en CI | Corrigen ZK-01 a ZK-05 y G2, G3, G5 en el camino B |
-| Contratos aztec-nr | `contracts/aztec/escrow`, `streams`, `identity` | Compilan con Aztec 6.0.0 en CI y pasan 30 tests TXE (escrow 10, identity 11, streams 9); corregidos tras la revisión `AZTEC_CONTRACTS_REVIEW.md`; sin despliegue | Destino recomendado (camino A) |
+| Contratos aztec-nr | `contracts/aztec/escrow`, `streams`, `identity` | Compilan con Aztec 6.0.0 en CI y pasan 55 tests TXE (escrow 13, identity 20, streams 22); corregidos tras la revisión `AZTEC_CONTRACTS_REVIEW.md`; sin despliegue | Destino recomendado (camino A) |
 
 ## Corrección al paquete de cierre de gaps
 

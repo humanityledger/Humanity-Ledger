@@ -12,7 +12,35 @@
 **Sponsored Fee Payment Contract (FPC):** `0x2d8fff82a3b0c15d0a89169e7d8d043e079ab94d52031f1de1e4972ebad169d3`  
 **Date of Deployment:** 4 November 2026  
 
-## Current classes, end to end (5 November 2026): escrow, stream with sender cancel, identity claim
+## Identity grace period and issuer rotation, and an agreement opened through the client library (5 November 2026)
+
+Run 42023143254 of the workflow [Aztec escrow e2e (testnet)](../.github/workflows/aztec-escrow-e2e.yml), all checks passing, throwaway accounts and a fresh test token. It repeated every escrow and stream check of run 41999587163 below on new instances of the same classes, and added:
+
+| Contract | Instance | Class |
+| --- | --- | --- |
+| `IdentityCredential` (grace period, two-step rotation) | `0x07c1380971e0349643892f2784cfeeb625ace863c86a3b3eae975f27cfa076f3` | `0x1be813182640bfe08c2dea56bc3f96a7192b380a8dadc8210fc27ae0867e6c06` |
+| `PrivateEscrow` opened with `openEscrow` (`lib/aztec/agreements.ts`) | `0x2008decef28858d86bb7efda63a1c56b0d82384c1626916e827a406e9d2522b9` | `0x163f855efb404a868d60e9ebd2352fd8317c54bc054561348c1cf764b2cdf873` |
+
+| Step | Transaction | Block |
+| --- | --- | --- |
+| Identity: deploy with a placeholder root | `0x0ca97aeb5b781274820b35e41c92c36bd02ac6d8ded9149c673ba82df1635e2f` | 19525 |
+| Identity: the issuer publishes a real depth-32 root | `0x1f66f1203a6ce484018ea690ec8d894686d8b49d05aeece20ff68ac16f231be9` | 19528 |
+| Identity: a member claims in scope 1 | `0x21015aac1f87a8776fcaed627408eab4a2718ea4c1fa585d1e243a5ad6b0879e` | 19530 |
+| Identity: the issuer replaces the root | `0x117dcab624b067bc82a13c1b7db8c9800c6347344f085e8860e66a3524fa90eb` | 19532 |
+| Identity: a claim against the replaced root, within the grace period | `0x1f66179700fd467a44e57308b5267cd9efe2ca8e73b43d2d603c575909fa2469` | 19534 |
+| Identity: the issuer proposes a new issuer | `0x160f266cd228076dfb8d111cd660f6d43c930e0d1d0683b50a1275bb10ae9885` | 19535 |
+| Identity: the proposed issuer accepts | `0x13e710c6e24571b88e5b140f5d7b30eedae82d1ba3edbd77a4ace62a36d288b8` | 19537 |
+| Agreement: keyed deploy by `openEscrow` | `0x19a95ed31cb36805828009921b57174d7fb9c13d531713e786e53179620006a9` | not recorded |
+| Agreement: deposit of 3 by `openEscrow` | `0x09af70437cd18cbf3908978631911d2200ca9d75e4c0475e65b0228485d86205` | not recorded |
+| Agreement: the recipient claims with the secret from the invitation | `0x2863bc4d04e2bd1464e49f7a6d75d788ecfe62f6d3c7a259c00d39cedaec0ea6` | 19541 |
+
+- After the rotation, the previous issuer's root change was refused (`only issuer can update root`).
+- `acceptInvite` refused an invitation whose address had been swapped (`address does not match the shared secret`) before registering anything, then verified and registered the genuine one; the claim with its secret paid the recipient 3.
+- The blocks of the two `openEscrow` transactions were not recorded by this run; `openEscrow` now returns them and later runs record them. Any reader can look the hashes up on the node.
+
+The escrow and stream classes of this run were superseded the same day by the classes with `escrow_view` and `stream_view` (AZ-21, AZ-22); the IdentityCredential class above is current.
+
+## Escrow, stream with sender cancel, identity claim, end to end (5 November 2026)
 
 Run 41999587163 of the workflow [Aztec escrow e2e (testnet)](../.github/workflows/aztec-escrow-e2e.yml), all checks passing, with throwaway accounts and a fresh test token:
 
@@ -128,13 +156,15 @@ All three contracts were written against `aztec-nr` v6.0.0, compiled with `aztec
 Any developer or reviewer can verify these deployments using Aztec.js or a direct JSON-RPC call against `https://aztec-testnet.drpc.org`:
 
 ```bash
-# Query contract instance metadata from the testnet node
+# Query contract instance metadata from the testnet node (here the
+# IdentityCredential v2 reference instance; any address in
+# deployments/aztec-testnet.json works)
 curl -X POST https://aztec-testnet.drpc.org \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
     "method": "node_getContractInstance",
-    "params": ["0x1d88555bead4ba81d1f93a16dd8366b5659d062928af1e57f94a75e08d343097"],
+    "params": ["0x10a7799394def50fc1bc2cfebe549bf2be029cff2e75c68b685badef1530d77c"],
     "id": 1
   }'
 ```

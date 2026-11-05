@@ -11,7 +11,7 @@
 
 Humanity Ledger is a messaging application (Ledger Chat). Direct messages go over XMTP v3, which uses MLS (RFC 9420); we do not implement MLS ourselves. Private payments use an Aztec PXE in the browser with the standard `Token` contract (our test tokens zkUSDC, zkDAI and zkETH, which have no value) and `SponsoredFPC` on Aztec testnet. Private transfers hide the amount and the parties; shielding and unshielding are public steps.
 
-For escrow, payment streams and identity we wrote three aztec-nr v6 contracts (section 2.1). They compile with Aztec 6.0.0 and pass 49 TXE tests in CI. On 4 November 2026 one instance of each was deployed on Aztec testnet (`docs/AZTEC_TESTNET_DEPLOYMENTS.md`); those first escrow and stream instances were deployed without public keys and must not receive deposits; keyed instances of the current classes have since run end to end there (section 2.1). We would value a review of their design (section 5).
+For escrow, payment streams and identity we wrote three aztec-nr v6 contracts (section 2.1). They compile with Aztec 6.0.0 and pass 55 TXE tests in CI. On 4 November 2026 one instance of each was deployed on Aztec testnet (`docs/AZTEC_TESTNET_DEPLOYMENTS.md`); those first escrow and stream instances were deployed without public keys and must not receive deposits; keyed instances of the current classes have since run end to end there (section 2.1). We would value a review of their design (section 5).
 
 We first wrote three standalone Noir circuits for the same purposes. A review on 3 November 2026 found soundness issues in all three (section 4). They remain in the repository as tested reference code; nothing relies on them.
 
@@ -28,7 +28,7 @@ An earlier version of this dossier pointed to commit `783df711` and described th
 | Committed artifacts are the compiled ones and the VKs are pinned | Real | `node scripts/zk/check-artifacts.mjs` |
 | UltraHonk proving and verification with the pinned VK | Real in tests only (Node) | `npx vitest run test/unit/aztec/circuit-proving.test.ts test/zk/` |
 | ZK-01 reproduction (streams double claim) | Documented | `npx vitest run test/circuits/streams_zk01_known_issue.test.ts` |
-| aztec-nr contracts (escrow, streams, identity) | Compile with Aztec 6.0.0; 49 TXE tests pass in CI; keyed escrow and stream instances and identity claims of the current classes ran end to end on testnet; the first escrow and stream instances (4 Nov, morning) are keyless (do not use); all checked daily against the node | See [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](AZTEC_TESTNET_DEPLOYMENTS.md) for live contract addresses, class IDs and verification hashes |
+| aztec-nr contracts (escrow, streams, identity) | Compile with Aztec 6.0.0; 55 TXE tests pass in CI; keyed escrow and stream instances and identity claims of the current classes ran end to end on testnet; the first escrow and stream instances (4 Nov, morning) are keyless (do not use); all checked daily against the node | See [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](AZTEC_TESTNET_DEPLOYMENTS.md) for live contract addresses, class IDs and verification hashes |
 | Browser (Web Worker) prover for the standalone circuits | Real in tests only; not used by any page | `npx vitest run test/zk/browser-prover.test.ts` |
 | Keyed `PrivateEscrow` and `PaymentStream`, current classes, end to end (escrow claim and refund after the deadline, stream withdrawal bounded by accrual) | Real on Aztec testnet, 4 November 2026 (run 41881180186, blocks 18528 to 18542) | Workflow "Aztec escrow e2e (testnet)"; hashes in `docs/AZTEC_TESTNET_DEPLOYMENTS.md` |
 | Unit and integration tests | 1,338 passing in CI on 4 November 2026 (they mock external services such as the database, Redis and RPC providers where needed) | `npm run test:run` |
@@ -47,7 +47,7 @@ A VK registry contract with a timelock exists (`contracts/ZKVerificationKeyRegis
 
 ### 2.1 aztec-nr v6 contracts (`contracts/aztec/`)
 
-Three contracts written against `aztec-labs-eng/aztec-nr@v6.0.0`: `PrivateEscrow`, `PaymentStream` and `IdentityCredential`. They compile with Aztec 6.0.0 in CI (workflow "Aztec contracts") and pass 49 TXE tests there (escrow 10, identity 20, streams 19), using a test-only token (`contracts/aztec/test_token`).
+Three contracts written against `aztec-labs-eng/aztec-nr@v6.0.0`: `PrivateEscrow`, `PaymentStream` and `IdentityCredential`. They compile with Aztec 6.0.0 in CI (workflow "Aztec contracts") and pass 55 TXE tests there (escrow 13, identity 20, streams 22), using a test-only token (`contracts/aztec/test_token`).
 
 | Contract | What it does | Verified |
 |---|---|---|
