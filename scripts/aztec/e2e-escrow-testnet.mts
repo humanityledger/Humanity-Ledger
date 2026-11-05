@@ -15,8 +15,12 @@
  *   4. escrow 2: deposit with a short deadline; a refund before it and a
  *      claim after it are refused; the sender is refunded after it;
  *   5. stream: create, a withdrawal beyond accrual is refused, a withdrawal
- *      within accrual is paid;
- *   6. every balance is checked after every step.
+ *      within accrual is paid; the sender cancels and gets the unaccrued
+ *      rest, after which withdrawing and cancelling again are refused;
+ *   6. identity: deploy with a placeholder root, the issuer publishes a real
+ *      depth-32 root, a member claims once per scope;
+ *   7. every balance is checked after every step; refusals are checked by
+ *      their reason, not only by failing.
  *
  *   node --conditions=browser --import tsx --import ./scripts/aztec/register.mjs scripts/aztec/e2e-escrow-testnet.mts
  *
@@ -199,21 +203,22 @@ async function main() {
     { from: sender, authWitnesses: [w1.witness] });
 
   const idRefund = Fr.random();
+  const claimSecret2 = Fr.random();
   const refundDeadline = nowSec() + 420;
   const w2 = await authwitFor(escrow.addr, 10_000_000n);
   await sendAndWait('escrow 2: deposit 10 (deadline +7 min)',
-    escrow.a.methods.deposit(recipient, 10_000_000n, BigInt(refundDeadline), await poseidon2WithSeparator([Fr.random()], DOM_SEP__CLAIM_SECRET), idRefund, w2.nonce),
+    escrow.a.methods.deposit(recipient, 10_000_000n, BigInt(refundDeadline), await poseidon2WithSeparator([claimSecret2], DOM_SEP__CLAIM_SECRET), idRefund, w2.nonce),
     { from: sender, authWitnesses: [w2.witness] });
   check('sender private balance is 55 after both deposits', (await balA()) === 55_000_000n);
   const early = await refused(escrow.a.methods.refund(idRefund), { from: sender, additionalScopes: [escrow.addr] });
-  check('escrow 2: refund before the deadline is refused', early !== 'accepted', early);
+  check('escrow 2: refund before the deadline is refused', early.includes('deadline not reached'), early);
 
   await sendAndWait('escrow 1: claim by the recipient', escrow.b.methods.claim(idClaim, claimSecret), { from: recipient, additionalScopes: [escrow.addr] });
   check('recipient private balance is 25 after the claim', (await balB()) === 25_000_000n);
   const again = await refused(escrow.b.methods.claim(idClaim, claimSecret), { from: recipient, additionalScopes: [escrow.addr] });
-  check('escrow 1: a second claim is refused', again !== 'accepted', again);
+  check('escrow 1: a second claim is refused', again.includes('escrow not found'), again);
   const lateRefund = await refused(escrow.a.methods.refund(idClaim), { from: sender, additionalScopes: [escrow.addr] });
-  check('escrow 1: the sender cannot refund a claimed escrow', lateRefund !== 'accepted', lateRefund);
+  check('escrow 1: a refund before its deadline is refused', lateRefund.includes('deadline not reached'), lateRefund);
 
   // ── PaymentStream: accrual-bounded withdrawal ──
   const stream = await deployKeyed('streams', 'PaymentStream');
@@ -225,7 +230,7 @@ async function main() {
     { from: sender, authWitnesses: [w3.witness] });
   check('sender private balance is 35 after the stream', (await balA()) === 35_000_000n);
   const tooMuch = await refused(stream.b.methods.withdraw(streamSalt, 20_000_000n), { from: recipient, additionalScopes: [stream.addr] });
-  check('stream: withdrawing the whole total early is refused', tooMuch !== 'accepted', tooMuch);
+  check('stream: withdrawing the whole total early is refused', tooMuch.includes('insufficient accrued balance'), tooMuch);
   await sendAndWait('stream: withdraw 5 (within accrual)', stream.b.methods.withdraw(streamSalt, 5_000_000n), { from: recipient, additionalScopes: [stream.addr] });
   check('recipient private balance is 30 after the withdrawal', (await balB()) === 30_000_000n);
 
@@ -235,10 +240,53 @@ async function main() {
     log(`waiting ${waitS}s for escrow 2's deadline to pass`);
     await sleep(waitS * 1000);
   }
-  const lateClaim = await refused(escrow.b.methods.claim(idRefund, Fr.random()), { from: recipient, additionalScopes: [escrow.addr] });
-  check('escrow 2: a claim after the deadline is refused', lateClaim !== 'accepted', lateClaim);
+  // AZ-12: the right claim secret, after the deadline, so the refusal can
+  // only come from the deadline check.
+  const lateClaim = await refused(escrow.b.methods.claim(idRefund, claimSecret2), { from: recipient, additionalScopes: [escrow.addr] });
+  check('escrow 2: a claim with the right secret after the deadline is refused by the deadline', lateClaim.includes('escrow expired'), lateClaim);
   await sendAndWait('escrow 2: refund to the sender after the deadline', escrow.a.methods.refund(idRefund), { from: sender, additionalScopes: [escrow.addr] });
   check('sender private balance is 45 after the refund', (await balA()) === 45_000_000n);
+
+  // ── PaymentStream: sender cancel (SEC-S12) ──
+  await sendAndWait('stream: cancel by the sender', stream.a.methods.cancel(streamSalt), { from: sender, additionalScopes: [stream.addr] });
+  const sAfter = await balA();
+  const rAfter = await balB();
+  check('stream cancel: nothing is created or lost (sender + recipient = 90)', sAfter + rAfter === 90_000_000n, `sender ${sAfter}, recipient ${rAfter}`);
+  check('stream cancel: the recipient is paid what accrued beyond the 5 withdrawn', rAfter > 30_000_000n && rAfter <= 45_000_000n, `recipient ${rAfter}`);
+  check('stream cancel: the sender gets the unaccrued rest back', sAfter > 45_000_000n, `sender ${sAfter}`);
+  const afterCancel = await refused(stream.b.methods.withdraw(streamSalt, 1n), { from: recipient, additionalScopes: [stream.addr] });
+  check('stream: a withdrawal after the cancel is refused', afterCancel !== 'accepted', afterCancel);
+  const secondCancel = await refused(stream.a.methods.cancel(streamSalt), { from: sender, additionalScopes: [stream.addr] });
+  check('stream: a second cancel is refused', secondCancel.includes('stream not found'), secondCancel);
+
+  // ── IdentityCredential: a real root, a real claim ──
+  const ID_COMMIT = 120938471, ID_LEAF = 238471092, MERKLE = 349582103, SANCTIONS = 461728390;
+  const SPAIN = 724;
+  const idSecret = Fr.random();
+  const idSalt = Fr.random();
+  const expiry = BigInt(nowSec() + 30 * 24 * 3600);
+  const commitment = await poseidon2WithSeparator([recipient.toField(), idSecret], ID_COMMIT);
+  let node_ = await poseidon2WithSeparator([commitment, new Fr(SPAIN), new Fr(expiry), idSalt], ID_LEAF);
+  for (let i = 0; i < 32; i++) node_ = await poseidon2WithSeparator([node_, Fr.ZERO], MERKLE);
+  const realRoot = node_;
+  const list = Array.from({ length: 16 }, (_, i) => (i === 0 ? new Fr(250) : Fr.ZERO));
+  const sanctionRoot = await poseidon2WithSeparator(list, SANCTIONS);
+  const idArtifact = loadKeyedArtifact(JSON.parse(fs.readFileSync('contracts/aztec/identity/target/identity_credential-IdentityCredential.json', 'utf8')));
+  const idDeploy: any = await Contract.deploy(wa, idArtifact, [new Fr(0x12345678), sanctionRoot, sender]).send({ from: sender, fee, wait: { timeout: 900 } } as any);
+  const idAddr = AztecAddress.fromStringUnsafe((idDeploy.instance?.address ?? idDeploy.contract?.address).toString());
+  receipt.steps.push({ step: 'deploy IdentityCredential with a placeholder root', txHash: idDeploy.receipt?.txHash?.toString(), block: idDeploy.receipt?.blockNumber ? Number(idDeploy.receipt.blockNumber) : undefined, detail: idAddr.toString() });
+  await wb.registerContract((await node.getContract(idAddr))!, idArtifact);
+  const idA: any = Contract.at(idAddr, idArtifact, wa);
+  const idB: any = Contract.at(idAddr, idArtifact, wb);
+  const claimArgs = (scope: number) => [new Fr(scope), realRoot, idSecret, SPAIN, expiry, idSalt, 0, Array(32).fill(Fr.ZERO), list];
+  const beforeRoot = await refused(idB.methods.verify_and_claim(...claimArgs(1)), { from: recipient });
+  check('identity: no claim against the placeholder root', beforeRoot !== 'accepted', beforeRoot);
+  await sendAndWait('identity: the issuer publishes the real root', idA.methods.update_root(realRoot), { from: sender });
+  await sendAndWait('identity: the member claims in scope 1', idB.methods.verify_and_claim(...claimArgs(1)), { from: recipient });
+  const twice = await refused(idB.methods.verify_and_claim(...claimArgs(1)), { from: recipient });
+  check('identity: a second claim in the same scope is refused', twice !== 'accepted', twice);
+  const notIssuer = await refused(idB.methods.update_root(Fr.random()), { from: recipient });
+  check('identity: only the issuer can change the root', notIssuer.includes('only issuer'), notIssuer);
 
   await wa.stop();
   await wb.stop();
