@@ -14,7 +14,7 @@
 | --- | --- | --- | --- |
 | G1 | The client knows which network it talks to and refuses drift | Done: `identifyNode` (`lib/aztec/fees.ts`) reads the node's L1 chain ID, rollup version, node version and rollup address and compares them with `lib/aztec/sequencer/networks.ts` | `test/unit/aztec/fees.test.ts`; workflow "Aztec mainnet preflight" against the Alpha node |
 | G2 | Fees in Fee Juice, never a sponsored payer on Alpha | Policy done (`feeChoices`, `assertFeeChoice`); the wallet still only implements the sponsored path, used on testnet | Unit tests; the preflight checks there is no sponsored payer on Alpha |
-| G3 | A real private token for agreements | Open. Our contracts call the token through the selector `transfer_in_private((Field),(Field),u128,Field)`; a mainnet token must expose exactly that function. Which private tokens exist on Alpha, and with which contract, is a question for Aztec | Verify the token's class before listing it; per-token caps |
+| G3 | A real private token for agreements | Partly done: `lib/aztec/token-check.ts` accepts a token only if its instance runs a class computed from an artifact the client trusts and that artifact has `transfer_in_private((Field),(Field),u128,Field)`, the function our contracts call by selector; the standard Token of noir-contracts.js 6.0.0 matches. Open: which private tokens are live on Alpha, and with which contract, is a question for Aztec | `test/unit/aztec/token-check.test.ts`; per-token caps |
 | G4 | Contract risk is bounded | Partly done: `lib/aztec/agreement-policy.ts` allows an agreement on Alpha only for a recorded class, with the user's acknowledgement while unaudited, and within a per-token cap; `openEscrow`, `openStream` and `acceptInvite` enforce it before anything is sent or registered. No external audit | `test/unit/aztec/agreement-policy.test.ts` |
 | G5 | Deployments recorded like on testnet | Ready: `deployments/aztec-mainnet.json` (empty) and its offline checks (transaction hash and block required, keys required for token-holding instances, class equal to the committed artifact); the preflight checks every entry on the node | `test/unit/aztec/deployments-registry.test.ts`, preflight |
 | G6 | Agreements usable from the chat | Open (NLnet D-1): the library is done and runs on testnet; the Ledger Chat interface is not | Two-account demo |
@@ -32,7 +32,7 @@ Test tokens (zkUSDC, zkDAI, zkETH, HLT) are testnet tokens with no value. They a
 ## Order of work
 
 1. G2 in the wallet: Fee Juice balance, bridging from L1 with `L1FeeJuicePortalManager` and claiming with `FeeJuicePaymentMethodWithClaim`; tested on testnet, where Fee Juice also exists.
-2. G3: ask Aztec which private token contracts are live on Alpha; add a check that a listed token's class has the function our contracts call.
+2. G3: ask Aztec which private token contracts are live on Alpha, and list a token only after `checkTokenInstance` passes against the Alpha node.
 3. G6: agreements in the conversation (invitation messages, status, claim, refund, withdraw, cancel).
 4. G5: deploy on Alpha (Stefan), record, preflight green.
 5. Small caps, acknowledgement on; raise caps only with an audit.
