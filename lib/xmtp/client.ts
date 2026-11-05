@@ -3,14 +3,15 @@
 /**
  * XMTP E2E Encrypted Chat Client
  *
- * Wraps @xmtp/browser-sdk v5.3.0 for system wallet-to-wallet encrypted messaging.
+ * Wraps @xmtp/browser-sdk (5.2.0, pinned in package.json and package-lock.json)
+ * for wallet-to-wallet encrypted messaging.
  *
- * v5.3.0 Signer interface (mandatory):
+ * Signer interface (mandatory):
  *   type          : "EOA" | "SCW"
  *   getIdentifier : () => Promise<{ identifier: string; identifierKind: "Ethereum" }>
  *   signMessage   : (message: string) => Promise<Uint8Array>    string ONLY
  *
- * v5.3.0 Key API changes vs v5.2:
+ * API used here:
  *   - conversations.newDm(inboxId)             takes inboxId string
  *   - conversations.newDmWithIdentifier(id)    takes Identifier object   USE THIS
  *   - DecodedMessage: senderInboxId, sentAtNs (BigInt ns), content (decoded)
@@ -28,7 +29,7 @@ if (typeof window !== 'undefined' && !window.Buffer) {
 
 import { Client, type XmtpEnv } from '@xmtp/browser-sdk';
 
-//  Type definitions matching browser-sdk v5.3.0 exactly 
+//  Type definitions matching the pinned browser-sdk 
 type IdentifierKind = 'Ethereum';
 export interface XmtpIdentifier {
   identifier: string;
@@ -122,7 +123,7 @@ export async function resolveInboxIdToAddress(inboxId: string, client?: Client):
   }
 
   // [CRITICAL FIX] Fallback to scanning listDms() to find the address
-  // In v5.3.0, inboxStateFromInboxIds may fail. We can securely resolve
+  // inboxStateFromInboxIds may fail. We can securely resolve
   // any inboxId that we already have a DM with by scanning our DMs.
   if (client) {
     try {
@@ -178,9 +179,9 @@ export async function warmInboxIdCache(client: Client): Promise<void> {
 }
 
 /**
- * Build an XMTP v5.3.0-compatible signer from a wagmi/viem EOA wallet client.
+ * Build an XMTP-compatible signer from a wagmi/viem EOA wallet client.
  *
- * CRITICAL v5.3.0 changes:
+ * Requirements:
  *  - signMessage receives string ONLY (no Uint8Array) and must return Uint8Array
  *  - getIdentifier returns { identifier: checksumAddress, identifierKind: "Ethereum" }
  */
@@ -204,7 +205,7 @@ function buildXmtpSigner(wagmiSigner: {
       };
     },
 
-    // v5.3.0: signMessage receives string only, must return Uint8Array
+    // signMessage receives string only, must return Uint8Array
     signMessage: async (message: string): Promise<Uint8Array> => {
       const hexSig = await wagmiSigner.signMessage(message);
       return hexToBytes(hexSig);
@@ -355,7 +356,7 @@ export function destroyXMTPClient(address: string): void {
 
 /**
  * Check if a given Ethereum address has an active XMTP identity.
- * v5.3.0: Client.canMessage returns Map<string, boolean>.
+ * Client.canMessage returns Map<string, boolean>.
  * 
  * CRITICAL FIX: We try multiple casing variants because the Map key can be
  * checksummed or lowercase depending on the XMTP network response.
@@ -400,7 +401,7 @@ export async function canReceiveMessages(
 
 /**
  * Normalize an Ethereum address to EIP-55 checksum format.
- * XMTP v5.3.0 uses the identifier string as a key and is case-sensitive.
+ * XMTP uses the identifier string as a key and is case-sensitive.
  * Always pass checksummed addresses to avoid silent DM mismatches.
  */
 async function checksumAddress(addr: string): Promise<string> {
@@ -415,7 +416,7 @@ async function checksumAddress(addr: string): Promise<string> {
 
 /**
  * Get or create a DM with a peer and return its conversation ID.
- * v5.3.0 FIX: use newDmWithIdentifier()  newDm() takes inboxId, NOT Identifier.
+ * Uses newDmWithIdentifier(): newDm() takes an inboxId, NOT Identifier.
  * CRITICAL: always pass EIP-55 checksummed address as identifier.
  */
 export async function getDmId(client: Client, peerAddress: string): Promise<string> {
@@ -431,9 +432,9 @@ export async function getDmId(client: Client, peerAddress: string): Promise<stri
 
 /**
  * Send an end to end encrypted message to a wallet address.
- * v5.3.0 FIX: use newDmWithIdentifier() which accepts an Identifier object.
+ * use newDmWithIdentifier() which accepts an Identifier object.
  * CRITICAL FIX: always checksum the toAddress before creating the DM.
- * XMTP v5.3.0 treats identifier strings as case-sensitive keys — a lowercase
+ * XMTP treats identifier strings as case-sensitive keys — a lowercase
  * address will NOT match the peer's checksummed registration and the DM will
  * appear to succeed locally but the peer will never receive the message.
  * After sending, syncs the conversation to confirm delivery.
@@ -446,7 +447,7 @@ const activeDmCache = new Map<string, any>();
 
 /**
  * Resolves the EXACT casing of the peer's Ethereum address that is registered on XMTP.
- * Sending to the wrong casing on XMTP v5.3.0 creates a ghost DM.
+ * Sending to the wrong casing on XMTP creates a ghost DM.
  */
 export async function getRegisteredAddress(address: string): Promise<string> {
   const cached = registeredAddressCache.get(address.toLowerCase());
@@ -582,7 +583,7 @@ function schedulePublishRetry(cacheKey: string, dm: any, attempt = 0) {
 
 /**
  * List all DM conversations.
- * v5.3.0: Must sync() first, then listDms().
+ * Must sync() first, then listDms().
  */
 export async function listConversations(client: Client): Promise<any[]> {
   await client.conversations.sync();
@@ -667,7 +668,7 @@ export async function extractPeerAddress(dm: any, selfInboxId: string, selfEthAd
  * Retrieve message history for a specific peer conversation.
  *
  * CRITICAL FIX v5: Always checksum peerAddress before XMTP lookup.
- * XMTP v5.3.0 identifier matching is case-sensitive.
+ * XMTP identifier matching is case-sensitive.
  */
 export async function getMessages(client: Client, peerAddress: string): Promise<any[]> {
   try {
@@ -682,7 +683,7 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
     };
 
     // [CRITICAL FIX v6] Try to find the DM in the local list FIRST.
-    // newDmWithIdentifier creates a new DM if one doesn't exist, which on XMTP v5.3.0
+    // newDmWithIdentifier creates a new DM if one doesn't exist, which on XMTP 
     // can occasionally return a freshly-created (empty) conversation instead of the existing one.
     // Using the existing DM object from listDms() gives us reliable message access.
     let dm: any = null;

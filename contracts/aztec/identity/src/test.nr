@@ -137,10 +137,68 @@ unconstrained fn only_the_issuer_updates_the_root() {
 }
 
 #[test(should_fail_with = "root mismatch or expired")]
-unconstrained fn proof_against_a_replaced_root_fails() {
+unconstrained fn proof_against_a_replaced_root_fails_after_the_grace_period() {
+    let s = setup(SPAIN, 250);
+    s.env.call_public(s.issuer, IdentityCredential::at(s.credential).update_root(0x123));
+    s.env.mine_block_at(s.env.last_block_timestamp() + 3601);
+    claim(s, 1, SPAIN, s.expiry, sanction_list(250));
+}
+
+// SEC-I8: a claim proven against the root an update just replaced still lands.
+#[test]
+unconstrained fn a_claim_against_the_replaced_root_lands_within_the_grace_period() {
     let s = setup(SPAIN, 250);
     s.env.call_public(s.issuer, IdentityCredential::at(s.credential).update_root(0x123));
     claim(s, 1, SPAIN, s.expiry, sanction_list(250));
+}
+
+#[test(should_fail_with = "root mismatch or expired")]
+unconstrained fn a_revoked_previous_root_is_refused_at_once() {
+    let s = setup(SPAIN, 250);
+    s.env.call_public(s.issuer, IdentityCredential::at(s.credential).update_root(0x123));
+    s.env.call_public(s.issuer, IdentityCredential::at(s.credential).revoke_previous_root());
+    claim(s, 1, SPAIN, s.expiry, sanction_list(250));
+}
+
+#[test(should_fail_with = "only issuer can revoke")]
+unconstrained fn only_the_issuer_revokes() {
+    let s = setup(SPAIN, 250);
+    s.env.call_public(s.user, IdentityCredential::at(s.credential).revoke_previous_root());
+}
+
+// SEC-I9: two-step rotation.
+#[test]
+unconstrained fn the_issuer_rotates_in_two_steps() {
+    let mut s = setup(SPAIN, 250);
+    let next = s.env.create_light_account();
+    s.env.call_public(s.issuer, IdentityCredential::at(s.credential).propose_issuer(next));
+    assert(s.env.view_public(IdentityCredential::at(s.credential).get_issuer()) == s.issuer);
+    s.env.call_public(next, IdentityCredential::at(s.credential).accept_issuer());
+    assert(s.env.view_public(IdentityCredential::at(s.credential).get_issuer()) == next);
+    s.env.call_public(next, IdentityCredential::at(s.credential).update_root(0x456));
+}
+
+#[test(should_fail_with = "only issuer can update root")]
+unconstrained fn the_old_issuer_loses_its_rights_after_a_rotation() {
+    let mut s = setup(SPAIN, 250);
+    let next = s.env.create_light_account();
+    s.env.call_public(s.issuer, IdentityCredential::at(s.credential).propose_issuer(next));
+    s.env.call_public(next, IdentityCredential::at(s.credential).accept_issuer());
+    s.env.call_public(s.issuer, IdentityCredential::at(s.credential).update_root(0x789));
+}
+
+#[test(should_fail_with = "only the pending issuer can accept")]
+unconstrained fn only_the_proposed_address_accepts() {
+    let mut s = setup(SPAIN, 250);
+    let next = s.env.create_light_account();
+    s.env.call_public(s.issuer, IdentityCredential::at(s.credential).propose_issuer(next));
+    s.env.call_public(s.user, IdentityCredential::at(s.credential).accept_issuer());
+}
+
+#[test(should_fail_with = "only issuer can propose")]
+unconstrained fn only_the_issuer_proposes() {
+    let s = setup(SPAIN, 250);
+    s.env.call_public(s.user, IdentityCredential::at(s.credential).propose_issuer(s.user));
 }
 
 #[test(should_fail_with = "invalid Merkle membership proof")]

@@ -12,7 +12,75 @@
 **Sponsored Fee Payment Contract (FPC):** `0x2d8fff82a3b0c15d0a89169e7d8d043e079ab94d52031f1de1e4972ebad169d3`  
 **Date of Deployment:** 4 November 2026  
 
-## Current classes, end to end (5 November 2026): escrow, stream with sender cancel, identity claim
+## Current classes, end to end (5 November 2026): stored-terms views, agreement confirmation, a three-member credential tree
+
+Run 42030688268 of the workflow [Aztec escrow e2e (testnet)](../.github/workflows/aztec-escrow-e2e.yml), all checks passing, throwaway accounts and a fresh test token. These are the classes of the committed artifacts.
+
+| Contract | Instance | Class |
+| --- | --- | --- |
+| `PrivateEscrow` (keyed, with `escrow_view`) | `0x0253dbdd1e81bb19bcfb0401c5d64d6d0337c0dc113663c67fc6bf9c87bf8a7f` | `0x1fc9702de2946be7308126990f4cf3b8a3fbe9a4c53dc072d9ccb95bf9f04b5e` |
+| `PaymentStream` (keyed, with `stream_view`) | `0x27fc79965b3a5d5b9bb3c2178527e8711b2b8ac8ce73be84c50e404c9b3d799d` | `0x1fd6afbe0bffe6a7cb675927dedc0aed886a46bf7c6d58edc32854af073701f2` |
+| `IdentityCredential` | `0x024a1a10f3dfd34b72347edb484bfbf5578b13fda79273f4fed4ad00954993cb` | `0x1be813182640bfe08c2dea56bc3f96a7192b380a8dadc8210fc27ae0867e6c06` |
+| `PrivateEscrow` opened with `openEscrow` | `0x12cf33312a1f026163492cea08f954c68e77914023be12850ffb2f0dc4590355` | `0x1fc9702de2946be7308126990f4cf3b8a3fbe9a4c53dc072d9ccb95bf9f04b5e` |
+
+| Step | Transaction | Block |
+| --- | --- | --- |
+| Escrow: keyed deploy, publishing the class | `0x1bb4b2696fa3cbbcd6ffea65d35b88c653307d262aeb6765fb8c5318ec8620c2` | 19563 |
+| Escrow 1: deposit 25 | `0x2f76cb066329b8d746c32342b72790eadcebe2388e04e37d020f5d738e7e86dc` | 19564 |
+| Escrow 2: deposit 10, deadline in 7 min | `0x262980d61c1e38f6bc8b69b40a4d167164aa3e14d44a4fb57db8dbad5dc429c8` | 19566 |
+| Escrow 1: claim by the recipient | `0x06e7662854f63c53d7d024591a0702b55db69aae32844450529b125ad180eaa4` | 19568 |
+| Stream: keyed deploy, publishing the class | `0x274acaf9bc287080495267f0352b9a56dfe01737a79dc42a8ad7736e88f9a0c9` | 19570 |
+| Stream 1: create 20; stream 2: create 5 | `0x0b75d12f4e4691e8b076d36458a21b673e0ab1868ec617fa15c87146a2a5a81b`, `0x2d89e6f43d74ed9b0740a4874b4e255ab541817868f5a0bf9c1971158f5ba9b6` | 19571, 19573 |
+| Stream 1: withdraw 5 | `0x2e020c1fcc1de912ab8b00a15443af3a4ac360b2d0fcd7792e4c6fc8df193185` | 19575 |
+| Escrow 2: refund after the deadline | `0x074f22d4557b77a8fe5084235f37162f29f00af549ac5172b3f2ed3a087a413a` | 19577 |
+| Stream 1: cancel by the sender | `0x1ddc4b00d5eb41d9b86ecc31442f93e5f0405024647c04c6f4027e0dad383bd0` | 19580 |
+| Identity: deploy with a placeholder root | `0x2a31319ee9c49e267bd5b3a85daf5cd93af1cee27c5f040f908af2ca5ed0811c` | 19582 |
+| Identity: the issuer publishes the root of a three-member tree | `0x161aa4e36daf86d6cc10c3b3be809c7db8d0c123bafbe35a46722f3a3b34ac72` | 19583 |
+| Identity: the member at index 5 claims in scope 1 | `0x1a47ebc1bbdecfe6397c891f9c17b40d10aef8b796577e9142787037665f6b21` | 19585 |
+| Identity: the issuer replaces the root | `0x1d1dd45575f9b91944acd140c29ef1b12d854d26cd57885a646c709b8bf2646b` | 19587 |
+| Identity: a claim against the replaced root, within the grace period | `0x165ce6cf22e87f01917fd7d51c8e2fa35b23c82aed0c8440f7e5780cf2f650e1` | 19589 |
+| Identity: propose and accept a new issuer | `0x3060ce25150bb351484f719ce2bcfe194291475ce27e10f46528cb61864de3cb`, `0x23bf4b211a3d0f0b5399eb41c1779d2d308983b42a6e632684b90fe94617ca7b` | 19591, 19592 |
+| Agreement: keyed deploy by `openEscrow` | `0x13b184c657e37f667bf18d84d7e89762e463c650e45dde1051a84bbd12280c8a` | 19594 |
+| Agreement: deposit of 3 by `openEscrow` | `0x1ee3818e7be62caf5d68297980980e25d5309c6fe974c472ab8f05e731b76015` | 19595 |
+| Agreement: the recipient claims with the secret from the invitation | `0x1e0f7d74fafd83e98d8b77877f0988444f97b3a458e30d156eb7b7f4d14d83c9` | 19597 |
+
+What this run adds to the earlier ones:
+
+- `escrow_view`: both parties read the stored amount, deadline and claim-secret hash of escrow 1; after the claim the sender's view reports it settled.
+- `stream_view`: after the withdrawal the sender holds copies at index 0 and 1, and the view returns index 1 (5 withdrawn), the live state; after the cancel the recipient's view reports the stream as not live, with nothing available.
+- `confirmAgreement`: the agreement escrow's stored note matched every field of the invitation, and the same note caught an invitation that overstated the amount.
+- Identity: the root came from `lib/aztec/credential-tree.ts` with three members, and the recipient claimed at index 5, whose path has non-zero siblings and both left and right steps. The issuer tool and the contract compute the same tree.
+- All escrow, stream and identity checks of the runs below were repeated with the same results (stream cancel: 45.12 to the sender, 39.88 to the recipient, 5 still in stream 2).
+
+## Identity grace period and issuer rotation, and an agreement opened through the client library (5 November 2026)
+
+Run 42023143254 of the workflow [Aztec escrow e2e (testnet)](../.github/workflows/aztec-escrow-e2e.yml), all checks passing, throwaway accounts and a fresh test token. It repeated every escrow and stream check of run 41999587163 below on new instances of the same classes, and added:
+
+| Contract | Instance | Class |
+| --- | --- | --- |
+| `IdentityCredential` (grace period, two-step rotation) | `0x07c1380971e0349643892f2784cfeeb625ace863c86a3b3eae975f27cfa076f3` | `0x1be813182640bfe08c2dea56bc3f96a7192b380a8dadc8210fc27ae0867e6c06` |
+| `PrivateEscrow` opened with `openEscrow` (`lib/aztec/agreements.ts`) | `0x2008decef28858d86bb7efda63a1c56b0d82384c1626916e827a406e9d2522b9` | `0x163f855efb404a868d60e9ebd2352fd8317c54bc054561348c1cf764b2cdf873` |
+
+| Step | Transaction | Block |
+| --- | --- | --- |
+| Identity: deploy with a placeholder root | `0x0ca97aeb5b781274820b35e41c92c36bd02ac6d8ded9149c673ba82df1635e2f` | 19525 |
+| Identity: the issuer publishes a real depth-32 root | `0x1f66f1203a6ce484018ea690ec8d894686d8b49d05aeece20ff68ac16f231be9` | 19528 |
+| Identity: a member claims in scope 1 | `0x21015aac1f87a8776fcaed627408eab4a2718ea4c1fa585d1e243a5ad6b0879e` | 19530 |
+| Identity: the issuer replaces the root | `0x117dcab624b067bc82a13c1b7db8c9800c6347344f085e8860e66a3524fa90eb` | 19532 |
+| Identity: a claim against the replaced root, within the grace period | `0x1f66179700fd467a44e57308b5267cd9efe2ca8e73b43d2d603c575909fa2469` | 19534 |
+| Identity: the issuer proposes a new issuer | `0x160f266cd228076dfb8d111cd660f6d43c930e0d1d0683b50a1275bb10ae9885` | 19535 |
+| Identity: the proposed issuer accepts | `0x13e710c6e24571b88e5b140f5d7b30eedae82d1ba3edbd77a4ace62a36d288b8` | 19537 |
+| Agreement: keyed deploy by `openEscrow` | `0x19a95ed31cb36805828009921b57174d7fb9c13d531713e786e53179620006a9` | not recorded |
+| Agreement: deposit of 3 by `openEscrow` | `0x09af70437cd18cbf3908978631911d2200ca9d75e4c0475e65b0228485d86205` | not recorded |
+| Agreement: the recipient claims with the secret from the invitation | `0x2863bc4d04e2bd1464e49f7a6d75d788ecfe62f6d3c7a259c00d39cedaec0ea6` | 19541 |
+
+- After the rotation, the previous issuer's root change was refused (`only issuer can update root`).
+- `acceptInvite` refused an invitation whose address had been swapped (`address does not match the shared secret`) before registering anything, then verified and registered the genuine one; the claim with its secret paid the recipient 3.
+- The blocks of the two `openEscrow` transactions were not recorded by this run; `openEscrow` now returns them and later runs record them. Any reader can look the hashes up on the node.
+
+The escrow and stream classes of this run were superseded the same day by the classes with `escrow_view` and `stream_view` (AZ-21, AZ-22); the IdentityCredential class above is current.
+
+## Escrow, stream with sender cancel, identity claim, end to end (5 November 2026)
 
 Run 41999587163 of the workflow [Aztec escrow e2e (testnet)](../.github/workflows/aztec-escrow-e2e.yml), all checks passing, with throwaway accounts and a fresh test token:
 
@@ -128,13 +196,15 @@ All three contracts were written against `aztec-nr` v6.0.0, compiled with `aztec
 Any developer or reviewer can verify these deployments using Aztec.js or a direct JSON-RPC call against `https://aztec-testnet.drpc.org`:
 
 ```bash
-# Query contract instance metadata from the testnet node
+# Query contract instance metadata from the testnet node (here the
+# IdentityCredential v2 reference instance; any address in
+# deployments/aztec-testnet.json works)
 curl -X POST https://aztec-testnet.drpc.org \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
     "method": "node_getContractInstance",
-    "params": ["0x1d88555bead4ba81d1f93a16dd8366b5659d062928af1e57f94a75e08d343097"],
+    "params": ["0x10a7799394def50fc1bc2cfebe549bf2be029cff2e75c68b685badef1530d77c"],
     "id": 1
   }'
 ```

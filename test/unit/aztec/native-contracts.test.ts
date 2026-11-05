@@ -50,6 +50,9 @@ describe('Aztec v6.0.0 Native Contracts Pipeline', () => {
       expect(fnNames).toContain('claim');
       expect(fnNames).toContain('refund');
       expect(fnNames).toContain('get_token');
+      // Stored terms and settlement for a party (utility, never proven).
+      expect(fnNames).toContain('escrow_view');
+      expect(artifact.functions.find(f => f.name === 'escrow_view')?.custom_attributes).toContain('abi_utility');
 
       // Check UltraHonk private functions and bytecode
       const depositFn = artifact.functions.find(f => f.name === 'deposit');
@@ -88,6 +91,9 @@ describe('Aztec v6.0.0 Native Contracts Pipeline', () => {
       // Sender cancel (SEC-S12, 5 Nov 2026): shares a state nullifier with withdraw.
       expect(fnNames).toContain('cancel');
       expect(fnNames).toContain('get_token');
+      // Live state for either party (SEC-S13, utility, never proven).
+      expect(fnNames).toContain('stream_view');
+      expect(artifact.functions.find(f => f.name === 'stream_view')?.custom_attributes).toContain('abi_utility');
 
       const createFn = artifact.functions.find(f => f.name === 'create_stream');
       const withdrawFn = artifact.functions.find(f => f.name === 'withdraw');
