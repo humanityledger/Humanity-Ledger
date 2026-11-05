@@ -169,3 +169,32 @@ unconstrained fn expired_credential_fails() {
     let s = Setup { env, credential, issuer, user, root, expiry };
     claim(s, 1, SPAIN, expiry, sanction_list(250));
 }
+
+unconstrained fn deploy_with_root(initial_root: Field) -> Setup {
+    let mut env = TestEnvironment::new();
+    let issuer = env.create_light_account();
+    let user = env.create_light_account();
+    let expiry = env.last_block_timestamp() + ONE_YEAR;
+    let root = credential_root(user, SPAIN, expiry);
+    let credential = env.deploy("IdentityCredential").with_public_initializer(
+        issuer,
+        IdentityCredential::interface().constructor(initial_root, sanction_root(sanction_list(250)), issuer),
+    );
+    Setup { env, credential, issuer, user, root, expiry }
+}
+
+// The testnet instance was deployed with a placeholder root: once the issuer
+// publishes the real root, members can claim.
+#[test]
+unconstrained fn the_issuer_replaces_a_placeholder_root_and_members_claim() {
+    let s = deploy_with_root(0x12345678);
+    s.env.call_public(s.issuer, IdentityCredential::at(s.credential).update_root(s.root));
+    claim(s, 1, SPAIN, s.expiry, sanction_list(250));
+    assert(s.env.view_public(IdentityCredential::at(s.credential).get_current_root()) == s.root);
+}
+
+#[test(should_fail_with = "identity root not set")]
+unconstrained fn no_claim_before_a_root_is_set() {
+    let s = deploy_with_root(0);
+    claim(s, 1, SPAIN, s.expiry, sanction_list(250));
+}

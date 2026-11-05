@@ -15,7 +15,7 @@
 //   claimable = min(accrued, total) - withdrawn
 //
 // ══════════════════════════════════════════════════════════════════════════════
-// SECURITY THREAT MODEL: Nation-State / Lazarus Group Adversary
+// SECURITY PROPERTIES
 // ══════════════════════════════════════════════════════════════════════════════
 //
 //   [SEC-S1] NULLIFIER PER WITHDRAWAL STATE — Each StreamNote emission
@@ -55,6 +55,15 @@
 //   [SEC-S11] OVERFLOW-FREE ACCRUAL (4 Nov 2026) — accrual is capped before
 //            multiplying, so a large rate can no longer overflow u128 and lock
 //            a stream. create_stream also refuses a stream to oneself.
+//
+//   [SEC-S12] SENDER CANCEL (5 Nov 2026) — every stream state has an index and
+//            a state nullifier H(salt, sender, recipient, index) emitted by
+//            both withdraw and cancel, so a state is either withdrawn from or
+//            cancelled, never both. Withdrawals deliver a copy of the next
+//            state to the sender, who cancels from the latest copy. Accrual is
+//            measured at the anchor block and a cancel must land within
+//            600 s of it, so an old anchor withholds at most 600 * rate from
+//            the recipient. Closes the SEC-S5 gap above.
 // ══════════════════════════════════════════════════════════════════════════════
 
 use aztec::macros::aztec;
@@ -70,10 +79,11 @@ pub contract PaymentStream {
             storage::storage,
         },
         messages::delivery::MessageDelivery,
-        note::{note_getter_options::NoteGetterOptions, note_interface::NoteProperties},
+        note::{note_getter_options::{NoteGetterOptions, SortOrder}, note_interface::NoteProperties},
         protocol::{
             abis::function_selector::FunctionSelector,
             address::AztecAddress,
+            hash::poseidon2_hash_with_separator,
             traits::{Deserialize, Packable, Serialize, ToField},
         },
         state_vars::{Owned, PrivateSet, PublicImmutable},
@@ -83,6 +93,15 @@ pub contract PaymentStream {
 
     global TRANSFER_IN_PRIVATE_SELECTOR: FunctionSelector =
         FunctionSelector::from_signature("transfer_in_private((Field),(Field),u128,Field)");
+
+    // Separator of the per-state nullifier shared by withdraw and cancel
+    // (SEC-S12). Distinct from every separator in contracts/aztec.
+    global DOM_SEP__STREAM_STATE: u32 = 718293051;
+    // A cancel measures accrual at its anchor block, which the sender's PXE
+    // picks. Bounding how long after its anchor a cancel can land bounds what
+    // an old anchor can withhold from the recipient: at most
+    // CANCEL_MAX_TX_LIFETIME * rate (SEC-S12).
+    global CANCEL_MAX_TX_LIFETIME: u64 = 600;
 
     // ─── StreamNote Definition ───────────────────────────────────────────────
     #[derive(Deserialize, Eq, Packable, Serialize)]
@@ -95,12 +114,16 @@ pub contract PaymentStream {
         pub start: u64,
         pub withdrawn: u128,
         pub salt: Field,
+        /// State index: 0 at creation, +1 on every withdrawal.
+        pub index: u32,
     }
 
     // ─── Storage ─────────────────────────────────────────────────────────────
     #[storage]
     struct Storage<Context> {
         stream_notes: Owned<PrivateSet<StreamNote, Context>, Context>,
+        /// The sender's copy of each stream state, so the sender can cancel.
+        sender_copies: Owned<PrivateSet<StreamNote, Context>, Context>,
         token: PublicImmutable<AztecAddress, Context>,
     }
 
@@ -147,9 +170,12 @@ pub contract PaymentStream {
             start,
             withdrawn: 0,
             salt,
+            index: 0,
         };
 
         self.storage.stream_notes.at(recipient).insert(note)
+            .deliver(MessageDelivery::onchain_constrained());
+        self.storage.sender_copies.at(sender).insert(note)
             .deliver(MessageDelivery::onchain_constrained());
     }
 
@@ -171,6 +197,15 @@ pub contract PaymentStream {
 
         let note = notes.get_unchecked(0);
 
+        // SEC-S12: one state nullifier per stream state, also emitted by
+        // cancel. After a cancel at this state, this withdrawal cannot land.
+        self.context.push_nullifier_unsafe(
+            poseidon2_hash_with_separator(
+                [note.salt, note.sender.to_field(), recipient.to_field(), note.index as Field],
+                DOM_SEP__STREAM_STATE,
+            ),
+        );
+
         // Conservative accrual, capped at the total without overflow: once
         // elapsed > total / rate the stream is fully accrued, and below that
         // bound elapsed * rate <= total. Multiplying first could overflow u128
@@ -189,7 +224,8 @@ pub contract PaymentStream {
 
         let new_withdrawn = note.withdrawn + amount;
 
-        // If stream is not yet completely drained, emit updated StreamNote
+        // If stream is not yet completely drained, emit the next state to the
+        // recipient, and a copy to the sender so that the sender can cancel it.
         if new_withdrawn < note.total {
             let updated_note = StreamNote {
                 sender: note.sender,
@@ -199,8 +235,11 @@ pub contract PaymentStream {
                 start: note.start,
                 withdrawn: new_withdrawn,
                 salt: note.salt,
+                index: note.index + 1,
             };
             self.storage.stream_notes.at(recipient).insert(updated_note)
+                .deliver(MessageDelivery::onchain_constrained());
+            self.storage.sender_copies.at(note.sender).insert(updated_note)
                 .deliver(MessageDelivery::onchain_constrained());
         }
 
@@ -219,5 +258,64 @@ pub contract PaymentStream {
     #[view]
     fn get_token() -> pub AztecAddress {
         self.storage.token.read()
+    }
+
+    /// Cancel a stream: the recipient is paid what has accrued and not yet
+    /// been withdrawn, and the sender gets the rest back.
+    ///
+    /// The sender uses its copy of the latest stream state. Cancel and
+    /// withdraw emit the same state nullifier (SEC-S12), so for any state only
+    /// one of them can land: a withdrawal after a cancel fails, and a cancel
+    /// from an outdated copy fails because that state's withdrawal already
+    /// emitted the nullifier. Selecting the highest index is a hint to the
+    /// PXE, not a constraint; soundness rests on the nullifier.
+    #[external("private")]
+    fn cancel(salt: Field) {
+        let sender = self.msg_sender();
+        let anchor_ts = self.context.get_anchor_block_header().timestamp() as u64;
+        self.context.set_expiration_timestamp(anchor_ts + CANCEL_MAX_TX_LIFETIME);
+
+        let copies = self.storage.sender_copies.at(sender).pop_notes(
+            NoteGetterOptions::new()
+                .select(StreamNote::properties().salt, Comparator.EQ, salt)
+                .sort(StreamNote::properties().index, SortOrder.DESC)
+                .set_limit(1),
+        );
+        assert(copies.len() > 0, "PaymentStream: stream not found");
+        let note = copies.get_unchecked(0);
+        assert(note.sender == sender, "PaymentStream: only the sender can cancel");
+
+        self.context.push_nullifier_unsafe(
+            poseidon2_hash_with_separator(
+                [note.salt, sender.to_field(), note.recipient.to_field(), note.index as Field],
+                DOM_SEP__STREAM_STATE,
+            ),
+        );
+
+        // Accrued at the anchor block, with the same overflow-free cap as withdraw.
+        let elapsed = (anchor_ts - note.start) as u128;
+        let accrued = if elapsed > note.total / note.rate {
+            note.total
+        } else {
+            elapsed * note.rate
+        };
+        let to_recipient = accrued - note.withdrawn;
+        let to_sender = note.total - accrued;
+
+        let token_addr = self.storage.token.read();
+        if to_recipient > 0 {
+            let _ = self.context.call_private_function(
+                token_addr,
+                TRANSFER_IN_PRIVATE_SELECTOR,
+                [self.context.this_address().to_field(), note.recipient.to_field(), to_recipient as Field, 0],
+            );
+        }
+        if to_sender > 0 {
+            let _ = self.context.call_private_function(
+                token_addr,
+                TRANSFER_IN_PRIVATE_SELECTOR,
+                [self.context.this_address().to_field(), sender.to_field(), to_sender as Field, 0],
+            );
+        }
     }
 }
