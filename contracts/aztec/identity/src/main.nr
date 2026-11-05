@@ -30,11 +30,16 @@
 //   [SEC-I5] TEMPORAL FRESHNESS — Verifies that `expiry >= anchor_ts`,
 //            preventing expired KYC/credentials from being reused.
 //
-//   [SEC-I6] ISSUER AUTHENTICATION — Only the issuer set at construction can
-//            update the identity root or the sanction list. The issuer is a
-//            single immutable address: it cannot be rotated (open limit).
+//   [SEC-I6] ISSUER AUTHENTICATION — Only the issuer can update the identity
+//            root or the sanction list.
 //   [SEC-I7] EXPIRY BOUND (5 Nov 2026) — a claim's transaction expires no
 //            later than the credential, so it cannot land after expiry.
+//   [SEC-I8] ROOT GRACE PERIOD (5 Nov 2026) — a replaced root stays valid for
+//            one hour (the longest a claim can take to land), so a root update
+//            does not invalidate claims already in flight; the issuer can end
+//            it at once with revoke_previous_root.
+//   [SEC-I9] ISSUER ROTATION (5 Nov 2026) — two steps, propose_issuer by the
+//            current issuer and accept_issuer by the proposed address.
 // ══════════════════════════════════════════════════════════════════════════════
 
 use aztec::macros::aztec;
@@ -54,7 +59,7 @@ pub contract IdentityCredential {
             hash::poseidon2_hash_with_separator,
             traits::ToField,
         },
-        state_vars::{Map, Owned, PublicImmutable, PublicMutable, SingleUseClaim},
+        state_vars::{Map, Owned, PublicMutable, SingleUseClaim},
     };
 
     // ─── Constants (u32 separators for poseidon2) ────────────────────────────
@@ -62,6 +67,8 @@ pub contract IdentityCredential {
     global DOM_SEP__IDENTITY_LEAF: u32       = 238471092;
     global DOM_SEP__MERKLE_NODE: u32         = 349582103;
     global MAX_TX_LIFETIME: u64 = 3600;
+    // A replaced root is accepted for as long as a claim may take to land.
+    global ROOT_GRACE_PERIOD: u64 = MAX_TX_LIFETIME;
 
     // Sanctioned jurisdictions (ISO-3166-1 numeric standards)
     global SANCTION_KP_DPRK: u32 = 408; // Democratic People's Republic of Korea
@@ -87,8 +94,16 @@ pub contract IdentityCredential {
         current_root: PublicMutable<Field, Context>,
         sanction_root: PublicMutable<Field, Context>,
 
-        /// Master identity authority / issuer address.
-        issuer: PublicImmutable<AztecAddress, Context>,
+        /// Root replaced by the last update, still accepted until
+        /// `previous_root_valid_until` so that claims proven just before an
+        /// update can land (SEC-I8).
+        previous_root: PublicMutable<Field, Context>,
+        previous_root_valid_until: PublicMutable<u64, Context>,
+
+        /// Identity authority. Rotated in two steps (SEC-I9): the issuer
+        /// proposes, the proposed address accepts.
+        issuer: PublicMutable<AztecAddress, Context>,
+        pending_issuer: PublicMutable<AztecAddress, Context>,
     }
 
     // ─── Constructor ─────────────────────────────────────────────────────────
@@ -97,7 +112,7 @@ pub contract IdentityCredential {
     fn constructor(initial_root: Field, initial_sanction_root: Field, issuer_address: AztecAddress) {
         self.storage.current_root.write(initial_root);
         self.storage.sanction_root.write(initial_sanction_root);
-        self.storage.issuer.initialize(issuer_address);
+        self.storage.issuer.write(issuer_address);
     }
 
     // ─── Public Functions ────────────────────────────────────────────────────
@@ -109,7 +124,38 @@ pub contract IdentityCredential {
         let issuer = self.storage.issuer.read();
         assert(caller == issuer, "IdentityCredential: only issuer can update root");
         assert(new_root != 0, "IdentityCredential: empty root rejected");
+        // SEC-I8: the replaced root stays valid for ROOT_GRACE_PERIOD, the
+        // longest a claim proven against it can take to land.
+        self.storage.previous_root.write(self.storage.current_root.read());
+        self.storage.previous_root_valid_until.write(self.context.timestamp() + ROOT_GRACE_PERIOD);
         self.storage.current_root.write(new_root);
+    }
+
+    /// Ends the grace period of the previous root now, for a root that must
+    /// stop being accepted at once (for example, a tree published by mistake).
+    #[external("public")]
+    fn revoke_previous_root() {
+        assert(self.msg_sender() == self.storage.issuer.read(), "IdentityCredential: only issuer can revoke");
+        self.storage.previous_root.write(0);
+        self.storage.previous_root_valid_until.write(0);
+    }
+
+    /// SEC-I9: first step of an issuer rotation. Only the current issuer.
+    #[external("public")]
+    fn propose_issuer(new_issuer: AztecAddress) {
+        assert(self.msg_sender() == self.storage.issuer.read(), "IdentityCredential: only issuer can propose");
+        self.storage.pending_issuer.write(new_issuer);
+    }
+
+    /// SEC-I9: second step. Only the proposed address, so a typo in the
+    /// proposal cannot hand the contract to an address nobody controls.
+    #[external("public")]
+    fn accept_issuer() {
+        let pending = self.storage.pending_issuer.read();
+        assert(pending != AztecAddress::zero(), "IdentityCredential: no pending issuer");
+        assert(self.msg_sender() == pending, "IdentityCredential: only the pending issuer can accept");
+        self.storage.issuer.write(pending);
+        self.storage.pending_issuer.write(AztecAddress::zero());
     }
 
     /// Replace the committed sanction list root. Only callable by the issuer.
@@ -135,7 +181,11 @@ pub contract IdentityCredential {
     fn assert_valid_root(expected_root: Field) {
         let active_root = self.storage.current_root.read();
         assert(active_root != 0, "IdentityCredential: identity root not set");
-        assert(active_root == expected_root, "IdentityCredential: root mismatch or expired");
+        let previous = self.storage.previous_root.read();
+        let in_grace = (previous != 0)
+            & (expected_root == previous)
+            & (self.context.timestamp() <= self.storage.previous_root_valid_until.read());
+        assert((active_root == expected_root) | in_grace, "IdentityCredential: root mismatch or expired");
     }
 
     // ─── External Private Functions ───────────────────────────────────────────
@@ -253,5 +303,11 @@ pub contract IdentityCredential {
     #[view]
     fn get_issuer() -> pub AztecAddress {
         self.storage.issuer.read()
+    }
+
+    #[external("public")]
+    #[view]
+    fn get_pending_issuer() -> pub AztecAddress {
+        self.storage.pending_issuer.read()
     }
 }
