@@ -33,7 +33,14 @@ jobs:
           cache: npm
       - run: npm ci --include=dev
       - name: Keyed escrow (claim, refund) and stream (withdraw) on testnet
-        run: node --conditions=browser --import tsx --import ./scripts/aztec/register.mjs scripts/aztec/e2e-escrow-testnet.mts
+        # lib/ has no "type": "module", so tsx would load lib/aztec/*.ts as
+        # CommonJS next to the ESM script and wallet: two copies of the SDK
+        # classes, and the wallet rejects an Fr made by the other copy. The app
+        # bundle has a single copy; for this run only, lib/aztec is loaded as
+        # ESM (the file is not committed).
+        run: |
+          echo '{"type":"module"}' > lib/aztec/package.json
+          node --conditions=browser --import tsx --import ./scripts/aztec/register.mjs scripts/aztec/e2e-escrow-testnet.mts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
