@@ -1,0 +1,12 @@
+{
+  "$comment": "Instances of our contracts on Aztec Alpha (mainnet, Ethereum L1 chain 1). Empty: nothing of ours is deployed there. Alpha runs real value and, in Aztec's words, is live but early, with critical bugs expected; our contracts have no external audit. An entry is added only with its transaction hash and block, after the read-only preflight (workflow \"Aztec mainnet preflight\") passes for the same artifacts. See docs/MAINNET_READINESS.md.",
+  "network": {
+    "name": "Aztec Alpha (mainnet), v6.0.0 Tierra",
+    "nodeUrl": "https://aztec-mainnet.drpc.org",
+    "l1ChainId": 1,
+    "rollupVersion": 2070860440
+  },
+  "sponsoredFpc": null,
+  "audit": null,
+  "contracts": []
+}

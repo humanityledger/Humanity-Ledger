@@ -19,6 +19,7 @@
 | On-chain VK registry (`contracts/ZKVerificationKeyRegistry.sol`) | Real in tests only (Hardhat) | `test/ZKVerificationKeyRegistry.test.ts`, `test/zk/vk-registry-onchain.test.ts` | Not deployed; `assertVKIntegrityOnChain` throws until it is |
 | Browser prover (`lib/zk/browser-prover.ts`, Web Worker) | Real in tests only; no Node built-ins; pinned VK | `test/zk/browser-prover.test.ts` | Not wired into any screen |
 | Sign-in (SIWE at `/connect`) | Real: sealed single-use nonce, any EVM chain, www/apex domain, ERC-1271/6492 wallets | `test/auth/siwe-routes.test.ts` (real route handlers and signatures) | Needs `NEXT_PUBLIC_APP_URL` or `NEXT_PUBLIC_DOMAIN` set in production |
+| Aztec Alpha (mainnet) | Nothing of ours deployed; read-only weekly preflight (node 6.0.0, L1 chain 1, no drift, no sponsored fee payer, our classes not published) | Workflow "Aztec mainnet preflight"; `deployments/aztec-mainnet.json` (empty) | Gates in `docs/MAINNET_READINESS.md`; the wallet refuses Ethereum mainnet |
 | L1 contracts | Local tests; not audited, not deployed to mainnet | `npm run test:contracts` | `ZKIdentityRegistry.verifyCredential` reverts until a verifier exists |
 | Community apps sandbox | Real (CSP `sandbox allow-scripts`, no network) | `test/eaf_isolation.adversarial.test.ts` | An app can navigate its own frame |
 

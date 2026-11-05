@@ -68,3 +68,34 @@ describe('deployments/aztec-testnet.json', () => {
     });
   }
 });
+
+// deployments/aztec-mainnet.json: the same rules, plus the network values
+// pinned in lib/aztec/sequencer/networks.ts. Empty until something is deployed.
+describe('deployments/aztec-mainnet.json', () => {
+  const mainnet = JSON.parse(fs.readFileSync(path.join(root, 'deployments/aztec-mainnet.json'), 'utf8'));
+  const entries = mainnet.contracts as Entry[];
+
+  it('names the pinned Alpha network and no sponsored fee payer', async () => {
+    const { AZTEC_NETWORKS } = await import('@/lib/aztec/sequencer/networks');
+    expect(mainnet.network.l1ChainId).toBe(1);
+    expect(mainnet.network.rollupVersion).toBe(AZTEC_NETWORKS.mainnet.rollupVersion);
+    expect(mainnet.network.nodeUrl).toBe(AZTEC_NETWORKS.mainnet.publicNodeRpc);
+    expect(mainnet.sponsoredFpc).toBeNull();
+  });
+
+  it('records every instance with its transaction and block, keyed when it holds tokens', () => {
+    for (const e of entries as Array<Entry & { deployTx?: string; deployBlock?: number }>) {
+      expect(e.address).toMatch(/^0x[0-9a-f]{64}$/);
+      expect(e.classId).toMatch(/^0x[0-9a-f]{64}$/);
+      expect(e.deployTx, e.name).toMatch(/^0x[0-9a-f]{64}$/);
+      expect(Number.isInteger(e.deployBlock), e.name).toBe(true);
+      if (e.holdsPrivateBalance) expect(e.keyed, e.name).toBe(true);
+    }
+  });
+
+  for (const e of entries.filter((x) => x.tracksCurrentArtifact)) {
+    it(`${e.name}: the recorded class ID is the one computed from the committed artifact`, async () => {
+      expect(await classIdOf(e.artifact)).toBe(e.classId);
+    });
+  }
+});

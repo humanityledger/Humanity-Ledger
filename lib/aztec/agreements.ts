@@ -31,6 +31,7 @@ import { Fr } from '@aztec-labs/aztec.js/fields';
 import { AztecAddress } from '@aztec-labs/aztec.js/addresses';
 import { Contract, DeployMethod } from '@aztec-labs/aztec.js/contracts';
 import { randomField } from './random';
+import { checkAgreementPolicy, type PolicyInput } from './agreement-policy';
 import { computeKeyedInstance, type KeyedContract, type loadKeyedArtifact } from './keyed-deploy';
 import {
   verifyAgreementInvite,
@@ -66,6 +67,17 @@ export interface OpenCommon {
   send: SendOptions;
   /** True when the node already has the contract class, so deployment skips publishing it. */
   classPublished: boolean;
+  /** Network policy (lib/aztec/agreement-policy.ts); required in practice on mainnet. */
+  policy?: AgreementPolicy;
+}
+
+/** The parts of a policy check that do not depend on the agreement itself. */
+export type AgreementPolicy = Omit<PolicyInput, 'classId' | 'token' | 'amount'>;
+
+function enforcePolicy(policy: AgreementPolicy | undefined, classId: string, token: string, amount: bigint) {
+  if (!policy) return;
+  const r = checkAgreementPolicy({ ...policy, classId, token, amount });
+  if (!r.ok) throw new Error(`agreement refused by policy: ${r.reasons.join('; ')}`);
 }
 
 export interface Opened<I extends AgreementInvite> {
@@ -101,10 +113,12 @@ const blockOf = (sent: any): number | undefined => {
 };
 
 /** Keyed universal deployment of a fresh instance, registered with its secret in the sender's wallet. */
-async function deployKeyed(c: OpenCommon) {
+async function deployKeyed(c: OpenCommon, amount: bigint) {
   const secretKey = randomField();
   const salt = randomField();
   const expected = await computeKeyedInstance(c.artifact, { secretKey, salt, token: c.token });
+  // Before anything is sent: on mainnet the policy can refuse the class, the token or the amount.
+  enforcePolicy(c.policy, expected.instance.currentContractClassId.toString(), c.token.toString(), amount);
   const deployment = DeployMethod.create(
     c.sender.wallet,
     { artifact: c.artifact, args: [c.token], postDeployCtor: (instance: any, w: any) => Contract.at(instance.address, c.artifact, w) },
@@ -131,7 +145,7 @@ async function authwit(c: OpenCommon, caller: AztecAddress, amount: bigint) {
 
 /** Opens an escrow: its own keyed PrivateEscrow instance, funded with `amount`. */
 export async function openEscrow(c: OpenCommon & { amount: bigint; deadline: number }): Promise<Opened<EscrowInvite>> {
-  const d = await deployKeyed(c);
+  const d = await deployKeyed(c, c.amount);
   const contract = Contract.at(d.address, c.artifact, c.sender.wallet) as AnyInteraction;
   const claimSecret = randomField();
   const escrowId = randomField();
@@ -162,7 +176,7 @@ export async function openEscrow(c: OpenCommon & { amount: bigint; deadline: num
 export async function openStream(
   c: OpenCommon & { total: bigint; rate: bigint; start: number },
 ): Promise<Opened<StreamInvite>> {
-  const d = await deployKeyed(c);
+  const d = await deployKeyed(c, c.total);
   const contract = Contract.at(d.address, c.artifact, c.sender.wallet) as AnyInteraction;
   const streamSalt = randomField();
   const w = await authwit(c, d.address, c.total);
@@ -197,10 +211,23 @@ export type Accepted =
  * instance with its secret in the recipient's wallet. The recipient's token
  * notes and the contract's notes then become visible to the recipient's PXE.
  */
-export async function acceptInvite(recipient: Party, raw: string, opts: Omit<VerifyOptions, 'me'>): Promise<Accepted> {
+export async function acceptInvite(
+  recipient: Party,
+  raw: string,
+  opts: Omit<VerifyOptions, 'me'> & { policy?: AgreementPolicy },
+): Promise<Accepted> {
   const v = await verifyAgreementInvite(raw, { ...opts, me: recipient.address.toString() });
   if (!v.ok) return v;
   const inv = v.invite;
+  if (opts.policy) {
+    const r = checkAgreementPolicy({
+      ...opts.policy,
+      classId: inv.classId,
+      token: inv.token,
+      amount: BigInt(inv.type === 'hl.escrow_invite' ? inv.amount : inv.total),
+    });
+    if (!r.ok) return { ok: false, reason: `refused by policy: ${r.reasons.join('; ')}` };
+  }
   const kind: KeyedContract = inv.type === 'hl.escrow_invite' ? 'escrow' : 'streams';
   const artifact = opts.artifacts[kind];
   const { instance } = await computeKeyedInstance(artifact, {

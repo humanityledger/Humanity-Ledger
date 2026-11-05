@@ -125,9 +125,9 @@ describe('Suite 3 — Explorer URL Helpers', () => {
     expect(url).toBe(`https://aztecscan.xyz/address/${addr}`);
   });
 
-  it('SPONSORED_FPC_ADDRESS: matches canonical rc.2 address (joshc confirmed)', () => {
-    // Source: https://docs.aztec.network/networks — confirmed 2026-07-07
-    const CANONICAL_FPC = '0x1969946536f0c09269e2c75e414eef4e21a76e763c5514125208db33d7d944d7';
+  it('SPONSORED_FPC_ADDRESS: matches the canonical v6.0.0 testnet address', () => {
+    // Source: https://docs.aztec.network/networks (v6.0.0, Tierra), checked 2026-11-05
+    const CANONICAL_FPC = '0x2d8fff82a3b0c15d0a89169e7d8d043e079ab94d52031f1de1e4972ebad169d3';
     // Either from env or hardcoded — must NOT be the old broken one
     const OLD_BROKEN_FPC = '0x261366b3c0a9b4c30864629556cf282be409e6822b1f3a065fcb7e34f36d7880';
     expect(SPONSORED_FPC_ADDRESS).not.toBe(OLD_BROKEN_FPC);

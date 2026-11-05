@@ -130,10 +130,12 @@ export function deriveSecretKeyFromEvm(evmAddress: string): string {
 }
 
 /**
- * Aztec Sponsored Fee Payment Contract (FPC) address on mainnet.
- * Used by airdrop routes to pay gas fees on behalf of new users.
+ * Canonical Sponsored FPC on the Aztec TEST network (v6.0.0). Alpha mainnet
+ * has no sponsored fee payer: there a transaction pays in Fee Juice
+ * (lib/aztec/fees.ts). The previous value here was an older testnet
+ * release's address, described as mainnet.
  */
-export const SPONSORED_FPC_ADDRESS = '0x25048e204c3cb7e43d2c2640448df2d3d4b81fe5f9e7bbdc98ea7ee4ec0c04e6';
+export const SPONSORED_FPC_ADDRESS = '0x2d8fff82a3b0c15d0a89169e7d8d043e079ab94d52031f1de1e4972ebad169d3';
 
 export function getFpcAddress(): string {
   return process.env.AZTEC_FPC_ADDRESS ?? SPONSORED_FPC_ADDRESS;
