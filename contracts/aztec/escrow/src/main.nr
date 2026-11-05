@@ -1,9 +1,10 @@
 // contracts/aztec/escrow/src/main.nr
 // Humanity Ledger Protocol — PrivateEscrow (Aztec v6.0.0 contract)
 //
-// Status: experimental, compiled in CI (workflow "Aztec contracts"), no TXE
-// tests yet, not deployed. Master prompt task R-08; review of the first version
-// in docs/zk/AZTEC_CONTRACTS_REVIEW.md.
+// Status: experimental. TXE tests in src/test.nr run in CI (workflow "Aztec
+// contracts"); keyed instances run on Aztec testnet (workflow "Aztec escrow
+// e2e (testnet)", receipts in docs/AZTEC_TESTNET_DEPLOYMENTS.md). Not audited.
+// Review notes in docs/zk/AZTEC_CONTRACTS_REVIEW.md.
 //
 // Flow
 //   deposit: the sender's tokens move to this contract; two copies of the same
@@ -13,6 +14,10 @@
 //            included before the deadline.
 //   refund:  the sender pops its copy after the deadline.
 //   Both publish the same settlement nullifier, so an escrow settles once.
+//   escrow_view (utility, runs in the caller's PXE, never proven): the terms
+//            of an escrow as the contract stores them, and whether it has
+//            settled, so a party can check an invitation against the note
+//            instead of trusting the invitation's own fields.
 //
 // Fixed from the first version (6c009e5a):
 //   - refund popped notes from the sender's set, where no note existed, so a
@@ -24,10 +29,9 @@
 //   - claim only checked the anchor timestamp, so it could be included after
 //     the deadline.
 //
-// Known limitation: this contract holds private token balances, so the PXE
-// that executes claim/refund must be able to spend the contract's notes
-// (contract deployed with public keys and its keys shared with the parties,
-// as in the aztec-standards Escrow). That deployment path is not built yet.
+// Custody: this contract holds private token balances, so it is deployed with
+// its own keys, one instance per agreement, and the parties hold the secret
+// (lib/aztec/keyed-deploy.ts, lib/aztec/agreements.ts).
 
 use aztec::macros::aztec;
 
@@ -42,7 +46,11 @@ pub contract PrivateEscrow {
             storage::storage,
         },
         messages::delivery::MessageDelivery,
-        note::{note_getter_options::NoteGetterOptions, note_interface::NoteProperties},
+        note::{
+            note_getter_options::NoteGetterOptions, note_interface::NoteProperties,
+            note_viewer_options::NoteViewerOptions,
+        },
+        oracle::nullifiers::check_nullifier_exists,
         protocol::{
             abis::function_selector::FunctionSelector,
             address::AztecAddress,
@@ -70,6 +78,14 @@ pub contract PrivateEscrow {
         pub amount: u128,
         pub deadline: u64,
         pub claim_secret_hash: Field,
+    }
+
+    /// What escrow_view returns. `note` is all zeros when `found` is false.
+    #[derive(Deserialize, Serialize)]
+    pub struct EscrowView {
+        pub found: bool,
+        pub settled: bool,
+        pub note: EscrowNote,
     }
 
     #[storage]
@@ -200,5 +216,52 @@ pub contract PrivateEscrow {
     #[view]
     fn get_token() -> pub AztecAddress {
         self.storage.token.read()
+    }
+
+    /// The escrow `escrow_id` as `owner`'s PXE holds it: the recipient's claim
+    /// copy, or else the sender's refund copy, and whether the settlement
+    /// nullifier exists. After a claim the recipient's copy is consumed, so the
+    /// recipient sees `found == false`; the sender still sees its copy, with
+    /// `settled == true`. Runs locally and is never proven: it informs the
+    /// client, it does not authorise anything. Asking the node whether the
+    /// settlement nullifier exists tells the node which nullifier this client
+    /// is interested in, as any note sync does.
+    #[external("utility")]
+    unconstrained fn escrow_view(owner: AztecAddress, escrow_id: Field) -> EscrowView {
+        let claims = self.storage.claims.at(owner).view_notes(
+            NoteViewerOptions::new().select(EscrowNote::properties().escrow_id, Comparator.EQ, escrow_id).set_limit(1),
+        );
+        let notes = if claims.len() > 0 {
+            claims
+        } else {
+            self.storage.refunds.at(owner).view_notes(
+                NoteViewerOptions::new()
+                    .select(EscrowNote::properties().escrow_id, Comparator.EQ, escrow_id)
+                    .set_limit(1),
+            )
+        };
+        if notes.len() == 0 {
+            EscrowView {
+                found: false,
+                settled: false,
+                note: EscrowNote {
+                    escrow_id: 0,
+                    sender: AztecAddress::zero(),
+                    recipient: AztecAddress::zero(),
+                    amount: 0,
+                    deadline: 0,
+                    claim_secret_hash: 0,
+                },
+            }
+        } else {
+            let note = notes.get(0);
+            let settled = check_nullifier_exists(
+                poseidon2_hash_with_separator(
+                    [note.escrow_id, note.sender.to_field(), note.recipient.to_field()],
+                    DOM_SEP__ESCROW_SETTLED,
+                ),
+            );
+            EscrowView { found: true, settled, note }
+        }
     }
 }
