@@ -22,6 +22,7 @@ import { deriveAccountKeys, WALLET_TYPED_DATA } from './keys';
 import { isValidAztecAddress } from '../grumpkin';
 import { parseUnits } from './amounts';
 import { loadLocalActivity, mergeActivity, upsertActivity, type Activity, type ActivityKind } from './history';
+import { assertFeeChoice, identifyNode } from '../fees';
 
 
 export type WalletPhase = 'idle' | 'signing' | 'starting' | 'deploying' | 'ready' | 'error';
@@ -194,6 +195,19 @@ class PrivateWallet {
       this.node = sdk.createAztecNodeClient(AZTEC_WALLET_CONFIG.nodeUrl, RPC_OPTIONS);
       const info = await this.node.getNodeInfo();
       assertTestNetwork(Number(info.l1ChainId));
+      // A node on another rollup or release fails later in obscure ways
+      // (unknown classes, rejected proofs); say so now, in words.
+      // A different node release is reported; a different rollup or L1 is refused.
+      const identity = identifyNode(info as any);
+      const blocking = identity.drift.filter((d) => d.field !== 'nodeVersion');
+      for (const d of identity.drift.filter((x) => x.field === 'nodeVersion')) {
+        console.warn(`[wallet] Aztec node ${d.actual}, this build was made for ${d.expected}`);
+      }
+      if (blocking.length) {
+        throw new Error(
+          `The Aztec node does not match this build: ${blocking.map((d) => `${d.field} ${d.actual} (expected ${d.expected})`).join(', ')}.`,
+        );
+      }
 
       if (this.wallet) {
         await this.wallet.stop().catch(() => {});
@@ -205,6 +219,8 @@ class PrivateWallet {
       if (fpc.address.toString().toLowerCase() !== AZTEC_WALLET_CONFIG.sponsoredFpc.toLowerCase()) {
         throw new Error('The Aztec libraries in this build do not match the network the wallet was set up for.');
       }
+      // Sponsored fees exist only where lib/aztec/fees.ts lists a sponsor (never on Alpha).
+      assertFeeChoice(identity.network ?? 'mainnet', { kind: 'sponsored', fpc: fpc.address.toString() }, AZTEC_WALLET_CONFIG.sponsoredFpc);
       await this.wallet.registerContract(fpc, sdk.SponsoredFPCContract.artifact);
       this.fee = { paymentMethod: new sdk.SponsoredFeePaymentMethod(fpc.address) };
 
