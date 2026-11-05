@@ -10,20 +10,25 @@
  *   2. deploy each contract with public keys derived from a fresh secret
  *      (lib/aztec/keyed-deploy.ts), publishing the class if the node does not
  *      have it; both parties register the instance with that secret;
- *   3. escrow 1: deposit with an authwit, claim by the recipient; a second
- *      claim and a refund of it are refused;
+ *   3. escrow 1: deposit with an authwit; both parties read the stored
+ *      terms with escrow_view; claim by the recipient; a second claim and a
+ *      refund of it are refused; the sender's view shows it settled;
  *   4. escrow 2: deposit with a short deadline; a refund before it and a
  *      claim after it are refused; the sender is refunded after it;
  *   5. stream: create, a withdrawal beyond accrual is refused, a withdrawal
- *      within accrual is paid; the sender cancels and gets the unaccrued
- *      rest, after which withdrawing and cancelling again are refused;
- *   6. identity: deploy with a placeholder root, the issuer publishes a real
- *      depth-32 root, a member claims once per scope;
+ *      within accrual is paid; stream_view gives both parties the live
+ *      state and skips the sender's stale copy; the sender cancels and gets
+ *      the unaccrued rest, after which withdrawing and cancelling again are
+ *      refused and the stream is no longer live;
+ *   6. identity: deploy with a placeholder root, the issuer publishes the
+ *      root of a three-member depth-32 tree built by lib/aztec/credential-tree.ts,
+ *      a member claims once per scope with its path;
  *   7. identity: a claim against a just-replaced root lands within the grace
  *      period; the issuer rotates in two steps;
  *   8. an escrow opened and accepted through lib/aztec/agreements.ts, the
  *      code the app uses: a tampered invitation is refused, the genuine one
- *      is verified and registered, and the recipient claims;
+ *      is verified, registered and confirmed against the stored note, an
+ *      invitation overstating the amount is caught, and the recipient claims;
  *   9. every balance is checked after every step; refusals are checked by
  *      their reason, not only by failing.
  *
@@ -45,6 +50,7 @@ import { TokenContract } from '@aztec-labs/noir-contracts.js/Token';
 import { openTmpStore } from '@aztec-labs/kv-store/deprecated/indexeddb';
 import { EmbeddedWallet } from '@aztec-labs/wallets/embedded';
 import { KEYED_ARTIFACT_PATHS, computeKeyedInstance, loadKeyedArtifact } from '../../lib/aztec/keyed-deploy.ts';
+import { CredentialTree, aztecPoseidon2, credentialLeaf, identityCommitment } from '../../lib/aztec/credential-tree.ts';
 import { openEscrow, acceptInvite, confirmAgreement, escrowMismatches, type EscrowView, type StreamView } from '../../lib/aztec/agreements.ts';
 import { currentClassIds } from '../../lib/aztec/agreement-invite.ts';
 
@@ -321,15 +327,25 @@ async function main() {
   check('stream_view: after the cancel the recipient sees the stream as not live', rDone.found && !rDone.live && big(rDone.available) === 0n);
 
   // ── IdentityCredential: a real root, a real claim ──
-  const ID_COMMIT = 120938471, ID_LEAF = 238471092, MERKLE = 349582103, SANCTIONS = 461728390;
+  const ID_COMMIT = 120938471, SANCTIONS = 461728390;
   const SPAIN = 724;
   const idSecret = Fr.random();
   const idSalt = Fr.random();
   const expiry = BigInt(nowSec() + 30 * 24 * 3600);
+  // The issuer's tree from lib/aztec/credential-tree.ts: the recipient is
+  // member 3 of 3, at index 5, so its path has non-zero siblings and both
+  // left and right steps.
+  const h = await aztecPoseidon2();
+  const leaves = new Map<number, bigint>();
+  for (const [i, other] of [[0, 0x0a11cen], [2, 0x0b0bn]] as const) {
+    leaves.set(i, await credentialLeaf(h, { commitment: await identityCommitment(h, other, 1n), jurisdiction: SPAIN, expiry, salt: 7n }));
+  }
   const commitment = await poseidon2WithSeparator([recipient.toField(), idSecret], ID_COMMIT);
-  let node_ = await poseidon2WithSeparator([commitment, new Fr(SPAIN), new Fr(expiry), idSalt], ID_LEAF);
-  for (let i = 0; i < 32; i++) node_ = await poseidon2WithSeparator([node_, Fr.ZERO], MERKLE);
-  const realRoot = node_;
+  leaves.set(5, await credentialLeaf(h, { commitment: commitment.toBigInt(), jurisdiction: SPAIN, expiry, salt: idSalt.toBigInt() }));
+  const tree = await CredentialTree.build(h, leaves);
+  const memberPath = tree.path(5);
+  const realRoot = new Fr(tree.root);
+  check('identity: the issuer tree has three members and the recipient\'s path is not all zeros', leaves.size === 3 && memberPath.siblings.some((x) => x !== 0n));
   const list = Array.from({ length: 16 }, (_, i) => (i === 0 ? new Fr(250) : Fr.ZERO));
   const sanctionRoot = await poseidon2WithSeparator(list, SANCTIONS);
   const idArtifact = loadKeyedArtifact(JSON.parse(fs.readFileSync('contracts/aztec/identity/target/identity_credential-IdentityCredential.json', 'utf8')));
@@ -340,7 +356,7 @@ async function main() {
   await wb.registerContract((await node.getContract(idAddr))!, idArtifact);
   const idA: any = Contract.at(idAddr, idArtifact, wa);
   const idB: any = Contract.at(idAddr, idArtifact, wb);
-  const claimArgs = (scope: number) => [new Fr(scope), realRoot, idSecret, SPAIN, expiry, idSalt, 0, Array(32).fill(Fr.ZERO), list];
+  const claimArgs = (scope: number) => [new Fr(scope), realRoot, idSecret, SPAIN, expiry, idSalt, memberPath.leafIndex, memberPath.siblings.map((x) => new Fr(x)), list];
   const beforeRoot = await refused(idB.methods.verify_and_claim(...claimArgs(1)), { from: recipient });
   check('identity: no claim against the placeholder root', beforeRoot !== 'accepted', beforeRoot);
   await sendAndWait('identity: the issuer publishes the real root', idA.methods.update_root(realRoot), { from: sender });
