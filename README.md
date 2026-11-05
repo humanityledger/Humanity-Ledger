@@ -18,9 +18,10 @@ Aztec review dossier:   docs/AZTEC_FOUNDATION_DOSSIER.md
 ## 1. Architecture
 
 1. **Private payments (real on testnet).** `lib/aztec/wallet/` runs an Aztec PXE in the browser with a Schnorr account whose keys are derived from a signature by the user's EVM wallet. It shields, sends privately and unshields with the standard `Token` contract, paying fees through `SponsoredFPC`.
-2. **Direct messages (real, provided by XMTP).** One-to-one messages travel over XMTP v3, which uses MLS (RFC 9420). Humanity Ledger does not implement MLS itself.
-3. **Communities (server-readable).** Community posts and community channel messages are stored in PostgreSQL by the application server and are readable by it. The interface says so. Moving communities to XMTP MLS groups is planned in [`docs/communities/MLS_MIGRATION.md`](docs/communities/MLS_MIGRATION.md) (task R-17).
-4. **Standalone Noir circuits (experimental).** `circuits/escrow`, `circuits/identity` and `circuits/streams` compile with nargo 1.0.0 and prove with Barretenberg in tests. They are not used by the app and have known soundness issues (section 5).
+2. **Private agreements (testnet).** In a direct conversation, an escrow or a payment stream runs in its own keyed instance of our aztec-nr contracts (`contracts/aztec/`). The invitation travels in the encrypted DM; the receiver verifies it against the shared secret, the deployment record and the contract's stored note before accepting (`lib/aztec/chat-agreements.ts`, [`docs/chat/AGREEMENTS.md`](docs/chat/AGREEMENTS.md)). Aztec Alpha (mainnet) is not used yet: see [`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md).
+3. **Direct messages (real, provided by XMTP).** One-to-one messages travel over XMTP v3, which uses MLS (RFC 9420). Humanity Ledger does not implement MLS itself.
+4. **Communities (server-readable).** Community posts and community channel messages are stored in PostgreSQL by the application server and are readable by it. The interface says so. Moving communities to XMTP MLS groups is planned in [`docs/communities/MLS_MIGRATION.md`](docs/communities/MLS_MIGRATION.md) (task R-17).
+5. **Standalone Noir circuits (experimental).** `circuits/escrow`, `circuits/identity` and `circuits/streams` compile with nargo 1.0.0 and prove with Barretenberg in tests. They are not used by the app and have known soundness issues (section 5).
 
 ```
 +----------------------------------------------------------------------+
@@ -49,7 +50,7 @@ Aztec review dossier:   docs/AZTEC_FOUNDATION_DOSSIER.md
 |---|---|
 | `circuits/` | Experimental standalone Noir circuits: v1 (`escrow`, `identity`, `streams`, pinned VKs) and v2 (`*_v2`, shared `hl_lib`, not pinned) |
 | `contracts/` | Solidity contracts (Cancun EVM). Not audited |
-| `lib/aztec/` | Aztec wallet (PXE, keys, tokens) and the VK pinning checks (`verifier.ts`) |
+| `lib/aztec/` | Aztec wallet (PXE, keys, tokens), agreements (keyed deployment, invitations, confirmation, chat integration), fees per network, mainnet policy, and the VK pinning checks (`verifier.ts`) |
 | `lib/zk/` | `prover.ts`: Node-only UltraHonk proving and verification for the standalone circuits |
 | `lib/community-apps/` | Community apps sandbox: a separate document served with CSP `sandbox allow-scripts` and no network |
 | `scripts/` | Tooling: testnet wallet script, artifact checks, copy checks |

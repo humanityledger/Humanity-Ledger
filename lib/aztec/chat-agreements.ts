@@ -105,9 +105,10 @@ export async function openChatAgreement(r: OpenRequest): Promise<{ raw: string; 
   const kind: Kind = r.kind === 'escrow' ? 'escrow' : 'streams';
   const artifact = L.artifacts[kind];
   r.onStep?.('Checking the contract on the network');
+  // Only the class ID is used: any fixed key and salt give the same class.
   const probe = await L.keyed.computeKeyedInstance(artifact, {
-    secretKey: L.fields.Fr.random(),
-    salt: L.fields.Fr.random(),
+    secretKey: new L.fields.Fr(1n),
+    salt: new L.fields.Fr(1n),
     token: L.addresses.AztecAddress.fromStringUnsafe(r.tokenAddress),
   });
   const classPublished = !!(await ctx.node.getContractClass(probe.instance.currentContractClassId));
