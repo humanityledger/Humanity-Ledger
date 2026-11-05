@@ -447,6 +447,30 @@ class PrivateWallet {
     }
   }
 
+  /**
+   * Handles of the open wallet for lib/aztec/chat-agreements.ts, which
+   * opens and settles agreements with the same PXE, account and fee payment.
+   * Throws until the wallet is ready.
+   */
+  agreementContext() {
+    if (this.snapshot.phase !== 'ready' || !this.wallet || !this.me || !this.sdk) {
+      throw new Error('Open your private wallet first.');
+    }
+    return {
+      wallet: this.wallet,
+      me: this.me,
+      node: this.node,
+      fee: this.fee,
+      /** The token contract bound to this wallet, by token address (configured tokens only). */
+      tokenAt: (address: string) => {
+        const t = AZTEC_WALLET_CONFIG.tokens.find((x) => x.address.toLowerCase() === address.toLowerCase());
+        return t ? { config: t, contract: this.tokens.get(t.key) } : null;
+      },
+      /** Re-reads balances and activity after an agreement transaction. */
+      refresh: () => this.refresh(),
+    };
+  }
+
   async disconnect() {
     await this.wallet?.stop?.().catch(() => {});
     this.wallet = null;

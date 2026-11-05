@@ -27,6 +27,11 @@ export const RELEASES: Release[] = [
     title: "Not yet released",
     note: "In the repository, waiting for the next deployment.",
     changes: [
+      { kind: "new", text: "Private agreements in conversations: open an escrow or a payment stream to the person you are talking to, on the Aztec test network. The recipient verifies the invitation against the contract before accepting, and both of you can claim, refund, withdraw or cancel from the conversation." },
+      { kind: "new", text: "Share your Aztec address in a conversation. Ledger Chat saves the other person's address the first time and warns if a different one appears." },
+      { kind: "fixed", text: "The private wallet in the web app is built against the Aztec 6.0.0 libraries the networks run, instead of an older preview build of them." },
+      { kind: "security", text: "The private wallet refuses an Aztec node on a different network or rollup version, and never offers sponsored fees where none exist." },
+      { kind: "security", text: "Agreement invitations, which carry secrets, never appear as text in previews, notifications, replies or copies, and are never queued in plain storage while offline." },
       { kind: "fixed", text: "Signing in at /connect works with wallets on any network the wallet list offers (BNB Chain, Linea, Avalanche, zkSync, World Chain and others), which were refused as unsupported." },
       { kind: "fixed", text: "Signing in works on both humanidfi.com and www.humanidfi.com, and no longer fails when the server's cache missed the moment you asked to sign in." },
       { kind: "fixed", text: "Smart contract wallets (Safe, Coinbase Smart Wallet and similar) can sign in." },

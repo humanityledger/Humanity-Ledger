@@ -31,6 +31,7 @@ import { Fr } from '@aztec-labs/aztec.js/fields';
 import { AztecAddress } from '@aztec-labs/aztec.js/addresses';
 import { Contract, DeployMethod } from '@aztec-labs/aztec.js/contracts';
 import { randomField } from './random';
+import { poseidon2WithSeparator } from './poseidon';
 import { checkAgreementPolicy, type PolicyInput } from './agreement-policy';
 import { computeKeyedInstance, type KeyedContract, type loadKeyedArtifact } from './keyed-deploy';
 import {
@@ -88,21 +89,6 @@ export interface Opened<I extends AgreementInvite> {
   txHashes: { deploy?: string; fund?: string };
   /** Blocks the deploy and funding transactions landed in, when the receipt reports them. */
   blocks: { deploy?: number; fund?: number };
-}
-
-// The export path of poseidon2HashWithSeparator differs between foundation
-// builds; the specifier is a variable so that type checking does not depend on
-// it. Node resolves it; a browser bundle should import it statically instead.
-async function poseidon2WithSeparator(inputs: Fr[], sep: number): Promise<Fr> {
-  for (const m of ['@aztec-labs/foundation/crypto/poseidon', '@aztec-labs/foundation/crypto']) {
-    try {
-      const mod: any = await import(m);
-      if (mod.poseidon2HashWithSeparator) return await mod.poseidon2HashWithSeparator(inputs, sep);
-    } catch {
-      /* next export path */
-    }
-  }
-  throw new Error('poseidon2HashWithSeparator not found in @aztec-labs/foundation');
 }
 
 export const claimSecretHash = (claimSecret: Fr) => poseidon2WithSeparator([claimSecret], DOM_SEP__CLAIM_SECRET);

@@ -134,8 +134,8 @@ export const zeroKnowledge: DocPage = {
   href: "/docs/zero-knowledge",
   label: "Private payments on Aztec",
   summary: "How the private payments wallet works, what it hides, what it does not, and why it runs on a test network.",
-  keywords: ["zk", "zero knowledge", "aztec", "shielded", "private payment", "proof", "noir", "notes", "nullifier", "shield", "unshield", "send", "receive", "qr", "testnet", "privacy", "wallet"],
-  updated: "2026-10-23",
+  keywords: ["zk", "zero knowledge", "aztec", "shielded", "private payment", "proof", "noir", "notes", "nullifier", "shield", "unshield", "send", "receive", "qr", "testnet", "privacy", "wallet", "escrow", "stream", "agreement"],
+  updated: "2026-11-05",
   blocks: [
     {
       t: "hint",
@@ -191,6 +191,28 @@ export const zeroKnowledge: DocPage = {
       t: "p",
       text: "Each action is a real transaction: your browser makes the proof, then the network includes it in a block. On a recent laptop that takes about a minute from pressing the button to the balance changing. The list shows each step as it happens: proving on this device, waiting for the network, settled.",
     },
+    { t: "h2", text: "Agreements in a conversation" },
+    {
+      t: "p",
+      text: "In a direct conversation, **Private agreement** in the attach menu opens an escrow or a payment stream to the other person. Each agreement is its own contract on the Aztec test network, with keys that only the two of you hold, so nobody else can read its balance.",
+    },
+    {
+      t: "steps",
+      items: [
+        { title: "Share Aztec addresses", text: "Each of you shares your Aztec address in the chat. Ledger Chat saves the other person's address the first time it sees it, and warns you if a different one appears later instead of replacing it." },
+        { title: "Open the agreement", text: "Choose escrow (the other person can claim before a deadline; after it you can take the amount back) or stream (the amount is paid out second by second, and you can cancel at any time). Your browser creates the contract and funds it from your private balance." },
+        { title: "Verify and accept", text: "The invitation arrives as a card. Nothing is trusted until the recipient presses Verify and accept: the browser checks that the contract is ours, for an accepted token, from the address this person shared, and that the contract holds the amount and deadline the invitation says." },
+        { title: "Settle", text: "The card shows the agreement as the contract holds it and offers the actions that apply: claim, refund, withdraw or cancel. Each is a real transaction proven on your device." },
+      ],
+    },
+    {
+      t: "ul",
+      items: [
+        "The invitation is an encrypted message in your conversation. It carries the agreement's secrets, so it is never shown as text, put in a notification or copied.",
+        "Saving the other person's address on first sight is trust on first use: it proves the address came from this conversation, not that they control that Aztec account.",
+        "The agreement contracts have no external audit. On the test network the tokens have no value.",
+      ],
+    },
     { t: "h2", text: "Test tokens" },
     {
       t: "p",
@@ -202,13 +224,14 @@ export const zeroKnowledge: DocPage = {
       items: [
         { label: "Private balances, send and receive", state: "partial", text: "Working on the Aztec test network. Contracts not independently audited." },
         { label: "Bridge from Ethereum", state: "development", text: "Moving real tokens from Ethereum into Aztec and back needs a bridge contract on each side. It is not built." },
-        { label: "Aztec mainnet", state: "unavailable", text: "Mainnet runs version 5.2.0, which our wallet does not support, and is described by Aztec as alpha." },
+        { label: "Agreements (escrow and payment stream)", state: "partial", text: "In conversations on the Aztec test network. Contracts not independently audited." },
+        { label: "Aztec Alpha (mainnet)", state: "unavailable", text: "Alpha runs the same version 6.0.0, but it holds real value and has no sponsored fees. The wallet refuses it until the gates in our mainnet readiness plan are met, including fees paid in Fee Juice and limits for unaudited contracts." },
       ],
     },
     { t: "h2", text: "Status of the Aztec network" },
     {
       t: "p",
-      text: "Aztec describes its mainnet as alpha, where bugs, including critical ones, are expected. In August 2026 its contributors reported a critical vulnerability in the proving system of Alpha V5 and announced a fix in version 6. The test network runs version 6.0.0. See the [Aztec network page](https://docs.aztec.network/networks) for the current versions.",
+      text: "Aztec describes its mainnet as alpha, where bugs, including critical ones, are expected. In August 2026 its contributors reported a critical vulnerability in the proving system of Alpha V5, fixed in version 6. Since 3 November 2026 (Tierra), both Alpha and the test network run version 6.0.0. See the [Aztec network page](https://docs.aztec.network/networks) for the current versions.",
     },
   ],
 };

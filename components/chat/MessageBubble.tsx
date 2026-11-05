@@ -17,6 +17,11 @@ import { ZkEscrowCard } from '@/components/zk/ZkEscrowCard';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { StickerPicker, PREMIUM_STICKERS, RenderPremiumSticker } from './StickerPicker';
 import { useLinkPreview, extractFirstUrl, LinkPreviewCard } from './LedgerLinkPreview';
+import dynamic from 'next/dynamic';
+import { isAgreementMessage } from '@/lib/aztec/agreement-message';
+
+// Loaded only when a conversation contains an agreement message.
+const AgreementCard = dynamic(() => import('./AgreementCard').then((m) => m.AgreementCard), { ssr: false });
 
 /*
  * One message in a conversation.
@@ -93,6 +98,8 @@ export interface MessageProps {
   onVotePoll?: (pollId: string, optionIndex: number) => void;
   onEditMsg?: (id: string, currentContent: string) => void;
   onJoinGroupCall?: (roomId: string, password: string) => void;
+  /** The other person's XMTP inbox when this is a direct conversation; agreements need it. */
+  dmPeerInboxId?: string;
 }
 
 // A spring that only translates. Nested scale transforms blur text on iOS Safari.
@@ -606,7 +613,7 @@ TapbackPicker.displayName = 'TapbackPicker';
 export const MessageBubble = React.memo(({
   msg, isMe, showDate, dateStr, fontFamily, fontSizePx, bubbleStyle = 'default',
   clientInboxId, onReply, onReact, onContextMenu, onOpenLightbox,
-  formatMessagePreview, onVotePoll, onJoinGroupCall,
+  formatMessagePreview, onVotePoll, onJoinGroupCall, dmPeerInboxId,
 }: MessageProps) => {
   const controls = useAnimation();
   const [showTapback, setShowTapback] = useState(false);
@@ -687,6 +694,8 @@ export const MessageBubble = React.memo(({
   const isZkTip      = content.startsWith('__ZK_TIP__:');
   const isZkStream   = content.startsWith('__ZK_STREAM__:');
   const isZkInvoice  = content.startsWith('__ZK_INVOICE__:');
+  // Escrow / stream invitations and Aztec address announcements (lib/aztec/agreement-message.ts).
+  const isAgreement  = isAgreementMessage(content);
   const isPremium    = content.startsWith('[PREMIUM:') || content.startsWith('__STICKER__[PREMIUM:');
   const isSticker    = content.startsWith('__STICKER__') && !isPremium;
   const isAudio      = content.startsWith('__AUDIO__');
@@ -875,7 +884,9 @@ export const MessageBubble = React.memo(({
               )}
             </AnimatePresence>
 
-            {isSticker ? (
+            {isAgreement ? (
+              <AgreementCard raw={content} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={msg.senderInboxId} />
+            ) : isSticker ? (
               <StickerBubble content={content} />
             ) : isPoll ? (
               <PollBubble content={content} msg={msg} isMe={isMe} onVotePoll={onVotePoll} clientInboxId={clientInboxId} />

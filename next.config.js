@@ -212,10 +212,14 @@ const nextConfig = {
         // bypassing the string-only ESM exports field that webpack cannot resolve
         // in a CJS Next.js build context.
         const aztecStub = path.resolve(__dirname, './lib/aztec/aztec-stub.js');
-        const aztecJsRoot = path.resolve(__dirname, 'node_modules/@aztec/aztec.js/dest/api');
-        const noirRoot   = path.resolve(__dirname, 'node_modules/@aztec/noir-contracts.js/dest');
-        const walletsRoot = path.resolve(__dirname, 'node_modules/@aztec/wallets/dest/embedded/entrypoints');
-        const kvRoot     = path.resolve(__dirname, 'node_modules/@aztec/kv-store/dest');
+        // Both scopes resolve to the 6.0.0 release (@aztec-labs/*), the version
+        // the networks run. The @aztec/* packages in node_modules are an older
+        // nightly whose artifacts differ (the sponsored FPC they compute does
+        // not exist on testnet), so the browser must never load them.
+        const aztecJsRoot = path.resolve(__dirname, 'node_modules/@aztec-labs/aztec.js/dest/api');
+        const noirRoot   = path.resolve(__dirname, 'node_modules/@aztec-labs/noir-contracts.js/dest');
+        const walletsRoot = path.resolve(__dirname, 'node_modules/@aztec-labs/wallets/dest/embedded/entrypoints');
+        const kvRoot     = path.resolve(__dirname, 'node_modules/@aztec-labs/kv-store/dest');
         const aztecSubpaths = {
             // aztec.js subpaths
             '@aztec/aztec.js/fields':    path.join(aztecJsRoot, 'fields.js'),
@@ -227,6 +231,8 @@ const nextConfig = {
             '@aztec/aztec.js/crypto':    path.join(aztecJsRoot, 'crypto.js'),
             '@aztec/aztec.js/tx':        path.join(aztecJsRoot, 'tx.js'),
             '@aztec/aztec.js/wallet':    path.join(aztecJsRoot, 'wallet.js'),
+            '@aztec/aztec.js/abi':       path.join(aztecJsRoot, 'abi.js'),
+            '@aztec/aztec.js/keys':      path.join(aztecJsRoot, 'keys.js'),
             // noir-contracts.js subpaths
             '@aztec/noir-contracts.js/SponsoredFPC': path.join(noirRoot, 'SponsoredFPC.js'),
             '@aztec/noir-contracts.js/Token':        path.join(noirRoot, 'Token.js'),
@@ -260,6 +266,8 @@ const nextConfig = {
                 '@aztec/noir-contracts.js': aztecStub,
                 '@aztec-labs/noir-contracts.js$': aztecStub,
                 '@aztec-labs/noir-contracts.js': aztecStub,
+                // lib/aztec/poseidon.ts (agreements); browser-only like the rest.
+                '@aztec-labs/foundation/crypto/poseidon': aztecStub,
             };
         } else {
             // Client: resolve subpaths directly to their built JS files

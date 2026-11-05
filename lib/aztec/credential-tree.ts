@@ -28,24 +28,10 @@ export const DOM_SEP__MERKLE_NODE = 349582103;
 /** poseidon2 with a domain separator, over field elements as bigints. */
 export type Hash = (inputs: bigint[], separator: number) => Promise<bigint>;
 
-/** The hash Aztec uses, from @aztec-labs/foundation (loaded on first use). */
+/** The hash Aztec uses (lib/aztec/poseidon.ts, loaded on first use). */
 export async function aztecPoseidon2(): Promise<Hash> {
-  const { Fr } = await import('@aztec-labs/aztec.js/fields');
-  let fn: ((inputs: unknown[], sep: number) => Promise<{ toBigInt(): bigint }>) | undefined;
-  for (const m of ['@aztec-labs/foundation/crypto/poseidon', '@aztec-labs/foundation/crypto']) {
-    try {
-      const mod: any = await import(/* @vite-ignore */ m);
-      if (mod.poseidon2HashWithSeparator) {
-        fn = mod.poseidon2HashWithSeparator;
-        break;
-      }
-    } catch {
-      /* next export path */
-    }
-  }
-  if (!fn) throw new Error('poseidon2HashWithSeparator not found in @aztec-labs/foundation');
-  const f = fn;
-  return async (inputs, sep) => (await f(inputs.map((x) => new Fr(x)), sep)).toBigInt();
+  const [{ Fr }, { poseidon2WithSeparator }] = await Promise.all([import('@aztec-labs/aztec.js/fields'), import('./poseidon')]);
+  return async (inputs, sep) => (await poseidon2WithSeparator(inputs.map((x) => new Fr(x)), sep)).toBigInt();
 }
 
 const MAX_INDEX = 2 ** DEPTH - 1;
