@@ -6,7 +6,7 @@
 > - What runs on the testnet is the private wallet. Its proofs are generated in the browser by the Aztec SDK.
 > - The standalone circuits have known soundness issues, ZK-01 to ZK-07 (`docs/zk/MASTER_PROMPT.md`). Their Web Worker prover is real in tests only and not used by any page.
 > - Direct-message security (MLS, RFC 9420) is provided by XMTP. We do not implement it ourselves.
-> - The aztec-nr contracts that replace the circuits pass 42 TXE tests in CI (`contracts/aztec/`). Keyed escrow and stream instances ran end to end on Aztec testnet on 4 November 2026 (`docs/AZTEC_TESTNET_DEPLOYMENTS.md`).
+> - The aztec-nr contracts that replace the circuits pass 49 TXE tests in CI (`contracts/aztec/`). Keyed escrow and stream instances ran end to end on Aztec testnet on 4 November 2026 (`docs/AZTEC_TESTNET_DEPLOYMENTS.md`).
 
 
 ***

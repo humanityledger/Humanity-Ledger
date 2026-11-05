@@ -114,9 +114,9 @@
       "holdsPrivateBalance": false,
       "keyed": false,
       "status": "reference",
-      "tracksCurrentArtifact": true,
+      "tracksCurrentArtifact": false,
       "deployedOn": "2026-11-05",
-      "note": "Class with the expiry bound (SEC-I7) and the root guard. Run 41999587163: deployed with a placeholder root (block 19355); the throwaway issuer published a real depth-32 root (block 19356); a member claimed in scope 1 (block 19358); a second claim in the same scope and a root change by a non-issuer were refused."
+      "note": "Class with the expiry bound (SEC-I7) and the root guard. Run 41999587163: deployed with a placeholder root (block 19355); the throwaway issuer published a real depth-32 root (block 19356); a member claimed in scope 1 (block 19358); a second claim in the same scope and a root change by a non-issuer were refused. Superseded on 5 Nov 2026 by the class with the root grace period (SEC-I8) and issuer rotation (SEC-I9)."
     }
   ],
   "e2eRuns": [

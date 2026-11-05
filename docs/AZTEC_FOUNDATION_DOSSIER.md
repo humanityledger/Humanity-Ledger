@@ -11,7 +11,7 @@
 
 Humanity Ledger is a messaging application (Ledger Chat). Direct messages go over XMTP v3, which uses MLS (RFC 9420); we do not implement MLS ourselves. Private payments use an Aztec PXE in the browser with the standard `Token` contract (our test tokens zkUSDC, zkDAI and zkETH, which have no value) and `SponsoredFPC` on Aztec testnet. Private transfers hide the amount and the parties; shielding and unshielding are public steps.
 
-For escrow, payment streams and identity we wrote three aztec-nr v6 contracts (section 2.1). They compile with Aztec 6.0.0 and pass 42 TXE tests in CI. On 4 November 2026 one instance of each was deployed on Aztec testnet (`docs/AZTEC_TESTNET_DEPLOYMENTS.md`); those first escrow and stream instances were deployed without public keys and must not receive deposits; keyed instances of the current classes have since run end to end there (section 2.1). We would value a review of their design (section 5).
+For escrow, payment streams and identity we wrote three aztec-nr v6 contracts (section 2.1). They compile with Aztec 6.0.0 and pass 49 TXE tests in CI. On 4 November 2026 one instance of each was deployed on Aztec testnet (`docs/AZTEC_TESTNET_DEPLOYMENTS.md`); those first escrow and stream instances were deployed without public keys and must not receive deposits; keyed instances of the current classes have since run end to end there (section 2.1). We would value a review of their design (section 5).
 
 We first wrote three standalone Noir circuits for the same purposes. A review on 3 November 2026 found soundness issues in all three (section 4). They remain in the repository as tested reference code; nothing relies on them.
 
@@ -28,7 +28,7 @@ An earlier version of this dossier pointed to commit `783df711` and described th
 | Committed artifacts are the compiled ones and the VKs are pinned | Real | `node scripts/zk/check-artifacts.mjs` |
 | UltraHonk proving and verification with the pinned VK | Real in tests only (Node) | `npx vitest run test/unit/aztec/circuit-proving.test.ts test/zk/` |
 | ZK-01 reproduction (streams double claim) | Documented | `npx vitest run test/circuits/streams_zk01_known_issue.test.ts` |
-| aztec-nr contracts (escrow, streams, identity) | Compile with Aztec 6.0.0; 42 TXE tests pass in CI; keyed escrow and stream instances of the current classes ran end to end on testnet; the first escrow and stream instances (4 Nov, morning) are keyless (do not use); all checked daily against the node | See [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](AZTEC_TESTNET_DEPLOYMENTS.md) for live contract addresses, class IDs and verification hashes |
+| aztec-nr contracts (escrow, streams, identity) | Compile with Aztec 6.0.0; 49 TXE tests pass in CI; keyed escrow and stream instances and identity claims of the current classes ran end to end on testnet; the first escrow and stream instances (4 Nov, morning) are keyless (do not use); all checked daily against the node | See [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](AZTEC_TESTNET_DEPLOYMENTS.md) for live contract addresses, class IDs and verification hashes |
 | Browser (Web Worker) prover for the standalone circuits | Real in tests only; not used by any page | `npx vitest run test/zk/browser-prover.test.ts` |
 | Keyed `PrivateEscrow` and `PaymentStream`, current classes, end to end (escrow claim and refund after the deadline, stream withdrawal bounded by accrual) | Real on Aztec testnet, 4 November 2026 (run 41881180186, blocks 18528 to 18542) | Workflow "Aztec escrow e2e (testnet)"; hashes in `docs/AZTEC_TESTNET_DEPLOYMENTS.md` |
 | Unit and integration tests | 1,338 passing in CI on 4 November 2026 (they mock external services such as the database, Redis and RPC providers where needed) | `npm run test:run` |
@@ -47,20 +47,19 @@ A VK registry contract with a timelock exists (`contracts/ZKVerificationKeyRegis
 
 ### 2.1 aztec-nr v6 contracts (`contracts/aztec/`)
 
-Three contracts written against `aztec-labs-eng/aztec-nr@v6.0.0`: `PrivateEscrow`, `PaymentStream` and `IdentityCredential`. They compile with Aztec 6.0.0 in CI (workflow "Aztec contracts") and pass 42 TXE tests there (escrow 10, identity 13, streams 19), using a test-only token (`contracts/aztec/test_token`).
+Three contracts written against `aztec-labs-eng/aztec-nr@v6.0.0`: `PrivateEscrow`, `PaymentStream` and `IdentityCredential`. They compile with Aztec 6.0.0 in CI (workflow "Aztec contracts") and pass 49 TXE tests there (escrow 10, identity 20, streams 19), using a test-only token (`contracts/aztec/test_token`).
 
-On 4 November 2026 one instance of each was deployed on Aztec testnet (Sepolia L1, chain ID 11155111, rollup 679261766). The node confirms that each runs the class compiled from this repository. The `PrivateEscrow` and `PaymentStream` instances were deployed with `Contract.deploy()`, so they carry the default public keys: tokens sent to them could never be spent. They are marked do-not-use, and escrows and streams are deployed with keys, one instance per agreement (`scripts/aztec/deploy-keyed.ts`). A keyed escrow has run end to end on testnet: keyed deployment, deposit with an authwit (tx `0x10700502…5f13`, block 18445) and claim by the recipient (tx `0x10fb36c0…23f2`, block 18447), reproducible by the workflow "Aztec escrow e2e (testnet)". With the current classes (deposit expiration bounded by the deadline, overflow-free stream accrual) the same workflow also ran an escrow refund after its deadline and a stream withdrawal bounded by accrual (run 41881180186). Addresses, class IDs and how to check them are in [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](AZTEC_TESTNET_DEPLOYMENTS.md):
-- `IdentityCredential`: `0x174e4652dd027f6de9dfe025d46fbfc4378039f19e67c53a34803a8079db56f0` (placeholder roots until the issuer sets real ones)
-- `PrivateEscrow`: `0x1d88555bead4ba81d1f93a16dd8366b5659d062928af1e57f94a75e08d343097` (bound to `zkUSDC`; keyless, do not use)
-- `PaymentStream`: `0x0567a641e6e8e10b99bbe9f7c0787763b7ef6cfc75ef7e2c59d55dd754e2c895` (bound to `zkUSDC`; keyless, do not use)
-
-A review on 3 November 2026 found that the first version could not refund an escrow or cancel a stream (both popped notes from the sender's set, which had none), and that `pop_notes` without a selector destroyed a user's other escrows and streams. These are fixed; the findings, fixes and open limits (contract keys for private custody, raw-selector token calls) are in [`docs/zk/AZTEC_CONTRACTS_REVIEW.md`](zk/AZTEC_CONTRACTS_REVIEW.md).
-
-| Contract | What it does | State |
+| Contract | What it does | Verified |
 |---|---|---|
-| `PrivateEscrow` | Claim note for the recipient, refund note for the sender, one settlement nullifier | 10 TXE tests passing; testnet instance `0x1d88…3097` is keyless (do not use) |
-| `PaymentStream` | Stream note re-created on each withdrawal (fixes the ZK-01 pattern); accrual from the anchor block | 11 TXE tests passing (incl. a 2^127 rate that no longer overflows); no sender cancel; testnet instance `0x0567…c895` is keyless (do not use) |
-| `IdentityCredential` | Depth-32 membership, fixed and committed sanction lists, `SingleUseClaim` per scope | 11 TXE tests passing; on testnet at `0x174e…56f0` with placeholder roots |
+| `PrivateEscrow` | A claim note for the recipient and a refund note for the sender, which emit the same settlement nullifier: only one of claim and refund can land. Claim requires `anchor <= deadline` and expires by the deadline; refund requires `anchor > deadline`; a deposit cannot land after its own deadline | 10 TXE tests; on testnet: claim, refund after the deadline, and a claim with the right secret after the deadline refused with `escrow expired` |
+| `PaymentStream` | Accrual from the start time, capped at the total without overflow; each withdrawal re-creates the stream note. Sender cancel: every state has an index and a state nullifier emitted by both withdraw and cancel, and withdrawals hand the sender a copy of the next state | 19 TXE tests, two of which keep a second stream funding the instance so only the state nullifier can stop a withdrawal after a cancel or a cancel from a stale copy; on testnet: withdrawal, cancel (every token accounted for) and a later withdrawal rejected by the node with `Existing nullifier` |
+| `IdentityCredential` | Depth-32 Poseidon2 membership, fixed and committed sanction lists, one `SingleUseClaim` per scope; the claim expires by the credential's expiry; a replaced root stays valid for one hour (revocable); two-step issuer rotation | 20 TXE tests; on testnet: claim against a real root, claim within the grace period of a replaced root, rotation of the issuer |
+
+Escrow and stream balances are token notes owned by the contract, so each agreement gets its own instance, deployed with public keys derived from a secret that only its two parties hold (`lib/aztec/keyed-deploy.ts`). The client opens and accepts agreements through `lib/aztec/agreements.ts`; the receiver accepts an invitation only after recomputing its address and class from the shared secret (`lib/aztec/agreement-invite.ts`).
+
+Every instance we deployed is in [`deployments/aztec-testnet.json`](../deployments/aztec-testnet.json), checked daily against the node (workflow "Aztec testnet deployments"), and every end-to-end run with its transaction hashes is in [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](AZTEC_TESTNET_DEPLOYMENTS.md). The first escrow and stream instances of 4 November (`0x1d88…3097`, `0x0567…c895`) were deployed without keys: tokens sent to them could never be spent. They are marked do-not-use. The first identity instance (`0x174e…56f0`) keeps placeholder roots.
+
+Findings, fixes and open limits are in [`docs/zk/AZTEC_CONTRACTS_REVIEW.md`](zk/AZTEC_CONTRACTS_REVIEW.md) (AZ-01 to AZ-19).
 
 ## 3. What was removed or corrected in this revision
 
@@ -90,12 +89,13 @@ A review on 3 November 2026 found that the first version could not refund an esc
 
 Meanwhile, v2 standalone circuits (`circuits/*_v2`) fix ZK-01 to ZK-05 with Poseidon2 and domain separation, a depth-32 identity tree, a committed sanction list, recipient-authorised escrow claims with sender refunds, and state chaining for streams. They compile and pass 36 tests in CI with nargo 1.0.0, and their VK hashes are pinned in CI (`scripts/zk/v2-vks.mjs`), but they have no deployed verifier that stores their state ([`docs/zk/V2_CIRCUITS.md`](zk/V2_CIRCUITS.md)).
 
-Our direction is the aztec-nr contracts of section 2.1, so that note ownership and the network's nullifier tree replace hand-written state handling. In `PrivateEscrow`, two copies of one note (a claim note for the recipient, a refund note for the sender) publish the same settlement nullifier, so only one of claim and refund can land. The claim requires `anchor timestamp <= deadline` and sets `set_expiration_timestamp(min(deadline, anchor + 1 hour))`; the refund requires `anchor timestamp > deadline`. Escrow and stream balances are token notes owned by the contract, so the contract is deployed with public keys derived from a secret that the parties register in their PXE (`lib/aztec/keyed-deploy.ts`).
+Our direction is the aztec-nr contracts of section 2.1, so that note ownership and the network's nullifier tree replace hand-written state handling.
 
 1. Is the shared settlement nullifier, with those timestamp checks, an idiomatic way to express "claim before the deadline, refund after it"?
 2. Is a keyed deployment whose secret is shared with the parties the pattern you recommend for a contract that holds a private balance, or is there a better one?
-3. Our contracts call the token through a raw `transfer_in_private` selector to avoid depending on a token crate. Is depending on the standard Token contract's interface preferred?
-4. `PaymentStream` has no sender cancel: the sender holds no note. What would you use for a cancel that races safely with withdrawals?
+3. Our contracts call the token through a raw `transfer_in_private` selector to avoid depending on a token crate. Is depending on the standard Token contract's interface preferred, and how do you avoid a duplicated `aztec` crate when doing so?
+4. Our stream cancel shares a per-state nullifier between withdraw and cancel and has withdrawals deliver a copy of the next state to the sender. Is that the pattern you would use, or would you reach for something else (for example a delayed public mutable for the cancellation time)?
+5. A cancel measures accrual at its anchor block, chosen by the sender's PXE; we bound it by expiring the cancel 600 s after its anchor. Is there a better way to bound a time-dependent value in a private function?
 
 ---
 

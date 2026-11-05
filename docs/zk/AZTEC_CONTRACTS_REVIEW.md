@@ -1,6 +1,6 @@
 # Revisión de los contratos aztec-nr (`contracts/aztec/`)
 
-**Fecha:** 3 de noviembre de 2026. **Revisa:** el commit `6c009e5a`, que añadió `PrivateEscrow`, `PaymentStream` e `IdentityCredential` (tareas R-08 a R-10 del prompt maestro). **Estado tras la revisión:** compilan con Aztec 6.0.0 en la CI (workflow "Aztec contracts", que además regenera sus artefactos en ramas `claude/**`). Desde el 4 de noviembre tienen 42 tests TXE que pasan en CI (escrow 10, identity 13, streams 19) contra un token solo de pruebas (`contracts/aztec/test_token`). El mismo día, instancias con claves de las clases actuales de escrow y streams se ejecutaron de extremo a extremo en Aztec testnet (workflow "Aztec escrow e2e (testnet)", run 41881180186; direcciones y hashes en `docs/AZTEC_TESTNET_DEPLOYMENTS.md`). **Actualizado:** 5 de noviembre de 2026 (ejecución en testnet 41999587163).
+**Fecha:** 3 de noviembre de 2026. **Revisa:** el commit `6c009e5a`, que añadió `PrivateEscrow`, `PaymentStream` e `IdentityCredential` (tareas R-08 a R-10 del prompt maestro). **Estado tras la revisión:** compilan con Aztec 6.0.0 en la CI (workflow "Aztec contracts", que además regenera sus artefactos en ramas `claude/**`). Desde el 4 de noviembre tienen 49 tests TXE que pasan en CI (escrow 10, identity 20, streams 19) contra un token solo de pruebas (`contracts/aztec/test_token`). El mismo día, instancias con claves de las clases actuales de escrow y streams se ejecutaron de extremo a extremo en Aztec testnet (workflow "Aztec escrow e2e (testnet)", run 41881180186; direcciones y hashes en `docs/AZTEC_TESTNET_DEPLOYMENTS.md`). **Actualizado:** 5 de noviembre de 2026 (ejecución en testnet 41999587163).
 
 ## Hallazgos y correcciones
 
@@ -23,6 +23,8 @@
 | AZ-15 | Comentarios | Baja | Las cabeceras de identity y streams citaban "Lazarus Group", "Nation-State" y "post-quantum", que el código no respalda | Sustituido por la lista de propiedades que el código sí comprueba |
 | AZ-16 | Cliente | Alta | Una invitación a un acuerdo podía apuntar a un contrato falso o a una instancia cuyas claves el receptor no tiene | `lib/aztec/agreement-invite.ts`: el receptor recalcula dirección y clase desde el secreto, exige clase actual del registro, token aceptado, destinatario propio y remitente del chat; 9 tests |
 | AZ-17 | Tests | Media | El test TXE "retiro tras cancelar" fallaba por saldo vacío, no por el nulificador: no probaba lo que decía | Dos tests con un segundo stream que deja saldo, de modo que solo el nulificador puede bloquear; el log de TXE muestra `NullifierTree ... already present` |
+| AZ-18 | IdentityCredential | Media | Un emisor único e inmutable, y cada cambio de raíz invalidaba las reclamaciones en vuelo | SEC-I8: la raíz sustituida vale una hora más (revocable con `revoke_previous_root`); SEC-I9: rotación en dos pasos (`propose_issuer` / `accept_issuer`). 7 tests TXE; en testnet, reclamación en el periodo de gracia y rotación |
+| AZ-19 | E2E en testnet | Baja | tsx cargaba `lib/aztec/*.ts` como CommonJS junto al script y el wallet ESM: dos copias de las clases del SDK, y el wallet rechazaba un `Fr` de la otra copia | La ejecución marca `lib/aztec` como ESM solo para sí misma; el bundle de la app tiene una sola copia |
 
 ## Límites que siguen abiertos
 
@@ -31,6 +33,7 @@
 3. **Tests TXE (hechos el 4 nov; 32 desde la noche del 4 nov).** Antes la CI solo probaba que compilaban. Los tests deben incluir: dos escrows del mismo receptor (AZ-03), reembolso tras el plazo (AZ-01), cobro y reembolso compitiendo (AZ-02), plazo a más de 24 h (AZ-04).
 4. **Afirmaciones del commit original que no se sostienen** ("Production Native", "Lazarus Group adversary", "sanction non-membership" con cuatro constantes, "cancelación en cualquier momento"): retiradas del dossier.
 5. **Copias antiguas del emisor.** Cada retiro deja al emisor una copia nueva y las anteriores no se anulan (la anulación necesitaría la clave del emisor). No son explotables, porque su nulificador ya se emitió, pero se acumulan en su PXE; el cliente debe ignorar las que ya no son el estado vigente.
-6. **Emisor de identidad único e inmutable.** No hay rotación de clave ni multisig; un cambio de raíz invalida las reclamaciones en vuelo (no hay historial de raíces). La instancia del 4 nov (`0x174e…56f0`) sigue con raíces de marcador; las reclamaciones reales se han probado en la instancia de la clase actual.
+6. **Emisor de identidad.** Hay rotación en dos pasos y periodo de gracia (AZ-18), pero el emisor sigue siendo una sola clave, no un multisig. La instancia del 4 nov (`0x174e…56f0`) sigue con raíces de marcador.
 7. **Privacidad de las reclamaciones de identidad.** Las llamadas públicas encoladas revelan que hubo una reclamación en ese contrato y con qué raíz, no quién la hizo.
-8. **Sin auditoría externa.**
+8. **Vínculo entre la identidad XMTP y la dirección de Aztec del par.** `verifyAgreementInvite` exige que el remitente de la invitación sea la dirección de Aztec del par, pero hoy esa dirección se escribe a mano. Diseño previsto para la integración en el chat: el par la comunica en un mensaje dentro del mismo DM de XMTP (que autentica su identidad Ethereum), la app la fija la primera vez y rechaza invitaciones de cualquier otra.
+9. **Sin auditoría externa.**
