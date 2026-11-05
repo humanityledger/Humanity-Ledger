@@ -19,7 +19,12 @@
  *      rest, after which withdrawing and cancelling again are refused;
  *   6. identity: deploy with a placeholder root, the issuer publishes a real
  *      depth-32 root, a member claims once per scope;
- *   7. every balance is checked after every step; refusals are checked by
+ *   7. identity: a claim against a just-replaced root lands within the grace
+ *      period; the issuer rotates in two steps;
+ *   8. an escrow opened and accepted through lib/aztec/agreements.ts, the
+ *      code the app uses: a tampered invitation is refused, the genuine one
+ *      is verified and registered, and the recipient claims;
+ *   9. every balance is checked after every step; refusals are checked by
  *      their reason, not only by failing.
  *
  *   node --conditions=browser --import tsx --import ./scripts/aztec/register.mjs scripts/aztec/e2e-escrow-testnet.mts
@@ -40,6 +45,8 @@ import { TokenContract } from '@aztec-labs/noir-contracts.js/Token';
 import { openTmpStore } from '@aztec-labs/kv-store/deprecated/indexeddb';
 import { EmbeddedWallet } from '@aztec-labs/wallets/embedded';
 import { KEYED_ARTIFACT_PATHS, computeKeyedInstance, loadKeyedArtifact } from '../../lib/aztec/keyed-deploy.ts';
+import { openEscrow, acceptInvite } from '../../lib/aztec/agreements.ts';
+import { currentClassIds } from '../../lib/aztec/agreement-invite.ts';
 
 const registry = JSON.parse(fs.readFileSync('deployments/aztec-testnet.json', 'utf8'));
 const NODE_URL = process.env.AZTEC_NODE_URL || registry.network.nodeUrl;
@@ -313,6 +320,53 @@ async function main() {
   check('identity: a second claim in the same scope is refused', twice !== 'accepted', twice);
   const notIssuer = await refused(idB.methods.update_root(Fr.random()), { from: recipient });
   check('identity: only the issuer can change the root', notIssuer.includes('only issuer'), notIssuer);
+
+  // SEC-I8: a claim proven against the root an update just replaced still lands.
+  await sendAndWait('identity: the issuer replaces the root', idA.methods.update_root(Fr.random()), { from: sender });
+  await sendAndWait('identity: a claim against the replaced root lands within the grace period', idB.methods.verify_and_claim(...claimArgs(2)), { from: recipient });
+  // SEC-I9: two-step issuer rotation.
+  await sendAndWait('identity: the issuer proposes a new issuer', idA.methods.propose_issuer(recipient), { from: sender });
+  await sendAndWait('identity: the proposed issuer accepts', idB.methods.accept_issuer(), { from: recipient });
+  const oldIssuer = await refused(idA.methods.update_root(Fr.random()), { from: sender });
+  check('identity: the previous issuer can no longer change the root', oldIssuer.includes('only issuer'), oldIssuer);
+
+  // ── An agreement through lib/aztec/agreements.ts, as the app opens it ──
+  const record = JSON.parse(fs.readFileSync('deployments/aztec-testnet.json', 'utf8'));
+  const escrowArtifact = loadKeyedArtifact(JSON.parse(fs.readFileSync(KEYED_ARTIFACT_PATHS.escrow, 'utf8')));
+  const streamArtifact = loadKeyedArtifact(JSON.parse(fs.readFileSync(KEYED_ARTIFACT_PATHS.streams, 'utf8')));
+  const escrowClass = (await computeKeyedInstance(escrowArtifact, { secretKey: Fr.random(), salt: Fr.random(), token: tokenAddr })).instance.currentContractClassId;
+  const opened = await openEscrow({
+    sender: { wallet: wa, address: sender },
+    recipient,
+    token: tokenAddr,
+    tokenSymbol: 'HLT',
+    tokenContract: tokA,
+    artifact: escrowArtifact,
+    send: { fee },
+    classPublished: !!(await node.getContractClass(escrowClass)),
+    amount: 3_000_000n,
+    deadline: nowSec() + 7200,
+  });
+  receipt.steps.push({ step: 'agreement: openEscrow (keyed deploy + deposit 3)', txHash: opened.txHashes.fund, detail: opened.invite.instanceAddress });
+  log('agreement escrow', opened.invite.instanceAddress, 'deploy', opened.txHashes.deploy, 'deposit', opened.txHashes.fund);
+  const verifyOpts = {
+    artifacts: { escrow: escrowArtifact, streams: streamArtifact },
+    allowedClassIds: currentClassIds(record),
+    allowedTokens: [tokenAddr.toString()],
+    peer: sender.toString(),
+  };
+  const tampered = JSON.stringify({ ...opened.invite, instanceAddress: stream.addr.toString() });
+  const bad = await acceptInvite({ wallet: wb, address: recipient }, tampered, verifyOpts);
+  check('agreement: a tampered invitation is refused before anything is registered', !bad.ok && bad.reason === 'address does not match the shared secret', bad.ok ? 'accepted' : bad.reason);
+  const acc = await acceptInvite({ wallet: wb, address: recipient }, opened.raw, verifyOpts);
+  check('agreement: the genuine invitation is verified and registered', acc.ok, acc.ok ? acc.invite.instanceAddress : acc.reason);
+  if (acc.ok && acc.invite.type === 'hl.escrow_invite') {
+    const before = await balB();
+    await sendAndWait('agreement: the recipient claims with the secret from the invitation',
+      acc.contract.methods.claim(Fr.fromString(acc.invite.escrowId), Fr.fromString(acc.invite.claimSecret)),
+      { from: recipient, additionalScopes: [AztecAddress.fromStringUnsafe(acc.invite.instanceAddress)] });
+    check('agreement: the recipient received 3', (await balB()) - before === 3_000_000n);
+  }
 
   await wa.stop();
   await wb.stop();
