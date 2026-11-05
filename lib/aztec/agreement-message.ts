@@ -47,3 +47,51 @@ export function agreementPreview(kind: AgreementMessageKind): string {
   if (kind === 'stream') return 'Private payment stream';
   return 'Shared an Aztec address';
 }
+
+const HEX32 = /^0x[0-9a-fA-F]{64}$/;
+const DEC = /^[0-9]{1,39}$/;
+
+/** What a card may show about an invitation: no secrets. */
+export interface AgreementSummary {
+  kind: 'escrow' | 'stream';
+  instanceAddress: string;
+  sender: string;
+  recipient: string;
+  token: string;
+  tokenSymbol: string;
+  /** Escrow amount or stream total, base units. */
+  amount: bigint;
+  /** Escrow only: unix seconds. */
+  deadline?: number;
+  /** Stream only: base units per second and unix start. */
+  rate?: bigint;
+  start?: number;
+}
+
+/**
+ * Reads the public fields of an invitation for display, without the
+ * secrets and without verifying anything. Null when it is not a well-formed
+ * invitation. Never throws.
+ */
+export function summarizeInvite(raw: string): AgreementSummary | null {
+  const kind = agreementMessageKind(raw);
+  if (kind !== 'escrow' && kind !== 'stream') return null;
+  try {
+    const j = JSON.parse(raw) as Record<string, unknown>;
+    const str = (k: string) => (typeof j[k] === 'string' ? (j[k] as string) : '');
+    for (const k of ['instanceAddress', 'sender', 'recipient', 'token']) if (!HEX32.test(str(k))) return null;
+    const amountRaw = kind === 'escrow' ? str('amount') : str('total');
+    if (!DEC.test(amountRaw)) return null;
+    const symbol = str('tokenSymbol').slice(0, 12);
+    const base = { instanceAddress: str('instanceAddress'), sender: str('sender'), recipient: str('recipient'), token: str('token'), tokenSymbol: symbol, amount: BigInt(amountRaw) };
+    if (kind === 'escrow') {
+      const deadline = Number(j.deadline);
+      return Number.isInteger(deadline) && deadline > 0 ? { kind, ...base, deadline } : null;
+    }
+    const start = Number(j.start);
+    if (!DEC.test(str('rate')) || !Number.isInteger(start)) return null;
+    return { kind, ...base, rate: BigInt(str('rate')), start };
+  } catch {
+    return null;
+  }
+}

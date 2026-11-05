@@ -72,6 +72,8 @@ const ZkWalletPanel = dynamic(() => import('@/components/zk/ZkWalletPanel').then
 const ZkStreamManager = dynamic(() => import('@/components/zk/ZkStreamManager').then(m => m.ZkStreamManager), { ssr: false });
 const ZkInvoiceModal = dynamic(() => import('@/components/zk/ZkInvoiceModal').then(m => m.ZkInvoiceModal), { ssr: false });
 import { encodeStreamPayload } from '@/lib/zk/zkStreaming';
+import { agreementMessageKind, agreementPreview, isAgreementMessage } from '@/lib/aztec/agreement-message';
+const AgreementComposer = dynamic(() => import('@/components/chat/AgreementComposer').then(m => m.AgreementComposer), { ssr: false });
 import { encodeInvoicePayload } from '@/lib/zk/zkInvoice';
 import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
 import { SLASH_COMMANDS, transformClientCommand, isBotCommand, executeBotCommand } from '@/lib/bots/botInterceptor';
@@ -104,7 +106,7 @@ interface ConversationMeta {
 }
 
 /** Attach-menu entries hidden when Settings → Payments → "Payments in chats" is off. */
-const PAYMENT_DRAWER_IDS = new Set(['zkmoney', 'zkstream', 'zkinvoice', 'payment', 'tip']);
+const PAYMENT_DRAWER_IDS = new Set(['zkmoney', 'zkstream', 'agreement', 'zkinvoice', 'payment', 'tip']);
 
 /** forceAutoInit=true: always auto-init XMTP even on mobile (used by /chat route) */
 export interface LedgerChatProps {
@@ -209,6 +211,10 @@ export const formatMessagePreview = (content: string): string => {
       }
     }
   }
+
+  // Agreement invitations carry secrets: never preview or notify their text.
+  const agreementKind = agreementMessageKind(cleanContent);
+  if (agreementKind) return agreementPreview(agreementKind);
 
   // Handle system messages and metadata
   if (cleanContent.startsWith(CALL_LOG_PREFIX)) {
@@ -771,6 +777,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showZkModal, setShowZkModal] = useState(false);
   const [showZkWallet, setShowZkWallet] = useState(false);
   const [showZkStreamModal, setShowZkStreamModal] = useState(false);
+  const [showAgreementComposer, setShowAgreementComposer] = useState(false);
   const [showZkInvoiceModal, setShowZkInvoiceModal] = useState(false);
   // Phase 5: Poll creator form state (hoisted to satisfy React rules of hooks)
   const [pollQuestion, setPollQuestion] = useState('');
@@ -4599,7 +4606,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       toast.error('You are sending messages too quickly. Wait a moment.');
       return;
     }
-    const moderationFlag = moderateContent(content);
+    // Agreement invitations and Aztec address announcements are sent exactly
+    // as built: no reply or thread wrapper, no text transforms, no
+    // disappearing timer, never to the plain-text offline outbox (an
+    // invitation carries the agreement's secrets).
+    const isAgreementMsg = isAgreementMessage(content);
+    if (isAgreementMsg && isOffline) {
+      toast.error('You are offline. Agreements are only sent while connected.');
+      return;
+    }
+    const moderationFlag = isAgreementMsg ? null : moderateContent(content);
     if (moderationFlag) {
       toast.error(moderationFlag);
       return;
@@ -4614,7 +4630,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (!isSystemSignal && sending) return;
 
     // Native client-side slash commands (/me, /shrug, /code, /table, /urgent, /clear, /online, /away, /dnd)
-    const { transformed, isHandledLocally, action } = transformClientCommand(content, getDisplayName(address || ''));
+    const { transformed, isHandledLocally, action } = isAgreementMsg
+      ? { transformed: content, isHandledLocally: false, action: undefined as any }
+      : transformClientCommand(content, getDisplayName(address || ''));
     if (isHandledLocally) {
       if (action === 'clear') {
         setMessages([]);
@@ -4635,7 +4653,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     content = transformed;
 
     // Bot command interception
-    if (isBotCommand(content)) {
+    if (!isAgreementMsg && isBotCommand(content)) {
       const botResponse = await executeBotCommand(content);
       if (botResponse) {
         const cmdMsg = {
@@ -4663,19 +4681,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     
     // Phase 2: Message Quoting
     let finalContent = content;
-    if (replyingTo && !isSystemSignal) {
-      const snippet = (replyingTo.content || '').replace(/__/g, '').slice(0, 80);
+    if (replyingTo && !isSystemSignal && !isAgreementMsg) {
+      const snippet = (isAgreementMessage(replyingTo.content) ? formatMessagePreview(replyingTo.content) : (replyingTo.content || '')).replace(/__/g, '').slice(0, 80);
       finalContent = `__REPLY__${replyingTo.id}__SNIPPET__${snippet}__::${content}`;
       setReplyingTo(null);
     }
     // Thread support
-    if (threadParentId && !isSystemSignal) {
+    if (threadParentId && !isSystemSignal && !isAgreementMsg) {
       finalContent = `__THREAD__${threadParentId}__::${finalContent}`;
       setThreadParentId(null);
     }
 
     // Smart macros
-    if (ledgerSettings?.smart_macros && !isSystemSignal) {
+    if (ledgerSettings?.smart_macros && !isSystemSignal && !isAgreementMsg) {
       if (content.trim() === '/add') { finalContent = `My wallet: ${address}`; }
       else if (/^\/pay (\d+\.?\d*)$/.test(content.trim())) {
         const m = content.trim().match(/^\/pay (\d+\.?\d*)$/);
@@ -4683,7 +4701,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       }
     }
     // Tone translator  
-    if (ledgerSettings?.tone_translator && !isSystemSignal) {
+    if (ledgerSettings?.tone_translator && !isSystemSignal && !isAgreementMsg) {
       finalContent = finalContent
         .replace(/\bfuck(ing)?\b/gi, 'strongly disagree')
         .replace(/\bshit\b/gi, 'situation')
@@ -4694,7 +4712,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
 
     // Disappearing messages: a timer set for this chat wins over the global one.
-    if (!isSystemSignal) {
+    if (!isSystemSignal && !isAgreementMsg) {
       let chatTimer = 'off';
       try { chatTimer = localStorage.getItem('ledger_disappearing_' + activePeer.toLowerCase()) || 'off'; } catch {}
       const globalTimer = (ledgerSettings as any)?.auto_delete_timer || 'off';
@@ -5023,7 +5041,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     rl.timestamps.push(now);
     let txt = inputText.trim();
     if (replyingTo) {
-      const snippet = (replyingTo.content || '').replace(/__/g, '').slice(0, 80);
+      const snippet = (isAgreementMessage(replyingTo.content) ? formatMessagePreview(replyingTo.content) : (replyingTo.content || '')).replace(/__/g, '').slice(0, 80);
       txt = `__REPLY__${replyingTo.id}__SNIPPET__${snippet}__::${txt}`;
       setReplyingTo(null);
     }
@@ -5936,6 +5954,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           onVotePoll={(pollId, idx) => executeSend(`__VOTE__${pollId}__::${idx}`)}
                           onEditMsg={(id, current) => setEditingMsg({ id, content: current })}
                           bubbleStyle={bubbleStyle}
+                          // The DM's peer inbox, resolved from the conversation's members:
+                          // an Aztec address is pinned only from that inbox.
+                          dmPeerInboxId={activePeerInboxIdRef.current || undefined}
                         />
                       );
                     }}
@@ -6174,7 +6195,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             { id: 'poll',      color: '#10B981', iconPath: <ListChecks size={19} strokeWidth={1.8} />,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
                             // ── Crypto & Aztec Private Payments ──────────────────────────
                             { id: 'zkmoney',   color: '#1C1C1E', iconPath: <ShieldCheck size={19} strokeWidth={1.8} />, label: 'Private payment', sublabel: 'Aztec test network', onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
-                            { id: 'zkstream',  color: '#1C1C1E', iconPath: <Waves size={19} strokeWidth={1.8} />, label: 'Payment stream', sublabel: 'Demo, no funds move', onClick: () => { setShowZkStreamModal(true); setShowAppDrawer(false); } },
+                            { id: 'agreement', color: '#1C1C1E', iconPath: <Waves size={19} strokeWidth={1.8} />, label: 'Private agreement', sublabel: 'Escrow or payment stream, Aztec test network', onClick: () => { setShowAgreementComposer(true); setShowAppDrawer(false); } },
                             { id: 'zkinvoice', color: '#1C1C1E', iconPath: <Receipt size={19} strokeWidth={1.8} />, label: 'Private invoice', sublabel: 'Request a private payment', onClick: () => { setShowZkInvoiceModal(true); setShowAppDrawer(false); } },
                             { id: 'payment',   color: '#1C1C1E', iconPath: <CreditCard size={19} strokeWidth={1.8} />,     label: 'Payment',        sublabel: 'Send tokens from your wallet',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
                             { id: 'tip',       color: '#1C1C1E', iconPath: <Heart size={19} strokeWidth={1.8} />, label: 'Tip',          sublabel: 'Send a small thank you', onClick: () => { setShowTipModal(true); setShowAppDrawer(false); } },
@@ -6896,6 +6917,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    <MessagesSquare size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Reply in thread
                  </button>
                  <button role="menuitem" type="button" onClick={() => {
+                   // An agreement invitation holds its secrets; copy only what the card shows.
+                   if (isAgreementMessage(contextMenu.content)) { navigator.clipboard.writeText(formatMessagePreview(contextMenu.content)); toast.success('Copied'); setContextMenu(null); return; }
                    navigator.clipboard.writeText(contextMenu.content.replace(/^\[.*?\]/, '').replace(/^__BURN_\d+__::/, ''));
                    // A disappearing message is removed from this chat, but a pasted copy is not.
                    if (/^__BURN_\d+__::/.test(contextMenu.content)) toast.success('Copied. This message disappears from the chat; the copy you paste elsewhere does not.');
@@ -7262,6 +7285,26 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
            </motion.div>
          )}
        </AnimatePresence>
+
+       {/* ── Private agreement: escrow or payment stream on Aztec (lib/aztec/chat-agreements.ts) ── */}
+       {showAgreementComposer && activePeer && (
+         activePeerInboxIdRef.current ? (
+           <AgreementComposer
+             dmPeerInboxId={activePeerInboxIdRef.current}
+             peerName={getDisplayName(activePeer)}
+             onClose={() => setShowAgreementComposer(false)}
+             onSend={(message: string) => executeSend(message)}
+             onOpenWallet={() => { setShowAgreementComposer(false); setShowZkWallet(true); }}
+           />
+         ) : (
+           <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/40 p-4" onClick={() => setShowAgreementComposer(false)}>
+             <div role="dialog" aria-modal="true" className="bg-white rounded-3xl p-5 max-w-[360px] text-[14px] text-[#4a505c]" onClick={e => e.stopPropagation()}>
+               Agreements need a direct conversation that has finished connecting. Send or receive a message with {getDisplayName(activePeer)} first, then try again.
+               <button type="button" className="mt-4 h-10 px-4 rounded-full bg-[#15171c] text-white text-[14px] font-semibold block" onClick={() => setShowAgreementComposer(false)}>OK</button>
+             </div>
+           </div>
+         )
+       )}
 
        {/* ── Aztec zk.money Payment Stream Modal ── */}
        {showZkStreamModal && activePeer && (
