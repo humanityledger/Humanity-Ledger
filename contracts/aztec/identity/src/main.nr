@@ -2,7 +2,7 @@
 // Humanity Ledger Protocol — IdentityCredential (Aztec v6.0.0 Native Contract)
 //
 // ══════════════════════════════════════════════════════════════════════════════
-// SECURITY THREAT MODEL: Advanced Persistent Threat (APT) / Lazarus Group
+// SECURITY PROPERTIES
 // ══════════════════════════════════════════════════════════════════════════════
 //
 // Invariants enforced at the circuit level:
@@ -30,8 +30,11 @@
 //   [SEC-I5] TEMPORAL FRESHNESS — Verifies that `expiry >= anchor_ts`,
 //            preventing expired KYC/credentials from being reused.
 //
-//   [SEC-I6] ISSUER AUTHENTICATION — Only the designated authority (or DAO multisig)
-//            can register valid root commitments or update roots.
+//   [SEC-I6] ISSUER AUTHENTICATION — Only the issuer set at construction can
+//            update the identity root or the sanction list. The issuer is a
+//            single immutable address: it cannot be rotated (open limit).
+//   [SEC-I7] EXPIRY BOUND (5 Nov 2026) — a claim's transaction expires no
+//            later than the credential, so it cannot land after expiry.
 // ══════════════════════════════════════════════════════════════════════════════
 
 use aztec::macros::aztec;
@@ -58,6 +61,7 @@ pub contract IdentityCredential {
     global DOM_SEP__IDENTITY_COMMITMENT: u32 = 120938471;
     global DOM_SEP__IDENTITY_LEAF: u32       = 238471092;
     global DOM_SEP__MERKLE_NODE: u32         = 349582103;
+    global MAX_TX_LIFETIME: u64 = 3600;
 
     // Sanctioned jurisdictions (ISO-3166-1 numeric standards)
     global SANCTION_KP_DPRK: u32 = 408; // Democratic People's Republic of Korea
@@ -130,6 +134,7 @@ pub contract IdentityCredential {
     #[only_self]
     fn assert_valid_root(expected_root: Field) {
         let active_root = self.storage.current_root.read();
+        assert(active_root != 0, "IdentityCredential: identity root not set");
         assert(active_root == expected_root, "IdentityCredential: root mismatch or expired");
     }
 
@@ -172,8 +177,13 @@ pub contract IdentityCredential {
         // 1. [SEC-I5] Temporal verification: check against anchor block timestamp
         let anchor_ts = self.context.get_anchor_block_header().timestamp() as u64;
         assert(expiry >= anchor_ts, "IdentityCredential: credential expired");
+        // [SEC-I7] The claim must also land before the credential expires: the
+        // anchor block is in the past, so without this a claim proven just
+        // before expiry could be included after it.
+        let latest = anchor_ts + MAX_TX_LIFETIME;
+        self.context.set_expiration_timestamp(if expiry < latest { expiry } else { latest });
 
-        // 2. [SEC-I4] Sanctions verification: post-quantum ZK non-membership assertions
+        // 2. [SEC-I4] Sanctions verification: the jurisdiction is not on the fixed floor or the committed list
         assert(jurisdiction != SANCTION_KP_DPRK, "IdentityCredential: OFAC/FATF sanctioned jurisdiction [KP]");
         assert(jurisdiction != SANCTION_IR_IRAN, "IdentityCredential: OFAC/FATF sanctioned jurisdiction [IR]");
         assert(jurisdiction != SANCTION_SY_SYRIA, "IdentityCredential: OFAC/FATF sanctioned jurisdiction [SY]");

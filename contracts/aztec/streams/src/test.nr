@@ -1,8 +1,8 @@
 // TXE tests for PaymentStream (run with `aztec test` after `aztec compile` of
 // this crate and of ../test_token). Master prompt task A.3: partial
 // withdrawals replace the stream note, accrual bounds every withdrawal, one
-// stream per salt. Sender cancel is not tested because it does not exist: it
-// was removed as unworkable in this design (SEC-S5, open question R-09).
+// stream per salt; sender cancel (SEC-S12) splits accrued and unaccrued and
+// shares one state nullifier with withdrawals.
 
 use crate::PaymentStream;
 use aztec::{
@@ -221,4 +221,107 @@ unconstrained fn a_stream_to_oneself_fails() {
         s.sender,
         PaymentStream::at(s.streams).create_stream(s.sender, TOTAL, RATE, start, 9, 31),
     );
+}
+
+unconstrained fn cancel(s: Setup, caller: AztecAddress, salt: Field) {
+    s.env.call_private_opts(
+        caller,
+        CallPrivateOptions::new().with_additional_scopes([s.streams]),
+        PaymentStream::at(s.streams).cancel(salt),
+    );
+}
+
+// SEC-S12: the recipient gets what accrued, the sender the rest, nothing stays.
+#[test]
+unconstrained fn cancel_mid_stream_splits_accrued_and_the_rest() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    s.env.mine_block_at(start + 40);
+    cancel(s, s.sender, 1);
+    let paid = balance(s.env, s.token, s.recipient);
+    assert((paid >= 40) & (paid <= 42));
+    assert(balance(s.env, s.token, s.sender) == MINTED - paid);
+    assert(balance(s.env, s.token, s.streams) == 0);
+}
+
+#[test]
+unconstrained fn cancel_before_any_accrual_returns_everything() {
+    let s = setup();
+    let _ = open(s, 1, 11);
+    cancel(s, s.sender, 1);
+    let paid = balance(s.env, s.token, s.recipient);
+    assert(paid <= 2);
+    assert(balance(s.env, s.token, s.sender) == MINTED - paid);
+    assert(balance(s.env, s.token, s.streams) == 0);
+}
+
+#[test]
+unconstrained fn cancel_after_a_withdrawal_pays_only_what_is_left() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    s.env.mine_block_at(start + 30);
+    withdraw(s, 1, 20);
+    s.env.mine_block_at(start + 60);
+    // The sender cancels from the copy the withdrawal delivered (index 1).
+    cancel(s, s.sender, 1);
+    let paid = balance(s.env, s.token, s.recipient);
+    assert((paid >= 60) & (paid <= 63));
+    assert(balance(s.env, s.token, s.sender) == MINTED - paid);
+    assert(balance(s.env, s.token, s.streams) == 0);
+}
+
+#[test(should_fail_with = "stream not found")]
+unconstrained fn a_second_cancel_fails() {
+    let s = setup();
+    let _ = open(s, 1, 11);
+    cancel(s, s.sender, 1);
+    cancel(s, s.sender, 1);
+}
+
+// The recipient's note survives the cancel, but withdrawing from it emits the
+// state nullifier the cancel already emitted.
+#[test(should_fail)]
+unconstrained fn a_withdrawal_after_cancel_fails() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    s.env.mine_block_at(start + 40);
+    cancel(s, s.sender, 1);
+    withdraw(s, 1, 10);
+}
+
+#[test(should_fail_with = "stream not found")]
+unconstrained fn only_the_sender_can_cancel() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    s.env.mine_block_at(start + 40);
+    cancel(s, s.recipient, 1);
+}
+
+// With a second stream funding the same instance, a withdrawal after a cancel
+// can only be stopped by the shared state nullifier, not by an empty balance.
+#[test(should_fail)]
+unconstrained fn a_withdrawal_after_cancel_fails_with_funds_left() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    let _ = open(s, 2, 12);
+    s.env.mine_block_at(start + 40);
+    cancel(s, s.sender, 1);
+    assert(balance(s.env, s.token, s.streams) == TOTAL);
+    withdraw(s, 1, 10);
+}
+
+// After a withdrawal the sender holds copies at index 0 and 1. Once index 1 is
+// cancelled, the stale index-0 copy cannot cancel again: its state nullifier
+// was emitted by the withdrawal. Stream 2 keeps funds in the contract.
+#[test(should_fail)]
+unconstrained fn a_cancel_from_a_stale_copy_fails_with_funds_left() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    let _ = open(s, 2, 12);
+    s.env.mine_block_at(start + 30);
+    withdraw(s, 1, 20);
+    s.env.mine_block_at(start + 60);
+    cancel(s, s.sender, 1);
+    assert(balance(s.env, s.token, s.streams) == TOTAL);
+    cancel(s, s.sender, 1);
 }

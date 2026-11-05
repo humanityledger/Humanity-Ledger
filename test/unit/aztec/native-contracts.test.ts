@@ -85,8 +85,8 @@ describe('Aztec v6.0.0 Native Contracts Pipeline', () => {
       expect(fnNames).toContain('constructor');
       expect(fnNames).toContain('create_stream');
       expect(fnNames).toContain('withdraw');
-      // cancel() was removed: it could never succeed (see contracts/aztec/streams).
-      expect(fnNames).not.toContain('cancel');
+      // Sender cancel (SEC-S12, 5 Nov 2026): shares a state nullifier with withdraw.
+      expect(fnNames).toContain('cancel');
       expect(fnNames).toContain('get_token');
 
       const createFn = artifact.functions.find(f => f.name === 'create_stream');

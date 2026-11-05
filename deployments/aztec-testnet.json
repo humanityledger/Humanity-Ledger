@@ -31,8 +31,8 @@
       "keyed": false,
       "status": "active",
       "deployedOn": "2026-11-04",
-      "note": "Deployed with placeholder roots (identity 0x12345678, sanctions 0x87654321): no member can claim until the issuer sets a real identity root.",
-      "tracksCurrentArtifact": true
+      "note": "Deployed with placeholder roots (identity 0x12345678, sanctions 0x87654321): no member can claim until the issuer sets a real identity root. Its class predates the expiry bound (SEC-I7) and the root guard of 5 Nov 2026.",
+      "tracksCurrentArtifact": false
     },
     {
       "name": "PrivateEscrow",
@@ -90,12 +90,116 @@
       "holdsPrivateBalance": true,
       "keyed": true,
       "status": "reference",
-      "tracksCurrentArtifact": true,
+      "tracksCurrentArtifact": false,
       "deployedOn": "2026-11-04",
-      "note": "Current PaymentStream class (overflow-free accrual, no self-streams), published with this deployment. Run 41881180186: stream of 20 test tokens created, 5 withdrawn within accrual. A reference instance, not one for new streams."
+      "note": "Current PaymentStream class (overflow-free accrual, no self-streams), published with this deployment. Run 41881180186: stream of 20 test tokens created, 5 withdrawn within accrual. A reference instance, not one for new streams. Superseded on 5 Nov 2026 by the class with sender cancel (SEC-S12)."
+    },
+    {
+      "name": "PaymentStream v3 (keyed, end-to-end run)",
+      "address": "0x2bd80a8d2dabcf30c40e656929b0234d68b03b92cce6eb027847e6ed75737a03",
+      "classId": "0x222a75a82bb2b83dd7be88c60d0c6efd044a2e7d548215ca6ff64792d5560756",
+      "artifact": "contracts/aztec/streams/target/payment_stream-PaymentStream.json",
+      "holdsPrivateBalance": true,
+      "keyed": true,
+      "status": "reference",
+      "tracksCurrentArtifact": true,
+      "deployedOn": "2026-11-05",
+      "note": "Class with sender cancel (SEC-S12). Run 41999587163: deployed in block 19342; two streams; withdrawal within accrual, cancel by the sender (block 19352), withdrawal after the cancel rejected by the node ('Existing nullifier'). Stream 2 (5 test tokens) stays locked: the run's keys were discarded."
+    },
+    {
+      "name": "IdentityCredential v2 (end-to-end run)",
+      "address": "0x10a7799394def50fc1bc2cfebe549bf2be029cff2e75c68b685badef1530d77c",
+      "classId": "0x090cebe96c81014a14c8408951ca7d0310f517864b15b57df19f045d4cb289ff",
+      "artifact": "contracts/aztec/identity/target/identity_credential-IdentityCredential.json",
+      "holdsPrivateBalance": false,
+      "keyed": false,
+      "status": "reference",
+      "tracksCurrentArtifact": true,
+      "deployedOn": "2026-11-05",
+      "note": "Class with the expiry bound (SEC-I7) and the root guard. Run 41999587163: deployed with a placeholder root (block 19355); the throwaway issuer published a real depth-32 root (block 19356); a member claimed in scope 1 (block 19358); a second claim in the same scope and a root change by a non-issuer were refused."
     }
   ],
   "e2eRuns": [
+    {
+      "workflow": "Aztec escrow e2e (testnet)",
+      "run": 41999587163,
+      "date": "2026-11-05",
+      "result": "all checks passed",
+      "transactions": [
+        {
+          "step": "deploy keyed PrivateEscrow",
+          "txHash": "0x12e09364551a73edd72353a0518d97ba69d7b28e85e5c84e1fa02422b361a253",
+          "block": 19330
+        },
+        {
+          "step": "escrow 1: deposit 25",
+          "txHash": "0x130a9d064edbe475a6fe153fb035021becde20affda468623547f74e60dd7776",
+          "block": 19332
+        },
+        {
+          "step": "escrow 2: deposit 10, deadline +7 min",
+          "txHash": "0x1d595ec4e9b611e6d1fccc1f4c2eb879432d4c1b3c303bad4743acd343d01f60",
+          "block": 19335
+        },
+        {
+          "step": "escrow 1: claim",
+          "txHash": "0x09c5963b1944a689f6c16fbec09cc5e64676652b51a9cc57c6cc0c019140cc6c",
+          "block": 19339
+        },
+        {
+          "step": "deploy keyed PaymentStream",
+          "txHash": "0x0a53583cdd591197c98c6a22b6ff3fbef3824e7e62becfd1ad8eefad9de58d53",
+          "block": 19342
+        },
+        {
+          "step": "stream 1: create 20",
+          "txHash": "0x0367979cc422b3f6797f84c6261b682799bb56be87cd86099b3e70f1e36c197a",
+          "block": 19344
+        },
+        {
+          "step": "stream 2: create 5",
+          "txHash": "0x004051220ab9951787a94fa74a0b4e87df9f47d3872cb35aa2d0d869a1ec0831",
+          "block": 19346
+        },
+        {
+          "step": "stream 1: withdraw 5",
+          "txHash": "0x1ea462b30c2c04defb2d0db2400998c40fe316c6022e4a1acf0a57266398533c",
+          "block": 19348
+        },
+        {
+          "step": "escrow 2: refund after the deadline",
+          "txHash": "0x01acd45f6250f971ad233011f1abb48c0aad7848ae0422f9bce61147e02a322e",
+          "block": 19350
+        },
+        {
+          "step": "stream 1: cancel by the sender",
+          "txHash": "0x2f219fe034b1bd12b6e962dca59cd31e30456776a61baf6e22f038e3c7791325",
+          "block": 19352
+        },
+        {
+          "step": "deploy IdentityCredential (placeholder root)",
+          "txHash": "0x179142fe105f3f27693ecddab5d1826237464c39d9438518965ecfc7bf17b295",
+          "block": 19355
+        },
+        {
+          "step": "identity: issuer publishes the real root",
+          "txHash": "0x2331d165dc0e7f4fd1d153fd7cefe41c7eee6b3c691f59efc20500927a07e528",
+          "block": 19356
+        },
+        {
+          "step": "identity: member claims in scope 1",
+          "txHash": "0x2e9eeceeb1be5aaa11bdca705da054ddb07a9bd1f40cafd779ad9e80cc108806",
+          "block": 19358
+        }
+      ],
+      "checks": [
+        "escrow 2 claimed with the right secret after its deadline: refused with 'escrow expired' (AZ-12)",
+        "stream 1 cancel: sender 45.13 + recipient 39.87 + 5 locked in stream 2 = 90; nothing created or lost",
+        "withdrawal from stream 1 after the cancel, sent to the node: rejected 'Invalid tx: Existing nullifier' (SEC-S12)",
+        "cancel from the stale index-0 copy: refused, here by the contract balance (stream 2 held less than it asked); the state-nullifier case with enough balance is the TXE test a_cancel_from_a_stale_copy_fails_with_funds_left",
+        "identity: no claim against the placeholder root; claim against the real root; second claim in the same scope refused (duplicate nullifier); root change by a non-issuer refused"
+      ]
+    },
     {
       "workflow": "Aztec escrow e2e (testnet)",
       "run": 41881180186,
