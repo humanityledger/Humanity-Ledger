@@ -278,7 +278,10 @@ async function main() {
   const afterCancel = await rejectedOnSend(stream.b.methods.withdraw(streamSalt, 1n), { from: recipient, additionalScopes: [stream.addr] });
   check('stream: a withdrawal after the cancel is rejected (state nullifier)', !afterCancel.startsWith('included'), afterCancel);
   const staleCancel = await rejectedOnSend(stream.a.methods.cancel(streamSalt), { from: sender, additionalScopes: [stream.addr] });
-  check('stream: a cancel from the stale copy is rejected (state nullifier)', !staleCancel.startsWith('included'), staleCancel);
+  // Rejected either by the state nullifier or, if stream 2 holds less than the
+  // stale copy asks for, by the contract balance; the TXE test
+  // a_cancel_from_a_stale_copy_fails_with_funds_left covers the nullifier case.
+  check('stream: a cancel from the stale copy is rejected', !staleCancel.startsWith('included'), staleCancel);
   check('stream: nothing moved after the rejected transactions', (await balA()) === sAfter && (await balB()) === rAfter);
 
   // ── IdentityCredential: a real root, a real claim ──

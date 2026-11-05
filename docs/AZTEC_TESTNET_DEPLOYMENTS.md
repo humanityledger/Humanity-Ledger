@@ -12,7 +12,38 @@
 **Sponsored Fee Payment Contract (FPC):** `0x2d8fff82a3b0c15d0a89169e7d8d043e079ab94d52031f1de1e4972ebad169d3`  
 **Date of Deployment:** 4 November 2026  
 
-## Current classes: keyed PrivateEscrow and PaymentStream, end to end (4 November 2026)
+## Current classes, end to end (5 November 2026): escrow, stream with sender cancel, identity claim
+
+Run 41999587163 of the workflow [Aztec escrow e2e (testnet)](../.github/workflows/aztec-escrow-e2e.yml), all checks passing, with throwaway accounts and a fresh test token:
+
+| Contract | Instance | Class |
+| --- | --- | --- |
+| `PrivateEscrow` (keyed) | `0x1950bee2b9eee9774519a53d39c95275dcce32596c3931e59155177fb4af7d5c` | `0x163f855efb404a868d60e9ebd2352fd8317c54bc054561348c1cf764b2cdf873` |
+| `PaymentStream` (keyed, with sender cancel) | `0x2bd80a8d2dabcf30c40e656929b0234d68b03b92cce6eb027847e6ed75737a03` | `0x222a75a82bb2b83dd7be88c60d0c6efd044a2e7d548215ca6ff64792d5560756` |
+| `IdentityCredential` | `0x10a7799394def50fc1bc2cfebe549bf2be029cff2e75c68b685badef1530d77c` | `0x090cebe96c81014a14c8408951ca7d0310f517864b15b57df19f045d4cb289ff` |
+
+| Step | Transaction | Block |
+| --- | --- | --- |
+| Escrow 1: deposit 25 (authwit) | `0x130a9d064edbe475a6fe153fb035021becde20affda468623547f74e60dd7776` | 19332 |
+| Escrow 2: deposit 10, deadline in 7 min | `0x1d595ec4e9b611e6d1fccc1f4c2eb879432d4c1b3c303bad4743acd343d01f60` | 19335 |
+| Escrow 1: claim by the recipient | `0x09c5963b1944a689f6c16fbec09cc5e64676652b51a9cc57c6cc0c019140cc6c` | 19339 |
+| Stream 1: create 20; stream 2: create 5 (same instance) | `0x0367979cc422b3f6797f84c6261b682799bb56be87cd86099b3e70f1e36c197a`, `0x004051220ab9951787a94fa74a0b4e87df9f47d3872cb35aa2d0d869a1ec0831` | 19344, 19346 |
+| Stream 1: withdraw 5 | `0x1ea462b30c2c04defb2d0db2400998c40fe316c6022e4a1acf0a57266398533c` | 19348 |
+| Escrow 2: refund after the deadline | `0x01acd45f6250f971ad233011f1abb48c0aad7848ae0422f9bce61147e02a322e` | 19350 |
+| Stream 1: cancel by the sender | `0x2f219fe034b1bd12b6e962dca59cd31e30456776a61baf6e22f038e3c7791325` | 19352 |
+| Identity: deploy with a placeholder root | `0x179142fe105f3f27693ecddab5d1826237464c39d9438518965ecfc7bf17b295` | 19355 |
+| Identity: the issuer publishes a real depth-32 root | `0x2331d165dc0e7f4fd1d153fd7cefe41c7eee6b3c691f59efc20500927a07e528` | 19356 |
+| Identity: a member claims in scope 1 | `0x2e9eeceeb1be5aaa11bdca705da054ddb07a9bd1f40cafd779ad9e80cc108806` | 19358 |
+
+What each refusal proves, and why:
+
+- Escrow 2 claimed **with its own claim secret** after the deadline: refused with `escrow expired`. The deadline check on claims is now proven on testnet, not only in TXE.
+- Stream 1 after the cancel: the sender received 45.13 and the recipient 39.87, with 5 still in stream 2: 90 in total, nothing created or lost.
+- A withdrawal from stream 1 after the cancel was **sent** and rejected by the node with `Invalid tx: Existing nullifier`: the state nullifier shared by withdraw and cancel (SEC-S12), with stream 2 still funding the contract.
+- A cancel from the sender's stale copy was refused too, but here by the contract balance (stream 2 held less than the stale copy asked for). The same case with enough balance, where only the state nullifier can stop it, is the TXE test `a_cancel_from_a_stale_copy_fails_with_funds_left`.
+- Identity: no claim against the placeholder root; a claim against the real root; a second claim in the same scope refused (duplicate nullifier); a root change by a non-issuer refused.
+
+## Keyed PrivateEscrow and PaymentStream, end to end (4 November 2026)
 
 The same workflow, after two contract fixes (`PrivateEscrow.deposit` can no longer land after its own deadline; `PaymentStream` accrual can no longer overflow u128 and lock a stream), published both classes and ran run 41881180186, all checks passing:
 
