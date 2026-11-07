@@ -986,7 +986,7 @@ export const MessageBubble = React.memo(({
             )}
 
             {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-              <div className={`flex flex-wrap gap-1 -mt-1.5 relative z-10 ${isMe ? 'justify-end pr-2' : 'justify-start pl-2'}`}>
+              <div className={`flex flex-wrap gap-1 -mt-1.5 relative z-[1] ${isMe ? 'justify-end pr-2' : 'justify-start pl-2'}`}>
                 {Object.entries(msg.reactions).map(([emoji, users]: [string, any]) => {
                   const mine = Array.isArray(users) && users.includes(clientInboxId || '');
                   return (

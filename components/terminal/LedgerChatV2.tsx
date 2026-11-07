@@ -5839,7 +5839,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           )
         ) : activePeer ? (
           <>
-            <div className="h-16 pl-2 pr-3 md:pl-4 border-b border-[#e4e7ec] flex items-center justify-between gap-2 bg-white shrink-0 z-10">
+            <div className="h-16 pl-2 pr-3 md:pl-4 border-b border-[#e4e7ec] flex items-center justify-between gap-2 bg-white shrink-0 z-30">
               <div className="flex items-center gap-1 min-w-0">
                 <button type="button" onClick={() => setShowList(true)} className="md:hidden w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c]" aria-label="Back to chats">
                   <ChevronLeft size={22} strokeWidth={1.9} />
@@ -5897,8 +5897,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   </button>
                   {showHeaderMenu && (
                     <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowHeaderMenu(false)} aria-hidden="true" />
-                      <div role="menu" className="absolute right-0 top-11 z-50 w-60 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] p-1.5">
+                      <div className="fixed inset-0 z-[150]" onClick={() => setShowHeaderMenu(false)} aria-hidden="true" />
+                      <div role="menu" className="absolute right-0 top-11 z-[160] w-60 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] p-1.5">
                         {[
                           { label: 'Contact info', icon: <Info size={17} strokeWidth={1.8} />, onClick: () => setShowContactInfo(true) },
                           { label: 'Search in chat', icon: <Search size={17} strokeWidth={1.8} />, onClick: () => { setShowSearch(true); setSearchQuery(''); setSearchIndex(0); } },

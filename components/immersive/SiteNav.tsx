@@ -11,10 +11,9 @@ import s from "./SiteNav.module.css";
  * SiteNav — the floating glass navigation of every public page.
  *
  * A rounded bar that floats over the living background (ImmersiveField),
- * frosted with backdrop blur. Each group opens a glass panel with a short
- * line under every link, on hover or focus on wide screens and on tap on
- * phones. Keyboard: Tab moves through groups, Enter/Space/ArrowDown opens,
- * Escape closes and returns focus to the trigger.
+ * frosted with high-contrast backdrop blur. Centralized hover management
+ * with a 350ms grace period ensures moving between Product, Developers,
+ * and Company is silky smooth and never abruptly closes.
  */
 
 export interface NavItem {
@@ -82,70 +81,26 @@ function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void 
   );
 }
 
-function Group({ group, open, setOpen }: { group: NavGroup; open: boolean; setOpen: (v: boolean) => void }) {
-  const id = useId();
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const cancelClose = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-  };
-  const scheduleClose = () => {
-    cancelClose();
-    closeTimer.current = setTimeout(() => setOpen(false), 140);
-  };
-
-  return (
-    <div
-      className={s.group}
-      onPointerEnter={(e) => {
-        if (e.pointerType === "mouse") {
-          cancelClose();
-          setOpen(true);
-        }
-      }}
-      onPointerLeave={(e) => e.pointerType === "mouse" && scheduleClose()}
-      onKeyDown={(e) => {
-        if (e.key === "Escape" && open) {
-          e.stopPropagation();
-          setOpen(false);
-          triggerRef.current?.focus();
-        }
-        if (e.key === "ArrowDown" && document.activeElement === triggerRef.current) {
-          e.preventDefault();
-          setOpen(true);
-          requestAnimationFrame(() => (panelRef.current?.querySelector("a") as HTMLElement | null)?.focus());
-        }
-      }}
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false);
-      }}
-    >
-      <button
-        ref={triggerRef}
-        type="button"
-        className={`${s.trigger} ${open ? s.triggerOpen : ""}`}
-        aria-expanded={open}
-        aria-controls={id}
-        onClick={() => setOpen(!open)}
-      >
-        {group.label}
-        <ChevronDown size={14} strokeWidth={2} aria-hidden="true" className={s.chev} />
-      </button>
-      <div ref={panelRef} id={id} role="menu" aria-label={group.label} className={`${s.panel} hl-glass ${open ? s.panelOpen : ""}`}>
-        {group.items.map((it) => (
-          <NavLink key={it.label} item={it} onNavigate={() => setOpen(false)} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function SiteNav({ groups = SITE_NAV }: { groups?: NavGroup[] }) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [sheet, setSheet] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelClose = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleClose = useCallback(() => {
+    cancelClose();
+    // 350ms grace timeout prevents accidental dismissals when moving between menus
+    closeTimerRef.current = setTimeout(() => {
+      setOpenIdx(null);
+    }, 350);
+  }, [cancelClose]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -174,10 +129,52 @@ export function SiteNav({ groups = SITE_NAV }: { groups?: NavGroup[] }) {
           <HLLogo size={30} />
         </Link>
 
-        <nav className={s.groups} aria-label="Main">
-          {groups.map((g, i) => (
-            <Group key={g.label} group={g} open={openIdx === i} setOpen={(v) => setOpenIdx(v ? i : openIdx === i ? null : openIdx)} />
-          ))}
+        <nav
+          className={s.groups}
+          aria-label="Main"
+          onPointerLeave={scheduleClose}
+          onPointerEnter={cancelClose}
+        >
+          {groups.map((g, i) => {
+            const isOpen = openIdx === i;
+            return (
+              <div
+                key={g.label}
+                className={s.group}
+                onPointerEnter={() => {
+                  cancelClose();
+                  setOpenIdx(i);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape" && isOpen) {
+                    e.stopPropagation();
+                    setOpenIdx(null);
+                  }
+                }}
+              >
+                <button
+                  type="button"
+                  className={`${s.trigger} ${isOpen ? s.triggerOpen : ""}`}
+                  aria-expanded={isOpen}
+                  onClick={() => setOpenIdx(isOpen ? null : i)}
+                >
+                  {g.label}
+                  <ChevronDown size={14} strokeWidth={2} aria-hidden="true" className={s.chev} />
+                </button>
+                <div
+                  role="menu"
+                  aria-label={g.label}
+                  className={`${s.panel} hl-glass ${isOpen ? s.panelOpen : ""}`}
+                  onPointerEnter={cancelClose}
+                  onPointerLeave={scheduleClose}
+                >
+                  {g.items.map((it) => (
+                    <NavLink key={it.label} item={it} onNavigate={() => setOpenIdx(null)} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </nav>
 
         <div className={s.actions}>

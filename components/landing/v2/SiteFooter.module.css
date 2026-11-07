@@ -209,19 +209,26 @@
 
 .markWord {
   position: relative;
-  display: block;
+  display: inline-block;
   font-size: clamp(56px, 13.4vw, 210px);
-  line-height: 0.86;
-  letter-spacing: -0.035em;
+  line-height: 0.92;
+  letter-spacing: -0.025em;
   white-space: nowrap;
   color: var(--hl-ink);
   background: linear-gradient(180deg, #15171c 0%, #15171c 62%, rgba(21, 23, 28, 0.55) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  /* Room for the descenders of y and g inside the clipped background. */
-  padding-bottom: 0.22em;
+  /* Ample room on the right and bottom so the slanted italic 'r' and descenders are never clipped */
+  padding-right: 0.25em;
+  padding-bottom: 0.25em;
   margin-bottom: -0.16em;
+}
+
+.markWord em {
+  font-style: italic;
+  display: inline-block;
+  padding-right: 0.2em;
 }
 
 .bottom {
