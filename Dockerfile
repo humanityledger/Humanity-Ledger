@@ -80,6 +80,9 @@ FROM build-base AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+# Copy scripts/ before npm ci — required because the postinstall hook runs
+# `node scripts/cross-fetch-patch.js` and needs the file to be present.
+COPY scripts/ ./scripts/
 # Using --legacy-peer-deps for compatibility with older Web3 libraries
 # Note: npm ci is preferred for speed and deterministic builds in CI
 RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
