@@ -144,14 +144,20 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
       });
     } catch {}
 
-    // Persist avatar so it shows immediately everywhere in the app
+    // Persist avatar and permanent onboarding clearance so it never asks again
     if (typeof window !== 'undefined') {
       if (avatar) {
         try { localStorage.setItem('ledger_avatar', avatar); } catch {}
         // Notify the app that avatar changed
         window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { avatarUrl: avatar } }));
       }
-      localStorage.setItem(`ledger_onboarded_${address}`, 'true');
+      try {
+        localStorage.setItem(`ledger_onboarded_${address}`, 'true');
+        if (address) localStorage.setItem(`ledger_onboarded_${address.toLowerCase()}`, 'true');
+        localStorage.setItem('ledger_onboarded_global', 'true');
+        localStorage.setItem('ledger_account_already_created', 'true');
+        localStorage.setItem('ledger_pin_configured', 'true');
+      } catch {}
     }
 
     // Request notification permission if the user opted in

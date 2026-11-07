@@ -206,7 +206,8 @@ export default function ConnectPage() {
       const { generateX25519KeyPair, generateVisualPin } = await import("@/lib/web-crypto");
       const pair = await generateX25519KeyPair();
       setEphemeral(pair);
-      setQrPin(generateVisualPin());
+      const generatedPin = generateVisualPin();
+      setQrPin(generatedPin);
       const sessId = crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
       // Register the code's public key; the reply sets the cookie that lets
       // only this browser poll the session and finish the sign-in.
@@ -222,6 +223,7 @@ export default function ConnectPage() {
       url.searchParams.set("s", sessId);
       url.searchParams.set("p", pair.publicKey);
       if (pair.isECDH) url.searchParams.set("ecdh", "1");
+      if (generatedPin) url.searchParams.set("pin", generatedPin);
       setQrData(url.toString());
       setSyncStatus("AWAITING");
       qrTimerRef.current = setTimeout(() => {

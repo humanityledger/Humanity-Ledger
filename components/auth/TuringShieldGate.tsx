@@ -14,7 +14,7 @@ const CLEARANCE_KEY       = '__enclave_clearance_v2__';
 const CLEARANCE_TOKEN_KEY = 'ledger_enclave_clearance';
 const CLEARANCE_TS_KEY    = 'ledger_enclave_ts';
 const CLEARANCE_FP_KEY    = '__enclave_fp__';
-const CLEARANCE_TTL_MS    = 8 * 60 * 60 * 1000; // 8 hours
+const CLEARANCE_TTL_MS    = 365 * 24 * 60 * 60 * 1000; // 365 days persistence on user's device
 
 function deriveFingerprint(token: string, ts: number): string {
   const combined = `${token}:${ts}:ledger_enclave`;
@@ -55,6 +55,19 @@ function readClearance(): boolean {
       } catch {}
       return true;
     }
+    // Also check if account was already created and signed in on this device
+    const addr = getStoredWalletAddress();
+    const isKnown = Boolean(
+      localStorage.getItem('ledger_account_already_created') === 'true' ||
+      localStorage.getItem('ledger_pin_configured') === 'true' ||
+      (addr && (
+        localStorage.getItem(`ledger_account_created_${addr.toLowerCase()}`) === 'true' ||
+        localStorage.getItem(`ledger_enclave_cleared_${addr.toLowerCase()}`) === 'true'
+      ))
+    );
+    if (isKnown) {
+      return true;
+    }
     return false;
   } catch { return false; }
 }
@@ -66,7 +79,14 @@ function writeClearance(token: string, ts: number) {
     [CLEARANCE_TOKEN_KEY, token],
     [CLEARANCE_TS_KEY, ts.toString()],
     [CLEARANCE_FP_KEY, fp],
+    ['ledger_account_already_created', 'true'],
+    ['ledger_pin_configured', 'true'],
   ];
+  const addr = getStoredWalletAddress();
+  if (addr) {
+    pairs.push([`ledger_account_created_${addr.toLowerCase()}`, 'true']);
+    pairs.push([`ledger_enclave_cleared_${addr.toLowerCase()}`, 'true']);
+  }
   // Write to BOTH storages — dual write guarantees survival across reloads
   for (const store of [sessionStorage, localStorage] as Storage[]) {
     try { pairs.forEach(([k, v]) => store.setItem(k, v)); } catch {}
@@ -325,6 +345,26 @@ export function TuringShieldGate({
           return;
         }
         if (data?.hasPin === false) {
+          // Permanence check: if this device/browser already belongs to an existing account,
+          // never divert into "Create your security PIN / account" loop again!
+          const addr = getStoredWalletAddress();
+          const isKnownAccount = Boolean(
+            localStorage.getItem('ledger_account_already_created') === 'true' ||
+            localStorage.getItem('ledger_onboarded_global') === 'true' ||
+            localStorage.getItem('ledger_pin_configured') === 'true' ||
+            (addr && (
+              localStorage.getItem(`ledger_account_created_${addr.toLowerCase()}`) === 'true' ||
+              localStorage.getItem(`ledger_onboarded_${addr.toLowerCase()}`) === 'true' ||
+              localStorage.getItem(`ledger_onboarded_${addr}`) === 'true'
+            )) ||
+            Object.keys(localStorage).some(k => k.startsWith('ledger_chat_') || k.startsWith('chat_v2_') || k.includes('xmtp'))
+          );
+          if (isKnownAccount) {
+            writeClearance(data?.clearanceToken || 'known-user', Date.now());
+            setCleared(true);
+            return;
+          }
+
           if (data.clearanceToken && data.clearanceTs) {
             setTempClearanceToken(data.clearanceToken);
             setTempClearanceTs(data.clearanceTs);

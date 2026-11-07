@@ -1080,10 +1080,39 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // Offline Queue State
   const [isOffline, setIsOffline] = useState(false);
   const [hasAcceptedEula, setHasAcceptedEula] = useState(false);
-  const [isOnboarded, setIsOnboarded] = useState(false);
+  const [isOnboarded, setIsOnboarded] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      if (localStorage.getItem('ledger_onboarded_global') === 'true') return true;
+      if (localStorage.getItem('ledger_account_already_created') === 'true') return true;
+      const addr = localStorage.getItem('system_wallet_addr') || '';
+      if (addr && (
+        localStorage.getItem('ledger_onboarded_' + addr) === 'true' ||
+        localStorage.getItem('ledger_onboarded_' + addr.toLowerCase()) === 'true'
+      )) return true;
+      const hasChats = Object.keys(localStorage).some(k => k.startsWith('ledger_chat_') || k.startsWith('chat_v2_') || k.includes('xmtp'));
+      if (hasChats) return true;
+    } catch {}
+    return false;
+  });
   useEffect(() => {
     if (typeof window !== 'undefined' && effectiveAddress && effectiveAddress !== '0x0') {
-      setIsOnboarded(localStorage.getItem('ledger_onboarded_' + effectiveAddress) === 'true');
+      const lower = effectiveAddress.toLowerCase();
+      const isKnown = Boolean(
+        localStorage.getItem('ledger_onboarded_' + effectiveAddress) === 'true' ||
+        localStorage.getItem('ledger_onboarded_' + lower) === 'true' ||
+        localStorage.getItem('ledger_onboarded_global') === 'true' ||
+        localStorage.getItem('ledger_account_already_created') === 'true'
+      );
+      if (isKnown) {
+        setIsOnboarded(true);
+        try {
+          localStorage.setItem('ledger_onboarded_' + effectiveAddress, 'true');
+          localStorage.setItem('ledger_onboarded_' + lower, 'true');
+          localStorage.setItem('ledger_onboarded_global', 'true');
+          localStorage.setItem('ledger_account_already_created', 'true');
+        } catch {}
+      }
     }
   }, [effectiveAddress]);
   const [hasMediaPermission, setHasMediaPermission] = useState(false);

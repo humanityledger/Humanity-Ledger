@@ -225,8 +225,8 @@ function QrStage(p: ConnectViewProps) {
 
       <ol className={s.qrSteps}>
         <li><span>Open your phone camera or QR code scanner app.</span></li>
-        <li><span>Scan this code and connect your wallet on your phone.</span></li>
-        <li><span>Enter the 4-digit code shown above to connect your computer.</span></li>
+        <li><span>Scan this code — your phone opens Ledger Chat.</span></li>
+        <li><span>Connect your wallet on your phone to link this computer instantly.</span></li>
       </ol>
     </>
   );

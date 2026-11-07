@@ -118,6 +118,15 @@ export default function ScanPage() {
   useEffect(() => { addressRef.current = address; }, [address]);
   useEffect(() => { setMounted(true); }, []);
 
+  // When wallet connects while waiting to authorize desktop session, auto-resume
+  useEffect(() => {
+    if (address && needsWallet && pinScanData) {
+      setNeedsWallet(false);
+      setErrMsg('');
+      handleRouteRef.current(pinScanData);
+    }
+  }, [address, needsWallet, pinScanData]);
+
   // Auto-detect payload from URL query (when scanned with phone's native camera)
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -152,8 +161,48 @@ export default function ScanPage() {
     const route = parseScanPayload(decodedText);
     try {
       if (route.type === 'session') {
+        let embeddedPin: string | undefined = undefined;
+        try {
+          const u = new URL(decodedText);
+          embeddedPin = u.searchParams.get('pin') || undefined;
+        } catch {}
+
+        // If wallet is not yet connected on mobile browser, prompt wallet connect
+        const currentAddr = getAddress();
+        if (!currentAddr) {
+          setPinScanData(decodedText);
+          setNeedsWallet(true);
+          setErrMsg('Connect your wallet on your phone to link your computer.');
+          setStatus('error');
+          hasScannedRef.current = false;
+          setTimeout(() => openAppKit(), 400);
+          return;
+        }
+
+        // Auto-authorize: complete handshake directly with embedded PIN or direct session
+        setStatus('verifying_pin');
+        try {
+          const res = await completeSessionHandshake(decodedText, getAddress, signMessageAsync, connector, embeddedPin);
+          if (res.ok) {
+            setSuccessLabel('Computer signed in ✓');
+            setStatus('success');
+            setTimeout(() => router.push('/chat'), 1200);
+            return;
+          } else if (res.needsWallet) {
+            setPinScanData(decodedText);
+            setNeedsWallet(true);
+            setErrMsg('Connect your wallet on your phone to complete signing in.');
+            setStatus('error');
+            hasScannedRef.current = false;
+            setTimeout(() => openAppKit(), 400);
+            return;
+          }
+        } catch {
+          // fallback to manual pin entry below if needed
+        }
+
         setPinScanData(decodedText);
-        setPinInput('');
+        setPinInput(embeddedPin || '');
         setTimeout(() => setStatus('pin_required'), 300);
         return;
       } else if (route.type === 'wallet' && route.walletAddress) {
