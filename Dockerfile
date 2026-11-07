@@ -97,9 +97,9 @@ COPY . .
 
 # Memory safety and worker controls for Next.js build:
 # Restrict workers to 1 so memory is never duplicated across multiple builder cores.
-# Set max-old-space-size to 2560MB so V8 aggressively cleans garbage before hitting container cgroup limits.
+# Set max-old-space-size to 6144MB to comfortably accommodate Next.js + Aztec + Webpack compilation without V8 heap exhaustion.
 ENV NEXT_BUILD_WORKERS=1
-ENV NODE_OPTIONS="--max-old-space-size=2560"
+ENV NODE_OPTIONS="--max-old-space-size=6144"
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_VALIDATION=true
 ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/dummy"

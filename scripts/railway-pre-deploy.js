@@ -136,8 +136,8 @@ async function runCliMigrations() {
 
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    console.warn('[pre-deploy] DATABASE_URL is not set. Skipping DB migration.');
+  if (!databaseUrl || databaseUrl.includes('dummy') || databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1')) {
+    console.warn('[pre-deploy] No remote production DATABASE_URL configured. Skipping DB migration.');
     process.exit(0);
   }
 
