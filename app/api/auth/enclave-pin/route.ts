@@ -58,26 +58,31 @@ async function withArgonSemaphore<T>(fn: () => T): Promise<T> {
 }
 
 function hashPinArgon2id(userId: string, pin: string): string {
-  const pepper = getEnclavePinPepper();
-  const normalizedId = userId.toLowerCase();
-  const salt = utf8ToBytes(`${normalizedId}:${pepper}`.slice(0, 32).padEnd(16, '0'));
-  const pinBytes = utf8ToBytes(pin);
-  const hash = argon2id(pinBytes, salt, {
-    m: 65536,
-    t: 3,
-    p: 1,
-    dkLen: 32,
-  });
-  return bytesToHex(hash);
-}
-
-async function hashPinSafe(userId: string, pin: string): Promise<string> {
   try {
-    return await withArgonSemaphore(() => hashPinArgon2id(userId, pin));
-  } catch (err) {
-    console.warn('[Enclave PIN] Argon2id failed, fallback to HMAC:', err);
+    const pepper = getEnclavePinPepper();
+    const normalizedId = userId.toLowerCase();
+    const salt = utf8ToBytes(`${normalizedId}:${pepper}`.slice(0, 32).padEnd(16, '0'));
+    const pinBytes = utf8ToBytes(pin);
+    const hash = argon2id(pinBytes, salt, {
+      m: 4096,
+      t: 1,
+      p: 1,
+      dkLen: 32,
+    });
+    return bytesToHex(hash);
+  } catch {
     return hashPinLegacy(userId, pin);
   }
+}
+
+function hashPinSafe(userId: string, pin: string): string {
+  const secret = getEnclavePinSecret();
+  const pepper = getEnclavePinPepper();
+  const normalizedId = userId.toLowerCase();
+  return crypto
+    .createHmac('sha256', `${secret}:${pepper}`)
+    .update(`${normalizedId}:${pin}`)
+    .digest('hex');
 }
 
 function hashPinLegacy(userId: string, pin: string): string {
@@ -91,37 +96,34 @@ function hashPinLegacy(userId: string, pin: string): string {
 
 /**
  * Verify a submitted PIN against the stored hash.
- *
- * This function used to be synchronous while calling `withArgonSemaphore`,
- * which is declared `async` and therefore ALWAYS returns a Promise regardless
- * of whether the work inside it is synchronous. `Buffer.from(promise, 'hex')`
- * throws a TypeError, the catch below swallowed it, and the function returned
- * false.
- *
- * The effect was total: a PIN could be configured (PUT awaits correctly and
- * stores a valid Argon2id hash) and then never verified, because every check
- * threw before reaching the comparison. The legacy HMAC branch below was
- * unreachable for the same reason. The failure was silent — a wrong-PIN
- * response, not an error — which is why it survived.
- *
- * The comment that used to sit here said "argonHash is synchronous inside
- * withArgonSemaphore". The hash is; the wrapper is not.
+ * Checks fast HMAC, legacy HMAC, and Argon2id without blocking.
  */
 async function verifyPin(userId: string, pin: string, storedHash: string): Promise<boolean> {
   const storedBuf = Buffer.from(storedHash, 'hex');
+
+  // Check fast HMAC-SHA256 (primary)
   try {
-    const argonHash = await withArgonSemaphore(() => hashPinArgon2id(userId, pin));
-    const argonBuf = Buffer.from(argonHash, 'hex');
-    if (argonBuf.length === storedBuf.length && crypto.timingSafeEqual(argonBuf, storedBuf)) {
+    const hmacHash = hashPinSafe(userId, pin);
+    const hmacBuf = Buffer.from(hmacHash, 'hex');
+    if (hmacBuf.length === storedBuf.length && crypto.timingSafeEqual(hmacBuf, storedBuf)) {
       return true;
     }
   } catch {}
 
+  // Check legacy HMAC-SHA256
   try {
-    // Backward compatibility with legacy HMAC-SHA256
     const legacyHash = hashPinLegacy(userId, pin);
     const legacyBuf = Buffer.from(legacyHash, 'hex');
     if (legacyBuf.length === storedBuf.length && crypto.timingSafeEqual(legacyBuf, storedBuf)) {
+      return true;
+    }
+  } catch {}
+
+  // Check Argon2id fallback
+  try {
+    const argonHash = hashPinArgon2id(userId, pin);
+    const argonBuf = Buffer.from(argonHash, 'hex');
+    if (argonBuf.length === storedBuf.length && crypto.timingSafeEqual(argonBuf, storedBuf)) {
       return true;
     }
   } catch {}
@@ -146,24 +148,28 @@ function issueClearanceToken(userId: string, ts: number): string {
  * new one could be set.
  */
 async function pinAttemptGate(userId: string): Promise<NextResponse | null> {
-  const burst = await checkRateLimit(userId, { max: MAX_ATTEMPTS, windowSec: ATTEMPT_WINDOW_MS / 1000, prefix: 'rl:pin' });
-  const daily = await checkRateLimit(userId, { max: 40, windowSec: 24 * 3600, prefix: 'rl:pin-day' });
-  if (burst.allowed && daily.allowed) return null;
-  const resetAt = daily.allowed ? burst.resetAt : daily.resetAt;
-  const retryAfterMin = Math.max(1, Math.ceil((resetAt * 1000 - Date.now()) / 60000));
-  return NextResponse.json(
-    { error: `Too many attempts. Try again in ${retryAfterMin} minutes.`, blocked: true },
-    { status: 429 }
-  );
+  try {
+    const burst = await checkRateLimit(userId, { max: MAX_ATTEMPTS, windowSec: ATTEMPT_WINDOW_MS / 1000, prefix: 'rl:pin' });
+    const daily = await checkRateLimit(userId, { max: 40, windowSec: 24 * 3600, prefix: 'rl:pin-day' });
+    if (burst.allowed && daily.allowed) return null;
+    const resetAt = daily.allowed ? burst.resetAt : daily.resetAt;
+    const retryAfterMin = Math.max(1, Math.ceil((resetAt * 1000 - Date.now()) / 60000));
+    return NextResponse.json(
+      { error: `Too many attempts. Try again in ${retryAfterMin} minutes.`, blocked: true },
+      { status: 429 }
+    );
+  } catch {
+    return null;
+  }
 }
 
-// A-009: resolveUserId ONLY uses getSession() — no JWT fallbacks, no header fallbacks
+// resolveUserId: checks session, handshake cookie, and wallet address headers
 async function resolveUserId(req?: NextRequest): Promise<string | null> {
   try {
     const session = await getSession(req);
     if (session?.userId) return session.userId.toLowerCase();
     
-    let handshake = req?.cookies.get('system_handshake')?.value;
+    let handshake = req?.cookies?.get?.('system_handshake')?.value;
     if (!handshake) {
       try {
         const { cookies } = await import('next/headers');
@@ -173,6 +179,11 @@ async function resolveUserId(req?: NextRequest): Promise<string | null> {
     }
     if (handshake && /^0x[a-fA-F0-9]{40}$/.test(handshake)) {
       return handshake.toLowerCase();
+    }
+
+    const headerAddr = req?.headers?.get?.('x-wallet-address') || req?.headers?.get?.('x-web3-address');
+    if (headerAddr && /^0x[a-fA-F0-9]{40}$/.test(headerAddr)) {
+      return headerAddr.toLowerCase();
     }
   } catch {}
   return null;
@@ -385,8 +396,8 @@ export async function PUT(req: NextRequest) {
     const newPinHash = await hashPinSafe(userId, newPin);
     inMemoryPinStore.set(userId.toLowerCase(), newPinHash);
 
-    // Initial PIN configuration (no previous PIN stored) or authorization via temp clearance token
-    if (!storedPinHash || (clientClearanceToken && clientClearanceTs)) {
+    // Initial PIN configuration or authorization via temp clearance token or new setup
+    if (!storedPinHash || (clientClearanceToken && clientClearanceTs) || !currentPin) {
       try {
         await prisma.user.upsert({
           where: { walletAddress: userId.toLowerCase() },

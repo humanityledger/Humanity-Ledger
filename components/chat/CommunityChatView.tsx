@@ -3,7 +3,7 @@ import React, {
   useState, useEffect, useRef, useCallback, useMemo
 } from 'react';
 import dynamic from 'next/dynamic';
-import { Send, Plus, MapPin, CircleDollarSign, Smile, BarChart2, Image as ImgIcon, Mic, Hash, CheckCircle, X, Reply, Play, Pause, Pin, Search, Users, ChevronDown, Film, MoreVertical, Copy, Trash2, ThumbsUp, Heart, Laugh, AlertCircle, Lock, Volume2, Globe, Shield, ExternalLink, Zap, FileText, Check } from 'lucide-react';
+import { Send, Plus, MapPin, CircleDollarSign, BarChart2, Image as ImgIcon, Mic, Hash, CheckCircle, X, Reply, Play, Pause, Pin, Search, Users, ChevronDown, Film, MoreVertical, Copy, Trash2, ThumbsUp, Heart, Laugh, AlertCircle, Lock, Volume2, Globe, Shield, ExternalLink, Zap, FileText, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { NativeCryptoSendModal } from './NativeCryptoSendModal';
 const ZkMoneyModal = dynamic(() => import('./ZkMoneyModal').then(m => m.ZkMoneyModal), { ssr: false });
@@ -52,28 +52,6 @@ interface CommunityChatViewProps {
   myAddress: string;
   communityName?: string;
   community?: any;
-}
-
-// ─── QUICK EMOJI REACTIONS ────────────────────────────────────────────────────
-const QUICK_EMOJIS = ['👍','❤️','😂','😮','😢','🔥','🚀','👏','💯','🎉'];
-
-function ReactionPicker({ onPick, onClose }: { onPick:(e:string)=>void; onClose:()=>void }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8, y: 8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.8, y: 8 }}
-      className="absolute bottom-full mb-2 left-0 z-50 bg-white rounded-2xl shadow-2xl border border-black/8 p-2 flex gap-1"
-      onClick={e => e.stopPropagation()}
-    >
-      {QUICK_EMOJIS.map(e => (
-        <button key={e} onClick={() => { onPick(e); onClose(); }}
-          className="w-8 h-8 flex items-center justify-center text-[18px] hover:bg-black/5 rounded-xl transition-colors active:scale-90">
-          {e}
-        </button>
-      ))}
-    </motion.div>
-  );
 }
 
 // ─── VOICE RECORDER ──────────────────────────────────────────────────────────
@@ -588,12 +566,6 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     }
   }
 
-  if (content.startsWith('[STICKER]:')) {
-    const name = content.replace('[STICKER]:', '');
-    const stickers: Record<string,string> = { fire:'🔥', heart:'❤️', clap:'👏', '100':'💯', rocket:'🚀', wave:'👋', thumbsup:'👍', cool:'😎' };
-    return <span className="text-4xl select-none">{stickers[name] || '🎭'}</span>;
-  }
-
   if (/<[a-z][\s\S]*>/i.test(content)) {
     return (
       <div
@@ -625,7 +597,6 @@ export function CommunityChatView({
   const [recordingVoice, setRecordingVoice] = useState(false);
   const [replyTo, setReplyTo] = useState<Msg|null>(null);
   const [contextMenu, setContextMenu] = useState<{msg:Msg;x:number;y:number}|null>(null);
-  const [emojiPickerFor, setEmojiPickerFor] = useState<string|null>(null);
   const [localReactions, setLocalReactions] = useState<Record<string,Record<string,boolean>>>({});
   const [pinnedMsgs, setPinnedMsgs] = useState<Msg[]>([]);
   const [showPinnedBanner, setShowPinnedBanner] = useState(true);
@@ -947,7 +918,7 @@ export function CommunityChatView({
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto overscroll-contain w-full max-w-full"
         style={{ minHeight: 0 }}
-        onClick={() => { setContextMenu(null); setEmojiPickerFor(null); }}
+        onClick={() => setContextMenu(null)}
       >
         <div className="px-3 py-4 space-y-0.5 max-w-4xl mx-auto w-full">
           {/* Empty state */}
@@ -1035,16 +1006,6 @@ export function CommunityChatView({
                         )}
 
                         <div className="relative">
-                          {/* Emoji picker */}
-                          <AnimatePresence>
-                            {emojiPickerFor === msg.id && (
-                              <ReactionPicker
-                                onPick={e => toggleReaction(msg.id, e)}
-                                onClose={() => setEmojiPickerFor(null)}
-                              />
-                            )}
-                          </AnimatePresence>
-
                           {/* Bubble (WhatsApp Desktop Parity) */}
                           <div className={`relative px-3.5 py-2 select-text shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] border border-black/[0.03]
                             ${me
@@ -1075,11 +1036,7 @@ export function CommunityChatView({
                           </div>
 
                           {/* Hover actions */}
-                          <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ${me ? '-left-16' : '-right-16'}`}>
-                            <button onClick={() => setEmojiPickerFor(id => id === msg.id ? null : msg.id)}
-                              className="w-6 h-6 rounded-full bg-white shadow border border-black/8 flex items-center justify-center text-black/40 hover:text-black/70 transition-colors">
-                              <Smile size={11}/>
-                            </button>
+                          <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ${me ? '-left-12' : '-right-12'}`}>
                             <button onClick={() => setReplyTo(msg)}
                               className="w-6 h-6 rounded-full bg-white shadow border border-black/8 flex items-center justify-center text-black/40 hover:text-black/70 transition-colors">
                               <Reply size={11}/>
@@ -1162,7 +1119,6 @@ export function CommunityChatView({
               {[
                 { label: 'Reply', icon: Reply, fn: () => { setReplyTo(contextMenu.msg); setContextMenu(null); } },
                 { label: 'Copy text', icon: Copy, fn: () => { navigator.clipboard.writeText(contextMenu.msg.content); toast.success('Copied to clipboard'); setContextMenu(null); } },
-                { label: 'React', icon: Smile, fn: () => { setEmojiPickerFor(contextMenu.msg.id); setContextMenu(null); } },
                 ...(!isMe(contextMenu.msg) && /^0x[0-9a-fA-F]{40}$/.test(contextMenu.msg.authorAddress || '')
                   ? [
                       // Private payments go to an Aztec address, which the sender enters in the wallet.
@@ -1218,7 +1174,6 @@ export function CommunityChatView({
                   { icon: CircleDollarSign, label: 'Crypto Send', color: 'bg-[#1C1C1E]', fn: () => { setCryptoRecipient(''); setShowRecipientSheet(true); } },
                   { icon: MapPin, label: 'Location', color: 'bg-[#3A3A3C]', fn: sendLocation },
                   { icon: BarChart2, label: 'Poll', color: 'bg-purple-500', fn: () => setShowPollCreator(true) },
-                  { icon: Smile, label: 'Sticker', color: 'bg-orange-500', fn: () => executeSend('[STICKER]:fire') },
                 ].map(({ icon: Icon, label, color, fn }) => (
                   <button key={label} onClick={() => { fn(); setShowAppDrawer(false); }}
                     className="flex flex-col items-center gap-1.5 group">
@@ -1251,16 +1206,6 @@ export function CommunityChatView({
                 title="Adjuntar"
               >
                 <Plus size={22} />
-              </button>
-
-              {/* Emoji (😊) Button - hidden on mobile to maximize spacious input */}
-              <button
-                type="button"
-                onClick={() => setEmojiPickerFor(prev => prev ? null : 'input')}
-                className="hidden sm:flex w-10 h-10 rounded-full items-center justify-center shrink-0 text-[#54656f] hover:bg-black/5 hover:text-[#111b21] transition-all active:scale-95 mb-0.5"
-                title="Emojis"
-              >
-                <Smile size={22} />
               </button>
 
               {/* Rounded White Text Box (Ergonomic on iOS & Android — min font-size 16px prevents browser zoom) */}

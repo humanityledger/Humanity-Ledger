@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Heart, Pin, Search, X, Smile, Trash2, Check, ChevronRight,
+  Heart, Pin, Search, X, Trash2, Check, ChevronRight,
   MessageSquare, AlertCircle, ChevronDown
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -36,41 +36,6 @@ interface PinnedMessage {
   createdAt: string;
   pinnedAt?: string;
   pinnedBy?: string;
-}
-
-// ─── EMOJI PICKER ─────────────────────────────────────────────────────────────
-
-function EmojiPickerPopup({ onSelect, onClose }: { onSelect: (e: string) => void; onClose: () => void }) {
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (!(e.target as Element)?.closest('[data-emoji-picker]')) onClose();
-    };
-    setTimeout(() => document.addEventListener('mousedown', h), 50);
-    return () => document.removeEventListener('mousedown', h);
-  }, [onClose]);
-
-  return (
-    <motion.div
-      data-emoji-picker
-      initial={{ opacity: 0, scale: 0.88, y: 6 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.88, y: 6 }}
-      transition={{ duration: 0.15 }}
-      className="absolute bottom-full mb-2 left-0 z-[9999] bg-white/95 backdrop-blur-xl border border-black/8 rounded-2xl shadow-2xl p-2.5"
-    >
-      <div className="grid grid-cols-6 gap-1">
-        {EMOJI_LIST.slice(0, 24).map(emoji => (
-          <button
-            key={emoji}
-            onClick={() => { onSelect(emoji); onClose(); }}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-xl hover:bg-[#F2F2F7] transition-colors active:scale-90"
-          >
-            {emoji}
-          </button>
-        ))}
-      </div>
-    </motion.div>
-  );
 }
 
 // ─── MESSAGE REACTION BAR ─────────────────────────────────────────────────────
@@ -148,20 +113,6 @@ export function MessageReactionBar({
         ))}
       </AnimatePresence>
 
-      {/* Add reaction button */}
-      <div className="relative">
-        <button
-          onClick={() => setShowPicker(p => !p)}
-          className="w-7 h-7 rounded-full border border-black/10 bg-white flex items-center justify-center text-black/30 hover:text-[#2754d6] hover:border-[#2754d6]/30 hover:bg-[#2754d6]/5 transition-all text-[14px]"
-        >
-          <Smile size={13} />
-        </button>
-        <AnimatePresence>
-          {showPicker && (
-            <EmojiPickerPopup onSelect={toggleReaction} onClose={() => setShowPicker(false)} />
-          )}
-        </AnimatePresence>
-      </div>
     </div>
   );
 }

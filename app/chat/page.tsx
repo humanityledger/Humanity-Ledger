@@ -2,7 +2,6 @@
 import dynamic from 'next/dynamic';
 import { TuringShieldGate } from '@/components/auth/TuringShieldGate';
 import { ChatEngineProvider } from '@/context/ChatEngineProvider';
-import { ImmersiveField } from '@/components/immersive/ImmersiveField';
 
 function ChatLoading() {
   return (
@@ -37,7 +36,7 @@ export default function ChatPage() {
   return (
     <TuringShieldGate>
       <ChatEngineProvider>
-        <div className="relative flex flex-col w-full h-full flex-1 min-h-0 overflow-hidden bg-white">
+        <div className="relative flex flex-col w-full h-full h-screen h-[100dvh] flex-1 min-h-0 overflow-hidden bg-white">
           <LedgerChat forceAutoInit={true} />
         </div>
       </ChatEngineProvider>

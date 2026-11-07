@@ -532,80 +532,11 @@ const StickerBubble = React.memo(({ content }: { content: string }) => (
 ));
 StickerBubble.displayName = 'StickerBubble';
 
-// ─── Quick reactions ─────────────────────────────────────────────────────────
-const TAPBACKS = ['❤️', '👍', '👎', '😂', '😮', '🙏'];
-const EXTENDED_EMOJIS = ['🔥', '🎉', '💯', '⭐', '🤯', '😭', '🤔', '🫡', '💪', '👀', '🙌', '🤝', '😍', '🥹', '😎', '🫶'];
-
+// ─── Quick reactions (Disabled: native phone emojis only) ──────────────────
 const TapbackPicker = React.memo(({ isMe, onReact, onClose }: {
   isMe: boolean; onReact: (e: string) => void; onClose: () => void;
 }) => {
-  const [showMore, setShowMore] = React.useState(false);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10, scale: 0.92 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 6, scale: 0.9 }}
-      transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-      role="menu"
-      aria-label="React to this message"
-      className="absolute z-50 flex flex-col items-center gap-1"
-      style={{ bottom: 'calc(100% + 10px)', ...(isMe ? { right: 0 } : { left: 0 }) }}
-      onClick={e => e.stopPropagation()}
-    >
-      {/* Extended emoji grid */}
-      <AnimatePresence>
-        {showMore && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            className="grid grid-cols-4 gap-1 p-2 bg-white rounded-2xl border border-[#e6e8ec] shadow-xl mb-1"
-          >
-            {EXTENDED_EMOJIS.map(t => (
-              <button
-                type="button"
-                role="menuitem"
-                key={t}
-                aria-label={`React with ${t}`}
-                onClick={() => { onReact(t); onClose(); setShowMore(false); }}
-                className="w-10 h-10 flex items-center justify-center text-[22px] rounded-xl hover:bg-[#f2f4f7] hover:scale-110 active:scale-95 transition-transform duration-150"
-              >
-                {t}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Primary tapback bar */}
-      <div className="flex items-center gap-0.5 p-1.5 bg-white rounded-full border border-[#e6e8ec] shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)]">
-        {TAPBACKS.map(t => (
-          <button
-            type="button"
-            role="menuitem"
-            key={t}
-            aria-label={`React with ${t}`}
-            onClick={() => { onReact(t); onClose(); }}
-            className="w-10 h-10 flex items-center justify-center text-[22px] rounded-full hover:bg-[#f2f4f7] hover:scale-110 active:scale-95 transition-transform duration-150"
-          >
-            {t}
-          </button>
-        ))}
-        {/* More button */}
-        <button
-          type="button"
-          role="menuitem"
-          aria-label="More reactions"
-          onClick={() => setShowMore(v => !v)}
-          aria-expanded={showMore}
-          className={`w-10 h-10 flex items-center justify-center text-[#475061] rounded-full transition-all duration-150 ${showMore ? 'bg-[#f2f4f7] rotate-45' : 'hover:bg-[#f2f4f7]'}`}
-        >
-          <Plus size={18} strokeWidth={1.9} aria-hidden="true" />
-        </button>
-      </div>
-    </motion.div>
-  );
+  return null;
 });
 TapbackPicker.displayName = 'TapbackPicker';
 

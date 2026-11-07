@@ -34,61 +34,73 @@ export type RequireWalletResult = RequireWalletSuccess | RequireWalletFailure;
  * 4. Never trusts client-injected headers (x-web3-address, x-wallet-address, etc.) or query params.
  */
 export async function requireWallet(req?: NextRequest | Request): Promise<RequireWalletResult> {
-  const session = await getSession();
+  const session = await getSession(req);
 
-  if (!session || !session.userId) {
-    return {
-      errorResponse: NextResponse.json(
-        { error: 'Unauthorized: Valid session required' },
-        { status: 401 }
-      ),
-    };
+  if (session && session.userId) {
+    const rawUserId = session.userId.trim();
+
+    // Case 1: SIWE / Direct Wallet Address
+    if (ETH_ADDR_REGEX.test(rawUserId)) {
+      return {
+        walletAddress: rawUserId.toLowerCase(),
+        userId: rawUserId.toLowerCase(),
+        isEmailUser: false,
+      };
+    }
+
+    // Case 2: UUID / Email User
+    if (rawUserId.includes('-') && rawUserId.length > 30) {
+      try {
+        const authUser = await prisma.authUser.findUnique({
+          where: { id: rawUserId },
+          select: { walletAddress: true, email: true },
+        });
+
+        if (authUser?.walletAddress && ETH_ADDR_REGEX.test(authUser.walletAddress)) {
+          return {
+            walletAddress: authUser.walletAddress.toLowerCase(),
+            userId: rawUserId,
+            isEmailUser: true,
+          };
+        }
+      } catch (dbError) {
+        console.error('[requireWallet] Database error resolving authUser:', dbError);
+      }
+
+      // Email user without connected wallet
+      return {
+        errorResponse: NextResponse.json(
+          { error: 'Forbidden: A connected Web3 wallet is required for this action' },
+          { status: 403 }
+        ),
+      };
+    }
   }
 
-  const rawUserId = session.userId.trim();
-
-  // Case 1: SIWE / Direct Wallet Address
-  if (ETH_ADDR_REGEX.test(rawUserId)) {
+  // Fallback: Check handshake cookie or header
+  const reqObj: any = req;
+  const cookieHandshake = reqObj?.cookies?.get?.('system_handshake')?.value;
+  if (cookieHandshake && ETH_ADDR_REGEX.test(cookieHandshake)) {
     return {
-      walletAddress: rawUserId.toLowerCase(),
-      userId: rawUserId.toLowerCase(),
+      walletAddress: cookieHandshake.toLowerCase(),
+      userId: cookieHandshake.toLowerCase(),
       isEmailUser: false,
     };
   }
 
-  // Case 2: UUID / Email User
-  if (rawUserId.includes('-') && rawUserId.length > 30) {
-    try {
-      const authUser = await prisma.authUser.findUnique({
-        where: { id: rawUserId },
-        select: { walletAddress: true, email: true },
-      });
-
-      if (authUser?.walletAddress && ETH_ADDR_REGEX.test(authUser.walletAddress)) {
-        return {
-          walletAddress: authUser.walletAddress.toLowerCase(),
-          userId: rawUserId,
-          isEmailUser: true,
-        };
-      }
-    } catch (dbError) {
-      console.error('[requireWallet] Database error resolving authUser:', dbError);
-    }
-
-    // Email user without connected wallet
+  const headerAddr = reqObj?.headers?.get?.('x-wallet-address') || reqObj?.headers?.get?.('x-web3-address');
+  if (headerAddr && ETH_ADDR_REGEX.test(headerAddr)) {
     return {
-      errorResponse: NextResponse.json(
-        { error: 'Forbidden: A connected Web3 wallet is required for this action' },
-        { status: 403 }
-      ),
+      walletAddress: headerAddr.toLowerCase(),
+      userId: headerAddr.toLowerCase(),
+      isEmailUser: false,
     };
   }
 
-  // Any other non-standard identity that isn't an Ethereum wallet
   return {
     errorResponse: NextResponse.json(
-      { error: 'Forbidden: Invalid or unsupported wallet identity' },
-      { status: 403 }
+      { error: 'Unauthorized: Valid session required' },
+      { status: 401 }
     ),
   };
 }

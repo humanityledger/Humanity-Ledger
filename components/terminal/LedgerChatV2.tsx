@@ -5314,7 +5314,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       {/* [LAYOUT FIX] This wrapper must be h-full flex-col so that `flex-1 min-h-0`
           children (the two-panel layout) can resolve their height against the viewport.
           Without this, TuringShieldGate's Fragment return gives no height context. */}
-      <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
+      <div className="flex flex-col h-full h-screen h-[100dvh] w-full min-h-0 overflow-hidden">
       {lockedChatPeer && (
         <PinPrompt
           title="This chat is locked"
@@ -6937,23 +6937,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    items[next]?.focus();
                  }}
                >
-                 {/* Quick reactions. Sent as a __REACT__ message (the format every
-                     Ledger Chat client already reads), not as the XMTP reaction
-                     content type: that codec is not installed yet. */}
-                 <div className="flex items-center justify-between gap-1 px-1.5 pb-1.5 mb-1 border-b border-[#eceef2]" aria-label="React">
-                   {['👍', '❤️', '😂', '😮', '😢', '🙏'].map((emoji) => (
-                     <button
-                       key={emoji}
-                       role="menuitem"
-                       type="button"
-                       aria-label={`React with ${emoji}`}
-                       onClick={() => { executeSend(`__REACT__${contextMenu.id}__::${emoji}`); setContextMenu(null); }}
-                       className="w-9 h-9 rounded-full text-[19px] leading-none hover:bg-[#f2f4f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#15171c] transition-colors"
-                     >
-                       {emoji}
-                     </button>
-                   ))}
-                 </div>
                  <button role="menuitem" type="button" onClick={() => { setReplyingTo({ id: contextMenu.id, content: contextMenu.content }); setContextMenu(null); setTimeout(() => inputRef.current?.focus(), 100); }} className={item}>
                    <Reply size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Reply
                  </button>
