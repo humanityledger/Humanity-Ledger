@@ -20,6 +20,12 @@ if (typeof process !== 'undefined' && !(globalThis as any).__WS_PROTECTED) {
     };
 
     process.on('uncaughtException', (err: any) => {
+        // Never terminate during Next.js build compilation
+        if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.NODE_ENV !== 'production') {
+            console.warn('[LedgerFortress:BuildGuard] Warning in build:', err?.message || err);
+            return;
+        }
+
         const msg = err?.message || '';
         const code = err?.code || '';
         

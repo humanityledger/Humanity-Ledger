@@ -95,8 +95,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Performance tuning for Next.js build on 8GB RAM Metal builders
-ENV NODE_OPTIONS="--max-old-space-size=4096"
+# Memory safety and worker controls for Next.js build:
+# Restrict workers to 1 so memory is never duplicated across multiple builder cores.
+# Set max-old-space-size to 2560MB so V8 aggressively cleans garbage before hitting container cgroup limits.
+ENV NEXT_BUILD_WORKERS=1
+ENV NODE_OPTIONS="--max-old-space-size=2560"
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_VALIDATION=true
 ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/dummy"
@@ -105,10 +108,14 @@ ENV NEXTAUTH_SECRET="build_time_dummy_secret_ledgerchat_org_0123456789"
 ENV NEXTAUTH_URL="https://ledgerchat.org"
 ENV NEXT_PUBLIC_APP_URL="https://ledgerchat.org"
 
-# Generate Prisma client and build application
-RUN npx prisma generate && \
-    npx next build && \
-    rm -rf .next/cache
+# Step 1: Generate Prisma client
+RUN npx prisma generate
+
+# Step 2: Build Next.js application
+RUN npx next build
+
+# Step 3: Remove build cache to keep final image compact
+RUN rm -rf .next/cache
 
 #  STAGE 5: PRODUCTION RUNNER 
 FROM runtime AS runner
@@ -116,7 +123,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
+ENV PORT=8080
 ENV HOSTNAME="0.0.0.0"
 
 # Copy verified production build and necessary runtime assets
@@ -134,7 +141,7 @@ RUN chmod +x /app/start.sh
 
 USER nextjs
 
-EXPOSE 3000
+EXPOSE 3000 8080
 
 # Execute the System boot sequence
 CMD ["sh", "/app/start.sh"]

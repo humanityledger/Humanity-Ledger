@@ -1,11 +1,12 @@
 #!/bin/bash
-# A-018: start.sh - Only starts Next.js. Migrations are handled in pre-deploy, not here.
+# A-018: start.sh - Boots Next.js on Railway for ledgerchat.org
 set -e
 
-echo "[start.sh] Booting Ledger Network - ledgerchat.org"
-echo "[start.sh] NODE_ENV=${NODE_ENV}"
-echo "[start.sh] PORT=${PORT:-3000}"
+# Railway Public Networking default for ledgerchat.org is port 8080, but respects $PORT if set.
+APP_PORT="${PORT:-8080}"
 
-# START NEXT.JS
-echo "[start.sh] Starting Next.js server on port ${PORT:-3000}..."
-exec npx next start -p "${PORT:-3000}" -H "0.0.0.0"
+echo "[start.sh] Booting Ledger Network - ledgerchat.org / www.ledgerchat.org"
+echo "[start.sh] NODE_ENV=${NODE_ENV:-production}"
+echo "[start.sh] Binding Next.js server to port ${APP_PORT} on 0.0.0.0..."
+
+exec npx next start -p "${APP_PORT}" -H "0.0.0.0"

@@ -3,59 +3,51 @@ const isExtension = process.env.EXT_BUILD === 'true';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // [CRITICAL WINDOWS FIX] EPERM guard — must run BEFORE any webpack/glob code.
-//
-// On Windows, junction points in node_modules can cause webpack's glob scanner
-// to escape the project directory and hit protected OS folders
-// (e.g. C:\Users\admin\Documents\Mi música → EPERM: operation not permitted).
-// This EPERM propagates into FlightClientEntryPlugin.createActionAssets() and
-// causes the build to crash with: "Cannot read properties of undefined (reading 'server')".
-//
-// Fix: Monkey-patch Node's fs module so that ALL readdirSync/readdir calls
-// silently return an empty array instead of throwing EPERM/EACCES.
-// This is safe because webpack only uses these to DISCOVER files — an empty
-// result is equivalent to "no source files found in that protected folder".
+// Only applicable on Windows platform where junction points cause EPERM.
 // ─────────────────────────────────────────────────────────────────────────────
-try {
-    const fs   = require('fs');
-    const path = require('path');
-    const projectRoot = __dirname;
+if (process.platform === 'win32') {
+    try {
+        const fs   = require('fs');
+        const path = require('path');
+        const projectRoot = __dirname;
 
-    // Patch readdirSync
-    const _readdirSync = fs.readdirSync.bind(fs);
-    fs.readdirSync = function patchedReaddirSync(p, ...args) {
-        try {
-            return _readdirSync(p, ...args);
-        } catch (err) {
-            if (err && (err.code === 'EPERM' || err.code === 'EACCES' || err.code === 'ENOENT')) {
-                return [];
+        // Patch readdirSync
+        const _readdirSync = fs.readdirSync.bind(fs);
+        fs.readdirSync = function patchedReaddirSync(p, ...args) {
+            try {
+                return _readdirSync(p, ...args);
+            } catch (err) {
+                if (err && (err.code === 'EPERM' || err.code === 'EACCES' || err.code === 'ENOENT')) {
+                    return [];
+                }
+                throw err;
             }
-            throw err;
-        }
-    };
+        };
 
-    // Patch async readdir (used by webpack watch)
-    const _readdir = fs.readdir.bind(fs);
-    fs.readdir = function patchedReaddir(p, ...args) {
-        const cb = typeof args[args.length - 1] === 'function' ? args.pop() : null;
-        try {
-            if (cb) {
-                return _readdir(p, ...args, (err, files) => {
-                    if (err && (err.code === 'EPERM' || err.code === 'EACCES' || err.code === 'ENOENT')) {
-                        return cb(null, []);
-                    }
-                    cb(err, files);
-                });
+        // Patch async readdir (used by webpack watch)
+        const _readdir = fs.readdir.bind(fs);
+        fs.readdir = function patchedReaddir(p, ...args) {
+            const cb = typeof args[args.length - 1] === 'function' ? args.pop() : null;
+            try {
+                if (cb) {
+                    return _readdir(p, ...args, (err, files) => {
+                        if (err && (err.code === 'EPERM' || err.code === 'EACCES' || err.code === 'ENOENT')) {
+                            return cb(null, []);
+                        }
+                        cb(err, files);
+                    });
+                }
+                return _readdir(p, ...args);
+            } catch (err) {
+                if (err && (err.code === 'EPERM' || err.code === 'EACCES')) return cb ? cb(null, []) : Promise.resolve([]);
+                throw err;
             }
-            return _readdir(p, ...args);
-        } catch (err) {
-            if (err && (err.code === 'EPERM' || err.code === 'EACCES')) return cb ? cb(null, []) : Promise.resolve([]);
-            throw err;
-        }
-    };
+        };
 
-    console.log('[EPERM Guard] fs.readdir patched — Windows protected folders will be silently skipped.');
-} catch (patchErr) {
-    console.warn('[EPERM Guard] Failed to patch fs:', patchErr.message);
+        console.log('[EPERM Guard] fs.readdir patched — Windows protected folders will be silently skipped.');
+    } catch (patchErr) {
+        console.warn('[EPERM Guard] Failed to patch fs:', patchErr.message);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -469,6 +461,7 @@ const nextConfig = {
     ],
 
     experimental: {
+        cpus: 1,
         serverActions: {
             // [QUANTUM HARDENING] Block massive payloads at the framework level
             bodySizeLimit: '500kb'
