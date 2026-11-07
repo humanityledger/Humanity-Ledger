@@ -73,6 +73,14 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
     const cfg = SETTINGS[variant];
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const coarse = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+    const isMobile = typeof navigator !== 'undefined' && (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 800);
+    
+    if (isMobile) {
+      // On mobile/Android devices: disable heavy canvas rAF noise loops to guarantee 60 FPS butter-smooth scroll
+      canvas.style.display = 'none';
+      return;
+    }
+
     const animate = !reduce && !coarse;
 
     let w = 0;

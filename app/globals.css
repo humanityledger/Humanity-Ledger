@@ -1866,8 +1866,9 @@ html.watermark-active body::after {
 /* ============================================================
    67% ZOOM-OUT SYSTEM FOR LANDING PAGE AND /CONNECT
    Renders at 67% scale at 100% default Chrome zoom on desktop
+   Touch/Android/mobile devices run at 100% native scale for maximum 60-120 FPS performance
    ============================================================ */
-@media screen and (min-width: 640px) {
+@media screen and (min-width: 980px) and (pointer: fine) {
   html:has(.hl-zoom-67-target),
   html.hl-zoom-67 {
     zoom: 0.67;

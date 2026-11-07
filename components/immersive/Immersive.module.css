@@ -83,3 +83,13 @@
     animation: none;
   }
 }
+
+@media (pointer: coarse), (max-width: 800px) {
+  .aurora {
+    filter: none;
+    animation: none;
+  }
+  .grain {
+    display: none;
+  }
+}

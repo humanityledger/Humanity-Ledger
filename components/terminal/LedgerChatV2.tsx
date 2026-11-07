@@ -636,11 +636,56 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [address]);
 
+  const [profileNames, setProfileNames] = useState<Record<string, string>>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      return JSON.parse(localStorage.getItem('ledger_profile_names') || '{}');
+    } catch { return {}; }
+  });
+
   const getDisplayName = useCallback((peerAddr: string) => {
     if (!peerAddr) return 'Unknown Peer';
-    const c = localContacts.find(c => c.peerAddress.toLowerCase() === peerAddr.toLowerCase());
-    return c ? c.name : shortAddr(peerAddr);
-  }, [localContacts]);
+    const lower = peerAddr.toLowerCase();
+    const c = localContacts.find(c => c.peerAddress.toLowerCase() === lower);
+    if (c?.name && !c.name.startsWith('0x') && !c.name.includes('…')) return c.name;
+    if (profileNames[lower]) return profileNames[lower];
+
+    try {
+      const cached = localStorage.getItem(`peer_profile_${lower}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        const name = parsed.displayName || parsed.nickname || parsed.name || parsed.username;
+        if (name && !name.startsWith('0x') && !name.includes('…')) return name;
+      }
+    } catch {}
+
+    return c?.name || shortAddr(peerAddr);
+  }, [localContacts, profileNames]);
+
+  // Auto-resolve remote user profile display name
+  useEffect(() => {
+    if (!activePeer || activePeer === '0x0') return;
+    const lower = activePeer.toLowerCase();
+    if (profileNames[lower]) return;
+
+    fetch(`/api/user/profile?walletAddress=${encodeURIComponent(lower)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const name = data?.displayName || data?.nickname || data?.name || data?.username;
+        if (name && !name.startsWith('0x')) {
+          setProfileNames(prev => {
+            const next = { ...prev, [lower]: name };
+            try { localStorage.setItem('ledger_profile_names', JSON.stringify(next)); } catch {}
+            return next;
+          });
+          const myAddr = (effectiveAddress || address || '').toLowerCase();
+          if (myAddr) {
+            saveLocalContact(myAddr, { peerAddress: lower, name, avatar: data?.avatarUrl || '' });
+          }
+        }
+      })
+      .catch(() => {});
+  }, [activePeer, effectiveAddress, address, profileNames]);
 
   const [reactionMenu, setReactionMenu] = useState<string | null>(null); // Phase 2: Emoji Reactions
   const [pinnedMessageId, setPinnedMessageId] = useState<string | null>(null); // Phase 3: Pinned
@@ -1230,23 +1275,34 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   };
 
   const executeClearChat = () => {
-    if (!activePeer || !address) return;
-    const dmId = `dm-${activePeer.toLowerCase()}`;
+    if (!activePeer) return;
+    const peerLower = activePeer.toLowerCase();
+    const dmId = `dm-${peerLower}`;
     const clearTs = Date.now();
-    localStorage.setItem(`ledger_cleared_${address}_${activePeer.toLowerCase()}`, clearTs.toString());
-    setSynced(address, { [`cleared:${activePeer.toLowerCase()}`]: clearTs }); // clear on all devices
-    // [BUG FIX] Filter by BOTH conversationId match AND by peer address presence in id
-    // This catches messages that may not have conversationId set correctly
+    const myAddr = (effectiveAddress || address || '').toLowerCase();
+
+    localStorage.setItem(`ledger_cleared_${peerLower}`, clearTs.toString());
+    if (myAddr) {
+      localStorage.setItem(`ledger_cleared_${myAddr}_${peerLower}`, clearTs.toString());
+      try { setSynced(myAddr, { [`cleared:${peerLower}`]: clearTs }); } catch {}
+    }
+    if (address) {
+      localStorage.setItem(`ledger_cleared_${address.toLowerCase()}_${peerLower}`, clearTs.toString());
+      localStorage.setItem(`ledger_cleared_${address}_${peerLower}`, clearTs.toString());
+    }
+
     setMessages(prev => prev.filter(m => {
-      if (m.conversationId === dmId) return false; // explicit conversationId match
-      // fallback: if message belongs to this peer by sender/content heuristic
-      if (!m.conversationId && (
-        m.senderInboxId?.toLowerCase() === activePeer.toLowerCase() ||
-        m.id?.includes(activePeer.toLowerCase().slice(2, 8))
-      )) return false;
+      const cId = (m.conversationId || '').toLowerCase();
+      const sId = (m.senderInboxId || m.senderAddress || m.sender || '').toLowerCase();
+      const rId = (m.recipientInboxId || m.recipientAddress || m.recipient || '').toLowerCase();
+      const id = (m.id || '').toLowerCase();
+
+      if (cId === dmId || cId === peerLower || cId.includes(peerLower)) return false;
+      if (sId === peerLower || rId === peerLower) return false;
+      if (peerLower.length >= 8 && id.includes(peerLower.slice(2, 10))) return false;
       return true;
     }));
-    // Deduplication set is left intact to prevent stream from re-injecting them
+
     setShowClearConfirm(false);
     toast.success('Chat cleared');
   };
@@ -4221,7 +4277,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           console.warn('[Ledger Chat] Failed to resolve DM IDs securely:', e);
         }
         
-        const clearTsMs = parseInt(localStorage.getItem(`ledger_cleared_${address}_${activePeer.toLowerCase()}`) || '0', 10);
+        const myAddrForClear = (effectiveAddress || address || '').toLowerCase();
+        const peerAddrForClear = activePeer.toLowerCase();
+        const clearTsMs = Math.max(
+          parseInt(localStorage.getItem(`ledger_cleared_${peerAddrForClear}`) || '0', 10),
+          myAddrForClear ? parseInt(localStorage.getItem(`ledger_cleared_${myAddrForClear}_${peerAddrForClear}`) || '0', 10) : 0,
+          address ? parseInt(localStorage.getItem(`ledger_cleared_${address.toLowerCase()}_${peerAddrForClear}`) || '0', 10) : 0,
+          address ? parseInt(localStorage.getItem(`ledger_cleared_${address}_${peerAddrForClear}`) || '0', 10) : 0
+        );
         if (clearTsMs > 0) {
           const clearTsNs = clearTsMs; // Fixed: sentAtNs is actually in MS after mapping
           raw = raw.filter((m: any) => m.sentAtNs > clearTsNs);
@@ -4424,7 +4487,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           // [BUG FIX] CLEAR CHAT GUARD FOR RT STREAM
           // Filter out messages older than the user's local clear timestamp,
           // otherwise every poll re-injects the deleted history.
-          const clearTsMs = parseInt(localStorage.getItem(`ledger_cleared_${address}_${activePeer.toLowerCase()}`) || '0', 10);
+          const myAddrForClearRt = (effectiveAddress || address || '').toLowerCase();
+          const peerAddrForClearRt = activePeer.toLowerCase();
+          const clearTsMs = Math.max(
+            parseInt(localStorage.getItem(`ledger_cleared_${peerAddrForClearRt}`) || '0', 10),
+            myAddrForClearRt ? parseInt(localStorage.getItem(`ledger_cleared_${myAddrForClearRt}_${peerAddrForClearRt}`) || '0', 10) : 0,
+            address ? parseInt(localStorage.getItem(`ledger_cleared_${address.toLowerCase()}_${peerAddrForClearRt}`) || '0', 10) : 0,
+            address ? parseInt(localStorage.getItem(`ledger_cleared_${address}_${peerAddrForClearRt}`) || '0', 10) : 0
+          );
           if (clearTsMs > 0) {
             const clearTsNs = clearTsMs; // Fixed: sentAtNs is actually in MS after mapping
             newConfirmed = newConfirmed.filter((m: any) => m.sentAtNs > clearTsNs);
@@ -5300,9 +5370,32 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               setShowContactInfo(false);
               if (window.confirm('Are you sure you want to clear this chat? This will remove all messages from your device.')) {
                 const clearedAt = Date.now();
-                localStorage.setItem(`ledger_cleared_${address}_${activePeer.toLowerCase()}`, clearedAt.toString());
-                if (address) setSynced(address, { [`cleared:${activePeer.toLowerCase()}`]: clearedAt }); // all devices
-                setMessages(prev => prev.filter(m => m.conversationId !== `dm-${activePeer.toLowerCase()}`));
+                const peerLower = activePeer.toLowerCase();
+                const dmId = `dm-${peerLower}`;
+                const myAddr = (effectiveAddress || address || '').toLowerCase();
+
+                localStorage.setItem(`ledger_cleared_${peerLower}`, clearedAt.toString());
+                if (myAddr) {
+                  localStorage.setItem(`ledger_cleared_${myAddr}_${peerLower}`, clearedAt.toString());
+                  try { setSynced(myAddr, { [`cleared:${peerLower}`]: clearedAt }); } catch {}
+                }
+                if (address) {
+                  localStorage.setItem(`ledger_cleared_${address.toLowerCase()}_${peerLower}`, clearedAt.toString());
+                  localStorage.setItem(`ledger_cleared_${address}_${peerLower}`, clearedAt.toString());
+                }
+
+                setMessages(prev => prev.filter(m => {
+                  const cId = (m.conversationId || '').toLowerCase();
+                  const sId = (m.senderInboxId || m.senderAddress || m.sender || '').toLowerCase();
+                  const rId = (m.recipientInboxId || m.recipientAddress || m.recipient || '').toLowerCase();
+                  const id = (m.id || '').toLowerCase();
+
+                  if (cId === dmId || cId === peerLower || cId.includes(peerLower)) return false;
+                  if (sId === peerLower || rId === peerLower) return false;
+                  if (peerLower.length >= 8 && id.includes(peerLower.slice(2, 10))) return false;
+                  return true;
+                }));
+
                 toast.success('Chat cleared');
               }
             }}
@@ -7288,22 +7381,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
        {/* ── Private agreement: escrow or payment stream on Aztec (lib/aztec/chat-agreements.ts) ── */}
        {showAgreementComposer && activePeer && (
-         activePeerInboxIdRef.current ? (
-           <AgreementComposer
-             dmPeerInboxId={activePeerInboxIdRef.current}
-             peerName={getDisplayName(activePeer)}
-             onClose={() => setShowAgreementComposer(false)}
-             onSend={(message: string) => executeSend(message)}
-             onOpenWallet={() => { setShowAgreementComposer(false); setShowZkWallet(true); }}
-           />
-         ) : (
-           <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/40 p-4" onClick={() => setShowAgreementComposer(false)}>
-             <div role="dialog" aria-modal="true" className="bg-white rounded-3xl p-5 max-w-[360px] text-[14px] text-[#4a505c]" onClick={e => e.stopPropagation()}>
-               Agreements need a direct conversation that has finished connecting. Send or receive a message with {getDisplayName(activePeer)} first, then try again.
-               <button type="button" className="mt-4 h-10 px-4 rounded-full bg-[#15171c] text-white text-[14px] font-semibold block" onClick={() => setShowAgreementComposer(false)}>OK</button>
-             </div>
-           </div>
-         )
+         <AgreementComposer
+           dmPeerInboxId={activePeerInboxIdRef.current || activePeer}
+           peerName={getDisplayName(activePeer)}
+           onClose={() => setShowAgreementComposer(false)}
+           onSend={(message: string) => executeSend(message)}
+           onOpenWallet={() => { setShowAgreementComposer(false); setShowZkWallet(true); }}
+         />
        )}
 
        {/* ── Aztec zk.money Payment Stream Modal ── */}

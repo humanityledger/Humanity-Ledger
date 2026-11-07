@@ -19,6 +19,8 @@ interface SearchUser {
   country: string;
   isVerified?: boolean;
   tier?: string;
+  avatarUrl?: string;
+  avatar?: string;
 }
 
 type RequestStatus = 'none' | 'sending' | 'pending' | 'accepted';
@@ -104,9 +106,14 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
         return;
       }
 
+      const chosenName = user.nickname || user.name || (user.address.slice(0, 6) + '…' + user.address.slice(-4));
+      saveLocalContact(myAddress, { peerAddress: addr, name: chosenName, avatar: user.avatar || '' });
+      try {
+        localStorage.setItem(`peer_profile_${addr}`, JSON.stringify({ displayName: chosenName, avatarUrl: user.avatar || '' }));
+      } catch {}
+
       if (data.status === 'ALREADY_CONNECTED') {
         // Already contacts — open chat immediately
-        saveLocalContact(myAddress, { peerAddress: addr, name: user.nickname || user.name, avatar: '' });
         onAddContact(addr);
         onClose();
         return;
@@ -278,7 +285,15 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                       {/* Dynamic action button */}
                       {reqStatus === 'accepted' ? (
                         <button
-                          onClick={() => { onAddContact(user.address); onClose(); }}
+                          onClick={() => {
+                            const chosenName = user.nickname || user.name || (user.address.slice(0, 6) + '…' + user.address.slice(-4));
+                            saveLocalContact(myAddress, { peerAddress: user.address.toLowerCase(), name: chosenName, avatar: user.avatar || '' });
+                            try {
+                              localStorage.setItem(`peer_profile_${user.address.toLowerCase()}`, JSON.stringify({ displayName: chosenName, avatarUrl: user.avatar || '' }));
+                            } catch {}
+                            onAddContact(user.address);
+                            onClose();
+                          }}
                           className="flex items-center gap-1.5 px-3.5 py-2 bg-[#30d158] text-white rounded-full font-semibold text-[12px] shadow-sm shrink-0 ml-2"
                         >
                           <MessageCircle size={14} />

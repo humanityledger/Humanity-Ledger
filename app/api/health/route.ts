@@ -50,14 +50,15 @@ export async function GET() {
     }
 
     // [3] Redis Status + Worker Heartbeats
-    let redisHealth = { ok: true, status: 'STANDALONE' };
+    let redisHealth: any = { ok: true, status: 'STANDALONE', mode: 'mock' };
     let meshAlive = false;
     let solanaAlive = false;
     let lastMeshBeat: string | null = null;
     let lastSolanaBeat: string | null = null;
 
     try {
-        redisHealth = await checkRedisHealth();
+        const rCheck = await checkRedisHealth();
+        redisHealth = { ok: rCheck.ok, status: rCheck.mode === 'real' ? 'CONNECTED' : 'STANDALONE', mode: rCheck.mode };
         if (redisClient && !(redisClient as any).__isMock) {
             const [meshHb, solanaHb] = await Promise.all([
                 redisClient.get(`hb:worker:mesh:${replicaId}`),

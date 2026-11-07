@@ -60,9 +60,9 @@ export function HLLogo({
         alt=""
         draggable={false}
         style={{
-          width: '118%',
-          height: '118%',
-          objectFit: 'cover',
+          width: '92%',
+          height: '92%',
+          objectFit: 'contain',
           pointerEvents: 'none',
           userSelect: 'none',
         }}

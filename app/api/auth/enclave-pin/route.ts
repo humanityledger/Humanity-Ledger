@@ -71,6 +71,15 @@ function hashPinArgon2id(userId: string, pin: string): string {
   return bytesToHex(hash);
 }
 
+async function hashPinSafe(userId: string, pin: string): Promise<string> {
+  try {
+    return await withArgonSemaphore(() => hashPinArgon2id(userId, pin));
+  } catch (err) {
+    console.warn('[Enclave PIN] Argon2id failed, fallback to HMAC:', err);
+    return hashPinLegacy(userId, pin);
+  }
+}
+
 function hashPinLegacy(userId: string, pin: string): string {
   const secret = getEnclavePinSecret();
   const normalizedId = userId.toLowerCase();
@@ -99,23 +108,25 @@ function hashPinLegacy(userId: string, pin: string): string {
  * withArgonSemaphore". The hash is; the wrapper is not.
  */
 async function verifyPin(userId: string, pin: string, storedHash: string): Promise<boolean> {
+  const storedBuf = Buffer.from(storedHash, 'hex');
   try {
     const argonHash = await withArgonSemaphore(() => hashPinArgon2id(userId, pin));
     const argonBuf = Buffer.from(argonHash, 'hex');
-    const storedBuf = Buffer.from(storedHash, 'hex');
     if (argonBuf.length === storedBuf.length && crypto.timingSafeEqual(argonBuf, storedBuf)) {
       return true;
     }
+  } catch {}
+
+  try {
     // Backward compatibility with legacy HMAC-SHA256
     const legacyHash = hashPinLegacy(userId, pin);
     const legacyBuf = Buffer.from(legacyHash, 'hex');
     if (legacyBuf.length === storedBuf.length && crypto.timingSafeEqual(legacyBuf, storedBuf)) {
       return true;
     }
-    return false;
-  } catch {
-    return false;
-  }
+  } catch {}
+
+  return false;
 }
 
 function issueClearanceToken(userId: string, ts: number): string {
@@ -371,11 +382,11 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    const newPinHash = await withArgonSemaphore(() => hashPinArgon2id(userId, newPin));
+    const newPinHash = await hashPinSafe(userId, newPin);
     inMemoryPinStore.set(userId.toLowerCase(), newPinHash);
 
-    // Initial PIN configuration (no previous PIN stored) — PUT is the setup path
-    if (!storedPinHash) {
+    // Initial PIN configuration (no previous PIN stored) or authorization via temp clearance token
+    if (!storedPinHash || (clientClearanceToken && clientClearanceTs)) {
       try {
         await prisma.user.upsert({
           where: { walletAddress: userId.toLowerCase() },

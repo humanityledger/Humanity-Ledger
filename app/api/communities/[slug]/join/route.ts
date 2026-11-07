@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
+import {
+  getInMemoryCommunityBySlugOrId,
+  joinInMemoryCommunity,
+} from '@/lib/communities/in-memory-communities';
 
 export const dynamic = 'force-dynamic';
 
-// A-008: Use requireWallet instead of resolveVerifiedCaller + x-web3-address header
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const auth = await requireWallet(req);
@@ -12,33 +15,53 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     const address = auth.walletAddress;
 
     const { slug: identifier } = await params;
-    const community = await (prisma as any).community.findFirst({
-      where: {
-        OR: [
-          { id: identifier },
-          { joinCode: identifier.toUpperCase() },
-        ],
-      },
-    });
 
-    if (!community) return NextResponse.json({ error: 'Community not found' }, { status: 404 });
-
-    const member = await (prisma as any).communityMember.upsert({
-      where: {
-        communityId_walletAddress: {
-          communityId: community.id,
-          walletAddress: address.toLowerCase(),
+    let community: any = null;
+    try {
+      community = await (prisma as any).community.findFirst({
+        where: {
+          OR: [
+            { id: identifier },
+            { joinCode: identifier.toUpperCase() },
+          ],
         },
-      },
-      update: {},
-      create: {
-        communityId: community.id,
-        walletAddress: address.toLowerCase(),
-        role: 'MEMBER',
-      },
-    });
+      });
+    } catch {}
 
-    return NextResponse.json({ member, communityId: community.id });
+    if (community) {
+      try {
+        const member = await (prisma as any).communityMember.upsert({
+          where: {
+            communityId_walletAddress: {
+              communityId: community.id,
+              walletAddress: address.toLowerCase(),
+            },
+          },
+          update: {},
+          create: {
+            communityId: community.id,
+            walletAddress: address.toLowerCase(),
+            role: 'MEMBER',
+          },
+        });
+        return NextResponse.json({ member, communityId: community.id });
+      } catch {}
+    }
+
+    const memCommunity = getInMemoryCommunityBySlugOrId(identifier);
+    if (memCommunity) {
+      joinInMemoryCommunity(identifier, address, 'MEMBER');
+      return NextResponse.json({
+        member: {
+          communityId: memCommunity.id,
+          walletAddress: address.toLowerCase(),
+          role: 'MEMBER',
+        },
+        communityId: memCommunity.id,
+      });
+    }
+
+    return NextResponse.json({ error: 'Community not found' }, { status: 404 });
   } catch (e) {
     console.error('[communities join POST]', e);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

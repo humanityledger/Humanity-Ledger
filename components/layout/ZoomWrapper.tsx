@@ -19,13 +19,8 @@ export function ZoomWrapper({ children }: { children: React.ReactNode }) {
             pathname?.startsWith('/chat');
 
         const updateZoom = () => {
-            // Apply 67% scale on screens 640px and wider (desktop and tablets).
-            // Zoom is driven purely via the CSS class 'hl-zoom-67' defined in
-            // globals.css (@media screen and (min-width:640px){ html.hl-zoom-67{zoom:0.67} }).
-            // We do NOT set document.documentElement.style.zoom here — that would
-            // create an inline style that fights the stylesheet rule and causes
-            // double-zoom when both exist simultaneously in Chromium.
-            if (isZoomTarget && window.innerWidth >= 640) {
+            const isTouch = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+            if (isZoomTarget && window.innerWidth >= 980 && !isTouch) {
                 document.documentElement.classList.add('hl-zoom-67');
             } else {
                 document.documentElement.classList.remove('hl-zoom-67');

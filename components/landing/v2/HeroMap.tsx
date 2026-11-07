@@ -19,7 +19,8 @@ export function HeroMap({ className }: { className?: string }) {
   useEffect(() => {
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const saveData = (navigator as unknown as { connection?: { saveData?: boolean } }).connection?.saveData;
-    if (reduce || saveData) return;
+    const isMobile = typeof navigator !== 'undefined' && (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768);
+    if (reduce || saveData || isMobile) return;
 
     const start = () => setLoad(true);
     const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number })
