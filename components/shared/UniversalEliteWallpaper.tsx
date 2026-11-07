@@ -16,8 +16,8 @@ export function UniversalEliteWallpaper() {
     const pathname = usePathname() ?? '/';
     const theme = useSettingsStore((s) => s.theme);
 
-    // /connect has its own full-bleed wallpaper — skip the global overlay
-    if (pathname.startsWith('/connect')) return null;
+    // /connect and /chat manage their own wallpaper — skip the global overlay
+    if (pathname.startsWith('/connect') || pathname.startsWith('/chat')) return null;
 
     const isDark = theme === 'dark' || (
         theme === 'system' &&

@@ -3,31 +3,10 @@
 import React, { useEffect, useRef } from "react";
 import s from "./Immersive.module.css";
 
-/**
- * ImmersiveField — the living background of the public pages and the app.
- *
- * Three layers, back to front:
- *   1. a paper gradient (cool at the top, warm at the bottom);
- *   2. an aurora of soft blue light that drifts slowly and leans toward the
- *      cursor (CSS, driven by --ax / --ay);
- *   3. a lattice of fine dots, drawn on a canvas, that swells and darkens
- *      around the cursor like a lens, and breathes with a slow noise field.
- *      The dots echo the dotted world map of the Humanity Ledger mark.
- *
- * It also lights cards: any element with `data-glow` gets --gx / --gy set
- * to the pointer position inside it, which Immersive.module.css turns into a
- * soft spotlight and a brighter rim (see `.glow`).
- *
- * Costs: one canvas, one rAF loop at ~30 fps that stops when the tab is
- * hidden, when nothing moves, and entirely under prefers-reduced-motion
- * (then a single static frame is drawn). Touch screens get the static field
- * plus the CSS drift. pointer-events: none, aria-hidden.
- */
-
 type Variant = "page" | "app" | "quiet";
 
 export interface ImmersiveFieldProps {
-  /** page: landing, /connect, docs. app: behind Ledger Chat (fainter). quiet: barely there. */
+  /** page: landing, /connect, docs. app: behind Ledger Chat. quiet: barely there. */
   variant?: Variant;
   /** Fixed to the viewport (default) or absolutely positioned inside the parent. */
   position?: "fixed" | "absolute";
@@ -35,16 +14,16 @@ export interface ImmersiveFieldProps {
 }
 
 const SETTINGS: Record<Variant, { spacing: number; base: number; lens: number; radius: number }> = {
-  page: { spacing: 15, base: 0.22, lens: 0.6, radius: 260 },
-  app: { spacing: 16, base: 0.14, lens: 0.45, radius: 220 },
+  page: { spacing: 15, base: 0.22, lens: 0.65, radius: 260 },
+  app: { spacing: 15, base: 0.20, lens: 0.65, radius: 240 },
   quiet: { spacing: 17, base: 0.1, lens: 0.35, radius: 220 },
 };
 
-// Cheap smooth value noise, enough for a slow "breathing" of the lattice.
 function hash(x: number, y: number) {
   const h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
   return h - Math.floor(h);
 }
+
 function noise(x: number, y: number) {
   const xi = Math.floor(x);
   const yi = Math.floor(y);
@@ -73,20 +52,11 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
     const cfg = SETTINGS[variant];
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const coarse = window.matchMedia?.("(pointer: coarse)").matches ?? false;
-    const isMobile = typeof navigator !== 'undefined' && (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 800);
-    
-    if (isMobile) {
-      // On mobile/Android devices: disable heavy canvas rAF noise loops to guarantee 60 FPS butter-smooth scroll
-      canvas.style.display = 'none';
-      return;
-    }
-
     const animate = !reduce && !coarse;
 
     let w = 0;
     let h = 0;
     let dpr = 1;
-    // Pointer in field coordinates; eased toward the target for a lens that lags gently.
     const target = { x: -9999, y: -9999, on: false };
     const lens = { x: -9999, y: -9999, k: 0 };
     let t = 0;
@@ -94,9 +64,6 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
     let last = 0;
     let idleFrames = 0;
 
-    // Sizes in the element's own CSS pixels. The landing, /connect and /chat
-    // are zoomed on desktop (html.hl-zoom-67), where getBoundingClientRect and
-    // pointer coordinates are in zoomed pixels; `toLocal` converts.
     const resize = () => {
       w = Math.max(1, root.clientWidth);
       h = Math.max(1, root.clientHeight);
@@ -118,7 +85,6 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
       const ox = (w - (cols - 1) * sp) / 2;
       for (let j = 0; j < rows; j++) {
         const y = j * sp + sp / 2;
-        // Denser and darker toward the top-left, fading out to the bottom-right.
         const fadeY = 1 - y / (h * 1.25);
         for (let i = 0; i < cols; i++) {
           const x = ox + i * sp;
@@ -135,15 +101,15 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
               lensMix = (1 - d2 / r2) * lens.k;
               lensMix *= lensMix;
               a += cfg.lens * lensMix;
-              size += 1.6 * lensMix;
+              size += 1.8 * lensMix;
             }
           }
           if (a < 0.012) continue;
-          // Ink far from the cursor, Humanity Ledger blue inside the lens.
+          // Ink far from the cursor, Humanity Ledger vibrant electric blue inside the lens.
           const rr = Math.round(21 + (39 - 21) * lensMix);
           const gg = Math.round(23 + (84 - 23) * lensMix);
           const bb = Math.round(28 + (214 - 28) * lensMix);
-          ctx.fillStyle = `rgba(${rr},${gg},${bb},${Math.min(a, 0.7).toFixed(3)})`;
+          ctx.fillStyle = `rgba(${rr},${gg},${bb},${Math.min(a, 0.85).toFixed(3)})`;
           const half = size / 2;
           ctx.fillRect(x - half, y - half, size, size);
         }
@@ -165,8 +131,6 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
       root.style.setProperty("--ay", `${((lens.y / h) * 100).toFixed(2)}%`);
       root.style.setProperty("--ak", lens.k.toFixed(3));
       draw();
-      // Stop spending frames when the cursor has left and the lens has faded;
-      // the slow drift is then carried by CSS alone.
       if (!target.on && lens.k < 0.002) {
         idleFrames++;
         if (idleFrames > 60) stop();
@@ -198,7 +162,6 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
       }
       start();
 
-      // Card spotlight: the nearest [data-glow] under the pointer.
       const el = (e.target as Element | null)?.closest?.("[data-glow]") as HTMLElement | null;
       if (el) {
         const b = el.getBoundingClientRect();

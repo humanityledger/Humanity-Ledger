@@ -24,10 +24,10 @@
   position: absolute;
   inset: -20%;
   background:
-    radial-gradient(38% 34% at 18% 12%, rgba(39, 84, 214, 0.20), transparent 70%),
-    radial-gradient(30% 30% at 86% 6%, rgba(122, 162, 255, 0.24), transparent 72%),
+    radial-gradient(38% 34% at 18% 12%, rgba(39, 84, 214, 0.22), transparent 70%),
+    radial-gradient(30% 30% at 86% 6%, rgba(122, 162, 255, 0.26), transparent 72%),
     radial-gradient(40% 36% at 70% 92%, rgba(255, 214, 170, 0.30), transparent 70%);
-  filter: blur(12px);
+  filter: blur(14px);
   animation: hl-aurora-drift 26s ease-in-out infinite alternate;
 }
 
@@ -36,8 +36,8 @@
   position: absolute;
   inset: 0;
   background: radial-gradient(
-    22% 22% at calc(16.66% + var(--ax) * 0.714) calc(16.66% + var(--ay) * 0.714),
-    rgba(39, 84, 214, calc(0.16 * var(--ak))),
+    24% 24% at calc(16.66% + var(--ax) * 0.714) calc(16.66% + var(--ay) * 0.714),
+    rgba(39, 84, 214, calc(0.24 * var(--ak))),
     transparent 72%
   );
 }
@@ -59,7 +59,7 @@
 }
 
 .field_app .aurora {
-  opacity: 0.6;
+  opacity: 0.85;
 }
 
 .field_quiet .aurora {
@@ -81,15 +81,5 @@
 @media (prefers-reduced-motion: reduce) {
   .aurora {
     animation: none;
-  }
-}
-
-@media (pointer: coarse), (max-width: 800px) {
-  .aurora {
-    filter: none;
-    animation: none;
-  }
-  .grain {
-    display: none;
   }
 }

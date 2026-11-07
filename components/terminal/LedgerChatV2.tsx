@@ -5452,7 +5452,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     <audio ref={ringAudioRef} loop playsInline x-webkit-airplay="allow" src="/sounds/call_ringtone.mp3" style={{ display: 'none' }} />
 
     {/* Solid white container — two-panel layout: sidebar (left) + chat (right) */}
-      <div className={`relative flex flex-row flex-1 min-h-0 w-full h-full overflow-hidden ${(showScanner || showMyQR || showProfile) ? 'overflow-visible' : ''}`} style={{ 
+      <div className={`relative flex flex-row flex-1 min-h-0 w-full h-full overflow-hidden md:rounded-[28px] lg:rounded-[32px] md:border md:border-black/[0.08] md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22),0_0_0_1px_rgba(16,24,40,0.06)] ${(showScanner || showMyQR || showProfile) ? 'overflow-visible' : ''}`} style={{ 
       background: '#ffffff',
       fontFamily,
     }}>
