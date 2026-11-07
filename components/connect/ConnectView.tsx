@@ -208,6 +208,13 @@ function QrStage(p: ConnectViewProps) {
           )}
         </div>
 
+        {p.qrPin && !p.qrExpired && (
+          <div className={s.code}>
+            <span className={s.codeLabel}>Your phone should show this code</span>
+            <span className={s.codeValue}>{p.qrPin}</span>
+          </div>
+        )}
+
         {!p.qrExpired && (
           <span className={s.waiting} role="status">
             <LoaderCircle size={14} strokeWidth={2} className={s.spin} aria-hidden="true" />
@@ -217,9 +224,9 @@ function QrStage(p: ConnectViewProps) {
       </div>
 
       <ol className={s.qrSteps}>
-        <li>Open your phone camera or QR code scanner app.</li>
-        <li>Scan this code — your phone will open <strong>ledgerchat.org</strong> automatically.</li>
-        <li>Connect your wallet on your phone and your computer will sign in instantly.</li>
+        <li><span>Open your phone camera or QR code scanner app.</span></li>
+        <li><span>Scan this code and connect your wallet on your phone.</span></li>
+        <li><span>Enter the 4-digit code shown above to connect your computer.</span></li>
       </ol>
     </>
   );

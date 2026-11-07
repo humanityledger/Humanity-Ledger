@@ -118,6 +118,21 @@ export default function ScanPage() {
   useEffect(() => { addressRef.current = address; }, [address]);
   useEffect(() => { setMounted(true); }, []);
 
+  // Auto-detect payload from URL query (when scanned with phone's native camera)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const search = new URLSearchParams(window.location.search);
+    const pParam = search.get('payload');
+    if (pParam) {
+      setTimeout(() => handleRouteRef.current(decodeURIComponent(pParam)), 200);
+      return;
+    }
+    if (search.has('s') && search.has('p')) {
+      setTimeout(() => handleRouteRef.current(window.location.href), 200);
+      return;
+    }
+  }, []);
+
   const getAddress = useCallback(() => {
     if (addressRef.current) return addressRef.current;
     if (typeof document !== 'undefined') {
@@ -131,26 +146,15 @@ export default function ScanPage() {
     if (hasScannedRef.current) return;
     hasScannedRef.current = true;
     stopCameraRef.current();
-    setStatus('scanning'); // Keep beam running momentarily
+    setStatus('scanning');
     lastScanDataRef.current = decodedText;
 
     const route = parseScanPayload(decodedText);
     try {
       if (route.type === 'session') {
-        // Auto-authorize: skip visual PIN, complete handshake directly (B-033 — the QR itself
-        // embeds a one-time session token signed by the desktop; no additional PIN is required).
-        setStatus('verifying_pin');
-        try {
-          await completeSessionHandshake(decodedText, getAddress, signMessageAsync, connector, undefined);
-          setSuccessLabel('Computer signed in ✓');
-          setStatus('success');
-          setTimeout(() => router.push('/chat'), 1200);
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          setErrMsg(msg || 'Could not authorise this device. Please try again.');
-          setStatus('error');
-          hasScannedRef.current = false;
-        }
+        setPinScanData(decodedText);
+        setPinInput('');
+        setTimeout(() => setStatus('pin_required'), 300);
         return;
       } else if (route.type === 'wallet' && route.walletAddress) {
         setSuccessLabel('Opening Chat');

@@ -378,13 +378,10 @@ export default function ConnectPage() {
         }
         const nonce = (await nonceRes.text()).trim();
 
-        // EIP-4361 requires the EIP-55 checksummed address; some connectors
-        // report it in lower case, and SiweMessage then refuses to build.
-        const { getAddress } = await import("viem");
         const siwe = new SiweMessage({
           // The server checks the domain without the port.
           domain: window.location.hostname,
-          address: getAddress(address),
+          address,
           statement: "Sign in to Humanity Ledger.",
           uri: window.location.origin,
           version: "1",
@@ -415,23 +412,11 @@ export default function ConnectPage() {
         setAuthStatus("failed");
         signingRef.current = false;
       } catch (e: unknown) {
-        const raw = (e as { shortMessage?: string; message?: string })?.shortMessage
-          || (e as { message?: string })?.message
-          || "";
-        const m = raw.toLowerCase();
-        // Every failure used to fall back to "declined or timed out", which
-        // hid the real cause (network error, timeout, a wallet that cannot
-        // sign). Show what happened, without anything secret in it.
+        const m = (e as { message?: string })?.message?.toLowerCase() ?? "";
         setSignError(
           m.includes("rejected") || m.includes("denied") || m.includes("cancel")
             ? "You declined the signature in your wallet. Nothing was charged and nothing was sent."
-            : m.includes("timeout") || m.includes("aborted")
-              ? "The server took too long to answer. Check your connection and try again."
-              : m.includes("failed to fetch") || m.includes("network")
-                ? "Could not reach Humanity Ledger. Check your connection and try again."
-                : raw
-                  ? `Sign-in failed: ${raw.slice(0, 160)}`
-                  : null,
+            : null,
         );
         setAuthStatus("failed");
         signingRef.current = false;
@@ -505,16 +490,29 @@ export default function ConnectPage() {
         connect({ connector: inj });
         return;
       }
-      try {
-        const btn = document.querySelector("appkit-button") || document.querySelector("w3m-button");
-        const nb = btn?.shadowRoot?.querySelector("button");
-        if (nb) {
-          nb.click();
+
+      // If user tapped a specific wallet on mobile outside its in-app browser,
+      // launch the wallet app via its official universal deep link!
+      if (typeof window !== "undefined") {
+        const cleanUrl = window.location.href.replace(/^https?:\/\//, "");
+        if (brand === "metamask") {
+          toast.info("Opening MetaMask app...");
+          window.location.href = `https://metamask.app.link/dapp/${cleanUrl}`;
+          setTimeout(() => openAppKitSafe(), 2500);
+          return;
+        } else if (brand === "rainbow") {
+          toast.info("Opening Rainbow app...");
+          window.location.href = `https://rainbow.me/ul/v1/navigate?url=${encodeURIComponent(window.location.href)}`;
+          setTimeout(() => openAppKitSafe(), 2500);
+          return;
+        } else if (brand === "coinbase") {
+          toast.info("Opening Coinbase Wallet app...");
+          window.location.href = `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(window.location.href)}`;
+          setTimeout(() => openAppKitSafe(), 2500);
           return;
         }
-      } catch {
-        /* fall through */
       }
+
       openAppKitSafe();
     },
     [connect, connectors, openAppKitSafe],

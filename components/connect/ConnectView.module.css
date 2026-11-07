@@ -640,23 +640,33 @@
 
 .qrSteps li {
   counter-increment: qr;
-  display: grid;
-  grid-template-columns: 24px 1fr;
+  display: flex;
+  align-items: flex-start;
   gap: 12px;
-  align-items: start;
+  width: 100%;
 }
 
 .qrSteps li::before {
   content: counter(qr);
+  flex-shrink: 0;
   width: 24px;
   height: 24px;
   border-radius: 999px;
   background: var(--page-bg);
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12.5px;
   font-weight: 650;
   color: var(--hl-ink);
+  line-height: 1;
+}
+
+.qrSteps li span,
+.qrSteps li div,
+.qrSteps li p {
+  flex: 1;
+  min-width: 0;
 }
 
 .waiting {

@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
     response.cookies.set('hl_session', rec.jwt, base);
     response.cookies.set('ledger_session', rec.jwt, base);
     response.cookies.set('human_session', rec.jwt, base);
+    response.cookies.set('system_handshake', address, { ...base, httpOnly: false });
     response.cookies.set('qr_init_session', '', { ...base, maxAge: 0 });
     return response;
   } catch (e: any) {

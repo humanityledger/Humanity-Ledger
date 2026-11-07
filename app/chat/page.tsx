@@ -36,7 +36,7 @@ export default function ChatPage() {
   return (
     <TuringShieldGate>
       <ChatEngineProvider>
-        <div className="relative flex flex-col w-full h-full flex-1 min-h-0 overflow-hidden bg-white">
+        <div data-chat-page="true" className="relative flex flex-col w-full h-full flex-1 min-h-0 overflow-hidden bg-white" style={{ height: '100%', minHeight: '100%', flex: '1 1 0%' }}>
           <LedgerChat forceAutoInit={true} />
         </div>
       </ChatEngineProvider>

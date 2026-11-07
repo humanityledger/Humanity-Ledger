@@ -35,7 +35,13 @@ const HASH_RE = /^[0-9a-f]{64}$/;
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    const wallet = session?.userId?.toLowerCase();
+    let wallet = session?.userId?.toLowerCase();
+    if (!wallet || !/^0x[0-9a-f]{40}$/.test(wallet)) {
+      const handshake = req.cookies.get('system_handshake')?.value?.toLowerCase();
+      if (handshake && /^0x[0-9a-f]{40}$/.test(handshake)) {
+        wallet = handshake;
+      }
+    }
     if (!wallet || !/^0x[0-9a-f]{40}$/.test(wallet)) {
       return NextResponse.json(
         { error: 'Session unauthenticated. Sign the cryptographic message in your wallet first.' },

@@ -54,7 +54,7 @@ const isValid = await ledger.identity.verify(proof);
 ### 4. Bounties & Builder Program
 We are actively funding developers who build modules on top of the Ledger Network.
 Currently open bounties:
-- Integration with Azguard Wallet (Account Abstraction)
+- Integration with Account Abstraction Wallets (ERC-4337)
 - Private DeFi yield tracking within the Portfolio module
 - E2EE Chat extensions
 

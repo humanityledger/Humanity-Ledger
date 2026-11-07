@@ -1729,12 +1729,18 @@ html.dark .doc-content .callout {
 
 /* 3. Full-height chat container using dynamic viewport */
 .ledger-chat-container {
-  /* Fill the flex parent — eliminates the white void below the message input bar.
-     100dvh caused double-sizing because this element already lives inside a flex chain. */
-  height: 100%;
-  max-height: 100%;
-  flex: 1 1 0%;
-  min-height: 0;
+  /* Fill the flex parent — eliminates the white void below the message input bar. */
+  height: 100% !important;
+  max-height: 100% !important;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+}
+
+/* Safety: /chat route must NEVER be scaled by zoom hack */
+html:has([data-chat-page]),
+html.chat-page {
+  zoom: 1 !important;
+  --hl-zoom: 1 !important;
 }
 
 /* Context menu pop animation */
