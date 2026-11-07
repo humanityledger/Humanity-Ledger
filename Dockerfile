@@ -99,6 +99,11 @@ COPY . .
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_VALIDATION=true
+ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/dummy"
+ENV DATABASE_URL_UNPOOLED="postgresql://postgres:postgres@localhost:5432/dummy"
+ENV NEXTAUTH_SECRET="build_time_dummy_secret_ledgerchat_org_0123456789"
+ENV NEXTAUTH_URL="https://ledgerchat.org"
+ENV NEXT_PUBLIC_APP_URL="https://ledgerchat.org"
 
 # Generate Prisma client and build application
 RUN npx prisma generate && \

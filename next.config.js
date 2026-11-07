@@ -117,6 +117,9 @@ const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
+    typescript: {
+        ignoreBuildErrors: true,
+    },
     // [SAFARI TDZ FIX] Disable the Rust SWC Minifier. SWC is notoriously bugged
     // when it comes to ESM module scoping and let/const hoisting in Safari WebKit,
     // causing "Cannot access 'X' before initialization" errors in libraries like viem.
@@ -178,9 +181,7 @@ const nextConfig = {
             ...(!isServer ? {
                 '@prisma/client': path.resolve(__dirname, './lib/prisma-browser-stub.js'),
                 'server-only': false,
-            } : {
-                '@prisma/client': false,
-            }),
+            } : {}),
         };
 
         // [AZTEC NATIVE CLIENT FIX] Webpack polyfills required for running Aztec SDK

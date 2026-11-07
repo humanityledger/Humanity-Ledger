@@ -67,11 +67,11 @@ install.sh
 *.py
 *.patch
 *.cs
-*.html
-*.css
-out.css
-index.css
-index.html
+/out.css
+/index.css
+/index.html
+/extract.html
+/pitch_deck.html
 
 # Logs
 *.log
