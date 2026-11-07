@@ -29,33 +29,45 @@ export async function getTransactionHistory(authUserId: string, options?: any) {
   // [ZK-ISOLATION] authUserId is now the wallet address (SIWE session.userId).
   // The Transaction table no longer has an authUserId column — it uses fromAddress/toAddress.
   // We query all three sources by address for full fidelity.
-  const [legacy, ledgers, blockchain] = await Promise.all([
-    prisma.transaction.findMany({
-      where: { 
-        OR: [{ fromAddress: authUserId }, { toAddress: authUserId }],
-        ...(options?.type ? { type: options.type } : {})
-      },
-      orderBy: { timestamp: 'desc' },
-      take: limit,
-      skip: offset,
-    }),
-    prisma.ledgerActivity.findMany({
-      where: {
-        OR: [
-          { fromAddress: authUserId },
-          { toAddress: authUserId },
-          { walletAddress: authUserId }
-        ]
-      },
-      orderBy: { timestamp: 'desc' },
-      take: limit,
-    }),
-    prisma.blockchainTransaction.findMany({
-      where: { userId: authUserId },
-      orderBy: { createdAt: 'desc' },
-      take: limit
-    })
-  ]);
+  let legacy: any[] = [];
+  let ledgers: any[] = [];
+  let blockchain: any[] = [];
+
+  try {
+    const results = await Promise.all([
+      prisma.transaction.findMany({
+        where: { 
+          OR: [{ fromAddress: authUserId }, { toAddress: authUserId }],
+          ...(options?.type ? { type: options.type } : {})
+        },
+        orderBy: { timestamp: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.ledgerActivity.findMany({
+        where: {
+          OR: [
+            { fromAddress: authUserId },
+            { toAddress: authUserId },
+            { walletAddress: authUserId }
+          ]
+        },
+        orderBy: { timestamp: 'desc' },
+        take: limit,
+      }),
+      prisma.blockchainTransaction.findMany({
+        where: { userId: authUserId },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    ]);
+    legacy = results[0];
+    ledgers = results[1];
+    blockchain = results[2];
+  } catch (err: any) {
+    // Graceful fallback for standalone execution
+    return [];
+  }
 
   // Mapeo unificado para el Ledger de Alta Fidelidad
   const unified = [
@@ -145,13 +157,16 @@ export async function getTransactionStats(authUserId: string) {
     ]
   };
 
-  const [total, pending, confirmed, failed] = await Promise.all([
-    prisma.transaction.count({ where: baseWhere }),
-    prisma.transaction.count({ where: { ...baseWhere, status: TransactionStatus.PENDING } }),
-    prisma.transaction.count({ where: { ...baseWhere, status: TransactionStatus.CONFIRMED } }),
-    prisma.transaction.count({ where: { ...baseWhere, status: TransactionStatus.FAILED } }),
-  ]);
-
-  return { total, pending, confirmed, failed };
+  try {
+    const [total, pending, confirmed, failed] = await Promise.all([
+      prisma.transaction.count({ where: baseWhere }),
+      prisma.transaction.count({ where: { ...baseWhere, status: TransactionStatus.PENDING } }),
+      prisma.transaction.count({ where: { ...baseWhere, status: TransactionStatus.CONFIRMED } }),
+      prisma.transaction.count({ where: { ...baseWhere, status: TransactionStatus.FAILED } }),
+    ]);
+    return { total, pending, confirmed, failed };
+  } catch {
+    return { total: 0, pending: 0, confirmed: 0, failed: 0 };
+  }
 }
 

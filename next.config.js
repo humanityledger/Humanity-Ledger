@@ -520,7 +520,7 @@ const nextConfig = {
                     // [SECURITY] CSP Report-Only: collects violation reports without blocking.
                     // Enforced CSP is set per-request by middleware.ts (nonce-based).
                     // Reports are collected at /api/security/csp-report.
-                    { key: 'Content-Security-Policy-Report-Only', value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://aztec-testnet.drpc.org https://api.aztec.network wss:; frame-src 'none'; object-src 'none'; base-uri 'self'; report-uri /api/security/csp-report" },
+                    { key: 'Content-Security-Policy-Report-Only', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; frame-src 'self' https:; object-src 'none'; base-uri 'self'; report-uri /api/security/csp-report" },
                 ]
             },
             //  API routes: never cache sensitive data endpoints 

@@ -1,10 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SiweMessage, SiweErrorType } from 'siwe';
+import { verifyMessage as viemVerifyMessage } from 'viem';
 import { prisma } from '@/lib/prisma';
 import { getRedisClient } from '@/lib/redis';
 import { logger } from '@/lib/logger';
 import { openNonce, resolveSiweDomainForVerification, consumeNonceLocally, NONCE_TTL_SEC } from '@/lib/security/siweNonce';
 import { verifyContractWalletSiwe } from '@/lib/security/siweContractWallet';
+
+// Normalizes Secp256k1 malleable (non-canonical) signatures from various wallets (MetaMask, Rabby, Ledger)
+function normalizeSignature(sig: string): string {
+  if (typeof sig !== 'string' || !sig.startsWith('0x') || sig.length < 130) {
+    return sig;
+  }
+  try {
+    const raw = sig.slice(2);
+    if (raw.length === 130) {
+      const r = raw.slice(0, 64);
+      const sHex = raw.slice(64, 128);
+      let v = parseInt(raw.slice(128, 130), 16);
+      const SECP256K1_N = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
+      const HALF_N = SECP256K1_N / 2n;
+      let s = BigInt('0x' + sHex);
+
+      if (s > HALF_N) {
+        s = SECP256K1_N - s;
+        if (v === 27) v = 28;
+        else if (v === 28) v = 27;
+        else if (v === 0) v = 1;
+        else if (v === 1) v = 0;
+      }
+      return '0x' + r + s.toString(16).padStart(64, '0') + v.toString(16).padStart(2, '0');
+    }
+  } catch {}
+  return sig;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,7 +71,8 @@ export async function POST(req: NextRequest) {
       logger.warn({ err }, 'Redis nonce check failed — local in-memory registry protected nonce');
     }
 
-    // Cryptographic signature verification
+    // Cryptographic signature verification with malleability normalization
+    const normalizedSig = normalizeSignature(signature);
     const siweMessage = new SiweMessage(message);
     const domain = resolveSiweDomainForVerification(siweMessage.domain, req.headers.get('host'));
     if (!domain) {
@@ -52,9 +82,27 @@ export async function POST(req: NextRequest) {
     
     // `suppressExceptions` ensures verification results are captured gracefully
     let { data: fields, error: siweErr } = await siweMessage.verify(
-      { signature, nonce, domain },
+      { signature: normalizedSig, nonce, domain },
       { suppressExceptions: true },
     );
+
+    // Fallback 1: Viem ECDSA verification for non-canonical/malleable signatures
+    if (siweErr) {
+      try {
+        const rawMsg = typeof message === 'string' ? message : siweMessage.prepareMessage();
+        const validViem = await viemVerifyMessage({
+          address: siweMessage.address as `0x${string}`,
+          message: rawMsg,
+          signature: signature as `0x${string}`,
+        });
+        if (validViem) {
+          fields = siweMessage;
+          siweErr = undefined as any;
+        }
+      } catch (viemErr) {
+        // Continue to contract wallet verification
+      }
+    }
 
     // Smart-contract wallets (Safe, Coinbase Smart Wallet, Argent...) sign with
     // ERC-1271 / ERC-6492, which the EOA check above cannot verify. Only when

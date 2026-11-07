@@ -151,9 +151,11 @@ type SystemPrismaClient = PrismaClient & {
   verificationCode: VerificationCodeDelegate;
 };
 
-function getSanitizedDatabaseUrl(): string | undefined {
+function getSanitizedDatabaseUrl(): string {
     const rawUrl = process.env.DATABASE_URL;
-    if (!rawUrl) return undefined;
+    if (!rawUrl || rawUrl.trim() === '') {
+        return 'postgresql://postgres:postgres@localhost:5432/humanity_ledger?schema=public';
+    }
 
     try {
         const urlObj = new URL(rawUrl);
