@@ -22,15 +22,14 @@ node_modules_backup/
 .vscode/
 .idea/
 
-# Smart Contracts (not needed at runtime)
+# Smart Contracts & Circuits build artifacts needed by Webpack
+# Note: contracts/ and circuits/ MUST be included because lib/aztec and lib/zk import them.
 artifacts/
 cache/
-contracts/
 ignition/
 typechain-types/
 .openzeppelin/
 forge/
-circuits/
 noir-projects/
 hardhat.config.*
 tsconfig.hardhat.json
@@ -158,6 +157,9 @@ NOTICE
 !ecosystem.config.json
 !server.js
 !server.ts
+!contracts/**
+!circuits/**
+!deployments/**
 
 node_modules
 .git

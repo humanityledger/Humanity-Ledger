@@ -20,7 +20,6 @@
 # Heavy dev-only directories (not needed at runtime)
 # 'scripts' is required for production background workers (system-mesh.ts etc)
 /k8s
-/contracts
 /typechain-types
 /artifacts
 /cache
