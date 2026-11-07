@@ -37,15 +37,8 @@ export default function ChatPage() {
   return (
     <TuringShieldGate>
       <ChatEngineProvider>
-        {/* On wide screens the app floats as a window over the living field
-            (ImmersiveField, "app" variant); on phones it fills the screen. */}
-        <div className="hl-zoom-67-target relative flex flex-col w-full h-full flex-1 min-h-0 overflow-hidden bg-white md:bg-transparent md:p-2.5">
-          <div className="hidden md:block">
-            <ImmersiveField variant="app" />
-          </div>
-          <div className="relative z-[1] flex flex-col w-full h-full flex-1 min-h-0">
-            <LedgerChat forceAutoInit={true} />
-          </div>
+        <div className="relative flex flex-col w-full h-full flex-1 min-h-0 overflow-hidden bg-white">
+          <LedgerChat forceAutoInit={true} />
         </div>
       </ChatEngineProvider>
     </TuringShieldGate>

@@ -14,9 +14,7 @@ export function ZoomWrapper({ children }: { children: React.ReactNode }) {
         const isZoomTarget =
             pathname === '/' ||
             pathname === '/connect' ||
-            pathname?.startsWith('/connect') ||
-            pathname === '/chat' ||
-            pathname?.startsWith('/chat');
+            pathname?.startsWith('/connect');
 
         const updateZoom = () => {
             const isTouch = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;

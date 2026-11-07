@@ -307,21 +307,21 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   // Root container
   const rootClass = isDashboard || isChat
-    ? 'fixed inset-0 w-full overflow-hidden flex flex-col bg-transparent z-0'
+    ? 'fixed inset-0 w-full h-full overflow-hidden flex flex-col bg-white z-0'
     : isBounded
       ? 'fixed inset-0 w-full overflow-hidden flex flex-col bg-transparent z-0'
       : 'w-full min-h-[100vh] relative z-0 flex flex-col bg-transparent';
 
   // Inner wrapper (below header)
   const innerClass = isDashboard || isChat
-    ? 'flex-1 flex flex-col relative w-full overflow-hidden min-h-0'
+    ? 'flex-1 flex flex-col relative w-full h-full overflow-hidden min-h-0'
     : isBounded
       ? 'flex-1 flex flex-col relative w-full overflow-hidden min-h-0'
       : 'flex-1 flex flex-col relative w-full';
 
   const isForumPage = pathname.startsWith('/forum');
   const mainClass = isDashboard || isChat
-    ? 'relative z-10 w-full flex-1 flex flex-col min-h-0 overflow-hidden md:pb-0'
+    ? 'relative z-10 w-full h-full flex-1 flex flex-col min-h-0 overflow-hidden md:pb-0'
     : isBounded
       // Scroll is fully contained here — no empty page-level void zones.
       // Landing page also uses this path so scroll stops exactly at footer.

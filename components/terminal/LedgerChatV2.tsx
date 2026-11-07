@@ -90,7 +90,7 @@ import { KeyboardShortcutsModal } from '@/components/chat/KeyboardShortcutsModal
 
 
 
-const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
+
 
 
 
@@ -256,7 +256,7 @@ export const parseMessageText = (text: string, isMe: boolean) => {
 };
 
 import { playSendSound, playReceiveSound } from '../../lib/utils/sounds';
-import { MessageBubble, StickerPicker } from '../chat/MessageBubble';
+import { MessageBubble } from '../chat/MessageBubble';
 import { PinPrompt } from '@/components/chat/pin/PinPrompt';
 import { IncomingCallScreen, OutgoingCallScreen, AudioCallStage, CallControls } from '@/components/chat/call/CallScreens';
 import { Archive, ArchiveRestore, ChevronLeft, ChevronUp, ChevronDown, MessageSquare, Plus, ArrowUp, WifiOff, Pin, Check, ScanQrCode, Camera, FileText, Sticker, ListChecks, CreditCard, Receipt, Waves, Navigation, Timer, Info, LoaderCircle, Minimize2, Mail, ShieldCheck, Reply, Forward, Pencil, Flag, MessagesSquare, Globe } from 'lucide-react';
@@ -941,7 +941,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [forwardMsg, setForwardMsg] = useState<any | null>(null); // message to forward
   const [scheduledAt, setScheduledAt] = useState<Date | null>(null); // scheduled send time
   const [showGifPicker, setShowGifPicker] = useState(false); // GIF picker
-  const [showStickerPicker, setShowStickerPicker] = useState(false); // Sticker picker
   const [showAppDrawer, setShowAppDrawer] = useState(false); // iMessage style + menu
   const [liveLocationWatchId, setLiveLocationWatchId] = useState<number | null>(null); // watchPosition ID for live location
   const [isLiveLocationActive, setIsLiveLocationActive] = useState(false); // whether live location is broadcasting
@@ -1073,9 +1072,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // ─── Backward compat shims so existing JSX works unchanged ──────────────────
   const callActive = callState === 'active' || callState === 'calling' || callState === 'connecting';
   const incomingCall = callState === 'ringing';
-
-  // Emoji State
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   // Offline Queue State
   const [isOffline, setIsOffline] = useState(false);
@@ -5441,7 +5437,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     <audio ref={ringAudioRef} loop playsInline x-webkit-airplay="allow" src="/sounds/call_ringtone.mp3" style={{ display: 'none' }} />
 
     {/* Solid white container — two-panel layout: sidebar (left) + chat (right) */}
-      <div className={`relative flex flex-row flex-1 min-h-0 w-full overflow-hidden shadow-sm md:rounded-[22px] md:shadow-[0_0_0_1px_rgba(16,24,40,0.06),0_28px_70px_-36px_rgba(16,24,40,0.38)] ${(showScanner || showMyQR || showProfile) ? 'overflow-visible' : ''}`} style={{ 
+      <div className={`relative flex flex-row flex-1 min-h-0 w-full h-full overflow-hidden ${(showScanner || showMyQR || showProfile) ? 'overflow-visible' : ''}`} style={{ 
       background: '#ffffff',
       fontFamily,
     }}>
@@ -6178,18 +6174,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   <button type="button" onClick={() => setBurnTimer(null)} className="px-3 h-8 rounded-full text-[13px] font-medium text-[#c53030] hover:bg-[#fed7d7]">Turn off</button>
                 </div>
               )}
-              {/* Sticker Picker */}
-              {showStickerPicker && (
-                <div className="relative px-3 pb-0">
-                  <StickerPicker
-                    onSend={(s) => {
-                      executeSend(`__STICKER__${s}`);
-                      setShowStickerPicker(false);
-                    }}
-                    onClose={() => setShowStickerPicker(false)}
-                  />
-                </div>
-              )}
               {/* Hito 4: GIF Picker */}
               {showGifPicker && (
                 <div className="bg-white border-t border-[#e4e7ec] p-3">
@@ -6284,7 +6268,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             { id: 'audio',     color: '#FF9500', iconPath: <Mic size={19} strokeWidth={1.8} />,     label: 'Voice message',  sublabel: 'Record and send', onClick: () => { setShowAppDrawer(false); startRecording(); } },
                             // ── Interactive ──────────────────────────────────────────
                             { id: 'gif',       color: '#AF52DE', iconPath: <ImageIcon size={19} strokeWidth={1.8} />,   label: 'GIF',            sublabel: 'Search animated images',   onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); searchGifs(gifSearch); } },
-                            { id: 'sticker',   color: '#FFCC00', iconPath: <Sticker size={19} strokeWidth={1.8} />,      label: 'Stickers',       sublabel: 'Send a sticker',         onClick: () => { setShowStickerPicker(true); setShowAppDrawer(false); } },
                             { id: 'poll',      color: '#10B981', iconPath: <ListChecks size={19} strokeWidth={1.8} />,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
                             // ── Crypto & Aztec Private Payments ──────────────────────────
                             { id: 'zkmoney',   color: '#1C1C1E', iconPath: <ShieldCheck size={19} strokeWidth={1.8} />, label: 'Private payment', sublabel: 'Aztec test network', onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
@@ -6369,36 +6352,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   >
                     <button
                       type="button"
-                      onClick={() => { setShowAppDrawer(d => !d); setShowEmojiPicker(false); }}
+                      onClick={() => setShowAppDrawer(d => !d)}
                       className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all duration-200 mb-[3px] ${showAppDrawer ? 'bg-[#15171c] text-white rotate-45' : 'text-[#475061] hover:bg-[#f2f4f7]'}`}
                       aria-label={showAppDrawer ? 'Close attachments' : 'Attach'}
                       aria-expanded={showAppDrawer}
                     >
                       <Plus size={22} strokeWidth={1.9} />
                     </button>
-
-                    <AnimatePresence>
-                      {showEmojiPicker && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-[90]"
-                            onClick={() => setShowEmojiPicker(false)}
-                          />
-                          <motion.div
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 8 }}
-                            className="absolute bottom-[64px] left-3 z-[100] shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] rounded-2xl overflow-hidden border border-[#e4e7ec]"
-                          >
-                            <EmojiPicker
-                              onEmojiClick={(emojiData: any) => {
-                                setInputText(prev => prev + emojiData.emoji);
-                              }}
-                            />
-                          </motion.div>
-                        </>
-                      )}
-                    </AnimatePresence>
 
                     {/* The message field */}
                     <div className="flex-1 bg-[#f2f4f7] rounded-[22px] flex items-end relative border border-transparent focus-within:bg-white focus-within:border-[#d0d5dd] min-h-[44px] max-h-[136px] transition-colors">
@@ -6468,20 +6428,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             aria-label="Message"
                             rows={1}
                             // 16px stops iOS Safari from zooming in when the field is focused.
-                            className="flex-1 bg-transparent pl-4 pr-1 py-[10px] text-[#15171c] focus:outline-none placeholder:text-[#a3a9b4] disabled:opacity-50 text-[16px] resize-none max-h-[134px] scrollbar-none leading-[1.5] min-h-[44px]"
+                            className="flex-1 bg-transparent px-4 py-[10px] text-[#15171c] focus:outline-none placeholder:text-[#a3a9b4] disabled:opacity-50 text-[16px] resize-none max-h-[134px] scrollbar-none leading-[1.5] min-h-[44px]"
                           />
-                          <button
-                            type="button"
-                            onClick={() => { setShowEmojiPicker(d => !d); setShowAppDrawer(false); }}
-                            className={`w-9 h-9 shrink-0 mb-[4px] mr-1 rounded-full flex items-center justify-center transition-colors ${showEmojiPicker ? 'text-[#15171c] bg-[#e9ecf0]' : 'text-[#727a88] hover:text-[#15171c]'}`}
-                            aria-label="Emoji"
-                            aria-expanded={showEmojiPicker}
-                          >
-                            <Smile size={21} strokeWidth={1.8} />
-                          </button>
                           {/* Character counter — appears when approaching long message */}
                           {inputText.length > 400 && (
-                            <span className={`text-[11px] tabular-nums font-medium shrink-0 mr-1 mb-[6px] self-end ${inputText.length > 900 ? 'text-[#e5484d]' : inputText.length > 700 ? 'text-[#f59e0b]' : 'text-[#a3a9b4]'}`}>
+                            <span className={`text-[11px] tabular-nums font-medium shrink-0 mr-2 mb-[6px] self-end ${inputText.length > 900 ? 'text-[#e5484d]' : inputText.length > 700 ? 'text-[#f59e0b]' : 'text-[#a3a9b4]'}`}>
                               {1000 - inputText.length}
                             </span>
                           )}

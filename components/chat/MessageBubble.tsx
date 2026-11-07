@@ -15,7 +15,7 @@ import { parseStreamPayload, calculateStreamProgress, ZkPaymentStream } from '@/
 import { parseInvoicePayload, ZkInvoice } from '@/lib/zk/zkInvoice';
 import { ZkEscrowCard } from '@/components/zk/ZkEscrowCard';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
-import { StickerPicker, PREMIUM_STICKERS, RenderPremiumSticker } from './StickerPicker';
+import { PREMIUM_STICKERS, RenderPremiumSticker } from './StickerPicker';
 import { useLinkPreview, extractFirstUrl, LinkPreviewCard } from './LedgerLinkPreview';
 import dynamic from 'next/dynamic';
 import { isAgreementMessage } from '@/lib/aztec/agreement-message';
@@ -105,7 +105,7 @@ export interface MessageProps {
 // A spring that only translates. Nested scale transforms blur text on iOS Safari.
 const SPRING = { type: 'spring', stiffness: 420, damping: 36, mass: 0.9 } as const;
 
-export { StickerPicker, PREMIUM_STICKERS as STICKERS, RenderPremiumSticker } from './StickerPicker';
+export { PREMIUM_STICKERS as STICKERS, RenderPremiumSticker } from './StickerPicker';
 
 // ─── Poll ──────────────────────────────────────────────────────────────────
 const PollBubble = React.memo(({ content, msg, onVotePoll, clientInboxId }: {
