@@ -23,11 +23,10 @@ export async function GET(req: NextRequest) {
       ...(search ? { name: { contains: search, mode: 'insensitive' as const } } : {}),
     };
 
-    let dbCommunities: any[] = [];
+    let mapped: any[] = [];
     let total = 0;
-
     try {
-      const [comms, cnt] = await Promise.all([
+      const [communities, dbTotal] = await Promise.all([
         (prisma as any).community.findMany({
           where,
           skip,
@@ -40,49 +39,25 @@ export async function GET(req: NextRequest) {
         }),
         (prisma as any).community.count({ where }),
       ]);
-      dbCommunities = comms;
-      total = cnt;
-    } catch {}
-
-    const memCommunities = listInMemoryCommunities({ isDiscover: true, search });
-
-    const seen = new Set<string>();
-    const mapped: any[] = [];
-
-    for (const c of dbCommunities) {
-      seen.add(c.id);
-      mapped.push({
+      total = dbTotal;
+      mapped = communities.map((c: any) => ({
         ...c,
         slug: c.joinCode || c.id,
-        membersCount: c._count?.members || 1,
-        channelsCount: c._count?.channels || 1,
-      });
+        membersCount: c._count.members,
+        channelsCount: c._count.channels,
+      }));
+    } catch {
+      // In-memory fallback
+      const mem = listInMemoryCommunities({ isDiscover: true, search });
+      total = mem.length;
+      mapped = mem.slice(skip, skip + limit);
     }
 
-    for (const mc of memCommunities) {
-      if (!seen.has(mc.id)) {
-        seen.add(mc.id);
-        mapped.push(mc);
-      }
-    }
-
-    const finalTotal = Math.max(total, mapped.length);
-
-    return NextResponse.json({
-      communities: mapped.slice(0, limit),
-      total: finalTotal,
-      page,
-      pages: Math.max(1, Math.ceil(finalTotal / limit)),
-    });
+    return NextResponse.json({ communities: mapped, total, page, pages: Math.ceil(total / limit) });
   } catch (e) {
     console.error('[communities GET]', e);
-    const fallback = listInMemoryCommunities({ isDiscover: true });
-    return NextResponse.json({
-      communities: fallback,
-      total: fallback.length,
-      page: 1,
-      pages: 1,
-    });
+    const mem = listInMemoryCommunities({ isDiscover: true });
+    return NextResponse.json({ communities: mem, total: mem.length, page: 1, pages: 1 });
   }
 }
 
@@ -92,17 +67,13 @@ export async function POST(req: NextRequest) {
     if (auth.errorResponse) return auth.errorResponse;
     const address = auth.walletAddress;
 
-    const body = await req.json().catch(() => ({}));
-    const { name, description, isPrivate } = body;
-    if (!name || typeof name !== 'string') {
-      return NextResponse.json({ error: 'Name required' }, { status: 400 });
-    }
+    const { name, description, isPrivate } = await req.json();
+    if (!name || typeof name !== 'string') return NextResponse.json({ error: 'Name required' }, { status: 400 });
 
-    // Try DB first
+    const { randomBytes } = await import('crypto');
+    const joinCode = randomBytes(4).toString('hex').toUpperCase();
+
     try {
-      const { randomBytes } = await import('crypto');
-      const joinCode = randomBytes(4).toString('hex').toUpperCase();
-
       const community = await (prisma as any).community.create({
         data: {
           name: name.trim(),
@@ -132,26 +103,22 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      return NextResponse.json(
-        {
-          community: {
-            ...community,
-            slug: community.joinCode,
-            membersCount: community._count?.members || 1,
-          },
+      return NextResponse.json({
+        community: {
+          ...community,
+          slug: community.joinCode,
+          membersCount: community._count.members,
         },
-        { status: 201 }
-      );
+      }, { status: 201 });
     } catch {
-      // Standalone mode without DB: use in-memory store
-      const memCommunity = createInMemoryCommunity({
-        name,
-        description: description || '',
+      // Resilient standalone mode: save in memory
+      const mem = createInMemoryCommunity({
+        name: name.trim(),
+        description: description?.trim() || '',
         isPrivate: Boolean(isPrivate),
         ownerAddress: address,
       });
-
-      return NextResponse.json({ community: memCommunity }, { status: 201 });
+      return NextResponse.json({ community: mem }, { status: 201 });
     }
   } catch (e: any) {
     console.error('[communities POST]', e);

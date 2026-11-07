@@ -52,7 +52,11 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
     if (!myAddress) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/chat/stories', { credentials: 'include', cache: 'no-store' });
+      const res = await fetch('/api/chat/stories', {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: { ...(myAddress ? { 'x-web3-address': myAddress } : {}) },
+      });
       if (res.ok) {
         const { stories } = await res.json();
         const me = myAddress.toLowerCase();
@@ -75,7 +79,10 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
       const res = await fetch('/api/chat/stories', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(myAddress ? { 'x-web3-address': myAddress } : {}),
+        },
         body: JSON.stringify({ contentUrl: text, mediaType: 'text' }),
       });
       const data = await res.json().catch(() => ({}));

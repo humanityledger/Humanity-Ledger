@@ -1,5 +1,4 @@
 @import './ledger-tokens.css';
-@import './hl-immersive.css';
 
 @tailwind base;
 @tailwind components;
@@ -1730,8 +1729,18 @@ html.dark .doc-content .callout {
 
 /* 3. Full-height chat container using dynamic viewport */
 .ledger-chat-container {
-  height: 100dvh;
-  max-height: 100dvh;
+  /* Fill the flex parent — eliminates the white void below the message input bar.
+     100dvh caused double-sizing because this element already lives inside a flex chain. */
+  height: 100%;
+  max-height: 100%;
+  flex: 1 1 0%;
+  min-height: 0;
+}
+
+/* Context menu pop animation */
+@keyframes ledger-ctx-pop {
+  from { opacity: 0; transform: scale(0.92) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
 }
 
 /* 4. iOS momentum scrolling on ALL scrollable elements */
@@ -1866,9 +1875,8 @@ html.watermark-active body::after {
 /* ============================================================
    67% ZOOM-OUT SYSTEM FOR LANDING PAGE AND /CONNECT
    Renders at 67% scale at 100% default Chrome zoom on desktop
-   Touch/Android/mobile devices run at 100% native scale for maximum 60-120 FPS performance
    ============================================================ */
-@media screen and (min-width: 980px) and (pointer: fine) {
+@media screen and (min-width: 640px) {
   html:has(.hl-zoom-67-target),
   html.hl-zoom-67 {
     zoom: 0.67;

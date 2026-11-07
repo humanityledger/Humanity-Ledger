@@ -137,10 +137,20 @@ export default function ScanPage() {
     const route = parseScanPayload(decodedText);
     try {
       if (route.type === 'session') {
-        setPinScanData(decodedText);
-        setPinInput('');
-        // Add a slight delay for better UX
-        setTimeout(() => setStatus('pin_required'), 400);
+        // Auto-authorize: skip visual PIN, complete handshake directly (B-033 — the QR itself
+        // embeds a one-time session token signed by the desktop; no additional PIN is required).
+        setStatus('verifying_pin');
+        try {
+          await completeSessionHandshake(decodedText, getAddress, signMessageAsync, connector, undefined);
+          setSuccessLabel('Computer signed in ✓');
+          setStatus('success');
+          setTimeout(() => router.push('/chat'), 1200);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setErrMsg(msg || 'Could not authorise this device. Please try again.');
+          setStatus('error');
+          hasScannedRef.current = false;
+        }
         return;
       } else if (route.type === 'wallet' && route.walletAddress) {
         setSuccessLabel('Opening Chat');
@@ -375,7 +385,7 @@ export default function ScanPage() {
             {/* WhatsApp/Signal style instructions */}
             <div className="px-8 py-5 bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 text-center max-w-[85%] mx-auto shadow-xl">
               <p className="text-white font-medium text-[15px] leading-relaxed">
-                Go to <span className="font-bold text-green-400">humanidfi.com/connect</span> on your computer and point your phone at the screen to capture the code.
+                Go to <span className="font-bold text-green-400">humanityledger.com/connect</span> on your computer and point your phone at the screen to capture the code.
               </p>
             </div>
           </div>

@@ -651,6 +651,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (profileNames[lower]) return profileNames[lower];
 
     try {
+      const localCustom = localStorage.getItem(`ledger_username_${lower}`) || localStorage.getItem(`ledger_display_name_${lower}`);
+      if (localCustom && !localCustom.startsWith('0x')) return localCustom;
+
       const cached = localStorage.getItem(`peer_profile_${lower}`);
       if (cached) {
         const parsed = JSON.parse(cached);
@@ -659,7 +662,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       }
     } catch {}
 
-    return c?.name || shortAddr(peerAddr);
+    if (c?.name && !c.name.startsWith('0x')) return c.name;
+    return shortAddr(peerAddr);
   }, [localContacts, profileNames]);
 
   // Auto-resolve remote user profile display name
@@ -4282,8 +4286,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           address ? parseInt(localStorage.getItem(`ledger_cleared_${address}_${peerAddrForClear}`) || '0', 10) : 0
         );
         if (clearTsMs > 0) {
-          const clearTsNs = clearTsMs; // Fixed: sentAtNs is actually in MS after mapping
-          raw = raw.filter((m: any) => m.sentAtNs > clearTsNs);
+          raw = raw.filter((m: any) => {
+            const rawTime = typeof m.sentAtNs === 'number'
+              ? (m.sentAtNs > 1e15 ? m.sentAtNs / 1e6 : m.sentAtNs)
+              : (new Date(m.sent || m.sentAt || 0).getTime());
+            return rawTime > clearTsMs;
+          });
         }
         
         // FETCH PENDING MESSAGES (OFFLINE ROUTING)
@@ -4355,7 +4363,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
              return true;
           });
 
-        const combined = [...rawMappedMsgs, ...pendingServer].sort((a, b) => a.sentAtNs - b.sentAtNs);
+        let combined = [...rawMappedMsgs, ...pendingServer].sort((a, b) => a.sentAtNs - b.sentAtNs);
+        if (clearTsMs > 0) {
+          combined = combined.filter((m: any) => (m.sentAtNs || 0) > clearTsMs);
+        }
         const mappedMsgs: any[] = [];
         const reactions: Record<string, Record<string, string[]>> = {};
         const readReceipts = new Set<string>();
@@ -4492,8 +4503,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             address ? parseInt(localStorage.getItem(`ledger_cleared_${address}_${peerAddrForClearRt}`) || '0', 10) : 0
           );
           if (clearTsMs > 0) {
-            const clearTsNs = clearTsMs; // Fixed: sentAtNs is actually in MS after mapping
-            newConfirmed = newConfirmed.filter((m: any) => m.sentAtNs > clearTsNs);
+            newConfirmed = newConfirmed.filter((m: any) => {
+              const rawTime = typeof m.sentAtNs === 'number'
+                ? (m.sentAtNs > 1e15 ? m.sentAtNs / 1e6 : m.sentAtNs)
+                : (new Date(m.sent || m.sentAt || 0).getTime());
+              return rawTime > clearTsMs;
+            });
           }
           
           // ── KEY GUARD ──────────────────────────────────────────────────────
@@ -5314,7 +5329,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       {/* [LAYOUT FIX] This wrapper must be h-full flex-col so that `flex-1 min-h-0`
           children (the two-panel layout) can resolve their height against the viewport.
           Without this, TuringShieldGate's Fragment return gives no height context. */}
-      <div className="flex flex-col h-full h-screen h-[100dvh] w-full min-h-0 overflow-hidden">
+      <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
       {lockedChatPeer && (
         <PinPrompt
           title="This chat is locked"
@@ -6908,22 +6923,28 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       ) : null}
 
        
-       {/* Message actions menu */}
+       {/* Message actions menu — Signal-parity right-click/long-press menu */}
        {(contextMenu && typeof document !== 'undefined')
          ? createPortal(
-         <div className="fixed inset-0 z-[200]" onClick={() => setContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}>
+         <div className="fixed inset-0 z-[99999] bg-black/10 select-none" onClick={() => setContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}>
            {(() => {
-             const mine = messages.find(m => m.id === contextMenu.id)?.senderAddress?.toLowerCase() === address?.toLowerCase();
-             const item = 'flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#15171c] text-left transition-colors';
+             const mine = messages.find(m => m.id === contextMenu.id)?.senderAddress?.toLowerCase() === (address || effectiveAddress || '').toLowerCase();
+             const item = 'flex items-center gap-3 px-3.5 py-[9px] rounded-xl hover:bg-[#f2f4f7] active:bg-[#eaecf0] text-[14px] font-[450] text-[#15171c] text-left transition-colors cursor-pointer select-none w-full';
+             const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+             const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+             const posX = Math.max(12, Math.min(contextMenu.x, vw - 264));
+             const posY = Math.max(12, Math.min(contextMenu.y, vh - 520));
              return (
                <div
                  role="menu"
                  aria-label="Message actions"
                  ref={(el) => { if (el && !el.contains(document.activeElement)) (el.querySelector('[role="menuitem"]') as HTMLElement | null)?.focus(); }}
-                 className="absolute bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)] p-1.5 min-w-[220px] max-h-[calc(100vh-16px)] overflow-y-auto flex flex-col motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-150"
+                 className="absolute bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_16px_48px_-8px_rgba(16,24,40,0.28),0_4px_16px_rgba(16,24,40,0.08)] p-1.5 min-w-[248px] max-h-[calc(100vh-24px)] overflow-y-auto flex flex-col"
                  style={{
-                   top: Math.max(8, Math.min(contextMenu.y, window.innerHeight - 520)),
-                   left: Math.max(8, Math.min(contextMenu.x, window.innerWidth - 236)),
+                   top: posY,
+                   left: posX,
+                   zIndex: 100000,
+                   animation: 'ledger-ctx-pop 120ms cubic-bezier(0.16,1,0.3,1)',
                  }}
                  onClick={e => e.stopPropagation()}
                  onKeyDown={(e) => {
@@ -6937,6 +6958,24 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    items[next]?.focus();
                  }}
                >
+                 {/* Signal Quick Reactions Bar */}
+                 <div className="flex items-center justify-between px-2 py-1.5 mb-1 bg-[#f7f8fa] rounded-xl border border-black/[0.04]">
+                   {['❤️', '👍', '👎', '😂', '😮', '😢', '🙏'].map(emoji => (
+                     <button
+                       key={emoji}
+                       type="button"
+                       onClick={() => {
+                         executeSend(`__REACT__${contextMenu.id}__::${emoji}`);
+                         setContextMenu(null);
+                       }}
+                       className="w-8 h-8 flex items-center justify-center text-[18px] hover:scale-125 active:scale-95 transition-transform rounded-lg hover:bg-black/5"
+                       aria-label={`React with ${emoji}`}
+                     >
+                       {emoji}
+                     </button>
+                   ))}
+                 </div>
+
                  <button role="menuitem" type="button" onClick={() => { setReplyingTo({ id: contextMenu.id, content: contextMenu.content }); setContextMenu(null); setTimeout(() => inputRef.current?.focus(), 100); }} className={item}>
                    <Reply size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Reply
                  </button>

@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { HLLogo } from "@/components/shared/HLLogo";
 import { LivePhone } from "@/components/landing/v2/PhoneShowcase";
-import { ImmersiveField } from "@/components/immersive/ImmersiveField";
 import s from "./ConnectView.module.css";
 
 /**
@@ -145,7 +144,7 @@ function Option({
 function Choose(p: ConnectViewProps) {
   return (
     <>
-      <h1 className={s.title}>Sign in to <em>Ledger Chat</em></h1>
+      <h1 className={s.title}>Sign in to Ledger Chat</h1>
       <p className={s.subtitle}>Connect the wallet you want to use as your account.</p>
 
       <div className={s.options}>
@@ -191,7 +190,7 @@ function QrStage(p: ConnectViewProps) {
         <ArrowLeft size={16} strokeWidth={1.75} aria-hidden="true" />
         Back
       </button>
-      <h1 className={s.title}>Sign in <em>with your phone</em></h1>
+      <h1 className={s.title}>Sign in with your phone</h1>
       <p className={s.subtitle}>Use a phone where you are already signed in to Ledger Chat.</p>
 
       <div className={s.qrCard}>
@@ -209,13 +208,6 @@ function QrStage(p: ConnectViewProps) {
           )}
         </div>
 
-        {p.qrPin && !p.qrExpired && (
-          <div className={s.code}>
-            <span className={s.codeLabel}>Your phone should show this code</span>
-            <span className={s.codeValue}>{p.qrPin}</span>
-          </div>
-        )}
-
         {!p.qrExpired && (
           <span className={s.waiting} role="status">
             <LoaderCircle size={14} strokeWidth={2} className={s.spin} aria-hidden="true" />
@@ -225,9 +217,9 @@ function QrStage(p: ConnectViewProps) {
       </div>
 
       <ol className={s.qrSteps}>
-        <li>On your phone, open <strong>humanidfi.com/connect</strong> in a mobile browser.</li>
-        <li>Sign in with your wallet on that page.</li>
-        <li>Tap <strong>Scan a code from your computer</strong> and point the camera at this code.</li>
+        <li>Open your phone camera or QR code scanner app.</li>
+        <li>Scan this code — your phone will open <strong>ledgerchat.org</strong> automatically.</li>
+        <li>Connect your wallet on your phone and your computer will sign in instantly.</li>
       </ol>
     </>
   );
@@ -270,7 +262,7 @@ function Signing(p: ConnectViewProps) {
       <span className={`${s.statusIcon} ${s.statusNeutral}`} aria-hidden="true">
         <KeyRound size={22} strokeWidth={1.75} />
       </span>
-      <h1 className={s.title}>Confirm <em>it is you</em></h1>
+      <h1 className={s.title}>Confirm it is you</h1>
       <p className={s.subtitle}>
         Your wallet will ask you to sign a message. Signing is free and does not send a transaction.
       </p>
@@ -363,7 +355,6 @@ export function ConnectView(props: ConnectViewProps) {
 
   return (
     <div className={s.root} data-stage={stage}>
-      <ImmersiveField variant="page" />
       <main className={s.panel}>
         <div className={s.panelTop}>
           <Link href="/" aria-label="Humanity Ledger home" className={s.brand}>
@@ -396,7 +387,7 @@ export function ConnectView(props: ConnectViewProps) {
 
         <div className={s.aboutHead}>
           <h2 id="connect-about-title" className={s.aboutTitle}>
-            Private messages and payments, <em>tied to your wallet.</em>
+            Private messages and payments, tied to your wallet.
           </h2>
           <p className={s.aboutLead}>
             Your wallet address is your account, so there is no phone number to share and no password to forget.
