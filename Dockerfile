@@ -34,12 +34,6 @@ ENV AZTEC_TESTNET_IMAGE="azteclabs/aztec:6.0.0-rc.3" \
     AZTEC_ROLLUP_DEPLOY_BLOCK="25428902" \
     AZTEC_NETHERMIND_VERSION="2.0.0"
 
-# Install Aztec CLI (provides `aztec start --pxe` for testnet connectivity)
-# Version pinned to match our @aztec/aztec.js package version (4.3.1)
-RUN curl -s https://install.aztec.network | bash -s -- --version 0.87.9 --no-sandbox 2>/dev/null || \
-    npm install -g @aztec/cli@4.3.1 2>/dev/null || \
-    echo "[Docker] Aztec CLI install skipped — PXE must be external"
-
 #  STAGE 2: BUILD DEPENDENCIES 
 FROM runtime AS build-base
 
@@ -130,9 +124,8 @@ ENV HOSTNAME="0.0.0.0"
 COPY --from=builder /app ./
 
 # Hardening: Enforce least privilege execution (CIS Docker Benchmark)
-RUN groupadd --system --gid 1001 nodejs && \
-    useradd --system --uid 1001 --gid nodejs nextjs && \
-    chown -R nextjs:nodejs /app
+RUN id -u nextjs >/dev/null 2>&1 || (groupadd --system --gid 1001 nodejs 2>/dev/null || true; useradd --system --uid 1001 -g nodejs nextjs 2>/dev/null || useradd --system --uid 1001 nextjs 2>/dev/null || true) && \
+    chown -R nextjs:nodejs /app || true
 
 # Final integrity checks
 RUN test -f /app/ecosystem.config.json || (echo "FATAL: ecosystem.config.json missing" && exit 1)

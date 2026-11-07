@@ -1,6 +1,11 @@
 #!/bin/bash
-# A-018: start.sh - Boots Next.js on Railway for ledgerchat.org
+# start.sh - Boots Next.js on Railway for ledgerchat.org / www.ledgerchat.org
 set -e
+
+# Run pre-deploy migration check if database is configured
+if [ -f scripts/railway-pre-deploy.js ]; then
+  node scripts/railway-pre-deploy.js || true
+fi
 
 # Railway Public Networking default for ledgerchat.org is port 8080, but respects $PORT if set.
 APP_PORT="${PORT:-8080}"

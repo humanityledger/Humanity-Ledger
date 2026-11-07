@@ -56,3 +56,30 @@ for (const file of targetFiles) {
 if (patchedCount > 0) {
   console.log(`[Patch cross-fetch] Successfully patched ${patchedCount} cross-fetch file(s) to use globalThis.fetch.`);
 }
+
+// Patch next/dist/bin/next to safely handle unexpanded $PORT from non-shell runners (e.g. Railway custom commands)
+try {
+  const nextBin = path.resolve(__dirname, '../node_modules/next/dist/bin/next');
+  if (fs.existsSync(nextBin)) {
+    let content = fs.readFileSync(nextBin, 'utf8');
+    if (!content.includes('SANITIZED_PORT_ARG')) {
+      const portPatch = `// SANITIZED_PORT_ARG: Auto-resolve literal $PORT passed by non-shell container runtimes
+for (let i = 0; i < process.argv.length; i++) {
+  if (process.argv[i] === '$PORT' || process.argv[i] === '\${PORT}') {
+    process.argv[i] = process.env.PORT || '8080';
+  }
+}
+`;
+      if (content.includes('"use strict";')) {
+        content = content.replace('"use strict";', '"use strict";\n' + portPatch);
+      } else {
+        content = portPatch + content;
+      }
+      fs.writeFileSync(nextBin, content, 'utf8');
+      console.log('[Patch next bin] Successfully added $PORT argument sanitizer to Next.js CLI.');
+    }
+  }
+} catch (portPatchErr) {
+  console.warn('[Patch next bin] Note on port sanitizer:', portPatchErr.message);
+}
+
