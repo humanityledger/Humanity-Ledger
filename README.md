@@ -1,21 +1,4 @@
-
-
-
-
-
-
-
-
-
-
-
-
-<img width="963" height="487" alt="worldmap-transparent" src="https://github.com/user-attachments/assets/40b22c42-dcbf-475c-849f-c7a2664a3030" />
-<img width="1024" height="1024" alt="aztec-logo-black" src="https://github.com/user-attachments/assets/b3dfc96c-38eb-4de6-b8ab-d07552ff37a5" />
-
-
-
-
+<img width="2531" height="400" alt="humanity-ledger-private-credentials" src="https://github.com/user-attachments/assets/393a0266-4ddb-426a-af2d-da76fbe5cec2" />
 # Humanity Ledger Protocol
 
 A messaging application (Ledger Chat) that uses XMTP for end-to-end encrypted direct messages and the Aztec network (testnet) for private payments, plus experimental standalone Noir circuits.
