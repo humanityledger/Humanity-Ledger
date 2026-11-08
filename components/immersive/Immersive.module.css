@@ -1,9 +1,6 @@
 /* The living background. See ImmersiveField.tsx. */
 
 .field {
-  --ax: 72%;
-  --ay: 18%;
-  --ak: 0;
   position: fixed;
   inset: -20px;
   z-index: 0;
@@ -15,16 +12,14 @@
   background:
     linear-gradient(180deg, #f4f6fa 0%, #f6f7fa 50%, #f4f6fa 100%);
   contain: strict;
-  transform: translateZ(0);
 }
 
 .fieldAbsolute {
   position: absolute;
 }
 
-/* Soft blue light. Two fixed pools drift slowly; a third follows the cursor
-   (--ax/--ay) and only shows while it is over the page (--ak).
-   Paints cool Aztec blue pools — no warm cream/orange tint. */
+/* Soft blue light. Pools drift slowly via pure GPU compositor animation.
+   Zero JavaScript style recalculations or reflows. */
 .aurora {
   position: absolute;
   inset: -20%;
@@ -35,17 +30,6 @@
   filter: blur(14px);
   animation: hl-aurora-drift 26s ease-in-out infinite alternate;
   transform: translateZ(0);
-}
-
-.aurora::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    24% 24% at calc(16.66% + var(--ax) * 0.714) calc(16.66% + var(--ay) * 0.714),
-    rgba(39, 84, 214, calc(0.24 * var(--ak))),
-    transparent 72%
-  );
 }
 
 .lattice {

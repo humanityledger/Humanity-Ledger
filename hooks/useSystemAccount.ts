@@ -1,7 +1,6 @@
 "use client";
 
 import { useAccount } from 'wagmi';
-import { useAppKitAccount } from '@reown/appkit/react';
 import { useState, useEffect, useRef } from 'react';
 import { useWalletStore } from '@/lib/store/wallet-store';
 import { getAddress } from 'viem';
@@ -91,7 +90,6 @@ function readHandshakeCookie(): string | null {
 //  Hook 
 export function useSystemAccount() {
     const wagmiAccount = useAccount();
-    const appKitAccount = useAppKitAccount();
     const storeAddress = useWalletStore(s => s.address);
     const storePrivateKey = useWalletStore(s => s.privateKey);
     const storePasswordHash = useWalletStore(s => s.passwordHash);
@@ -111,7 +109,7 @@ export function useSystemAccount() {
 
     // [QD TOKENOMICS] Fire daily login earn event when wallet is connected
     useEffect(() => {
-        const address = wagmiAccount.address || (appKitAccount.isConnected ? appKitAccount.address : undefined) || storeAddress;
+        const address = wagmiAccount.address || storeAddress;
         if (!address || typeof address !== 'string' || address.startsWith('email_')) return;
         const today = new Date().toDateString();
         const key = `${address}_${today}`;
@@ -124,15 +122,14 @@ export function useSystemAccount() {
             credentials: 'include',
             body: JSON.stringify({ address: address.toLowerCase(), event: 'DAILY_LOGIN' }),
         }).catch(() => {});
-    }, [wagmiAccount.address, appKitAccount.isConnected, appKitAccount.address, storeAddress]);
+    }, [wagmiAccount.address, storeAddress]);
 
     // [CRITICAL FIX] Absolute Firewall for Logout Loops
     // Wagmi sometimes auto-reconnects on page load if IndexedDB clearing fails.
-    // If the user has an active, connected wallet in Wagmi or AppKit (e.g. MetaMask extension),
+    // If the user has an active, connected wallet in Wagmi (e.g. MetaMask extension),
     // they are NOT disconnected.
     const isLiveWallet = Boolean(
         (wagmiAccount.isConnected && wagmiAccount.address) ||
-        (appKitAccount.isConnected && appKitAccount.address) ||
         (typeof window !== 'undefined' && (window as any).ethereum?.selectedAddress)
     );
 
@@ -274,16 +271,14 @@ export function useSystemAccount() {
         };
     }
 
-    //  Priority 1: Direct Web3 Connection (Wagmi / AppKit / MetaMask Extension)
+    //  Priority 1: Direct Web3 Connection (Wagmi / MetaMask Extension)
     // ABSOLUTE PRIORITY: a live external wallet connection always wins over any
     // cached or in-memory Humanity Ledger local-wallet state.
     const activeWeb3Address = wagmiAccount.address
-        || (appKitAccount.isConnected && appKitAccount.address ? (appKitAccount.address as `0x${string}`) : undefined)
         || (!isGuarded && typeof window !== 'undefined' && (window as any).ethereum?.selectedAddress ? ((window as any).ethereum.selectedAddress as `0x${string}`) : undefined);
 
     const isWeb3Connected = Boolean(
         (wagmiAccount.isConnected && wagmiAccount.address) ||
-        (appKitAccount.isConnected && appKitAccount.address) ||
         (!isGuarded && typeof window !== 'undefined' && (window as any).ethereum?.selectedAddress)
     );
 

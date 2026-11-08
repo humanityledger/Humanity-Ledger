@@ -54,10 +54,6 @@
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* Hardware-accelerated smooth scrolling */
-  transform: translateZ(0);
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: none;
 }
 
 @media (max-width: 760px) {
@@ -279,11 +275,6 @@
   padding: var(--card-pad);
   box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.04), 0 12px 36px -20px rgba(16, 24, 40, 0.16);
   scroll-margin-top: 96px;
-  /* MODERN BROWSER FLUIDITY: browser engine skips layout and painting of
-     off-screen sections until user approaches them. Drastically cuts scroll CPU time. */
-  content-visibility: auto;
-  contain-intrinsic-size: 1px 650px;
-  transform: translateZ(0);
 }
 
 /* Sections that sit straight on the field, like an editorial page. */
