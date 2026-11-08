@@ -31,7 +31,21 @@ export const config = createConfig({
         // CRITICAL: injected must be listed FIRST so MetaMask/Rabby are
         // the default connector and contract writes get proper RPC params.
         // Only one injected() instance  having two causes 'Connector already connected' errors.
-        injected({ target: 'metaMask' }),
+        // Generic target: works inside the MetaMask, Coinbase Wallet and Rainbow
+        // in-app browsers (window.ethereum), where target:'metaMask' fails
+        // for the last two. Prefers MetaMask when several wallets inject.
+        injected({
+            target: {
+                id: 'injected',
+                name: 'Browser Wallet',
+                provider: (w) => {
+                    const eth = (w as any)?.ethereum;
+                    if (!eth) return undefined;
+                    const list = Array.isArray(eth.providers) ? eth.providers : [eth];
+                    return list.find((p: any) => p?.isMetaMask) ?? list[0];
+                },
+            },
+        }),
         walletConnect({
             projectId,
             metadata: {

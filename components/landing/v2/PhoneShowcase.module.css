@@ -301,8 +301,14 @@
 }
 
 .connect .glass {
-  background: #050506;
+  /* No solid black backing: its antialiased edge showed as a hairline
+     through the fingers on iOS. The photograph already has the bezel. */
+  background: transparent;
   border-radius: 66px;
+}
+
+.connect .screen::after {
+  box-shadow: none;
 }
 
 /* The glass catches the same light as the room. */

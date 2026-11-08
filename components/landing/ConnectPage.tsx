@@ -599,9 +599,12 @@ export default function ConnectPage() {
               } else if (brand === "coinbase") {
                 targetLink = `https://go.cb-w.com/wc?uri=${encodeURIComponent(uri)}`;
               }
+              // Shown as a tappable button too: iOS Safari may ignore a
+              // redirect that is not tied to a tap, so the user can always
+              // open the wallet by hand.
               setMobileDeepLink(targetLink);
               if (typeof window !== "undefined") {
-                window.location.href = targetLink;
+                window.location.assign(targetLink);
               }
             });
           }
