@@ -366,7 +366,7 @@ export default function ConnectPage() {
         const nonceRes = await fetch("/api/siwe/nonce", {
           cache: "no-store",
           credentials: "include",
-          signal: AbortSignal.timeout(8_000),
+          signal: AbortSignal.timeout(12_000),
         });
         if (!nonceRes.ok) {
           setSignError(
@@ -392,7 +392,45 @@ export default function ConnectPage() {
           issuedAt: new Date().toISOString(),
         });
         const message = siwe.prepareMessage();
-        const signature = await signMessageAsync({ message });
+
+        // Robust mobile signature handling:
+        // On iOS / Android, when switching to MetaMask/Rainbow to sign, the tab may background.
+        // We retry up to 3 times for transient connection/relay-reconnect errors.
+        let signature = "";
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            signature = await signMessageAsync({ message });
+            if (signature) break;
+          } catch (e: unknown) {
+            const errMsg = ((e as { message?: string })?.message || "").toLowerCase();
+            const isUserDecline =
+              errMsg.includes("rejected") ||
+              errMsg.includes("denied") ||
+              errMsg.includes("user rejected") ||
+              errMsg.includes("cancel");
+
+            if (isUserDecline) {
+              throw e; // User explicitly cancelled, do not retry
+            }
+
+            const isRecoverable =
+              errMsg.includes("not connected") ||
+              errMsg.includes("reconnecting") ||
+              errMsg.includes("socket stall") ||
+              errMsg.includes("provider not found") ||
+              errMsg.includes("unavailable") ||
+              errMsg.includes("timeout") ||
+              errMsg.includes("network") ||
+              errMsg.includes("relay");
+
+            if (isRecoverable && attempt < 2) {
+              console.warn(`[SIWE:Mobile] Transient error on attempt ${attempt + 1}, retrying...`, errMsg);
+              await new Promise((r) => setTimeout(r, 1500));
+              continue;
+            }
+            throw e;
+          }
+        }
 
         const vr = await fetch("/api/siwe/verify", {
           method: "POST",
@@ -415,16 +453,51 @@ export default function ConnectPage() {
         signingRef.current = false;
       } catch (e: unknown) {
         const m = (e as { message?: string })?.message?.toLowerCase() ?? "";
-        setSignError(
-          m.includes("rejected") || m.includes("denied") || m.includes("cancel")
-            ? "You declined the signature in your wallet. Nothing was charged and nothing was sent."
-            : null,
-        );
+        if (m.includes("rejected") || m.includes("denied") || m.includes("cancel") || m.includes("user rejected")) {
+          setSignError("You declined the signature in your wallet. Nothing was charged and nothing was sent.");
+        } else if (m.includes("timeout") || m.includes("timed out") || m.includes("expired")) {
+          setSignError("The signature request timed out. Please tap 'Try again' and approve the request in your wallet.");
+        } else {
+          setSignError("Connection interrupted while waiting for wallet. Please tap 'Try again'.");
+        }
         setAuthStatus("failed");
         signingRef.current = false;
       }
     })();
   }, [mounted, accountStatus, address, authStatus, chainId, isLinked, signMessageAsync, setLinked]);
+
+  /* ── Auto-heal / Resume when returning from wallet app ────────────────── */
+  useEffect(() => {
+    const onVisibilityChange = async () => {
+      if (typeof document === "undefined" || document.visibilityState !== "visible") return;
+      if (redirectingRef.current) return;
+
+      // 1. Check if session was completed in background or already valid
+      try {
+        const r = await fetch("/api/auth/verify-session", { cache: "no-store", credentials: "include" });
+        if (r.ok) {
+          const d = await r.json();
+          if (d.authenticated && d.user?.address) {
+            setSignStep(3);
+            setLinked(true);
+            redirectingRef.current = true;
+            window.location.replace(returnPathFromQuery());
+            return;
+          }
+        }
+      } catch {}
+
+      // 2. If stuck in failed state after tab background restore, enable auto-retry if still connected
+      if (effectiveIsConnected && authStatus === "failed") {
+        signingRef.current = false;
+        setSignError(null);
+        setAuthStatus("idle");
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [effectiveIsConnected, authStatus, setLinked]);
 
   /* ── Actions ──────────────────────────────────────────────────────────── */
   const openAppKitSafe = useCallback(() => {
@@ -478,6 +551,10 @@ export default function ConnectPage() {
         /* storage unavailable */
       }
       const brand = walletId.split("-")[0];
+      try {
+        sessionStorage.setItem("preferred_mobile_wallet", brand);
+      } catch {}
+
       const inj = connectors.find(
         (c) =>
           c.id === "injected" ||
@@ -493,28 +570,11 @@ export default function ConnectPage() {
         return;
       }
 
-      // If user tapped a specific wallet on mobile outside its in-app browser,
-      // launch the wallet app via its official universal deep link!
-      if (typeof window !== "undefined") {
-        const cleanUrl = window.location.href.replace(/^https?:\/\//, "");
-        if (brand === "metamask") {
-          toast.info("Opening MetaMask app...");
-          window.location.href = `https://metamask.app.link/dapp/${cleanUrl}`;
-          setTimeout(() => openAppKitSafe(), 2500);
-          return;
-        } else if (brand === "rainbow") {
-          toast.info("Opening Rainbow app...");
-          window.location.href = `https://rainbow.me/ul/v1/navigate?url=${encodeURIComponent(window.location.href)}`;
-          setTimeout(() => openAppKitSafe(), 2500);
-          return;
-        } else if (brand === "coinbase") {
-          toast.info("Opening Coinbase Wallet app...");
-          window.location.href = `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(window.location.href)}`;
-          setTimeout(() => openAppKitSafe(), 2500);
-          return;
-        }
-      }
-
+      // Outside an in-app browser (e.g. mobile Safari / Chrome):
+      // Launch Reown AppKit natively!
+      // This establishes the WalletConnect session and prompts MetaMask / Rainbow / Coinbase
+      // to connect and sign via standard universal link, cleanly returning to Safari/Chrome
+      // instead of hijacking the tab or opening an in-app webview / Google search.
       openAppKitSafe();
     },
     [connect, connectors, openAppKitSafe],

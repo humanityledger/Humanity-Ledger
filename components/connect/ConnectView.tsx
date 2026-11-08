@@ -294,6 +294,23 @@ function Signing(p: ConnectViewProps) {
       </ol>
 
       <div className={s.actions}>
+        {p.isMobile && (
+          <button
+            type="button"
+            className={`${s.btn} ${s.btnPrimary}`}
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                const pref = sessionStorage.getItem("preferred_mobile_wallet") || "";
+                if (pref === "metamask") window.location.href = "metamask://";
+                else if (pref === "rainbow") window.location.href = "rainbow://";
+                else if (pref === "coinbase") window.location.href = "cbwallet://";
+                else p.onOtherWallets();
+              }
+            }}
+          >
+            Open wallet to sign
+          </button>
+        )}
         <button type="button" className={s.btnText} onClick={p.onDisconnect}>
           Cancel and disconnect
         </button>
