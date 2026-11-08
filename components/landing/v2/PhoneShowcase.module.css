@@ -256,9 +256,7 @@
   width: 1600px;
   transform-origin: 0 0;
   transform: translate(var(--ox, 0px), var(--oy, 0px)) scale(var(--s, 0.4));
-  /* Hidden until the script has fitted the photo to its tile, so a photo is
-     never seen at the default scale (cut off, with an empty band below). */
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.35s ease;
 }
 

@@ -115,9 +115,8 @@ const CENTRES = PHONES.map((ph) => phoneCentre(ph.m));
 /** Position the photo inside its tile: cover the tile, zoomed towards the phone. */
 function fitPhoto(el: HTMLElement, i: number, zoom: number) {
   const ph = PHONES[i];
-  const W = el.clientWidth;
-  const H = el.clientHeight;
-  if (!W || !H) return;
+  const W = el.clientWidth || el.parentElement?.clientWidth || 400;
+  const H = el.clientHeight || el.parentElement?.clientHeight || 500;
   const sc = Math.max(W / ph.w, H / ph.h) * zoom;
   const fx = CENTRES[i].x * 0.7 + (ph.w / 2) * 0.3;
   const fy = CENTRES[i].y * 0.7 + (ph.h / 2) * 0.3;
@@ -126,6 +125,7 @@ function fitPhoto(el: HTMLElement, i: number, zoom: number) {
   el.style.setProperty("--s", String(sc));
   el.style.setProperty("--ox", `${ox}px`);
   el.style.setProperty("--oy", `${oy}px`);
+  el.dataset.fit = "1";
 }
 
 /** The diagonal: upcoming photos wait below and to the right, past ones leave up and to the left. */
@@ -165,8 +165,20 @@ function scrollParent(el: HTMLElement | null): HTMLElement | null {
   return (document.scrollingElement as HTMLElement) ?? null;
 }
 
-function PhonePhoto({ ph, i, progress, active }: { ph: Phone; i: number; progress: number; active: boolean }) {
-  const { Screen } = ph;
+function PhonePhoto({
+  ph,
+  i,
+  progress,
+  active,
+  screen,
+}: {
+  ph: Phone;
+  i: number;
+  progress: number;
+  active: boolean;
+  screen?: React.ComponentType<ScreenProps>;
+}) {
+  const Screen = screen ?? ph.Screen;
   return (
     <div className={s.photo} data-photo={i} aria-hidden="true">
       <div className={s.frame}>
@@ -178,15 +190,17 @@ function PhonePhoto({ ph, i, progress, active }: { ph: Phone; i: number; progres
           </div>
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          className={s.fingers}
-          src={ph.fingers}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          draggable={false}
-          style={{ left: ph.f.x, top: ph.f.y, width: ph.f.w, height: ph.f.h }}
-        />
+        {ph.f.w > 0 && (
+          <img
+            className={s.fingers}
+            src={ph.fingers}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            style={{ left: ph.f.x, top: ph.f.y, width: ph.f.w, height: ph.f.h }}
+          />
+        )}
       </div>
     </div>
   );
@@ -407,8 +421,25 @@ export function PhoneShowcase() {
  * One photograph on its own, playing its screen on a loop. Used where there
  * is no scroll to drive it, such as the sign-in page.
  */
-export function LivePhone({ id = "chat", className }: { id?: string; className?: string }) {
+export function LivePhone({
+  id = "chat",
+  screen,
+  zoom,
+  fill,
+  className,
+}: {
+  /** Which photograph to use. */
+  id?: string;
+  /** Which screen to play on it (defaults to the photo's own). */
+  screen?: string;
+  /** Override how far the photo is zoomed towards the phone. */
+  zoom?: number;
+  /** Instead of a zoom: the share of the tile's height the whole phone should take (e.g. 0.85). */
+  fill?: number;
+  className?: string;
+}) {
   const i = Math.max(0, PHONES.findIndex((ph) => ph.id === id));
+  const ScreenOverride = screen ? PHONES.find((ph) => ph.id === screen)?.Screen : undefined;
   const ref = useRef<HTMLDivElement>(null);
   const [p, setP] = useState(0);
   const [visible, setVisible] = useState(true);
@@ -418,14 +449,28 @@ export function LivePhone({ id = "chat", className }: { id?: string; className?:
     if (!el) return;
     const fit = () => {
       const photo = el.querySelector<HTMLElement>("[data-photo]");
-      if (photo) fitPhoto(photo, i, el.clientWidth < 520 ? 1.4 : 1.06);
+      if (!photo) return;
+      let z = zoom ?? (el.clientWidth < 520 ? 1.4 : 1.06);
+      if (fill) {
+        // Size the photo so the whole phone takes `fill` of the tile's height,
+        // whatever the tile's shape, but never leave the tile uncovered.
+        const ph = PHONES[i];
+        const W = photo.clientWidth || el.clientWidth || 400;
+        const H = photo.clientHeight || el.clientHeight || 500;
+        if (W && H) {
+          const cover = Math.max(W / ph.w, H / ph.h);
+          const glassH = Math.hypot(ph.m[4], ph.m[5]) * 932;
+          z = Math.max(1, (fill * H) / glassH / cover);
+        }
+      }
+      fitPhoto(photo, i, z);
     };
     fit();
     if (typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [i]);
+  }, [i, zoom, fill]);
 
   useEffect(() => {
     const el = ref.current;
@@ -459,7 +504,7 @@ export function LivePhone({ id = "chat", className }: { id?: string; className?:
 
   return (
     <div ref={ref} className={`${s.live} ${className ?? ""}`}>
-      <PhonePhoto ph={PHONES[i]} i={i} progress={p} active={visible} />
+      <PhonePhoto ph={PHONES[i]} i={i} progress={p} active={visible} screen={ScreenOverride} />
     </div>
   );
 }
