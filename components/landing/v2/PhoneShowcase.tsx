@@ -41,17 +41,14 @@ const PHONES: Phone[] = [
     title: "Talk like you always do.",
     text: "Direct messages are encrypted on your device before they are sent and travel over XMTP, an open messaging network. You sign in with your wallet, so there is no phone number or email to hand over.",
     src: "/landing/phones/p1.webp",
-    fingers: "",
+    fingers: "/landing/phones/p1-fingers.webp",
     w: 1600,
-    h: 1066,
-    // Screen quad (px): TL=(600,110) TR=(825,152) BR=(848,862) BL=(623,820)
+    h: 1067,
     m: [
-      0.523255814, 0.097674419, 0, 0,
-      0.024678112, 0.761802575, 0, 0,
-      0, 0, 1, 0,
-      600.0, 110.0, 0, 1.0,
+      0.903914422, -0.199539273, 0, -4.6e-8, 0.306408086, 0.826558745, 0, -1.0101e-5, 0, 0, 1, 0, 464.399993896,
+      181.600006104, 0, 1,
     ],
-    f: { x: 0, y: 0, w: 0, h: 0 },
+    f: { x: 479, y: 105, w: 656, h: 848 },
     Screen: ChatScreen,
   },
   {
@@ -60,17 +57,11 @@ const PHONES: Phone[] = [
     title: "Call straight from the chat.",
     text: "Voice calls connect browser to browser over WebRTC and are encrypted in transit with DTLS-SRTP. No phone number is involved at any point.",
     src: "/landing/phones/p3.webp",
-    fingers: "",
+    fingers: "/landing/phones/p3-fingers.webp",
     w: 1600,
     h: 1066,
-    // Screen quad (px): TL=(650,118) TR=(995,112) BR=(998,912) BL=(653,918)
-    m: [
-      0.802325581, -0.013953488, 0, 0,
-      0.003218884, 0.858369099, 0, 0,
-      0, 0, 1, 0,
-      650.0, 118.0, 0, 1.0,
-    ],
-    f: { x: 0, y: 0, w: 0, h: 0 },
+    m: [0.863255842, 0, 0, 0, 0, 0.847210299, 0, 0, 0, 0, 1, 0, 612.0, 86.400001526, 0, 1],
+    f: { x: 610, y: 423, w: 21, h: 296 },
     Screen: VoiceCallScreen,
   },
   {
@@ -79,17 +70,14 @@ const PHONES: Phone[] = [
     title: "Face to face, on your terms.",
     text: "Video calls use the same encrypted connection. Turn on Hide my IP address in settings and calls are routed through a relay, so the other person never sees your IP address.",
     src: "/landing/phones/p2.webp",
-    fingers: "",
+    fingers: "/landing/phones/p2-fingers.webp",
     w: 1600,
     h: 1066,
-    // Screen quad (px): TL=(600,88) TR=(800,55) BR=(830,660) BL=(630,692)
     m: [
-      0.462065336, -0.076953938, 0, 0,
-      0.032355117, 0.648251309, 0, 0,
-      0, 0, 1, 0,
-      600.0, 88.0, 0, 1.0,
+      0.824615639, 0.012275579, 0, 1.3135e-5, 0.054036733, 0.778028224, 0, -2.125e-6, 0, 0, 1, 0, 532.960021973,
+      79.919998169, 0, 1,
     ],
-    f: { x: 0, y: 0, w: 0, h: 0 },
+    f: { x: 552, y: 374, w: 39, h: 271 },
     Screen: VideoCallScreen,
   },
   {
@@ -98,17 +86,11 @@ const PHONES: Phone[] = [
     title: "Settle up where you agreed it.",
     text: "Send ETH, USDC or USDT from your own wallet, or try private payments on the Aztec test network, where the amount and the recipient stay hidden. Test tokens only, with no real value.",
     src: "/landing/phones/p4.webp",
-    fingers: "",
+    fingers: "/landing/phones/p4-fingers.webp",
     w: 1600,
     h: 1066,
-    // Screen quad (px): TL=(360,145) TR=(680,138) BR=(680,862) BL=(360,870)
-    m: [
-      0.746370294, -0.015835796, 0, 0,
-      0, 0.777896996, 0, 0,
-      0, 0, 1, 0,
-      360.0, 145.0, 0, 1.0,
-    ],
-    f: { x: 0, y: 0, w: 0, h: 0 },
+    m: [0.885581367, 0, 0, 0, 0, 0.871244647, 0, 0, 0, 0, 1, 0, 605.600036621, 59.200000763, 0, 1],
+    f: { x: 602, y: 496, w: 263, h: 379 },
     Screen: PaymentScreen,
   },
 ];
@@ -144,46 +126,33 @@ function fitPhoto(el: HTMLElement, i: number, zoom: number) {
   el.style.setProperty("--s", String(sc));
   el.style.setProperty("--ox", `${ox}px`);
   el.style.setProperty("--oy", `${oy}px`);
-  // The photo stays hidden until it has been fitted once (see .photo[data-fit]).
-  el.dataset.fit = "1";
 }
 
-/**
- * A deck: the next photo waits just behind the current one, peeking out
- * below and to the right, and comes forward as the visitor scrolls; the
- * current one lifts away up and to the left. Every tile stays inside the
- * stage, so no photo is ever cut by the edge of the card.
- */
+/** The diagonal: upcoming photos wait below and to the right, past ones leave up and to the left. */
 function tileStyle(d: number) {
   const a = Math.abs(d);
-  let tx: number, ty: number, sc: number, op: number, rz: number;
+  let tx: number, ty: number, sc: number, op: number;
   if (d >= 0) {
-    // d = 1: the one waiting behind; d = 2 and further: hidden behind it.
-    const k = Math.min(d, 1);
-    tx = k * 8;
-    ty = k * 7;
-    sc = 1 - 0.08 * k;
-    rz = k * 1.6;
-    // Opaque while it comes forward, so it covers the one leaving.
-    op = d <= 1 ? 1 : clamp(1 - (d - 1) * 1.6);
+    tx = d * 46;
+    ty = d * 30;
+    sc = 1 - 0.13 * d;
+    // Opaque while it arrives, so it covers the one leaving instead of blending with it.
+    op = clamp(1 - 0.55 * (d - 1));
   } else {
-    tx = d * 22;
-    ty = d * 26;
-    sc = 1 - 0.05 * a;
-    rz = d * 2.4;
-    op = clamp(1 - 1.4 * a);
+    tx = d * 34;
+    ty = d * 44;
+    sc = 1 - 0.06 * a;
+    op = clamp(1 - 1.25 * a);
   }
+  const rx = d * 5;
+  const ry = d * -9;
+  const rz = d * -1.2;
   return {
-    transform: `perspective(1800px) translate3d(${tx}%, ${ty}%, 0) rotateX(${d * 2.5}deg) rotateY(${d * -4}deg) rotateZ(${rz}deg) scale(${sc})`,
+    transform: `perspective(1800px) translate3d(${tx}%, ${ty}%, 0) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${sc})`,
     opacity: op,
     zIndex: 100 - Math.round(a * 10) - (d < 0 ? 20 : 0),
     visibility: op < 0.01 ? "hidden" : "visible",
   } as const;
-}
-
-/** Screen pixels per CSS pixel for this element (below 1 while the page is zoomed out). */
-function screenScale(el: HTMLElement, rect = el.getBoundingClientRect()) {
-  return el.offsetHeight > 0 && rect.height > 0 ? rect.height / el.offsetHeight : 1;
 }
 
 function scrollParent(el: HTMLElement | null): HTMLElement | null {
@@ -196,8 +165,8 @@ function scrollParent(el: HTMLElement | null): HTMLElement | null {
   return (document.scrollingElement as HTMLElement) ?? null;
 }
 
-function PhonePhoto({ ph, i, progress, active, screen }: { ph: Phone; i: number; progress: number; active: boolean; screen?: React.ComponentType<ScreenProps> }) {
-  const Screen = screen ?? ph.Screen;
+function PhonePhoto({ ph, i, progress, active }: { ph: Phone; i: number; progress: number; active: boolean }) {
+  const { Screen } = ph;
   return (
     <div className={s.photo} data-photo={i} aria-hidden="true">
       <div className={s.frame}>
@@ -209,17 +178,15 @@ function PhonePhoto({ ph, i, progress, active, screen }: { ph: Phone; i: number;
           </div>
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        {ph.f.w > 0 && (
-          <img
-            className={s.fingers}
-            src={ph.fingers}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            draggable={false}
-            style={{ left: ph.f.x, top: ph.f.y, width: ph.f.w, height: ph.f.h }}
-          />
-        )}
+        <img
+          className={s.fingers}
+          src={ph.fingers}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+          style={{ left: ph.f.x, top: ph.f.y, width: ph.f.w, height: ph.f.h }}
+        />
       </div>
     </div>
   );
@@ -263,8 +230,7 @@ export function PhoneShowcase() {
       const dw = deck.clientWidth;
       const dh = deck.clientHeight;
       const aspect = 1.25;
-      // Room for the next photo peeking out from behind (8% right, 7% down).
-      const tw = Math.min(dw * 0.88, dh * 0.86 * aspect);
+      const tw = Math.min(dw, dh * 0.84 * aspect);
       deck.style.setProperty("--tw", `${tw}px`);
       deck.style.setProperty("--th", `${tw / aspect}px`);
     }
@@ -276,26 +242,10 @@ export function PhoneShowcase() {
   useEffect(() => {
     layout();
     const deck = deckRef.current;
-    if (!deck) return;
-    // Fit again whenever the deck or any photo changes size, once the photos
-    // have loaded and when the page is shown again: a photo fitted while it
-    // still had no size would otherwise keep the default scale and leave an
-    // empty band at the bottom of its tile.
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => layout()) : null;
-    ro?.observe(deck);
-    deck.querySelectorAll<HTMLElement>("[data-photo]").forEach((el) => ro?.observe(el));
-    const imgs = [...deck.querySelectorAll<HTMLImageElement>("img")];
-    imgs.forEach((img) => img.addEventListener("load", layout));
-    window.addEventListener("load", layout);
-    window.addEventListener("pageshow", layout);
-    const late = [80, 400, 1200].map((ms) => window.setTimeout(layout, ms));
-    return () => {
-      ro?.disconnect();
-      imgs.forEach((img) => img.removeEventListener("load", layout));
-      window.removeEventListener("load", layout);
-      window.removeEventListener("pageshow", layout);
-      late.forEach(clearTimeout);
-    };
+    if (!deck || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => layout());
+    ro.observe(deck);
+    return () => ro.disconnect();
   }, [layout]);
 
   // Follow the scroll.
@@ -327,10 +277,8 @@ export function PhoneShowcase() {
 
       if (mode === "scroll") {
         const rect = track.getBoundingClientRect();
-        // Rects are in screen pixels; CSS lengths are not when the page is zoomed (67% on desktop).
-        const z = screenScale(track, rect);
-        const top = (parseFloat(getComputedStyle(stage).top) || 84) * z;
-        const dist = Math.max(1, rect.height - stage.offsetHeight * z);
+        const top = parseFloat(getComputedStyle(stage).top) || 84;
+        const dist = Math.max(1, rect.height - stage.offsetHeight);
         const p = clamp((top - rect.top) / dist);
         const seg = Math.min(p * N, N - 1e-6);
         const i0 = Math.floor(seg);
@@ -390,12 +338,10 @@ export function PhoneShowcase() {
     const scroller = scrollParent(track);
     if (!scroller) return;
     const rect = track.getBoundingClientRect();
-    const z = screenScale(track, rect);
-    const top = (parseFloat(getComputedStyle(stage).top) || 84) * z;
-    const dist = rect.height - stage.offsetHeight * z;
+    const top = parseFloat(getComputedStyle(stage).top) || 84;
+    const dist = rect.height - stage.offsetHeight;
     const target = ((i + 0.62 * (i === N - 1 ? 1.2 : 1)) / N) * dist;
-    // scrollTop is in CSS pixels, the distances above in screen pixels.
-    scroller.scrollTo({ top: scroller.scrollTop + (rect.top - top + target) / z, behavior: "smooth" });
+    scroller.scrollTo({ top: scroller.scrollTop + rect.top - top + target, behavior: "smooth" });
   };
 
   return (
@@ -461,25 +407,8 @@ export function PhoneShowcase() {
  * One photograph on its own, playing its screen on a loop. Used where there
  * is no scroll to drive it, such as the sign-in page.
  */
-export function LivePhone({
-  id = "chat",
-  screen,
-  zoom,
-  fill,
-  className,
-}: {
-  /** Which photograph to use. */
-  id?: string;
-  /** Which screen to play on it (defaults to the photo's own). */
-  screen?: string;
-  /** Override how far the photo is zoomed towards the phone. */
-  zoom?: number;
-  /** Instead of a zoom: the share of the tile's height the whole phone should take (e.g. 0.85). */
-  fill?: number;
-  className?: string;
-}) {
+export function LivePhone({ id = "chat", className }: { id?: string; className?: string }) {
   const i = Math.max(0, PHONES.findIndex((ph) => ph.id === id));
-  const ScreenOverride = screen ? PHONES.find((ph) => ph.id === screen)?.Screen : undefined;
   const ref = useRef<HTMLDivElement>(null);
   const [p, setP] = useState(0);
   const [visible, setVisible] = useState(true);
@@ -489,36 +418,14 @@ export function LivePhone({
     if (!el) return;
     const fit = () => {
       const photo = el.querySelector<HTMLElement>("[data-photo]");
-      if (!photo) return;
-      let z = zoom ?? (el.clientWidth < 520 ? 1.4 : 1.06);
-      if (fill) {
-        // Size the photo so the whole phone takes `fill` of the tile's height,
-        // whatever the tile's shape, but never leave the tile uncovered.
-        const ph = PHONES[i];
-        const W = photo.clientWidth;
-        const H = photo.clientHeight;
-        if (W && H) {
-          const cover = Math.max(W / ph.w, H / ph.h);
-          const glassH = Math.hypot(ph.m[4], ph.m[5]) * 932;
-          z = Math.max(1, (fill * H) / glassH / cover);
-        }
-      }
-      fitPhoto(photo, i, z);
+      if (photo) fitPhoto(photo, i, el.clientWidth < 520 ? 1.4 : 1.06);
     };
     fit();
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
-    ro?.observe(el);
-    const imgs = [...el.querySelectorAll<HTMLImageElement>("img")];
-    imgs.forEach((img) => img.addEventListener("load", fit));
-    window.addEventListener("pageshow", fit);
-    const late = [80, 400, 1200].map((ms) => window.setTimeout(fit, ms));
-    return () => {
-      ro?.disconnect();
-      imgs.forEach((img) => img.removeEventListener("load", fit));
-      window.removeEventListener("pageshow", fit);
-      late.forEach(clearTimeout);
-    };
-  }, [i, zoom, fill]);
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [i]);
 
   useEffect(() => {
     const el = ref.current;
@@ -552,7 +459,7 @@ export function LivePhone({
 
   return (
     <div ref={ref} className={`${s.live} ${className ?? ""}`}>
-      <PhonePhoto ph={PHONES[i]} i={i} progress={p} active={visible} screen={ScreenOverride} />
+      <PhonePhoto ph={PHONES[i]} i={i} progress={p} active={visible} />
     </div>
   );
 }

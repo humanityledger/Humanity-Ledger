@@ -1363,34 +1363,31 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (!activePeer) return;
     const peerLower = activePeer.toLowerCase();
     const dmId = `dm-${peerLower}`;
-    const clearTs = Date.now();
+    const clearTs = Date.now() + 5000;
     const myAddr = (effectiveAddress || address || '').toLowerCase();
 
-    localStorage.setItem(`ledger_cleared_${peerLower}`, clearTs.toString());
-    if (myAddr) {
-      localStorage.setItem(`ledger_cleared_${myAddr}_${peerLower}`, clearTs.toString());
-      try { setSynced(myAddr, { [`cleared:${peerLower}`]: clearTs }); } catch {}
-    }
-    if (address) {
-      localStorage.setItem(`ledger_cleared_${address.toLowerCase()}_${peerLower}`, clearTs.toString());
-      localStorage.setItem(`ledger_cleared_${address}_${peerLower}`, clearTs.toString());
-    }
+    try {
+      localStorage.setItem(`ledger_cleared_${peerLower}`, clearTs.toString());
+      if (myAddr) {
+        localStorage.setItem(`ledger_cleared_${myAddr}_${peerLower}`, clearTs.toString());
+        try { setSynced(myAddr, { [`cleared:${peerLower}`]: clearTs }); } catch {}
+      }
+      if (address) {
+        localStorage.setItem(`ledger_cleared_${address.toLowerCase()}_${peerLower}`, clearTs.toString());
+        localStorage.setItem(`ledger_cleared_${address}_${peerLower}`, clearTs.toString());
+      }
+    } catch {}
 
+    // Immediately remove all messages of this active chat from React state
     setMessages(prev => prev.filter(m => {
       const cId = (m.conversationId || '').toLowerCase();
-      const sId = (m.senderInboxId || m.senderAddress || m.sender || '').toLowerCase();
-      const rId = (m.recipientInboxId || m.recipientAddress || m.recipient || '').toLowerCase();
-      const id = (m.id || '').toLowerCase();
-
-      if (cId === dmId || cId === peerLower || cId.includes(peerLower)) return false;
-      if (sId === peerLower || rId === peerLower) return false;
-      if (peerLower.length >= 8 && id.includes(peerLower.slice(2, 10))) return false;
+      if (!cId || cId === dmId || cId === peerLower || cId.includes(peerLower) || dmId.includes(cId)) return false;
       return true;
     }));
 
     // Reset pinned message
     setPinnedMessageId(null);
-    localStorage.removeItem(`ledger_pinned_${peerLower}`);
+    try { localStorage.removeItem(`ledger_pinned_${peerLower}`); } catch {}
 
     // Clear sidebar conversation preview
     setConversations(prev => {
@@ -1410,6 +1407,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }).catch(() => {});
 
     setShowClearConfirm(false);
+    setShowHeaderMenu(false);
     toast.success('Chat cleared');
   };
 
@@ -4316,6 +4314,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       try {
         // [1] Load instantly from IndexedDB cache
         const dmId = `dm-${activePeer.toLowerCase()}`;
+        const peerAddrForClearInit = activePeer.toLowerCase();
+        const myAddrForClearInit = (effectiveAddress || address || '').toLowerCase();
+        const clearTsMsInit = Math.max(
+          parseInt(localStorage.getItem(`ledger_cleared_${peerAddrForClearInit}`) || '0', 10),
+          myAddrForClearInit ? parseInt(localStorage.getItem(`ledger_cleared_${myAddrForClearInit}_${peerAddrForClearInit}`) || '0', 10) : 0,
+          address ? parseInt(localStorage.getItem(`ledger_cleared_${address.toLowerCase()}_${peerAddrForClearInit}`) || '0', 10) : 0
+        );
+
         try {
           const rawLocal = await chatDB.getMessagesForConversation(dmId, 100);
           // Earlier builds saved each sent message twice: once under its
@@ -4326,7 +4332,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           if (staleIds.length) chatDB.deleteMessages(staleIds).catch(() => {});
           const localMsgs = (rawLocal || [])
             .filter((m: any) => !(typeof m.id === 'string' && m.id.startsWith('optimistic-')))
-            .map((m: any) => (m.sentAtNs > 1e14 ? { ...m, sentAtNs: Math.floor(m.sentAtNs / 1e6) } : m));
+            .map((m: any) => (m.sentAtNs > 1e14 ? { ...m, sentAtNs: Math.floor(m.sentAtNs / 1e6) } : m))
+            .filter((m: any) => clearTsMsInit === 0 || (m.sentAtNs || 0) > clearTsMsInit);
           if (localMsgs && localMsgs.length > 0 && !cancelled) {
             setMessages(prev => {
               const existingIds = new Set(prev.map(m => m.id));
@@ -6114,9 +6121,29 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               {(() => {
                 // Filter messages for the current active conversation only
                 const convId = `dm-${activePeer!.toLowerCase()}`;
+                const peerLowerForFilter = activePeer!.toLowerCase();
+                const myLowerForFilter = (effectiveAddress || address || '').toLowerCase();
+                let clearTsMs = 0;
+                try {
+                  clearTsMs = Math.max(
+                    parseInt(localStorage.getItem(`ledger_cleared_${peerLowerForFilter}`) || '0', 10),
+                    myLowerForFilter ? parseInt(localStorage.getItem(`ledger_cleared_${myLowerForFilter}_${peerLowerForFilter}`) || '0', 10) : 0,
+                    address ? parseInt(localStorage.getItem(`ledger_cleared_${address.toLowerCase()}_${peerLowerForFilter}`) || '0', 10) : 0
+                  );
+                } catch {}
+
                 const filteredMsgs = messages.filter(m => {
                   if (m.conversationId?.toLowerCase() !== convId.toLowerCase()) return false;
                   if (m.burnAtNs && m.burnAtNs <= Date.now()) return false;
+                  
+                  // Hide any message created at or before the chat was cleared
+                  if (clearTsMs > 0) {
+                    const rawTime = typeof m.sentAtNs === 'number'
+                      ? (m.sentAtNs > 1e14 ? Math.floor(m.sentAtNs / 1e6) : m.sentAtNs)
+                      : (m.sentAtNs ? Number(BigInt(String(m.sentAtNs)) / 1_000_000n) : new Date(m.sentAt || m.sent || 0).getTime());
+                    if (rawTime <= clearTsMs) return false;
+                  }
+
                   const c = typeof m.content === 'string' ? m.content : '';
                   // Call signals stay hidden; the call-log bubbles built from them show.
                   if (c.startsWith('__CALL_') && !c.startsWith(CALL_LOG_PREFIX)) return false;
