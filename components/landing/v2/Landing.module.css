@@ -38,21 +38,26 @@
 }
 
 .page {
-  --page-bg: #f2f3f5;
+  --page-bg: #f4f6fa;
   --card-radius: 28px;
   --card-pad: 64px;
   --gutter: 32px;
 
   position: relative;
   min-height: calc(100vh / var(--hl-zoom, 1));
-  /* The living field (ImmersiveField) paints the background. */
-  background: transparent;
+  /* UNIFIED AZTEC NEUTRAL BACKGROUND:
+     Matches ImmersiveField and body background perfectly. No cream or dark bands. */
+  background: #f4f6fa;
   color: var(--hl-ink);
   font-family: var(--hl-font);
   font-size: 16px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Hardware-accelerated smooth scrolling */
+  transform: translateZ(0);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
 }
 
 @media (max-width: 760px) {
@@ -266,14 +271,19 @@
   position: relative;
   min-width: 0;
   max-width: 100%;
-  /* Nearly opaque white over the living field: no backdrop blur here, so the
-     moving canvas behind does not force every large card to re-blur. */
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  /* Solid pure white card: zero background bleed-through during fast scroll,
+     delivering crisp 120fps compositor performance like Aztec.network. */
+  background: #ffffff;
+  border: 1px solid rgba(16, 24, 40, 0.08);
   border-radius: var(--card-radius);
   padding: var(--card-pad);
-  box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.05), 0 18px 48px -28px rgba(16, 24, 40, 0.28);
+  box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.04), 0 12px 36px -20px rgba(16, 24, 40, 0.16);
   scroll-margin-top: 96px;
+  /* MODERN BROWSER FLUIDITY: browser engine skips layout and painting of
+     off-screen sections until user approaches them. Drastically cuts scroll CPU time. */
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 650px;
+  transform: translateZ(0);
 }
 
 /* Sections that sit straight on the field, like an editorial page. */
@@ -281,13 +291,19 @@
   background: transparent;
   border-color: transparent;
   box-shadow: none;
+  content-visibility: visible;
 }
 
-/* Gentle reveal while scrolling. The resting state is fully visible, so the
-   page reads correctly with no motion and in browsers without scroll
-   timelines. */
+/* Hero card: always visible without intrinsic size estimation */
+.hero {
+  content-visibility: visible !important;
+}
+
+/* Gentle reveal while scrolling — DESKTOP ONLY.
+   On mobile/touch devices, cards render solid immediately without scroll-linked
+   transforms, eliminating jank, paint lags and background flashes. */
 @supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
+  @media (min-width: 981px) and (hover: hover) and (prefers-reduced-motion: no-preference) {
     .reveal {
       animation: reveal linear both;
       animation-timeline: view();
@@ -300,8 +316,8 @@
 
 @keyframes reveal {
   from {
-    opacity: 0.55;
-    transform: translateY(24px) scale(0.99);
+    opacity: 0.65;
+    transform: translateY(18px) scale(0.995);
   }
   to {
     opacity: 1;
@@ -337,6 +353,12 @@
   font-weight: 400;
   letter-spacing: -0.025em;
   text-wrap: balance;
+  /* FIX: Italic glyphs' right descenders can extend beyond the content box and be
+     clipped by overflow-x: clip on html. Add a small padding-right so the full
+     letter including any italic overhang is always visible. */
+  padding-right: 4px;
+  /* Prevent text from being clipped on the right by any parent overflow: hidden */
+  overflow: visible;
 }
 
 .h2 {

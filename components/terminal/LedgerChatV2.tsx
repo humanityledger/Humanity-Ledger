@@ -74,7 +74,7 @@ const ZkInvoiceModal = dynamic(() => import('@/components/zk/ZkInvoiceModal').th
 import { encodeStreamPayload } from '@/lib/zk/zkStreaming';
 import { agreementMessageKind, agreementPreview, isAgreementMessage } from '@/lib/aztec/agreement-message';
 const AgreementComposer = dynamic(() => import('@/components/chat/AgreementComposer').then(m => m.AgreementComposer), { ssr: false });
-import { encodeInvoicePayload } from '@/lib/zk/zkInvoice';
+import { encodeInvoicePayload, parseInvoicePayload, type ZkInvoice } from '@/lib/zk/zkInvoice';
 import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
 import { SLASH_COMMANDS, transformClientCommand, isBotCommand, executeBotCommand } from '@/lib/bots/botInterceptor';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
@@ -233,6 +233,15 @@ export const formatMessagePreview = (content: string): string => {
   if (cleanContent.startsWith('__PIN__') || cleanContent.startsWith('__REVOKE__') || cleanContent.startsWith('__READ__') || cleanContent.startsWith('__TYPING__')) {
     return 'System message';
   }
+
+  // ZK payment / structured message previews — never leak raw payload to sidebar
+  if (cleanContent.startsWith('__ZK_INVOICE__')) return '📄 Invoice';
+  if (cleanContent.startsWith('__ZK_TIP__')) return '💸 Private tip sent';
+  if (cleanContent.startsWith('__ZK_STREAM__')) return '🔁 Payment stream';
+  if (cleanContent.startsWith('__ZK_MONEY_PAYMENT__')) return '💰 Private payment';
+  if (cleanContent.startsWith('__ZK_ESCROW__')) return '🔒 Escrow contract';
+  if (cleanContent.startsWith('__REACT__')) return '';
+  if (cleanContent.startsWith('__EDIT__')) return 'Message updated';
 
   return isBurn ? `Disappearing: ${cleanContent}` : cleanContent;
 };
@@ -828,6 +837,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showZkStreamModal, setShowZkStreamModal] = useState(false);
   const [showAgreementComposer, setShowAgreementComposer] = useState(false);
   const [showZkInvoiceModal, setShowZkInvoiceModal] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<ZkInvoice | null>(null);
+
+  useEffect(() => {
+    const handleOpenInvoice = (e: Event) => {
+      const inv = (e as CustomEvent<{ invoice: ZkInvoice }>).detail?.invoice;
+      if (inv) {
+        setSelectedInvoice(inv);
+        setShowZkInvoiceModal(true);
+      }
+    };
+    window.addEventListener('ledger_open_invoice', handleOpenInvoice);
+    return () => window.removeEventListener('ledger_open_invoice', handleOpenInvoice);
+  }, []);
   // Phase 5: Poll creator form state (hoisted to satisfy React rules of hooks)
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
@@ -5246,6 +5268,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }
 
   if (!isConnected) {
+    // CRITICAL: If the account is still being checked (wagmi auto-reconnect in progress),
+    // show a loading spinner rather than the "Connect your wallet" screen.
+    // Without this, a MetaMask user who refreshes /chat sees the connect screen briefly
+    // (or permanently if isChecking never resolves due to a race condition).
+    if (isChecking) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center h-full bg-white">
+          <div className="w-8 h-8 border-2 border-[#15171c] border-t-transparent rounded-full animate-spin" />
+        </div>
+      );
+    }
     const inDesktopApp = typeof window !== 'undefined' && (window as any).electronAPI?.isElectron;
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-full bg-white px-6 py-12 text-center">
@@ -7426,16 +7459,26 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
        )}
 
        {/* ── Aztec zk.money Invoice Modal ── */}
-       {showZkInvoiceModal && activePeer && (
+       {showZkInvoiceModal && (activePeer || selectedInvoice) && (
           <ZkInvoiceModal
             userAddress={address || ''}
-            recipientAddress={activePeer}
-            recipientTag={getDisplayName(activePeer)}
-            onClose={() => setShowZkInvoiceModal(false)}
+            recipientAddress={selectedInvoice?.recipientAddress || activePeer || ''}
+            recipientTag={selectedInvoice ? selectedInvoice.recipientTag : (activePeer ? getDisplayName(activePeer) : '')}
+            existingInvoice={selectedInvoice || undefined}
+            onClose={() => {
+              setShowZkInvoiceModal(false);
+              setSelectedInvoice(null);
+            }}
             onInvoiceCreated={(invoice) => {
               executeSend(encodeInvoicePayload(invoice));
               setShowZkInvoiceModal(false);
+              setSelectedInvoice(null);
               toast.success('Invoice sent');
+            }}
+            onInvoicePaid={() => {
+              toast.success('Invoice settled on Aztec');
+              setSelectedInvoice(null);
+              setShowZkInvoiceModal(false);
             }}
           />
         )}

@@ -5,13 +5,17 @@
   --ay: 18%;
   --ak: 0;
   position: fixed;
-  inset: 0;
+  inset: -20px;
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+  /* UNIFIED AZTEC PALETTE: Consistent cool neutral tones throughout the entire page.
+     No cream (#f8f4ec) or orange stops so fast-scrolling on iOS/Android never
+     exposes contrasting colored rectangles. */
   background:
-    linear-gradient(180deg, #f3f5fa 0%, #f6f6f4 46%, #f8f4ec 100%);
+    linear-gradient(180deg, #f4f6fa 0%, #f6f7fa 50%, #f4f6fa 100%);
   contain: strict;
+  transform: translateZ(0);
 }
 
 .fieldAbsolute {
@@ -19,16 +23,18 @@
 }
 
 /* Soft blue light. Two fixed pools drift slowly; a third follows the cursor
-   (--ax/--ay) and only shows while it is over the page (--ak). */
+   (--ax/--ay) and only shows while it is over the page (--ak).
+   Paints cool Aztec blue pools — no warm cream/orange tint. */
 .aurora {
   position: absolute;
   inset: -20%;
   background:
-    radial-gradient(38% 34% at 18% 12%, rgba(39, 84, 214, 0.22), transparent 70%),
-    radial-gradient(30% 30% at 86% 6%, rgba(122, 162, 255, 0.26), transparent 72%),
-    radial-gradient(40% 36% at 70% 92%, rgba(255, 214, 170, 0.30), transparent 70%);
+    radial-gradient(38% 34% at 18% 12%, rgba(39, 84, 214, 0.18), transparent 70%),
+    radial-gradient(30% 30% at 86% 6%, rgba(122, 162, 255, 0.20), transparent 72%),
+    radial-gradient(36% 32% at 70% 88%, rgba(82, 0, 255, 0.12), transparent 70%);
   filter: blur(14px);
   animation: hl-aurora-drift 26s ease-in-out infinite alternate;
+  transform: translateZ(0);
 }
 
 .aurora::after {
@@ -81,5 +87,19 @@
 @media (prefers-reduced-motion: reduce) {
   .aurora {
     animation: none;
+  }
+}
+
+/* ── Mobile Touch Optimization ──
+   Disables heavy background SVG noise filters and GPU-expensive blur animations
+   during mobile scrolling, giving instant 60-120fps native fluidity like Aztec.network. */
+@media (max-width: 980px), (pointer: coarse) {
+  .grain {
+    display: none !important;
+  }
+  .aurora {
+    animation: none !important;
+    filter: blur(8px) !important;
+    opacity: 0.5 !important;
   }
 }

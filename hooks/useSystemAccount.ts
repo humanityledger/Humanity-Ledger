@@ -1,6 +1,7 @@
 "use client";
 
 import { useAccount } from 'wagmi';
+import { useAppKitAccount } from '@reown/appkit/react';
 import { useState, useEffect, useRef } from 'react';
 import { useWalletStore } from '@/lib/store/wallet-store';
 import { getAddress } from 'viem';
@@ -90,6 +91,7 @@ function readHandshakeCookie(): string | null {
 //  Hook 
 export function useSystemAccount() {
     const wagmiAccount = useAccount();
+    const appKitAccount = useAppKitAccount();
     const storeAddress = useWalletStore(s => s.address);
     const storePrivateKey = useWalletStore(s => s.privateKey);
     const storePasswordHash = useWalletStore(s => s.passwordHash);
@@ -109,7 +111,7 @@ export function useSystemAccount() {
 
     // [QD TOKENOMICS] Fire daily login earn event when wallet is connected
     useEffect(() => {
-        const address = wagmiAccount.address || storeAddress;
+        const address = wagmiAccount.address || (appKitAccount.isConnected ? appKitAccount.address : undefined) || storeAddress;
         if (!address || typeof address !== 'string' || address.startsWith('email_')) return;
         const today = new Date().toDateString();
         const key = `${address}_${today}`;
@@ -122,18 +124,27 @@ export function useSystemAccount() {
             credentials: 'include',
             body: JSON.stringify({ address: address.toLowerCase(), event: 'DAILY_LOGIN' }),
         }).catch(() => {});
-    }, [wagmiAccount.address, storeAddress]);
+    }, [wagmiAccount.address, appKitAccount.isConnected, appKitAccount.address, storeAddress]);
 
     // [CRITICAL FIX] Absolute Firewall for Logout Loops
     // Wagmi sometimes auto-reconnects on page load if IndexedDB clearing fails.
-    // If the guard is active, we FORCE the UI to show disconnected.
-    // IMPORTANT: The guard ONLY kills wagmi/session state — it NEVER touches
-    // ledger_hw_session_token (IDB-based), which is the hardware-bound key that
-    // must survive logout so the user can re-login without re-creating a wallet.
-    const isGuarded = typeof window !== 'undefined' && (
+    // If the user has an active, connected wallet in Wagmi or AppKit (e.g. MetaMask extension),
+    // they are NOT disconnected.
+    const isLiveWallet = Boolean(
+        (wagmiAccount.isConnected && wagmiAccount.address) ||
+        (appKitAccount.isConnected && appKitAccount.address) ||
+        (typeof window !== 'undefined' && (window as any).ethereum?.selectedAddress)
+    );
+
+    const isGuarded = typeof window !== 'undefined' && !isLiveWallet && (
         safeSessionGet('__disconnected__') === '1' ||
         (typeof localStorage !== 'undefined' && localStorage.getItem('__disconnected__') === '1')
     );
+
+    if (isLiveWallet && typeof window !== 'undefined') {
+        try { localStorage.removeItem('__disconnected__'); } catch {}
+        try { sessionStorage.removeItem('__disconnected__'); } catch {}
+    }
 
     //  Mount effect: storage reads + hardware-bound auto-unlock 
     useEffect(() => {
@@ -263,19 +274,28 @@ export function useSystemAccount() {
         };
     }
 
-    //  Priority 1: Direct Wagmi connection (WalletConnect / MetaMask / any injected wallet)
+    //  Priority 1: Direct Web3 Connection (Wagmi / AppKit / MetaMask Extension)
     // ABSOLUTE PRIORITY: a live external wallet connection always wins over any
     // cached or in-memory Humanity Ledger local-wallet state.
-    if (wagmiAccount.isConnected) {
-        // Clear any stale QR/handshake cookie — when MetaMask is live, the cookie
-        // must not interfere with the error message path in LedgerChat.tsx
+    const activeWeb3Address = wagmiAccount.address
+        || (appKitAccount.isConnected && appKitAccount.address ? (appKitAccount.address as `0x${string}`) : undefined)
+        || (!isGuarded && typeof window !== 'undefined' && (window as any).ethereum?.selectedAddress ? ((window as any).ethereum.selectedAddress as `0x${string}`) : undefined);
+
+    const isWeb3Connected = Boolean(
+        (wagmiAccount.isConnected && wagmiAccount.address) ||
+        (appKitAccount.isConnected && appKitAccount.address) ||
+        (!isGuarded && typeof window !== 'undefined' && (window as any).ethereum?.selectedAddress)
+    );
+
+    if (isWeb3Connected && activeWeb3Address) {
         if (typeof document !== 'undefined') {
             try {
-                document.cookie = 'system_handshake=; Max-Age=0; path=/; SameSite=Lax';
+                // Ensure system_handshake cookie is synchronized with the connected wallet
+                document.cookie = `system_handshake=${activeWeb3Address.toLowerCase()}; path=/; max-age=31536000; SameSite=Lax`;
             } catch {}
         }
         return {
-            address: wagmiAccount.address,
+            address: activeWeb3Address,
             isConnected: true,
             isConnecting: wagmiAccount.isConnecting,
             isReconnecting: wagmiAccount.isReconnecting,

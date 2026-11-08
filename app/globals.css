@@ -118,10 +118,24 @@ main[class*="overflow-y-auto"] > div[class*="h-full"] {
   flex: 1 1 auto;
 }
 
-/* ── ANTI-BLACK-VOID: Nuclear guarantee ──────────────────────────────────────
-   Ensures NO background behind any root-level layout ever shows as black.
-   The browser chrome (OS-level dark mode) can bleed through on some platforms. */
+/* ── ANTI-BLACK-VOID + ANTI-CREAM-VOID: Nuclear guarantee ────────────────────
+   Ensures NO background behind any root-level layout ever shows as black OR cream.
+   On iOS/Android, overscroll bounce reveals the html/body background above/below
+   the scroll content. Set to #f4f6fa (matching ImmersiveField and landing background)
+   so the overscroll area blends seamlessly with zero visible seam or color flash. */
 html, body {
+  background-color: #f4f6fa !important;
+}
+
+/* Landing pages: use the page background colour so overscroll top/bottom match */
+html:has([data-page="landing"]),
+body:has([data-page="landing"]) {
+  background-color: #f4f6fa !important;
+}
+
+/* Chat page: keep white */
+html:has([data-page="chat"]),
+body:has([data-page="chat"]) {
   background-color: #FFFFFF !important;
 }
 

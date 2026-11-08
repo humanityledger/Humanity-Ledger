@@ -342,9 +342,16 @@ const ZkStreamBubble = React.memo(({ content }: { content: string; isMe: boolean
 ZkStreamBubble.displayName = 'ZkStreamBubble';
 
 // ─── Invoice ─────────────────────────────────────────────────────────────────
-const ZkInvoiceBubble = React.memo(({ content }: { content: string; isMe: boolean }) => {
+const ZkInvoiceBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
   const invoice: ZkInvoice | null = parseInvoicePayload(content);
-  if (!invoice) return null;
+  if (!invoice) {
+    return (
+      <div className={`${CARD} min-w-[260px] max-w-[320px] p-4`}>
+        <CardLabel icon={<FileText size={13} strokeWidth={2} />}>Invoice</CardLabel>
+        <p className="text-[14.5px] font-semibold text-[#15171c] mt-2">Private Shielded Invoice</p>
+      </div>
+    );
+  }
   const overdue = invoice.status === 'unpaid' && invoice.dueDate < Date.now();
   const state = invoice.status === 'paid' ? 'Paid' : overdue ? 'Overdue' : 'Unpaid';
   const dot = invoice.status === 'paid' ? 'bg-[#1f9d55]' : overdue ? 'bg-[#e5484d]' : 'bg-[#a3a9b4]';
@@ -371,9 +378,22 @@ const ZkInvoiceBubble = React.memo(({ content }: { content: string; isMe: boolea
         <span className="text-[13px] text-[#727a88]">Total</span>
         <span className="text-[18px] font-semibold tabular-nums text-[#15171c]">{invoice.totalAmount} <span className="text-[13px] font-medium text-[#727a88]">{invoice.token}</span></span>
       </div>
-      <p className="text-[13px] text-[#727a88] flex items-center gap-1.5 mt-2">
-        <Clock size={12} strokeWidth={2} aria-hidden="true" /> Due {new Date(invoice.dueDate).toLocaleDateString()}
-      </p>
+      <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-[#f0f2f5]">
+        <p className="text-[12px] text-[#727a88] flex items-center gap-1.5">
+          <Clock size={12} strokeWidth={2} aria-hidden="true" /> Due {new Date(invoice.dueDate).toLocaleDateString()}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('ledger_open_invoice', { detail: { invoice } }));
+            }
+          }}
+          className="text-[12.5px] font-semibold text-[#15171c] hover:text-[#5200ff] transition-colors cursor-pointer"
+        >
+          {invoice.status === 'paid' ? 'Receipt' : !isMe ? 'Pay Invoice' : 'View'}
+        </button>
+      </div>
     </div>
   );
 });
@@ -624,7 +644,7 @@ export const MessageBubble = React.memo(({
   const isZkEscrow   = content.startsWith('__ZK_ESCROW__:');
   const isZkTip      = content.startsWith('__ZK_TIP__:');
   const isZkStream   = content.startsWith('__ZK_STREAM__:');
-  const isZkInvoice  = content.startsWith('__ZK_INVOICE__:');
+  const isZkInvoice  = content.startsWith('__ZK_INVOICE__');
   // Escrow / stream invitations and Aztec address announcements (lib/aztec/agreement-message.ts).
   const isAgreement  = isAgreementMessage(content);
   const isPremium    = content.startsWith('[PREMIUM:') || content.startsWith('__STICKER__[PREMIUM:');

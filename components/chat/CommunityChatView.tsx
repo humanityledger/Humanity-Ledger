@@ -537,7 +537,7 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     }
   }
 
-  if (content.startsWith('__ZK_INVOICE__:')) {
+  if (content.startsWith('__ZK_INVOICE__')) {
     const invoice = parseInvoicePayload(content);
     if (invoice) {
       return (

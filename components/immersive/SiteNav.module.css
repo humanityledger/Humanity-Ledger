@@ -44,6 +44,9 @@
   margin-right: auto;
   text-decoration: none;
   border-radius: 10px;
+  /* FIX: Prevent font glyph clipping on the right edge (italic overhang) */
+  overflow: visible;
+  min-width: 0;
 }
 
 .groups {

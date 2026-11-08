@@ -333,51 +333,69 @@ export function TuringShieldGate({
     // A-015: No longer sending x-wallet-address header — identity resolved server-side from session only
     setMounted(true);
     if (readClearance()) { setCleared(true); return; }
-    fetch('/api/auth/enclave-pin', { 
-      credentials: 'include',
-    })
-      .then(r => r.json().then(data => ({ status: r.status, data })))
-      .then(({ status, data }) => {
-        // No session — redirect to connect so user can authenticate
-        if (status === 401 || data?.noSession) {
-          const dest = typeof window !== 'undefined' ? window.location.pathname : '/chat';
-          window.location.replace(`/connect?redirect=${encodeURIComponent(dest)}`);
-          return;
-        }
-        if (data?.hasPin === false) {
-          // Permanence check: if this device/browser already belongs to an existing account,
-          // never divert into "Create your security PIN / account" loop again!
-          const addr = getStoredWalletAddress();
-          const isKnownAccount = Boolean(
-            localStorage.getItem('ledger_account_already_created') === 'true' ||
-            localStorage.getItem('ledger_onboarded_global') === 'true' ||
-            localStorage.getItem('ledger_pin_configured') === 'true' ||
-            (addr && (
-              localStorage.getItem(`ledger_account_created_${addr.toLowerCase()}`) === 'true' ||
-              localStorage.getItem(`ledger_onboarded_${addr.toLowerCase()}`) === 'true' ||
-              localStorage.getItem(`ledger_onboarded_${addr}`) === 'true'
-            )) ||
-            Object.keys(localStorage).some(k => k.startsWith('ledger_chat_') || k.startsWith('chat_v2_') || k.includes('xmtp'))
-          );
-          if (isKnownAccount) {
-            writeClearance(data?.clearanceToken || 'known-user', Date.now());
-            setCleared(true);
+
+    // CRITICAL FIX: On page load, wagmi auto-reconnects MetaMask in the background.
+    // The SIWE session cookie may not be set yet. We retry the enclave-pin check up to
+    // 3 times with 1.5s gaps before giving up and redirecting to /connect.
+    // This prevents the "need to go back and try again" bug where MetaMask users who
+    // refresh /chat get sent to /connect even though they're already connected.
+    let attempts = 0;
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY_MS = 1500;
+
+    const checkEnclave = () => {
+      fetch('/api/auth/enclave-pin', { credentials: 'include' })
+        .then(r => r.json().then(data => ({ status: r.status, data })))
+        .then(({ status, data }) => {
+          // No session — retry if we haven't exhausted attempts (wagmi may still be reconnecting)
+          if (status === 401 || data?.noSession) {
+            attempts++;
+            if (attempts < MAX_RETRIES) {
+              setTimeout(checkEnclave, RETRY_DELAY_MS);
+              return;
+            }
+            // All retries exhausted — redirect to connect
+            const dest = typeof window !== 'undefined' ? window.location.pathname : '/chat';
+            window.location.replace(`/connect?redirect=${encodeURIComponent(dest)}`);
             return;
           }
+          if (data?.hasPin === false) {
+            // Permanence check: if this device/browser already belongs to an existing account,
+            // never divert into "Create your security PIN / account" loop again!
+            const addr = getStoredWalletAddress();
+            const isKnownAccount = Boolean(
+              localStorage.getItem('ledger_account_already_created') === 'true' ||
+              localStorage.getItem('ledger_onboarded_global') === 'true' ||
+              localStorage.getItem('ledger_pin_configured') === 'true' ||
+              (addr && (
+                localStorage.getItem(`ledger_account_created_${addr.toLowerCase()}`) === 'true' ||
+                localStorage.getItem(`ledger_onboarded_${addr.toLowerCase()}`) === 'true' ||
+                localStorage.getItem(`ledger_onboarded_${addr}`) === 'true'
+              )) ||
+              Object.keys(localStorage).some(k => k.startsWith('ledger_chat_') || k.startsWith('chat_v2_') || k.includes('xmtp'))
+            );
+            if (isKnownAccount) {
+              writeClearance(data?.clearanceToken || 'known-user', Date.now());
+              setCleared(true);
+              return;
+            }
 
-          if (data.clearanceToken && data.clearanceTs) {
-            setTempClearanceToken(data.clearanceToken);
-            setTempClearanceTs(data.clearanceTs);
+            if (data.clearanceToken && data.clearanceTs) {
+              setTempClearanceToken(data.clearanceToken);
+              setTempClearanceTs(data.clearanceTs);
+            }
+            setIsFirstTime(true);
+            setSettingPin(true);
+            setSetupStep(0);
           }
-          setIsFirstTime(true);
-          setSettingPin(true);
-          setSetupStep(0);
-        }
-        // hasPin === true → show main PIN gate (default state)
-      })
-      .catch(() => {
-        // Network error — show gate, user will see the PIN input and retry
-      });
+          // hasPin === true → show main PIN gate (default state)
+        })
+        .catch(() => {
+          // Network error — show gate, user will see the PIN input and retry
+        });
+    };
+
+    checkEnclave();
   }, []);
 
   const triggerShake = useCallback(() => {

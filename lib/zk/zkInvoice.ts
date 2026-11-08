@@ -182,10 +182,11 @@ export function encodeInvoicePayload(invoice: ZkInvoice): string {
 }
 
 export function parseInvoicePayload(content: string): ZkInvoice | null {
-  if (!content || !content.startsWith('__ZK_INVOICE__:')) return null;
+  if (!content || typeof content !== 'string') return null;
+  const match = content.match(/^__ZK_INVOICE__:+([\s\S]*)$/);
+  if (!match) return null;
   try {
-    const raw = content.slice('__ZK_INVOICE__:'.length);
-    return JSON.parse(raw) as ZkInvoice;
+    return JSON.parse(match[1].trim()) as ZkInvoice;
   } catch {
     return null;
   }
