@@ -118,6 +118,22 @@ export function PadlockLoader({
                 <p className={s.hint}>
                   Approve the signature request in your wallet. It is free and sends no transaction.
                 </p>
+                {typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
+                  <button
+                    type="button"
+                    className={s.secondary}
+                    style={{ marginTop: '14px', width: '100%' }}
+                    onClick={() => {
+                      const pref = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('preferred_mobile_wallet')) || '';
+                      if (pref === 'metamask') window.location.href = 'https://metamask.app.link/';
+                      else if (pref === 'rainbow') window.location.href = 'https://rainbow.me/';
+                      else if (pref === 'coinbase') window.location.href = 'https://go.cb-w.com/';
+                      else window.location.href = 'wc:';
+                    }}
+                  >
+                    Open wallet app
+                  </button>
+                )}
               </>
             ) : (
               <p className={s.status}>Securing your channel</p>

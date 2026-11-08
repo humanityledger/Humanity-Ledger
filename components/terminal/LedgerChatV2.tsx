@@ -172,8 +172,26 @@ function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: 
 
 const shortAddr = (addr: string) => formatAddress(addr);
 
+export const isSystemSignal = (content: any): boolean => {
+  if (typeof content !== 'string') return false;
+  return content.startsWith('__CALL_') ||
+         content.startsWith('__REACT__') ||
+         content.startsWith('__PIN__') ||
+         content.startsWith('__UNPIN__') ||
+         content.startsWith('__REVOKE__') ||
+         content.startsWith('__EDIT__') ||
+         content.startsWith('__READ__') ||
+         content.startsWith('__DELIVERED__') ||
+         content.startsWith('__VOTE__') ||
+         content.startsWith('__TYPING__') ||
+         content.startsWith('__KEY_') ||
+         content.startsWith('__SIGNAL_') ||
+         content.startsWith('__CLEAR__');
+};
+
 export const formatMessagePreview = (content: string): string => {
   if (typeof content !== 'string') return 'Message';
+  if (isSystemSignal(content)) return '';
   let cleanContent = content;
   let isBurn = false;
   
@@ -230,8 +248,8 @@ export const formatMessagePreview = (content: string): string => {
   if (cleanContent.startsWith('[GIF]')) return 'GIF';
   if (cleanContent.startsWith('__POLL__')) return 'Poll';
   if (cleanContent.startsWith('__PAYMENT__')) return 'Payment';
-  if (cleanContent.startsWith('__PIN__') || cleanContent.startsWith('__REVOKE__') || cleanContent.startsWith('__READ__') || cleanContent.startsWith('__TYPING__')) {
-    return 'System message';
+  if (isSystemSignal(cleanContent)) {
+    return '';
   }
 
   // ZK payment / structured message previews — never leak raw payload to sidebar
@@ -1369,6 +1387,27 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (peerLower.length >= 8 && id.includes(peerLower.slice(2, 10))) return false;
       return true;
     }));
+
+    // Reset pinned message
+    setPinnedMessageId(null);
+    localStorage.removeItem(`ledger_pinned_${peerLower}`);
+
+    // Clear sidebar conversation preview
+    setConversations(prev => {
+      const updated = prev.map(c =>
+        c.peerAddress.toLowerCase() === peerLower
+          ? { ...c, lastMessage: '', unreadCount: 0 }
+          : c
+      );
+      persistToLocal(updated);
+      return updated;
+    });
+
+    // Wipe persistent local IndexedDB records for this conversation
+    import('@/lib/chat/indexeddb').then(({ chatDB }) => {
+      chatDB.clearConversation(dmId).catch(() => {});
+      chatDB.clearConversation(peerLower).catch(() => {});
+    }).catch(() => {});
 
     setShowClearConfirm(false);
     toast.success('Chat cleared');
@@ -3786,9 +3825,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             }
 
 
-            // Phase 3: Intercept Pins & Revokes
+            // Phase 3: Intercept Pins, Unpins & Revokes
             if (typeof content === 'string' && content.startsWith('__PIN__')) {
-              setPinnedMessageId(content.replace('__PIN__', ''));
+              const pId = content.replace('__PIN__', '');
+              setPinnedMessageId(pId);
+              if (msgConvPeer) localStorage.setItem(`ledger_pinned_${msgConvPeer.toLowerCase()}`, pId);
+              continue;
+            }
+            if (typeof content === 'string' && content.startsWith('__UNPIN__')) {
+              setPinnedMessageId(null);
+              if (msgConvPeer) localStorage.removeItem(`ledger_pinned_${msgConvPeer.toLowerCase()}`);
               continue;
             }
             if (typeof content === 'string' && content.startsWith('__REVOKE__')) {
@@ -4152,15 +4198,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               });
 
               // Update conversation preview
-              setConversations(prev => {
-                const updated = prev.map(c =>
-                  c.peerAddress.toLowerCase() === currentActivePeer
-                    ? { ...c, lastMessage: content.slice(0, 30), lastAt: new Date() }
-                    : c
-                );
-                persistToLocal(updated);
-                return updated;
-              });
+              if (!isSystemSignal(content)) {
+                setConversations(prev => {
+                  const updated = prev.map(c =>
+                    c.peerAddress.toLowerCase() === currentActivePeer
+                      ? { ...c, lastMessage: content.slice(0, 80), lastAt: new Date() }
+                      : c
+                  );
+                  persistToLocal(updated);
+                  return updated;
+                });
+              }
             } else {
               // Belongs to a different (background) conversation
               if (fromPeer && !content.startsWith('__')) {
@@ -4199,14 +4247,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 if (exists) {
                   updated = prev.map(c =>
                     c.peerAddress.toLowerCase() === msgConvPeer
-                      ? { ...c, lastMessage: content.slice(0, 30), lastAt: new Date(), unreadCount: countsAsUnread ? (c.unreadCount || 0) + 1 : (fromPeer ? (c.unreadCount || 0) : 0) }
+                      ? { ...c, ...(isSystemSignal(content) ? {} : { lastMessage: content.slice(0, 80) }), lastAt: new Date(), unreadCount: countsAsUnread ? (c.unreadCount || 0) + 1 : (fromPeer ? (c.unreadCount || 0) : 0) }
                       : c
                   );
                 } else {
                   needsSync = true;
                   updated = [{
                     peerAddress: msgConvPeer,
-                    lastMessage: content.slice(0, 30),
+                    lastMessage: isSystemSignal(content) ? '' : content.slice(0, 80),
                     lastAt: new Date(),
                     unreadCount: countsAsUnread ? 1 : 0,
                   }, ...prev];
@@ -4474,6 +4522,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             readReceipts.add(readId);
           } else if (typeof content === 'string' && content.startsWith('__PIN__')) {
             latestPinnedId = content.replace('__PIN__', '');
+          } else if (typeof content === 'string' && content.startsWith('__UNPIN__')) {
+            latestPinnedId = null;
           } else if (typeof content === 'string' && content.startsWith('__REVOKE__')) {
             revokedIds.add(content.replace('__REVOKE__', ''));
           // [BUG FIX] Skip __VOTE__ signals from main message list — they are control signals only
@@ -4774,8 +4824,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     
     const isReaction = content.startsWith('__REACT__');
     const isVote = content.startsWith('__VOTE__');
-    const isSystemSignal = content.startsWith('__CALL_') || isReaction || isVote;
-    if (!isSystemSignal && sending) return;
+    const isSignal = isSystemSignal(content);
+    if (!isSignal && sending) return;
+
+    // Direct local state sync for PIN/UNPIN signals
+    if (content.startsWith('__PIN__')) {
+      const pId = content.replace('__PIN__', '');
+      setPinnedMessageId(pId);
+      if (activePeer) localStorage.setItem(`ledger_pinned_${activePeer.toLowerCase()}`, pId);
+    } else if (content.startsWith('__UNPIN__')) {
+      setPinnedMessageId(null);
+      if (activePeer) localStorage.removeItem(`ledger_pinned_${activePeer.toLowerCase()}`);
+    }
 
     // Native client-side slash commands (/me, /shrug, /code, /table, /urgent, /clear, /online, /away, /dnd)
     const { transformed, isHandledLocally, action } = isAgreementMsg
@@ -4825,23 +4885,23 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       }
     }
 
-    if (!isSystemSignal) setSending(true);
+    if (!isSignal) setSending(true);
     
     // Phase 2: Message Quoting
     let finalContent = content;
-    if (replyingTo && !isSystemSignal && !isAgreementMsg) {
+    if (replyingTo && !isSignal && !isAgreementMsg) {
       const snippet = (isAgreementMessage(replyingTo.content) ? formatMessagePreview(replyingTo.content) : (replyingTo.content || '')).replace(/__/g, '').slice(0, 80);
       finalContent = `__REPLY__${replyingTo.id}__SNIPPET__${snippet}__::${content}`;
       setReplyingTo(null);
     }
     // Thread support
-    if (threadParentId && !isSystemSignal && !isAgreementMsg) {
+    if (threadParentId && !isSignal && !isAgreementMsg) {
       finalContent = `__THREAD__${threadParentId}__::${finalContent}`;
       setThreadParentId(null);
     }
 
     // Smart macros
-    if (ledgerSettings?.smart_macros && !isSystemSignal && !isAgreementMsg) {
+    if (ledgerSettings?.smart_macros && !isSignal && !isAgreementMsg) {
       if (content.trim() === '/add') { finalContent = `My wallet: ${address}`; }
       else if (/^\/pay (\d+\.?\d*)$/.test(content.trim())) {
         const m = content.trim().match(/^\/pay (\d+\.?\d*)$/);
@@ -4849,7 +4909,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       }
     }
     // Tone translator  
-    if (ledgerSettings?.tone_translator && !isSystemSignal && !isAgreementMsg) {
+    if (ledgerSettings?.tone_translator && !isSignal && !isAgreementMsg) {
       finalContent = finalContent
         .replace(/\bfuck(ing)?\b/gi, 'strongly disagree')
         .replace(/\bshit\b/gi, 'situation')
@@ -4860,7 +4920,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
 
     // Disappearing messages: a timer set for this chat wins over the global one.
-    if (!isSystemSignal && !isAgreementMsg) {
+    if (!isSignal && !isAgreementMsg) {
       let chatTimer = 'off';
       try { chatTimer = localStorage.getItem('ledger_disappearing_' + activePeer.toLowerCase()) || 'off'; } catch {}
       const globalTimer = (ledgerSettings as any)?.auto_delete_timer || 'off';
@@ -4894,7 +4954,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
 
     try {
-      if (!isReaction) {
+      if (!isReaction && !isSignal) {
         // ─── OPTIMISTIC INSERT ────────────────────────────────────────────────────
         // Register the content in the map BEFORE inserting, so the stream echo
         // can find and replace this optimistic message atomically when it arrives.
@@ -4912,7 +4972,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
         // Clear typing indicator immediately
         stopTypingSignal();
-      } else {
+      } else if (isReaction) {
         // Phase 2: Optimistic Reaction Insert
         const parts = finalContent.split('__::');
         if (parts.length >= 2) {
@@ -4932,7 +4992,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }
       }
 
-      if (!isSystemSignal && !isReaction) if (ledgerSettings?.notification_sound !== false) { playSendSound(); };
+      if (!isSignal && !isReaction) if (ledgerSettings?.notification_sound !== false) { playSendSound(); };
       triggerHaptic(ledgerSettings?.haptics_intensity ?? 0);
 
       // If device is offline, also save to localStorage outbox as backup
@@ -4972,7 +5032,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         addCallSignalsRef.current(activePeer, [{ id: realId, content: finalContent, sentAtMs: Date.now(), fromMe: true, senderInboxId: (client as any)?.inboxId }]);
       }
 
-      if (realId && !isReaction) {
+      if (realId && !isReaction && !isSignal) {
         optimisticContentMap.current.delete(finalContent);
         confirmedMsgIds.current.add(realId);
         const sentAtMs = Date.now();
@@ -4998,7 +5058,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }).catch(() => {});
       }
 
-      if (!isReaction) {
+      if (!isReaction && !isSignal) {
         // UPDATE LOCAL ADDRESS BOOK
         // Capture stable copies before setState to avoid stale-closure
         // ReferenceError when React replays the updater function.
@@ -5027,7 +5087,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       ));
       console.error('[Chat] executeSend failed:', err);
     } finally {
-      if (!isSystemSignal) setSending(false);
+      if (!isSignal) setSending(false);
     }
   };
 
@@ -5466,36 +5526,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             messages={messages.filter((m: any) => m.conversationId === `dm-${activePeer?.toLowerCase()}`)}
             onClearChat={() => {
               setShowContactInfo(false);
-              if (window.confirm('Are you sure you want to clear this chat? This will remove all messages from your device.')) {
-                const clearedAt = Date.now();
-                const peerLower = activePeer.toLowerCase();
-                const dmId = `dm-${peerLower}`;
-                const myAddr = (effectiveAddress || address || '').toLowerCase();
-
-                localStorage.setItem(`ledger_cleared_${peerLower}`, clearedAt.toString());
-                if (myAddr) {
-                  localStorage.setItem(`ledger_cleared_${myAddr}_${peerLower}`, clearedAt.toString());
-                  try { setSynced(myAddr, { [`cleared:${peerLower}`]: clearedAt }); } catch {}
-                }
-                if (address) {
-                  localStorage.setItem(`ledger_cleared_${address.toLowerCase()}_${peerLower}`, clearedAt.toString());
-                  localStorage.setItem(`ledger_cleared_${address}_${peerLower}`, clearedAt.toString());
-                }
-
-                setMessages(prev => prev.filter(m => {
-                  const cId = (m.conversationId || '').toLowerCase();
-                  const sId = (m.senderInboxId || m.senderAddress || m.sender || '').toLowerCase();
-                  const rId = (m.recipientInboxId || m.recipientAddress || m.recipient || '').toLowerCase();
-                  const id = (m.id || '').toLowerCase();
-
-                  if (cId === dmId || cId === peerLower || cId.includes(peerLower)) return false;
-                  if (sId === peerLower || rId === peerLower) return false;
-                  if (peerLower.length >= 8 && id.includes(peerLower.slice(2, 10))) return false;
-                  return true;
-                }));
-
-                toast.success('Chat cleared');
-              }
+              setShowClearConfirm(true);
             }}
             onAddToGroup={() => {
               setShowContactInfo(false);
@@ -5792,18 +5823,34 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             </span>
                           )}
                         </div>
-                        {conv.lastMessage && (
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-[14px] text-[#727a88] truncate">{formatMessagePreview(conv.lastMessage)}</p>
-                            {conv.unreadCount && conv.unreadCount > 0 && !isMuted ? (
-                              <div className="min-w-[20px] h-5 bg-[#1f9d55] rounded-full flex items-center justify-center px-1.5 shrink-0" aria-label={`${conv.unreadCount} unread`}>
-                                <span className="text-[11px] font-semibold text-white tabular-nums">
-                                  {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
-                                </span>
-                              </div>
-                            ) : null}
-                          </div>
-                        )}
+                        {(() => {
+                          let preview = formatMessagePreview(conv.lastMessage || '');
+                          if (!preview || isSystemSignal(conv.lastMessage || '')) {
+                            const convId = `dm-${conv.peerAddress.toLowerCase()}`;
+                            const validMsgs = messages.filter(m =>
+                              m.conversationId?.toLowerCase() === convId &&
+                              typeof m.content === 'string' &&
+                              !isSystemSignal(m.content)
+                            );
+                            if (validMsgs.length > 0) {
+                              preview = formatMessagePreview(validMsgs[validMsgs.length - 1].content);
+                            } else {
+                              preview = '';
+                            }
+                          }
+                          return preview ? (
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[14px] text-[#727a88] truncate">{preview}</p>
+                              {conv.unreadCount && conv.unreadCount > 0 && !isMuted ? (
+                                <div className="min-w-[20px] h-5 bg-[#1f9d55] rounded-full flex items-center justify-center px-1.5 shrink-0" aria-label={`${conv.unreadCount} unread`}>
+                                  <span className="text-[11px] font-semibold text-white tabular-nums">
+                                    {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                                  </span>
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
                   </button>
@@ -5966,18 +6013,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           { label: isSecretChat ? 'Turn off secret chat' : 'Secret chat', icon: <Flame size={17} strokeWidth={1.8} />, onClick: () => setIsSecretChat(!isSecretChat) },
                           { label: 'Private wallet', icon: <ShieldCheck size={17} strokeWidth={1.8} />, onClick: () => setShowZkWallet(v => !v) },
                           { label: 'Scan a code', icon: <ScanQrCode size={17} strokeWidth={1.8} />, onClick: () => setShowScanner(true) },
-                          { label: 'Chat options', icon: <Settings size={17} strokeWidth={1.8} />, onClick: () => setShowProfile(true) },
                           { label: 'Saved messages', icon: <Bookmark size={17} strokeWidth={1.8} />, onClick: () => setShowSavedModal(true) },
                           { label: 'Keyboard shortcuts', icon: <Clock size={17} strokeWidth={1.8} />, onClick: () => setShowShortcutsModal(true) },
-                        ].map(item => (
+                          { label: 'Clear chat', icon: <Trash2 size={17} strokeWidth={1.8} className="text-[#e5484d]" />, onClick: () => setShowClearConfirm(true), danger: true },
+                        ].map((item: any) => (
                           <button
                             key={item.label}
                             type="button"
                             role="menuitem"
                             onClick={() => { setShowHeaderMenu(false); item.onClick(); }}
-                            className="w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[14.5px] text-[#15171c] hover:bg-[#f2f4f7] transition-colors text-left"
+                            className={`w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[14.5px] transition-colors text-left ${item.danger ? 'text-[#e5484d] hover:bg-[#fff0f0]' : 'text-[#15171c] hover:bg-[#f2f4f7]'}`}
                           >
-                            <span className="text-[#475061]">{item.icon}</span>
+                            <span className={item.danger ? 'text-[#e5484d]' : 'text-[#475061]'}>{item.icon}</span>
                             {item.label}
                           </button>
                         ))}
@@ -6022,8 +6069,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    const oldPin = pinnedMessageId;
                     setPinnedMessageId(null);
-                    executeSend(`__UNPIN__${pinnedMessageId}`);
+                    if (activePeer) localStorage.removeItem(`ledger_pinned_${activePeer.toLowerCase()}`);
+                    executeSend(`__UNPIN__${oldPin}`);
                   }}
                   className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061] transition-colors"
                   aria-label="Unpin message"
@@ -6367,7 +6416,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             { id: 'camera',    color: '#FF3B30', iconPath: <Camera size={19} strokeWidth={1.8} />,  label: 'Camera',        sublabel: 'Take a photo or video', onClick: () => { cameraRef.current?.click(); setShowAppDrawer(false); } },
                             { id: 'gallery',   color: '#5856D6', iconPath: <ImageIcon size={19} strokeWidth={1.8} />,   label: 'Photos and videos', sublabel: 'Choose from your library',   onClick: () => { galleryRef.current?.click(); setShowAppDrawer(false); } },
                             { id: 'attach',    color: '#34C759', iconPath: <FileText size={19} strokeWidth={1.8} />,  label: 'Document',       sublabel: 'Any file up to 1 MB',    onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
-                            { id: 'audio',     color: '#FF9500', iconPath: <Mic size={19} strokeWidth={1.8} />,     label: 'Voice message',  sublabel: 'Record and send', onClick: () => { setShowAppDrawer(false); startRecording(); } },
+
                             // ── Interactive ──────────────────────────────────────────
                             { id: 'gif',       color: '#AF52DE', iconPath: <ImageIcon size={19} strokeWidth={1.8} />,   label: 'GIF',            sublabel: 'Search animated images',   onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); searchGifs(gifSearch); } },
                             { id: 'poll',      color: '#10B981', iconPath: <ListChecks size={19} strokeWidth={1.8} />,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
@@ -6390,10 +6439,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                               }
                             } },
                             { id: 'live-loc',  color: '#FF3B30', iconPath: <Navigation size={19} strokeWidth={1.8} />,   label: isLiveLocationActive ? 'Stop live location' : 'Live location', sublabel: isLiveLocationActive ? 'Stop sharing your position' : 'Share your position as you move', onClick: () => { startLiveLocation(); setShowAppDrawer(false); } },
-                            { id: 'schedule',  color: '#636366', iconPath: <Clock size={19} strokeWidth={1.8} />,      label: 'Schedule',       sublabel: 'Send at a later time', onClick: () => {
-                                setShowAppDrawer(false);
-                                setShowScheduleSheet(true);
-                              } },
+
                             { id: 'burn',      color: '#FF6B00', iconPath: <Timer size={19} strokeWidth={1.8} />,      label: burnTimer ? `Disappearing after ${burnTimer >= 60 ? `${Math.floor(burnTimer/60)}m` : `${burnTimer}s`}` : 'Disappearing messages', sublabel: burnTimer ? 'Tap to change duration' : 'Messages vanish after they are read', onClick: () => { setShowBurnSheet(true); setShowAppDrawer(false); } },
                           ].filter(app => (ledgerSettings as any)?.payments_enabled !== false || !PAYMENT_DRAWER_IDS.has(app.id)).map((app) => (
                             <button 
@@ -7100,15 +7146,34 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                      </button>
                    </>
                  )}
-                 <button role="menuitem" type="button" onClick={() => {
+                 <button role="menuitem" type="button" onClick={(e) => {
+                   e.stopPropagation();
                    const m = messages.find(x => x.id === contextMenu.id);
-                   setMsgDetails({ id: contextMenu.id, sender: m?.senderAddress, sentAt: m?.sentAtNs || m?.sentAt || m?.sent, conversationId: m?.conversationId });
+                   setMsgDetails({ 
+                     id: contextMenu.id, 
+                     sender: m?.senderAddress || (m as any)?.sender || (m as any)?.from || (m as any)?.authorAddress || address || 'Unknown', 
+                     sentAt: m?.sentAtNs || m?.sentAt || m?.sent || Date.now(), 
+                     conversationId: m?.conversationId || (activePeer ? `dm-${activePeer.toLowerCase()}` : 'Unknown'),
+                     content: contextMenu.content
+                   });
                    setContextMenu(null);
                  }} className={item}>
                    <Info size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Details
                  </button>
-                 <button role="menuitem" type="button" onClick={() => { executeSend(`__PIN__${contextMenu.id}`); setContextMenu(null); }} className={item}>
-                   <Pin size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Pin
+                 <button role="menuitem" type="button" onClick={(e) => {
+                   e.stopPropagation();
+                   if (pinnedMessageId === contextMenu.id) {
+                     setPinnedMessageId(null);
+                     if (activePeer) localStorage.removeItem(`ledger_pinned_${activePeer.toLowerCase()}`);
+                     executeSend(`__UNPIN__${contextMenu.id}`);
+                   } else {
+                     setPinnedMessageId(contextMenu.id);
+                     if (activePeer) localStorage.setItem(`ledger_pinned_${activePeer.toLowerCase()}`, contextMenu.id);
+                     executeSend(`__PIN__${contextMenu.id}`);
+                   }
+                   setContextMenu(null);
+                 }} className={item}>
+                   <Pin size={16} strokeWidth={1.8} className="text-[#4a505c]" /> {pinnedMessageId === contextMenu.id ? 'Unpin message' : 'Pin message'}
                  </button>
                  <button role="menuitem" type="button" onClick={() => { toggleSaveMessage(contextMenu.id, contextMenu.content); setContextMenu(null); }} className={item}>
                    <Bookmark size={16} strokeWidth={1.8} className="text-[#4a505c]" /> {savedMessages.some(m => m.id === contextMenu.id) ? 'Remove saved' : 'Save message'}
@@ -7138,16 +7203,64 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
        {/* Message details */}
        {(msgDetails && typeof document !== 'undefined')
          ? createPortal(
-         <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/30 p-4" onClick={() => setMsgDetails(null)} onKeyDown={(e) => { if (e.key === 'Escape') setMsgDetails(null); }}>
-           <div role="dialog" aria-modal="true" aria-labelledby="msg-details-title" className="bg-white rounded-2xl shadow-xl border border-[#e4e7ec] w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
-             <h2 id="msg-details-title" className="text-[16px] font-semibold text-[#15171c] mb-3">Message details</h2>
-             <dl className="text-[13.5px] text-[#3b404a] space-y-2">
-               <div><dt className="font-medium text-[#15171c]">Sent</dt><dd>{msgDetails.sentAt ? new Date(Number(msgDetails.sentAt) || msgDetails.sentAt).toLocaleString() : 'Unknown'}</dd></div>
-               <div><dt className="font-medium text-[#15171c]">From</dt><dd className="font-mono break-all">{msgDetails.sender || 'Unknown'}</dd></div>
-               <div><dt className="font-medium text-[#15171c]">Encryption</dt><dd>End-to-end encrypted with MLS through XMTP. Only the members of this conversation can read it.</dd></div>
-               <div><dt className="font-medium text-[#15171c]">Message id</dt><dd className="font-mono break-all">{msgDetails.id}</dd></div>
+         <div
+           className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+           style={{ zIndex: 300000 }}
+           onClick={(e) => { e.stopPropagation(); setMsgDetails(null); }}
+           onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setMsgDetails(null); } }}
+         >
+           <div
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="msg-details-title"
+             className="bg-white rounded-3xl shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)] border border-[#e4e7ec] w-full max-w-sm p-6"
+             onClick={e => e.stopPropagation()}
+           >
+             <div className="flex items-center justify-between mb-4">
+               <h2 id="msg-details-title" className="text-[17px] font-semibold tracking-[-0.01em] text-[#15171c]">Message details</h2>
+               <button
+                 type="button"
+                 onClick={(e) => { e.stopPropagation(); setMsgDetails(null); }}
+                 className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061] transition-colors"
+                 aria-label="Close"
+               >
+                 <X size={16} strokeWidth={2} />
+               </button>
+             </div>
+             <dl className="text-[13.5px] text-[#3b404a] space-y-3">
+               <div className="flex flex-col gap-0.5">
+                 <dt className="text-[12px] font-semibold uppercase tracking-wider text-[#727a88]">Sent timestamp</dt>
+                 <dd className="font-medium text-[#15171c]">
+                   {msgDetails.sentAt ? new Date(Number(msgDetails.sentAt) || msgDetails.sentAt).toLocaleString() : 'Unknown'}
+                 </dd>
+               </div>
+               <div className="flex flex-col gap-0.5">
+                 <dt className="text-[12px] font-semibold uppercase tracking-wider text-[#727a88]">From</dt>
+                 <dd className="font-mono text-[12px] break-all bg-[#f7f8fa] p-2 rounded-xl border border-[#e4e7ec] text-[#15171c]">
+                   {msgDetails.sender || 'Unknown'}
+                 </dd>
+               </div>
+               <div className="flex flex-col gap-0.5">
+                 <dt className="text-[12px] font-semibold uppercase tracking-wider text-[#727a88]">Encryption protocol</dt>
+                 <dd className="text-[#475061] leading-relaxed">
+                   End-to-end encrypted with MLS / DTLS via XMTP & Aztec Network. Zero metadata accessible outside of participants.
+                 </dd>
+               </div>
+               <div className="flex flex-col gap-0.5">
+                 <dt className="text-[12px] font-semibold uppercase tracking-wider text-[#727a88]">Message ID</dt>
+                 <dd className="font-mono text-[11px] break-all bg-[#f7f8fa] p-2 rounded-xl border border-[#e4e7ec] text-[#727a88]">
+                   {msgDetails.id}
+                 </dd>
+               </div>
              </dl>
-             <button type="button" autoFocus onClick={() => setMsgDetails(null)} className="mt-4 w-full py-2.5 rounded-xl bg-[#15171c] text-white text-[14px] font-semibold">Close</button>
+             <button
+               type="button"
+               autoFocus
+               onClick={(e) => { e.stopPropagation(); setMsgDetails(null); }}
+               className="mt-6 w-full py-2.5 rounded-xl bg-[#15171c] hover:bg-[#252830] text-white text-[14px] font-semibold transition-colors"
+             >
+               Close
+             </button>
            </div>
          </div>,
          document.body
@@ -7302,6 +7415,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                {archivedPeers.has(sidebarMenu.peer.toLowerCase())
                  ? <><ArchiveRestore size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Move to inbox</>
                  : <><Archive size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Archive</>}
+             </button>
+             <button role="menuitem" type="button" onClick={() => { const p = sidebarMenu.peer; setSidebarMenu(null); setActivePeer(p); setShowClearConfirm(true); }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#e5484d] text-left">
+               <Trash2 size={16} strokeWidth={1.8} /> Clear chat
              </button>
              <button role="menuitem" type="button" onClick={() => deleteConversation(sidebarMenu.peer)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#d93036] text-left">
                <Trash2 size={16} strokeWidth={1.8} /> Delete chat

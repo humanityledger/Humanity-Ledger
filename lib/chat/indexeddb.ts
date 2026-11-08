@@ -127,6 +127,26 @@ export class ChatDatabase {
     });
   }
 
+  async clearConversation(conversationId: string): Promise<void> {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = this.db!.transaction(['messages'], 'readwrite');
+        const store = transaction.objectStore('messages');
+        const index = store.index('conversationId');
+        const request = index.getAllKeys(IDBKeyRange.only(conversationId.toLowerCase()));
+        request.onsuccess = () => {
+          const keys = request.result;
+          keys.forEach(k => store.delete(k));
+        };
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+      } catch (e) {
+        resolve(); // gracefully resolve if IDB transaction fails
+      }
+    });
+  }
+
   async clearAll(): Promise<void> {
     if (!this.db) await this.init();
     return new Promise((resolve, reject) => {
