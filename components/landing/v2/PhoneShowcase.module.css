@@ -295,6 +295,16 @@
   isolation: isolate;
 }
 
+/* /connect keeps the geometry calibrated for its photograph. */
+.connect .screen {
+  inset: 10px;
+}
+
+.connect .glass {
+  background: #050506;
+  border-radius: 66px;
+}
+
 /* The glass catches the same light as the room. */
 .screen::after {
   content: "";

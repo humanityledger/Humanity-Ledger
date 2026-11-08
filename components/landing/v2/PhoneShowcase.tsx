@@ -15,7 +15,7 @@
  * Narrow screens and reduced motion: the photographs stack with their text.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChatScreen, PaymentScreen, VideoCallScreen, VoiceCallScreen, type ScreenProps } from "./phoneScreens";
 import s from "./PhoneShowcase.module.css";
 
@@ -112,14 +112,21 @@ function phoneCentre(m: number[]) {
 
 const CENTRES = PHONES.map((ph) => phoneCentre(ph.m));
 
+/**
+ * The calibrated matrix the /connect page uses for the "voice" photograph.
+ * The landing page keeps the matrix in PHONES.
+ */
+const CONNECT_VOICE_M = [0.863255842, 0, 0, 0, 0, 0.847210299, 0, 0, 0, 0, 1, 0, 612.0, 86.400001526, 0, 1];
+
 /** Position the photo inside its tile: cover the tile, zoomed towards the phone. */
-function fitPhoto(el: HTMLElement, i: number, zoom: number) {
-  const ph = PHONES[i];
+function fitPhoto(el: HTMLElement, i: number, zoom: number, phone?: Phone) {
+  const ph = phone ?? PHONES[i];
+  const centre = phone ? phoneCentre(phone.m) : CENTRES[i];
   const W = el.clientWidth || el.parentElement?.clientWidth || 400;
   const H = el.clientHeight || el.parentElement?.clientHeight || 500;
   const sc = Math.max(W / ph.w, H / ph.h) * zoom;
-  const fx = CENTRES[i].x * 0.7 + (ph.w / 2) * 0.3;
-  const fy = CENTRES[i].y * 0.7 + (ph.h / 2) * 0.3;
+  const fx = centre.x * 0.7 + (ph.w / 2) * 0.3;
+  const fy = centre.y * 0.7 + (ph.h / 2) * 0.3;
   const ox = clamp(W / 2 - fx * sc, W - ph.w * sc, 0);
   const oy = clamp(H / 2 - fy * sc, H - ph.h * sc, 0);
   el.style.setProperty("--s", String(sc));
@@ -427,6 +434,7 @@ export function LivePhone({
   zoom,
   fill,
   className,
+  variant = "landing",
 }: {
   /** Which photograph to use. */
   id?: string;
@@ -437,8 +445,17 @@ export function LivePhone({
   /** Instead of a zoom: the share of the tile's height the whole phone should take (e.g. 0.85). */
   fill?: number;
   className?: string;
+  /** "connect" uses the geometry calibrated for the /connect page. */
+  variant?: "landing" | "connect";
 }) {
   const i = Math.max(0, PHONES.findIndex((ph) => ph.id === id));
+  const connect = variant === "connect";
+  // A copy with the legacy matrix for /connect; the shared PHONES array is never mutated.
+  const phone = useMemo<Phone>(
+    () => (connect && PHONES[i].id === "voice" ? { ...PHONES[i], m: CONNECT_VOICE_M } : PHONES[i]),
+    [connect, i],
+  );
+  const phoneOverride = phone === PHONES[i] ? undefined : phone;
   const ScreenOverride = screen ? PHONES.find((ph) => ph.id === screen)?.Screen : undefined;
   const ref = useRef<HTMLDivElement>(null);
   const [p, setP] = useState(0);
@@ -454,7 +471,7 @@ export function LivePhone({
       if (fill) {
         // Size the photo so the whole phone takes `fill` of the tile's height,
         // whatever the tile's shape, but never leave the tile uncovered.
-        const ph = PHONES[i];
+        const ph = phone;
         const W = photo.clientWidth || el.clientWidth || 400;
         const H = photo.clientHeight || el.clientHeight || 500;
         if (W && H) {
@@ -463,14 +480,14 @@ export function LivePhone({
           z = Math.max(1, (fill * H) / glassH / cover);
         }
       }
-      fitPhoto(photo, i, z);
+      fitPhoto(photo, i, z, phoneOverride);
     };
     fit();
     if (typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [i, zoom, fill]);
+  }, [i, zoom, fill, phone, phoneOverride]);
 
   useEffect(() => {
     const el = ref.current;
@@ -503,8 +520,8 @@ export function LivePhone({
   }, [visible]);
 
   return (
-    <div ref={ref} className={`${s.live} ${className ?? ""}`}>
-      <PhonePhoto ph={PHONES[i]} i={i} progress={p} active={visible} screen={ScreenOverride} />
+    <div ref={ref} className={`${s.live} ${connect ? s.connect : ""} ${className ?? ""}`}>
+      <PhonePhoto ph={phone} i={i} progress={p} active={visible} screen={ScreenOverride} />
     </div>
   );
 }
