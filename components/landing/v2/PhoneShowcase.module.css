@@ -278,13 +278,13 @@
   width: 430px;
   height: 932px;
   transform-origin: 0 0;
-  border-radius: 66px;
-  background: #050506;
+  border-radius: 56px;
+  background: transparent;
 }
 
 .screen {
   position: absolute;
-  inset: 10px;
+  inset: 0;
   border-radius: 56px;
   overflow: hidden;
   background: #fff;
