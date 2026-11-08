@@ -439,9 +439,9 @@ export function ConnectView(props: ConnectViewProps) {
 
         <div className={s.showcase}>
           <div className={s.visual}>
-            {/* The front-on photograph: no fingers cross the glass and no
-                perspective, so the live chat screen sits exactly on it. */}
-            <LivePhone id="voice" screen="chat" fill={0.8} />
+            {/* The front-on photograph, using the calibrated /connect
+                geometry so the live chat screen sits exactly on the glass. */}
+            <LivePhone id="voice" screen="chat" fill={0.8} variant="connect" />
           </div>
           <Facts />
         </div>
