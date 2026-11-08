@@ -94,18 +94,6 @@ export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [
     zksync
 ];
 
-export const wagmiAdapter = new WagmiAdapter({
-    ssr: true,
-    storage: createStorage({ storage: cookieStorage as any }),
-    projectId,
-    networks,
-    multiInjectedProviderDiscovery: true,
-})
-
-export const config = wagmiAdapter.wagmiConfig
-
-const queryClient = new QueryClient()
-
 // Dynamically resolve application origin.
 // In WalletConnect v2, metadata.url MUST match the actual WebSocket origin (e.g. https://ledgerchat.org).
 // Any domain mismatch between the origin header and metadata.url triggers relayer rejection ("Failed to publish payload").
@@ -119,6 +107,26 @@ const metadata = {
     url: appOrigin,
     icons: [`${appOrigin}/logo-mark.png`],
 }
+
+export const wagmiAdapter = new WagmiAdapter({
+    ssr: true,
+    storage: createStorage({ storage: cookieStorage as any }),
+    projectId,
+    networks,
+    connectors: [
+        injected({ shimDisconnect: true }),
+        walletConnect({ 
+            projectId, 
+            showQrModal: false,
+            metadata,
+        }),
+    ],
+    multiInjectedProviderDiscovery: true,
+})
+
+export const config = wagmiAdapter.wagmiConfig
+
+const queryClient = new QueryClient()
 
 //  1-Click Auth (SIWE) Configuration 
 const siweConfig = createSIWEConfig({
@@ -205,9 +213,7 @@ try {
                 '--w3m-font-family': 'Inter, sans-serif',
                 '--w3m-z-index': 99999,  // must be above our fixed inset-0 container                    
             },
-            enableInjected: true,
             enableEIP6963: true, // MUST BE TRUE for wagmi 2.x to detect injected wallets like MetaMask properly
-            enableWalletConnect: true,
             enableCoinbase: true,
         });
     }

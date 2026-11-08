@@ -123,6 +123,7 @@ export default function ConnectPage() {
   const [authStatus, setAuthStatus] = useState<"idle" | "verifying" | "failed">("idle");
   const [signStep, setSignStep] = useState<1 | 2 | 3>(2);
   const [signError, setSignError] = useState<string | null>(null);
+  const [mobileDeepLink, setMobileDeepLink] = useState<string | null>(null);
 
   const [qrSession, setQrSession] = useState<string | null>(null);
   const [qrData, setQrData] = useState("");
@@ -543,7 +544,7 @@ export default function ConnectPage() {
   );
 
   const handleMobileWallet = useCallback(
-    (walletId: string) => {
+    async (walletId: string) => {
       try {
         clearDisconnectGuard();
         localStorage.setItem("system_pending_wakeup", "1");
@@ -555,6 +556,7 @@ export default function ConnectPage() {
         sessionStorage.setItem("preferred_mobile_wallet", brand);
       } catch {}
 
+      // 1. If inside an in-app browser (e.g. MetaMask Mobile browser), connect directly via injected provider
       const inj = connectors.find(
         (c) =>
           c.id === "injected" ||
@@ -570,11 +572,47 @@ export default function ConnectPage() {
         return;
       }
 
-      // Outside an in-app browser (e.g. mobile Safari / Chrome):
-      // Launch Reown AppKit natively!
-      // This establishes the WalletConnect session and prompts MetaMask / Rainbow / Coinbase
-      // to connect and sign via standard universal link, cleanly returning to Safari/Chrome
-      // instead of hijacking the tab or opening an in-app webview / Google search.
+      // 2. If 'other-mobile', open AppKit's full modal with 500+ wallets
+      if (walletId === "other-mobile") {
+        openAppKitSafe();
+        return;
+      }
+
+      // 3. Native Direct Universal Link for MetaMask, Rainbow, Coinbase
+      const w = MOBILE_WALLETS.find((x) => x.id === walletId);
+      if (w) setPendingWallet({ id: w.id, name: w.name, logo: w.logo });
+
+      const wcConnector = connectors.find(
+        (c) => c.id === "walletConnect" || (c as { type?: string }).type === "walletConnect",
+      );
+
+      if (wcConnector) {
+        try {
+          const provider = (await wcConnector.getProvider()) as any;
+          if (provider && typeof provider.once === "function") {
+            provider.once("display_uri", (uri: string) => {
+              let targetLink = uri;
+              if (brand === "metamask") {
+                targetLink = `https://metamask.app.link/wc?uri=${encodeURIComponent(uri)}`;
+              } else if (brand === "rainbow") {
+                targetLink = `https://rainbow.me/wc?uri=${encodeURIComponent(uri)}`;
+              } else if (brand === "coinbase") {
+                targetLink = `https://go.cb-w.com/wc?uri=${encodeURIComponent(uri)}`;
+              }
+              setMobileDeepLink(targetLink);
+              if (typeof window !== "undefined") {
+                window.location.href = targetLink;
+              }
+            });
+          }
+          connect({ connector: wcConnector });
+          return;
+        } catch (err) {
+          console.warn("[MobileWallet] Direct universal link failed, falling back to AppKit modal:", err);
+        }
+      }
+
+      // Fallback to AppKit modal
       openAppKitSafe();
     },
     [connect, connectors, openAppKitSafe],
@@ -584,6 +622,7 @@ export default function ConnectPage() {
     stopQr();
     setView("choose");
     setPendingWallet(null);
+    setMobileDeepLink(null);
     setAuthStatus("idle");
     setSignError(null);
     signingRef.current = false;
@@ -594,6 +633,7 @@ export default function ConnectPage() {
   const handleRetry = useCallback(() => {
     signingRef.current = false;
     setSignError(null);
+    setMobileDeepLink(null);
     setAuthStatus("idle");
   }, []);
 
@@ -630,6 +670,7 @@ export default function ConnectPage() {
         pendingWallet={pendingWallet}
         signStep={signStep}
         errorMessage={signError}
+        mobileDeepLink={mobileDeepLink}
         qr={qrData ? <QRCodeSVG value={qrData} size={172} level="M" bgColor="#ffffff" fgColor="#15171c" /> : null}
         qrPin={qrPin}
         qrExpired={qrExpired}
@@ -640,7 +681,10 @@ export default function ConnectPage() {
         onBack={handleBack}
         onRetry={handleRetry}
         onDisconnect={handleDisconnect}
-        onCancelPending={() => setPendingWallet(null)}
+        onCancelPending={() => {
+          setPendingWallet(null);
+          setMobileDeepLink(null);
+        }}
         onRefreshQr={startQr}
         onLinkDevice={() => setShowMobileScanner(true)}
       />

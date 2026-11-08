@@ -46,6 +46,7 @@ export interface ConnectViewProps {
   /** 1 wallet connected, 2 waiting for signature, 3 opening the session. */
   signStep?: 1 | 2 | 3;
   errorMessage?: string | null;
+  mobileDeepLink?: string | null;
   /** The rendered QR code, supplied by the container. */
   qr?: React.ReactNode;
   qrPin?: string | null;
@@ -246,12 +247,30 @@ function Connecting(p: ConnectViewProps) {
         </span>
       )}
       <h1 className={s.title}>Waiting for {name}</h1>
-      <p className={s.subtitle}>Approve the connection request in {name}. If nothing appears, open the extension from your browser toolbar.</p>
+      <p className={s.subtitle}>
+        {p.isMobile 
+          ? `Open ${name} to approve the connection. Tap the button below if the app did not open automatically.`
+          : `Approve the connection request in ${name}. If nothing appears, open the extension from your browser toolbar.`}
+      </p>
       <span className={s.waiting} role="status">
         <LoaderCircle size={14} strokeWidth={2} className={s.spin} aria-hidden="true" />
         Waiting for approval
       </span>
       <div className={s.actions}>
+        {p.isMobile && p.mobileDeepLink && (
+          <a
+            href={p.mobileDeepLink}
+            className={`${s.btn} ${s.btnPrimary}`}
+            onClick={(e) => {
+              // Direct navigation fallback on mobile
+              if (typeof window !== "undefined") {
+                window.location.href = p.mobileDeepLink!;
+              }
+            }}
+          >
+            Open {name}
+          </a>
+        )}
         <button type="button" className={`${s.btn} ${s.btnSecondary}`} onClick={p.onCancelPending}>
           Cancel
         </button>
@@ -301,9 +320,9 @@ function Signing(p: ConnectViewProps) {
             onClick={() => {
               if (typeof window !== "undefined") {
                 const pref = sessionStorage.getItem("preferred_mobile_wallet") || "";
-                if (pref === "metamask") window.location.href = "metamask://";
-                else if (pref === "rainbow") window.location.href = "rainbow://";
-                else if (pref === "coinbase") window.location.href = "cbwallet://";
+                if (pref === "metamask") window.location.href = "https://metamask.app.link/";
+                else if (pref === "rainbow") window.location.href = "https://rainbow.me/";
+                else if (pref === "coinbase") window.location.href = "https://go.cb-w.com/";
                 else p.onOtherWallets();
               }
             }}
