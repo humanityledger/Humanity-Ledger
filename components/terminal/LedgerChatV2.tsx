@@ -235,7 +235,17 @@ export const formatMessagePreview = (content: string): string => {
   }
 
   // ZK payment / structured message previews — never leak raw payload to sidebar
-  if (cleanContent.startsWith('__ZK_INVOICE__')) return '📄 Invoice';
+  if (cleanContent.startsWith('__ZK_INVOICE__')) {
+    try {
+      const inv = parseInvoicePayload(cleanContent);
+      if (inv && inv.totalAmount) {
+        return `📄 Invoice: ${inv.totalAmount} ${inv.token || 'USDC'}`;
+      }
+    } catch {
+      // fallback
+    }
+    return '📄 Invoice';
+  }
   if (cleanContent.startsWith('__ZK_TIP__')) return '💸 Private tip sent';
   if (cleanContent.startsWith('__ZK_STREAM__')) return '🔁 Payment stream';
   if (cleanContent.startsWith('__ZK_MONEY_PAYMENT__')) return '💰 Private payment';
