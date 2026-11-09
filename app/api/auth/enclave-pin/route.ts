@@ -22,19 +22,25 @@ import { argon2id } from '@noble/hashes/argon2';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 
 const ATTEMPT_WINDOW_MS = 5 * 60 * 1000;  // 5 minutes
-const MAX_ATTEMPTS = 8;                     // 8 attempts
+const MAX_ATTEMPTS = 5;                     // 5 attempts
 
 // In-memory fallback PIN hash store for resilient standalone execution without database
 const inMemoryPinStore = new Map<string, string>();
 
-// A-010: Resilient secrets with secure defaults for standalone deployment
+// A-010: Secrets must be provided via environment; no hard-coded fallbacks.
 function getEnclavePinPepper(): string {
-  const pepper = process.env.ENCLAVE_PIN_PEPPER || 'whale_enclave_argon2id_pepper_2026_prod_secret';
+  const pepper = process.env.ENCLAVE_PIN_PEPPER;
+  if (!pepper || pepper.length < 32) {
+    throw new Error('[Enclave PIN] ENCLAVE_PIN_SECRET / ENCLAVE_PIN_PEPPER is not set or too short.');
+  }
   return pepper;
 }
 
 function getEnclavePinSecret(): string {
-  const secret = process.env.ENCLAVE_PIN_SECRET || 'whale_enclave_hmac_secret_2026_change_in_prod';
+  const secret = process.env.ENCLAVE_PIN_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error('[Enclave PIN] ENCLAVE_PIN_SECRET / ENCLAVE_PIN_PEPPER is not set or too short.');
+  }
   return secret;
 }
 
@@ -163,28 +169,11 @@ async function pinAttemptGate(userId: string): Promise<NextResponse | null> {
   }
 }
 
-// resolveUserId: checks session, handshake cookie, and wallet address headers
+// resolveUserId: server-side session only. Client-controlled cookies/headers must not identify the user.
 async function resolveUserId(req?: NextRequest): Promise<string | null> {
   try {
     const session = await getSession(req);
     if (session?.userId) return session.userId.toLowerCase();
-    
-    let handshake = req?.cookies?.get?.('system_handshake')?.value;
-    if (!handshake) {
-      try {
-        const { cookies } = await import('next/headers');
-        const cStore = await cookies();
-        handshake = cStore.get('system_handshake')?.value;
-      } catch {}
-    }
-    if (handshake && /^0x[a-fA-F0-9]{40}$/.test(handshake)) {
-      return handshake.toLowerCase();
-    }
-
-    const headerAddr = req?.headers?.get?.('x-wallet-address');
-    if (headerAddr && /^0x[a-fA-F0-9]{40}$/.test(headerAddr)) {
-      return headerAddr.toLowerCase();
-    }
   } catch {}
   return null;
 }
@@ -396,8 +385,8 @@ export async function PUT(req: NextRequest) {
     const newPinHash = await hashPinSafe(userId, newPin);
     inMemoryPinStore.set(userId.toLowerCase(), newPinHash);
 
-    // Initial PIN configuration or authorization via temp clearance token or new setup
-    if (!storedPinHash || (clientClearanceToken && clientClearanceTs) || !currentPin) {
+    // Initial PIN configuration: only when no PIN exists yet
+    if (!storedPinHash) {
       try {
         await prisma.user.upsert({
           where: { walletAddress: userId.toLowerCase() },
@@ -455,7 +444,7 @@ export async function PUT(req: NextRequest) {
 
     if (!isAuthorized) {
       if (!currentPin || typeof currentPin !== 'string' || !/^\d{6}$/.test(currentPin)) {
-        return NextResponse.json({ error: 'Current PIN is required to change PIN.' }, { status: 400 });
+        return NextResponse.json({ error: 'Current PIN is required to change PIN.' }, { status: 403 });
       }
       const gatedPut = await pinAttemptGate(userId);
       if (gatedPut) return gatedPut;
