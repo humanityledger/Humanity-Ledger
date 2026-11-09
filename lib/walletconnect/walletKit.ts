@@ -18,7 +18,7 @@ export async function createWeb3Wallet() {
 
     const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID 
       || process.env.NEXT_PUBLIC_WC_PROJECT_ID 
-      || '47cce4049225582027fdeeecb2868ead';
+      || 'c78f6e1e-1169-4640-8626-d9de982fa0ea';
 
     const core = new Core({
         projectId,
@@ -28,10 +28,10 @@ export async function createWeb3Wallet() {
     web3wallet = await Web3Wallet.init({
         core: core as any, // pino Logger types diverge between nested @walletconnect package versions
         metadata: {
-            name: 'Ledger Portfolio',
-            description: 'Sovereign System Wallet',
-            url: process.env.NEXT_PUBLIC_APP_URL || 'https://www.humanidfi.com',
-            icons: ['https://www.humanidfi.com/logo-mark.png'],
+            name: 'Ledger Chat',
+            description: 'Sovereign identity & encrypted chat network.',
+            url: process.env.NEXT_PUBLIC_APP_URL || 'https://ledgerchat.org',
+            icons: [`${process.env.NEXT_PUBLIC_APP_URL || 'https://ledgerchat.org'}/logo-mark.png`],
         },
     });
 

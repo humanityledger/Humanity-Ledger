@@ -8,8 +8,10 @@ import {
 } from "wagmi/chains";
 import { injected, walletConnect, coinbaseWallet } from 'wagmi/connectors'
 
-// Project ID for WalletConnect
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || process.env.NEXT_PUBLIC_WC_PROJECT_ID || 'bf1083a298e7222c838266166b12b2ba';
+// Project ID for WalletConnect — must match the Reown Cloud project
+// that has ledgerchat.org in its Allowed Domains list.
+// Set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID in Railway env vars.
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || process.env.NEXT_PUBLIC_WC_PROJECT_ID || 'c78f6e1e-1169-4640-8626-d9de982fa0ea';
 
 export const AUTH_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_AUTH_TOKEN_ADDRESS || '0xdc6f18f83959cd25095c2453192f16d08b496666') as `0x${string}`;
 
