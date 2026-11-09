@@ -14,9 +14,17 @@
 import React from "react";
 import {
   ArrowLeft,
+  Bell,
+  CalendarDays,
   Check,
   CheckCheck,
+  FileText,
+  Heart,
   Lock,
+  MessageCircle,
+  PenLine,
+  Search,
+  Users,
   Mic,
   MicOff,
   Phone,
@@ -206,27 +214,12 @@ export function VoiceCallScreen({ p, active }: ScreenProps) {
 export function VideoCallScreen({ p, active }: ScreenProps) {
   return (
     <div className={`${s.screenVideo} ${active ? s.videoLive : ""}`}>
-      {/* The remote camera: an illustration, not a photograph of a person. */}
+      {/* The remote camera: a warmly lit person in an interior, drawn in CSS. */}
       <div className={s.remote} aria-hidden="true">
+        <div className={s.videoPersonBg} />
         <span className={s.bokeh} />
         <span className={s.bokeh2} />
-        <svg className={s.figure} viewBox="0 0 410 600" preserveAspectRatio="xMidYMax slice">
-          <defs>
-            <linearGradient id="hlSkin" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#59606c" />
-              <stop offset="1" stopColor="#3c414b" />
-            </linearGradient>
-            <linearGradient id="hlKnit" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#2f343d" />
-              <stop offset="1" stopColor="#15181d" />
-            </linearGradient>
-          </defs>
-          <path d="M40 600c8-120 70-178 165-178s157 58 165 178Z" fill="url(#hlKnit)" />
-          <rect x="178" y="330" width="54" height="80" rx="24" fill="url(#hlSkin)" />
-          <ellipse cx="205" cy="268" rx="82" ry="98" fill="url(#hlSkin)" />
-          <path d="M122 250c-2-78 44-120 92-118 52 2 86 40 80 112-14-40-46-62-86-64-40 0-72 26-86 70Z" fill="#1b1e24" />
-          <path d="M287 230c8 40 2 82-16 110M60 560c10-80 50-128 120-140" fill="none" stroke="#f3e2c9" strokeOpacity="0.45" strokeWidth="5" strokeLinecap="round" />
-        </svg>
+        <div className={s.videoPersonFigure} />
       </div>
       <StatusBar dark />
       <div className={s.videoTop}>
@@ -271,7 +264,7 @@ export function VideoCallScreen({ p, active }: ScreenProps) {
 /* ── 4. Private payment ────────────────────────────────────────────── */
 
 export function PaymentScreen({ p }: ScreenProps) {
-  const amount = "42.00";
+  const amount = "140.00";
   const typed = amount.slice(0, Math.max(1, Math.min(amount.length, Math.floor(p * 12))));
   const pressed = p >= 0.58 && p < 0.7;
   const sent = p >= 0.7;
@@ -283,32 +276,44 @@ export function PaymentScreen({ p }: ScreenProps) {
       <div className={`${s.chatBody} ${s.chatBodyPay}`}>
         <span className={s.day}>Yesterday</span>
         <div className={`${s.msgIn} ${s.in}`}>
-          Thanks for dinner! What do I owe you?<span className={s.time}>22:14</span>
+          Thanks for the cabin weekend! What do I owe you?<span className={s.time}>22:14</span>
         </div>
         <div className={`${s.msgOut} ${s.in}`}>
-          42, whenever you can.
+          Sending you the invoice now.
           <span className={s.time}>
             22:15 <CheckCheck size={15} strokeWidth={2.2} />
           </span>
         </div>
         <span className={s.day}>Today</span>
-        <div className={`${s.payCard} ${sent ? s.in : s.gone}`}>
-          <span className={s.payTop}>
-            <ShieldCheck size={18} strokeWidth={2} />
-            Private payment
-          </span>
-          <span className={s.payAmount}>42.00 zkUSDC</span>
-          <span className={s.payRow}>
+        <div className={`${s.invoiceCard} ${sent ? s.in : s.gone}`}>
+          <div className={s.invoiceHeader}>
+            <FileText size={16} strokeWidth={2} className={s.invoiceIcon} />
+            <span className={s.invoiceRef}>Invoice INV-2026-6638</span>
+            <span className={`${s.invoiceBadge} ${settled ? s.invoiceBadgePaid : ""}`}>{settled ? "Paid" : "Unpaid"}</span>
+          </div>
+          <div className={s.invoiceTitle}>Cabin Rental Weekend Split</div>
+          <div className={s.invoiceFrom}>From zk:812daF to zk:0xF207…2A8e</div>
+          <div className={s.invoiceLine}>
+            <span>Aztec zk.money Native Chat Integ…</span>
+            <span>140.00</span>
+          </div>
+          <div className={s.invoiceDivider} />
+          <div className={s.invoiceTotal}>
+            <span>Total</span>
+            <span className={s.invoiceTotalAmount}>140.00 USDC</span>
+          </div>
+          <div className={s.invoiceFooter}>
+            <span className={s.invoiceDue}>
+              <CalendarDays size={14} strokeWidth={2} /> Due 22/11/2026
+            </span>
             {settled ? (
-              <>
-                <Check size={15} strokeWidth={2.6} /> Settled on the Aztec test network
-              </>
+              <span className={s.invoicePaidNote}>
+                <Check size={14} strokeWidth={2.6} /> Settled
+              </span>
             ) : (
-              <>
-                <span className={s.spinner} /> Proving on this device
-              </>
+              <span className={s.invoicePayBtn}>Pay Invoice</span>
             )}
-          </span>
+          </div>
         </div>
       </div>
       <Composer />
@@ -329,6 +334,189 @@ export function PaymentScreen({ p }: ScreenProps) {
         <span className={`${s.sheetBtn} ${pressed ? s.sheetBtnPressed : ""}`}>Send privately</span>
         <span className={s.sheetBal}>Private balance 118.40 zkUSDC</span>
       </div>
+    </div>
+  );
+}
+
+/* ── 5 to 8. Screens drawn in a CSS iPhone frame ───────────────────── */
+
+type Tab = "chats" | "communities" | "updates";
+
+function TabBar({ on }: { on: Tab }) {
+  const tabs: { id: Tab; label: string; Icon: typeof Bell }[] = [
+    { id: "chats", label: "Chats", Icon: MessageCircle },
+    { id: "communities", label: "Communities", Icon: Users },
+    { id: "updates", label: "Updates", Icon: Bell },
+  ];
+  return (
+    <div className={s.tabBar}>
+      {tabs.map(({ id, label, Icon }) => (
+        <span key={id} className={`${s.tab} ${id === on ? s.tabOn : ""}`}>
+          <Icon size={24} strokeWidth={id === on ? 2.4 : 1.9} />
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function PageTitle({ children }: { children: React.ReactNode }) {
+  return <div className={s.pageTitle}>{children}</div>;
+}
+
+const COMMUNITIES = [
+  { name: "Design Team", initials: "DT", members: "128 members", last: "Figma file is in the vault.", time: "10:52", hue: 262 },
+  { name: "Cabin Weekend", initials: "CW", members: "6 members", last: "Invoice INV-2026-6638 sent.", time: "09:14", hue: 24 },
+  { name: "Aztec Builders", initials: "AB", members: "2,481 members", last: "Proof times are down 30%.", time: "Yesterday", hue: 200 },
+  { name: "Family", initials: "FA", members: "9 members", last: "Dinner on Sunday?", time: "Yesterday", hue: 340 },
+  { name: "Early Access", initials: "EA", members: "10,000 members", last: "Welcome to Ledger Chat.", time: "Mon", hue: 150 },
+];
+
+export function CommunitiesScreen({ p }: ScreenProps) {
+  const shown = Math.max(2, Math.min(COMMUNITIES.length, 2 + Math.floor(p * 4)));
+  return (
+    <div className={s.screenLight}>
+      <StatusBar />
+      <PageTitle>Communities</PageTitle>
+      <div className={s.searchField}>
+        <Search size={18} strokeWidth={2} /> Search communities
+      </div>
+      <div className={s.list}>
+        {COMMUNITIES.map((c, i) => (
+          <div key={c.name} className={`${s.row} ${i < shown ? s.in : s.out}`}>
+            <span className={s.groupAvatar} style={{ background: `hsl(${c.hue} 55% 92%)`, color: `hsl(${c.hue} 45% 32%)` }}>
+              {c.initials}
+            </span>
+            <span className={s.rowMain}>
+              <span className={s.rowTop}>
+                <span className={s.rowName}>{c.name}</span>
+                <span className={s.rowTime}>{c.time}</span>
+              </span>
+              <span className={s.rowSub}>{c.members}</span>
+              <span className={s.rowLast}>
+                <Lock size={12} strokeWidth={2.4} /> {c.last}
+              </span>
+            </span>
+            <span className={s.encBadge}>Encrypted</span>
+          </div>
+        ))}
+      </div>
+      <TabBar on="communities" />
+    </div>
+  );
+}
+
+export function AgreementScreen({ p }: ScreenProps) {
+  const signed = p >= 0.6;
+  return (
+    <div className={s.screenLight}>
+      <StatusBar />
+      <ChatHeader name="Irina Vlad" initials="IV" sub="0xA4f2…9C1b" />
+      <div className={s.chatBody}>
+        <span className={s.day}>Today</span>
+        <div className={`${s.msgIn} ${s.in}`}>
+          Here is the contract for Q4. Please sign.<span className={s.time}>14:02</span>
+        </div>
+        <div className={`${s.docCard} ${s.in}`}>
+          <div className={s.invoiceHeader}>
+            <PenLine size={16} strokeWidth={2} className={s.invoiceIcon} />
+            <span className={s.invoiceRef}>Private agreement</span>
+            <span className={`${s.invoiceBadge} ${signed ? s.invoiceBadgePaid : ""}`}>{signed ? "Signed" : "Pending"}</span>
+          </div>
+          <div className={s.invoiceTitle}>Freelance Contract Q4</div>
+          <div className={s.partyRow}>
+            <span className={s.partyAddr}>0xA4f2…9C1b</span>
+            <span className={s.partyArrow}>↔</span>
+            <span className={s.partyAddr}>0x812d…1ea</span>
+          </div>
+          <div className={`${s.signState} ${signed ? s.signStateOn : ""}`}>
+            {signed ? (
+              <>
+                <Check size={15} strokeWidth={2.6} /> Both parties signed
+              </>
+            ) : (
+              <>
+                <span className={s.spinnerDark} /> Waiting for the second signature
+              </>
+            )}
+          </div>
+          <span className={s.docBtn}>View on-chain proof</span>
+        </div>
+      </div>
+      <Composer />
+    </div>
+  );
+}
+
+export function InvoicePaidScreen({ p }: ScreenProps) {
+  const proof = p >= 0.5;
+  return (
+    <div className={s.screenLight}>
+      <StatusBar />
+      <ChatHeader name="Marco Rossi" initials="MR" sub="online" />
+      <div className={s.chatBody}>
+        <span className={s.day}>Today</span>
+        <div className={`${s.invoiceCard} ${s.in}`} style={{ alignSelf: "center", width: "92%" }}>
+          <div className={s.invoiceHeader}>
+            <FileText size={16} strokeWidth={2} className={s.invoiceIcon} />
+            <span className={s.invoiceRef}>Invoice INV-2026-6638</span>
+            <span className={`${s.invoiceBadge} ${s.invoiceBadgePaid}`}>Paid</span>
+          </div>
+          <div className={s.invoiceTitle}>Cabin Rental Weekend Split</div>
+          <div className={s.invoiceLine}>
+            <span>Cabin, 2 nights</span>
+            <span>120.00</span>
+          </div>
+          <div className={s.invoiceLine}>
+            <span>Cleaning fee</span>
+            <span>20.00</span>
+          </div>
+          <div className={s.invoiceDivider} />
+          <div className={s.invoiceTotal}>
+            <span>Total</span>
+            <span className={s.invoiceTotalAmount}>140.00 USDC</span>
+          </div>
+          <div className={`${s.paidBanner} ${proof ? s.in : s.out}`}>
+            <Check size={16} strokeWidth={2.6} /> Paid. Aztec proof verified
+          </div>
+        </div>
+        <div className={`${s.msgIn} ${at(p, 0.7)}`}>
+          Received, thank you!<span className={s.time}>14:06</span>
+        </div>
+      </div>
+      <Composer />
+    </div>
+  );
+}
+
+export function UpdatesScreen({ p }: ScreenProps) {
+  const items = [
+    { Icon: Heart, tint: "#7c4dff", title: "Invoice paid", text: "42 USDC received from Marco Rossi", time: "2 min ago" },
+    { Icon: FileText, tint: "#0a7d4f", title: "Agreement signed", text: "Freelance Contract Q4 is signed by both parties", time: "1h ago" },
+    { Icon: Bell, tint: "#2563eb", title: "Design Team", text: "New message in Design Team", time: "3h ago" },
+  ];
+  const shown = Math.max(1, Math.min(items.length, 1 + Math.floor(p * 3)));
+  return (
+    <div className={s.screenLight}>
+      <StatusBar />
+      <PageTitle>Updates</PageTitle>
+      <div className={s.list}>
+        {items.map(({ Icon, tint, title, text, time }, i) => (
+          <div key={title} className={`${s.row} ${i < shown ? s.in : s.out}`}>
+            <span className={s.groupAvatar} style={{ background: `${tint}1a`, color: tint }}>
+              <Icon size={22} strokeWidth={2.1} />
+            </span>
+            <span className={s.rowMain}>
+              <span className={s.rowTop}>
+                <span className={s.rowName}>{title}</span>
+                <span className={s.rowTime}>{time}</span>
+              </span>
+              <span className={s.rowLast}>{text}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+      <TabBar on="updates" />
     </div>
   );
 }

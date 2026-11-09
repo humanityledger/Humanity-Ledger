@@ -16,7 +16,17 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChatScreen, PaymentScreen, VideoCallScreen, VoiceCallScreen, type ScreenProps } from "./phoneScreens";
+import {
+  AgreementScreen,
+  ChatScreen,
+  CommunitiesScreen,
+  InvoicePaidScreen,
+  PaymentScreen,
+  UpdatesScreen,
+  VideoCallScreen,
+  VoiceCallScreen,
+  type ScreenProps,
+} from "./phoneScreens";
 import s from "./PhoneShowcase.module.css";
 
 interface Phone {
@@ -32,7 +42,19 @@ interface Phone {
   m: number[];
   f: { x: number; y: number; w: number; h: number };
   Screen: React.ComponentType<ScreenProps>;
+  /** No photograph: draw an iPhone 15 Pro (390 x 844) in CSS instead. */
+  cssFrame?: boolean;
 }
+
+const CSS_PHONE = {
+  src: "",
+  fingers: "",
+  w: 390,
+  h: 844,
+  m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+  f: { x: 0, y: 0, w: 0, h: 0 },
+  cssFrame: true,
+};
 
 const PHONES: Phone[] = [
   {
@@ -92,6 +114,38 @@ const PHONES: Phone[] = [
     m: [0.885581367, 0, 0, 0, 0, 0.871244647, 0, 0, 0, 0, 1, 0, 605.600036621, 59.200000763, 0, 1],
     f: { x: 602, y: 496, w: 263, h: 379 },
     Screen: PaymentScreen,
+  },
+  {
+    ...CSS_PHONE,
+    id: "communities",
+    label: "Communities",
+    title: "Your private group, your rules.",
+    text: "Create encrypted group spaces for your team, family or community. Up to 10,000 members, zero central server.",
+    Screen: CommunitiesScreen,
+  },
+  {
+    ...CSS_PHONE,
+    id: "agreement",
+    label: "Agreements",
+    title: "Agreements that live on-chain.",
+    text: "Sign binding agreements inside your chat. Both signatures are anchored to the Aztec network, immutable and verifiable.",
+    Screen: AgreementScreen,
+  },
+  {
+    ...CSS_PHONE,
+    id: "invoice",
+    label: "Invoices",
+    title: "Create, send, collect, in one chat.",
+    text: "Private invoices settle in one tap. The payer approves from their own wallet. No intermediary. No waiting days.",
+    Screen: InvoicePaidScreen,
+  },
+  {
+    ...CSS_PHONE,
+    id: "updates",
+    label: "Updates",
+    title: "Everything in one place.",
+    text: "Payment confirmations, agreement signatures, new messages, all in one encrypted feed. Nothing slips through.",
+    Screen: UpdatesScreen,
   },
 ];
 
@@ -172,6 +226,52 @@ function scrollParent(el: HTMLElement | null): HTMLElement | null {
   return (document.scrollingElement as HTMLElement) ?? null;
 }
 
+/** An iPhone 15 Pro in CSS, 390 x 844, scaled to sit in its tile like a photograph. */
+function CssPhone({
+  i,
+  progress,
+  active,
+  Screen,
+}: {
+  ph: Phone;
+  i: number;
+  progress: number;
+  active: boolean;
+  Screen: React.ComponentType<ScreenProps>;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const fit = () => {
+      const W = el.clientWidth || 400;
+      const H = el.clientHeight || 500;
+      el.style.setProperty("--cs", String(Math.min(W / 390, (H * 0.9) / 844)));
+    };
+    fit();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={s.photo} data-photo={i} data-css="1" aria-hidden="true">
+      <div className={s.cssStage}>
+        <div className={s.cssScale}>
+          <div className={s.iphoneFrame}>
+            <span className={s.iphoneIsland} />
+            <div className={s.iphoneScreen}>
+              <div className={s.iphoneContent}>
+                <Screen p={progress} active={active} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PhonePhoto({
   ph,
   i,
@@ -186,6 +286,7 @@ function PhonePhoto({
   screen?: React.ComponentType<ScreenProps>;
 }) {
   const Screen = screen ?? ph.Screen;
+  if (ph.cssFrame) return <CssPhone ph={ph} i={i} progress={progress} active={active} Screen={Screen} />;
   return (
     <div className={s.photo} data-photo={i} aria-hidden="true">
       <div className={s.frame}>
@@ -255,7 +356,7 @@ export function PhoneShowcase() {
       deck.style.setProperty("--tw", `${tw}px`);
       deck.style.setProperty("--th", `${tw / aspect}px`);
     }
-    deck.querySelectorAll<HTMLElement>("[data-photo]").forEach((el) => {
+    deck.querySelectorAll<HTMLElement>("[data-photo]:not([data-css])").forEach((el) => {
       fitPhoto(el, Number(el.dataset.photo), mode === "scroll" ? 1.12 : 1.38);
     });
   }, [mode]);

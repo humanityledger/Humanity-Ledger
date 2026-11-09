@@ -1279,3 +1279,414 @@
     transition: none !important;
   }
 }
+
+/* ── Video call: a warmly lit person, drawn in CSS ── */
+.videoPersonBg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 60% at 50% 35%, #e8c9a0 0%, #d4a574 30%, #c4875a 55%, #3a3030 100%);
+}
+
+.videoPersonFigure {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 240px;
+  height: 420px;
+  background:
+    radial-gradient(ellipse 100% 40% at 50% 100%, #2a1f1a 0%, transparent 70%),
+    radial-gradient(ellipse 18% 15% at 50% 68%, #d4956a 0%, transparent 60%),
+    radial-gradient(ellipse 55% 48% at 50% 42%, #f0b88a 0%, #e09060 40%, #c47848 70%, transparent 90%);
+  filter: blur(0.5px);
+}
+
+/* ── Invoice card (payment screen, invoice screen) ── */
+.invoiceCard,
+.docCard {
+  align-self: flex-end;
+  width: 88%;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fff;
+  color: #111;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+  font-size: 14px;
+}
+
+.docCard {
+  align-self: center;
+  width: 92%;
+}
+
+.invoiceHeader {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.invoiceIcon {
+  flex: none;
+  color: #5b6270;
+}
+
+.invoiceRef {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #5b6270;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.invoiceBadge {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #fff1d6;
+  color: #9a5b00;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.invoiceBadgePaid {
+  background: #dcf5e7;
+  color: #0a7d4f;
+}
+
+.invoiceTitle {
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.invoiceFrom {
+  font-size: 12.5px;
+  color: #7a808c;
+}
+
+.invoiceLine {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13.5px;
+  color: #3a404c;
+  font-variant-numeric: tabular-nums;
+}
+
+.invoiceDivider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.invoiceTotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 600;
+}
+
+.invoiceTotalAmount {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.invoiceFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.invoiceDue {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: #7a808c;
+}
+
+.invoicePayBtn,
+.docBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 16px;
+  border-radius: 10px;
+  background: #111;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.docBtn {
+  margin-top: 4px;
+}
+
+.invoicePaidNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  font-weight: 650;
+  color: #0a7d4f;
+}
+
+.paidBanner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #dcf5e7;
+  color: #0a7d4f;
+  font-size: 13.5px;
+  font-weight: 650;
+}
+
+/* ── Agreement ── */
+.partyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #f5f6f8;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.partyAddr {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-weight: 550;
+}
+
+.partyArrow {
+  color: #7a808c;
+}
+
+.signState {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #7a808c;
+}
+
+.signStateOn {
+  color: #0a7d4f;
+}
+
+.spinnerDark {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-top-color: #111;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ── List screens (Communities, Updates) ── */
+.pageTitle {
+  flex: none;
+  padding: 6px 20px 10px;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.searchField {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #eceef2;
+  color: #7a808c;
+  font-size: 16px;
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid rgba(16, 24, 40, 0.06);
+}
+
+.groupAvatar {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.rowMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rowTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rowName {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.rowTime {
+  font-size: 12.5px;
+  color: #8a909c;
+  white-space: nowrap;
+}
+
+.rowSub {
+  font-size: 13px;
+  color: #7a808c;
+}
+
+.rowLast {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  color: #5b6270;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.encBadge {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #dcf5e7;
+  color: #0a7d4f;
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
+.tabBar {
+  flex: none;
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 8px 26px;
+  border-top: 1px solid rgba(16, 24, 40, 0.08);
+  background: #fff;
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  font-weight: 550;
+  color: #8a909c;
+}
+
+.tabOn {
+  color: #111;
+  font-weight: 700;
+}
+
+/* ── iPhone 15 Pro drawn in CSS (screens without a photograph) ── */
+.cssStage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(160deg, #e4e5e8 0%, #cfd1d6 100%);
+}
+
+.cssScale {
+  /* 390 x 844 box scaled to fit the tile; --cs is set from the tile size. */
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 390px;
+  height: 844px;
+  transform: translate(-50%, -50%) scale(var(--cs, 0.5));
+  transform-origin: 50% 50%;
+}
+
+.iphoneFrame {
+  position: relative;
+  width: 390px;
+  height: 844px;
+  background: #0a0a0a;
+  border-radius: 54px;
+  border: 1.5px solid #aaa9aa;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+    0 50px 100px rgba(0, 0, 0, 0.4),
+    0 1px 3px rgba(255, 255, 255, 0.15) inset;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.iphoneIsland {
+  position: absolute;
+  top: 13px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 34px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 10;
+}
+
+.iphoneScreen {
+  position: absolute;
+  inset: 0;
+  border-radius: 52px;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* The screens are laid out on 430 x 932; fit them to 390 x 844. */
+.iphoneContent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 430px;
+  height: 932px;
+  transform: scale(0.907);
+  transform-origin: 0 0;
+}
+
+/* The frame draws the island, so hide the one in the screen's status bar. */
+.iphoneContent .island {
+  display: none;
+}
