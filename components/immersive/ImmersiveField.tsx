@@ -84,9 +84,14 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
       }
     };
 
+    // The landing page sets CSS zoom on <html>; pointer events and layout
+    // rects then disagree by that factor. Empty string (Firefox) means 1.
+    const htmlZoom = () => parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+
     const resize = () => {
+      const z = htmlZoom();
       const rect = root.getBoundingClientRect();
-      cachedRect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+      cachedRect = { left: rect.left / z, top: rect.top / z, width: rect.width / z, height: rect.height / z };
       w = Math.max(1, root.clientWidth);
       h = Math.max(1, root.clientHeight);
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -174,8 +179,9 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
 
     const onMove = (e: PointerEvent) => {
       // Use cached rect coordinates — zero synchronous layout reflows!
-      target.x = e.clientX - cachedRect.left;
-      target.y = e.clientY - cachedRect.top;
+      const z = htmlZoom();
+      target.x = e.clientX / z - cachedRect.left;
+      target.y = e.clientY / z - cachedRect.top;
       if (!target.on) {
         target.on = true;
         if (lens.k < 0.01) {
