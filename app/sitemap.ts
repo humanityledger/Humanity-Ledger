@@ -12,7 +12,7 @@ import { BLOG_POSTS } from "@/lib/docs/pages/company";
  * /sovereign-identity, /aztec-sequencer) and superseded legal pages.
  */
 
-const BASE = "https://humanidfi.com";
+const BASE = "https://ledgerchat.org";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const docs = NAV.flatMap((group) =>

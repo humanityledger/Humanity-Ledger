@@ -28,7 +28,7 @@ jobs:
           };
 
           export default function () {
-            const res = http.get('https://humanidfi.com/api/health');
+            const res = http.get('https://ledgerchat.org/api/health');
             check(res, {
               'status is 200': (r) => r.status === 200,
             });

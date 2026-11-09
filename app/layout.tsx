@@ -97,7 +97,7 @@ export const metadata = {
 
   ],
 
-  authors: [{ name: 'Humanity Ledger', url: 'https://humanidfi.com' }],
+  authors: [{ name: 'Humanity Ledger', url: 'https://ledgerchat.org' }],
   icons: {
     icon: [
       { url: '/favicon.png', type: 'image/png', sizes: '32x32' },
@@ -134,7 +134,7 @@ export const metadata = {
     'dc.subject': 'Encrypted messaging, wallet based identity, private payments',
   },
 
-  metadataBase: new URL('https://humanidfi.com'),
+  metadataBase: new URL('https://ledgerchat.org'),
 
   alternates: {
 
@@ -174,7 +174,7 @@ export const metadata = {
 
     description: 'A messenger where your wallet is your account. Encrypted direct messages, communities, calls and payments you sign yourself. Early access.',
 
-    url: 'https://humanidfi.com',
+    url: 'https://ledgerchat.org',
 
     siteName: 'Humanity Ledger',
 
@@ -266,12 +266,12 @@ export default async function RootLayout({
     "@graph": [
       {
         "@type": "Organization",
-        "@id": "https://humanidfi.com/#organization",
+        "@id": "https://ledgerchat.org/#organization",
         "name": "Humanity Ledger",
         "description": "Humanity Ledger builds Ledger Chat, a private messenger where your Ethereum wallet is your account. Direct messages are encrypted on your device with MLS through XMTP, and payments are signed in your own wallet.",
-        "url": "https://humanidfi.com",
-        "logo": "https://humanidfi.com/logo-mark.png",
-        "email": "contact@humanidfi.com",
+        "url": "https://ledgerchat.org",
+        "logo": "https://ledgerchat.org/logo-mark.png",
+        "email": "contact@ledgerchat.org",
         "foundingDate": "2024",
         "sameAs": [
           "https://es.linkedin.com/company/humanity-ledger",
@@ -280,10 +280,10 @@ export default async function RootLayout({
       },
       {
         "@type": "WebSite",
-        "@id": "https://humanidfi.com/#website",
-        "url": "https://humanidfi.com/",
+        "@id": "https://ledgerchat.org/#website",
+        "url": "https://ledgerchat.org/",
         "name": "Humanity Ledger",
-        "publisher": { "@id": "https://humanidfi.com/#organization" },
+        "publisher": { "@id": "https://ledgerchat.org/#organization" },
         "inLanguage": "en"
       },
       {
@@ -291,8 +291,8 @@ export default async function RootLayout({
         "name": "Ledger Chat",
         "applicationCategory": "CommunicationApplication",
         "operatingSystem": "Web browser",
-        "url": "https://humanidfi.com/chat",
-        "publisher": { "@id": "https://humanidfi.com/#organization" },
+        "url": "https://ledgerchat.org/chat",
+        "publisher": { "@id": "https://ledgerchat.org/#organization" },
         "description": "The private messenger where your wallet is your account. Early access.",
         "featureList": [
           "Sign in with Ethereum (EIP-4361)",
@@ -309,9 +309,9 @@ export default async function RootLayout({
         "name": "Humanity Ledger source code",
         "codeRepository": "https://github.com/humanityledger/Humanity-Ledger",
         "programmingLanguage": ["TypeScript", "Noir", "Solidity"],
-        "author": { "@id": "https://humanidfi.com/#organization" },
-        "copyrightHolder": { "@id": "https://humanidfi.com/#organization" },
-        "license": "https://humanidfi.com/docs/content-policy",
+        "author": { "@id": "https://ledgerchat.org/#organization" },
+        "copyrightHolder": { "@id": "https://ledgerchat.org/#organization" },
+        "license": "https://ledgerchat.org/docs/content-policy",
         "description": "Source available under a proprietary licence: published so it can be read and checked, not redistributed."
       }
     ]

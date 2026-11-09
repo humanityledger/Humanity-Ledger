@@ -181,7 +181,7 @@ async function resolveUserId(req?: NextRequest): Promise<string | null> {
       return handshake.toLowerCase();
     }
 
-    const headerAddr = req?.headers?.get?.('x-wallet-address') || req?.headers?.get?.('x-web3-address');
+    const headerAddr = req?.headers?.get?.('x-wallet-address');
     if (headerAddr && /^0x[a-fA-F0-9]{40}$/.test(headerAddr)) {
       return headerAddr.toLowerCase();
     }

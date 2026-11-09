@@ -14,6 +14,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/admin/', '/api/', '/chat/', '/portfolio/', '/terminal/', '/forum/'],
       }
     ],
-    sitemap: 'https://humanidfi.com/sitemap.xml',
+    sitemap: 'https://ledgerchat.org/sitemap.xml',
   }
 }

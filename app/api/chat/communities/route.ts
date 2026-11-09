@@ -231,6 +231,76 @@ export async function PATCH(req: NextRequest) {
         });
         return NextResponse.json({ ok: true, community: updated });
       }
+
+      if (action === 'CREATE_CHANNEL') {
+        const { name, description, isPaid, price, currency } = body;
+        const count = await (prisma as any).communityChannel.count({ where: { communityId } });
+        const channel = await (prisma as any).communityChannel.create({
+          data: {
+            communityId,
+            name: clean(name, 40),
+            description: description ? clean(description, MAX_DESCRIPTION) : '',
+            isPaid: Boolean(isPaid),
+            price: price ? parseFloat(price) : null,
+            currency: currency || null,
+            position: count
+          }
+        });
+        return NextResponse.json({ ok: true, channel });
+      }
+
+      if (action === 'UPDATE_CHANNEL') {
+        const { channelId, name, description, isPaid, price, currency, position } = body;
+        if (!channelId || typeof channelId !== 'string') return NextResponse.json({ error: 'Invalid channelId' }, { status: 400 });
+        const existing = await (prisma as any).communityChannel.findFirst({ where: { id: channelId, communityId } });
+        if (!existing) return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
+        const channel = await (prisma as any).communityChannel.update({
+          where: { id: channelId },
+          data: {
+            ...(name !== undefined && { name: clean(name, 40) }),
+            ...(description !== undefined && { description: clean(description, MAX_DESCRIPTION) }),
+            ...(isPaid !== undefined && { isPaid: Boolean(isPaid) }),
+            ...(price !== undefined && { price: price === null ? null : parseFloat(price) }),
+            ...(currency !== undefined && { currency }),
+            ...(position !== undefined && { position })
+          }
+        });
+        return NextResponse.json({ ok: true, channel });
+      }
+
+      if (action === 'DELETE_CHANNEL') {
+        const { channelId } = body;
+        if (!channelId || typeof channelId !== 'string') return NextResponse.json({ error: 'Invalid channelId' }, { status: 400 });
+        const removed = await (prisma as any).communityChannel.deleteMany({ where: { id: channelId, communityId } });
+        if (!removed?.count) return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
+        return NextResponse.json({ ok: true });
+      }
+
+      if (action === 'UPDATE_PERMISSIONS') {
+        const flags: Record<string, boolean> = {};
+        if (body.permissions && typeof body.permissions === 'object') {
+          for (const [k, v] of Object.entries(body.permissions as Record<string, unknown>)) {
+            if (typeof v === 'boolean' && !['id', 'communityId'].includes(k) && /^[A-Za-z]{1,40}$/.test(k)) {
+              flags[k] = v;
+            }
+          }
+        }
+        const updated = await (prisma as any).communityPermission.upsert({
+          where: { communityId },
+          create: { communityId, ...flags },
+          update: { ...flags }
+        });
+        return NextResponse.json({ ok: true, permissions: updated });
+      }
+
+      if (action === 'UPDATE_PRIVACY') {
+        const { isPrivate } = body;
+        const updated = await (prisma as any).community.update({
+          where: { id: communityId },
+          data: { isPrivate: Boolean(isPrivate) }
+        });
+        return NextResponse.json({ ok: true, community: updated });
+      }
     } catch {}
 
     return NextResponse.json({ ok: true });
