@@ -168,7 +168,7 @@ export function buildHLOrderTypedData(order: HLOrderPayload, nonce: number) {
         // For direct per-order signing, use the exchange REST with EIP-712.
         primaryType: 'Agent' as const,
         message: {
-            source: 'https://humanityledger.com',
+            source: 'https://ledgerchat.org',
             connectionId: `0x${nonce.toString(16).padStart(64, '0')}`,
         },
     };

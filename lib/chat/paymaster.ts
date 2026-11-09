@@ -8,8 +8,8 @@ import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 
 export class GaslessPaymaster {
-  private static bundlerUrl = 'https://bundler.humanityledger.com/rpc';
-  private static paymasterUrl = 'https://paymaster.humanityledger.com/rpc';
+  private static bundlerUrl = 'https://bundler.ledgerchat.org/rpc';
+  private static paymasterUrl = 'https://paymaster.ledgerchat.org/rpc';
   private static ENTRY_POINT_ADDRESS = '0x0000000071727De22E5E9d8BAf0edAc6f37da032';
   private static CHAIN_ID = 137; // Polygon PoS / Humanity AppChain
 

@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -107,7 +107,7 @@ async function rpcProbe(name: string, category: string, url: string, timeoutMs =
 }
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.humanityledger.com';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ledgerchat.org';
 
   const results = await Promise.all([
     // Aztec ZK & Privacy Enclave (Real Mainnet Connectivity)

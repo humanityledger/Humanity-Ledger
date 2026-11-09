@@ -1,4 +1,4 @@
-﻿/**
+/**
  * lib/security/siweNonce.ts
  *
  * The SIWE nonce cookie is signed by the server.
@@ -80,10 +80,6 @@ export function expectedSiweDomain(hostHeader: string | null): string | null {
 }
 
 const KNOWN_VALID_DOMAINS = new Set([
-  'ledgerchat.org',
-  'www.ledgerchat.org',
-  'humanityledger.com',
-  'www.humanityledger.com',
   'ledgerchat.org',
   'www.ledgerchat.org',
 ]);

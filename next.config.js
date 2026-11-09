@@ -76,28 +76,6 @@ try {
     console.warn('[Fetch Bridge] Failed to patch Module._load:', e.message);
 }
 
-//  Automatic Lottie Animation Sync 
-try {
-    const fs = require('fs');
-    const path = require('path');
-    const copyLottie = (srcName, destName) => {
-        const srcPath = path.join(__dirname, 'public', 'lotties', srcName);
-        const destPath = path.join(__dirname, 'public', 'lotties', destName);
-        if (fs.existsSync(srcPath)) {
-            fs.copyFileSync(srcPath, destPath);
-            console.log(`[LOTTIE SYNC] Successfully mapped ${srcName} -> ${destName}`);
-        } else {
-            console.warn(`[LOTTIE SYNC] Missing source file for mapping: ${srcName}`);
-        }
-    };
-    copyLottie('Connected world.json', 'Ledger Mission.json');
-    copyLottie('Abstract Isometric Loader #1.json', 'block abstract.json');
-    copyLottie('Payment Success.json', 'Transaction Complete.json');
-} catch (e) {
-    console.error('[LOTTIE SYNC] Error synchronizing custom assets:', e);
-}
-
-
 // [LEGENDARY FIX] Ensure build doesn't crash if environment variables are missing in CI
 if (!process.env.MORALIS_API_KEY) {
     process.env.MORALIS_API_KEY = 'dummy_moralis_key_to_pass_build';
@@ -549,15 +527,6 @@ const nextConfig = {
             },
             {
                 source: '/olas-hokusai-4k.png',
-                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
-            },
-            // ── Devine Lu Linvega pixel art hero images — served at full native resolution ──
-            {
-                source: '/system-shots/Devine-Lu-Linvega-monochrome-pixel-art-illustration-arch-2268374-wallhere.com.jpg',
-                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
-            },
-            {
-                source: '/system-shots/monochrome-illustration-science-fiction-arch-pixel-art-Devine-Lu-Linvega-2268380-wallhere.com (1).jpg',
                 headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
             },
             // Phase 1 Mainnet: Lottie JSON animations — immutable CDN cache

@@ -43,11 +43,16 @@ export async function GET(req: NextRequest) {
         }
       });
     } catch {
-      // Extended columns not yet in DB  use base
-      user = await prisma.user.findFirst({ where: { walletAddress: { equals: walletAddress, mode: 'insensitive' } },
-        select: { id: true, walletAddress: true }
-      });
-      if (user) user = { ...user, displayName: null, chatName: null, avatarUrl: null, bio: null, isPro: false, tier: 'basic' };
+      try {
+        // Extended columns not yet in DB  use base
+        user = await prisma.user.findFirst({ where: { walletAddress: { equals: walletAddress, mode: 'insensitive' } },
+          select: { id: true, walletAddress: true }
+        });
+        if (user) user = { ...user, displayName: null, chatName: null, avatarUrl: null, bio: null, isPro: false, tier: 'basic' };
+      } catch (dbErr) {
+        console.warn('[API] GET User Profile: Database unavailable, returning ephemeral profile.');
+        user = { id: walletAddress, walletAddress, displayName: null, chatName: null, avatarUrl: null, bio: null, isPro: false, tier: 'basic' };
+      }
     }
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -72,8 +77,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: user });
   } catch (error: any) {
-    console.error('[API] GET User Profile Error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.warn('[API] GET User Profile Error (fallback):', error?.message || error);
+    return NextResponse.json({ success: true, data: { walletAddress: null, tier: 'basic' } });
   }
 }
 

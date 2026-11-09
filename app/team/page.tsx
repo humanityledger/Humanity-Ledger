@@ -19,11 +19,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 // Canonical base URL — resolved at build time from the environment variable.
-// In production this is https://humanityledger.com (set in next.config.js).
+// In production this is https://ledgerchat.org (set in next.config.js).
 // Locally it falls back to http://localhost:3000 so the page works immediately.
 const BASE =
   process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ||
-  'https://humanityledger.com';
+  'https://ledgerchat.org';
 
 export const metadata: Metadata = {
   title: 'Leadership Team | Humanity Ledger',

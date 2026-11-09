@@ -11,7 +11,7 @@ import { createHmac } from 'crypto';
  */
 export async function GET() {
   const turnSecret = process.env.TURN_SECRET;
-  const turnDomain = process.env.NEXT_PUBLIC_TURN_DOMAIN || 'turn.humanityledger.com';
+  const turnDomain = process.env.NEXT_PUBLIC_TURN_DOMAIN || 'turn.ledgerchat.org';
 
   const defaultStun = [
     { urls: 'stun:stun.l.google.com:19302' },

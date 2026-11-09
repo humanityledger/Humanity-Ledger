@@ -14,22 +14,28 @@ export async function GET(req: NextRequest) {
     const address = auth.walletAddress;
 
     const normalized = address.toLowerCase();
-    const messages = await prisma.pendingChatMessage.findMany({
-      where: { recipient: normalized },
-      orderBy: { createdAt: 'asc' },
-      take: 200, // Safety cap
-    });
+    let messages: any[] = [];
+    try {
+      messages = await prisma.pendingChatMessage.findMany({
+        where: { recipient: normalized },
+        orderBy: { createdAt: 'asc' },
+        take: 200, // Safety cap
+      });
 
-    // Auto-clean messages older than 7 days (stale, recipient never came online)
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    await prisma.pendingChatMessage.deleteMany({
-      where: { recipient: normalized, createdAt: { lt: sevenDaysAgo } },
-    }).catch(() => {});
+      // Auto-clean messages older than 7 days (stale, recipient never came online)
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      await prisma.pendingChatMessage.deleteMany({
+        where: { recipient: normalized, createdAt: { lt: sevenDaysAgo } },
+      }).catch(() => {});
+    } catch (dbErr: any) {
+      console.warn('[queue GET] Database unavailable, returning empty queue.');
+      return NextResponse.json({ messages: [] });
+    }
 
     return NextResponse.json({ messages });
   } catch (e) {
     console.error('[queue GET]', e);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    return NextResponse.json({ messages: [] });
   }
 }
 

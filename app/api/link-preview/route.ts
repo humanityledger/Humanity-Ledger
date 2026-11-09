@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
       maxRedirects: 3,
       stopAt: '</head>',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; HumanityLedgerBot/1.0; +https://humanityledger.com)',
+        'User-Agent': 'Mozilla/5.0 (compatible; LedgerChatBot/1.0; +https://ledgerchat.org)',
         'Accept': 'text/html,application/xhtml+xml',
       },
     });

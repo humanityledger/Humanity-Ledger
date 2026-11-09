@@ -56,8 +56,8 @@ export async function GET(req: NextRequest) {
         isVerified: u.isZkVerified || false,
       }))
     });
-  } catch (err) {
-    console.error('[User Search]', err);
+  } catch (err: any) {
+    console.warn('[User Search] Database unavailable, returning empty search results.');
     return NextResponse.json({ users: [] });
   }
 }

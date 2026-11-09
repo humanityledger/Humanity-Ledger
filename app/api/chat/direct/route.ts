@@ -18,28 +18,35 @@ export async function GET(req: NextRequest) {
     const sinceParam = req.nextUrl.searchParams.get('since');
     const since = sinceParam ? new Date(parseInt(sinceParam, 10)) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    // Fetch undelivered messages for me — no time filter so nothing is missed
-    const undeliveredMessages = await prisma.directMessage.findMany({
-      where: {
-        recipient: address,
-        delivered: false,
-      },
-      orderBy: { createdAt: 'asc' },
-      take: 200,
-    });
+    let undeliveredMessages: any[] = [];
+    let recentMessages: any[] = [];
+    try {
+      // Fetch undelivered messages for me — no time filter so nothing is missed
+      undeliveredMessages = await prisma.directMessage.findMany({
+        where: {
+          recipient: address,
+          delivered: false,
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 200,
+      });
 
-    // Also fetch recent messages (both delivered and not) in the time window for reconnect sync
-    const recentMessages = await prisma.directMessage.findMany({
-      where: {
-        OR: [
-          { recipient: address, createdAt: { gte: since } },
-          // Also return messages I sent (so sender sees their own messages in history)
-          { sender: address, createdAt: { gte: since } },
-        ],
-      },
-      orderBy: { createdAt: 'asc' },
-      take: 100,
-    });
+      // Also fetch recent messages (both delivered and not) in the time window for reconnect sync
+      recentMessages = await prisma.directMessage.findMany({
+        where: {
+          OR: [
+            { recipient: address, createdAt: { gte: since } },
+            // Also return messages I sent (so sender sees their own messages in history)
+            { sender: address, createdAt: { gte: since } },
+          ],
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 100,
+      });
+    } catch (dbError: any) {
+      console.warn('[chat/direct GET] Database unavailable, returning empty messages.');
+      return NextResponse.json({ messages: [] });
+    }
 
     // Merge: undelivered + recent, deduplicated by ID
     const allById = new Map<string, typeof undeliveredMessages[0]>();
