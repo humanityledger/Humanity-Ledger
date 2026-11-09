@@ -1,4 +1,4 @@
-route,methods,is_public,auth_mechanism,tables,file_path
+﻿route,methods,is_public,auth_mechanism,tables,file_path
 "/api/academy/parse-document","POST",true,"none","none","app/api/academy/parse-document/route.ts"
 "/api/academy/progress","GET|POST",false,"getSession","user;userProgress","app/api/academy/progress/route.ts"
 "/api/academy/submissions","POST",false,"getSession","user","app/api/academy/submissions/route.ts"
@@ -200,7 +200,7 @@ route,methods,is_public,auth_mechanism,tables,file_path
 "/api/grok-manifest","GET",true,"none","none","app/api/grok-manifest/route.ts"
 "/api/health","GET",true,"none","ledgerActivity;goldenTicket","app/api/health/route.ts"
 "/api/health-check","GET",true,"none","none","app/api/health-check/route.ts"
-"/api/humanidfi/activity","GET",false,"requireWallet","transaction","app/api/humanidfi/activity/route.ts"
+"/api/ledger/activity","GET",false,"requireWallet","transaction","app/api/ledger/activity/route.ts"
 "/api/identity","POST",true,"none","user","app/api/identity/route.ts"
 "/api/identity/token","GET",false,"getSession","kYCRecord","app/api/identity/token/route.ts"
 "/api/infrastructure/node-health","GET",true,"none","none","app/api/infrastructure/node-health/route.ts"

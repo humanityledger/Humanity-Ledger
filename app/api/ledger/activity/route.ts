@@ -6,15 +6,10 @@ import { sanitiseExplorerUrl } from '@/lib/aztec/client';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/humanidfi/activity?page=1&limit=50
+ * GET /api/ledger/activity?page=1&limit=50
  *
  * Returns the signed-in wallet's own activity records, newest first.
  * Used by the Registry "Humanity Ledger Activity" section.
- *
- * Until 2026-10-28 this was public and returned every wallet's records. The
- * chat and the portfolio write one each day someone opens them, so anyone
- * on the internet could see which wallet used the app and when. It also
- * listed rows of the retired QDs token.
  */
 export async function GET(req: NextRequest) {
   const auth = await requireWallet(req);
@@ -59,25 +54,23 @@ export async function GET(req: NextRequest) {
 
     const formatted = txs.map(tx => {
       const meta = (tx.metadata as any) || {};
-        // sanitiseExplorerUrl fixes old /tx/ paths stored in DB and virtual hashes that 404 on AztecScan.
-        // AztecScan SPA uses /tx-effect/:hash — /tx/ does not exist and always shows "Page does not exist".
-        const rawUrl = (tx.metadata as any)?.explorerUrl ?? null;
-        const safeExplorerUrl = sanitiseExplorerUrl(rawUrl);
+      const rawUrl = (tx.metadata as any)?.explorerUrl ?? null;
+      const safeExplorerUrl = sanitiseExplorerUrl(rawUrl);
 
-        return {
-          id: tx.id,
-          txHash: tx.txHash,
-          type: tx.type,
-          status: tx.status,
-          amount: tx.amount,
-          token: tx.token,
-          fromAddress: tx.fromAddress,
-          toAddress: tx.toAddress,
-          timestamp: tx.timestamp.toISOString(),
-          chainId: tx.chainId,
-          blockNumber: tx.blockNumber?.toString() ?? '0',
-          explorerUrl: safeExplorerUrl,
-          provenance: meta.provenance === true,
+      return {
+        id: tx.id,
+        txHash: tx.txHash,
+        type: tx.type,
+        status: tx.status,
+        amount: tx.amount,
+        token: tx.token,
+        fromAddress: tx.fromAddress,
+        toAddress: tx.toAddress,
+        timestamp: tx.timestamp.toISOString(),
+        chainId: tx.chainId,
+        blockNumber: tx.blockNumber?.toString() ?? '0',
+        explorerUrl: safeExplorerUrl,
+        provenance: meta.provenance === true,
         fingerprint: meta.fingerprint ?? null,
         actionDetails: meta.actionDetails ?? null,
       };
@@ -91,7 +84,7 @@ export async function GET(req: NextRequest) {
       totalPages: Math.ceil(total / limit),
     });
   } catch (err: any) {
-    console.error('[HumanIDFi Activity]', err?.message);
+    console.error('[Ledger Activity]', err?.message);
     return NextResponse.json({ error: 'Could not load activity' }, { status: 500 });
   }
 }

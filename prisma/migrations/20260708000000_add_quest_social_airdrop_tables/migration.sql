@@ -1,4 +1,4 @@
--- Migration: add_quest_social_airdrop_tables
+﻿-- Migration: add_quest_social_airdrop_tables
 -- Creates all tables needed for the QD quest reward system
 
 -- AztecQuest: defines available quests
@@ -78,5 +78,5 @@ VALUES
   ('quest-twitter-001', 'twitter-follow', 'Follow on X (Twitter)', 'Follow @WhaleNetwork on X to earn 50 QDs. Be part of the Aztec community.', 50, true),
   ('quest-youtube-001', 'youtube-follow', 'Subscribe on YouTube', 'Subscribe to Humanity Ledger on YouTube to earn 200 QDs.', 200, true),
   ('quest-tg-001', 'tg-join', 'Join Telegram Community', 'Join t.me/humanityledger on Telegram to earn 200 QDs.', 200, true),
-  ('quest-share-001', 'page-share', 'Share humanidfi.com', 'Share humanidfi.com on your social networks to earn 15 QDs.', 15, true)
+  ('quest-share-001', 'page-share', 'Share ledgerchat.org', 'Share ledgerchat.org on your social networks to earn 15 QDs.', 15, true)
 ON CONFLICT ("slug") DO NOTHING;

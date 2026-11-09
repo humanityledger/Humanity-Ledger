@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Universal scan router — classifies decoded QR / barcode text before handling.
  */
 
@@ -151,6 +151,6 @@ export function parseScanPayload(decodedText: string): ScanRoute {
 }
 
 export function passportPublicUrl(slug: string, origin?: string): string {
-  const base = origin || (typeof window !== 'undefined' ? window.location.origin : 'https://www.humanidfi.com');
+  const base = origin || (typeof window !== 'undefined' ? window.location.origin : 'https://www.ledgerchat.org');
   return `${base.replace(/\/$/, '')}/passport/${slug}`;
 }

@@ -1,8 +1,8 @@
-# Humanity Ledger
+﻿# Humanity Ledger
 
 > Humanity Ledger builds Ledger Chat, a messenger in which an Ethereum wallet is the account. Direct messages are encrypted on the user's device with MLS (RFC 9420) through the XMTP network. Payments are signed in the user's own wallet. A private payments wallet runs on the Aztec test network with test tokens. The product is in early access, and its contracts have not been independently audited.
 
-This file summarises the public documentation at https://humanidfi.com/docs. When the two differ, the documentation is correct. Facts below were last checked on 23 October 2026.
+This file summarises the public documentation at https://ledgerchat.org/docs. When the two differ, the documentation is correct. Facts below were last checked on 23 October 2026.
 
 ## Who provides it
 
@@ -29,17 +29,17 @@ This file summarises the public documentation at https://humanidfi.com/docs. Whe
 
 ## Key pages
 
-- [Overview](https://humanidfi.com/docs/overview): what works today and what does not.
-- [Messaging](https://humanidfi.com/docs/ledger-chat): what is encrypted and how fallback messages are labelled.
-- [Private payments on Aztec](https://humanidfi.com/docs/zero-knowledge): how the test network wallet works.
-- [Architecture](https://humanidfi.com/docs/architecture): each component and what it can see.
-- [Whitepaper](https://humanidfi.com/docs/whitepaper): the technical design and threat model.
-- [Security audits and open findings](https://humanidfi.com/docs/audits)
-- [Report a vulnerability](https://humanidfi.com/docs/bug-bounty)
-- [Legal notice](https://humanidfi.com/docs/legal-notice)
-- [Terms of Service](https://humanidfi.com/docs/terms)
-- [Privacy Policy](https://humanidfi.com/docs/privacy)
-- [Cookie Policy](https://humanidfi.com/docs/cookies)
-- [Content and copyright](https://humanidfi.com/docs/content-policy)
-- [Risk disclosure](https://humanidfi.com/docs/disclaimer)
-- [Changelog](https://humanidfi.com/changelog)
+- [Overview](https://ledgerchat.org/docs/overview): what works today and what does not.
+- [Messaging](https://ledgerchat.org/docs/ledger-chat): what is encrypted and how fallback messages are labelled.
+- [Private payments on Aztec](https://ledgerchat.org/docs/zero-knowledge): how the test network wallet works.
+- [Architecture](https://ledgerchat.org/docs/architecture): each component and what it can see.
+- [Whitepaper](https://ledgerchat.org/docs/whitepaper): the technical design and threat model.
+- [Security audits and open findings](https://ledgerchat.org/docs/audits)
+- [Report a vulnerability](https://ledgerchat.org/docs/bug-bounty)
+- [Legal notice](https://ledgerchat.org/docs/legal-notice)
+- [Terms of Service](https://ledgerchat.org/docs/terms)
+- [Privacy Policy](https://ledgerchat.org/docs/privacy)
+- [Cookie Policy](https://ledgerchat.org/docs/cookies)
+- [Content and copyright](https://ledgerchat.org/docs/content-policy)
+- [Risk disclosure](https://ledgerchat.org/docs/disclaimer)
+- [Changelog](https://ledgerchat.org/changelog)

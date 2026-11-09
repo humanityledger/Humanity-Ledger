@@ -1,4 +1,4 @@
-import { SignJWT, jwtVerify, JWTPayload, importJWK } from 'jose';
+﻿import { SignJWT, jwtVerify, JWTPayload, importJWK } from 'jose';
 import { isSessionPayload } from './security/sessionClaims';
 
 const alg = 'EdDSA';
@@ -58,8 +58,8 @@ export const mintJWT = async (payload: JWTPayload): Promise<string> => {
       .setProtectedHeader({ alg })
       .setIssuedAt()
       .setExpirationTime('7d')
-      .setIssuer('humanidfi.com')
-      .setAudience('humanidfi.com')
+      .setIssuer('ledgerchat.org')
+      .setAudience('ledgerchat.org')
       .sign(keys.privateKey);
   }
 
@@ -69,8 +69,8 @@ export const mintJWT = async (payload: JWTPayload): Promise<string> => {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
-    .setIssuer('humanidfi.com')
-    .setAudience('humanidfi.com')
+    .setIssuer('ledgerchat.org')
+    .setAudience('ledgerchat.org')
     .sign(new TextEncoder().encode(secret));
 };
 

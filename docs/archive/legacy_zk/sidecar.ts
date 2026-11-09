@@ -1,4 +1,4 @@
-import { createPXEClient } from '@aztec/aztec.js';
+﻿import { createPXEClient } from '@aztec/aztec.js';
 
 export type PXE = any;
 
@@ -12,7 +12,7 @@ const AZTEC_NODE_URL = process.env.AZTEC_NODE_URL || 'https://v5.testnet.rpc.azt
 export function getIsolatedPXE(sessionJwt: string): PXE {
   if (!sessionJwt) throw new Error('Cannot connect to PXE sidecar without valid Session JWT');
   // In a real deployed environment, this connects to the secure sidecar container
-  // e.g., https://pxe.sidecar.humanidfi.com/?token=...
+  // e.g., https://pxe.sidecar.ledgerchat.org/?token=...
   // For this sandbox, we connect to the node's public PXE (read-only / test mode)
   return createPXEClient(AZTEC_NODE_URL);
 }

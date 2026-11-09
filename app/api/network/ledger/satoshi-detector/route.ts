@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 // Known historical "sleeping giant" BTC wallets for demonstration + real monitoring
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
 
 async function analyzeAddress(address: string) {
   const res = await fetch(`https://blockchain.info/rawaddr/${address}?limit=5`, {
-    headers: { 'User-Agent': 'HumanDeFi/1.0' },
+    headers: { 'User-Agent': 'HumanityLedger/1.0' },
     signal: AbortSignal.timeout(5000),
     next: { revalidate: 300 }
   });

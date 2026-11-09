@@ -1,4 +1,4 @@
-import { escapeHtml } from '@/lib/security/escapeHtml';
+﻿import { escapeHtml } from '@/lib/security/escapeHtml';
 import { Resend } from 'resend';
 
 // Provide a dummy key for build-time safety if env is missing
@@ -8,7 +8,7 @@ const resend = new Resend(process.env.RESEND_API_KEY || 're_123456789');
 // When using Resend without a verified domain, you MUST use onboarding@resend.dev
 // or emails will fail silently for external recipients.
 const getSender = (name: string) => {
-  const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@humanidfi.com';
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@ledgerchat.org';
   return `${name} <${fromEmail}>`;
 };
 
@@ -22,10 +22,10 @@ export async function sendVerificationEmail(email: string, code: string): Promis
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const { data, error } = await resend.emails.send({
-        from: getSender('HumanDefi'),
+        from: getSender('HumanityLedger'),
         to: email,
-        subject: 'Your HumanDefi Verification Code',
-        replyTo: 'support@humanidfi.com',
+        subject: 'Your HumanityLedger Verification Code',
+        replyTo: 'support@ledgerchat.org',
         html: `
           <!DOCTYPE html>
           <html>
@@ -263,7 +263,7 @@ export async function sendSupportEmail(message: string, section: string, senderE
             </div>
 
             <div class="footer">
-              <p>Sent via HumanDefi Support Interface</p>
+              <p>Sent via HumanityLedger Support Interface</p>
             </div>
           </div>
         </body>

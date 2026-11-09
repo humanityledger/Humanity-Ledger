@@ -1,4 +1,4 @@
-import type { DocPage } from "../types";
+﻿import type { DocPage } from "../types";
 
 /**
  * The changelog is written from the repository history, in plain language.
@@ -33,7 +33,7 @@ export const RELEASES: Release[] = [
       { kind: "security", text: "The private wallet refuses an Aztec node on a different network or rollup version, and never offers sponsored fees where none exist." },
       { kind: "security", text: "Agreement invitations, which carry secrets, never appear as text in previews, notifications, replies or copies, and are never queued in plain storage while offline." },
       { kind: "fixed", text: "Signing in at /connect works with wallets on any network the wallet list offers (BNB Chain, Linea, Avalanche, zkSync, World Chain and others), which were refused as unsupported." },
-      { kind: "fixed", text: "Signing in works on both humanidfi.com and www.humanidfi.com, and no longer fails when the server's cache missed the moment you asked to sign in." },
+      { kind: "fixed", text: "Signing in works on both ledgerchat.org and www.ledgerchat.org, and no longer fails when the server's cache missed the moment you asked to sign in." },
       { kind: "fixed", text: "Smart contract wallets (Safe, Coinbase Smart Wallet and similar) can sign in." },
       { kind: "improved", text: "When signing in fails, the page says why instead of always saying the signature was declined." },
       { kind: "improved", text: "The message menu adds quick reactions, private and regular payments, message details and keyboard navigation. Deleting for everyone is now described as a request, because other apps can keep a copy." },

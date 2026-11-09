@@ -1,10 +1,10 @@
-import { vi } from 'vitest';
+﻿import { vi } from 'vitest';
 import { parseScanPayload } from '@/lib/scan/parseScanPayload';
 
 describe('parseScanPayload', () => {
   it('classifies session URL with uuid and pub', () => {
     const r = parseScanPayload(
-      'https://www.humanidfi.com/connect?uuid=abc-123&pub=testpub&ecdh=1'
+      'https://www.ledgerchat.org/connect?uuid=abc-123&pub=testpub&ecdh=1'
     );
     expect(r.type).toBe('session');
   });
@@ -39,8 +39,8 @@ describe('parseScanPayload', () => {
     expect(r.type).toBe('wallet');
   });
 
-  it('classifies humanidfi passport URL', () => {
-    const r = parseScanPayload('https://www.humanidfi.com/passport/my-test-slug-12');
+  it('classifies ledgerchat passport URL', () => {
+    const r = parseScanPayload('https://www.ledgerchat.org/passport/my-test-slug-12');
     expect(r.type).toBe('passport');
     expect(r.slug).toBe('my-test-slug-12');
   });

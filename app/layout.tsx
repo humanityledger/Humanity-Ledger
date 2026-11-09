@@ -1,4 +1,4 @@
-// System layout  No Clerk provider needed (SIWE-native auth)
+﻿// System layout  No Clerk provider needed (SIWE-native auth)
 
 import { headers } from 'next/headers'
 
@@ -91,9 +91,9 @@ export const metadata = {
 
   keywords: [
 
-    'Humanity Ledger', 'Ledger Chat', 'humanidfi',
+    'Humanity Ledger', 'Ledger Chat', 'ledgerchat',
     'wallet messenger', 'encrypted messaging', 'XMTP', 'MLS', 'Sign in with Ethereum',
-    'Aztec', 'private payments', 'zero knowledge', 'humanidfi'
+    'Aztec', 'private payments', 'zero knowledge', 'ledgerchat'
 
   ],
 

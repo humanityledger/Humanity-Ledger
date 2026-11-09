@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from "react";
 import { motion, Variants } from "framer-motion";
@@ -166,7 +166,7 @@ export function NetworkMapPanel() {
             </motion.div>
           )}
           <p className="mt-6 text-sm md:text-base text-black/55 font-medium max-w-2xl leading-relaxed">
-            A high-level technical overview of the humanidfi.com infrastructure, spanning from dual-client synchronisation through the Noir ZK proving pipeline to the core Aztec Protocol on Ethereum L1.
+            A high-level technical overview of the ledgerchat.org infrastructure, spanning from dual-client synchronisation through the Noir ZK proving pipeline to the core Aztec Protocol on Ethereum L1.
           </p>
         </motion.div>
 
@@ -197,7 +197,7 @@ export function NetworkMapPanel() {
 
                   <div className="text-[10px] font-mono font-black uppercase tracking-[0.3em] text-black/40 mb-3">Web Domain (PC)</div>
                   <h3 className="text-2xl md:text-3xl font-black mb-1">Ledger Web Client</h3>
-                  <p className="text-xs text-black/50 font-mono mb-6">humanidfi.com • Browser Context</p>
+                  <p className="text-xs text-black/50 font-mono mb-6">ledgerchat.org • Browser Context</p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                     <div className="p-4 bg-[#F9F9F9] border border-black/5 rounded-2xl">

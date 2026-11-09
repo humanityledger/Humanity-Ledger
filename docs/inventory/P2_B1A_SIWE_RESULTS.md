@@ -1,4 +1,4 @@
-# P2-B.1A: SIWE VALIDATION ANALYSIS
+﻿# P2-B.1A: SIWE VALIDATION ANALYSIS
 
 ## Methodology
 Static code analysis of `app/api/auth/siwe/verify/route.ts`.
@@ -37,9 +37,9 @@ verificationResult = await siweMessage.verify({
 });
 ```
 
-**Problem:** The `uri` field from the SIWE message (e.g., `https://humanidfi.com/registry`) is not compared to the expected server URI. While `domain` is validated, `uri` could be any path on that domain.
+**Problem:** The `uri` field from the SIWE message (e.g., `https://ledgerchat.org/registry`) is not compared to the expected server URI. While `domain` is validated, `uri` could be any path on that domain.
 
-**Exploitability:** Low in isolation. Domain validation already prevents cross-site attacks. But a SIWE message signed for `https://humanidfi.com/legacy-auth` could be replayed at `https://humanidfi.com/api/auth/siwe/verify` and would pass validation.
+**Exploitability:** Low in isolation. Domain validation already prevents cross-site attacks. But a SIWE message signed for `https://ledgerchat.org/legacy-auth` could be replayed at `https://ledgerchat.org/api/auth/siwe/verify` and would pass validation.
 
 **Fix:**
 ```ts
@@ -93,12 +93,12 @@ if (!ALLOWED_CHAIN_IDS.includes(data.chainId)) {
 
 | Origin | Expected result | Current behavior |
 |---|---|---|
-| `humanidfi.com` | PASS | PASS (domain validated) |
-| `evil-humanidfi.com` | FAIL | FAIL (domain mismatch → siwe.verify() rejects) |
-| `humanidfi.com.evil.com` | FAIL | FAIL (different host) |
-| `sub.humanidfi.com` | FAIL | FAIL (different host — exact match) |
-| `humanidfi.com:8080` | FAIL | FAIL (host includes port) |
-| `http://humanidfi.com` (wrong scheme) | FAIL | FAIL (domain field includes scheme in full URI) |
+| `ledgerchat.org` | PASS | PASS (domain validated) |
+| `evil-ledgerchat.org` | FAIL | FAIL (domain mismatch → siwe.verify() rejects) |
+| `ledgerchat.org.evil.com` | FAIL | FAIL (different host) |
+| `sub.ledgerchat.org` | FAIL | FAIL (different host — exact match) |
+| `ledgerchat.org:8080` | FAIL | FAIL (host includes port) |
+| `https://ledgerchat.org` (wrong scheme) | FAIL | FAIL (domain field includes scheme in full URI) |
 
 **Conclusion:** Domain validation in `siwe@3` uses exact string matching on the `domain` field (host + optional port, no scheme). This is correct per EIP-4361 §3.
 

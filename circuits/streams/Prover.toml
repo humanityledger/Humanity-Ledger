@@ -1,0 +1,11 @@
+claim_amount = 0
+current_time = 0
+rate_per_second = 0
+recipient_pubkey = 0
+salt = 0
+sender_secret = 0
+start_time = 0
+stream_commitment = 0
+stream_nullifier = 0
+total_allocation = 0
+withdrawn_amount = 0

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { randomBytes } from 'crypto';
@@ -44,12 +44,12 @@ export async function POST(request: NextRequest) {
 
     try {
       await resend.emails.send({
-        from: 'Humanity Ledger <newsletter@humanidfi.com>',
-        to: 'humanityledger@humanidfi.es',
+        from: 'Humanity Ledger <newsletter@ledgerchat.org>',
+        to: 'humanityledger@ledgerchat.org',
         subject: 'New Newsletter Subscriber',
         text: `A new user has subscribed to the newsletter!\n\nEmail: ${email}\nFrequency: ${frequency}\n\nPlease add them to the mailing list.`,
       });
-      console.log(`Successfully routed newsletter subscription for ${email} to humanityledger@humanidfi.es`);
+      console.log(`Successfully routed newsletter subscription for ${email} to humanityledger@ledgerchat.org`);
     } catch (emailError) {
       console.error('Error sending newsletter routing email:', emailError);
       // We don't fail the request if the email sending fails, just log it.

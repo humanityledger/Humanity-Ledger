@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { safeRedisGet, safeRedisSet, redisClient } from '@/lib/redis/client';
 import { verifyMessage } from 'viem';
 import { getClientForChain } from '@/lib/blockchain/rpc-engine';
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
         });
 
         const host = req.headers.get("host") || "";
-        const cookieDomain = (process.env.NODE_ENV === 'production' && host.includes("humanidfi.com")) ? 'humanidfi.com' : undefined;
+        const cookieDomain = (process.env.NODE_ENV === 'production' && host.includes("ledgerchat.org")) ? 'ledgerchat.org' : undefined;
         const response = NextResponse.json({ status: 'queued' });
         
         response.cookies.set('human_session', jwt, {

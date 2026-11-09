@@ -1,7 +1,7 @@
-name: Clone Detection Monitor — Humanity Ledger
+﻿name: Clone Detection Monitor — Humanity Ledger
 # ============================================================
 # Copyright (c) 2024-2026 Humanity Ledger Protocol. All Rights Reserved.
-# Humanity Ledger — https://humanidfi.com
+# Humanity Ledger — https://ledgerchat.org
 #
 # This GitHub Action runs daily and:
 #  1. Searches GitHub for forks of the Humanity Ledger repository
@@ -64,7 +64,7 @@ jobs:
         run: |
           # Search for repos using our unique codebase identifier
           RESULTS=$(curl -s \
-            "https://api.github.com/search/code?q=HL-ORIGIN-SAC-2024-humanidfi-com-v1+in:file&per_page=30" \
+            "https://api.github.com/search/code?q=HL-ORIGIN-SAC-2024-ledgerchat-com-v1+in:file&per_page=30" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             | jq -r '.items[]? | "  - \(.repository.full_name): \(.path) | URL: \(.html_url)"' 2>/dev/null || echo "  (No results or rate limited)")
@@ -80,7 +80,7 @@ jobs:
         run: |
           if [ -n "${{ secrets.HL_ADMIN_KEY }}" ]; then
             BEACON_DATA=$(curl -s \
-              "https://humanidfi.com/api/internal/beacon?key=${{ secrets.HL_ADMIN_KEY }}" \
+              "https://ledgerchat.org/api/internal/beacon?key=${{ secrets.HL_ADMIN_KEY }}" \
               --max-time 10 || echo '{"error": "Beacon unreachable"}')
             CLONE_COUNT=$(echo "$BEACON_DATA" | jq '.summary.clones // "N/A"' 2>/dev/null || echo "N/A")
             TOTAL_DEPLOYS=$(echo "$BEACON_DATA" | jq '.summary.total // "N/A"' 2>/dev/null || echo "N/A")
@@ -102,7 +102,7 @@ jobs:
           DATE=$(date -u "+%Y-%m-%d %H:%M UTC")
           cat > daily_clone_report.md << 'REPORT'
           # 🛡️ Humanity Ledger — Daily Clone Detection Report
-          **Owner:** Humanity Ledger Protocol | legal@humanidfi.com
+          **Owner:** Humanity Ledger Protocol | legal@ledgerchat.org
           **Date:** ${{ env.REPORT_DATE }}
 
           ---
@@ -139,8 +139,8 @@ jobs:
 
           1. GitHub: https://github.com/contact/dmca
           2. Original repo: https://github.com/humanityledger/Humanity-Ledger
-          3. Ownership proof: https://humanidfi.com/legal/ownership
-          4. Contact: legal@humanidfi.com
+          3. Ownership proof: https://ledgerchat.org/legal/ownership
+          4. Contact: legal@ledgerchat.org
 
           ---
           *Copyright (c) 2024-2026 Humanity Ledger Protocol. All Rights Reserved.*
@@ -192,7 +192,7 @@ jobs:
 
             **Action required:** Review the above and file DMCA takedowns for any commercial clones.
             - DMCA: https://github.com/contact/dmca
-            - Ownership proof: https://humanidfi.com/legal/ownership
+            - Ownership proof: https://ledgerchat.org/legal/ownership
             `;
 
             await github.rest.issues.create({

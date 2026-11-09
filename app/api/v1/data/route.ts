@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { withApiAuth, withRateLimitHeaders } from '@/lib/middleware/apiAuth';
 import { isTokenAllowed, PlanTier } from '@/lib/node_infrastructure/tiers';
 import { prisma } from '@/lib/prisma';
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         symbol,
         resolution,
         timestamp: Date.now(),
-        provider: 'HumanDeFi Elite Engine (Real-Time)',
+        provider: 'HumanityLedger Elite Engine (Real-Time)',
         tier,
         data: candles.map((c: any) => ({
             time: Number(c.timestamp),

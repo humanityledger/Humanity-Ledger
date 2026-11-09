@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { walletAnalyticsService } from '@/lib/wallet/WalletAnalyticsService';
 export const dynamic = 'force-dynamic';
 
@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
 
     // --- LEGACY BITCOIN PATH ---
     const res = await fetch(`https://blockchain.info/rawaddr/${address}?limit=10`, {
-      headers: { 'User-Agent': 'HumanDeFi/1.0' },
+      headers: { 'User-Agent': 'HumanityLedger/1.0' },
       next: { revalidate: 60 }
     });
 

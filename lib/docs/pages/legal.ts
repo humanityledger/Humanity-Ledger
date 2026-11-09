@@ -1,4 +1,4 @@
-import type { Block, DocPage } from "../types";
+﻿import type { Block, DocPage } from "../types";
 import { LEGAL_ENTITY, LEGAL_EMAIL_LINK, PROVIDER_LINE } from "@/lib/constants/legalEntity";
 
 /**
@@ -29,7 +29,7 @@ const identityRows: string[][] = [
   ...(LEGAL_ENTITY.postalAddress ? [["Postal address", LEGAL_ENTITY.postalAddress]] : []),
   ["Country", LEGAL_ENTITY.country],
   ["Email", CONTACT],
-  ["Website", `[humanidfi.com](${LEGAL_ENTITY.website})`],
+  ["Website", `[ledgerchat.org](${LEGAL_ENTITY.website})`],
 ];
 
 export const legalNotice: DocPage = {

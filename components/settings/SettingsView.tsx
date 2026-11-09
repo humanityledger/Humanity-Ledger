@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 "use client";
 
 import { useCallback } from 'react';
@@ -679,12 +679,12 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
           </div>
           <h3 className="text-[16px] font-black text-black tracking-tight">Humanity Ledger</h3>
           <p className="text-[12px] text-zinc-500 mt-1">Version 1.0.0 · First Release 01/01/2027</p>
-          <p className="text-[11px] text-zinc-400 mt-0.5">humanidfi.com</p>
+          <p className="text-[11px] text-zinc-400 mt-0.5">ledgerchat.org</p>
         </div>
 
         <SectionLabel>Legal</SectionLabel>
-        <Row icon={FileText} title="Terms of Service" desc="humanidfi.com/docs/terms" action={() => window.open('/docs/terms', '_blank')} actionLabel="View" />
-        <Row icon={Shield} title="Privacy Policy" desc="humanidfi.com/docs/privacy" action={() => window.open('/docs/privacy', '_blank')} actionLabel="View" />
+        <Row icon={FileText} title="Terms of Service" desc="ledgerchat.org/docs/terms" action={() => window.open('/docs/terms', '_blank')} actionLabel="View" />
+        <Row icon={Shield} title="Privacy Policy" desc="ledgerchat.org/docs/privacy" action={() => window.open('/docs/privacy', '_blank')} actionLabel="View" />
         <Row icon={Key} title="Security Audit Reports" desc="Public cryptographic audit reports — Q1 2027." action={() => toast.info('Audit reports coming January 2027.')} actionLabel="View" />
 
         <SectionLabel>Runtime Info</SectionLabel>

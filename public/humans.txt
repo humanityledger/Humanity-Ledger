@@ -1,6 +1,6 @@
-/* TEAM */
+﻿/* TEAM */
 Author: Humanity Ledger / Humanity Ledger S.L.
-Site: humanidfi.com
+Site: ledgerchat.org
 From: Earth
 
 /* TECHNOLOGY */

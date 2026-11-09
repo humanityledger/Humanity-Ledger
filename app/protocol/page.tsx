@@ -1,4 +1,4 @@
-import { AztecDocPage } from '@/components/landing/AztecDocPage';
+﻿import { AztecDocPage } from '@/components/landing/AztecDocPage';
 
 export default function ProtocolPage() {
   return (
@@ -38,7 +38,7 @@ export default function ProtocolPage() {
           title: 'Communities',
           paragraphs: [
             'Communities are group spaces inside Ledger Chat. They support public and private modes, multiple channels, role-based access (admin and member), and real-time chat powered by the same encrypted messaging engine used for direct conversations.',
-            'Creating a community takes about thirty seconds. You give it a name, a description, and choose whether it is public or invite-only. Public communities appear in the discovery directory at humanidfi.com/communities, where anyone can find them and join without needing a direct link.',
+            'Creating a community takes about thirty seconds. You give it a name, a description, and choose whether it is public or invite-only. Public communities appear in the discovery directory at ledgerchat.org/communities, where anyone can find them and join without needing a direct link.',
             'Communities are designed for teams, DAOs, crypto projects, and any group that wants a private, ad-free space to coordinate. There are no analytics trackers, no advertiser profiles, and no data sold to third parties.',
           ],
         },

@@ -1,4 +1,4 @@
-# Humanity Ledger — Deployment Topology & Degradation Paths
+﻿# Humanity Ledger — Deployment Topology & Degradation Paths
 **Version 1.0 — 2026-10-31**  
 **Authority**: Directive Section 4.4
 
@@ -11,7 +11,7 @@
 │                        USER BROWSER                         │
 │                                                             │
 │  ┌──────────────┐  ┌──────────────────────────────────────┐ │
-│  │ Aztec PXE    │  │  Next.js App (humanidfi.com)         │ │
+│  │ Aztec PXE    │  │  Next.js App (ledgerchat.org)         │ │
 │  │ EmbeddedWallet│  │  ┌──────────────────────────────┐   │ │
 │  │ (client-only)│  │  │ EAF Sandbox (iframe)         │   │ │
 │  │ UltraHonk    │  │  │ connect-src: 'none'          │   │ │

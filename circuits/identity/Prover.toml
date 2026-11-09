@@ -1,0 +1,7 @@
+expected_merkle_root = 0
+identity_secret = 0
+is_left = false
+jurisdiction_code = 0
+merkle_leaf_sibling = 0
+scope = 0
+scoped_nullifier = 0

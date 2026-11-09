@@ -1,4 +1,4 @@
-/**
+﻿/**
  * scripts/load-test-k6.js
  *
  * k6 Load Test Scenario for Humanity Ledger Server-Side Infrastructure.
@@ -15,13 +15,13 @@
  *   k6 run scripts/load-test-k6.js
  *
  * Custom target environment:
- *   k6 run -e BASE_URL=https://humanidfi.com scripts/load-test-k6.js
+ *   k6 run -e BASE_URL=https://ledgerchat.org scripts/load-test-k6.js
  */
 
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-const BASE_URL = __ENV.BASE_URL || 'https://humanidfi.com';
+const BASE_URL = __ENV.BASE_URL || 'https://ledgerchat.org';
 
 export const options = {
   stages: [

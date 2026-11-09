@@ -1,4 +1,4 @@
-const { expect } = require('chai');
+﻿const { expect } = require('chai');
 const hre = require('hardhat');
 
 /**
@@ -82,7 +82,7 @@ describe('T8 / A4 — L1 Contract Invariants & Anti-Backdoor Controls', function
       // User1 registers identity
       await registry.connect(user1).registerIdentity(
         'Alice Sovereign',
-        'https://humanidfi.com/avatar1.png',
+        'https://ledgerchat.org/avatar1.png',
         'Humanity Ledger Core Member',
         nullifier,
       );

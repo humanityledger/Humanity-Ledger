@@ -1,4 +1,4 @@
-# P2-B.1A: SESSION & JWT SECURITY ANALYSIS
+﻿# P2-B.1A: SESSION & JWT SECURITY ANALYSIS
 
 ## Methodology
 This is a **static code analysis** of the implemented SIWE verify and session routes.
@@ -144,7 +144,7 @@ create(walletAddress)      → SUCCESS on first
 | `signature` | YES | Core of `siweMessage.verify()` — ECDSA recovery |
 
 **Gaps identified:**
-1. **`uri` not validated against server-expected URI** — the server does not enforce that `message.uri` matches `process.env.NEXT_PUBLIC_APP_URL`. An attacker who constructs a valid SIWE message for `https://evil.com` with a nonce stolen from `https://humanidfi.com` would still pass signature verification (signature is against the full message text including domain/URI). However, `domain` validation IS enforced, which makes this less critical.
+1. **`uri` not validated against server-expected URI** — the server does not enforce that `message.uri` matches `process.env.NEXT_PUBLIC_APP_URL`. An attacker who constructs a valid SIWE message for `https://evil.com` with a nonce stolen from `https://ledgerchat.org` would still pass signature verification (signature is against the full message text including domain/URI). However, `domain` validation IS enforced, which makes this less critical.
 2. **`chainId` not restricted** — A valid signature from Chain 1 (Ethereum Mainnet) will be accepted even if the system should only accept Chain 137 (Polygon). No chain allowlist exists. This is a policy gap.
 
 ---

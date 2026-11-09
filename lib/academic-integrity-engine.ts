@@ -1,6 +1,6 @@
-// ============================================================================
+﻿// ============================================================================
 // TURING SHIELD — ACADEMIC INTEGRITY ENGINE v3.0
-// ICAIEPHE 2026, Timișoara — Universidad Humanidfi
+// ICAIEPHE 2026, Timișoara — Universidad LedgerChat
 // ============================================================================
 //
 // DETECTION ARCHITECTURE (8 Layers):

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { qrEphKey, setOnce } from '@/lib/security/qrLogin';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
  * to store the PUBLIC key in Redis, keyed by a short UUID.
  * 
  * The QR code then only encodes a short URL:
- *   https://humanidfi.com/connect?s=<uuid>
+ *   https://ledgerchat.org/connect?s=<uuid>
  * 
  * This reduces QR data from ~600 chars → ~50 chars, making it scannable
  * at 100% zoom on any phone without requiring the user to zoom in.

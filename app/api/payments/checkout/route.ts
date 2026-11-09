@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { stripe, PRICE_IDS } from '@/lib/payments/stripe';
 import { prisma } from '@/lib/prisma';
 import { validateSecureRequest } from '@/lib/security/premium-security';
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Build correct return URLs based on context
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://humanidfi.com';
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ledgerchat.org';
         const successPath = returnTab === 'studio' ? '/studio/provenance' : `/terminal?tab=${returnTab}`;
         const cancelPath  = returnTab === 'studio' ? '/studio/provenance' : `/terminal?tab=${returnTab}`;
 

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { createRequire } from 'module';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
-  const vapidEmail = process.env.VAPID_EMAIL || 'mailto:contact@humanidfi.com';
+  const vapidEmail = process.env.VAPID_EMAIL || 'mailto:contact@ledgerchat.org';
   if (!vapidPublic || !vapidPrivate) {
     return NextResponse.json({ skipped: true, reason: 'Push is not configured' }, { status: 503 });
   }

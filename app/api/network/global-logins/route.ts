@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +11,7 @@ export async function GET() {
       return NextResponse.json({ ok: true, totalLogins: 0, countries: [], activeRegions: 0 });
     }
 
-    // 1. Get true historic scale from the very beginning of humanidfi.com
+    // 1. Get true historic scale from the very beginning of ledgerchat.org
     const totalHistoricalUsers = await prisma.user.count();
 
     // 2. Get the real geo-distribution since the geo-tracking system was deployed

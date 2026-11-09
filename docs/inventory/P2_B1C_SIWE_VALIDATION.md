@@ -1,11 +1,11 @@
-# P2-B.1C: SIWE VALIDATION & TEST MATRIX
+﻿# P2-B.1C: SIWE VALIDATION & TEST MATRIX
 
 ## Validation Fixes Implemented
 
 The API route `app/api/auth/siwe/verify/route.ts` has been modified to enforce the following required validation logic per EIP-4361:
 
 ### 1. URI Validation (FIXED)
-The route now extracts the server's expected root URI (`process.env.NEXT_PUBLIC_APP_URL`) and explicitly checks that the client-provided `siweMessage.uri` starts with this expected URI. This prevents a signed message intended for `https://evil.com/login` from being accepted at `https://humanidfi.com`.
+The route now extracts the server's expected root URI (`process.env.NEXT_PUBLIC_APP_URL`) and explicitly checks that the client-provided `siweMessage.uri` starts with this expected URI. This prevents a signed message intended for `https://evil.com/login` from being accepted at `https://ledgerchat.org`.
 
 ### 2. Chain ID Binding (FIXED)
 The route now enforces an explicit server-side policy for allowed networks.

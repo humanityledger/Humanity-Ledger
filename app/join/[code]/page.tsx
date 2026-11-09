@@ -39,9 +39,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       siteName: 'Humanity Ledger',
       type: 'website',
-      url: `https://humanidfi.com/join/${code}`,
+      url: `https://ledgerchat.org/join/${code}`,
       images: [{
-        url: `https://humanidfi.com/og-community.png`,
+        url: `https://ledgerchat.org/og-community.png`,
         width: 1200,
         height: 630,
         alt: community.name,

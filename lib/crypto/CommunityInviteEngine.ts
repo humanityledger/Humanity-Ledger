@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+﻿import crypto from 'crypto';
 
 export interface CryptographicInvitePayload {
   communityId: string;
@@ -46,7 +46,7 @@ export function generateCryptographicInvite(
   const signature = hmac.digest('base64url');
 
   const token = `inv_${encodedPayload}.${signature}`;
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://humanidfi.com';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ledgerchat.org';
   const inviteUrl = `${baseUrl}/join?token=${token}`;
   const qrData = `hl:join:${token}`;
 

@@ -1,28 +1,24 @@
 # Humanity Ledger — Smart Contracts Architecture
 
-This directory contains the L1 Solidity contracts for the Humanity Ledger protocol. Confidential L2 computation and private transactions are executed via Aztec Network contracts in `aztec-contracts/`.
+This directory contains the authoritative L1 Solidity contracts for the Humanity Ledger protocol. Confidential L2 computation, anonymous transfers, and private transactions are executed via Aztec Network Noir circuits in `circuits/`.
 
-## Active Contracts
+## Active Core Contracts (In-Scope)
 
-### Bridges & Settlement
-- `HumanityOmnichainBridge.sol`: L1 token bridge for cross-chain liquidity and settlement.
-- `HumanityPaymaster.sol`: ERC-4337 gasless onboarding and sponsorship paymaster.
-- `HumanityTimeLockVault.sol`: Multisig timelock vault for protocol governance.
-
-### Tokens & Identity
-- `HumanityQdToken.sol` / `QDSToken.sol`: ERC-20 utility and settlement tokens on Ethereum / Base.
-- `HumanityIdentityRegistry.sol`: On-chain identity mapping and verification.
+### Identity & Access
+- `HumanityIdentityRegistry.sol`: On-chain identity mapping and World ID nullifier uniqueness verification.
 - `ZKIdentityRegistry.sol`: Zero-knowledge proof verification anchor for identity claims.
+- `ZKVerificationKeyRegistry.sol`: Verification key registry for Noir circuit proofs.
 
-### Security
-- `security/LedgerDeadmanSwitch.sol`: Emergency recovery and dead man's switch mechanism.
-- `security/SafeContracts.sol`: Safe multisig integration interfaces.
+### Asset Security & Governance
+- `HumanityTimeLockVault.sol`: Per-user multi-token timelock and dead man's switch vault with atomic multi-token sweeping.
+- `security/LedgerDeadmanSwitch.sol`: Non-custodial inheritance protocol with 72-hour backup cooldown and strict caller authorization.
+- `civilization/HumanTimeLock.sol`: Time-locked vault with non-reentrant ETH locking.
+- `security/SafeContracts.sol`: Safe multisig circuit breaker and emergency control standard.
+- `StudioProvenance.sol`: Immutable content hashing and timestamping anchor.
 
-### Ancillary Modules
-- `StudioProvenance.sol`: Immutable content hashing and timestamping.
-- `HumanityAcademyCore.sol` & `HumanityAcademySBT.sol`: Non-transferable credential registry.
-- `HumanityForum.sol`: Decentralized topic anchoring.
-- `HumanityLedgerCore.sol`: Core protocol state coordinator.
+## Testing Mocks
+- `mocks/MockERC20.sol`: Test mock for ERC-20 token transfers and allowances.
+- `mocks/MockERC721.sol`: Test mock for NFT non-custodial forwarding.
 
-## Deprecated Contracts
-All obsolete and deprecated contracts (including on-chain chat, legacy oracles, and test verifiers) have been permanently removed from the repository. Messaging is handled 100% end-to-end encrypted via XMTP MLS without centralized or on-chain plaintext storage.
+## Deprecated & Retired Contracts
+All obsolete contracts (including the retired QDS token, monolithic testnet routers, legacy paymasters, cross-chain bridge stubs, and legacy on-chain chat) have been permanently removed. Messaging in Ledger Chat is 100% end-to-end encrypted via XMTP MLS without centralized or on-chain plaintext storage.

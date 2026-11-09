@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 "use client";
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -7036,7 +7036,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                  Scan a contact&apos;s code to start a conversation, or the code shown on your computer to sign in there.
                </p>
                <QrScanner mode="scan" onScanSuccess={async (text) => {
-                  if (text.includes('?s=') || text.includes('?uuid=') || text.includes('ledgerchat.org/connect') || text.includes('humanidfi.com/connect') || text.includes('session=')) {
+                  if (text.includes('?s=') || text.includes('?uuid=') || text.includes('ledgerchat.org/connect') || text.includes('ledgerchat.org/connect') || text.includes('session=')) {
                     toast.loading('Signing in on your computer', { id: 'link-device' });
                     const result = await completeSessionHandshake(
                       text,

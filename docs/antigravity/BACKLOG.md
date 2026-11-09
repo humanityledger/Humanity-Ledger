@@ -1,4 +1,4 @@
-# Humanity Ledger — Backlog de 400 tareas para Antigravity
+﻿# Humanity Ledger — Backlog de 400 tareas para Antigravity
 
 Generado el 20 de octubre de 2026 sobre el commit `0dae01b`. Estado inicial de todas: Pendiente.
 
@@ -45,7 +45,7 @@ Pilar = hoy + (100 − hoy) × (peso de tareas "Hecha" ÷ peso total del pilar).
 | B-001 | Modelo de amenazas (STRIDE) de autenticación, chat, comunidades, llamadas y pagos | nuevo `docs/security/threat-model.md` | Documento revisado; cada amenaza enlaza a una tarea o a un control existente | P1 | Pendiente |
 | B-002 | Inventario automático de las 488 rutas: pública o no, mecanismo de auth, tablas que toca | nuevo `scripts/route-inventory.ts` → `docs/security/routes.csv` | La CI falla si aparece una ruta sin clasificar | P0 | Hecha |
 | B-003 | Wrapper `withAuth(handler, { wallet, admin })` obligatorio en rutas no públicas, con regla de lint | nuevo `lib/security/withAuth.ts`, `.eslintrc` | La regla falla en una ruta sin wrapper | P1 | Pendiente |
-| B-004 | Reducir `PUBLIC_PREFIXES` a rutas exactas (revisar `/api/auth/`, `/api/call/`, `/api/notifications/`, `/api/provenance/`, `/api/registry/`, `/api/humanidfi/`, `/api/settings`, `/api/user/profile`) | `middleware.ts` L40–95 | Cada entrada pública justificada en `routes.csv` | P0 | Pendiente |
+| B-004 | Reducir `PUBLIC_PREFIXES` a rutas exactas (revisar `/api/auth/`, `/api/call/`, `/api/notifications/`, `/api/provenance/`, `/api/registry/`, `/api/ledgerchat/`, `/api/settings`, `/api/user/profile`) | `middleware.ts` L40–95 | Cada entrada pública justificada en `routes.csv` | P0 | Pendiente |
 | B-005 | `/api/dev/deploy` devuelve 404 en producción | `app/api/dev/deploy/route.ts` | Prueba con `NODE_ENV=production` → 404 | P0 | Hecha |
 | B-006 | `/api/aztec/deploy-token`: solo administrador con sesión, comparación en tiempo constante y apagado en producción | `app/api/aztec/deploy-token/route.ts` | Sin sesión de admin → 401/403 | P0 | Hecha |
 | B-007 | Una sola cookie de sesión HttpOnly (`hl_session`) en lugar de cinco (`ledger_session`, `human_session`, `humanity_session`, `human.access-token`, `human.session-token`) | `lib/session.ts`, `lib/jwt.ts`, rutas `app/api/auth/*` | `getSession()` lee una sola cookie; migración transparente de sesiones activas | P1 | Pendiente |

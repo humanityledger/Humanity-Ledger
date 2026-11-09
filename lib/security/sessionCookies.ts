@@ -1,4 +1,4 @@
-/**
+﻿/**
  * lib/security/sessionCookies.ts
  *
  * The one list of cookies that carry a signed-in session, and the one way to
@@ -64,7 +64,7 @@ export function expireSessionCookies(res: NextResponse, host: string | null): vo
   const secure = isProd ? '; Secure' : '';
   const expired = 'Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0';
   const domains = [''];
-  if (isProd && (host || '').includes('humanidfi.com')) domains.push('; Domain=humanidfi.com');
+  if (isProd && (host || '').includes('ledgerchat.org')) domains.push('; Domain=ledgerchat.org');
 
   for (const name of [...SESSION_TOKEN_COOKIES, ...SESSION_SIDE_COOKIES]) {
     // __Secure- cookies must be cleared with Secure even outside production.

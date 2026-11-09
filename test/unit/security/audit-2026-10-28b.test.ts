@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+﻿import { vi } from 'vitest';
 import { SignJWT } from 'jose';
 import { isSessionPayload } from '@/lib/security/sessionClaims';
 import { safeReturnPath } from '@/lib/security/safeRedirect';
@@ -95,7 +95,7 @@ describe('routes retired in the second pass', () => {
 describe('perimeter', () => {
   it('user search and the activity feed need a session', () => {
     expect(isPublicPath('/api/chat/users/search')).toBe(false);
-    expect(isPublicPath('/api/humanidfi/activity')).toBe(false);
+    expect(isPublicPath('/api/ledger/activity')).toBe(false);
   });
 
   it('the page CSP is strict in production and only relaxed in development', () => {

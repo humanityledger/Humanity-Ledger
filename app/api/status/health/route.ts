@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -107,7 +107,7 @@ async function rpcProbe(name: string, category: string, url: string, timeoutMs =
 }
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.humanidfi.com';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.humanityledger.com';
 
   const results = await Promise.all([
     // Aztec ZK & Privacy Enclave (Real Mainnet Connectivity)
@@ -128,7 +128,7 @@ export async function GET() {
     probe('EVM Event Indexer', 'Data Lake & Intelligence', `${baseUrl}/api/network/evm/recent`),
     probe('Quantum Data Shards', 'Data Lake & Intelligence', `${baseUrl}/qds`),
 
-    // Core HumanIDFi Infrastructure
+    // Core Humanity Ledger Infrastructure
     probe('Global Load Balancer', 'Core Infrastructure', `${baseUrl}/`),
     probe('Encrypted Chat Protocol', 'Core Infrastructure', `${baseUrl}/chat`),
     probe('Asset Portfolio Tracker', 'Core Infrastructure', `${baseUrl}/portfolio`),

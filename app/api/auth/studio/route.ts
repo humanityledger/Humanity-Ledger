@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { getSession } from '@/lib/session';
 
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     const session = await getSession();
 
     if (!session?.userId) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://humanidfi.com';
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ledgerchat.org';
       return NextResponse.redirect(new URL('/?error=unauthorized_for_studio', appUrl));
     }
 

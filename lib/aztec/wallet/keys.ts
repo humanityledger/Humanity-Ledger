@@ -1,4 +1,4 @@
-/**
+﻿/**
  * lib/aztec/wallet/keys.ts
  *
  * Derives the keys of a person's Aztec account from a signature by their own
@@ -36,7 +36,7 @@ export const WALLET_TYPED_DATA = {
   message: {
     purpose: 'Open my private payments wallet in Ledger Chat',
     network: 'Aztec test network',
-    warning: 'Only sign this on humanidfi.com or on your own copy of Ledger Chat. Anyone who has this signature can spend from your private wallet.',
+    warning: 'Only sign this on ledgerchat.org or on your own copy of Ledger Chat. Anyone who has this signature can spend from your private wallet.',
   },
 } as const;
 

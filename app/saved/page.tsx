@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -35,7 +35,7 @@ const DEMO_SAVED: SavedMessage[] = [
   },
   {
     id: '3',
-    content: 'https://humanidfi.com/join/abc123 — Invite link for the Builders community',
+    content: 'https://ledgerchat.org/join/abc123 — Invite link for the Builders community',
     source: 'Direct Message',
     savedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
     tags: ['links'],

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 
 // All 20 VIP tokens with their Binance Futures symbol
 const SYMBOLS = [
@@ -29,7 +29,7 @@ async function fetchSymbolLiquidations(symbol: string, startTime: number): Promi
   try {
     const url = `https://fapi.binance.com/fapi/v1/allForceOrders?symbol=${symbol}&startTime=${startTime}&limit=1000`;
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'HumanDeFi/1.0', Accept: 'application/json' },
+      headers: { 'User-Agent': 'HumanityLedger/1.0', Accept: 'application/json' },
       signal: AbortSignal.timeout(6000),
       next: { revalidate: 0 },
     });

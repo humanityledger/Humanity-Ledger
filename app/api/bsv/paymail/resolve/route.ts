@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 
 /**
  * Private IDENTITY - PAYMAIL RESOLUTION ENGINE
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
                 const resolveRes = await fetch(resolveUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ senderHandle: 'inquiry@humanidfi.com', dt: new Date().toISOString(), amount: 0 }),
+                    body: JSON.stringify({ senderHandle: 'inquiry@ledgerchat.org', dt: new Date().toISOString(), amount: 0 }),
                     signal: AbortSignal.timeout(5000),
                 });
                 if (resolveRes.ok) {

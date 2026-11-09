@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GET /api/powered-by
  *
  * "Powered by Humanity Ledger" Integration Registry
@@ -26,7 +26,7 @@ const FEATURED_INTEGRATIONS = [
     {
         id:          'ledger-alert-native',
         name:        'Humanity Ledger',
-        url:         'https://humanidfi.com',
+        url:         'https://ledgerchat.org',
         description: 'The system terminal. EVM Thermodynamics engine, ZK identity layer, sovereign analytics.',
         category:    'analytics',
         tier:        'Private',
@@ -70,12 +70,12 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({
             total:        allIntegrations.length,
             integrations: allIntegrations,
-            embedSnippet: `<script src="https://humanidfi.com/sdk/powered-by.js" data-theme="light" async></script>`,
+            embedSnippet: `<script src="https://ledgerchat.org/sdk/powered-by.js" data-theme="light" async></script>`,
             registerUrl:  '/api/powered-by',
             badgeAssets: {
-                dark:  'https://humanidfi.com/badges/powered-by-dark.svg',
-                light: 'https://humanidfi.com/badges/powered-by-light.svg',
-                mini:  'https://humanidfi.com/badges/powered-by-mini.svg',
+                dark:  'https://ledgerchat.org/badges/powered-by-dark.svg',
+                light: 'https://ledgerchat.org/badges/powered-by-light.svg',
+                mini:  'https://ledgerchat.org/badges/powered-by-mini.svg',
             },
         }, {
             headers: { 'Cache-Control': 'public, max-age=120' }
@@ -139,12 +139,12 @@ export async function POST(req: NextRequest) {
             embedKey,
             approved:       false,
             reviewTime:     '24-48 hours',
-            embedSnippet:   `<script src="https://humanidfi.com/sdk/powered-by.js" data-key="${embedKey}" data-theme="light" async></script>`,
-            badgeMarkdown:  `[![Powered by Humanity Ledger](https://humanidfi.com/badges/powered-by-light.svg)](https://humanidfi.com?ref=${integrationId})`,
+            embedSnippet:   `<script src="https://ledgerchat.org/sdk/powered-by.js" data-key="${embedKey}" data-theme="light" async></script>`,
+            badgeMarkdown:  `[![Powered by Humanity Ledger](https://ledgerchat.org/badges/powered-by-light.svg)](https://ledgerchat.org?ref=${integrationId})`,
             nextSteps: [
                 'Add the badge to your README and UI',
                 'Our team will review and approve within 48h',
-                `Join @HumanidFi to announce your integration`,
+                `Join @HumanityLedger to announce your integration`,
             ],
         });
 

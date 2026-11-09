@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Ambassador Program API
  *
  * GET  /api/ambassador            Fetch ambassador program info + application form
@@ -187,11 +187,11 @@ export async function POST(req: NextRequest) {
             tier:         'WATCHER',
             status:       'PENDING',
             message:      ' Application received. Review takes 4872h. Your referral code is already active.',
-            shareUrl:     `https://humanidfi.com?ref=${referralCode}`,
+            shareUrl:     `https://ledgerchat.org?ref=${referralCode}`,
             nextSteps:    [
                 'Share your referral link to start earning commissions immediately',
                 'Reach 5 referrals to unlock SENTINEL tier (5% commission)',
-                'Join @HumanidFi on Telegram for ambassador-exclusive updates',
+                'Join @HumanityLedger on Telegram for ambassador-exclusive updates',
             ],
         });
 

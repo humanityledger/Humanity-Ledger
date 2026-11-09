@@ -1,4 +1,4 @@
-# Humanity Ledger — Load Test Plan
+﻿# Humanity Ledger — Load Test Plan
 **Version 1.0 — 2026-10-31**  
 **Authority**: Directive Section 4.2
 
@@ -49,7 +49,7 @@ export const options = {
 };
 
 export default function () {
-  const res = http.get('https://humanidfi.com/api/health');
+  const res = http.get('https://ledgerchat.org/api/health');
   check(res, { 'status is 200': (r) => r.status === 200 });
   sleep(1);
 }

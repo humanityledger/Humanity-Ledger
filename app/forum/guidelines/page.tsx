@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft, Shield, AlertTriangle, CheckCircle2, BookOpen, Users, Zap, Flag, Scale, MessageSquare } from 'lucide-react';
@@ -197,7 +197,7 @@ export default function ForumGuidelinesPage() {
         <div className="mt-12 bg-slate-900 rounded-xl p-8 text-white">
           <h3 className="text-[16px] font-black tracking-tight mb-3 uppercase text-white">Aplicación de Normas y Apelaciones</h3>
           <p className="text-[13px] text-slate-300 leading-relaxed font-medium mb-6 max-w-4xl">
-            Las infracciones se tratarán según su gravedad: advertencia inicial para faltas menores, suspensión temporal de 3 a 30 días para reincidencias, y expulsión permanente del foro en casos graves de manipulación de mercado, acoso o exposición de datos privados. Las apelaciones pueden enviarse a <span className="font-bold border-b border-slate-500">moderation@humanidfi.com</span> en un plazo máximo de 14 días. Las decisiones serán resueltas por el equipo en un plazo de 5 días hábiles.
+            Las infracciones se tratarán según su gravedad: advertencia inicial para faltas menores, suspensión temporal de 3 a 30 días para reincidencias, y expulsión permanente del foro en casos graves de manipulación de mercado, acoso o exposición de datos privados. Las apelaciones pueden enviarse a <span className="font-bold border-b border-slate-500">moderation@ledgerchat.org</span> en un plazo máximo de 14 días. Las decisiones serán resueltas por el equipo en un plazo de 5 días hábiles.
           </p>
           <div className="flex items-center gap-2 pt-5 border-t border-slate-800">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-500">Última actualización: Mayo 2026</span>

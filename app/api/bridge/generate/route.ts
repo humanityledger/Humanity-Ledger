@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import crypto from 'crypto';
 import { safeRedisGet, safeRedisSet } from '@/lib/redis/client';
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         // Use Redis for cross-replica and restart persistence
         await safeRedisSet(`bridge:token:${token}`, sessionId, 'EX', TOKEN_EXPIRY_S);
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.humanidfi.com';
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.ledgerchat.org';
         const linkUrl = `${baseUrl}/bridge?token=${token}`;
 
         return NextResponse.json({

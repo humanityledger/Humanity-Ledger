@@ -1,8 +1,8 @@
-{
+﻿{
   "route": "/registry",
   "apiCalls": [
     "/api/registry/real-users",
-    "/api/humanidfi/activity",
+    "/api/ledger/activity",
     "/api/auth/siwe/session"
   ],
   "siweIntegration": "SiweRegistryAdapter (Feature Flagged)",

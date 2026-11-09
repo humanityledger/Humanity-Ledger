@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 // @ts-nocheck
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -155,7 +155,7 @@ const Group = ({ title, footer, children }: {
 const DeviceQRCode = ({ data, size = 200 }: { data: string; size?: number }) => (
   <div className="p-3 bg-white rounded-[16px] shadow-sm flex items-center justify-center">
     <QRCodeSVG
-      value={data || 'https://humanidfi.com/chat'}
+      value={data || 'https://ledgerchat.org/chat'}
       size={size}
       level="M"
       includeMargin={false}

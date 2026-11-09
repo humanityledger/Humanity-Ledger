@@ -1,0 +1,8 @@
+amount = 0
+current_timestamp = 0
+deadline = 0
+escrow_commitment = 0
+nullifier = 0
+recipient_pubkey = 0
+salt = 0
+sender_secret = 0

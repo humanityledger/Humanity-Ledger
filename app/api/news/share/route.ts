@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { sendSupportEmail } from '@/lib/email'; 
 
 // Esta función simula un "Gmail-like" dispatch apoyándose en el proveedor Resend de la infraestructura base
@@ -14,9 +14,9 @@ export async function POST(req: Request) {
     const tokenData = Buffer.from(JSON.stringify({ id: articleId, exp: Date.now() + 86400000 })).toString('base64');
     
     // Generamos la URL de acceso secreto
-    // baseUrl se calcula de forma dinámica u hardcodeamos a production (https://humanidfi.com)
+    // baseUrl se calcula de forma dinámica u hardcodeamos a production (https://ledgerchat.org)
     // Para entornos dinámicos:
-    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://humanidfi.com';
+    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://ledgerchat.org';
     const secretLink = `${origin}/news?share_token=${tokenData}`;
 
     // Construcción térmica del correo estilo "Humanity Ledger"

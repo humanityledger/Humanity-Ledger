@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -108,7 +108,7 @@ describe('Humanity Ledger — 300-Item Fortification Checklist Automated Verific
     });
 
     it('Item 26: URLs and query strings do not contain private keys', () => {
-      const sampleUrl = 'https://humanidfi.com/api/transfers?scope=20261031&recipient=0x123';
+      const sampleUrl = 'https://ledgerchat.org/api/transfers?scope=20261031&recipient=0x123';
       expect(/(key|secret|seed)=[0-9a-fA-F]{32,}/i.test(sampleUrl)).toBe(false);
     });
   });

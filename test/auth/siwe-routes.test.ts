@@ -1,4 +1,4 @@
-/**
+﻿/**
  * test/auth/siwe-routes.test.ts
  *
  * Sign-in at /connect, end to end on the server: the real /api/siwe/nonce and
@@ -36,7 +36,7 @@ import { getRedisClient } from '../../lib/redis';
 
 const wallet = Wallet.createRandom();
 
-async function issueNonce(host = 'humanidfi.com') {
+async function issueNonce(host = 'ledgerchat.org') {
   const res = await nonceGET(new NextRequest(`https://${host}/api/siwe/nonce`, { headers: { 'x-forwarded-for': '203.0.113.7' } }));
   expect(res.status).toBe(200);
   const nonce = (await res.text()).trim();
@@ -47,7 +47,7 @@ async function issueNonce(host = 'humanidfi.com') {
 
 /** Same fields as ConnectPage.tsx. */
 async function signConnectMessage(opts: { nonce: string; domain?: string; chainId?: number; signer?: Wallet }) {
-  const domain = opts.domain ?? 'humanidfi.com';
+  const domain = opts.domain ?? 'ledgerchat.org';
   const message = new SiweMessage({
     domain,
     address: wallet.address,
@@ -62,7 +62,7 @@ async function signConnectMessage(opts: { nonce: string; domain?: string; chainI
   return { message, signature };
 }
 
-function verify(body: object, cookie: string, host = 'humanidfi.com') {
+function verify(body: object, cookie: string, host = 'ledgerchat.org') {
   return verifyPOST(
     new NextRequest(`https://${host}/api/siwe/verify`, {
       method: 'POST',
@@ -74,7 +74,7 @@ function verify(body: object, cookie: string, host = 'humanidfi.com') {
 
 describe('SIWE sign-in routes (/connect)', () => {
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_APP_URL = 'https://humanidfi.com';
+    process.env.NEXT_PUBLIC_APP_URL = 'https://ledgerchat.org';
     delete process.env.NEXT_PUBLIC_DOMAIN;
     delete process.env.SIWE_ALLOWED_DOMAINS;
     contractWallet.ok = false;
@@ -98,8 +98,8 @@ describe('SIWE sign-in routes (/connect)', () => {
   });
 
   it('accepts the www variant of the configured domain', async () => {
-    const { nonce, cookie } = await issueNonce('www.humanidfi.com');
-    const res = await verify(await signConnectMessage({ nonce, domain: 'www.humanidfi.com' }), cookie, 'www.humanidfi.com');
+    const { nonce, cookie } = await issueNonce('www.ledgerchat.org');
+    const res = await verify(await signConnectMessage({ nonce, domain: 'www.ledgerchat.org' }), cookie, 'www.ledgerchat.org');
     expect(res.status, JSON.stringify(await res.clone().json())).toBe(200);
   });
 

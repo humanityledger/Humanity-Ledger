@@ -1,4 +1,4 @@
-import { ChainId } from './BlockchainService';
+﻿import { ChainId } from './BlockchainService';
 import { getUsdcAddress } from '@/config/tokens';
 import { parseUnits } from 'viem';
 
@@ -79,7 +79,7 @@ export class DeFiRouterService {
                 fromAddress:  userAddress,
                 toAddress:    userAddress,
                 slippage:     '0.03',                // 3% max slippage
-                integrator:   'humanidfi',           // Identifies this dApp to Li.Fi
+                integrator:   'ledgerchat',           // Identifies this dApp to Li.Fi
                 order:        'RECOMMENDED',
             });
 

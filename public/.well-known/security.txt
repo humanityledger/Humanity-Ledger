@@ -1,15 +1,15 @@
-Contact: mailto:security@humanidfi.com
+﻿Contact: mailto:security@ledgerchat.org
 Expires: 2027-12-31T23:59:59.000Z
 Preferred-Languages: en, es
-Canonical: https://humanidfi.com/.well-known/security.txt
-Policy: https://humanidfi.com/security
-Hiring: https://humanidfi.com/careers
+Canonical: https://ledgerchat.org/.well-known/security.txt
+Policy: https://ledgerchat.org/security
+Hiring: https://ledgerchat.org/careers
 
 # Humanity Ledger — Responsible Disclosure Policy
 #
 # We take security seriously. If you discover a vulnerability:
 #
-# 1. Email security@humanidfi.com with a clear description
+# 1. Email security@ledgerchat.org with a clear description
 # 2. Include: affected component, steps to reproduce, impact assessment
 # 3. Do NOT publicly disclose until we've had 90 days to fix
 # 4. We will acknowledge receipt within 48 hours

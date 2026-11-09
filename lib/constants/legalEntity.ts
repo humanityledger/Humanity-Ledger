@@ -1,4 +1,4 @@
-/**
+﻿/**
  * lib/constants/legalEntity.ts
  *
  * Who is legally responsible for the service. Every legal page, the footer
@@ -36,7 +36,7 @@ export const LEGAL_ENTITY = {
     name: "Agencia Española de Protección de Datos",
     url: "https://www.aepd.es",
   },
-  website: "https://humanidfi.com",
+  website: "https://ledgerchat.org",
 } as const;
 
 /** Markdown link to the contact address, for use inside docs text. */
