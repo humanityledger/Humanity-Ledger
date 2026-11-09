@@ -3,13 +3,13 @@ import { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Humanity Ledger',
-    short_name: 'Humanity Ledger',
+    short_name: 'Ledger Chat',
     description: 'Enterprise Privacy Infrastructure & Decentralised Identity on the Aztec Network.',
-    start_url: '/',
+    start_url: '/chat',
     display: 'standalone',
     orientation: 'portrait',
     background_color: '#FFFFFF',
-    theme_color: '#050505',
+    theme_color: '#FFFFFF',
     categories: ['finance', 'security', 'productivity', 'utilities'],
     icons: [
       {

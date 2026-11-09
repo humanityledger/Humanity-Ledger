@@ -1,5 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireWallet } from '@/lib/security/requireWallet';
+import { createHmac } from 'crypto';
+
+/**
+ * GET /api/call/token
+ * 
+ * Issues ephemeral TURN/STUN ICE server configuration (RFC 5766 / Coturn HMAC-SHA1).
+ * If TURN_SECRET is set, produces a 1-hour time-limited credential so secrets are
+ * never baked into frontend bundles. Fallbacks to Google STUN if TURN is unset.
+ */
+export async function GET() {
+  const turnSecret = process.env.TURN_SECRET;
+  const turnDomain = process.env.NEXT_PUBLIC_TURN_DOMAIN || 'turn.humanityledger.com';
+
+  const defaultStun = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ];
+
+  if (!turnSecret) {
+    return NextResponse.json({
+      iceServers: defaultStun,
+      iceCandidatePoolSize: 10,
+      bundlePolicy: 'max-bundle',
+    });
+  }
+
+  const ttl = 3600; // 1 hour
+  const expiry = Math.floor(Date.now() / 1000) + ttl;
+  const username = `${expiry}:humanity-peer`;
+
+  const hmac = createHmac('sha1', turnSecret);
+  hmac.update(username);
+  const credential = hmac.digest('base64');
+
+  return NextResponse.json({
+    iceServers: [
+      ...defaultStun,
+      {
+        urls: [
+          `turn:${turnDomain}:3478?transport=udp`,
+          `turn:${turnDomain}:3478?transport=tcp`,
+          `turns:${turnDomain}:443?transport=tcp`,
+        ],
+        username,
+        credential,
+      },
+    ],
+    iceCandidatePoolSize: 10,
+    bundlePolicy: 'max-bundle',
+  });
+}
 
 /**
  * POST /api/call/token

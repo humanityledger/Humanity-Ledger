@@ -295,16 +295,6 @@
   isolation: isolate;
 }
 
-/* /connect keeps the geometry calibrated for its photograph. */
-.connect .screen {
-  inset: 10px;
-}
-
-.connect .glass {
-  background: #050506;
-  border-radius: 66px;
-}
-
 /* The glass catches the same light as the room. */
 .screen::after {
   content: "";
@@ -1269,6 +1259,592 @@
   font-size: 13.5px;
   color: #8a909c;
   font-variant-numeric: tabular-nums;
+}
+
+/* ── Realistic Photographic Portrait for Video Call ── */
+.photoPortraitBg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 65% 55% at 50% 28%, #f8dfcb 0%, #ebb996 35%, #9e755b 70%, #2a221f 100%);
+  filter: blur(2px);
+}
+
+.photoPortraitSubject {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.portraitHairBack {
+  position: absolute;
+  top: 155px;
+  width: 172px;
+  height: 196px;
+  border-radius: 90px 90px 70px 70px;
+  background: #181210;
+  filter: blur(4px);
+}
+
+.portraitNeck {
+  position: absolute;
+  top: 290px;
+  width: 68px;
+  height: 90px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #d89874 0%, #c48260 100%);
+  filter: blur(3px);
+}
+
+.portraitHead {
+  position: absolute;
+  top: 175px;
+  width: 144px;
+  height: 170px;
+  border-radius: 72px / 85px;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 40%, #ffeedd 0%, #f1be9e 45%, #d89976 80%, #aa6d4c 100%);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  filter: blur(3.5px);
+}
+
+.portraitHairFront {
+  position: absolute;
+  top: 155px;
+  width: 160px;
+  height: 80px;
+  border-radius: 80px 80px 40px 40px;
+  background: #1d1512;
+  filter: blur(4px);
+}
+
+.portraitShoulders {
+  position: absolute;
+  bottom: -30px;
+  width: 380px;
+  height: 240px;
+  border-radius: 190px 190px 0 0;
+  background: linear-gradient(180deg, #242b36 0%, #161a22 100%);
+  filter: blur(5px);
+}
+
+.selfCam {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  background: #2b303c;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.selfPerson {
+  width: 70px;
+  height: 90px;
+  border-radius: 35px 35px 10px 10px;
+  background: radial-gradient(circle at 50% 35%, #f2c7ab 0%, #bd8668 70%);
+  filter: blur(2px);
+}
+
+/* ── Ledger Chat Native Invoice Card ── */
+.ledgerInvoiceCard {
+  align-self: flex-start;
+  width: 88%;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 16px 18px 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  margin: 4px 0 10px;
+}
+
+.invTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.invDocTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #667085;
+}
+
+.invStatusTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.invStatusUnpaid {
+  background: #f2f4f7;
+  color: #667085;
+}
+
+.invStatusPaid {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.invDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.invTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #101828;
+  letter-spacing: -0.015em;
+}
+
+.invParties {
+  font-size: 12.5px;
+  color: #667085;
+  font-family: var(--font-mono, monospace);
+}
+
+.invItemRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #344054;
+  margin-top: 4px;
+}
+
+.invDivider {
+  height: 1px;
+  background: #f2f4f7;
+  margin: 4px 0;
+}
+
+.invTotalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.invTotalRow span:first-child {
+  font-size: 14px;
+  font-weight: 500;
+  color: #475467;
+}
+
+.invTotalVal {
+  font-size: 20px;
+  font-weight: 700;
+  color: #101828;
+  letter-spacing: -0.02em;
+}
+
+.invFooterRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.invDue {
+  font-size: 12px;
+  color: #98a2b3;
+}
+
+.invActionBtn {
+  background: #111318;
+  color: #fff;
+  border-radius: 12px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.invActionDone {
+  background: #f2f4f7;
+  color: #344054;
+}
+
+.invReaction {
+  position: absolute;
+  bottom: -10px;
+  left: 18px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+}
+
+/* ── CSS iPhone 15 Pro Frame for New Showcases ── */
+.iphoneFrame {
+  position: relative;
+  width: 390px;
+  height: 844px;
+  background: #000;
+  border-radius: 54px;
+  border: 4px solid #38393d;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+    0 30px 70px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  margin: auto;
+}
+
+.iphoneIsland {
+  position: absolute;
+  top: 11px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 34px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 50;
+}
+
+.iphoneScreen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50px;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* ── Communities Screen ── */
+.commHead {
+  padding: 16px 20px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.commTitle {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #101828;
+}
+
+.commAction {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f2f4f7;
+  display: grid;
+  place-items: center;
+  color: #344054;
+}
+
+.commList {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  gap: 14px;
+}
+
+.commItem {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.commAvatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.commMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.commNameRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.commName {
+  font-size: 15px;
+  font-weight: 650;
+  color: #101828;
+}
+
+.commBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #027a48;
+  background: #ecfdf3;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.commSub {
+  font-size: 12px;
+  color: #667085;
+}
+
+.commLastMsg {
+  font-size: 12.5px;
+  color: #475467;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Smart Agreement Card ── */
+.agreementCard {
+  align-self: flex-start;
+  width: 88%;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 16px;
+  border: 1.5px solid #e0e2e8;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.agTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.agTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #5200ff;
+}
+
+.agStatus {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 12px;
+}
+
+.agSigned {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.agPending {
+  background: #fff8e6;
+  color: #b54708;
+}
+
+.agTitle {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #101828;
+}
+
+.agParties {
+  font-size: 12px;
+  color: #475467;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.agParties span {
+  font-weight: 600;
+  color: #101828;
+}
+
+.agDigest {
+  font-size: 11px;
+  color: #98a2b3;
+  font-family: var(--font-mono, monospace);
+  background: #f9fafb;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.agBtn {
+  margin-top: 4px;
+  background: #5200ff;
+  color: #fff;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+/* ── Invoice Details Screen ── */
+.invDetailHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  font-size: 17px;
+  font-weight: 650;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.invDetailCard {
+  margin: 24px 20px;
+  background: #fff;
+  border-radius: 24px;
+  padding: 28px 20px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.invSuccessBadge {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #ecfdf3;
+  color: #027a48;
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+}
+
+.invDetailAmount {
+  font-size: 32px;
+  font-weight: 800;
+  color: #101828;
+  letter-spacing: -0.025em;
+}
+
+.invDetailStatus {
+  font-size: 13px;
+  font-weight: 600;
+  color: #027a48;
+  margin-bottom: 24px;
+}
+
+.invDetailRows {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px dashed #e4e7ec;
+  padding-top: 18px;
+}
+
+.invRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.invRow span:first-child {
+  color: #667085;
+}
+
+.invRow span:last-child {
+  font-weight: 600;
+  color: #101828;
+}
+
+.invHash {
+  font-family: var(--font-mono, monospace);
+  color: #5200ff !important;
+}
+
+/* ── Updates Feed ── */
+.updatesList {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px;
+  gap: 14px;
+}
+
+.updateItem {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.updateDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.updateContent {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.updateTitle {
+  font-size: 14.5px;
+  font-weight: 650;
+  color: #101828;
+}
+
+.updateSub {
+  font-size: 12.5px;
+  color: #667085;
+}
+
+.updateTime {
+  font-size: 11.5px;
+  color: #98a2b3;
+  margin-top: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {

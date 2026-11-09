@@ -85,8 +85,14 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
     };
 
     const resize = () => {
+      const htmlZoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
       const rect = root.getBoundingClientRect();
-      cachedRect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+      cachedRect = {
+        left: rect.left / htmlZoom,
+        top: rect.top / htmlZoom,
+        width: rect.width / htmlZoom,
+        height: rect.height / htmlZoom,
+      };
       w = Math.max(1, root.clientWidth);
       h = Math.max(1, root.clientHeight);
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -173,9 +179,10 @@ export function ImmersiveField({ variant = "page", position = "fixed", className
     };
 
     const onMove = (e: PointerEvent) => {
-      // Use cached rect coordinates — zero synchronous layout reflows!
-      target.x = e.clientX - cachedRect.left;
-      target.y = e.clientY - cachedRect.top;
+      // Compensate for CSS zoom on <html> (e.g. landing page zoom: 0.67)
+      const htmlZoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+      target.x = e.clientX / htmlZoom - cachedRect.left;
+      target.y = e.clientY / htmlZoom - cachedRect.top;
       if (!target.on) {
         target.on = true;
         if (lens.k < 0.01) {

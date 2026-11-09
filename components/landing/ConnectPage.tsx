@@ -48,8 +48,6 @@ const DynamicUniversalScanModal = dynamic(() => import("@/components/scan/Univer
 
 const QR_LIFETIME_MS = 240_000;
 const QR_POLL_MS = 2_000;
-const WALLET_TIMEOUT_DESKTOP_MS = 20_000;
-const WALLET_TIMEOUT_MOBILE_MS = 45_000;
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -78,6 +76,8 @@ const MOBILE_WALLETS: WalletOption[] = [
   { id: "metamask-mobile", name: "MetaMask", hint: "Opens the MetaMask app", logo: "/wallets/metamask.svg" },
   { id: "coinbase-mobile", name: "Coinbase Wallet", hint: "Opens the Coinbase Wallet app", logo: "/wallets/coinbase.png" },
   { id: "rainbow-mobile", name: "Rainbow", hint: "Opens the Rainbow app", logo: "/wallets/rainbow.png" },
+  { id: "trust-mobile", name: "Trust Wallet", hint: "Opens Trust Wallet app", logo: "/wallets/metamask.svg" },
+  { id: "okx-mobile", name: "OKX Wallet", hint: "Opens OKX app", logo: "/wallets/coinbase.png" },
 ];
 
 /** Return path after sign-in. Only same-origin paths are honoured. */
@@ -160,23 +160,6 @@ export default function ConnectPage() {
       toast.error("The wallet could not connect.", { description: error.message });
     }
   }, [isError, error]);
-
-  /* ── Clear the pending wallet once the account is connected ───────────── */
-  useEffect(() => {
-    if (accountStatus === "connected") setPendingWallet(null);
-  }, [accountStatus]);
-
-  /* ── Give up waiting if the wallet never answers ──────────────────────── */
-  useEffect(() => {
-    if (!pendingWallet || isConnected || isPending) return;
-    const timeoutMs = isMobile ? WALLET_TIMEOUT_MOBILE_MS : WALLET_TIMEOUT_DESKTOP_MS;
-    const t = setTimeout(() => {
-      setPendingWallet(null);
-      setSignError("The wallet did not respond. Open the wallet and try again, or choose another wallet.");
-      setAuthStatus("failed");
-    }, timeoutMs);
-    return () => clearTimeout(t);
-  }, [pendingWallet, isConnected, isPending, isMobile]);
 
   /* ── First mount ──────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -460,6 +443,18 @@ export default function ConnectPage() {
         });
 
         if (vr.ok) {
+          try {
+            const addrLower = address.toLowerCase();
+            localStorage.setItem(
+              "system_session_v2",
+              JSON.stringify({ wallet: addrLower, exp: Date.now() + 604_800_000, source: "siwe" })
+            );
+            sessionStorage.setItem("system_wallet_addr", addrLower);
+            localStorage.setItem("system_wallet_addr", addrLower);
+            clearDisconnectGuard();
+          } catch {
+            /* storage unavailable */
+          }
           setSignStep(3);
           setLinked(true);
           redirectingRef.current = true;
@@ -491,6 +486,15 @@ export default function ConnectPage() {
     const onVisibilityChange = async () => {
       if (typeof document === "undefined" || document.visibilityState !== "visible") return;
       if (redirectingRef.current) return;
+
+      // 0. Purge pending state if user has been away or stuck for > 45 seconds
+      const wakeupTs = localStorage.getItem("system_pending_wakeup_ts");
+      if (wakeupTs && Date.now() - parseInt(wakeupTs, 10) > 45_000) {
+        setPendingWallet(null);
+        setMobileDeepLink(null);
+        localStorage.removeItem("system_pending_wakeup");
+        localStorage.removeItem("system_pending_wakeup_ts");
+      }
 
       // 1. Check if session was completed in background or already valid
       try {
@@ -556,7 +560,6 @@ export default function ConnectPage() {
         connect({ connector: conn });
       } else {
         openAppKitSafe();
-        setPendingWallet(null);
         toast.info(`${w.name} is not installed here. Scan the code with the ${w.name} app on your phone instead.`);
       }
     },
@@ -568,12 +571,14 @@ export default function ConnectPage() {
       try {
         clearDisconnectGuard();
         localStorage.setItem("system_pending_wakeup", "1");
+        localStorage.setItem("system_pending_wakeup_ts", Date.now().toString());
       } catch {
         /* storage unavailable */
       }
       const brand = walletId.split("-")[0];
       try {
         sessionStorage.setItem("preferred_mobile_wallet", brand);
+        localStorage.setItem("preferred_mobile_wallet", brand);
       } catch {}
 
       // 1. If inside an in-app browser (e.g. MetaMask Mobile browser), connect directly via injected provider
@@ -598,7 +603,7 @@ export default function ConnectPage() {
         return;
       }
 
-      // 3. Native Direct Universal Link for MetaMask, Rainbow, Coinbase
+      // 3. Native Direct Universal Link for MetaMask, Rainbow, Coinbase, Trust, OKX
       const w = MOBILE_WALLETS.find((x) => x.id === walletId);
       if (w) setPendingWallet({ id: w.id, name: w.name, logo: w.logo });
 
@@ -610,7 +615,15 @@ export default function ConnectPage() {
         try {
           const provider = (await wcConnector.getProvider()) as any;
           if (provider && typeof provider.once === "function") {
+            let fired = false;
+            // 4-second safety fallback: if display_uri doesn't arrive, open AppKit modal
+            const fallbackTimer = setTimeout(() => {
+              if (!fired) openAppKitSafe();
+            }, 4000);
+
             provider.once("display_uri", (uri: string) => {
+              fired = true;
+              clearTimeout(fallbackTimer);
               let targetLink = uri;
               if (brand === "metamask") {
                 targetLink = `https://metamask.app.link/wc?uri=${encodeURIComponent(uri)}`;
@@ -618,6 +631,10 @@ export default function ConnectPage() {
                 targetLink = `https://rainbow.me/wc?uri=${encodeURIComponent(uri)}`;
               } else if (brand === "coinbase") {
                 targetLink = `https://go.cb-w.com/wc?uri=${encodeURIComponent(uri)}`;
+              } else if (brand === "trust") {
+                targetLink = `https://link.trustwallet.com/wc?uri=${encodeURIComponent(uri)}`;
+              } else if (brand === "okx") {
+                targetLink = `okx://wallet/dapp/details?dappUrl=${encodeURIComponent(window.location.origin)}&wc=${encodeURIComponent(uri)}`;
               }
               setMobileDeepLink(targetLink);
               if (typeof window !== "undefined") {
@@ -634,7 +651,6 @@ export default function ConnectPage() {
 
       // Fallback to AppKit modal
       openAppKitSafe();
-      setPendingWallet(null);
     },
     [connect, connectors, openAppKitSafe],
   );

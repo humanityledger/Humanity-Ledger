@@ -15,8 +15,18 @@
  * Narrow screens and reduced motion: the photographs stack with their text.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChatScreen, PaymentScreen, VideoCallScreen, VoiceCallScreen, type ScreenProps } from "./phoneScreens";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ChatScreen,
+  PaymentScreen,
+  VideoCallScreen,
+  VoiceCallScreen,
+  CommunitiesScreen,
+  AgreementScreen,
+  InvoicePaidScreen,
+  UpdatesScreen,
+  type ScreenProps,
+} from "./phoneScreens";
 import s from "./PhoneShowcase.module.css";
 
 interface Phone {
@@ -32,6 +42,7 @@ interface Phone {
   m: number[];
   f: { x: number; y: number; w: number; h: number };
   Screen: React.ComponentType<ScreenProps>;
+  cssFrame?: boolean;
 }
 
 const PHONES: Phone[] = [
@@ -84,7 +95,7 @@ const PHONES: Phone[] = [
     id: "pay",
     label: "Payments",
     title: "Settle up where you agreed it.",
-    text: "Send ETH, USDC or USDT from your own wallet, or try private payments on the Aztec test network, where the amount and the recipient stay hidden. Test tokens only, with no real value.",
+    text: "Create native invoices or send USDC/ETH with one tap. Zero intermediaries, privacy-preserving proofs, and direct wallet settlement.",
     src: "/landing/phones/p4.webp",
     fingers: "/landing/phones/p4-fingers.webp",
     w: 1600,
@@ -92,6 +103,62 @@ const PHONES: Phone[] = [
     m: [0.885581367, 0, 0, 0, 0, 0.871244647, 0, 0, 0, 0, 1, 0, 605.600036621, 59.200000763, 0, 1],
     f: { x: 602, y: 496, w: 263, h: 379 },
     Screen: PaymentScreen,
+  },
+  {
+    id: "communities",
+    label: "Communities",
+    title: "Sovereign group channels.",
+    text: "Create encrypted group spaces for your project, team or community with up to 10,000 members and zero central servers.",
+    src: "",
+    fingers: "",
+    w: 390,
+    h: 844,
+    m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    f: { x: 0, y: 0, w: 0, h: 0 },
+    Screen: CommunitiesScreen,
+    cssFrame: true,
+  },
+  {
+    id: "agreements",
+    label: "Agreements",
+    title: "Agreements that live on-chain.",
+    text: "Sign binding digital agreements directly in your chat. Mutual cryptographic signatures anchored to verifiable zero-knowledge proofs.",
+    src: "",
+    fingers: "",
+    w: 390,
+    h: 844,
+    m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    f: { x: 0, y: 0, w: 0, h: 0 },
+    Screen: AgreementScreen,
+    cssFrame: true,
+  },
+  {
+    id: "invoices",
+    label: "Invoices",
+    title: "Instant verifiable settlement.",
+    text: "Every invoice links directly to cryptographic receipts on-chain. Track paid status, timestamps, and verifiable payment hashes in real time.",
+    src: "",
+    fingers: "",
+    w: 390,
+    h: 844,
+    m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    f: { x: 0, y: 0, w: 0, h: 0 },
+    Screen: InvoicePaidScreen,
+    cssFrame: true,
+  },
+  {
+    id: "updates",
+    label: "Updates",
+    title: "Everything that matters, private.",
+    text: "Get live notifications for incoming payments, signed contracts, and community mentions in a single encrypted chronological feed.",
+    src: "",
+    fingers: "",
+    w: 390,
+    h: 844,
+    m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    f: { x: 0, y: 0, w: 0, h: 0 },
+    Screen: UpdatesScreen,
+    cssFrame: true,
   },
 ];
 
@@ -112,21 +179,22 @@ function phoneCentre(m: number[]) {
 
 const CENTRES = PHONES.map((ph) => phoneCentre(ph.m));
 
-/**
- * The calibrated matrix the /connect page uses for the "voice" photograph.
- * The landing page keeps the matrix in PHONES.
- */
-const CONNECT_VOICE_M = [0.863255842, 0, 0, 0, 0, 0.847210299, 0, 0, 0, 0, 1, 0, 612.0, 86.400001526, 0, 1];
-
 /** Position the photo inside its tile: cover the tile, zoomed towards the phone. */
-function fitPhoto(el: HTMLElement, i: number, zoom: number, phone?: Phone) {
-  const ph = phone ?? PHONES[i];
-  const centre = phone ? phoneCentre(phone.m) : CENTRES[i];
+function fitPhoto(el: HTMLElement, i: number, zoom: number) {
+  const ph = PHONES[i];
+  if (!ph) return;
+  if (ph.cssFrame) {
+    el.style.setProperty("--s", "1");
+    el.style.setProperty("--ox", "0px");
+    el.style.setProperty("--oy", "0px");
+    el.dataset.fit = "1";
+    return;
+  }
   const W = el.clientWidth || el.parentElement?.clientWidth || 400;
   const H = el.clientHeight || el.parentElement?.clientHeight || 500;
   const sc = Math.max(W / ph.w, H / ph.h) * zoom;
-  const fx = centre.x * 0.7 + (ph.w / 2) * 0.3;
-  const fy = centre.y * 0.7 + (ph.h / 2) * 0.3;
+  const fx = CENTRES[i].x * 0.7 + (ph.w / 2) * 0.3;
+  const fy = CENTRES[i].y * 0.7 + (ph.h / 2) * 0.3;
   const ox = clamp(W / 2 - fx * sc, W - ph.w * sc, 0);
   const oy = clamp(H / 2 - fy * sc, H - ph.h * sc, 0);
   el.style.setProperty("--s", String(sc));
@@ -186,6 +254,18 @@ function PhonePhoto({
   screen?: React.ComponentType<ScreenProps>;
 }) {
   const Screen = screen ?? ph.Screen;
+  if (ph.cssFrame) {
+    return (
+      <div className={s.photo} data-photo={i} aria-hidden="true" style={{ display: "grid", placeItems: "center", height: "100%", width: "100%" }}>
+        <div className={s.iphoneFrame}>
+          <div className={s.iphoneIsland} />
+          <div className={s.iphoneScreen}>
+            <Screen p={progress} active={active} />
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={s.photo} data-photo={i} aria-hidden="true">
       <div className={s.frame}>
@@ -434,7 +514,6 @@ export function LivePhone({
   zoom,
   fill,
   className,
-  variant = "landing",
 }: {
   /** Which photograph to use. */
   id?: string;
@@ -445,17 +524,8 @@ export function LivePhone({
   /** Instead of a zoom: the share of the tile's height the whole phone should take (e.g. 0.85). */
   fill?: number;
   className?: string;
-  /** "connect" uses the geometry calibrated for the /connect page. */
-  variant?: "landing" | "connect";
 }) {
   const i = Math.max(0, PHONES.findIndex((ph) => ph.id === id));
-  const connect = variant === "connect";
-  // A copy with the legacy matrix for /connect; the shared PHONES array is never mutated.
-  const phone = useMemo<Phone>(
-    () => (connect && PHONES[i].id === "voice" ? { ...PHONES[i], m: CONNECT_VOICE_M } : PHONES[i]),
-    [connect, i],
-  );
-  const phoneOverride = phone === PHONES[i] ? undefined : phone;
   const ScreenOverride = screen ? PHONES.find((ph) => ph.id === screen)?.Screen : undefined;
   const ref = useRef<HTMLDivElement>(null);
   const [p, setP] = useState(0);
@@ -471,7 +541,7 @@ export function LivePhone({
       if (fill) {
         // Size the photo so the whole phone takes `fill` of the tile's height,
         // whatever the tile's shape, but never leave the tile uncovered.
-        const ph = phone;
+        const ph = PHONES[i];
         const W = photo.clientWidth || el.clientWidth || 400;
         const H = photo.clientHeight || el.clientHeight || 500;
         if (W && H) {
@@ -480,14 +550,14 @@ export function LivePhone({
           z = Math.max(1, (fill * H) / glassH / cover);
         }
       }
-      fitPhoto(photo, i, z, phoneOverride);
+      fitPhoto(photo, i, z);
     };
     fit();
     if (typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [i, zoom, fill, phone, phoneOverride]);
+  }, [i, zoom, fill]);
 
   useEffect(() => {
     const el = ref.current;
@@ -520,8 +590,8 @@ export function LivePhone({
   }, [visible]);
 
   return (
-    <div ref={ref} className={`${s.live} ${connect ? s.connect : ""} ${className ?? ""}`}>
-      <PhonePhoto ph={phone} i={i} progress={p} active={visible} screen={ScreenOverride} />
+    <div ref={ref} className={`${s.live} ${className ?? ""}`}>
+      <PhonePhoto ph={PHONES[i]} i={i} progress={p} active={visible} screen={ScreenOverride} />
     </div>
   );
 }

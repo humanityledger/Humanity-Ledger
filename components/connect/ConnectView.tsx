@@ -319,10 +319,16 @@ function Signing(p: ConnectViewProps) {
             className={`${s.btn} ${s.btnPrimary}`}
             onClick={() => {
               if (typeof window !== "undefined") {
-                const pref = sessionStorage.getItem("preferred_mobile_wallet") || "";
+                const pref =
+                  sessionStorage.getItem("preferred_mobile_wallet") ||
+                  localStorage.getItem("preferred_mobile_wallet") ||
+                  "";
                 if (pref === "metamask") window.location.href = "https://metamask.app.link/";
                 else if (pref === "rainbow") window.location.href = "https://rainbow.me/";
                 else if (pref === "coinbase") window.location.href = "https://go.cb-w.com/";
+                else if (pref === "trust") window.location.href = "https://link.trustwallet.com/";
+                else if (pref === "okx") window.location.href = "okx://wallet/";
+                else if (p.mobileDeepLink) window.location.href = p.mobileDeepLink;
                 else p.onOtherWallets();
               }
             }}
@@ -439,9 +445,9 @@ export function ConnectView(props: ConnectViewProps) {
 
         <div className={s.showcase}>
           <div className={s.visual}>
-            {/* The front-on photograph, using the calibrated /connect
-                geometry so the live chat screen sits exactly on the glass. */}
-            <LivePhone id="voice" screen="chat" fill={0.8} variant="connect" />
+            {/* The front-on photograph: no fingers cross the glass and no
+                perspective, so the live chat screen sits exactly on it. */}
+            <LivePhone id="voice" screen="chat" fill={0.8} />
           </div>
           <Facts />
         </div>

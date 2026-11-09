@@ -23,10 +23,10 @@ if (typeof self !== 'undefined' && (self.location.hostname === 'localhost' || se
 // cached shell only when offline); hashed build assets are cache-first; the
 // API and anything that is not a same-origin GET is never touched.
 
-const VERSION = 'hl-2026-10-27';
+const VERSION = 'hl-2026-11-09';
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
-const SHELL = ['/', '/manifest.json', '/favicon.ico', '/icon-192.png', '/icon-512.png'];
+const SHELL = ['/', '/chat', '/manifest.json', '/favicon.ico', '/icon-192.png', '/icon-512.png', '/apple-icon.png'];
 const ICON = '/icon-192.png';
 const BADGE = '/favicon-32x32.png';
 

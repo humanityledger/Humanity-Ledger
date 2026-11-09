@@ -1,21 +1,19 @@
 "use client";
 
 /**
- * The Ledger Chat screens shown inside the iPhone photographs on the landing
- * page. Each screen is laid out on a 410 x 912 canvas (an iPhone 15 Pro at
- * 1x plus a little room) and receives `p`, its progress from 0 to 1, from the
- * scroll position: messages arrive, a call timer runs and a payment is sent
- * as the visitor scrolls.
- *
- * The screens follow the real product: the light chat interface, the dark call
- * screens, and private payments labelled as the Aztec test network.
+ * The Ledger Chat screens shown inside the iPhone photographs and CSS frames
+ * on the landing page. Each screen is laid out on a 410 x 912 canvas (an iPhone 15 Pro
+ * at 1x plus room) and receives `p`, its progress from 0 to 1, from the scroll position.
  */
 
 import React from "react";
 import {
   ArrowLeft,
+  Bell,
   Check,
   CheckCheck,
+  FileSignature,
+  FileText,
   Lock,
   Mic,
   MicOff,
@@ -25,6 +23,7 @@ import {
   RefreshCw,
   SendHorizontal,
   ShieldCheck,
+  Users,
   Video,
   Volume2,
 } from "lucide-react";
@@ -93,6 +92,12 @@ function Composer() {
   );
 }
 
+function clock(sec: number) {
+  const m = Math.floor(sec / 60);
+  const r = sec % 60;
+  return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+}
+
 /* ── 1. Conversation ───────────────────────────────────────────────── */
 
 export function ChatScreen({ p }: ScreenProps) {
@@ -140,12 +145,6 @@ export function ChatScreen({ p }: ScreenProps) {
 }
 
 /* ── 2. Voice call ─────────────────────────────────────────────────── */
-
-function clock(sec: number) {
-  const m = Math.floor(sec / 60);
-  const r = sec % 60;
-  return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
-}
 
 export function VoiceCallScreen({ p, active }: ScreenProps) {
   const connected = p >= 0.12;
@@ -201,32 +200,25 @@ export function VoiceCallScreen({ p, active }: ScreenProps) {
   );
 }
 
-/* ── 3. Video call ─────────────────────────────────────────────────── */
+/* ── 3. Video call (Realistic Portrait without vector puppet) ──────── */
 
 export function VideoCallScreen({ p, active }: ScreenProps) {
   return (
     <div className={`${s.screenVideo} ${active ? s.videoLive : ""}`}>
-      {/* The remote camera: an illustration, not a photograph of a person. */}
+      {/* Remote camera: realistic warm photographic video portrait */}
       <div className={s.remote} aria-hidden="true">
+        <div className={s.photoPortraitBg} />
+        <div className={s.photoPortraitSubject}>
+          {/* Hair & head volume */}
+          <div className={s.portraitHairBack} />
+          <div className={s.portraitNeck} />
+          <div className={s.portraitHead} />
+          <div className={s.portraitHairFront} />
+          {/* Torso & clothing */}
+          <div className={s.portraitShoulders} />
+        </div>
         <span className={s.bokeh} />
         <span className={s.bokeh2} />
-        <svg className={s.figure} viewBox="0 0 410 600" preserveAspectRatio="xMidYMax slice">
-          <defs>
-            <linearGradient id="hlSkin" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#59606c" />
-              <stop offset="1" stopColor="#3c414b" />
-            </linearGradient>
-            <linearGradient id="hlKnit" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#2f343d" />
-              <stop offset="1" stopColor="#15181d" />
-            </linearGradient>
-          </defs>
-          <path d="M40 600c8-120 70-178 165-178s157 58 165 178Z" fill="url(#hlKnit)" />
-          <rect x="178" y="330" width="54" height="80" rx="24" fill="url(#hlSkin)" />
-          <ellipse cx="205" cy="268" rx="82" ry="98" fill="url(#hlSkin)" />
-          <path d="M122 250c-2-78 44-120 92-118 52 2 86 40 80 112-14-40-46-62-86-64-40 0-72 26-86 70Z" fill="#1b1e24" />
-          <path d="M287 230c8 40 2 82-16 110M60 560c10-80 50-128 120-140" fill="none" stroke="#f3e2c9" strokeOpacity="0.45" strokeWidth="5" strokeLinecap="round" />
-        </svg>
       </div>
       <StatusBar dark />
       <div className={s.videoTop}>
@@ -242,13 +234,9 @@ export function VideoCallScreen({ p, active }: ScreenProps) {
         </span>
       </div>
       <div className={s.self} aria-hidden="true">
-        <svg viewBox="0 0 120 160" preserveAspectRatio="xMidYMax slice">
-          <rect width="120" height="160" fill="#cfd4dc" />
-          <path d="M8 160c3-34 22-52 52-52s49 18 52 52Z" fill="#3f4652" />
-          <rect x="51" y="88" width="18" height="26" rx="8" fill="#545b68" />
-          <ellipse cx="60" cy="70" rx="25" ry="30" fill="#545b68" />
-          <path d="M34 66c0-26 13-38 27-38 17 0 28 12 26 36-6-12-15-18-27-18-12 0-21 8-26 20Z" fill="#2f343d" />
-        </svg>
+        <div className={s.selfCam}>
+          <div className={s.selfPerson} />
+        </div>
       </div>
       <div className={s.videoBar}>
         <span className={s.vbBtn}>
@@ -268,66 +256,291 @@ export function VideoCallScreen({ p, active }: ScreenProps) {
   );
 }
 
-/* ── 4. Private payment ────────────────────────────────────────────── */
+/* ── 4. Private payment / Native Invoice (Exact Ledger Chat Design) ── */
 
 export function PaymentScreen({ p }: ScreenProps) {
-  const amount = "42.00";
-  const typed = amount.slice(0, Math.max(1, Math.min(amount.length, Math.floor(p * 12))));
-  const pressed = p >= 0.58 && p < 0.7;
-  const sent = p >= 0.7;
-  const settled = p >= 0.86;
+  const settled = p >= 0.65;
   return (
     <div className={s.screenLight}>
       <StatusBar />
-      <ChatHeader name="Marco Rossi" initials="MR" sub="online" />
-      <div className={`${s.chatBody} ${s.chatBodyPay}`}>
-        <span className={s.day}>Yesterday</span>
+      <div className={s.chatHead}>
+        <ArrowLeft size={24} strokeWidth={2} />
+        <span className={s.chatAvatar} style={{ background: "#fef0e6", color: "#b94b15" }}>81</span>
+        <span className={s.chatWho}>
+          <span className={s.chatName}>0x812d…d1ea</span>
+          <span className={s.chatSub}>0x812d…d1ea</span>
+        </span>
+        <Phone size={22} strokeWidth={1.9} />
+        <Video size={24} strokeWidth={1.9} />
+      </div>
+      <div className={s.chatBody} style={{ background: "#fff5ed" }}>
+        <span className={s.e2ee}>
+          <Lock size={13} strokeWidth={2.2} />
+          Messages are end to end encrypted. Tap for details
+        </span>
+        <div className={`${s.msgIn} ${s.in}`} style={{ background: "#fff", color: "#15171c" }}>
+          Just paid the reservation so we wouldn't lose it.
+          <span className={s.time}>13:20</span>
+        </div>
+        <div className={`${s.msgOut} ${s.in}`} style={{ background: "#111318", color: "#fff" }}>
+          Legend 🙌 How do I send you my half?
+          <span className={s.time}>13:20</span>
+        </div>
+        <div className={`${s.msgIn} ${s.in}`} style={{ background: "#fff", color: "#15171c" }}>
+          Let me create an invoice right here in Ledger Chat.
+          <span className={s.time}>13:20</span>
+        </div>
+        <div className={`${s.msgOut} ${s.in}`} style={{ background: "#111318", color: "#fff" }}>
+          Sweet, send it over.
+          <span className={s.time}>13:20</span>
+        </div>
+
+        {/* The Exact Invoice Card from Ledger Chat Screenshots */}
+        <div className={`${s.ledgerInvoiceCard} ${s.in}`}>
+          <div className={s.invTop}>
+            <span className={s.invDocTag}>
+              <FileText size={14} strokeWidth={2.2} />
+              Invoice INV-2026-6638
+            </span>
+            <span className={`${s.invStatusTag} ${settled ? s.invStatusPaid : s.invStatusUnpaid}`}>
+              <span className={s.invDot} />
+              {settled ? "Paid" : "Unpaid"}
+            </span>
+          </div>
+          <div className={s.invTitle}>Cabin Rental Weekend Split</div>
+          <div className={s.invParties}>From zk:812daF to zk:0xF207…2A8e</div>
+          <div className={s.invItemRow}>
+            <span>Aztec zk.money Native Chat Integ…</span>
+            <span>140.00</span>
+          </div>
+          <div className={s.invDivider} />
+          <div className={s.invTotalRow}>
+            <span>Total</span>
+            <span className={s.invTotalVal}>140.00 USDC</span>
+          </div>
+          <div className={s.invFooterRow}>
+            <span className={s.invDue}>Due 22/11/2026</span>
+            <span className={`${s.invActionBtn} ${settled ? s.invActionDone : ""}`}>
+              {settled ? "View" : "Pay Invoice"}
+            </span>
+          </div>
+          <span className={s.invReaction}>❤️</span>
+        </div>
+
+        <div className={`${s.msgOut} ${at(p, 0.45)}`} style={{ background: "#111318", color: "#fff" }}>
+          So who's driving on Friday?
+          <span className={s.time}>13:23</span>
+        </div>
+        <div className={`${s.msgIn} ${at(p, 0.7)}`} style={{ background: "#fff", color: "#15171c" }}>
+          My car is getting serviced, can we take yours?
+          <span className={s.time}>13:23</span>
+        </div>
+        <div className={`${s.msgOut} ${at(p, 0.85)}`} style={{ background: "#111318", color: "#fff" }}>
+          Sure, my trunk has plenty of room for our bags
+          <span className={s.time}>13:24</span>
+        </div>
+      </div>
+      <Composer />
+    </div>
+  );
+}
+
+/* ── 5. Communities Showcase Screen ────────────────────────────────── */
+
+export function CommunitiesScreen({ p }: ScreenProps) {
+  return (
+    <div className={s.screenLight}>
+      <StatusBar />
+      <div className={s.commHead}>
+        <span className={s.commTitle}>Communities</span>
+        <span className={s.commAction}>
+          <Plus size={20} strokeWidth={2.2} />
+        </span>
+      </div>
+      <div className={s.commList}>
+        <div className={`${s.commItem} ${s.in}`}>
+          <div className={s.commAvatar} style={{ background: "#5200ff", color: "#fff" }}>
+            HL
+          </div>
+          <div className={s.commMeta}>
+            <div className={s.commNameRow}>
+              <span className={s.commName}>Humanity Core Network</span>
+              <span className={s.commBadge}>
+                <Lock size={11} strokeWidth={2} /> Encrypted
+              </span>
+            </div>
+            <div className={s.commSub}>2,410 members • 12 online</div>
+            <div className={s.commLastMsg}>Protocol upgrade deployed to Aztec rollup…</div>
+          </div>
+        </div>
+        <div className={`${s.commItem} ${at(p, 0.25)}`}>
+          <div className={s.commAvatar} style={{ background: "#10b981", color: "#fff" }}>
+            ZK
+          </div>
+          <div className={s.commMeta}>
+            <div className={s.commNameRow}>
+              <span className={s.commName}>Zero-Knowledge Builders</span>
+              <span className={s.commBadge}>
+                <Lock size={11} strokeWidth={2} /> Encrypted
+              </span>
+            </div>
+            <div className={s.commSub}>840 members • 5 online</div>
+            <div className={s.commLastMsg}>Client-side proving in WASM running at 120ms…</div>
+          </div>
+        </div>
+        <div className={`${s.commItem} ${at(p, 0.55)}`}>
+          <div className={s.commAvatar} style={{ background: "#f59e0b", color: "#fff" }}>
+            DF
+          </div>
+          <div className={s.commMeta}>
+            <div className={s.commNameRow}>
+              <span className={s.commName}>Private DeFi Alliance</span>
+              <span className={s.commBadge}>
+                <Lock size={11} strokeWidth={2} /> Encrypted
+              </span>
+            </div>
+            <div className={s.commSub}>3,120 members • 48 online</div>
+            <div className={s.commLastMsg}>USDC private settlement volume hit $14M…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── 6. Smart Agreement Screen ─────────────────────────────────────── */
+
+export function AgreementScreen({ p }: ScreenProps) {
+  const signed = p >= 0.5;
+  return (
+    <div className={s.screenLight}>
+      <StatusBar />
+      <ChatHeader name="Irina Vlad" initials="IV" sub="online" />
+      <div className={s.chatBody}>
+        <span className={s.e2ee}>
+          <Lock size={13} strokeWidth={2.2} />
+          Messages are end to end encrypted
+        </span>
         <div className={`${s.msgIn} ${s.in}`}>
-          Thanks for dinner! What do I owe you?<span className={s.time}>22:14</span>
+          I've drawn up our mutual terms. Review and sign when you are ready.
+          <span className={s.time}>16:10</span>
         </div>
-        <div className={`${s.msgOut} ${s.in}`}>
-          42, whenever you can.
+        <div className={`${s.agreementCard} ${s.in}`}>
+          <div className={s.agTop}>
+            <span className={s.agTag}>
+              <ShieldCheck size={14} /> Smart Agreement
+            </span>
+            <span className={`${s.agStatus} ${signed ? s.agSigned : s.agPending}`}>
+              {signed ? "Signed on-chain ✓" : "Pending signature"}
+            </span>
+          </div>
+          <div className={s.agTitle}>Software Consulting Agreement Q4</div>
+          <div className={s.agParties}>
+            <div>
+              <span>Party A:</span> 0xA4f2…9C1b (You)
+            </div>
+            <div>
+              <span>Party B:</span> 0x812d…d1ea (Client)
+            </div>
+          </div>
+          <div className={s.agDigest}>Digest: 0x7a89…4e21 (Poseidon Hash)</div>
+          <div className={s.agBtn}>
+            {signed ? "View Aztec Proof Hash" : "Sign with Wallet"}
+          </div>
+        </div>
+        <div className={`${s.msgOut} ${at(p, 0.6)}`}>
+          Signed directly from my wallet! The proof is verifiable on-chain.
           <span className={s.time}>
-            22:15 <CheckCheck size={15} strokeWidth={2.2} />
-          </span>
-        </div>
-        <span className={s.day}>Today</span>
-        <div className={`${s.payCard} ${sent ? s.in : s.gone}`}>
-          <span className={s.payTop}>
-            <ShieldCheck size={18} strokeWidth={2} />
-            Private payment
-          </span>
-          <span className={s.payAmount}>42.00 zkUSDC</span>
-          <span className={s.payRow}>
-            {settled ? (
-              <>
-                <Check size={15} strokeWidth={2.6} /> Settled on the Aztec test network
-              </>
-            ) : (
-              <>
-                <span className={s.spinner} /> Proving on this device
-              </>
-            )}
+            16:12 <CheckCheck size={15} strokeWidth={2.2} />
           </span>
         </div>
       </div>
       <Composer />
+    </div>
+  );
+}
 
-      <div className={`${s.sheet} ${sent ? s.sheetDown : ""}`}>
-        <span className={s.grabber} />
-        <span className={s.sheetTitle}>Send privately</span>
-        <span className={s.sheetTo}>To Marco Rossi</span>
-        <span className={s.sheetAmount}>
-          {typed}
-          <span className={s.caret} />
-          <span className={s.sheetUnit}>zkUSDC</span>
+/* ── 7. Invoice Settled Details Screen ─────────────────────────────── */
+
+export function InvoicePaidScreen({ p }: ScreenProps) {
+  return (
+    <div className={s.screenLight}>
+      <StatusBar />
+      <div className={s.invDetailHead}>
+        <ArrowLeft size={22} />
+        <span>Invoice Details</span>
+        <span style={{ width: 22 }} />
+      </div>
+      <div className={s.invDetailCard}>
+        <div className={s.invSuccessBadge}>
+          <Check size={28} strokeWidth={2.5} />
+        </div>
+        <div className={s.invDetailAmount}>140.00 USDC</div>
+        <div className={s.invDetailStatus}>Payment Settled On-Chain</div>
+        <div className={s.invDetailRows}>
+          <div className={s.invRow}>
+            <span>Invoice ID</span>
+            <span>INV-2026-6638</span>
+          </div>
+          <div className={s.invRow}>
+            <span>Recipient</span>
+            <span>0x812d…d1ea</span>
+          </div>
+          <div className={s.invRow}>
+            <span>Payer</span>
+            <span>0xF207…2A8e</span>
+          </div>
+          <div className={s.invRow}>
+            <span>Network</span>
+            <span>Ethereum / Aztec</span>
+          </div>
+          <div className={s.invRow}>
+            <span>Transaction</span>
+            <span className={s.invHash}>0x4e8a…9c1f</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── 8. Updates & Notifications Feed Screen ────────────────────────── */
+
+export function UpdatesScreen({ p }: ScreenProps) {
+  return (
+    <div className={s.screenLight}>
+      <StatusBar />
+      <div className={s.commHead}>
+        <span className={s.commTitle}>Updates</span>
+        <span className={s.commAction}>
+          <Bell size={20} strokeWidth={2} />
         </span>
-        <span className={s.sheetNote}>
-          <Lock size={14} strokeWidth={2.2} />
-          The amount and the recipient stay private. Test tokens on the Aztec test network.
-        </span>
-        <span className={`${s.sheetBtn} ${pressed ? s.sheetBtnPressed : ""}`}>Send privately</span>
-        <span className={s.sheetBal}>Private balance 118.40 zkUSDC</span>
+      </div>
+      <div className={s.updatesList}>
+        <div className={`${s.updateItem} ${s.in}`}>
+          <span className={s.updateDot} style={{ background: "#10b981" }} />
+          <div className={s.updateContent}>
+            <div className={s.updateTitle}>Payment Received: 140.00 USDC</div>
+            <div className={s.updateSub}>From 0x812d…d1ea for Cabin Rental Split</div>
+            <div className={s.updateTime}>2 minutes ago • Confirmed</div>
+          </div>
+        </div>
+        <div className={`${s.updateItem} ${at(p, 0.35)}`}>
+          <span className={s.updateDot} style={{ background: "#5200ff" }} />
+          <div className={s.updateContent}>
+            <div className={s.updateTitle}>Smart Agreement Signed</div>
+            <div className={s.updateSub}>Irina Vlad countersigned Consulting Q4</div>
+            <div className={s.updateTime}>1 hour ago • Verified on-chain</div>
+          </div>
+        </div>
+        <div className={`${s.updateItem} ${at(p, 0.7)}`}>
+          <span className={s.updateDot} style={{ background: "#3b82f6" }} />
+          <div className={s.updateContent}>
+            <div className={s.updateTitle}>Identity Credential Anchored</div>
+            <div className={s.updateSub}>Depth-32 Merkle Tree leaf updated</div>
+            <div className={s.updateTime}>3 hours ago • Zero-Knowledge proof ready</div>
+          </div>
+        </div>
       </div>
     </div>
   );

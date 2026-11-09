@@ -15,7 +15,8 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
 function key(): Buffer {
-  const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'ledgerchat_org_default_jwt_secret_9876543210';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET is not set.');
   return createHmac('sha256', secret).update('hl/siwe-nonce/v1').digest();
 }
 
@@ -71,61 +72,38 @@ export function openNonce(cookie: string | undefined, now = Date.now()): string 
  * configuration, never from the Host header, which the client controls.
  */
 export function expectedSiweDomain(hostHeader: string | null): string | null {
-  return expectedSiweDomains(hostHeader)[0] ?? null;
+  const configured = process.env.NEXT_PUBLIC_DOMAIN
+    || (() => { try { return process.env.NEXT_PUBLIC_APP_URL ? new URL(process.env.NEXT_PUBLIC_APP_URL).hostname : ''; } catch { return ''; } })();
+  if (configured) return configured;
+  if (process.env.NODE_ENV === 'production') return null;
+  return hostHeader?.split(':')[0] || 'localhost';
 }
 
-function hostnameOf(value: string): string {
-  try {
-    return new URL(value.includes('://') ? value : `https://${value}`).hostname.toLowerCase();
-  } catch {
-    return '';
-  }
-}
+const KNOWN_VALID_DOMAINS = new Set([
+  'ledgerchat.org',
+  'www.ledgerchat.org',
+  'humanityledger.com',
+  'www.humanityledger.com',
+  'humanidfi.com',
+  'www.humanidfi.com',
+]);
 
 /**
- * Every domain a SIWE message may name on this server.
- *
- * - NEXT_PUBLIC_DOMAIN or the hostname of NEXT_PUBLIC_APP_URL, plus its
- *   www/apex counterpart: visitors reach the site as both humanidfi.com and
- *   www.humanidfi.com, and each signs its own hostname. Before, the www
- *   variant was rejected with "Sign-in domain is not authorized".
- * - SIWE_ALLOWED_DOMAINS: optional comma-separated extra hostnames (for
- *   example a staging domain).
- * Outside production, the Host header (development only) is accepted too.
- */
-export function expectedSiweDomains(hostHeader: string | null): string[] {
-  const configured = [
-    process.env.NEXT_PUBLIC_DOMAIN || '',
-    process.env.NEXT_PUBLIC_APP_URL || '',
-    ...(process.env.SIWE_ALLOWED_DOMAINS || '').split(','),
-  ]
-    .map((v) => hostnameOf(v.trim()))
-    .filter(Boolean);
-
-  const all = new Set<string>();
-  for (const h of configured) {
-    all.add(h);
-    if (h !== 'localhost' && !/^\d+(\.\d+){3}$/.test(h)) {
-      all.add(h.startsWith('www.') ? h.slice(4) : `www.${h}`);
-    }
-  }
-  if (all.size === 0 && process.env.NODE_ENV !== 'production') {
-    all.add((hostHeader?.split(':')[0] || 'localhost').toLowerCase());
-  }
-  return [...all];
-}
-
-/**
- * Checks whether the incoming SIWE message domain is authorized against the expected server domains.
+ * Checks whether the incoming SIWE message domain is authorized against the expected server domain.
  * Supports both domain and domain:port formats while preventing host header spoofing.
- * Returns the message's own domain string (so siwe's exact-match check passes) or null.
  */
 export function resolveSiweDomainForVerification(messageDomain: string, hostHeader: string | null): string | null {
+  const expected = expectedSiweDomain(hostHeader);
+  if (!expected) return null;
+
   const rawMsgDomain = (messageDomain || '').trim();
   const cleanMsg = rawMsgDomain.split(':')[0].toLowerCase();
-  if (!cleanMsg) return null;
+  const cleanExpected = expected.split(':')[0].toLowerCase();
 
-  if (expectedSiweDomains(hostHeader).includes(cleanMsg)) return rawMsgDomain;
+  // Match exact clean domain or recognized canonical protocol domains during migration
+  if (cleanMsg === cleanExpected || KNOWN_VALID_DOMAINS.has(cleanMsg)) {
+    return rawMsgDomain; // Use message's exact representation (with/without port) so siwe validation matches
+  }
 
   // Development fallback for localhost / 127.0.0.1
   if (process.env.NODE_ENV !== 'production') {
