@@ -319,16 +319,10 @@ function Signing(p: ConnectViewProps) {
             className={`${s.btn} ${s.btnPrimary}`}
             onClick={() => {
               if (typeof window === "undefined") return;
-              // If we already have the final WC deep link, use it directly
-              if (p.mobileDeepLink) {
-                window.open(p.mobileDeepLink, "_blank");
-                return;
-              }
-              // Otherwise open the wallet homepage synchronously (counts as user gesture on iOS)
               const pref =
                 sessionStorage.getItem("preferred_mobile_wallet") ||
                 localStorage.getItem("preferred_mobile_wallet") ||
-                "";
+                "metamask";
               const links: Record<string, string> = {
                 metamask: "https://metamask.app.link/",
                 rainbow: "https://rainbow.me/",
@@ -336,9 +330,8 @@ function Signing(p: ConnectViewProps) {
                 trust: "https://link.trustwallet.com/",
                 okx: "https://www.okx.com/web3",
               };
-              const url = links[pref];
-              if (url) window.open(url, "_blank");
-              else p.onOtherWallets();
+              const url = links[pref] || "https://metamask.app.link/";
+              window.location.href = url;
             }}
           >
             Open wallet to sign

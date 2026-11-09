@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Humanity Ledger',
+    name: 'Ledger Chat',
     short_name: 'Ledger Chat',
     description: 'Enterprise Privacy Infrastructure & Decentralised Identity on the Aztec Network.',
     start_url: '/chat',
@@ -13,13 +13,24 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['finance', 'security', 'productivity', 'utilities'],
     icons: [
       {
-        src: '/icon.png',
-        sizes: 'any',
+        src: '/favicon-32x32.png',
+        sizes: '32x32',
+        type: 'image/png',
+      },
+      {
+        src: '/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icon-512.png',
+        sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',
       },
       {
-        src: '/apple-icon.png',
+        src: '/apple-touch-icon.png',
         sizes: '180x180',
         type: 'image/png',
         purpose: 'any',
@@ -27,16 +38,16 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       {
+        name: 'Chat',
+        short_name: 'Chat',
+        description: 'Open encrypted P2P communications',
+        url: '/chat',
+      },
+      {
         name: 'Portfolio',
         short_name: 'Portfolio',
         description: 'View your secure zero-knowledge assets',
         url: '/portfolio',
-      },
-      {
-        name: 'LedgerChat',
-        short_name: 'Chat',
-        description: 'Open encrypted P2P communications',
-        url: '/terminal',
       },
       {
         name: 'Markets',

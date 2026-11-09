@@ -335,6 +335,9 @@ export default function ConnectPage() {
     }
     if (readDisconnectGuard()) return;
 
+    // Clear stale connection pairing URI now that session is connected
+    setMobileDeepLink(null);
+
     signingRef.current = true;
     (async () => {
       setAuthStatus("verifying");
@@ -387,7 +390,7 @@ export default function ConnectPage() {
           // The server checks the domain without the port.
           domain: window.location.hostname,
           address,
-          statement: "Sign in to Humanity Ledger.",
+          statement: "Sign in to Ledger Chat.",
           uri: window.location.origin,
           version: "1",
           chainId: chainId ?? 1,
@@ -395,6 +398,32 @@ export default function ConnectPage() {
           issuedAt: new Date().toISOString(),
         });
         const message = siwe.prepareMessage();
+
+        // On mobile (iOS / Android), when WalletConnect requests a signature,
+        // MetaMask is either in the background or awaiting user return.
+        // Prompting the native wallet app via its universal link ensures
+        // the user is taken directly into MetaMask where the signature sheet pops up.
+        if (isMobile) {
+          const brand =
+            sessionStorage.getItem("preferred_mobile_wallet") ||
+            localStorage.getItem("preferred_mobile_wallet") ||
+            "metamask";
+          const walletUniversalLinks: Record<string, string> = {
+            metamask: "https://metamask.app.link/",
+            rainbow: "https://rainbow.me/",
+            coinbase: "https://go.cb-w.com/",
+            trust: "https://link.trustwallet.com/",
+            okx: "https://www.okx.com/web3",
+          };
+          const link = walletUniversalLinks[brand] || "https://metamask.app.link/";
+          setTimeout(() => {
+            try {
+              window.location.href = link;
+            } catch {
+              /* ignore */
+            }
+          }, 350);
+        }
 
         // Robust mobile signature handling:
         // On iOS / Android, when switching to MetaMask/Rainbow to sign, the tab may background.

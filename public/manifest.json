@@ -1,5 +1,5 @@
 {
-  "name": "Humanity Ledger",
+  "name": "Ledger Chat",
   "short_name": "Ledger Chat",
   "description": "Sovereign, End-to-End Encrypted Messaging & Zero-Knowledge Protocol.",
   "start_url": "/chat",
@@ -23,6 +23,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

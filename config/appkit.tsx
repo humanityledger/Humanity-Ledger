@@ -15,7 +15,7 @@ import { metaMask, injected, walletConnect, safe } from 'wagmi/connectors';
 // Set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID in Railway for clean env separation.
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
     || process.env.NEXT_PUBLIC_WC_PROJECT_ID
-    || '47cce4049225582027fdeeecb2868ead'; // Master WalletConnect ID (Synced from next.config.js)
+    || 'c78f6e1e-1169-4640-8626-d9de982fa0ea';
 
 if (!process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID && typeof window !== 'undefined') {
     console.warn('[WalletConnect] Using hardcoded project ID. Ensure NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID is set in production.');

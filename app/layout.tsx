@@ -1,4 +1,4 @@
-﻿// System layout  No Clerk provider needed (SIWE-native auth)
+// System layout  No Clerk provider needed (SIWE-native auth)
 
 import { headers } from 'next/headers'
 
@@ -112,7 +112,7 @@ export const metadata = {
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    title: 'Ledger',
+    title: 'Ledger Chat',
     statusBarStyle: 'default',
   },
 
