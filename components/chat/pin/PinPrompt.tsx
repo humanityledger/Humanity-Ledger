@@ -23,9 +23,14 @@ export interface PinPromptProps {
   subtitle?: string;
   onUnlock: () => void;
   onCancel?: () => void;
+  /** Called when the account has no PIN (404 / needsPinSetup). Takes precedence over the built-in message. */
+  onNeedsSetup?: () => void;
+  /** Called by the "Create PIN" button shown when the account has no PIN and onNeedsSetup is not provided. */
+  onCreatePin?: () => void;
 }
 
 const LENGTH = 6;
+const NO_PIN_MESSAGE = 'No PIN is set for this account. Create one to continue.';
 
 export function PinPrompt({
   variant = 'overlay',
@@ -33,6 +38,8 @@ export function PinPrompt({
   subtitle = 'Your six digit Ledger Chat PIN.',
   onUnlock,
   onCancel,
+  onNeedsSetup,
+  onCreatePin,
 }: PinPromptProps) {
   const [digits, setDigits] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
@@ -76,7 +83,8 @@ export function PinPrompt({
           setMessage('Your session has ended. Sign in again to continue.');
         } else if (res.status === 404 || data?.needsPinSetup) {
           setPhase('nopin');
-          setMessage('You have not set a PIN yet. Set one in Settings to use this lock.');
+          setMessage(NO_PIN_MESSAGE);
+          onNeedsSetup?.();
         } else if (res.status === 429 || data?.blocked) {
           setPhase('blocked');
           setMessage(data?.error || 'Too many attempts. Try again in a few minutes.');
@@ -98,12 +106,12 @@ export function PinPrompt({
         setMessage('Could not reach the server. Check your connection and try again.');
       }
     },
-    [onUnlock],
+    [onUnlock, onNeedsSetup],
   );
 
   const push = useCallback(
     (d: string) => {
-      if (busy || phase === 'blocked') return;
+      if (busy || phase === 'blocked' || phase === 'nopin') return;
       const prev = digitsRef.current;
       if (prev.length >= LENGTH) return;
       const next = (prev + d).slice(0, LENGTH);
@@ -142,6 +150,7 @@ export function PinPrompt({
     return () => window.removeEventListener('keydown', onKey);
   }, [push, back, onCancel]);
 
+  const noPin = phase === 'nopin';
   const isError = phase === 'wrong' || phase === 'blocked' || phase === 'error' || phase === 'nosession';
 
   const body = (
@@ -152,11 +161,13 @@ export function PinPrompt({
       <h2 className={s.title}>{title}</h2>
       <p className={s.subtitle}>{subtitle}</p>
 
-      <div key={shakeKey} className={`${s.dots} ${shakeKey ? s.shake : ''}`} aria-hidden="true">
-        {Array.from({ length: LENGTH }).map((_, i) => (
-          <span key={i} className={`${s.dot} ${i < digits.length ? s.dotFilled : ''}`} />
-        ))}
-      </div>
+      {!noPin && (
+        <div key={shakeKey} className={`${s.dots} ${shakeKey ? s.shake : ''}`} aria-hidden="true">
+          {Array.from({ length: LENGTH }).map((_, i) => (
+            <span key={i} className={`${s.dot} ${i < digits.length ? s.dotFilled : ''}`} />
+          ))}
+        </div>
+      )}
 
       <p className={`${s.message} ${isError ? s.error : ''}`} role="status" aria-live="polite">
         {busy ? (
@@ -167,7 +178,7 @@ export function PinPrompt({
       </p>
 
       {/* A real input so phones show the number pad and screen readers can enter the PIN. */}
-      <input
+      {!noPin && <input
         ref={inputRef}
         className={s.hiddenInput}
         type="password"
@@ -183,9 +194,9 @@ export function PinPrompt({
             setBoth(only);
           }
         }}
-      />
+      />}
 
-      <div className={s.pad}>
+      {!noPin && <div className={s.pad}>
         {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
           <button key={d} type="button" className={s.key} onClick={() => push(d)} disabled={busy || phase === 'blocked'}>
             {d}
@@ -204,7 +215,7 @@ export function PinPrompt({
         >
           <Delete size={22} strokeWidth={1.8} />
         </button>
-      </div>
+      </div>}
 
       <div className={s.footer}>
         {phase === 'nosession' && (
@@ -212,9 +223,9 @@ export function PinPrompt({
             Sign in again
           </a>
         )}
-        {phase === 'nopin' && (
-          <button type="button" className={s.textButton} onClick={onUnlock}>
-            Continue without a PIN
+        {phase === 'nopin' && !onNeedsSetup && onCreatePin && (
+          <button type="button" className={s.textButton} onClick={onCreatePin}>
+            Create PIN
           </button>
         )}
         {onCancel && (
