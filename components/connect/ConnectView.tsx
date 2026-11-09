@@ -337,18 +337,14 @@ function Signing(p: ConnectViewProps) {
                 trust: "https://link.trustwallet.com/",
                 okx: "https://www.okx.com/web3",
               };
-              const scheme = schemes[pref];
-              if (scheme) {
-                try {
-                  const a = document.createElement("a");
-                  a.href = scheme;
-                  a.rel = "noopener noreferrer";
-                  a.click();
-                  return;
-                } catch {}
+              const scheme = schemes[pref] || "metamask://";
+              const link = links[pref] || "https://metamask.app.link/";
+              try {
+                window.location.href = scheme;
+                return;
+              } catch {
+                window.location.href = link;
               }
-              const url = links[pref] || "https://metamask.app.link/";
-              window.open(url, "_blank", "noopener,noreferrer");
             }}
           >
             Open wallet to sign

@@ -106,6 +106,10 @@ const metadata = {
     description: 'Decentralized Encrypted Messenger on Humanity Ledger',
     url: appOrigin,
     icons: [`${appOrigin}/logo-mark.png`],
+    redirect: {
+        native: 'ledgerchat://',
+        universal: typeof window !== 'undefined' ? window.location.origin : 'https://ledgerchat.org',
+    },
 }
 
 export const wagmiAdapter = new WagmiAdapter({

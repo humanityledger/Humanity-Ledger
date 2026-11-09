@@ -54,7 +54,12 @@ export function PadlockLoader({
   const isWalletError =
     initError.includes('wallet connection lost') ||
     initError.includes('Connect your wallet') ||
-    lower.includes('unknown signer');
+    lower.includes('unknown signer') ||
+    lower.includes('synchronized from desktop') ||
+    lower.includes('handshake') ||
+    lower.includes('not yet synchronized') ||
+    lower.includes('no active wallet') ||
+    lower.includes('connector');
 
   const state: 'idle' | 'working' | 'error' = initError ? 'error' : isInitializing ? 'working' : 'idle';
 
@@ -92,6 +97,9 @@ export function PadlockLoader({
                   <button type="button" className={s.secondary} onClick={onRefreshSession}>
                     Refresh session
                   </button>
+                  <button type="button" className={s.secondary} style={{ marginTop: '8px' }} onClick={onClearAndRetry}>
+                    Sign in with new wallet
+                  </button>
                 </>
               ) : (
                 <button
@@ -124,14 +132,14 @@ export function PadlockLoader({
                     className={s.secondary}
                     style={{ marginTop: '14px', width: '100%' }}
                     onClick={() => {
-                      const pref = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('preferred_mobile_wallet')) || '';
-                      if (pref === 'metamask') window.location.href = 'https://metamask.app.link/';
-                      else if (pref === 'rainbow') window.location.href = 'https://rainbow.me/';
-                      else if (pref === 'coinbase') window.location.href = 'https://go.cb-w.com/';
-                      else window.location.href = 'wc:';
+                      const pref = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('preferred_mobile_wallet')) || 'metamask';
+                      if (pref === 'metamask') window.location.href = 'metamask://';
+                      else if (pref === 'rainbow') window.location.href = 'rainbow://';
+                      else if (pref === 'coinbase') window.location.href = 'cbwallet://';
+                      else window.location.href = 'metamask://';
                     }}
                   >
-                    Open wallet app
+                    Open wallet to approve
                   </button>
                 )}
               </>

@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 "use client";
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -3383,9 +3383,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             setInitError('Humanity Ledger module failed to load. Please check your network connection and reload the terminal.');
           } else if (errorMsg.includes('No active wallet') || errorMsg.includes('connector') || errorMsg.includes('signMessage') || errorMsg.toLowerCase().includes('unknown signer')) {
             if (isSystemHandshake) {
-               setInitError('Ledger identity not yet synchronized from desktop. Please keep this browser open while the desktop terminal finishes the handshake.');
+               setInitError('Ledger identity not yet synchronized. Connect your wallet or keep this browser open while the desktop terminal finishes the handshake.');
             } else {
-               setInitError('Active wallet connection lost or not detected. Please ensure your wallet app is open and connected directly to this browser.');
+               setInitError('Active wallet connection lost or not detected. Connect your wallet app directly to this browser to proceed.');
             }
           } else if (errorMsg.includes('WASM') || errorMsg.includes('wasm')) {
             setInitError('Cryptographic Engine Failure. Hardware architecture error or restricted browser security settings.');
