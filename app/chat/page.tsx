@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { TuringShieldGate } from '@/components/auth/TuringShieldGate';
 import { ChatEngineProvider } from '@/context/ChatEngineProvider';
 import { ImmersiveField } from '@/components/immersive/ImmersiveField';
+import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 
 function ChatLoading() {
   return (
@@ -34,6 +35,7 @@ const LedgerChat = dynamic(
 );
 
 export default function ChatPage() {
+  useKeyboardInset();
   return (
     <TuringShieldGate>
       <ChatEngineProvider>
@@ -43,7 +45,7 @@ export default function ChatPage() {
             on mobile phones it fills the display completely. */}
         <div
           data-chat-page="true"
-          className="relative flex flex-col w-full h-full flex-1 min-h-0 overflow-hidden bg-white md:bg-transparent md:p-[50px] lg:p-[75px] xl:p-[95px] 2xl:p-[120px]"
+          className="relative flex flex-col w-full h-full flex-1 min-h-0 overflow-hidden bg-white md:bg-transparent max-md:pb-[var(--keyboard-inset,0px)] max-md:transition-[padding] max-md:duration-150 max-md:ease-out md:p-[50px] lg:p-[75px] xl:p-[95px] 2xl:p-[120px]"
           style={{ height: '100%', minHeight: '100%', flex: '1 1 0%' }}
         >
           <div className="hidden md:block">

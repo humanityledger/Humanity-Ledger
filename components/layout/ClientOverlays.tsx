@@ -16,6 +16,7 @@ const ClientFortress  = dynamic(() => import("@/components/ui/ClientFortress").t
 const OfflineDetector = dynamic(() => import("@/components/ui/OfflineScreen").then(m => m.OfflineDetector),  { ssr: false });
 const GlobalSettingsModal = dynamic(() => import("@/components/shared/GlobalSettingsModal").then(m => m.GlobalSettingsModal), { ssr: false });
 const SettingsEnforcer = dynamic(() => import("@/components/providers/SettingsEnforcer").then(m => m.SettingsEnforcer), { ssr: false });
+const PWAInstallBanner = dynamic(() => import("@/components/mobile/PWAInstallBanner").then(m => m.PWAInstallBanner), { ssr: false });
 
 export function ClientOverlays() {
   return (
@@ -25,6 +26,7 @@ export function ClientOverlays() {
       <OfflineDetector />
       <ClientFortress />
       <GlobalSettingsModal />
+      <PWAInstallBanner />
     </>
   );
 }

@@ -129,7 +129,7 @@ function Option({
   return (
     <button type="button" className={s.option} onClick={onClick} disabled={disabled}>
       <span className={s.optionLogo} aria-hidden="true">
-        {logo ? <img src={logo} alt="" /> : Icon ? <Icon size={18} strokeWidth={1.75} /> : null}
+        {logo ? <img src={logo} alt="" /> : Icon ? <Icon size={18} strokeWidth={1.75} /> : <Wallet size={18} strokeWidth={1.75} />}
       </span>
       <span className={s.optionText}>
         <span className={s.optionName}>{name}</span>

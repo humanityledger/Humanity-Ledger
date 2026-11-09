@@ -2,10 +2,10 @@
   "name": "Humanity Ledger",
   "short_name": "Humanity",
   "description": "Sovereign, End-to-End Encrypted Messaging & Zero-Knowledge Protocol",
-  "start_url": "/",
+  "start_url": "/chat",
   "display": "standalone",
   "background_color": "#FFFFFF",
-  "theme_color": "#0A0A0A",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "/favicon-32x32.png",

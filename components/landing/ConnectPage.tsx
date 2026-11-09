@@ -32,7 +32,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useAccount, useChainId, useConnect, useSignMessage } from "wagmi";
+import { useAccount, useChainId, useConfig, useConnect, useSignMessage } from "wagmi";
+import { reconnect as wagmiReconnect } from "wagmi/actions";
 import { SiweMessage } from "siwe";
 import { useAppKit } from "@reown/appkit/react";
 import { toast } from "sonner";
@@ -48,6 +49,11 @@ const DynamicUniversalScanModal = dynamic(() => import("@/components/scan/Univer
 
 const QR_LIFETIME_MS = 240_000;
 const QR_POLL_MS = 2_000;
+/** How long the page waits for a wallet app before it stops saying "waiting". */
+const WALLET_WAIT_MS = 45_000;
+/** If the wallet link has not produced a WalletConnect URI by then, open AppKit. */
+const URI_WAIT_MS = 4_000;
+const WAKEUP_TS_KEY = "system_pending_wakeup_ts";
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -76,7 +82,28 @@ const MOBILE_WALLETS: WalletOption[] = [
   { id: "metamask-mobile", name: "MetaMask", hint: "Opens the MetaMask app", logo: "/wallets/metamask.svg" },
   { id: "coinbase-mobile", name: "Coinbase Wallet", hint: "Opens the Coinbase Wallet app", logo: "/wallets/coinbase.png" },
   { id: "rainbow-mobile", name: "Rainbow", hint: "Opens the Rainbow app", logo: "/wallets/rainbow.png" },
+  { id: "trust-mobile", name: "Trust Wallet", hint: "Opens the Trust Wallet app", logo: "" },
+  { id: "okx-mobile", name: "OKX Wallet", hint: "Opens the OKX app", logo: "" },
 ];
+
+/** Universal Links (https) open the app reliably on iOS 16+; OKX only has a scheme. */
+function walletDeepLink(brand: string, uri: string): string {
+  const u = encodeURIComponent(uri);
+  switch (brand) {
+    case "metamask":
+      return `https://metamask.app.link/wc?uri=${u}`;
+    case "rainbow":
+      return `https://rainbow.me/wc?uri=${u}`;
+    case "coinbase":
+      return `https://go.cb-w.com/wc?uri=${u}`;
+    case "trust":
+      return `https://link.trustwallet.com/wc?uri=${u}`;
+    case "okx":
+      return `okx://main/wc?uri=${u}`;
+    default:
+      return uri;
+  }
+}
 
 /** Return path after sign-in. Only same-origin paths are honoured. */
 function returnPathFromQuery(): string {
@@ -112,6 +139,7 @@ export default function ConnectPage() {
   const chainId = useChainId();
   const { connect, connectors, isPending, isError, error } = useConnect();
   const { signMessageAsync } = useSignMessage();
+  const wagmiConfig = useConfig();
   const { open: openAppKit } = useAppKit();
   const { isLinked, setLinked } = useUIStore();
   const { nuclearDisconnect } = useSystemSignOut();
@@ -467,38 +495,87 @@ export default function ConnectPage() {
     })();
   }, [mounted, accountStatus, address, authStatus, chainId, isLinked, signMessageAsync, setLinked]);
 
-  /* ── Auto-heal / Resume when returning from wallet app ────────────────── */
+  /* ── Reconcile when returning from a wallet app ──────────────────────────
+     iOS suspends the page while the wallet is in front and freezes the
+     WalletConnect socket, so on return nothing in memory can be trusted:
+     re-attach wagmi to the stored session, ask the server whether the
+     signature already landed, and drop a "waiting for wallet" state that has
+     outlived WALLET_WAIT_MS. */
   useEffect(() => {
-    const onVisibilityChange = async () => {
+    let running = false;
+    const reconcile = async () => {
       if (typeof document === "undefined" || document.visibilityState !== "visible") return;
-      if (redirectingRef.current) return;
-
-      // 1. Check if session was completed in background or already valid
+      if (redirectingRef.current || running) return;
+      running = true;
       try {
-        const r = await fetch("/api/auth/verify-session", { cache: "no-store", credentials: "include" });
-        if (r.ok) {
-          const d = await r.json();
-          if (d.authenticated && d.user?.address) {
-            setSignStep(3);
-            setLinked(true);
-            redirectingRef.current = true;
-            window.location.replace(returnPathFromQuery());
-            return;
+        // Not awaited: a dead socket must not delay the session check.
+        wagmiReconnect(wagmiConfig).catch(() => {});
+
+        try {
+          const r = await fetch("/api/auth/verify-session", { cache: "no-store", credentials: "include" });
+          if (r.ok) {
+            const d = await r.json();
+            if (d.authenticated && d.user?.address) {
+              setSignStep(3);
+              setLinked(true);
+              redirectingRef.current = true;
+              window.location.replace(returnPathFromQuery());
+              return;
+            }
+          }
+        } catch {
+          /* offline for a moment: fall through */
+        }
+
+        let ts = 0;
+        try {
+          ts = Number(localStorage.getItem(WAKEUP_TS_KEY) || 0);
+        } catch {
+          /* storage unavailable */
+        }
+        if (ts && Date.now() - ts > WALLET_WAIT_MS && !signingRef.current) {
+          setPendingWallet(null);
+          setMobileDeepLink(null);
+          try {
+            localStorage.removeItem("system_pending_wakeup");
+            localStorage.removeItem(WAKEUP_TS_KEY);
+          } catch {
+            /* storage unavailable */
           }
         }
-      } catch {}
 
-      // 2. If stuck in failed state after tab background restore, enable auto-retry if still connected
-      if (effectiveIsConnected && authStatus === "failed") {
-        signingRef.current = false;
-        setSignError(null);
-        setAuthStatus("idle");
+        if (effectiveIsConnected && authStatus === "failed") {
+          signingRef.current = false;
+          setSignError(null);
+          setAuthStatus("idle");
+        }
+      } finally {
+        running = false;
       }
     };
 
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
-  }, [effectiveIsConnected, authStatus, setLinked]);
+    document.addEventListener("visibilitychange", reconcile);
+    window.addEventListener("pageshow", reconcile);
+    return () => {
+      document.removeEventListener("visibilitychange", reconcile);
+      window.removeEventListener("pageshow", reconcile);
+    };
+  }, [wagmiConfig, effectiveIsConnected, authStatus, setLinked]);
+
+  /* Page stayed in front but the wallet never answered. */
+  useEffect(() => {
+    if (!pendingWallet || effectiveIsConnected) return;
+    const t = setTimeout(() => {
+      setPendingWallet(null);
+      setMobileDeepLink(null);
+      try {
+        localStorage.removeItem(WAKEUP_TS_KEY);
+      } catch {
+        /* storage unavailable */
+      }
+    }, WALLET_WAIT_MS);
+    return () => clearTimeout(t);
+  }, [pendingWallet, effectiveIsConnected]);
 
   /* ── Actions ──────────────────────────────────────────────────────────── */
   const openAppKitSafe = useCallback(() => {
@@ -548,6 +625,7 @@ export default function ConnectPage() {
       try {
         clearDisconnectGuard();
         localStorage.setItem("system_pending_wakeup", "1");
+        localStorage.setItem(WAKEUP_TS_KEY, String(Date.now()));
       } catch {
         /* storage unavailable */
       }
@@ -590,28 +668,26 @@ export default function ConnectPage() {
         try {
           const provider = (await wcConnector.getProvider()) as any;
           if (provider && typeof provider.once === "function") {
+            // No URI in a few seconds (stale session, blocked relay): hand over to AppKit.
+            const uriTimer = setTimeout(() => openAppKitSafe(), URI_WAIT_MS);
             provider.once("display_uri", (uri: string) => {
-              let targetLink = uri;
-              if (brand === "metamask") {
-                targetLink = `https://metamask.app.link/wc?uri=${encodeURIComponent(uri)}`;
-              } else if (brand === "rainbow") {
-                targetLink = `https://rainbow.me/wc?uri=${encodeURIComponent(uri)}`;
-              } else if (brand === "coinbase") {
-                targetLink = `https://go.cb-w.com/wc?uri=${encodeURIComponent(uri)}`;
-              }
-              // Shown as a tappable button too: iOS Safari may ignore a
-              // redirect that is not tied to a tap, so the user can always
-              // open the wallet by hand.
+              clearTimeout(uriTimer);
+              const targetLink = walletDeepLink(brand, uri);
+              // Also shown as a tappable button: iOS may ignore a redirect that
+              // is not tied to a tap, so the user can always open the wallet.
               setMobileDeepLink(targetLink);
-              if (typeof window !== "undefined") {
-                window.location.assign(targetLink);
+              try {
+                localStorage.setItem(WAKEUP_TS_KEY, String(Date.now()));
+              } catch {
+                /* storage unavailable */
               }
+              window.location.assign(targetLink);
             });
+            connect({ connector: wcConnector });
+            return;
           }
-          connect({ connector: wcConnector });
-          return;
         } catch (err) {
-          console.warn("[MobileWallet] Direct universal link failed, falling back to AppKit modal:", err);
+          console.warn("[MobileWallet] Direct link failed, falling back to AppKit modal:", err);
         }
       }
 

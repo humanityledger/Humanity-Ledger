@@ -2714,7 +2714,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // Request browser permission directly — no intermediary modal
     try {
       const constraints = type === 'video' ? { audio: true, video: true } : { audio: true, video: false };
-      await navigator.mediaDevices.getUserMedia(constraints);
+      // Only the permission is wanted here: release the tracks at once so the
+      // camera light does not stay on (iOS keeps it lit until every track stops).
+      (await navigator.mediaDevices.getUserMedia(constraints)).getTracks().forEach(t => t.stop());
       vault.setItem('ledger_media_perm', 'true');
       setHasMediaPermission(true);
       startCall(type, targetPeerOverride);
@@ -2739,7 +2741,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
     // Request browser permission directly — no intermediary modal
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      (await navigator.mediaDevices.getUserMedia({ audio: true, video: true })).getTracks().forEach(t => t.stop());
       vault.setItem('ledger_media_perm', 'true');
       setHasMediaPermission(true);
       answerCall();

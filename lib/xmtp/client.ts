@@ -28,6 +28,8 @@ if (typeof window !== 'undefined' && !window.Buffer) {
 }
 
 import { Client, type XmtpEnv } from '@xmtp/browser-sdk';
+import { toast } from 'sonner';
+import { probeIndexedDB } from '@/lib/storage/probeIndexedDB';
 
 //  Type definitions matching the pinned browser-sdk 
 type IdentifierKind = 'Ethereum';
@@ -255,6 +257,18 @@ export async function getXMTPClient(
   }
   const dbEncryptionKey = new Uint8Array(Buffer.from(dbKeyHex, 'hex'));
 
+  // Private browsing or a broken store: run on volatile in-memory storage
+  // instead of failing the whole chat. Messages are re-synced from the network.
+  const storageOk = await probeIndexedDB();
+  if (!storageOk) {
+    console.warn('[XMTP] Local storage unavailable. Using in-memory storage.');
+    try {
+      toast.warning('Modo privado detectado: los mensajes no se persistirán localmente.', { duration: 8000 });
+    } catch {
+      /* toaster not mounted */
+    }
+  }
+
   let client: Client;
   try {
     // Client.create wrapped in 8s timeout — WASM load or network hang must NEVER freeze UI
@@ -266,6 +280,7 @@ export async function getXMTPClient(
         env: XMTP_ENV,
         codecs: [],
         dbEncryptionKey,
+        ...(storageOk ? {} : { dbPath: null }),
         appVersion: 'LedgerNetwork-Privacy-Node/1.0.0-obfuscated',
       }),
       createTimeout,

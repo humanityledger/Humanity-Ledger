@@ -5,11 +5,11 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Humanity Ledger',
     short_name: 'Humanity Ledger',
     description: 'Enterprise Privacy Infrastructure & Decentralised Identity on the Aztec Network.',
-    start_url: '/',
+    start_url: '/chat',
     display: 'standalone',
     orientation: 'portrait',
     background_color: '#FFFFFF',
-    theme_color: '#050505',
+    theme_color: '#ffffff',
     categories: ['finance', 'security', 'productivity', 'utilities'],
     icons: [
       {

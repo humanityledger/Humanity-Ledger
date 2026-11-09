@@ -927,3 +927,20 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* Touch screens: 52px rows (Apple HIG minimum is 44, 52 is comfortable),
+   no sideways scroll, and room for the home indicator under the last row. */
+@media (max-width: 640px) {
+  .root.root {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  .root.root .option {
+    min-height: 52px;
+  }
+
+  .panel {
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  }
+}
