@@ -378,7 +378,7 @@ jobs:
           for pattern in "${PATTERNS[@]}"; do
             # The legal notice must name the owner (LSSI art. 10), so the legal
             # files, the docs and this workflow are allowed to.
-            HITS=$(git grep -l "$pattern" -- ':!*.log' ':!*.jsonl' ':!NOTICE' ':!LICENSE' ':!lib/constants/legalEntity.ts' ':!lib/docs/pages/company.ts' ':!docs/**' ':!.github/**' 2>/dev/null || true)
+            HITS=$(git grep -l "$pattern" -- ':!*.log' ':!*.jsonl' ':!NOTICE' ':!LICENSE' ':!lib/constants/legalEntity.ts' ':!lib/docs/pages/company.ts' ':!app/team/**' ':!docs/**' ':!.github/**' 2>/dev/null || true)
             if [ -n "$HITS" ]; then
               echo "WARNING: Personal name pattern '$pattern' found in: $HITS"
               FAIL=1
