@@ -164,15 +164,17 @@ describe("LedgerDeadmanSwitch", function () {
 
     describe("triggerInheritance", function () {
         it("reverts before timeout", async function () {
+            // backupWallet is the correct caller; test that timeout guard fires first
             await expect(
-                contract.connect(stranger).triggerInheritance([mockERC20.target], [mockERC721.target], [1])
+                contract.connect(backup).triggerInheritance([mockERC20.target], [mockERC721.target], [1])
             ).to.be.revertedWithCustomError(contract, "NotYetExpired");
         });
 
         it("transfers ERC20 + ERC721 after timeout, emits events", async function () {
             await time.increase(TIMEOUT_SECS + 1);
 
-            const tx = await contract.connect(stranger).triggerInheritance(
+            // Only backupWallet (or owner) may call triggerInheritance
+            const tx = await contract.connect(backup).triggerInheritance(
                 [mockERC20.target],
                 [mockERC721.target],
                 [1]
@@ -190,46 +192,65 @@ describe("LedgerDeadmanSwitch", function () {
             await expect(tx).to.emit(contract, "ERC721Forwarded");
         });
 
-        it("marks triggered = true, blocks second call", async function () {
+        it("reverts when called by non-backupWallet (griefing prevention)", async function () {
             await time.increase(TIMEOUT_SECS + 1);
-            await contract.connect(stranger).triggerInheritance([], [], []);
+            // A stranger can no longer call triggerInheritance — this closes the
+            // zero-array griefing freeze where any address could call with [] arrays
+            // to permanently set triggered=true without transferring any assets.
+            await expect(
+                contract.connect(stranger).triggerInheritance([mockERC20.target], [], [])
+            ).to.be.revertedWithCustomError(contract, "Blocked");
+        });
+
+        it("reverts when both asset arrays are empty (even for backupWallet)", async function () {
+            await time.increase(TIMEOUT_SECS + 1);
+            await expect(
+                contract.connect(backup).triggerInheritance([], [], [])
+            ).to.be.revertedWithCustomError(contract, "NoAssetsSpecified");
+        });
+
+        it("marks triggered = true and blocks second call when backupWallet triggers", async function () {
+            await time.increase(TIMEOUT_SECS + 1);
+            await contract.connect(backup).triggerInheritance([mockERC20.target], [], []);
             expect(await contract.triggered()).to.equal(true);
 
             await expect(
-                contract.connect(stranger).triggerInheritance([], [], [])
+                contract.connect(backup).triggerInheritance([mockERC20.target], [], [])
             ).to.be.revertedWithCustomError(contract, "AlreadyTriggered");
         });
 
         it("reverts on array length mismatch", async function () {
             await time.increase(TIMEOUT_SECS + 1);
             await expect(
-                contract.connect(stranger).triggerInheritance([], [mockERC721.target], []) // len 1 vs 0
+                contract.connect(backup).triggerInheritance([], [mockERC721.target], []) // len 1 vs 0
             ).to.be.revertedWithCustomError(contract, "ArrayLengthMismatch");
         });
 
         it("skips ERC721 tokens not approved to contract", async function () {
             await mockERC721.connect(owner).setApprovalForAll(contract.target, false);
             await time.increase(TIMEOUT_SECS + 1);
-            // Should not revert  just skip the unapproved token
-            await contract.connect(stranger).triggerInheritance([], [mockERC721.target], [1]);
+            // Should not revert — just skip the unapproved token; backupWallet is the caller
+            await contract.connect(backup).triggerInheritance([], [mockERC721.target], [1]);
             expect(await mockERC721.ownerOf(1)).to.equal(owner.address);
         });
 
         it("reverts when paused", async function () {
             await contract.connect(owner).pause();
             await time.increase(TIMEOUT_SECS + 1);
+            // Paused guard fires before caller check; use backupWallet for consistency
             await expect(
-                contract.connect(stranger).triggerInheritance([], [], [])
+                contract.connect(backup).triggerInheritance([mockERC20.target], [], [])
             ).to.be.revertedWithCustomError(contract, "EnforcedPause");
         });
 
-        it("ping resets expiry  trigger blocked again", async function () {
+        it("ping resets expiry — trigger blocked again", async function () {
             await time.increase(TIMEOUT_SECS - 1000);
             await contract.connect(owner).ping();
             // After ping, another TIMEOUT_SECS must pass
             await time.increase(1001);
+            // Even the backupWallet cannot trigger before the new timeout expires
             await expect(
-                contract.connect(stranger).triggerInheritance([], [], [])
+                contract.connect(backup).triggerInheritance([mockERC20.target], [], [])
             ).to.be.revertedWithCustomError(contract, "NotYetExpired");
         });
     });

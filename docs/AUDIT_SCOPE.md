@@ -39,13 +39,27 @@ This document defines the formal scope for an external security audit of the Hum
 - VK anchoring: Are verification keys correctly committed on-chain via the 14-day timelock?
 - Negative test coverage: Are all boundary conditions tested? (See `test/circuits/`)
 
+#### 3.1.1 Native Aztec Pre-Audit Gaps Register (G1–G6, UI Integration)
+
+All open protocol and circuit gaps are tracked with **High for production** severity to enforce native Aztec Network architecture alignment prior to mainnet:
+
+| Gap ID | Description | Severity | Current Status & Planned Resolution |
+|---|---|---|---|
+| **G1** | `recipient_pubkey` treated as Field rather than validated Grumpkin point | **High for production** | Validated at PXE client layer prior to witness construction; in-circuit curve check and migration to native Aztec `Npk` type planned. |
+| **G2** | Sanction set hardcoded as compile-time constants (999, 998) | **High for production** | Prototype constraint. Production design requires on-chain Merkle-committed dynamic sanction root. |
+| **G3** | Identity Merkle tree depth is 1 (2-node path) | **High for production** | Currently a demonstration subpath. Requires expansion to full depth (e.g. depth 32) for realistic anonymity sets using native Poseidon2. |
+| **G4** | Potential u64 arithmetic overflow in stream accrual multiplication | **CLOSED** | CLOSED via explicit `rate_per_second <= MAX_RATE` constraint and test suite (`test/circuits/streams_rate_bound.test.ts`). |
+| **G5** | Hash function is `pedersen_hash`, not native `poseidon2` | **High for production** | Cryptographically sound over BN254, but not yet aligned with Aztec's native Poseidon2 note scheme. Migration planned before external audit. |
+| **G6** | No formal equivalence verification between Noir source and ACIR | **High for production** | Formal circuit verification planned prior to mainnet consideration. |
+| **UI Integration** | In-browser client prover integration | **High for production** | Executed and verified in automated test suites (`test/aztec_e2e_no_simulation.test.ts`); currently being wired into the user-facing web interface. |
+
 ### 3.2 L1 Smart Contracts (Solidity / EVM)
 
 | Contract | Location | Role |
 |---|---|---|
-| `HumanityTimeLockVault` | `contracts/HumanityTimeLockVault.sol` | 14-day timelock on VK and parameter updates |
+| `HumanityTimeLockVault` | `contracts/HumanityTimeLockVault.sol` | Per-user multi-token dead man's switch vault — sweeps all deposited ERC-20 tokens to a designated backup wallet after configurable inactivity timeout; vault reconfigurable by owner if alive |
 | `HumanityIdentityRegistry` | `contracts/HumanityIdentityRegistry.sol` | On-chain identity claim registry |
-| `LedgerDeadmanSwitch` | `contracts/security/LedgerDeadmanSwitch.sol` | Emergency protocol freeze |
+| `LedgerDeadmanSwitch` | `contracts/security/LedgerDeadmanSwitch.sol` | Non-custodial inheritance protocol — forwards pre-approved ERC-20/ERC-721 allowances from owner to backup wallet; callable only by backupWallet or owner after inactivity timeout |
 
 **Audit focus**:
 - No unilateral admin drain or backdoor functions (verified: `scripts/verify-l1-bytecode.ts`)

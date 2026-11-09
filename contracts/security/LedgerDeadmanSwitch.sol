@@ -92,6 +92,7 @@ contract LedgerDeadmanSwitch is Ownable2Step, ReentrancyGuard, Pausable {
     error NoPendingChange();
     error CooldownNotElapsed();
     error ArrayLengthMismatch();
+    error NoAssetsSpecified();
     error Blocked();
 
     // 
@@ -184,26 +185,44 @@ contract LedgerDeadmanSwitch is Ownable2Step, ReentrancyGuard, Pausable {
 
     /**
      * @notice Forward all pre-approved owner tokens to backupWallet.
-     *         Callable by ANYONE once `timeoutPeriod` has elapsed since lastPing.
+     *
+     * @dev    CALLER RESTRICTION: only `backupWallet` or `owner()` may call this
+     *         function. Restricting to these two addresses eliminates the zero-array
+     *         griefing attack where any third party could call with empty arrays to
+     *         permanently set `triggered = true` without transferring any assets,
+     *         rendering the vault permanently frozen (audit finding, 2026-11).
+     *         The owner() path exists so the owner can self-trigger if desired;
+     *         the primary production path is backupWallet after owner is unreachable.
      *
      * @param erc20Tokens       List of ERC-20 contract addresses to forward.
+     *                          At least one of erc20Tokens or erc721Contracts must
+     *                          be non-empty.
      * @param erc721Contracts   List of ERC-721 contract addresses to forward.
      * @param erc721TokenIds    Token IDs for each ERC-721 contract (parallel array).
      *
      * @dev The owner must have granted allowance / setApprovalForAll to this
      *      contract *before* this function is called. This contract never holds
-     *      any assets itself  it only moves them from owner  backupWallet.
+     *      any assets itself — it only moves them from owner → backupWallet.
      */
     function triggerInheritance(
         address[] calldata erc20Tokens,
         address[] calldata erc721Contracts,
         uint256[] calldata erc721TokenIds
     ) external nonReentrant whenNotPaused {
+        // SECURITY: restrict caller to backupWallet or owner — prevents griefing
+        // by arbitrary third parties calling with empty arrays to freeze the vault.
+        if (msg.sender != backupWallet && msg.sender != owner()) revert Blocked();
+
         if (triggered)                                             revert AlreadyTriggered();
         if (block.timestamp <= lastPing + timeoutPeriod)           revert NotYetExpired();
         if (erc721Contracts.length != erc721TokenIds.length)       revert ArrayLengthMismatch();
 
-        triggered = true; // permanent flag  prevents any second call
+        // Require at least one asset array to be non-empty — a call with all-empty
+        // arrays cannot legitimately transfer anything and would only waste the
+        // triggered flag, permanently freezing the vault.
+        if (erc20Tokens.length == 0 && erc721Contracts.length == 0) revert NoAssetsSpecified();
+
+        triggered = true; // permanent flag — prevents any second call (CEI: set before external transfers)
 
         address currentOwner  = owner();
         address currentBackup = backupWallet;
