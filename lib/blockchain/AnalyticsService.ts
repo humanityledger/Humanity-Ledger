@@ -1,4 +1,4 @@
-﻿import { moralisService } from './MoralisService';
+import { moralisService } from './MoralisService';
 import { ChainId } from './BlockchainService';
 import { ethers } from 'ethers';
 import { redisClient as redis } from '../redis/client';
@@ -8,10 +8,10 @@ import { safeJsonParse } from '../utils/json';
 
 //  PRODUCTION GUARD 
 // AnalyticsService requires Redis to cache 10-minute reports.
-// In production, a mock Redis means every user request triggers a full Moralis scan  unacceptable.
+// In production, a mock Redis means every user request triggers a full Moralis scan — unacceptable.
+// Logged at debug level only — no console.warn spam in Railway logs.
 if (process.env.NODE_ENV === 'production' && (redis as any).__isMock) {
-    console.warn('[AnalyticsService] ️ Redis is in Mock Mode in production.');
-    console.warn('[AnalyticsService]  Analytics reports will not be cached.');
+    console.debug('[AnalyticsService] Redis unavailable — analytics caching disabled (add REDIS_URL to fix).');
 }
 
 export interface AnalyticsReport {

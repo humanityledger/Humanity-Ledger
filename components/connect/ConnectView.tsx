@@ -318,19 +318,27 @@ function Signing(p: ConnectViewProps) {
             type="button"
             className={`${s.btn} ${s.btnPrimary}`}
             onClick={() => {
-              if (typeof window !== "undefined") {
-                const pref =
-                  sessionStorage.getItem("preferred_mobile_wallet") ||
-                  localStorage.getItem("preferred_mobile_wallet") ||
-                  "";
-                if (pref === "metamask") window.location.href = "https://metamask.app.link/";
-                else if (pref === "rainbow") window.location.href = "https://rainbow.me/";
-                else if (pref === "coinbase") window.location.href = "https://go.cb-w.com/";
-                else if (pref === "trust") window.location.href = "https://link.trustwallet.com/";
-                else if (pref === "okx") window.location.href = "okx://wallet/";
-                else if (p.mobileDeepLink) window.location.href = p.mobileDeepLink;
-                else p.onOtherWallets();
+              if (typeof window === "undefined") return;
+              // If we already have the final WC deep link, use it directly
+              if (p.mobileDeepLink) {
+                window.open(p.mobileDeepLink, "_blank");
+                return;
               }
+              // Otherwise open the wallet homepage synchronously (counts as user gesture on iOS)
+              const pref =
+                sessionStorage.getItem("preferred_mobile_wallet") ||
+                localStorage.getItem("preferred_mobile_wallet") ||
+                "";
+              const links: Record<string, string> = {
+                metamask: "https://metamask.app.link/",
+                rainbow: "https://rainbow.me/",
+                coinbase: "https://go.cb-w.com/",
+                trust: "https://link.trustwallet.com/",
+                okx: "https://www.okx.com/web3",
+              };
+              const url = links[pref];
+              if (url) window.open(url, "_blank");
+              else p.onOtherWallets();
             }}
           >
             Open wallet to sign

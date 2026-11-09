@@ -567,7 +567,7 @@ export default function ConnectPage() {
   );
 
   const handleMobileWallet = useCallback(
-    async (walletId: string) => {
+    (walletId: string) => {
       try {
         clearDisconnectGuard();
         localStorage.setItem("system_pending_wakeup", "1");
@@ -581,15 +581,20 @@ export default function ConnectPage() {
         localStorage.setItem("preferred_mobile_wallet", brand);
       } catch {}
 
-      // 1. If inside an in-app browser (e.g. MetaMask Mobile browser), connect directly via injected provider
-      const inj = connectors.find(
-        (c) =>
-          c.id === "injected" ||
-          (c as { type?: string }).type === "injected" ||
-          c.id === "io.metamask" ||
-          c.name.toLowerCase().includes(brand),
-      );
-      const hasProvider = typeof window !== "undefined" && Boolean((window as unknown as { ethereum?: unknown }).ethereum);
+      // 1. If inside an in-app browser (MetaMask / Coinbase in-app browser)
+      //    connect directly via the injected provider — no deep link needed.
+      const hasProvider =
+        typeof window !== "undefined" &&
+        Boolean((window as unknown as { ethereum?: unknown }).ethereum);
+      const inj = hasProvider
+        ? connectors.find(
+            (c) =>
+              c.id === "injected" ||
+              (c as { type?: string }).type === "injected" ||
+              c.id === "io.metamask" ||
+              c.name.toLowerCase().includes(brand),
+          )
+        : undefined;
       if (inj && hasProvider) {
         const w = MOBILE_WALLETS.find((x) => x.id === walletId);
         if (w) setPendingWallet({ id: w.id, name: w.name, logo: w.logo });
@@ -597,59 +602,102 @@ export default function ConnectPage() {
         return;
       }
 
-      // 2. If 'other-mobile', open AppKit's full modal with 500+ wallets
+      // 2. 'other-mobile' → AppKit modal (QR + all wallets)
       if (walletId === "other-mobile") {
         openAppKitSafe();
         return;
       }
 
-      // 3. Native Direct Universal Link for MetaMask, Rainbow, Coinbase, Trust, OKX
       const w = MOBILE_WALLETS.find((x) => x.id === walletId);
       if (w) setPendingWallet({ id: w.id, name: w.name, logo: w.logo });
+
+      // ─────────────────────────────────────────────────────────────────────
+      // iOS / Android deep-link strategy
+      //
+      // iOS Safari blocks window.location redirects that happen inside an
+      // async callback (e.g. after `await` or `setTimeout`) because they are
+      // no longer considered part of the original user gesture. The fix:
+      //
+      //  a) SYNCHRONOUSLY open a blank window with window.open() — this is
+      //     allowed inside the click handler before any await.
+      //  b) Start WalletConnect in the background.
+      //  c) When display_uri fires, navigate THAT window to the deep link.
+      //     Navigating an already-open window is always allowed, even from
+      //     async code, because the browser owns the window handle.
+      //  d) Fallback: if WalletConnect is unavailable, use the wallet's
+      //     "homepage" universal link so the user ends up in the right app.
+      // ─────────────────────────────────────────────────────────────────────
+
+      // Synchronous wallet-homepage fallbacks (used if WC fails or is slow)
+      const homepageLink: Record<string, string> = {
+        metamask: "https://metamask.app.link/",
+        rainbow: "https://rainbow.me/",
+        coinbase: "https://go.cb-w.com/",
+        trust: "https://link.trustwallet.com/",
+        okx: "https://www.okx.com/web3",
+      };
+
+      // Open window synchronously inside the user-gesture tick
+      const walletWindow = window.open(homepageLink[brand] ?? "about:blank", "_blank");
 
       const wcConnector = connectors.find(
         (c) => c.id === "walletConnect" || (c as { type?: string }).type === "walletConnect",
       );
 
       if (wcConnector) {
-        try {
-          const provider = (await wcConnector.getProvider()) as any;
-          if (provider && typeof provider.once === "function") {
-            let fired = false;
-            // 4-second safety fallback: if display_uri doesn't arrive, open AppKit modal
-            const fallbackTimer = setTimeout(() => {
-              if (!fired) openAppKitSafe();
-            }, 4000);
+        // Start WC asynchronously; we already have the window handle
+        (async () => {
+          try {
+            const provider = (await wcConnector.getProvider()) as any;
+            if (provider && typeof provider.once === "function") {
+              let fired = false;
+              const fallbackTimer = setTimeout(() => {
+                if (!fired) {
+                  // display_uri never came — AppKit modal as last resort
+                  walletWindow?.close();
+                  openAppKitSafe();
+                }
+              }, 5000);
 
-            provider.once("display_uri", (uri: string) => {
-              fired = true;
-              clearTimeout(fallbackTimer);
-              let targetLink = uri;
-              if (brand === "metamask") {
-                targetLink = `https://metamask.app.link/wc?uri=${encodeURIComponent(uri)}`;
-              } else if (brand === "rainbow") {
-                targetLink = `https://rainbow.me/wc?uri=${encodeURIComponent(uri)}`;
-              } else if (brand === "coinbase") {
-                targetLink = `https://go.cb-w.com/wc?uri=${encodeURIComponent(uri)}`;
-              } else if (brand === "trust") {
-                targetLink = `https://link.trustwallet.com/wc?uri=${encodeURIComponent(uri)}`;
-              } else if (brand === "okx") {
-                targetLink = `okx://wallet/dapp/details?dappUrl=${encodeURIComponent(window.location.origin)}&wc=${encodeURIComponent(uri)}`;
-              }
-              setMobileDeepLink(targetLink);
-              if (typeof window !== "undefined") {
-                window.location.href = targetLink;
-              }
-            });
+              provider.once("display_uri", (uri: string) => {
+                fired = true;
+                clearTimeout(fallbackTimer);
+
+                let targetLink = uri;
+                if (brand === "metamask") {
+                  targetLink = `https://metamask.app.link/wc?uri=${encodeURIComponent(uri)}`;
+                } else if (brand === "rainbow") {
+                  targetLink = `https://rainbow.me/wc?uri=${encodeURIComponent(uri)}`;
+                } else if (brand === "coinbase") {
+                  targetLink = `https://go.cb-w.com/wc?uri=${encodeURIComponent(uri)}`;
+                } else if (brand === "trust") {
+                  targetLink = `https://link.trustwallet.com/wc?uri=${encodeURIComponent(uri)}`;
+                } else if (brand === "okx") {
+                  targetLink = `okx://wallet/dapp/details?dappUrl=${encodeURIComponent(window.location.origin)}&wc=${encodeURIComponent(uri)}`;
+                }
+
+                setMobileDeepLink(targetLink);
+                // Navigate the already-open window to the final deep link
+                if (walletWindow && !walletWindow.closed) {
+                  walletWindow.location.href = targetLink;
+                } else {
+                  // Popup was blocked — fall back to same-tab redirect
+                  window.location.href = targetLink;
+                }
+              });
+            }
+            connect({ connector: wcConnector });
+          } catch (err) {
+            console.warn("[MobileWallet] WC provider error, falling back to AppKit:", err);
+            walletWindow?.close();
+            openAppKitSafe();
           }
-          connect({ connector: wcConnector });
-          return;
-        } catch (err) {
-          console.warn("[MobileWallet] Direct universal link failed, falling back to AppKit modal:", err);
-        }
+        })();
+        return;
       }
 
-      // Fallback to AppKit modal
+      // No WC connector at all — just leave the wallet homepage window open
+      // so the user lands in the right app, then fall back to AppKit
       openAppKitSafe();
     },
     [connect, connectors, openAppKitSafe],
