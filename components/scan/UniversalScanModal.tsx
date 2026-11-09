@@ -411,8 +411,8 @@ export default function UniversalScanModal({
               <button
                 type="button"
                 onClick={() => setTab('camera')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
-                  tab === 'camera' ? 'bg-white text-white' : 'bg-white text-black/40 border-black/10'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                  tab === 'camera' ? 'bg-[#050505] text-white border-[#050505]' : 'bg-white text-black/40 border-black/10'
                 }`}
               >
                 <Camera size={13} /> Camera
@@ -420,8 +420,8 @@ export default function UniversalScanModal({
               <button
                 type="button"
                 onClick={() => setTab('file')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
-                  tab === 'file' ? 'bg-white text-white' : 'bg-white text-black/40 border-black/10'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                  tab === 'file' ? 'bg-[#050505] text-white border-[#050505]' : 'bg-white text-black/40 border-black/10'
                 }`}
               >
                 <Upload size={13} /> Gallery
@@ -583,7 +583,7 @@ export default function UniversalScanModal({
               )}
               {tab === 'file' && (
                 <div className="flex flex-col items-center justify-center flex-1 p-6 gap-4">
-                  <label className="cursor-pointer flex items-center gap-2 px-6 py-3 bg-white text-white text-[10px] font-black uppercase rounded-xl">
+                  <label className="cursor-pointer flex items-center gap-2 px-6 py-3 bg-[#050505] text-white text-[10px] font-black uppercase rounded-xl hover:bg-black/90 transition-colors">
                     {fileLoading ? <Loader2 className="animate-spin" size={13} /> : <Upload size={13} />}
                     Select image
                     <input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} disabled={fileLoading} />

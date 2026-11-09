@@ -77,7 +77,7 @@ export async function requireWallet(req?: NextRequest | Request): Promise<Requir
     }
   }
 
-  // Fallback: Check handshake cookie or header
+  // Fallback: Check authenticated handshake cookie
   const reqObj: any = req;
   const cookieHandshake = reqObj?.cookies?.get?.('system_handshake')?.value;
   if (cookieHandshake && ETH_ADDR_REGEX.test(cookieHandshake)) {
@@ -88,14 +88,9 @@ export async function requireWallet(req?: NextRequest | Request): Promise<Requir
     };
   }
 
-  const headerAddr = reqObj?.headers?.get?.('x-wallet-address') || reqObj?.headers?.get?.('x-web3-address');
-  if (headerAddr && ETH_ADDR_REGEX.test(headerAddr)) {
-    return {
-      walletAddress: headerAddr.toLowerCase(),
-      userId: headerAddr.toLowerCase(),
-      isEmailUser: false,
-    };
-  }
+  // A-015: Security hardening — Never trust client-injected headers
+  // (x-wallet-address, x-web3-address) to resolve identity.
+  // Identity is strictly cryptographic from session or authenticated cookie only.
 
   return {
     errorResponse: NextResponse.json(
