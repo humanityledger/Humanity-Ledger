@@ -7036,7 +7036,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                  Scan a contact&apos;s code to start a conversation, or the code shown on your computer to sign in there.
                </p>
                <QrScanner mode="scan" onScanSuccess={async (text) => {
-                  if (text.includes('?s=') || text.includes('?uuid=') || text.includes('humanidfi.com/connect') || text.includes('session=')) {
+                  if (text.includes('?s=') || text.includes('?uuid=') || text.includes('ledgerchat.org/connect') || text.includes('humanidfi.com/connect') || text.includes('session=')) {
                     toast.loading('Signing in on your computer', { id: 'link-device' });
                     const result = await completeSessionHandshake(
                       text,

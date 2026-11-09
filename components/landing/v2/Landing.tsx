@@ -79,7 +79,7 @@ function SignatureVignette() {
       <div className={s.sig}>
         <div className={s.sigTitle}>Signature request</div>
         <div className={s.small}>
-          humanidfi.com wants you to sign in with your Ethereum account.
+          ledgerchat.org wants you to sign in with your Ethereum account.
         </div>
         <div className={s.sigRows}>
           <div className={s.sigRow}>
