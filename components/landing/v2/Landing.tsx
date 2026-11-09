@@ -8,6 +8,7 @@ import {
   BadgeCheck,
   Check,
   Coins,
+  Copy,
   Download,
   Globe,
   Info,
@@ -361,6 +362,47 @@ const UPDATES = [
 /* ── Page ──────────────────────────────────────────────────────────────── */
 
 export function HumanityLanding() {
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [pwaInstalled, setPwaInstalled] = useState(false);
+  const [showWinVerify, setShowWinVerify] = useState(false);
+  const [copiedSha, setCopiedSha] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+    if (isStandalone) setPwaInstalled(true);
+
+    const handlePrompt = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handlePrompt);
+    window.addEventListener("appinstalled", () => setPwaInstalled(true));
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handlePrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (installPrompt) {
+      try {
+        await installPrompt.prompt();
+        const choice = await installPrompt.userChoice;
+        if (choice.outcome === "accepted") setPwaInstalled(true);
+      } catch {}
+    } else {
+      window.location.href = "/chat";
+    }
+  };
+
+  const handleCopySha = () => {
+    navigator.clipboard?.writeText("96bf4a3e66372df155a4f167dd62eadb6503c26923a90c54bfbfe76e3a145a1c");
+    setCopiedSha(true);
+    setTimeout(() => setCopiedSha(false), 3000);
+  };
+
   return (
     <div className={s.page}>
       <ImmersiveField variant="page" />
@@ -665,16 +707,67 @@ export function HumanityLanding() {
             </div>
             <div className={s.platform}>
               <Monitor size={24} strokeWidth={1.6} aria-hidden="true" />
-              <p className={s.platformStatus}>Preview</p>
+              <p className={s.platformStatus + " " + s.platformLive}>Windows 10 / 11</p>
               <h3 className={s.h3}>Windows</h3>
               <p className={s.small}>
-                A preview for Windows 10 and 11. It is not signed yet, so Windows will warn you before it opens.
+                Install directly as a standalone desktop app, or download the verified open-source preview installer.
               </p>
-              <div className={s.platformAction}>
-                <a href="/releases/Ledger-Chat-Setup-Windows.exe" download className={`${s.btn} ${s.btnSm} ${s.btnSecondary}`}>
+              <div className={s.platformAction} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={handleInstallClick}
+                  className={`${s.btn} ${s.btnSm} ${s.btnPrimary}`}
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
                   <Download size={15} strokeWidth={2} aria-hidden="true" />
-                  Download preview
-                </a>
+                  {pwaInstalled ? "Launch Desktop App" : "Install Desktop App"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowWinVerify(!showWinVerify)}
+                  className={`${s.btn} ${s.btnSm} ${s.btnSecondary}`}
+                  style={{ width: "100%", justifyContent: "center", fontSize: "12px", padding: "6px 12px" }}
+                >
+                  {showWinVerify ? "Hide details" : "Standalone .exe & SHA-256"}
+                </button>
+                {showWinVerify && (
+                  <div style={{ marginTop: "10px", padding: "12px", background: "rgba(0,0,0,0.04)", borderRadius: "8px", fontSize: "11px", lineHeight: "1.5" }}>
+                    <div style={{ fontWeight: 600, marginBottom: "4px" }}>Open-source binary (Windows x64)</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", margin: "6px 0" }}>
+                      <a
+                        href="/releases/Ledger-Chat-Setup-Windows.exe"
+                        download
+                        style={{ color: "var(--hl-ink)", textDecoration: "underline", fontWeight: 600 }}
+                      >
+                        Direct Download (.exe)
+                      </a>
+                      <span>·</span>
+                      <a
+                        href="https://github.com/humanityledger/Humanity-Ledger/releases"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "var(--hl-ink)", textDecoration: "underline" }}
+                      >
+                        GitHub Mirror
+                      </a>
+                    </div>
+                    <div style={{ fontSize: "10px", color: "var(--hl-ink-3)", wordBreak: "break-all", background: "rgba(0,0,0,0.03)", padding: "6px", borderRadius: "4px" }}>
+                      <strong>SHA-256:</strong><br />
+                      96bf4a3e66372df155a4f167dd62eadb6503c26923a90c54bfbfe76e3a145a1c
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopySha}
+                      style={{ marginTop: "6px", fontSize: "10px", cursor: "pointer", background: "none", border: "none", padding: 0, textDecoration: "underline", color: "var(--hl-ink-2)", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                    >
+                      <Copy size={11} strokeWidth={2} aria-hidden="true" />
+                      {copiedSha ? "✓ Hash copied to clipboard" : "Copy SHA-256 fingerprint"}
+                    </button>
+                    <p style={{ marginTop: "8px", fontSize: "10px", color: "var(--hl-ink-3)" }}>
+                      <em>Note: For standalone .exe preview builds, Windows SmartScreen will ask for confirmation. Click &quot;More info&quot; → &quot;Run anyway&quot;. For zero warnings, use the 1-click &quot;Install Desktop App&quot; above.</em>
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
             <div className={s.platform}>

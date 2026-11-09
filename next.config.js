@@ -543,6 +543,16 @@ const nextConfig = {
                 source: '/system-shots/(.*)\\.mp4',
                 headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=2592000' }],
             },
+            // Binary releases (.exe, installers) - explicit attachment and nosniff to prevent browser download false-positives
+            {
+                source: '/releases/(.*)',
+                headers: [
+                    { key: 'Content-Type', value: 'application/octet-stream' },
+                    { key: 'Content-Disposition', value: 'attachment' },
+                    { key: 'X-Content-Type-Options', value: 'nosniff' },
+                    { key: 'Cache-Control', value: 'public, max-age=604800, immutable' },
+                ],
+            },
             // 3D model textures
             {
                 source: '/textures/(.*)',
