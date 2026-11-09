@@ -35,10 +35,10 @@ export const config = createConfig({
         walletConnect({
             projectId,
             metadata: {
-                name: 'Humanity Ledger',
-                description: 'The System Identity & Prediction Market Suite',
-                url: 'https://humanidfi.com',
-                icons: ['https://humanidfi.com/logo-mark.png'],
+                name: 'Ledger Chat',
+                description: 'The sovereign identity & encrypted chat network.',
+                url: process.env.NEXT_PUBLIC_APP_URL || 'https://ledgerchat.org',
+                icons: [`${process.env.NEXT_PUBLIC_APP_URL || 'https://ledgerchat.org'}/logo-mark.png`],
             }
         }),
         coinbaseWallet({ 
