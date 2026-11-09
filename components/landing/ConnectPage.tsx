@@ -399,30 +399,40 @@ export default function ConnectPage() {
         });
         const message = siwe.prepareMessage();
 
-        // On mobile (iOS / Android), when WalletConnect requests a signature,
-        // MetaMask is either in the background or awaiting user return.
-        // Prompting the native wallet app via its universal link ensures
-        // the user is taken directly into MetaMask where the signature sheet pops up.
-        if (isMobile) {
+        // On mobile (iOS / Android), when WalletConnect requests a signature:
+        // 1. If in an in-app browser (e.g. MetaMask app browser), do NOT redirect
+        //    because MetaMask renders the signature prompt natively on the current view.
+        // 2. If in external browser (Safari / Chrome), gently signal the wallet app
+        //    via custom scheme without destroying the current tab or tearing down WebSockets.
+        const isInAppBrowser =
+          typeof window !== "undefined" &&
+          Boolean((window as unknown as { ethereum?: unknown }).ethereum);
+
+        if (isMobile && !isInAppBrowser) {
           const brand =
             sessionStorage.getItem("preferred_mobile_wallet") ||
             localStorage.getItem("preferred_mobile_wallet") ||
             "metamask";
-          const walletUniversalLinks: Record<string, string> = {
-            metamask: "https://metamask.app.link/",
-            rainbow: "https://rainbow.me/",
-            coinbase: "https://go.cb-w.com/",
-            trust: "https://link.trustwallet.com/",
-            okx: "https://www.okx.com/web3",
+          const walletSchemes: Record<string, string> = {
+            metamask: "metamask://",
+            rainbow: "rainbow://",
+            coinbase: "cbwallet://",
+            trust: "trust://",
+            okx: "okx://",
           };
-          const link = walletUniversalLinks[brand] || "https://metamask.app.link/";
-          setTimeout(() => {
-            try {
-              window.location.href = link;
-            } catch {
-              /* ignore */
-            }
-          }, 350);
+          const scheme = walletSchemes[brand];
+          if (scheme) {
+            setTimeout(() => {
+              try {
+                const a = document.createElement("a");
+                a.href = scheme;
+                a.rel = "noopener noreferrer";
+                a.click();
+              } catch {
+                /* ignore */
+              }
+            }, 300);
+          }
         }
 
         // Robust mobile signature handling:

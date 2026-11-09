@@ -167,8 +167,8 @@ function Choose(p: ConnectViewProps) {
         {p.isMobile ? (
           <Option
             icon={ScanQrCode}
-            name="Scan a code from your computer"
-            hint="Sign in on a computer using this phone"
+            name="Pair with a computer"
+            hint="Optional: Link an active desktop session"
             onClick={p.onPhone}
           />
         ) : (
@@ -323,6 +323,13 @@ function Signing(p: ConnectViewProps) {
                 sessionStorage.getItem("preferred_mobile_wallet") ||
                 localStorage.getItem("preferred_mobile_wallet") ||
                 "metamask";
+              const schemes: Record<string, string> = {
+                metamask: "metamask://",
+                rainbow: "rainbow://",
+                coinbase: "cbwallet://",
+                trust: "trust://",
+                okx: "okx://",
+              };
               const links: Record<string, string> = {
                 metamask: "https://metamask.app.link/",
                 rainbow: "https://rainbow.me/",
@@ -330,8 +337,18 @@ function Signing(p: ConnectViewProps) {
                 trust: "https://link.trustwallet.com/",
                 okx: "https://www.okx.com/web3",
               };
+              const scheme = schemes[pref];
+              if (scheme) {
+                try {
+                  const a = document.createElement("a");
+                  a.href = scheme;
+                  a.rel = "noopener noreferrer";
+                  a.click();
+                  return;
+                } catch {}
+              }
               const url = links[pref] || "https://metamask.app.link/";
-              window.location.href = url;
+              window.open(url, "_blank", "noopener,noreferrer");
             }}
           >
             Open wallet to sign

@@ -86,6 +86,8 @@ export const metadata = {
 
   },
 
+  applicationName: 'Ledger Chat',
+
   // Every claim here must also be true in the documentation (CLAUDE.md §1).
   description: 'Humanity Ledger builds Ledger Chat: a messenger where your Ethereum wallet is your account. Direct messages are encrypted on your device with MLS through XMTP, payments are signed in your own wallet, and private payments run on the Aztec test network. Early access.',
 

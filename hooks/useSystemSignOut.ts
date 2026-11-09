@@ -99,6 +99,35 @@ export function useSystemSignOut() {
                     localStorage.removeItem(key);
                 });
 
+                // SECURITY [PIN-GATE]: Explicitly nuke ALL enclave clearance tokens so the
+                // PIN gate is ALWAYS shown after sign-out. Even if other localStorage keys
+                // survived the purge loop above, these must be gone.
+                // This prevents seed-phrase attackers from bypassing the PIN gate.
+                const ENCLAVE_CLEARANCE_KEYS = [
+                    '__enclave_clearance_v2__',
+                    'ledger_enclave_clearance',
+                    'ledger_enclave_ts',
+                    '__enclave_fp__',
+                    'ledger_account_already_created',
+                    'ledger_pin_configured',
+                    'ledger_onboarded_global',
+                ];
+                ENCLAVE_CLEARANCE_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+                // Also nuke per-address clearance keys
+                Object.keys(localStorage).forEach(key => {
+                    const lower = key.toLowerCase();
+                    if (
+                        lower.startsWith('ledger_account_created_') ||
+                        lower.startsWith('ledger_enclave_cleared_') ||
+                        lower.startsWith('ledger_onboarded_')
+                    ) {
+                        try { localStorage.removeItem(key); } catch {}
+                    }
+                });
+
+                // Set explicit flag: PIN must be verified on next login (survives to next page load)
+                try { localStorage.setItem('ledger_pin_required_after_logout', '1'); } catch {}
+
             } catch (e) {
                 console.warn('[System:Logout] LocalStorage purge failed:', e);
             }

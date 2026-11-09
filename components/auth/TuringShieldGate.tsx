@@ -43,6 +43,17 @@ function _readFrom(store: Storage): boolean {
 }
 
 function readClearance(): boolean {
+  // SECURITY [PIN-GATE]: If the user just signed out, always require PIN re-entry.
+  // This flag is set by useSystemSignOut and cleared only after successful PIN verification.
+  try {
+    if (
+      localStorage.getItem('ledger_pin_required_after_logout') === '1' ||
+      sessionStorage.getItem('ledger_pin_required_after_logout') === '1'
+    ) {
+      return false;
+    }
+  } catch {}
+
   // Check sessionStorage first (fastest), fall back to localStorage (survives reloads)
   try {
     if (_readFrom(sessionStorage)) return true;
@@ -55,19 +66,10 @@ function readClearance(): boolean {
       } catch {}
       return true;
     }
-    // Also check if account was already created and signed in on this device
-    const addr = getStoredWalletAddress();
-    const isKnown = Boolean(
-      localStorage.getItem('ledger_account_already_created') === 'true' ||
-      localStorage.getItem('ledger_pin_configured') === 'true' ||
-      (addr && (
-        localStorage.getItem(`ledger_account_created_${addr.toLowerCase()}`) === 'true' ||
-        localStorage.getItem(`ledger_enclave_cleared_${addr.toLowerCase()}`) === 'true'
-      ))
-    );
-    if (isKnown) {
-      return true;
-    }
+    // NOTE: The 'isKnownAccount' bypass that previously allowed skipping the PIN gate
+    // has been REMOVED for security. If a clearance token is not present in storage,
+    // the PIN MUST be entered. This prevents seed-phrase attackers from bypassing the
+    // second-factor PIN after a logout. The PIN gate is the defense layer.
     return false;
   } catch { return false; }
 }
@@ -91,12 +93,18 @@ function writeClearance(token: string, ts: number) {
   for (const store of [sessionStorage, localStorage] as Storage[]) {
     try { pairs.forEach(([k, v]) => store.setItem(k, v)); } catch {}
   }
+  // SECURITY [PIN-GATE]: Clear the "pin required after logout" flag now that
+  // the user has successfully verified their PIN.
+  try { localStorage.removeItem('ledger_pin_required_after_logout'); } catch {}
+  try { sessionStorage.removeItem('ledger_pin_required_after_logout'); } catch {}
 }
 
 function clearClearance() {
   for (const store of [sessionStorage, localStorage] as Storage[]) {
     try { _clearAll(store); } catch {}
   }
+  // Also set the pin-required flag so the gate is shown after any programmatic clearance
+  try { localStorage.setItem('ledger_pin_required_after_logout', '1'); } catch {}
 }
 
 function getStoredWalletAddress(): string {
@@ -734,7 +742,7 @@ export function TuringShieldGate({
                           <Clock size={16} strokeWidth={2} className="text-[#15171c]" aria-hidden="true" />
                         }
                         title="When do you enter it?"
-                        body="Once per session, valid for 8 hours. Your account stays secure because only you know the PIN."
+                        body="Every time you sign in. If you sign out and come back, your PIN is required before anyone can access your account — even with your wallet seed phrase."
                       />
                     </div>
 
@@ -893,7 +901,7 @@ export function TuringShieldGate({
                       PIN saved
                     </h2>
                     <p className="text-[13px] text-black/50 text-center leading-relaxed mb-3 px-2">
-                      Your access PIN has been saved. You will enter it at the start of each session.
+                      Your access PIN has been saved. You will enter it every time you sign in to Ledger Chat.
                     </p>
 
                     {/* Recovery reminder */}
@@ -1082,7 +1090,8 @@ export function TuringShieldGate({
                             <p className="text-[12px] font-semibold text-[#15171c]">About this PIN</p>
                             <p className="text-[12.5px] text-black/50 leading-relaxed">
                               Your Ledger Chat PIN is a second lock on top of your wallet. You chose it the first
-                              time you opened Ledger Chat. After you enter it, this device stays unlocked for up to 8 hours.
+                              time you opened Ledger Chat. It is required every time you sign in — protecting your
+                              account even if someone has your wallet seed phrase.
                             </p>
                             <div className="h-px bg-black/[0.06]" />
                             <p className="text-[12px] font-semibold text-[#15171c]">How to recover access</p>

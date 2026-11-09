@@ -73,11 +73,6 @@ export class PortfolioService {
    */
   private getCommonTokensForChain(chainId: ChainId): string[] {
     const tokens: string[] = [];
-    const qdsChainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '137', 10);
-    const qdsContractAddress = process.env.NEXT_PUBLIC_TOKEN_CONTRACT_ADDRESS;
-    if (chainId === qdsChainId && qdsContractAddress && qdsContractAddress.startsWith('0x')) {
-      tokens.push(qdsContractAddress);
-    }
 
     switch (chainId) {
         case ChainId.WORLDCHAIN:
@@ -162,9 +157,7 @@ export class PortfolioService {
           if (bal <= 0.000001) return null;
 
           // Determine symbol
-          const qdsContractAddress = process.env.NEXT_PUBLIC_TOKEN_CONTRACT_ADDRESS;
-          const isQd = qdsContractAddress && t.address.toLowerCase() === qdsContractAddress.toLowerCase();
-          const symbol = isQd ? 'QDs' : (chainId === ChainId.WORLDCHAIN && t.address.toLowerCase() === '0x2cfc85d8e48f8eab294be644d9e25c3030863003') ? 'WLD' : 'UNK';
+          const symbol = (chainId === ChainId.WORLDCHAIN && t.address.toLowerCase() === '0x2cfc85d8e48f8eab294be644d9e25c3030863003') ? 'WLD' : 'UNK';
           
           let tokenPrice = 0;
           try {
@@ -349,58 +342,6 @@ export class PortfolioService {
         });
       }
 
-      //  CUSTOM TOKEN INJECTION: CoreDots (QDs) 
-      const qdsChainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '137', 10);
-      const qdsContractAddress = process.env.NEXT_PUBLIC_TOKEN_CONTRACT_ADDRESS;
-      if (chainId === qdsChainId && qdsContractAddress && qdsContractAddress.startsWith('0x')) {
-        try {
-          const { blockchainService } = await import('./BlockchainService');
-          const provider = blockchainService.getProvider(qdsChainId);
-          const qdsContract = new ethers.Contract(
-            qdsContractAddress,
-            ['function balanceOf(address) view returns (uint256)'],
-            provider
-          );
-          let qdsBalance: bigint = 0n;
-          try {
-            qdsBalance = await qdsContract.balanceOf(address);
-          } catch (e) {}
-          if (qdsBalance > 0n) {
-            const qdsBalanceFormatted = parseFloat(ethers.formatUnits(qdsBalance, 18));
-            const existingIdx = enrichedTokens.findIndex(
-              t => t.address && t.address.toLowerCase() === qdsContractAddress.toLowerCase()
-            );
-            const qdsToken = {
-              address: qdsContractAddress,
-              contractAddress: qdsContractAddress,
-              balance: qdsBalance.toString(),
-              balanceNumeric: qdsBalanceFormatted,
-              balanceFormatted: safeToLocaleString(qdsBalanceFormatted, { maximumFractionDigits: 4 }),
-              name: 'CoreDots',
-              symbol: 'QDs',
-              decimals: 18,
-              logo: '/logo-mark.png',
-              price: 0,
-              valueUsd: 0,
-              change24h: 0,
-              chainId,
-              sector: 'AI',
-              isUnknown: false
-            };
-            if (existingIdx >= 0) {
-              enrichedTokens[existingIdx] = qdsToken;
-            } else {
-              enrichedTokens.push(qdsToken);
-            }
-          }
-        } catch (qdsError: any) {
-          const msg = qdsError.message || '';
-          if (!msg.includes('BAD_DATA') && !msg.includes('could not decode') && !msg.includes('0x')) {
-            console.warn(`[Portfolio-QDs-Query] Failed to query QDs balance:`, msg);
-          }
-        }
-      }
-
       const calculatedTotal = enrichedTokens.reduce((acc: number, t: any) => acc + (isNaN(t?.valueUsd) ? 0 : (t?.valueUsd || 0)), 0);
       const totalValueUsd = (chainNetWorth && parseFloat(chainNetWorth.networth_usd || '0') > calculatedTotal)
         ? parseFloat(chainNetWorth.networth_usd || '0')
@@ -453,24 +394,18 @@ export class PortfolioService {
               if (bal <= 0.000001) return null;
 
               // Use PriceService for valuation
-              const qdsContractAddress = process.env.NEXT_PUBLIC_TOKEN_CONTRACT_ADDRESS;
-              const isQd = qdsContractAddress && t.address.toLowerCase() === qdsContractAddress.toLowerCase();
-              const symbol = isQd ? 'QDs' : (chainId === ChainId.WORLDCHAIN && t.address.toLowerCase() === '0x2cfc85d8e48f8eab294be644d9e25c3030863003') ? 'WLD' : 'UNK';
+              const symbol = (chainId === ChainId.WORLDCHAIN && t.address.toLowerCase() === '0x2cfc85d8e48f8eab294be644d9e25c3030863003') ? 'WLD' : 'UNK';
               
               let price = 0;
-              if (isQd) {
-                  price = 1.0;
-              } else {
-                  try {
-                      const priceData = await PriceService.getBulkPrices([{
-                          symbol,
-                          address: t.address,
-                          chainId
-                      }]);
-                      price = priceData[symbol]?.price || 0;
-                  } catch (e) {
-                      console.warn(`[Portfolio-Fallback-Price] Failed for ${symbol}:`, e);
-                  }
+              try {
+                  const priceData = await PriceService.getBulkPrices([{
+                      symbol,
+                      address: t.address,
+                      chainId
+                  }]);
+                  price = priceData[symbol]?.price || 0;
+              } catch (e) {
+                  console.warn(`[Portfolio-Fallback-Price] Failed for ${symbol}:`, e);
               }
 
               return {
@@ -479,66 +414,19 @@ export class PortfolioService {
                   balance: t.balance,
                   balanceNumeric: bal,
                   balanceFormatted: safeToLocaleString(bal),
-                  name: isQd ? 'CoreDots' : symbol === ("AUTH" as any) ? 'Identity' : 'Unknown Token',
+                  name: symbol === ("AUTH" as any) ? 'Identity' : 'Unknown Token',
                   symbol,
                   decimals,
-                  logo: isQd ? '/logo-mark.png' : symbol === ("AUTH" as any) ? 'https://assets.coingecko.com/coins/images/31069/small/identity.jpeg' : null,
+                  logo: symbol === ("AUTH" as any) ? 'https://assets.coingecko.com/coins/images/31069/small/identity.jpeg' : null,
                   price,
                   valueUsd: bal * price,
                   chainId,
-                  sector: isQd ? 'AI' : symbol === ("AUTH" as any) ? 'DeFi' : 'Unknown',
-                  isUnknown: !isQd && symbol === 'UNK'
+                  sector: symbol === ("AUTH" as any) ? 'DeFi' : 'Unknown',
+                  isUnknown: symbol === 'UNK'
               };
           }));
 
           const filteredTokens = tokensWithPrices.filter(t => t !== null);
-
-          // --- FALLBACK PATH CUSTOM TOKEN INJECTION: CoreDots (QDs) ---
-          const qdsChainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '137', 10);
-          const qdsContractAddress = process.env.NEXT_PUBLIC_TOKEN_CONTRACT_ADDRESS;
-          if (chainId === qdsChainId && qdsContractAddress && qdsContractAddress.startsWith('0x')) {
-              try {
-                  const qdsExistingIdx = filteredTokens.findIndex(
-                      t => t && t.address && t.address.toLowerCase() === qdsContractAddress.toLowerCase()
-                  );
-                  let qdsBal = 0n;
-                  try {
-                      const provider = blockchainService.getProvider(qdsChainId);
-                      const qdsContract = new ethers.Contract(
-                          qdsContractAddress,
-                          ['function balanceOf(address) view returns (uint256)'],
-                          provider
-                      );
-                      qdsBal = await qdsContract.balanceOf(address);
-                  } catch (e) {}
-                  if (qdsBal > 0n) {
-                      const qdsBalFormatted = parseFloat(ethers.formatUnits(qdsBal, 18));
-                      const qdsToken = {
-                          address: qdsContractAddress,
-                          contractAddress: qdsContractAddress,
-                          balance: qdsBal.toString(),
-                          balanceNumeric: qdsBalFormatted,
-                          balanceFormatted: safeToLocaleString(qdsBalFormatted, { maximumFractionDigits: 4 }),
-                          name: 'CoreDots',
-                          symbol: 'QDs',
-                          decimals: 18,
-                          logo: '/logo-mark.png',
-                          price: 0,
-                          valueUsd: 0,
-                          chainId,
-                          sector: 'AI',
-                          isUnknown: false
-                      };
-                      if (qdsExistingIdx >= 0) {
-                          filteredTokens[qdsExistingIdx] = qdsToken;
-                      } else {
-                          filteredTokens.push(qdsToken);
-                      }
-                  }
-              } catch (qdsErr: any) {
-                  console.warn(`[Portfolio-Fallback-QDs-Query] Failed to query fallback QDs:`, qdsErr.message);
-              }
-          }
 
           // Add native
           if (nativeBalanceFormatted >= 0) {
