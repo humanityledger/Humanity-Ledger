@@ -172,10 +172,11 @@ export async function setSessionCookies(token: string, refreshToken?: string) {
     const cookieStore = await cookies();
     
     // B-007: Single unified cookie 'hl_session'
+    // Use 'lax' so the session cookie survives mobile deep-link return from wallet apps (MetaMask, Rainbow)
     cookieStore.set(SESSION_CONFIG.COOKIE_NAME, token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
         maxAge: SESSION_CONFIG.ACCESS_TOKEN_DURATION,
         path: '/',
     });
@@ -184,7 +185,7 @@ export async function setSessionCookies(token: string, refreshToken?: string) {
         cookieStore.set('hl_refresh', refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            sameSite: 'lax',
             maxAge: SESSION_CONFIG.REFRESH_TOKEN_DURATION,
             path: '/',
         });

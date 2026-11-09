@@ -257,19 +257,32 @@ function Connecting(p: ConnectViewProps) {
         Waiting for approval
       </span>
       <div className={s.actions}>
-        {p.isMobile && p.mobileDeepLink && (
+        {p.isMobile && (
           <a
-            href={p.mobileDeepLink}
+            href={p.mobileDeepLink || "https://metamask.app.link/"}
             className={`${s.btn} ${s.btnPrimary}`}
             onClick={(e) => {
-              // Direct navigation fallback on mobile
-              if (typeof window !== "undefined") {
+              if (p.mobileDeepLink && typeof window !== "undefined") {
                 window.location.href = p.mobileDeepLink!;
               }
             }}
           >
             Open {name}
           </a>
+        )}
+        {p.isMobile && (
+          <button
+            type="button"
+            className={`${s.btn} ${s.btnSecondary}`}
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                const cleanUrl = window.location.host + window.location.pathname + window.location.search;
+                window.location.href = `https://metamask.app.link/dapp/${cleanUrl}`;
+              }
+            }}
+          >
+            Open in MetaMask App
+          </button>
         )}
         <button type="button" className={`${s.btn} ${s.btnSecondary}`} onClick={p.onCancelPending}>
           Cancel
@@ -319,17 +332,18 @@ function Signing(p: ConnectViewProps) {
             className={`${s.btn} ${s.btnPrimary}`}
             onClick={() => {
               if (typeof window === "undefined") return;
+              // If we have a WalletConnect deep link stored (set by ConnectPage),
+              // navigate to it — we are inside a button onClick which IS a user
+              // gesture, so Safari 15+ WILL allow this navigation.
+              if (p.mobileDeepLink) {
+                window.location.href = p.mobileDeepLink;
+                return;
+              }
+              // Fallback: use the preferred wallet's universal link.
               const pref =
                 sessionStorage.getItem("preferred_mobile_wallet") ||
                 localStorage.getItem("preferred_mobile_wallet") ||
                 "metamask";
-              const schemes: Record<string, string> = {
-                metamask: "metamask://",
-                rainbow: "rainbow://",
-                coinbase: "cbwallet://",
-                trust: "trust://",
-                okx: "okx://",
-              };
               const links: Record<string, string> = {
                 metamask: "https://metamask.app.link/",
                 rainbow: "https://rainbow.me/",
@@ -337,14 +351,7 @@ function Signing(p: ConnectViewProps) {
                 trust: "https://link.trustwallet.com/",
                 okx: "https://www.okx.com/web3",
               };
-              const scheme = schemes[pref] || "metamask://";
-              const link = links[pref] || "https://metamask.app.link/";
-              try {
-                window.location.href = scheme;
-                return;
-              } catch {
-                window.location.href = link;
-              }
+              window.location.href = links[pref] || links.metamask;
             }}
           >
             Open wallet to sign

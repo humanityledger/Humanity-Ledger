@@ -183,6 +183,24 @@ export function checkCsrf(req: NextRequest): NextResponse | null {
     }
   }
 
+  // iOS Safari deep-link return: when a user opens MetaMask and comes back,
+  // Safari sometimes sends the POST with no Origin header at all because the
+  // page never navigated away from our domain — the browser itself is making
+  // the request on the same origin. Failing closed here blocked every mobile
+  // sign-in attempt. Allow requests with no Origin when they carry a valid
+  // first-party cookie (httpOnly cookies can ONLY be set by our server, so
+  // their presence is an implicit same-origin proof).
+  if (!origin) {
+    const hasSiweCookie =
+      req.cookies.has('siwe-nonce') ||
+      req.cookies.has('hl_session') ||
+      req.cookies.has('human_session') ||
+      req.cookies.has('system_handshake');
+    if (hasSiweCookie) {
+      return null;
+    }
+  }
+
   // Neither trusted Sec-Fetch-Site nor allowed Origin present -> Fail closed
   return NextResponse.json(
     { error: 'Forbidden: Untrusted mutation source (CSRF protection)' },

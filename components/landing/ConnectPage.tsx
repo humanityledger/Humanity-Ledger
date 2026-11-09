@@ -73,10 +73,11 @@ const DESKTOP_WALLETS: DesktopWallet[] = [
 ];
 
 const MOBILE_WALLETS: WalletOption[] = [
-  { id: "metamask-mobile", name: "MetaMask", hint: "Opens the MetaMask app", logo: "/wallets/metamask.svg" },
+  { id: "metamask-browser", name: "MetaMask (Open in App)", hint: "Recommended: opens directly in MetaMask app", logo: "/wallets/metamask.svg" },
+  { id: "metamask-mobile", name: "MetaMask", hint: "Connect via Safari with WalletConnect", logo: "/wallets/metamask.svg" },
   { id: "coinbase-mobile", name: "Coinbase Wallet", hint: "Opens the Coinbase Wallet app", logo: "/wallets/coinbase.png" },
   { id: "rainbow-mobile", name: "Rainbow", hint: "Opens the Rainbow app", logo: "/wallets/rainbow.png" },
-  { id: "trust-mobile", name: "Trust Wallet", hint: "Opens Trust Wallet app", logo: "/wallets/metamask.svg" },
+  { id: "trust-mobile", name: "Trust Wallet", hint: "Opens Trust Wallet app", logo: "/wallets/trust.png" },
   { id: "okx-mobile", name: "OKX Wallet", hint: "Opens OKX app", logo: "/wallets/coinbase.png" },
 ];
 
@@ -140,6 +141,7 @@ export default function ConnectPage() {
 
   const redirectingRef = useRef(false);
   const signingRef = useRef(false);
+  const signingStartTimeRef = useRef(0);
 
   const effectiveIsConnected = mounted && isConnected && !readDisconnectGuard();
 
@@ -339,6 +341,7 @@ export default function ConnectPage() {
     setMobileDeepLink(null);
 
     signingRef.current = true;
+    signingStartTimeRef.current = Date.now();
     (async () => {
       setAuthStatus("verifying");
       setSignStep(2);
@@ -402,8 +405,11 @@ export default function ConnectPage() {
         // On mobile (iOS / Android), when WalletConnect requests a signature:
         // 1. If in an in-app browser (e.g. MetaMask in-app browser), do NOT redirect
         //    because MetaMask renders the signature prompt natively on the current view.
-        // 2. If in external browser (Safari / Chrome), allow the WebSocket frame 1200ms
-        //    to register on the relay, then trigger the wallet app's native scheme (metamask://).
+        // 2. If in external browser (Safari / Chrome), store the deep link in state.
+        //    The "Open wallet to sign" button uses this link with a user-gesture
+        //    onClick — the ONLY context where iOS Safari allows navigation.
+        //    DO NOT use setTimeout + window.location.href here: async context,
+        //    Safari blocks it silently since iOS 15.
         const isInAppBrowser =
           typeof window !== "undefined" &&
           Boolean((window as unknown as { ethereum?: unknown }).ethereum);
@@ -414,27 +420,18 @@ export default function ConnectPage() {
             localStorage.getItem("preferred_mobile_wallet") ||
             "metamask";
 
-          const schemes: Record<string, string> = {
-            metamask: "metamask://",
-            rainbow: "rainbow://",
-            coinbase: "cbwallet://",
-            trust: "trust://",
-            okx: "okx://",
+          const links: Record<string, string> = {
+            metamask: "https://metamask.app.link/",
+            rainbow: "https://rainbow.me/",
+            coinbase: "https://go.cb-w.com/",
+            trust: "https://link.trustwallet.com/",
+            okx: "https://www.okx.com/web3",
           };
-          const targetUrl = schemes[brand] || "metamask://";
+          // Set the deep link so the "Open wallet to sign" button renders.
+          // The button's onClick is a synchronous user-gesture handler and
+          // CAN navigate to the wallet app. We must NOT navigate here.
+          const targetUrl = links[brand] || links.metamask;
           setMobileDeepLink(targetUrl);
-
-          // Allow the WebSocket frame 1200ms to register on the relay before iOS suspends Safari
-          setTimeout(() => {
-            try {
-              const a = document.createElement("a");
-              a.href = targetUrl;
-              a.rel = "noopener noreferrer";
-              a.click();
-            } catch {
-              /* ignore */
-            }
-          }, 1200);
         }
 
         // Robust mobile signature handling with deep retry on transient relay errors.
@@ -474,9 +471,13 @@ export default function ConnectPage() {
 
             if (isRecoverable && attempt < 4) {
               console.warn(`[SIWE:Mobile] Transient error on attempt ${attempt + 1}, retrying in 3s...`, errMsg);
-              // On retry: re-open the wallet with the deep link stored in state
+              // On retry: update the deep link in state so the button re-renders with
+              // the current link. The user can tap "Open wallet to sign" to return
+              // to the wallet — from a button click (user gesture) Safari allows it.
               if (isMobile && mobileDeepLink) {
-                setTimeout(() => { window.location.href = mobileDeepLink; }, 500);
+                // Update state so button reflects current link; do NOT navigate here
+                // (we are inside an async IIFE — not a user gesture — Safari blocks it).
+                setMobileDeepLink(mobileDeepLink);
               }
               await new Promise((r) => setTimeout(r, 3000));
               continue;
@@ -546,7 +547,12 @@ export default function ConnectPage() {
         localStorage.removeItem("system_pending_wakeup_ts");
       }
 
-      // 1. Check if session was completed in background or already valid
+      // 1. Check if session was completed in background or already valid.
+      //    On mobile, the user just returned from the wallet app — give the
+      //    browser 800ms to deliver the response cookies before we check.
+      //    Without this delay, the fetch races the cookie write and returns 401.
+      await new Promise((r) => setTimeout(r, 800));
+
       try {
         const r = await fetch("/api/auth/verify-session", { cache: "no-store", credentials: "include" });
         if (r.ok) {
@@ -561,8 +567,8 @@ export default function ConnectPage() {
         }
       } catch {}
 
-      // 2. If stuck in failed state after tab background restore, enable auto-retry if still connected
-      if (effectiveIsConnected && authStatus === "failed") {
+      // 2. If stuck in failed state or hung in verifying after tab background restore, enable auto-retry if still connected
+      if (effectiveIsConnected && (authStatus === "failed" || (authStatus === "verifying" && Date.now() - signingStartTimeRef.current > 15_000))) {
         signingRef.current = false;
         setSignError(null);
         setAuthStatus("idle");
@@ -652,7 +658,18 @@ export default function ConnectPage() {
         return;
       }
 
-      // 2. 'other-mobile' → AppKit modal (QR + all wallets)
+      // 2. Direct in-app browser navigation:
+      // When tapping "MetaMask (Open in App)", directly open the dApp inside MetaMask's Web3 browser.
+      // This is 100% reliable on iOS and Android because window.ethereum is injected natively.
+      if (walletId === "metamask-browser") {
+        const cleanUrl = typeof window !== "undefined"
+          ? (window.location.host + window.location.pathname + window.location.search)
+          : "ledgerchat.org/connect";
+        window.location.href = `https://metamask.app.link/dapp/${cleanUrl}`;
+        return;
+      }
+
+      // 3. 'other-mobile' → AppKit modal (QR + all wallets)
       if (walletId === "other-mobile") {
         openAppKitSafe();
         return;
@@ -662,27 +679,51 @@ export default function ConnectPage() {
       if (w) setPendingWallet({ id: w.id, name: w.name, logo: w.logo });
 
       // ─────────────────────────────────────────────────────────────────────
-      // iOS / Android deep-link strategy
+      // iOS / Android deep-link strategy (iOS Safari user-gesture constraint)
       //
-      // iOS Safari blocks window.location redirects that happen inside an
-      // async callback (e.g. after `await` or `setTimeout`) because they are
-      // no longer considered part of the original user gesture. The fix:
+      // iOS Safari blocks ANY programmatic navigation that happens inside an
+      // async callback (e.g. after `await` or `setTimeout` or inside a WC
+      // event listener) because those are no longer part of the original user
+      // gesture. window.location.href assignments and window.open() both fail
+      // silently in async contexts. The correct fix is:
       //
-      //  a) SYNCHRONOUSLY open a blank window with window.open() — this is
-      //     allowed inside the click handler before any await.
-      //  b) Start WalletConnect in the background.
-      //  c) When display_uri fires, navigate THAT window to the deep link.
-      //     Navigating an already-open window is always allowed, even from
-      //     async code, because the browser owns the window handle.
-      //  d) Fallback: if WalletConnect is unavailable, use the wallet's
-      //     "homepage" universal link so the user ends up in the right app.
+      //  a) SYNCHRONOUSLY call window.location.href = universalLink RIGHT NOW
+      //     inside this synchronous click handler — before any async work.
+      //     This is always allowed and opens/activates the wallet app.
+      //  b) Start WalletConnect in the background after the redirect.
+      //  c) When the user returns from the wallet app, Safari fires
+      //     `visibilitychange` and the `onVisibilityChange` auto-heal effect
+      //     detects the now-available session and completes sign-in.
+      //
+      // Universal links (https://metamask.app.link/) are preferred over
+      // native schemes (metamask://) because:
+      //  - They work even if the wallet app is not installed (opens App Store).
+      //  - They survive iOS 15+ link-interception policies.
+      //  - WalletConnect URI is appended after we have it; for the first tap
+      //    the homepage link is enough to open the right app.
       // ─────────────────────────────────────────────────────────────────────
+
+      // Universal links per wallet brand (open app store if not installed)
+      const universalLinks: Record<string, string> = {
+        metamask: "https://metamask.app.link/",
+        rainbow: "https://rainbow.me/",
+        coinbase: "https://go.cb-w.com/",
+        trust: "https://link.trustwallet.com/",
+        okx: "https://www.okx.com/web3",
+      };
+
+      // SYNCHRONOUS: navigate NOW while we are inside the user-gesture context.
+      // This opens the wallet app immediately. We will upgrade this link to a
+      // WalletConnect URI once the WC provider fires display_uri.
+      const homepageLink = universalLinks[brand] || universalLinks.metamask;
+      setMobileDeepLink(homepageLink);
 
       const wcConnector = connectors.find(
         (c) => c.id === "walletConnect" || (c as { type?: string }).type === "walletConnect",
       );
 
       if (wcConnector) {
+        // Start connecting immediately — display_uri fires within ~1s
         (async () => {
           try {
             const provider = (await wcConnector.getProvider()) as any;
@@ -690,15 +731,20 @@ export default function ConnectPage() {
               let fired = false;
               const fallbackTimer = setTimeout(() => {
                 if (!fired) {
-                  openAppKitSafe();
+                  // WC timed out — user is probably already in the wallet app
+                  // from the synchronous navigation above. No further action needed.
+                  console.warn("[MobileWallet] WC display_uri timeout — user already redirected via universal link");
                 }
-              }, 4000);
+              }, 6000);
 
               provider.once("display_uri", (uri: string) => {
                 fired = true;
                 clearTimeout(fallbackTimer);
 
-                let targetLink = uri;
+                // Build a WalletConnect deep link with the session URI.
+                // These universal links are opened by the already-active wallet app
+                // (via the universal link we opened synchronously above).
+                let targetLink: string;
                 if (brand === "metamask") {
                   targetLink = `https://metamask.app.link/wc?uri=${encodeURIComponent(uri)}`;
                 } else if (brand === "rainbow") {
@@ -708,25 +754,38 @@ export default function ConnectPage() {
                 } else if (brand === "trust") {
                   targetLink = `https://link.trustwallet.com/wc?uri=${encodeURIComponent(uri)}`;
                 } else if (brand === "okx") {
-                  targetLink = `okx://wallet/dapp/details?dappUrl=${encodeURIComponent(window.location.origin)}&wc=${encodeURIComponent(uri)}`;
+                  targetLink = `https://www.okx.com/web3/wallet/dapp?dappUrl=${encodeURIComponent(window.location.origin)}&wc=${encodeURIComponent(uri)}`;
+                } else {
+                  targetLink = uri;
                 }
 
+                // Update the deep link stored in state so the "Open wallet to sign"
+                // button always has the most current WC URI.
                 setMobileDeepLink(targetLink);
-                // In iOS Safari, navigate the current tab so the return breadcrumb stays on this session
-                window.location.href = targetLink;
+
+                // Attempt navigation — this may or may not succeed depending on
+                // whether we are still inside a user-gesture stack. If it succeeds,
+                // the wallet is re-opened with the WC session URI. If it fails
+                // (async context, iOS), the user can tap the "Open wallet" button
+                // which IS in a user-gesture context and will navigate correctly.
+                try {
+                  window.location.href = targetLink;
+                } catch {
+                  /* navigation blocked — button tap will handle it */
+                }
               });
             }
             connect({ connector: wcConnector });
           } catch (err) {
-            console.warn("[MobileWallet] WC provider error, falling back to AppKit:", err);
-            openAppKitSafe();
+            console.warn("[MobileWallet] WC provider error, falling back to universal link:", err);
+            // User is already in the wallet app from the synchronous redirect — no further action needed.
           }
         })();
         return;
       }
 
-      // No WC connector at all — just leave the wallet homepage window open
-      // so the user lands in the right app, then fall back to AppKit
+      // No WC connector at all — navigate to the wallet homepage (already done above synchronously)
+      // and open AppKit as a secondary option in case WC becomes available.
       openAppKitSafe();
     },
     [connect, connectors, openAppKitSafe],

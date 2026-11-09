@@ -218,11 +218,17 @@ export async function POST(req: NextRequest) {
       chainId: fields.chainId,
     });
 
+    // SameSite=None is required for iOS Safari deep-link return flows.
+    // When a user signs in via MetaMask (deep-link out of Safari then back),
+    // Safari treats the POST as cross-site and strips SameSite=Lax cookies.
+    // Using None; Secure allows the session cookies to be sent after the
+    // wallet round-trip. In development (HTTP) fall back to Lax.
     const isProd = process.env.NODE_ENV === 'production';
+    const sameSiteVal: 'none' | 'lax' = isProd ? 'none' : 'lax';
     const httpOnlyCookieOptions = {
       httpOnly: true,
       secure: isProd,
-      sameSite: 'lax' as const, // Lax prevents session loss on mobile wallet return/deep-link
+      sameSite: sameSiteVal,
       path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 days
     };
@@ -230,7 +236,7 @@ export async function POST(req: NextRequest) {
     const clientReadableCookieOptions = {
       httpOnly: false,
       secure: isProd,
-      sameSite: 'lax' as const,
+      sameSite: sameSiteVal,
       path: '/',
       maxAge: 60 * 60 * 24 * 7,
     };

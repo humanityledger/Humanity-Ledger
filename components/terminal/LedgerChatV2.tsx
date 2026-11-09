@@ -1135,8 +1135,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     try {
       if (localStorage.getItem('ledger_onboarded_global') === 'true') return true;
       if (localStorage.getItem('ledger_account_already_created') === 'true') return true;
-      if (localStorage.getItem('ledger_pin_configured') === 'true') return true;
-      if (localStorage.getItem('__enclave_clearance_v2__') === 'granted') return true;
       const addr = localStorage.getItem('system_wallet_addr') || '';
       if (addr && (
         localStorage.getItem('ledger_onboarded_' + addr) === 'true' ||
@@ -1147,7 +1145,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         k.startsWith('ledger_chat_') || k.startsWith('chat_v2_') || k.startsWith('chat_history_') || k.includes('xmtp') || k.startsWith('conversation_')
       );
       if (hasChats) return true;
-      if (document.cookie.includes('system_handshake=')) return true;
     } catch {}
     return false;
   });

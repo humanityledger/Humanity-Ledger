@@ -81,12 +81,10 @@ function writeClearance(token: string, ts: number) {
     [CLEARANCE_TOKEN_KEY, token],
     [CLEARANCE_TS_KEY, ts.toString()],
     [CLEARANCE_FP_KEY, fp],
-    ['ledger_account_already_created', 'true'],
     ['ledger_pin_configured', 'true'],
   ];
   const addr = getStoredWalletAddress();
   if (addr) {
-    pairs.push([`ledger_account_created_${addr.toLowerCase()}`, 'true']);
     pairs.push([`ledger_enclave_cleared_${addr.toLowerCase()}`, 'true']);
   }
   // Write to BOTH storages — dual write guarantees survival across reloads
@@ -344,29 +342,49 @@ export function TuringShieldGate({
 
     // CRITICAL FIX: On page load, wagmi auto-reconnects MetaMask in the background.
     // The SIWE session cookie may not be set yet. We retry the enclave-pin check up to
-    // 3 times with 1.5s gaps before giving up and redirecting to /connect.
-    // This prevents the "need to go back and try again" bug where MetaMask users who
-    // refresh /chat get sent to /connect even though they're already connected.
+    // 5 times with increasing gaps before giving up and redirecting to /connect.
+    // Mobile devices on 4G/5G can take 3–5 seconds for the SIWE cookie to arrive after
+    // returning from a wallet deep-link, so the gaps must be long enough to accommodate that.
     let attempts = 0;
-    const MAX_RETRIES = 3;
-    const RETRY_DELAY_MS = 1500;
+    const MAX_RETRIES = 5;
+    // Progressive backoff: 1s, 2s, 2.5s, 3s, 3s — total up to ~11.5s before redirect
+    const RETRY_DELAYS_MS = [1000, 2000, 2500, 3000, 3000];
+
+    // On mobile, the user may have been redirected to the wallet app and is now
+    // returning. If this page becomes visible after being in the background, that
+    // signals we should re-check the session immediately rather than waiting.
+    const handleVisibilityForGate = () => {
+      if (document.visibilityState === 'visible') {
+        // Re-check clearance immediately when the tab becomes visible.
+        // The user may have just completed signing in the wallet app and returned.
+        if (!readClearance()) {
+          // Reset attempt counter so we get fresh retries on return
+          attempts = 0;
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityForGate);
 
     const checkEnclave = () => {
       fetch('/api/auth/enclave-pin', { credentials: 'include' })
         .then(r => r.json().then(data => ({ status: r.status, data })))
         .then(({ status, data }) => {
-          // No session — retry if we haven't exhausted attempts (wagmi may still be reconnecting)
+          // No session — retry if we haven't exhausted attempts (wagmi may still be reconnecting,
+          // or the user just returned from a wallet deep-link and the SIWE cookie is in-flight).
           if (status === 401 || data?.noSession) {
             attempts++;
             if (attempts < MAX_RETRIES) {
-              setTimeout(checkEnclave, RETRY_DELAY_MS);
+              const delay = RETRY_DELAYS_MS[attempts - 1] ?? 3000;
+              setTimeout(checkEnclave, delay);
               return;
             }
             // All retries exhausted — redirect to connect
+            document.removeEventListener('visibilitychange', handleVisibilityForGate);
             const dest = typeof window !== 'undefined' ? window.location.pathname : '/chat';
             window.location.replace(`/connect?redirect=${encodeURIComponent(dest)}`);
             return;
           }
+          document.removeEventListener('visibilitychange', handleVisibilityForGate);
           if (data?.hasPin === false) {
             // Permanence check: if this device/browser already belongs to an existing account,
             // never divert into "Create your security PIN / account" loop again!
@@ -400,10 +418,14 @@ export function TuringShieldGate({
         })
         .catch(() => {
           // Network error — show gate, user will see the PIN input and retry
+          document.removeEventListener('visibilitychange', handleVisibilityForGate);
         });
     };
 
     checkEnclave();
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityForGate);
+    };
   }, []);
 
   const triggerShake = useCallback(() => {

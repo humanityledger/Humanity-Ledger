@@ -26,10 +26,18 @@ export async function GET(req: NextRequest) {
     headers: { 'Content-Type': 'text/plain' },
   });
 
+  // SameSite=None is required so the cookie survives the iOS Safari ↔ wallet
+  // app deep-link round-trip. When a user opens MetaMask from Safari, then
+  // returns to Safari to complete the sign-in, Safari classifies the outgoing
+  // POST as a cross-site request and strips SameSite=Lax cookies — the nonce
+  // cookie never reaches /api/siwe/verify, causing "No nonce in session" for
+  // every mobile user. SameSite=None; Secure is the correct fix.
+  // In development (HTTP) we fall back to Lax because Secure cannot be set.
+  const isProd = process.env.NODE_ENV === 'production';
   res.cookies.set('siwe-nonce', sealNonce(nonce), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
     path: '/',
     maxAge: NONCE_TTL_SEC, // 10 minutes TTL
   });

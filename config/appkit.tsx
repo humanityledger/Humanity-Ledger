@@ -125,7 +125,12 @@ export const wagmiAdapter = new WagmiAdapter({
             metadata,
         }),
     ],
-    multiInjectedProviderDiscovery: true,
+    // EIP-6963 multi-injected provider discovery MUST be disabled on mobile.
+    // iOS Safari has no injected window.ethereum, so enabling this causes wagmi
+    // to race against an empty provider set and prevents WalletConnect from being
+    // selected as the default connector. This breaks MetaMask and all other
+    // wallet apps on iPhone / iPad / Android Chrome.
+    multiInjectedProviderDiscovery: false,
 })
 
 export const config = wagmiAdapter.wagmiConfig
