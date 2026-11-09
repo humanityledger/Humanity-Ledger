@@ -48,6 +48,8 @@ const DynamicUniversalScanModal = dynamic(() => import("@/components/scan/Univer
 
 const QR_LIFETIME_MS = 240_000;
 const QR_POLL_MS = 2_000;
+const WALLET_TIMEOUT_DESKTOP_MS = 20_000;
+const WALLET_TIMEOUT_MOBILE_MS = 45_000;
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -158,6 +160,23 @@ export default function ConnectPage() {
       toast.error("The wallet could not connect.", { description: error.message });
     }
   }, [isError, error]);
+
+  /* ── Clear the pending wallet once the account is connected ───────────── */
+  useEffect(() => {
+    if (accountStatus === "connected") setPendingWallet(null);
+  }, [accountStatus]);
+
+  /* ── Give up waiting if the wallet never answers ──────────────────────── */
+  useEffect(() => {
+    if (!pendingWallet || isConnected || isPending) return;
+    const timeoutMs = isMobile ? WALLET_TIMEOUT_MOBILE_MS : WALLET_TIMEOUT_DESKTOP_MS;
+    const t = setTimeout(() => {
+      setPendingWallet(null);
+      setSignError("The wallet did not respond. Open the wallet and try again, or choose another wallet.");
+      setAuthStatus("failed");
+    }, timeoutMs);
+    return () => clearTimeout(t);
+  }, [pendingWallet, isConnected, isPending, isMobile]);
 
   /* ── First mount ──────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -537,6 +556,7 @@ export default function ConnectPage() {
         connect({ connector: conn });
       } else {
         openAppKitSafe();
+        setPendingWallet(null);
         toast.info(`${w.name} is not installed here. Scan the code with the ${w.name} app on your phone instead.`);
       }
     },
@@ -617,6 +637,7 @@ export default function ConnectPage() {
 
       // Fallback to AppKit modal
       openAppKitSafe();
+      setPendingWallet(null);
     },
     [connect, connectors, openAppKitSafe],
   );
