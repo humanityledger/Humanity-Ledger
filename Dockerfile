@@ -111,7 +111,7 @@ RUN npx next build
 # Step 3: Remove build cache to keep final image compact
 RUN rm -rf .next/cache
 
-#  STAGE 5: PRODUCTION RUNNER 
+# STAGE 5: PRODUCTION RUNNER 
 FROM runtime AS runner
 WORKDIR /app
 
@@ -120,12 +120,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=8080
 ENV HOSTNAME="0.0.0.0"
 
+# Create nextjs system user/group first
+RUN id -u nextjs >/dev/null 2>&1 || (groupadd --system --gid 1001 nodejs 2>/dev/null || true; useradd --system --uid 1001 -g nodejs nextjs 2>/dev/null || useradd --system --uid 1001 nextjs 2>/dev/null || true)
+
 # Copy verified production build and necessary runtime assets
 COPY --from=builder /app ./
 
-# Hardening: Enforce least privilege execution (CIS Docker Benchmark)
-RUN id -u nextjs >/dev/null 2>&1 || (groupadd --system --gid 1001 nodejs 2>/dev/null || true; useradd --system --uid 1001 -g nodejs nextjs 2>/dev/null || useradd --system --uid 1001 nextjs 2>/dev/null || true) && \
-    chown -R nextjs:nodejs /app || true
+# Fast permission setup: only .next cache needs write access at runtime, NEVER chown 200,000+ files in node_modules
+RUN mkdir -p /app/.next/cache && chown -R nextjs:nodejs /app/.next/cache 2>/dev/null || true
 
 # Final integrity checks
 RUN test -f /app/ecosystem.config.json || (echo "FATAL: ecosystem.config.json missing" && exit 1)
