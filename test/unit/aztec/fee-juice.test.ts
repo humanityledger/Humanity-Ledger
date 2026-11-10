@@ -217,3 +217,11 @@ describe('agreementFeeCheck', () => {
   });
 });
 
+
+describe('humanError: encrypted store failures', () => {
+  it('maps decrypt_failed and store errors without leaking internals', async () => {
+    const { humanError } = await import('@/lib/aztec/wallet/client');
+    expect(humanError(new Error('SqliteEncryptionError decrypt_failed: cannot decode page 1'))).toMatch(/could not be decrypted/);
+    expect(humanError(new Error('[ENCRYPTED STORE ERROR] This browser cannot keep an encrypted private wallet'))).toBe('This browser cannot keep an encrypted private wallet');
+  });
+});

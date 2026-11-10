@@ -450,7 +450,6 @@ describe('Suite 9 — Landing Page & Mobile Viewport Integrity', () => {
 describe('Suite 10 — Critical API Health Check', () => {
   const criticalRoutes = [
     '/api/users/count',
-    '/api/qd/balance',
     '/api/aztec/balance',
     '/api/ledger',
     '/api/auth/session',

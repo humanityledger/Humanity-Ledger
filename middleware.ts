@@ -484,10 +484,10 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   if (req.nextUrl.pathname.startsWith('/prove')) {
     response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
     response.headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
-  } else if (req.nextUrl.pathname.startsWith('/chat')) {
-    response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-    response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
   }
+  // /chat is deliberately NOT cross-origin isolated: COOP same-origin severs wallet popups
+  // (Coinbase/AppKit social login) and COEP blocks wallet iframes. /chat also returns from the
+  // public branch above, so a header set here never applied. Proving runs single-threaded there.
 
   // [SECURITY] Additional hardening headers
   response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');

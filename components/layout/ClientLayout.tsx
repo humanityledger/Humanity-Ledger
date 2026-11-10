@@ -9,7 +9,6 @@ import { useSettingsStore } from '@/lib/store/useSettingsStore';
 import { useSystemSessionLock } from '@/hooks/useSystemSessionLock';
 import { useWalletStore } from '@/lib/store/wallet-store';
 import { TitaniumGate } from '@/components/layout/TitaniumGate';
-import { InstitutionalHeader } from '@/components/shared/InstitutionalHeader';
 import { ThemeApplier } from '@/components/layout/ThemeApplier';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
 
@@ -19,10 +18,6 @@ import dynamic from 'next/dynamic';
 
 const UniversalEliteWallpaper = dynamic(
   () => import('@/components/shared/UniversalEliteWallpaper').then(m => ({ default: m.UniversalEliteWallpaper })),
-  { ssr: false }
-);
-const UtilityPanels = dynamic(
-  () => import('@/components/shared/UtilityPanels').then(m => ({ default: m.UtilityPanels })),
   { ssr: false }
 );
 // BillionLedgerNotification removed per user request (no fake transfer alerts)
@@ -298,20 +293,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       ? `relative z-10 w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-none flex flex-col md:pb-0 bg-white`
       : `relative z-10 w-full flex-1 flex flex-col overscroll-none md:pb-0`;
 
-  const showInstitutionalHeader =
-    !pathname.startsWith('/sign-up') &&
-    !pathname.startsWith('/login') &&
-    !pathname.startsWith('/connect') &&
-    !pathname.startsWith('/scan') &&
-    (
-      pathname.startsWith('/terminal') ||
-      pathname === '/ledger' ||
-      (pathname === '/portfolio' && isConnected) ||
-      pathname === '/support' ||
-      pathname === '/academy' ||
-      pathname === '/vip'
-      // removed careers
-    );
 
 
   // /chat has its own full-screen header  never show the global one there
@@ -323,22 +304,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         <UniversalEliteWallpaper />
 
           <div className={rootClass}>
-            {/* Top header for select standalone routes — single instance, responsive internally */}
-            {showInstitutionalHeader && !isChat && (
-              <div className="flex-none w-full z-50 fixed top-0 left-0 right-0">
-                <InstitutionalHeader />
-              </div>
-            )}
-            {/* Spacer to prevent content from hiding under fixed header */}
-            {showInstitutionalHeader && !isChat && (
-              <div className="w-full flex-none" style={{ minHeight: '64px' }} />
-            )}
-
             <div className={innerClass}>
-              <div className={isChat ? 'absolute z-40 top-0 left-0 right-0 pointer-events-none' : 'relative z-40'}>
-                <UtilityPanels />
-                {/* BillionLedgerNotification removed */}
-              </div>
 
               <ZoomWrapper>
                 <main
