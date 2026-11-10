@@ -658,25 +658,29 @@ export default function ConnectPage() {
         return;
       }
 
-      // 2. Direct in-app browser navigation:
-      // When tapping "MetaMask (Open in App)", directly open the dApp inside MetaMask's Web3 browser.
-      // This is 100% reliable on iOS and Android because window.ethereum is injected natively.
-      if (walletId === "metamask-browser") {
-        const cleanUrl = typeof window !== "undefined"
-          ? (window.location.host + window.location.pathname + window.location.search)
-          : "ledgerchat.org/connect";
-        window.location.href = `https://metamask.app.link/dapp/${cleanUrl}`;
-        return;
-      }
-
-      // 3. 'other-mobile' → AppKit modal (QR + all wallets)
-      if (walletId === "other-mobile") {
-        openAppKitSafe();
-        return;
-      }
+      // [MOBILE FIX] For ALL wallet taps on mobile (Safari / Chrome), open the AppKit
+      // modal instead of deep-linking into the wallet's internal browser.
+      //
+      // WHY THIS IS THE CORRECT APPROACH:
+      //   The old code did: window.location.href = "metamask.app.link/dapp/[url]"
+      //   This opened the page INSIDE MetaMask's WebView which:
+      //     a) Has broken zoom / viewport scaling
+      //     b) Is not scalable to other wallets
+      //     c) Requires users to leave Safari permanently
+      //
+      //   The correct WalletConnect v2 mobile flow is:
+      //     1. AppKit modal appears (bottom sheet on mobile)
+      //     2. User taps their wallet — AppKit opens it via a universal link with wc:// URI
+      //     3. Wallet signs and WalletConnect relay delivers the SIWE signature back
+      //     4. Safari/Chrome NEVER navigates away — the signed session arrives via WebSocket
+      //
+      //   showQrModal: true in wagmiAdapter enables this flow automatically.
 
       const w = MOBILE_WALLETS.find((x) => x.id === walletId);
       if (w) setPendingWallet({ id: w.id, name: w.name, logo: w.logo });
+
+      // Open AppKit modal — it shows a bottom sheet with wallet options on mobile
+      openAppKitSafe();
 
       // ─────────────────────────────────────────────────────────────────────
       // iOS / Android deep-link strategy (iOS Safari user-gesture constraint)

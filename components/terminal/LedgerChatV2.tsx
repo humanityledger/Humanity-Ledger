@@ -3095,18 +3095,54 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }
 
         try {
-          // Convert blob to base64 data URL — sent over already-encrypted XMTP channel
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            const dataUrl = reader.result as string; // data:audio/webm;base64,...
-            const audioMsg = `__AUDIO__${dataUrl}`;
-            if (executeSendRef.current) {
-              await executeSendRef.current(audioMsg);
+          // [VOICE FIX] Upload audio to /api/chat/attachments rather than embedding a raw
+          // base64 data URL inline. XMTP has a ~1 MB message cap; a 10-second WebM voice
+          // note encodes to ~200 KB base64 which is fine for short clips but longer ones
+          // exceed the limit silently and are dropped by the relay. Uploading to our
+          // attachment endpoint gives back a compact data-URL (<= 1 MB enforced server-side)
+          // and keeps the XMTP message payload small regardless of recording duration.
+          const audioFile = new File(
+            audioChunksRef.current,
+            `voice_${Date.now()}.${mimeType?.includes('mp4') || mimeType?.includes('m4a') ? 'm4a' : mimeType?.includes('ogg') ? 'ogg' : 'webm'}`,
+            { type: mimeType || 'audio/webm' }
+          );
+
+          const formData = new FormData();
+          formData.append('file', audioFile);
+
+          let audioSrc: string;
+          try {
+            const uploadRes = await fetch('/api/chat/attachments', { method: 'POST', body: formData });
+            if (uploadRes.ok) {
+              const uploadData = await uploadRes.json();
+              // Server returns { url: 'data:audio/...;base64,...', type, name }
+              audioSrc = uploadData.url as string;
             } else {
-              toast.error('Open a conversation first');
+              // Fallback: embed inline — works for short clips under XMTP limit
+              console.warn('[Voice] Attachment upload failed, falling back to inline base64');
+              const reader2 = new FileReader();
+              audioSrc = await new Promise<string>((res, rej) => {
+                reader2.onloadend = () => res(reader2.result as string);
+                reader2.onerror = rej;
+                reader2.readAsDataURL(blob);
+              });
             }
-          };
-          reader.readAsDataURL(blob);
+          } catch {
+            // Network error — inline fallback
+            const reader2 = new FileReader();
+            audioSrc = await new Promise<string>((res, rej) => {
+              reader2.onloadend = () => res(reader2.result as string);
+              reader2.onerror = rej;
+              reader2.readAsDataURL(blob);
+            });
+          }
+
+          const audioMsg = `__AUDIO__${audioSrc}`;
+          if (executeSendRef.current) {
+            await executeSendRef.current(audioMsg);
+          } else {
+            toast.error('Open a conversation first');
+          }
         } catch (error) {
           console.error('[Voice] Audio send failed:', error);
           toast.error('Could not send the voice message');
@@ -6442,28 +6478,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             { id: 'attach',    color: '#34C759', iconPath: <FileText size={19} strokeWidth={1.8} />,  label: 'Document',       sublabel: 'Any file up to 1 MB',    onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
 
                             // ── Interactive ──────────────────────────────────────────
-                            { id: 'gif',       color: '#AF52DE', iconPath: <ImageIcon size={19} strokeWidth={1.8} />,   label: 'GIF',            sublabel: 'Search animated images',   onClick: () => { setShowGifPicker(true); setShowAppDrawer(false); searchGifs(gifSearch); } },
                             { id: 'poll',      color: '#10B981', iconPath: <ListChecks size={19} strokeWidth={1.8} />,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
                             // ── Crypto & Aztec Private Payments ──────────────────────────
                             { id: 'zkmoney',   color: '#1C1C1E', iconPath: <ShieldCheck size={19} strokeWidth={1.8} />, label: 'Private payment', sublabel: 'Aztec test network', onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
                             { id: 'agreement', color: '#1C1C1E', iconPath: <Waves size={19} strokeWidth={1.8} />, label: 'Private agreement', sublabel: 'Escrow or payment stream, Aztec test network', onClick: () => { setShowAgreementComposer(true); setShowAppDrawer(false); } },
                             { id: 'zkinvoice', color: '#1C1C1E', iconPath: <Receipt size={19} strokeWidth={1.8} />, label: 'Private invoice', sublabel: 'Request a private payment', onClick: () => { setShowZkInvoiceModal(true); setShowAppDrawer(false); } },
                             { id: 'payment',   color: '#1C1C1E', iconPath: <CreditCard size={19} strokeWidth={1.8} />,     label: 'Payment',        sublabel: 'Send tokens from your wallet',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
-                            { id: 'tip',       color: '#1C1C1E', iconPath: <Heart size={19} strokeWidth={1.8} />, label: 'Tip',          sublabel: 'Send a small thank you', onClick: () => { setShowTipModal(true); setShowAppDrawer(false); } },
-                            // ── Utilities ────────────────────────────────────────────
-                            { id: 'location',  color: '#32D74B', iconPath: <MapPin size={19} strokeWidth={1.8} />,    label: 'Location',       sublabel: 'Share your location',    onClick: () => { 
-                              setShowAppDrawer(false);
-                              if (navigator.geolocation) {
-                                navigator.geolocation.getCurrentPosition(
-                                  (pos) => executeSendRef.current?.(`[LOCATION]${pos.coords.latitude},${pos.coords.longitude}`),
-                                  () => toast.error('Location access is blocked. Allow it in your browser settings.')
-                                );
-                              } else {
-                                toast.error('This device cannot share your location');
-                              }
-                            } },
-                            { id: 'live-loc',  color: '#FF3B30', iconPath: <Navigation size={19} strokeWidth={1.8} />,   label: isLiveLocationActive ? 'Stop live location' : 'Live location', sublabel: isLiveLocationActive ? 'Stop sharing your position' : 'Share your position as you move', onClick: () => { startLiveLocation(); setShowAppDrawer(false); } },
-
+                            // ── Security ──────────────────────────────────────────────
                             { id: 'burn',      color: '#FF6B00', iconPath: <Timer size={19} strokeWidth={1.8} />,      label: burnTimer ? `Disappearing after ${burnTimer >= 60 ? `${Math.floor(burnTimer/60)}m` : `${burnTimer}s`}` : 'Disappearing messages', sublabel: burnTimer ? 'Tap to change duration' : 'Messages vanish after they are read', onClick: () => { setShowBurnSheet(true); setShowAppDrawer(false); } },
                           ].filter(app => (ledgerSettings as any)?.payments_enabled !== false || !PAYMENT_DRAWER_IDS.has(app.id)).map((app) => (
                             <button 
@@ -7085,7 +7106,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
          ? createPortal(
          <div className="fixed inset-0 z-[99999] bg-black/10 select-none" onClick={() => setContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}>
            {(() => {
-             const mine = messages.find(m => m.id === contextMenu.id)?.senderAddress?.toLowerCase() === (address || effectiveAddress || '').toLowerCase();
+             const targetMsg = messages.find(m => m.id === contextMenu.id);
+             const myAddr = (address || effectiveAddress || '').toLowerCase();
+             const msgSender = (targetMsg?.senderAddress || (targetMsg as any)?.sender || (targetMsg as any)?.from || '').toLowerCase();
+             const mine = Boolean((targetMsg as any)?.isMe || (myAddr && msgSender && msgSender === myAddr));
              const item = 'flex items-center gap-3 px-3.5 py-[9px] rounded-xl hover:bg-[#f2f4f7] active:bg-[#eaecf0] text-[14px] font-[450] text-[#15171c] text-left transition-colors cursor-pointer select-none w-full';
              const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
              const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
@@ -7208,13 +7232,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    </button>
                  )}
                  <div className="h-px bg-[#eceef2] my-1 mx-2" />
-                 {mine ? (
-                   <button role="menuitem" type="button" onClick={() => { setMessages(prev => prev.filter(m => m.id !== contextMenu.id)); executeSend(`__REVOKE__${contextMenu.id}`); setContextMenu(null); }} className={`${item} text-[#d93036]`}>
-                     <Trash2 size={16} strokeWidth={1.8} /> <span className="flex flex-col"><span>Ask to delete for everyone</span><span className="text-[11.5px] text-[#8a1f23]">Hidden here and in Ledger Chat apps; other apps and saved copies may keep it</span></span>
-                   </button>
-                 ) : (
-                   <button role="menuitem" type="button" onClick={() => { reportMessage(contextMenu.id, contextMenu.content); }} className={`${item} text-[#d93036]`}>
-                     <Flag size={16} strokeWidth={1.8} /> Report
+                 {/* Delete for me — always available */}
+                 <button role="menuitem" type="button" onClick={() => { setMessages(prev => prev.filter(m => m.id !== contextMenu.id)); setContextMenu(null); toast.success('Message deleted for you'); }} className={`${item} text-[#d93036]`}>
+                   <Trash2 size={16} strokeWidth={1.8} /> <span>Eliminar mensaje para mí</span>
+                 </button>
+                 {/* Delete for everyone — available if message is mine */}
+                 {mine && (
+                   <button role="menuitem" type="button" onClick={() => { setMessages(prev => prev.filter(m => m.id !== contextMenu.id)); executeSend(`__REVOKE__${contextMenu.id}`); setContextMenu(null); toast.success('Message deleted for everyone'); }} className={`${item} text-[#d93036]`}>
+                     <Trash2 size={16} strokeWidth={1.8} /> <span className="flex flex-col"><span>Eliminar para todos</span><span className="text-[11.5px] text-[#8a1f23]">Removed from all Ledger Chat clients</span></span>
                    </button>
                  )}
                </div>

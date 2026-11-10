@@ -16,6 +16,7 @@ import { architecture, cryptography, zeroKnowledge, whitepaper } from "./pages/p
 import { securityModel, audits, bugBounty } from "./pages/security";
 import { developers } from "./pages/developers";
 import { about, blog, contact, status } from "./pages/company";
+import { brand } from "./pages/brand";
 import { changelog } from "./pages/changelog";
 import { legalNotice, terms, privacy, cookies, contentPolicy, disclaimer } from "./pages/legal";
 
@@ -25,7 +26,7 @@ export const NAV: NavGroup[] = [
   { title: "Protocol", pages: [architecture, cryptography, zeroKnowledge, whitepaper] },
   { title: "Security", pages: [securityModel, audits, bugBounty] },
   { title: "Developers", pages: [developers] },
-  { title: "Company", pages: [about, blog, changelog, status, contact] },
+  { title: "Company", pages: [about, brand, blog, changelog, status, contact] },
   { title: "Legal", pages: [legalNotice, terms, privacy, cookies, contentPolicy, disclaimer] },
 ];
 

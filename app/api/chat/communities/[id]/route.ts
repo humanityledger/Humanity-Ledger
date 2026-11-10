@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
+import { getInMemoryCommunityBySlugOrId } from '@/lib/communities/in-memory-communities';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,16 +21,46 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id: communityId } = await params;
-    const community = await (prisma as any).community.findUnique({
-      where: { id: communityId },
-      include: {
-        members: true,
-        channels: { orderBy: { position: 'asc' } },
-        permissions: true,
-        _count: { select: { members: true, posts: true, channels: true } },
-      },
-    });
-    if (!community) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    // ── Try DB first ───────────────────────────────────────────────────────────
+    let community: any = null;
+    try {
+      community = await (prisma as any).community.findUnique({
+        where: { id: communityId },
+        include: {
+          members: true,
+          channels: { orderBy: { position: 'asc' } },
+          permissions: true,
+          _count: { select: { members: true, posts: true, channels: true } },
+        },
+      });
+    } catch {
+      // DB unavailable — fall through to in-memory lookup
+    }
+
+    // ── In-memory fallback ────────────────────────────────────────────────────
+    if (!community) {
+      const mem = getInMemoryCommunityBySlugOrId(communityId);
+      if (!mem) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+      const isMember =
+        mem.ownerAddress?.toLowerCase() === caller ||
+        mem.members.some((m) => m.walletAddress?.toLowerCase() === caller);
+
+      if (mem.isPrivate && !isMember) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        community: {
+          ...mem,
+          isMember,
+          membersCount: mem.membersCount,
+          postsCount: 0,
+          ...(isMember ? {} : { members: [], joinCode: undefined }),
+        },
+      });
+    }
 
     const isMember =
       community.ownerAddress?.toLowerCase() === caller ||
@@ -62,12 +93,32 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id: communityId } = await params;
-    const community = await (prisma as any).community.findUnique({ where: { id: communityId } });
+
+    // In-memory PATCH
+    const mem = getInMemoryCommunityBySlugOrId(communityId);
+    if (mem) {
+      if (mem.ownerAddress?.toLowerCase() !== caller) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      const body = await req.json().catch(() => ({}));
+      if (body.name) mem.name = clean(body.name, 60);
+      if (body.description !== undefined) mem.description = clean(body.description, 280);
+      if (body.isPrivate !== undefined) mem.isPrivate = Boolean(body.isPrivate);
+      return NextResponse.json({ community: mem });
+    }
+
+    let community: any = null;
+    try {
+      community = await (prisma as any).community.findUnique({ where: { id: communityId } });
+    } catch {
+      return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 503 });
+    }
+
     if (!community) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const membership = await (prisma as any).communityMember.findFirst({
       where: { communityId, walletAddress: caller },
-    });
+    }).catch(() => null);
     const isAdmin = community.ownerAddress?.toLowerCase() === caller || membership?.role === 'ADMIN';
     if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -99,7 +150,23 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id: communityId } = await params;
-    const community = await (prisma as any).community.findUnique({ where: { id: communityId } });
+
+    // In-memory DELETE (no-op for seeded communities)
+    const mem = getInMemoryCommunityBySlugOrId(communityId);
+    if (mem) {
+      if (mem.ownerAddress?.toLowerCase() !== caller)
+        return NextResponse.json({ error: 'Only owner can delete' }, { status: 403 });
+      // In-memory communities cannot be permanently deleted (they reseed on restart).
+      return NextResponse.json({ ok: true });
+    }
+
+    let community: any = null;
+    try {
+      community = await (prisma as any).community.findUnique({ where: { id: communityId } });
+    } catch {
+      return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 503 });
+    }
+
     if (!community) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     if (community.ownerAddress?.toLowerCase() !== caller)
       return NextResponse.json({ error: 'Only owner can delete' }, { status: 403 });

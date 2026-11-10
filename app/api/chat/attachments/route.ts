@@ -29,25 +29,36 @@ export async function POST(req: Request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // [SECURITY — MED-02] Magic Bytes MIME Validation
-    // Never trust client-provided file.type. Check actual file headers.
+    // [SECURITY — MED-02] Magic Bytes + Client MIME Validation
+    // Never trust client-provided file.type alone. Cross-reference with actual file headers.
     const magic = new Uint8Array(buffer.slice(0, 12));
     const isPNG  = magic[0] === 0x89 && magic[1] === 0x50 && magic[2] === 0x4E && magic[3] === 0x47;
     const isJPEG = magic[0] === 0xFF && magic[1] === 0xD8 && magic[2] === 0xFF;
     const isGIF  = magic[0] === 0x47 && magic[1] === 0x49 && magic[2] === 0x46; // 'GIF'
     const isWebP = magic[8] === 0x57 && magic[9] === 0x45 && magic[10] === 0x42 && magic[11] === 0x50; // 'WEBP'
-    
-    // MP4 signature 'ftyp'
-    const isMP4 = magic[4] === 0x66 && magic[5] === 0x74 && magic[6] === 0x79 && magic[7] === 0x70; 
-    
+    // MP4 / M4A signature: 'ftyp' at offset 4
+    const isFtyp = magic[4] === 0x66 && magic[5] === 0x74 && magic[6] === 0x79 && magic[7] === 0x70;
+    const isMP4  = isFtyp && !file.type?.startsWith('audio/');
+    const isM4A  = isFtyp && file.type?.startsWith('audio/');
+    // WebM: EBML header 0x1A45DFA3
+    const isWebM = magic[0] === 0x1A && magic[1] === 0x45 && magic[2] === 0xDF && magic[3] === 0xA3;
+    // OGG: 'OggS'
+    const isOGG  = magic[0] === 0x4F && magic[1] === 0x67 && magic[2] === 0x67 && magic[3] === 0x53;
+
+    // [AUDIO] Accept WebM, OGG, and M4A for voice messages
+    const clientTypeIsAudio = typeof file.type === 'string' && file.type.startsWith('audio/');
+
     let safeMimeType = 'application/octet-stream';
     if (isPNG) safeMimeType = 'image/png';
     else if (isJPEG) safeMimeType = 'image/jpeg';
     else if (isGIF) safeMimeType = 'image/gif';
     else if (isWebP) safeMimeType = 'image/webp';
     else if (isMP4) safeMimeType = 'video/mp4';
+    else if (isM4A || (isFtyp && clientTypeIsAudio)) safeMimeType = 'audio/mp4';
+    else if (isWebM && clientTypeIsAudio) safeMimeType = 'audio/webm';
+    else if (isOGG && clientTypeIsAudio) safeMimeType = 'audio/ogg';
     else {
-      return NextResponse.json({ error: 'Unsupported file type. Only PNG, JPEG, GIF, WebP, and MP4 are allowed.' }, { status: 415 });
+      return NextResponse.json({ error: 'Unsupported file type. Allowed: PNG, JPEG, GIF, WebP, MP4, and audio (WebM, OGG, M4A).' }, { status: 415 });
     }
 
     // Generate base64 data URL

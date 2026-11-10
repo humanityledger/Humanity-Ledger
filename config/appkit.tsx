@@ -118,10 +118,23 @@ export const wagmiAdapter = new WagmiAdapter({
     projectId,
     networks,
     connectors: [
-        injected({ shimDisconnect: true }),
+        // [MOBILE FIX] Only add injected() when window.ethereum is present (desktop / in-app browser).
+        // On iOS Safari window.ethereum is undefined, so injected() silently fails and prevents
+        // WalletConnect from being selected as the default connector.
+        ...(typeof window !== 'undefined' && Boolean((window as any).ethereum)
+            ? [injected({ shimDisconnect: true })]
+            : []),
         walletConnect({ 
-            projectId, 
-            showQrModal: false,
+            projectId,
+            // [MOBILE FIX] showQrModal: true enables the AppKit built-in bottom sheet on mobile.
+            // This is the CORRECT signing flow for Safari/Chrome on iOS and Android:
+            //   1. User taps a wallet in the AppKit sheet
+            //   2. AppKit generates a wc:// URI and opens the wallet via universal link
+            //   3. User approves in the wallet — WalletConnect relay delivers the signed SIWE back
+            //   4. Safari never navigates away — the page receives the session via WebSocket
+            // showQrModal: false caused us to handle deep links manually (metamask.app.link/dapp/...)
+            // which opened the page INSIDE MetaMask's browser (zoom issues, not scalable).
+            showQrModal: true,
             metadata,
         }),
     ],

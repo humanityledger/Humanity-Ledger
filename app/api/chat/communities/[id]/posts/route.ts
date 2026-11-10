@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
+import { getInMemoryCommunityBySlugOrId } from '@/lib/communities/in-memory-communities';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,13 +16,33 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const caller = auth.walletAddress.toLowerCase();
 
     const { id: communityId } = await params;
-    const community = await (prisma as any).community.findUnique({ where: { id: communityId } });
+
+    // ── In-memory fallback: return empty posts array for seeded communities ───
+    const mem = getInMemoryCommunityBySlugOrId(communityId);
+    if (mem) {
+      const isMember =
+        mem.ownerAddress?.toLowerCase() === caller ||
+        mem.members.some((m) => m.walletAddress?.toLowerCase() === caller);
+      if (mem.isPrivate && !isMember) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      }
+      return NextResponse.json({ posts: [] });
+    }
+
+    // ── DB path ───────────────────────────────────────────────────────────────
+    let community: any = null;
+    try {
+      community = await (prisma as any).community.findUnique({ where: { id: communityId } });
+    } catch {
+      return NextResponse.json({ posts: [] });
+    }
+
     if (!community) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     if (community.isPrivate) {
       const member = await (prisma as any).communityMember.findFirst({
         where: { communityId, walletAddress: caller },
-      });
+      }).catch(() => null);
       if (!member && community.ownerAddress?.toLowerCase() !== caller) {
         return NextResponse.json({ error: 'Not found' }, { status: 404 });
       }
@@ -32,7 +53,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       where: { communityId, title: { not: null } },
       orderBy: { createdAt: 'desc' },
       take: 100,
-    });
+    }).catch(() => []);
     return NextResponse.json({ posts });
   } catch (e: any) {
     console.error('[community/[id]/posts GET]', e);
