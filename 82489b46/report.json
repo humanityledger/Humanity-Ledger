@@ -1,0 +1,154 @@
+[
+  {
+    "page": "home",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-YjJkZjgzZjItZDU3ZS00MmJmLThhN2UtNTI5YTNhMWFkZTQ4' 'wasm-unsafe-eval' htt",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event"
+    ]
+  },
+  {
+    "page": "connect",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/connect",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ZjkwZTVlN2ItYWU5NC00OTRhLThiM2YtOThmOThhNGM3OTJk' 'wasm-unsafe-eval' htt",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event"
+    ]
+  },
+  {
+    "page": "docs",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/overview",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MGUyYzdlZjYtY2I4MS00Mjc0LWE4NzUtZTNhNzBjMjFjMWE3' 'wasm-unsafe-eval' htt",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event"
+    ]
+  },
+  {
+    "page": "docs-privacy",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/privacy",
+    "errors": [
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MTlkZDFiMzYtZTZjYy00MTg5LWI2MDYtYTkwOGFjMmNjMjJl' 'wasm-unsafe-eval' htt",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event"
+    ]
+  },
+  {
+    "page": "chat",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/chat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-YmViYjljMWItYzY2ZC00ZDZiLTkxMmEtMTg2MDlhNTI4MTEx' 'wasm-unsafe-eval' htt",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event",
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event"
+    ]
+  },
+  {
+    "page": "changelog",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/changelog",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-Zjk3ZGU4NWUtOWU1Ny00ZTA3LTg0ODEtNDFiYTJhOGQ2YmMx' 'wasm-unsafe-eval' htt",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event"
+    ]
+  },
+  {
+    "page": "home",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/",
+    "errors": [
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NzRjZjIzZDMtOWVlMi00MmQyLTg1ZTgtNjYxNGI0OGYxMTE0' 'wasm-unsafe-eval' htt",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event"
+    ]
+  },
+  {
+    "page": "connect",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/connect",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NWZmOTllOTktNzU4MC00ZWZjLTk3N2UtNWQ5YzA5N2MzZTNj' 'wasm-unsafe-eval' htt",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event"
+    ]
+  },
+  {
+    "page": "docs",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/overview",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MTBkMmZlNjctZGQ3Yy00MzllLThkZmEtMzFkMTBkMWZmNmRm' 'wasm-unsafe-eval' htt",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event"
+    ]
+  },
+  {
+    "page": "docs-privacy",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/privacy",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MmMxOTcyYjUtZDljMi00MGMzLWE0YWItZWQyYzc4YjU5N2U2' 'wasm-unsafe-eval' htt",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event"
+    ]
+  },
+  {
+    "page": "chat",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/chat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-Y2Q1YjYzMDEtMTliYS00NjZiLWEwMTgtZTAwZGRhZDY2ODU1' 'wasm-unsafe-eval' htt",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event",
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event"
+    ]
+  },
+  {
+    "page": "changelog",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/changelog",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MTYyYzNhMzgtMWMzYS00MThiLWEzMmEtN2M0NTg0ZDA0ZjA1' 'wasm-unsafe-eval' htt",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event",
+      "WebSocket connection to 'wss://stream.binance.com:9443/ws/!ticker@arr' failed: Error during WebSocket handshake: Unexpected response code: 451",
+      "[System Grid] WebSocket Error: Event"
+    ]
+  }
+]
