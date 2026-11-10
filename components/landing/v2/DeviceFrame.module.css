@@ -1,0 +1,196 @@
+/* DeviceFrame — vector iPhone. All sizes are device points at scale 1; the
+   canvas is scaled as a whole by DeviceFrame.tsx to fit its box. */
+
+.box {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  contain: layout size;
+}
+
+.canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: 50% 50%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.canvas[data-ready] {
+  opacity: 1;
+}
+
+.body {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.screen {
+  position: absolute;
+  overflow: hidden;
+  background: #fff;
+  isolation: isolate;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--hl-font, Inter), "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+  font-variant-numeric: tabular-nums;
+}
+
+.glass {
+  position: absolute;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* The highlights only add light: invisible on white, visible on dark screens,
+   as on real glass. */
+.glassLight {
+  mix-blend-mode: screen;
+}
+
+/* ── Dynamic Island ───────────────────────────────────────────────── */
+
+.islandSlot {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.island {
+  position: relative;
+  height: 37.33px;
+  border-radius: 18.67px;
+  background: #000;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px 0 13px;
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.04);
+  transition: width 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.islandLead,
+.islandTrail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  opacity: 0;
+  transition: opacity 0.25s ease 0.2s;
+}
+
+.island:not([data-state="idle"]) .islandLead,
+.island:not([data-state="idle"]) .islandTrail {
+  opacity: 1;
+}
+
+/* Keep the trailing content clear of the lens at the right end. */
+.islandTrail {
+  margin-right: 22px;
+}
+
+.island[data-state="secure"] .islandLead {
+  color: #10b981;
+}
+
+.island[data-state="call"] .islandLead,
+.island[data-state="video"] .islandLead {
+  color: #30d158;
+}
+
+.islandTime {
+  font: 600 14px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.islandWave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 14px;
+}
+
+.islandWave i {
+  display: block;
+  width: 2.5px;
+  height: 100%;
+  border-radius: 2px;
+  background: #30d158;
+  transform-origin: 50% 50%;
+  animation: islandWave 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes islandWave {
+  from { transform: scaleY(0.3); }
+  to { transform: scaleY(1); }
+}
+
+.islandDotSecure {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+}
+
+/* iOS privacy indicators, just right of the island: orange = microphone in
+   use, green = camera in use. */
+.island[data-state="call"]::after,
+.island[data-state="video"]::after {
+  content: "";
+  position: absolute;
+  right: -14px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+}
+
+.island[data-state="call"]::after {
+  background: #ff9f0a;
+}
+
+.island[data-state="video"]::after {
+  background: #30d158;
+}
+
+/* Front camera: dark glass with a violet-blue coating reflection and a
+   specular point, as the lens looks under studio light. */
+.lens {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.55) 0 7%, transparent 18%),
+    radial-gradient(circle at 60% 66%, rgba(92, 70, 255, 0.55) 0 14%, transparent 42%),
+    radial-gradient(circle at 50% 50%, #111527 0 38%, #070811 60%, #0d0e12 100%);
+  box-shadow:
+    0 0 0 1.4px #0a0b0e,
+    0 0 0 2.2px rgba(255, 255, 255, 0.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .island,
+  .islandLead,
+  .islandTrail,
+  .canvas {
+    transition: none;
+  }
+  .islandWave i {
+    animation: none;
+    transform: scaleY(0.6);
+  }
+}

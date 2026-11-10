@@ -1,32 +1,33 @@
 "use client";
 
 /**
- * "Ledger Chat in your hand": four photographs of an iPhone, each showing a
- * live Ledger Chat screen (a conversation, a voice call, a video call and a
- * private payment).
+ * "Ledger Chat in your hand": four live Ledger Chat screens on a vector
+ * iPhone (DeviceFrame.tsx): a conversation with a private invoice, a voice
+ * call, a video call and a community.
  *
- * How the screen sits on the photograph: every photo has a 3D matrix that
- * maps the 430 x 932 glass of the phone onto its pixels. The screen is plain
- * HTML laid out on that glass, transformed with the matrix, and the fingers
- * that cross the glass are drawn again on top from a cut-out.
+ * The device is drawn, not photographed, and scaled as a whole to fit its
+ * tile, so it is never cropped or re-proportioned. (The earlier version
+ * placed screens on photographs with per-photo 3D matrices, then on a fixed
+ * 390 x 844 CSS frame that clipped the 430 x 932 screens and drew a second
+ * Dynamic Island under the screens' own.)
  *
  * Wide screens: the stage stays pinned while the visitor scrolls, the
- * photographs travel along a diagonal and the step on the left follows.
- * Narrow screens and reduced motion: the photographs stack with their text.
+ * phones travel along a diagonal and the step on the left follows.
+ * Narrow screens and reduced motion: the phones stack with their text.
+ *
+ * Copy rule: every sentence here must be true of the product today.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ChatScreen,
-  PaymentScreen,
+  InvoiceChatScreen,
   VideoCallScreen,
   VoiceCallScreen,
   CommunitiesScreen,
-  AgreementScreen,
-  InvoicePaidScreen,
-  UpdatesScreen,
+  ChatScreen,
   type ScreenProps,
 } from "./phoneScreens";
+import { DeviceFrame, type IslandState } from "./DeviceFrame";
 import s from "./PhoneShowcase.module.css";
 
 interface Phone {
@@ -34,131 +35,58 @@ interface Phone {
   label: string;
   title: string;
   text: string;
-  src: string;
-  fingers: string;
-  w: number;
-  h: number;
-  /** matrix3d, column-major, from the glass (430 x 932) to photo pixels. */
-  m: number[];
-  f: { x: number; y: number; w: number; h: number };
   Screen: React.ComponentType<ScreenProps>;
-  cssFrame?: boolean;
+  /** What the Dynamic Island shows while this screen plays. */
+  island: IslandState;
+  /** For the call island: seconds at p = 0 and p = 1. */
+  clock?: [number, number];
 }
 
 const PHONES: Phone[] = [
   {
     id: "chat",
     label: "Messages",
-    title: "Talk like you always do.",
-    text: "Direct messages are encrypted on your device before they are sent and travel over XMTP, an open messaging network. You sign in with your wallet, so there is no phone number or email to hand over.",
-    src: "",
-    fingers: "",
-    w: 390,
-    h: 844,
-    m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-    f: { x: 0, y: 0, w: 0, h: 0 },
-    Screen: ChatScreen,
-    cssFrame: true,
+    title: "Talk, then settle up in the same chat.",
+    text: "Direct messages are end-to-end encrypted with MLS over XMTP and kept on your device. A private invoice is paid from your Aztec wallet without leaving the conversation; today that runs on the Aztec test network.",
+    Screen: InvoiceChatScreen,
+    island: "secure",
   },
   {
     id: "voice",
     label: "Voice calls",
     title: "Call straight from the chat.",
-    text: "Voice calls connect browser to browser over WebRTC and are encrypted in transit with DTLS-SRTP. No phone number is involved at any point.",
-    src: "",
-    fingers: "",
-    w: 390,
-    h: 844,
-    m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-    f: { x: 0, y: 0, w: 0, h: 0 },
+    text: "Voice calls connect browser to browser over WebRTC and are encrypted in transit with DTLS-SRTP, with optional noise suppression. No phone number is involved at any point.",
     Screen: VoiceCallScreen,
-    cssFrame: true,
+    island: "call",
+    clock: [3, 99],
   },
   {
     id: "video",
     label: "Video calls",
-    title: "Face to face, on your terms.",
+    title: "Face to face, without your IP address.",
     text: "Video calls use the same encrypted connection. Turn on Hide my IP address in settings and calls are routed through a relay, so the other person never sees your IP address.",
-    src: "",
-    fingers: "",
-    w: 390,
-    h: 844,
-    m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-    f: { x: 0, y: 0, w: 0, h: 0 },
     Screen: VideoCallScreen,
-    cssFrame: true,
-  },
-  {
-    id: "pay",
-    label: "Payments",
-    title: "Settle up where you agreed it.",
-    text: "Create native invoices or send USDC/ETH with one tap. Zero intermediaries, privacy-preserving proofs, and direct wallet settlement.",
-    src: "",
-    fingers: "",
-    w: 390,
-    h: 844,
-    m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-    f: { x: 0, y: 0, w: 0, h: 0 },
-    Screen: PaymentScreen,
-    cssFrame: true,
+    island: "video",
   },
   {
     id: "communities",
     label: "Communities",
-    title: "Sovereign group channels.",
-    text: "Create encrypted group spaces for your project, team or community with up to 10,000 members and zero central servers.",
-    src: "",
-    fingers: "",
-    w: 390,
-    h: 844,
-    m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-    f: { x: 0, y: 0, w: 0, h: 0 },
+    title: "Channels, pinned posts and votes.",
+    text: "Communities have topic channels, pinned announcements and proposals with one vote per wallet. Community posts are kept on Humanity Ledger's servers so new members can read the history; direct messages are the end-to-end encrypted part.",
     Screen: CommunitiesScreen,
-    cssFrame: true,
-  },
-  {
-    id: "agreements",
-    label: "Agreements",
-    title: "Agreements that live on-chain.",
-    text: "Sign binding digital agreements directly in your chat. Mutual cryptographic signatures anchored to verifiable zero-knowledge proofs.",
-    src: "",
-    fingers: "",
-    w: 390,
-    h: 844,
-    m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-    f: { x: 0, y: 0, w: 0, h: 0 },
-    Screen: AgreementScreen,
-    cssFrame: true,
-  },
-  {
-    id: "invoices",
-    label: "Invoices",
-    title: "Instant verifiable settlement.",
-    text: "Every invoice links directly to cryptographic receipts on-chain. Track paid status, timestamps, and verifiable payment hashes in real time.",
-    src: "",
-    fingers: "",
-    w: 390,
-    h: 844,
-    m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-    f: { x: 0, y: 0, w: 0, h: 0 },
-    Screen: InvoicePaidScreen,
-    cssFrame: true,
-  },
-  {
-    id: "updates",
-    label: "Updates",
-    title: "Everything that matters, private.",
-    text: "Get live notifications for incoming payments, signed contracts, and community mentions in a single encrypted chronological feed.",
-    src: "",
-    fingers: "",
-    w: 390,
-    h: 844,
-    m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-    f: { x: 0, y: 0, w: 0, h: 0 },
-    Screen: UpdatesScreen,
-    cssFrame: true,
+    island: "idle",
   },
 ];
+
+/** Screens available to LivePhone by id, including ones not in the scroll story. */
+const SCREENS: Record<string, React.ComponentType<ScreenProps>> = {
+  chat: InvoiceChatScreen,
+  invoice: InvoiceChatScreen,
+  messages: ChatScreen,
+  voice: VoiceCallScreen,
+  video: VideoCallScreen,
+  communities: CommunitiesScreen,
+};
 
 const N = PHONES.length;
 /** Share of each step spent playing its screen before moving to the next. */
@@ -166,40 +94,6 @@ const DWELL = 0.66;
 
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (x: number) => x * x * (3 - 2 * x);
-
-/** Where the middle of the phone falls on the photograph. */
-function phoneCentre(m: number[]) {
-  const gx = 215;
-  const gy = 466;
-  const w = m[3] * gx + m[7] * gy + m[15];
-  return { x: (m[0] * gx + m[4] * gy + m[12]) / w, y: (m[1] * gx + m[5] * gy + m[13]) / w };
-}
-
-const CENTRES = PHONES.map((ph) => phoneCentre(ph.m));
-
-/** Position the photo inside its tile: cover the tile, zoomed towards the phone. */
-function fitPhoto(el: HTMLElement, i: number, zoom: number) {
-  const ph = PHONES[i];
-  if (!ph) return;
-  if (ph.cssFrame) {
-    el.style.setProperty("--s", "1");
-    el.style.setProperty("--ox", "0px");
-    el.style.setProperty("--oy", "0px");
-    el.dataset.fit = "1";
-    return;
-  }
-  const W = el.clientWidth || el.parentElement?.clientWidth || 400;
-  const H = el.clientHeight || el.parentElement?.clientHeight || 500;
-  const sc = Math.max(W / ph.w, H / ph.h) * zoom;
-  const fx = CENTRES[i].x * 0.7 + (ph.w / 2) * 0.3;
-  const fy = CENTRES[i].y * 0.7 + (ph.h / 2) * 0.3;
-  const ox = clamp(W / 2 - fx * sc, W - ph.w * sc, 0);
-  const oy = clamp(H / 2 - fy * sc, H - ph.h * sc, 0);
-  el.style.setProperty("--s", String(sc));
-  el.style.setProperty("--ox", `${ox}px`);
-  el.style.setProperty("--oy", `${oy}px`);
-  el.dataset.fit = "1";
-}
 
 /** The diagonal: upcoming photos wait below and to the right, past ones leave up and to the left. */
 function tileStyle(d: number) {
@@ -238,55 +132,30 @@ function scrollParent(el: HTMLElement | null): HTMLElement | null {
   return (document.scrollingElement as HTMLElement) ?? null;
 }
 
-function PhonePhoto({
+function PhoneTile({
   ph,
   i,
   progress,
   active,
   screen,
+  fit,
 }: {
   ph: Phone;
   i: number;
   progress: number;
   active: boolean;
   screen?: React.ComponentType<ScreenProps>;
+  fit?: number;
 }) {
   const Screen = screen ?? ph.Screen;
-  if (ph.cssFrame) {
-    return (
-      <div className={s.photo} data-photo={i} aria-hidden="true" style={{ display: "grid", placeItems: "center", height: "100%", width: "100%" }}>
-        <div className={s.iphoneFrame}>
-          <div className={s.iphoneIsland} />
-          <div className={s.iphoneScreen}>
-            <Screen p={progress} active={active} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const seconds = ph.clock ? Math.round(ph.clock[0] + (ph.clock[1] - ph.clock[0]) * progress) : 0;
+  // A call island only once the call has connected (VoiceCallScreen connects at p = 0.12).
+  const island: IslandState = ph.island === "call" && progress < 0.12 ? "idle" : ph.island;
   return (
-    <div className={s.photo} data-photo={i} aria-hidden="true">
-      <div className={s.frame}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className={s.base} src={ph.src} width={ph.w} height={ph.h} alt="" loading="lazy" decoding="async" draggable={false} />
-        <div className={s.glass} style={{ transform: `matrix3d(${ph.m.join(",")})` }}>
-          <div className={s.screen}>
-            <Screen p={progress} active={active} />
-          </div>
-        </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {ph.f.w > 0 && (
-          <img
-            className={s.fingers}
-            src={ph.fingers}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            draggable={false}
-            style={{ left: ph.f.x, top: ph.f.y, width: ph.f.w, height: ph.f.h }}
-          />
-        )}
-      </div>
+    <div className={s.photo} data-photo={i}>
+      <DeviceFrame island={active || progress >= 1 ? island : "idle"} callSeconds={seconds} fit={fit}>
+        <Screen p={progress} active={active} />
+      </DeviceFrame>
     </div>
   );
 }
@@ -321,21 +190,16 @@ export function PhoneShowcase() {
     };
   }, []);
 
-  // Size the tiles and fit each photo.
+  // Size the tiles. The device inside scales itself (DeviceFrame).
   const layout = useCallback(() => {
     const deck = deckRef.current;
-    if (!deck) return;
-    if (mode === "scroll") {
-      const dw = deck.clientWidth;
-      const dh = deck.clientHeight;
-      const aspect = 1.25;
-      const tw = Math.min(dw, dh * 0.84 * aspect);
-      deck.style.setProperty("--tw", `${tw}px`);
-      deck.style.setProperty("--th", `${tw / aspect}px`);
-    }
-    deck.querySelectorAll<HTMLElement>("[data-photo]").forEach((el) => {
-      fitPhoto(el, Number(el.dataset.photo), mode === "scroll" ? 1.12 : 1.38);
-    });
+    if (!deck || mode !== "scroll") return;
+    const dw = deck.clientWidth;
+    const dh = deck.clientHeight;
+    const aspect = 1.25;
+    const tw = Math.min(dw, dh * 0.84 * aspect);
+    deck.style.setProperty("--tw", `${tw}px`);
+    deck.style.setProperty("--th", `${tw / aspect}px`);
   }, [mode]);
 
   useEffect(() => {
@@ -485,7 +349,7 @@ export function PhoneShowcase() {
               className={s.tile}
               aria-label={`${ph.label}: ${ph.title}`}
             >
-              <PhonePhoto ph={ph} i={i} progress={progress[i]} active={reduced ? false : i === active} />
+              <PhoneTile ph={ph} i={i} progress={progress[i]} active={reduced ? false : i === active} fit={mode === "scroll" ? 0.9 : 0.88} />
               <figcaption className={s.figcap}>
                 <span className={s.figNum}>
                   {String(i + 1).padStart(2, "0")}
@@ -503,8 +367,8 @@ export function PhoneShowcase() {
 }
 
 /**
- * One photograph on its own, playing its screen on a loop. Used where there
- * is no scroll to drive it, such as the sign-in page.
+ * One phone on its own, playing its screen on a loop. Used where there is no
+ * scroll to drive it, such as the sign-in page.
  */
 export function LivePhone({
   id = "chat",
@@ -513,49 +377,21 @@ export function LivePhone({
   fill,
   className,
 }: {
-  /** Which photograph to use. */
+  /** Which step's island and timing to use. */
   id?: string;
-  /** Which screen to play on it (defaults to the photo's own). */
+  /** Which screen to play (defaults to the step's own): chat, invoice, messages, voice, video, communities. */
   screen?: string;
-  /** Override how far the photo is zoomed towards the phone. */
+  /** Kept for compatibility; the device always fits its box now. Values above 1 are ignored. */
   zoom?: number;
-  /** Instead of a zoom: the share of the tile's height the whole phone should take (e.g. 0.85). */
+  /** Share of the box's limiting side the phone takes (e.g. 0.85). */
   fill?: number;
   className?: string;
 }) {
   const i = Math.max(0, PHONES.findIndex((ph) => ph.id === id));
-  const ScreenOverride = screen ? PHONES.find((ph) => ph.id === screen)?.Screen : undefined;
+  const ScreenOverride = screen ? SCREENS[screen] : undefined;
   const ref = useRef<HTMLDivElement>(null);
   const [p, setP] = useState(0);
   const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const fit = () => {
-      const photo = el.querySelector<HTMLElement>("[data-photo]");
-      if (!photo) return;
-      let z = zoom ?? (el.clientWidth < 520 ? 1.4 : 1.06);
-      if (fill) {
-        // Size the photo so the whole phone takes `fill` of the tile's height,
-        // whatever the tile's shape, but never leave the tile uncovered.
-        const ph = PHONES[i];
-        const W = photo.clientWidth || el.clientWidth || 400;
-        const H = photo.clientHeight || el.clientHeight || 500;
-        if (W && H) {
-          const cover = Math.max(W / ph.w, H / ph.h);
-          const glassH = Math.hypot(ph.m[4], ph.m[5]) * 932;
-          z = Math.max(1, (fill * H) / glassH / cover);
-        }
-      }
-      fitPhoto(photo, i, z);
-    };
-    fit();
-    if (typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(fit);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [i, zoom, fill]);
 
   useEffect(() => {
     const el = ref.current;
@@ -587,9 +423,10 @@ export function LivePhone({
     return () => window.clearInterval(timer);
   }, [visible]);
 
+  const fit = fill ?? (zoom && zoom <= 1 ? zoom : 0.9);
   return (
     <div ref={ref} className={`${s.live} ${className ?? ""}`}>
-      <PhonePhoto ph={PHONES[i]} i={i} progress={p} active={visible} screen={ScreenOverride} />
+      <PhoneTile ph={PHONES[i]} i={i} progress={p} active={visible} screen={ScreenOverride} fit={fit} />
     </div>
   );
 }

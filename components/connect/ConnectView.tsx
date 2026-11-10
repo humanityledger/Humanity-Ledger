@@ -466,9 +466,9 @@ export function ConnectView(props: ConnectViewProps) {
 
         <div className={s.showcase}>
           <div className={s.visual}>
-            {/* The front-on photograph: no fingers cross the glass and no
-                perspective, so the live chat screen sits exactly on it. */}
-            <LivePhone id="voice" screen="chat" fill={0.8} />
+            {/* Vector iPhone with the live Ledger Chat conversation: an Aztec
+                private invoice settling inside an MLS-encrypted DM. */}
+            <LivePhone id="chat" fill={0.86} />
           </div>
           <Facts />
         </div>

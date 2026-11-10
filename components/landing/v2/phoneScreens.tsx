@@ -1,19 +1,25 @@
 "use client";
 
 /**
- * The Ledger Chat screens shown inside the iPhone photographs and CSS frames
- * on the landing page. Each screen is laid out on a 410 x 912 canvas (an iPhone 15 Pro
- * at 1x plus room) and receives `p`, its progress from 0 to 1, from the scroll position.
+ * The Ledger Chat screens shown inside the vector iPhone (DeviceFrame.tsx) on
+ * the landing page and the sign-in page. Each screen fills the 430 x 932
+ * display (iPhone 15 / 16 Pro Max, 1 px = 1 pt) and receives `p`, its
+ * progress from 0 to 1, from the scroll position or the loop on /connect.
+ *
+ * The Dynamic Island is drawn by the frame, not by the screens.
+ *
+ * Everything a screen says must be true of the product today: no "verified"
+ * badge (peer proof, G7, is open), no "Encrypted" badge on communities (their
+ * posts are server-stored), and payments say which Aztec network they run on.
  */
 
 import React from "react";
 import {
   ArrowLeft,
-  Bell,
+  Hash,
+  Megaphone,
   Check,
   CheckCheck,
-  FileSignature,
-  FileText,
   Lock,
   Mic,
   MicOff,
@@ -40,7 +46,6 @@ function StatusBar({ dark = false }: { dark?: boolean }) {
   return (
     <div className={`${s.status} ${dark ? s.statusDark : ""}`}>
       <span className={s.statusTime}>9:41</span>
-      <span className={s.island} aria-hidden="true" />
       <span className={s.statusIcons} aria-hidden="true">
         <svg width="19" height="12" viewBox="0 0 19 12">
           <rect x="0" y="8" width="3.2" height="4" rx="1" fill="currentColor" />
@@ -154,7 +159,11 @@ export function VoiceCallScreen({ p, active }: ScreenProps) {
       <div className={s.callTop}>
         <span className={s.callBadge}>
           <Lock size={13} strokeWidth={2.2} />
-          Encrypted call
+          Encrypted · DTLS-SRTP
+        </span>
+        <span className={`${s.callBadge} ${s.callBadgeSoft} ${at(p, 0.3)}`}>
+          <Mic size={13} strokeWidth={2.2} />
+          Noise suppression on
         </span>
       </div>
       <div className={`${s.callAvatarWrap} ${active && connected ? s.ringing : ""}`}>
@@ -256,290 +265,169 @@ export function VideoCallScreen({ p, active }: ScreenProps) {
   );
 }
 
-/* ── 4. Private payment / Native Invoice (Exact Ledger Chat Design) ── */
+/* ── 4. Conversation with a private invoice ────────────────────────── */
 
-export function PaymentScreen({ p }: ScreenProps) {
-  const settled = p >= 0.65;
+/**
+ * A direct message with an Aztec private invoice settling in place. Used as
+ * the first step on the landing page and as the phone on /connect.
+ * The invoice goes Unpaid -> Proving (the proof is made on the payer's
+ * device) -> Paid.
+ */
+export function InvoiceChatScreen({ p }: ScreenProps) {
+  const proving = p >= 0.46 && p < 0.7;
+  const paid = p >= 0.7;
   return (
     <div className={s.screenLight}>
       <StatusBar />
       <div className={s.chatHead}>
         <ArrowLeft size={24} strokeWidth={2} />
-        <span className={s.chatAvatar} style={{ background: "#fef0e6", color: "#b94b15" }}>81</span>
+        <span className={s.chatAvatar} style={{ background: "#ece5ff", color: "#5200ff" }}>A</span>
         <span className={s.chatWho}>
-          <span className={s.chatName}>0x812d…d1ea</span>
-          <span className={s.chatSub}>0x812d…d1ea</span>
+          <span className={s.chatName}>Alice</span>
+          <span className={`${s.chatSub} ${s.mono}`}>zk:alice</span>
         </span>
         <Phone size={22} strokeWidth={1.9} />
         <Video size={24} strokeWidth={1.9} />
       </div>
-      <div className={s.chatBody} style={{ background: "#fff5ed" }}>
+      <div className={s.chatBody}>
         <span className={s.e2ee}>
           <Lock size={13} strokeWidth={2.2} />
-          Messages are end to end encrypted. Tap for details
+          End-to-end encrypted · MLS
         </span>
-        <div className={`${s.msgIn} ${s.in}`} style={{ background: "#fff", color: "#15171c" }}>
-          Just paid the reservation so we wouldn't lose it.
-          <span className={s.time}>13:20</span>
+        <span className={s.day}>Today</span>
+        <div className={`${s.msgIn} ${s.in}`}>
+          I paid for dinner. Your share is 42 USDC.<span className={s.time}>21:04</span>
         </div>
-        <div className={`${s.msgOut} ${s.in}`} style={{ background: "#111318", color: "#fff" }}>
-          Legend 🙌 How do I send you my half?
-          <span className={s.time}>13:20</span>
-        </div>
-        <div className={`${s.msgIn} ${s.in}`} style={{ background: "#fff", color: "#15171c" }}>
-          Let me create an invoice right here in Ledger Chat.
-          <span className={s.time}>13:20</span>
-        </div>
-        <div className={`${s.msgOut} ${s.in}`} style={{ background: "#111318", color: "#fff" }}>
-          Sweet, send it over.
-          <span className={s.time}>13:20</span>
+        <div className={`${s.msgOut} ${at(p, 0.1)}`}>
+          Send me a private invoice and I will pay it here.
+          <span className={s.time}>
+            21:05 <CheckCheck size={15} strokeWidth={2.2} />
+          </span>
         </div>
 
-        {/* The Exact Invoice Card from Ledger Chat Screenshots */}
-        <div className={`${s.ledgerInvoiceCard} ${s.in}`}>
+        <div className={`${s.ledgerInvoiceCard} ${at(p, 0.24)}`}>
           <div className={s.invTop}>
             <span className={s.invDocTag}>
-              <FileText size={14} strokeWidth={2.2} />
-              Invoice INV-2026-6638
+              <ShieldCheck size={14} strokeWidth={2.2} />
+              Private invoice
             </span>
-            <span className={`${s.invStatusTag} ${settled ? s.invStatusPaid : s.invStatusUnpaid}`}>
+            <span className={`${s.invStatusTag} ${paid ? s.invStatusPaid : proving ? s.invStatusProving : s.invStatusUnpaid}`}>
               <span className={s.invDot} />
-              {settled ? "Paid" : "Unpaid"}
+              {paid ? "Paid" : proving ? "Proving" : "Unpaid"}
             </span>
           </div>
-          <div className={s.invTitle}>Cabin Rental Weekend Split</div>
-          <div className={s.invParties}>From zk:812daF to zk:0xF207…2A8e</div>
+          <div className={s.invTitle}>Dinner, Friday</div>
+          <div className={s.invParties}>From zk:alice</div>
           <div className={s.invItemRow}>
-            <span>Aztec zk.money Native Chat Integ…</span>
-            <span>140.00</span>
+            <span>Your share</span>
+            <span className={s.num}>42.00</span>
           </div>
           <div className={s.invDivider} />
           <div className={s.invTotalRow}>
             <span>Total</span>
-            <span className={s.invTotalVal}>140.00 USDC</span>
+            <span className={`${s.invTotalVal} ${s.num}`}>42.00 USDC</span>
           </div>
           <div className={s.invFooterRow}>
-            <span className={s.invDue}>Due 22/11/2026</span>
-            <span className={`${s.invActionBtn} ${settled ? s.invActionDone : ""}`}>
-              {settled ? "View" : "Pay Invoice"}
+            <span className={s.invDue}>Aztec testnet</span>
+            <span className={`${s.invActionBtn} ${paid ? s.invActionDone : ""}`}>
+              {paid ? (
+                <span className={s.invBtnInner}><Check size={14} strokeWidth={2.6} /> Paid</span>
+              ) : proving ? (
+                <span className={s.invBtnInner}><span className={s.spinner} /> Making proof</span>
+              ) : (
+                "Pay privately"
+              )}
             </span>
           </div>
-          <span className={s.invReaction}>❤️</span>
         </div>
 
-        <div className={`${s.msgOut} ${at(p, 0.45)}`} style={{ background: "#111318", color: "#fff" }}>
-          So who's driving on Friday?
-          <span className={s.time}>13:23</span>
-        </div>
-        <div className={`${s.msgIn} ${at(p, 0.7)}`} style={{ background: "#fff", color: "#15171c" }}>
-          My car is getting serviced, can we take yours?
-          <span className={s.time}>13:23</span>
-        </div>
-        <div className={`${s.msgOut} ${at(p, 0.85)}`} style={{ background: "#111318", color: "#fff" }}>
-          Sure, my trunk has plenty of room for our bags
-          <span className={s.time}>13:24</span>
-        </div>
-      </div>
-      <Composer />
-    </div>
-  );
-}
-
-/* ── 5. Communities Showcase Screen ────────────────────────────────── */
-
-export function CommunitiesScreen({ p }: ScreenProps) {
-  return (
-    <div className={s.screenLight}>
-      <StatusBar />
-      <div className={s.commHead}>
-        <span className={s.commTitle}>Communities</span>
-        <span className={s.commAction}>
-          <Plus size={20} strokeWidth={2.2} />
-        </span>
-      </div>
-      <div className={s.commList}>
-        <div className={`${s.commItem} ${s.in}`}>
-          <div className={s.commAvatar} style={{ background: "#5200ff", color: "#fff" }}>
-            HL
-          </div>
-          <div className={s.commMeta}>
-            <div className={s.commNameRow}>
-              <span className={s.commName}>Humanity Core Network</span>
-              <span className={s.commBadge}>
-                <Lock size={11} strokeWidth={2} /> Encrypted
-              </span>
-            </div>
-            <div className={s.commSub}>2,410 members • 12 online</div>
-            <div className={s.commLastMsg}>Protocol upgrade deployed to Aztec rollup…</div>
-          </div>
-        </div>
-        <div className={`${s.commItem} ${at(p, 0.25)}`}>
-          <div className={s.commAvatar} style={{ background: "#10b981", color: "#fff" }}>
-            ZK
-          </div>
-          <div className={s.commMeta}>
-            <div className={s.commNameRow}>
-              <span className={s.commName}>Zero-Knowledge Builders</span>
-              <span className={s.commBadge}>
-                <Lock size={11} strokeWidth={2} /> Encrypted
-              </span>
-            </div>
-            <div className={s.commSub}>840 members • 5 online</div>
-            <div className={s.commLastMsg}>Client-side proving in WASM running at 120ms…</div>
-          </div>
-        </div>
-        <div className={`${s.commItem} ${at(p, 0.55)}`}>
-          <div className={s.commAvatar} style={{ background: "#f59e0b", color: "#fff" }}>
-            DF
-          </div>
-          <div className={s.commMeta}>
-            <div className={s.commNameRow}>
-              <span className={s.commName}>Private DeFi Alliance</span>
-              <span className={s.commBadge}>
-                <Lock size={11} strokeWidth={2} /> Encrypted
-              </span>
-            </div>
-            <div className={s.commSub}>3,120 members • 48 online</div>
-            <div className={s.commLastMsg}>USDC private settlement volume hit $14M…</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── 6. Smart Agreement Screen ─────────────────────────────────────── */
-
-export function AgreementScreen({ p }: ScreenProps) {
-  const signed = p >= 0.5;
-  return (
-    <div className={s.screenLight}>
-      <StatusBar />
-      <ChatHeader name="Irina Vlad" initials="IV" sub="online" />
-      <div className={s.chatBody}>
-        <span className={s.e2ee}>
-          <Lock size={13} strokeWidth={2.2} />
-          Messages are end to end encrypted
-        </span>
-        <div className={`${s.msgIn} ${s.in}`}>
-          I've drawn up our mutual terms. Review and sign when you are ready.
-          <span className={s.time}>16:10</span>
-        </div>
-        <div className={`${s.agreementCard} ${s.in}`}>
-          <div className={s.agTop}>
-            <span className={s.agTag}>
-              <ShieldCheck size={14} /> Smart Agreement
-            </span>
-            <span className={`${s.agStatus} ${signed ? s.agSigned : s.agPending}`}>
-              {signed ? "Signed on-chain ✓" : "Pending signature"}
-            </span>
-          </div>
-          <div className={s.agTitle}>Software Consulting Agreement Q4</div>
-          <div className={s.agParties}>
-            <div>
-              <span>Party A:</span> 0xA4f2…9C1b (You)
-            </div>
-            <div>
-              <span>Party B:</span> 0x812d…d1ea (Client)
-            </div>
-          </div>
-          <div className={s.agDigest}>Digest: 0x7a89…4e21 (Poseidon Hash)</div>
-          <div className={s.agBtn}>
-            {signed ? "View Aztec Proof Hash" : "Sign with Wallet"}
-          </div>
-        </div>
-        <div className={`${s.msgOut} ${at(p, 0.6)}`}>
-          Signed directly from my wallet! The proof is verifiable on-chain.
+        <div className={`${s.msgOut} ${at(p, 0.76)}`}>
+          Paid.
           <span className={s.time}>
-            16:12 <CheckCheck size={15} strokeWidth={2.2} />
+            21:06 <CheckCheck size={15} strokeWidth={2.2} />
           </span>
         </div>
+        <div className={`${s.msgIn} ${at(p, 0.88)}`}>
+          Got it, thank you!<span className={s.time}>21:06</span>
+        </div>
       </div>
       <Composer />
     </div>
   );
 }
 
-/* ── 7. Invoice Settled Details Screen ─────────────────────────────── */
+/* ── 5. Communities ─────────────────────────────────────────────────── */
 
-export function InvoicePaidScreen({ p }: ScreenProps) {
-  return (
-    <div className={s.screenLight}>
-      <StatusBar />
-      <div className={s.invDetailHead}>
-        <ArrowLeft size={22} />
-        <span>Invoice Details</span>
-        <span style={{ width: 22 }} />
-      </div>
-      <div className={s.invDetailCard}>
-        <div className={s.invSuccessBadge}>
-          <Check size={28} strokeWidth={2.5} />
-        </div>
-        <div className={s.invDetailAmount}>140.00 USDC</div>
-        <div className={s.invDetailStatus}>Payment Settled On-Chain</div>
-        <div className={s.invDetailRows}>
-          <div className={s.invRow}>
-            <span>Invoice ID</span>
-            <span>INV-2026-6638</span>
-          </div>
-          <div className={s.invRow}>
-            <span>Recipient</span>
-            <span>0x812d…d1ea</span>
-          </div>
-          <div className={s.invRow}>
-            <span>Payer</span>
-            <span>0xF207…2A8e</span>
-          </div>
-          <div className={s.invRow}>
-            <span>Network</span>
-            <span>Ethereum / Aztec</span>
-          </div>
-          <div className={s.invRow}>
-            <span>Transaction</span>
-            <span className={s.invHash}>0x4e8a…9c1f</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── 8. Updates & Notifications Feed Screen ────────────────────────── */
-
-export function UpdatesScreen({ p }: ScreenProps) {
+/**
+ * A community workspace: channels, a pinned announcement and a proposal
+ * with one vote per wallet. Community posts are stored on the server (they
+ * are not end-to-end encrypted like direct messages), so no lock badge here.
+ */
+export function CommunitiesScreen({ p }: ScreenProps) {
+  const yes = Math.round(38 + 26 * Math.min(1, Math.max(0, (p - 0.35) / 0.5)));
   return (
     <div className={s.screenLight}>
       <StatusBar />
       <div className={s.commHead}>
-        <span className={s.commTitle}>Updates</span>
+        <span className={s.commTitleWrap}>
+          <span className={s.commAvatar} style={{ background: "#15171c", color: "#fff", width: 38, height: 38, fontSize: 14 }}>
+            HL
+          </span>
+          <span className={s.commTitleText}>
+            <span className={s.commTitle}>Builders</span>
+            <span className={s.commSub}>214 members</span>
+          </span>
+        </span>
         <span className={s.commAction}>
-          <Bell size={20} strokeWidth={2} />
+          <Users size={18} strokeWidth={2.1} />
         </span>
       </div>
-      <div className={s.updatesList}>
-        <div className={`${s.updateItem} ${s.in}`}>
-          <span className={s.updateDot} style={{ background: "#10b981" }} />
-          <div className={s.updateContent}>
-            <div className={s.updateTitle}>Payment Received: 140.00 USDC</div>
-            <div className={s.updateSub}>From 0x812d…d1ea for Cabin Rental Split</div>
-            <div className={s.updateTime}>2 minutes ago • Confirmed</div>
-          </div>
+      <div className={s.commTabs}>
+        <span className={s.commTabOn}>Chat & Channels</span>
+        <span>Posts</span>
+        <span>Governance</span>
+        <span>Members</span>
+      </div>
+      <div className={s.commList}>
+        <div className={`${s.chanRow} ${s.in}`}>
+          <Hash size={17} strokeWidth={2.2} /> <span className={s.chanName}>general</span>
+          <span className={s.chanCount}>3</span>
         </div>
-        <div className={`${s.updateItem} ${at(p, 0.35)}`}>
-          <span className={s.updateDot} style={{ background: "#5200ff" }} />
-          <div className={s.updateContent}>
-            <div className={s.updateTitle}>Smart Agreement Signed</div>
-            <div className={s.updateSub}>Irina Vlad countersigned Consulting Q4</div>
-            <div className={s.updateTime}>1 hour ago • Verified on-chain</div>
-          </div>
+        <div className={`${s.chanRow} ${s.in}`}>
+          <Megaphone size={17} strokeWidth={2.1} /> <span className={s.chanName}>announcements</span>
         </div>
-        <div className={`${s.updateItem} ${at(p, 0.7)}`}>
-          <span className={s.updateDot} style={{ background: "#3b82f6" }} />
-          <div className={s.updateContent}>
-            <div className={s.updateTitle}>Identity Credential Anchored</div>
-            <div className={s.updateSub}>Depth-32 Merkle Tree leaf updated</div>
-            <div className={s.updateTime}>3 hours ago • Zero-Knowledge proof ready</div>
+        <div className={`${s.chanRow} ${at(p, 0.1)}`}>
+          <Hash size={17} strokeWidth={2.2} /> <span className={s.chanName}>aztec-contracts</span>
+          <span className={s.chanCount}>12</span>
+        </div>
+
+        <div className={`${s.pinCard} ${at(p, 0.2)}`}>
+          <span className={s.pinTag}>Pinned</span>
+          <span className={s.pinText}>Weekly call moves to Thursday 17:00 CET.</span>
+        </div>
+
+        <div className={`${s.propCard} ${at(p, 0.3)}`}>
+          <div className={s.propTop}>
+            <span className={s.propTag}>Proposal</span>
+            <span className={s.propRule}>1 wallet, 1 vote</span>
           </div>
+          <div className={s.propTitle}>Fund a second audit of the escrow contract</div>
+          <div className={s.propBar}>
+            <span style={{ width: `${yes}%` }} />
+          </div>
+          <div className={s.propNums}>
+            <span className={s.num}>Yes {yes}%</span>
+            <span className={s.num}>No {100 - yes}%</span>
+          </div>
+          <span className={`${s.propVote} ${p >= 0.6 ? s.propVoted : ""}`}>
+            {p >= 0.6 ? (
+              <>
+                <Check size={14} strokeWidth={2.6} /> You voted yes
+              </>
+            ) : (
+              "Vote"
+            )}
+          </span>
         </div>
       </div>
     </div>

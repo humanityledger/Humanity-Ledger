@@ -484,8 +484,8 @@ export function HumanityLanding() {
               Messages, calls and payments. <em>One private place.</em>
             </h2>
             <p className={s.lead}>
-              A conversation, a voice call, a video call and a payment, the way they look on your phone. Keep scrolling
-              to watch each one happen.
+              A conversation with a private invoice, a voice call, a video call and a community, the way they look on
+              your phone. Keep scrolling to watch each one happen.
             </p>
           </div>
           <PhoneShowcase />

@@ -212,11 +212,16 @@
   transform-style: flat;
 }
 
+/* The tile is a studio plate: a soft key light from above on a cool grey
+   sweep. The phone inside is vector (DeviceFrame) and scales to fit. */
 .photo {
   position: relative;
   overflow: hidden;
   border-radius: 26px;
-  background: #d6d7d9;
+  background:
+    radial-gradient(110% 70% at 50% -5%, #ffffff 0%, rgba(255, 255, 255, 0) 62%),
+    radial-gradient(90% 55% at 50% 108%, rgba(82, 0, 255, 0.07) 0%, rgba(82, 0, 255, 0) 70%),
+    linear-gradient(180deg, #f3f4f6 0%, #e4e6ea 100%);
   box-shadow:
     0 60px 110px -50px rgba(16, 24, 40, 0.55),
     0 18px 40px -24px rgba(16, 24, 40, 0.35),
@@ -247,72 +252,6 @@
   height: 100%;
   border-radius: inherit;
   box-shadow: none;
-}
-
-.frame {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 1600px;
-  transform-origin: 0 0;
-  transform: translate(var(--ox, 0px), var(--oy, 0px)) scale(var(--s, 0.4));
-  opacity: 1;
-  transition: opacity 0.35s ease;
-}
-
-.photo[data-fit] .frame {
-  opacity: 1;
-}
-
-.base {
-  display: block;
-  width: 1600px;
-  height: auto;
-  user-select: none;
-}
-
-.glass {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 430px;
-  height: 932px;
-  transform-origin: 0 0;
-  border-radius: 56px;
-  background: transparent;
-}
-
-.screen {
-  position: absolute;
-  inset: 0;
-  border-radius: 56px;
-  overflow: hidden;
-  background: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--hl-font), "Segoe UI", sans-serif;
-  -webkit-font-smoothing: antialiased;
-  line-height: 1.3;
-  letter-spacing: -0.005em;
-  isolation: isolate;
-}
-
-/* The glass catches the same light as the room. */
-.screen::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 50;
-  pointer-events: none;
-  background:
-    linear-gradient(118deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 34%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.07) 100%);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
-  border-radius: inherit;
-}
-
-.fingers {
-  position: absolute;
-  pointer-events: none;
-  user-select: none;
 }
 
 .figcap {
@@ -392,7 +331,7 @@
   }
 }
 
-/* ══ The screens (a 410 x 912 canvas) ═══════════════════════════ */
+/* ══ The screens (the 430 x 932 display) ══════════════════════ */
 
 .in {
   animation: pop 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -469,17 +408,6 @@
 
 .statusTime {
   letter-spacing: -0.01em;
-}
-
-.island {
-  position: absolute;
-  left: 50%;
-  top: 11px;
-  width: 124px;
-  height: 36px;
-  border-radius: 20px;
-  background: #000;
-  transform: translateX(-50%);
 }
 
 .statusIcons {
@@ -643,11 +571,6 @@
   }
 }
 
-.chatBodyPay {
-  /* Keeps the payment clear of the finger in the photograph. */
-  padding-bottom: 118px;
-}
-
 /* Composer */
 .composer {
   flex: none;
@@ -704,6 +627,15 @@
 
 .callTop {
   margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.callBadgeSoft {
+  background: rgba(48, 209, 88, 0.14);
+  color: #7ee2a0;
 }
 
 .callBadge {
@@ -942,22 +874,6 @@
   }
 }
 
-.figure {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 84%;
-  transform-origin: 50% 100%;
-  /* A phone camera at arm's length: the person is soft against the window. */
-  filter: blur(6px) saturate(0.9);
-}
-
-.videoLive .figure {
-  animation: sway 6s ease-in-out infinite alternate;
-}
-
 @keyframes sway {
   from {
     transform: translateX(-3px) rotate(-0.5deg);
@@ -1059,43 +975,6 @@
   color: #fff;
 }
 
-/* ── Private payment ── */
-.payCard {
-  align-self: flex-end;
-  width: 78%;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px 18px 14px;
-  border-radius: 22px;
-  border-bottom-right-radius: 6px;
-  background: #111318;
-  color: #fff;
-}
-
-.payTop {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.72);
-}
-
-.payAmount {
-  font-size: 31px;
-  font-weight: 650;
-  letter-spacing: -0.025em;
-  font-variant-numeric: tabular-nums;
-}
-
-.payRow {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13.5px;
-  color: rgba(255, 255, 255, 0.75);
-}
-
 .spinner {
   width: 13px;
   height: 13px;
@@ -1111,140 +990,10 @@
   }
 }
 
-.sheet {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 12px 24px 90px;
-  border-radius: 32px 32px 0 0;
-  background: #fff;
-  color: #0b0c0f;
-  box-shadow:
-    0 -18px 50px rgba(16, 24, 40, 0.16),
-    0 0 0 999px rgba(8, 10, 14, 0.32);
-  transition:
-    transform 0.65s cubic-bezier(0.3, 0.7, 0.2, 1),
-    box-shadow 0.5s ease;
-}
-
-.sheetDown {
-  transform: translateY(105%);
-  box-shadow:
-    0 -18px 50px rgba(16, 24, 40, 0),
-    0 0 0 999px rgba(8, 10, 14, 0);
-}
-
-.grabber {
-  width: 40px;
-  height: 5px;
-  border-radius: 3px;
-  background: #d5d8de;
-  margin-bottom: 18px;
-}
-
-.sheetTitle {
-  font-size: 21px;
-  font-weight: 650;
-  letter-spacing: -0.015em;
-}
-
-.sheetTo {
-  margin-top: 4px;
-  font-size: 15px;
-  color: #6b7280;
-}
-
-.sheetAmount {
-  margin-top: 22px;
-  display: flex;
-  align-items: baseline;
-  font-size: 58px;
-  font-weight: 650;
-  letter-spacing: -0.035em;
-  font-variant-numeric: tabular-nums;
-}
-
-.caret {
-  align-self: center;
-  width: 3px;
-  height: 50px;
-  margin-left: 3px;
-  border-radius: 2px;
-  background: #111318;
-  animation: caret 1s steps(2, start) infinite;
-}
-
 @keyframes caret {
   to {
     visibility: hidden;
   }
-}
-
-.sheetUnit {
-  margin-left: 10px;
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: 0;
-  color: #8a909c;
-}
-
-.sheetNote {
-  margin-top: 18px;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: #f4f5f7;
-  color: #5b6270;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.sheetNote svg {
-  flex: none;
-  margin-top: 2px;
-}
-
-.sheetBtn {
-  position: relative;
-  overflow: hidden;
-  margin-top: 22px;
-  width: 100%;
-  height: 60px;
-  border-radius: 30px;
-  display: grid;
-  place-items: center;
-  background: #111318;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 600;
-  transition:
-    transform 0.2s ease,
-    background 0.2s ease;
-}
-
-.sheetBtnPressed {
-  transform: scale(0.97);
-  background: #2a2d35;
-}
-
-.sheetBtnPressed::after {
-  content: "";
-  position: absolute;
-  left: 52%;
-  top: 50%;
-  width: 24px;
-  height: 24px;
-  margin: -12px 0 0 -12px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.35);
-  animation: ripple 0.7s ease-out forwards;
 }
 
 @keyframes ripple {
@@ -1252,13 +1001,6 @@
     transform: scale(16);
     opacity: 0;
   }
-}
-
-.sheetBal {
-  margin-top: 14px;
-  font-size: 13.5px;
-  color: #8a909c;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ── Realistic Photographic Portrait for Video Call ── */
@@ -1483,55 +1225,6 @@
   color: #344054;
 }
 
-.invReaction {
-  position: absolute;
-  bottom: -10px;
-  left: 18px;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  display: grid;
-  place-items: center;
-  font-size: 13px;
-}
-
-/* ── CSS iPhone 15 Pro Frame for New Showcases ── */
-.iphoneFrame {
-  position: relative;
-  width: 390px;
-  height: 844px;
-  background: #000;
-  border-radius: 54px;
-  border: 4px solid #38393d;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.12) inset,
-    0 30px 70px rgba(0, 0, 0, 0.35);
-  overflow: hidden;
-  margin: auto;
-}
-
-.iphoneIsland {
-  position: absolute;
-  top: 11px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 120px;
-  height: 34px;
-  background: #000;
-  border-radius: 20px;
-  z-index: 50;
-}
-
-.iphoneScreen {
-  position: absolute;
-  inset: 0;
-  border-radius: 50px;
-  overflow: hidden;
-  background: #fff;
-}
-
 /* ── Communities Screen ── */
 .commHead {
   padding: 16px 20px 12px;
@@ -1565,17 +1258,6 @@
   gap: 14px;
 }
 
-.commItem {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  padding: 12px;
-  background: #fff;
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-}
-
 .commAvatar {
   width: 46px;
   height: 46px;
@@ -1587,264 +1269,15 @@
   flex-shrink: 0;
 }
 
-.commMeta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.commNameRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.commName {
-  font-size: 15px;
-  font-weight: 650;
-  color: #101828;
-}
-
-.commBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #027a48;
-  background: #ecfdf3;
-  padding: 1px 6px;
-  border-radius: 10px;
-}
-
 .commSub {
   font-size: 12px;
   color: #667085;
-}
-
-.commLastMsg {
-  font-size: 12.5px;
-  color: #475467;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ── Smart Agreement Card ── */
-.agreementCard {
-  align-self: flex-start;
-  width: 88%;
-  background: #ffffff;
-  border-radius: 18px;
-  padding: 16px;
-  border: 1.5px solid #e0e2e8;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 6px 0;
-}
-
-.agTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.agTag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #5200ff;
-}
-
-.agStatus {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 12px;
-}
-
-.agSigned {
-  background: #ecfdf3;
-  color: #027a48;
-}
-
-.agPending {
-  background: #fff8e6;
-  color: #b54708;
-}
-
-.agTitle {
-  font-size: 15.5px;
-  font-weight: 700;
-  color: #101828;
-}
-
-.agParties {
-  font-size: 12px;
-  color: #475467;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.agParties span {
-  font-weight: 600;
-  color: #101828;
-}
-
-.agDigest {
-  font-size: 11px;
-  color: #98a2b3;
-  font-family: var(--font-mono, monospace);
-  background: #f9fafb;
-  padding: 4px 8px;
-  border-radius: 6px;
-}
-
-.agBtn {
-  margin-top: 4px;
-  background: #5200ff;
-  color: #fff;
-  text-align: center;
-  padding: 8px 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 650;
-}
-
-/* ── Invoice Details Screen ── */
-.invDetailHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  font-size: 17px;
-  font-weight: 650;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.invDetailCard {
-  margin: 24px 20px;
-  background: #fff;
-  border-radius: 24px;
-  padding: 28px 20px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.invSuccessBadge {
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background: #ecfdf3;
-  color: #027a48;
-  display: grid;
-  place-items: center;
-  margin-bottom: 12px;
-}
-
-.invDetailAmount {
-  font-size: 32px;
-  font-weight: 800;
-  color: #101828;
-  letter-spacing: -0.025em;
-}
-
-.invDetailStatus {
-  font-size: 13px;
-  font-weight: 600;
-  color: #027a48;
-  margin-bottom: 24px;
-}
-
-.invDetailRows {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  border-top: 1px dashed #e4e7ec;
-  padding-top: 18px;
-}
-
-.invRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-}
-
-.invRow span:first-child {
-  color: #667085;
-}
-
-.invRow span:last-child {
-  font-weight: 600;
-  color: #101828;
-}
-
-.invHash {
-  font-family: var(--font-mono, monospace);
-  color: #5200ff !important;
-}
-
-/* ── Updates Feed ── */
-.updatesList {
-  display: flex;
-  flex-direction: column;
-  padding: 16px 20px;
-  gap: 14px;
-}
-
-.updateItem {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  padding: 14px;
-  background: #fff;
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-}
-
-.updateDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-top: 6px;
-  flex-shrink: 0;
-}
-
-.updateContent {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
 }
 
 .updateTitle {
   font-size: 14.5px;
   font-weight: 650;
   color: #101828;
-}
-
-.updateSub {
-  font-size: 12.5px;
-  color: #667085;
-}
-
-.updateTime {
-  font-size: 11.5px;
-  color: #98a2b3;
-  margin-top: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1854,4 +1287,195 @@
     animation: none !important;
     transition: none !important;
   }
+}
+
+
+/* ── Shared details ── */
+.mono {
+  font-family: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+  font-size: 12.5px;
+  letter-spacing: 0;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Private invoice states ── */
+.invStatusProving {
+  background: #f1ebff;
+  color: #5200ff;
+}
+
+.invBtnInner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.invActionBtn .spinner {
+  width: 11px;
+  height: 11px;
+  border-width: 1.8px;
+}
+
+/* ── Community workspace ── */
+.commTitleWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.commTitleText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.commTabs {
+  display: flex;
+  gap: 18px;
+  padding: 12px 20px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 14px;
+  font-weight: 500;
+  color: #667085;
+  white-space: nowrap;
+}
+
+.commTabs > span {
+  padding-bottom: 11px;
+}
+
+.commTabOn {
+  color: #101828;
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 #15171c;
+}
+
+.chanRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 6px;
+  color: #475467;
+  font-size: 16px;
+}
+
+.chanName {
+  flex: 1;
+  color: #101828;
+  font-weight: 500;
+}
+
+.chanCount {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 11px;
+  background: #15171c;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.pinCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f7f8fa;
+  border: 1px solid #e4e7ec;
+}
+
+.pinTag,
+.propTag {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #667085;
+}
+
+.pinText {
+  font-size: 15px;
+  color: #101828;
+}
+
+.propCard {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 14px 16px 16px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.04);
+}
+
+.propTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.propRule {
+  font-size: 12px;
+  font-weight: 600;
+  color: #5200ff;
+  background: #f1ebff;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.propTitle {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: #101828;
+}
+
+.propBar {
+  height: 8px;
+  border-radius: 4px;
+  background: #f2f4f7;
+  overflow: hidden;
+}
+
+.propBar > span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: #10b981;
+  transition: width 0.4s ease;
+}
+
+.propNums {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #475467;
+}
+
+.propVote {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: #15171c;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.propVoted {
+  background: #ecfdf3;
+  color: #027a48;
 }

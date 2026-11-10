@@ -789,8 +789,10 @@
   /* Portrait, like the phone in it, so the phone is shown large on phones too. */
   aspect-ratio: 4 / 5;
   max-height: 560px;
-  /* The photograph's own backdrop, so no band shows while it loads. */
-  background: linear-gradient(180deg, #e9e9ea 0%, #d9d9db 100%);
+  /* Studio plate behind the vector phone: a soft key light from above. */
+  background:
+    radial-gradient(120% 80% at 50% 0%, #ffffff 0%, rgba(255, 255, 255, 0) 60%),
+    linear-gradient(180deg, #f3f4f6 0%, #e6e8ec 100%);
   box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.06);
 }
 
