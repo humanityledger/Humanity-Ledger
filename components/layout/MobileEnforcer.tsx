@@ -115,15 +115,14 @@ export function MobileEnforcer({ children }: { children: React.ReactNode }) {
             '/scan',
             '/studio',
 
-            // App hub + docs: same experience on mobile and desktop
+            // Chat + docs: same experience on mobile and desktop
             '/chat',
             '/docs',
             '/settings',
-            '/whitepaper',
         ];
 
         // [Cryptographic-GATE] Always allow dashboard/chat/portfolio so they can reach the ZK-Gate and connect from there
-        DIRECT_ACCESS_ROUTES.push('/terminal', '/chat', '/portfolio');
+        DIRECT_ACCESS_ROUTES.push('/chat', '/communities', '/studio');
 
         const isDirectAccessRoute = DIRECT_ACCESS_ROUTES.some(r => pathname === r || pathname.startsWith(r + '/'));
 
@@ -132,8 +131,7 @@ export function MobileEnforcer({ children }: { children: React.ReactNode }) {
         }
 
         // If it's a mobile device and they try to hit a non-direct access route,
-        // we redirect them to /hub instead of showing a fake mobile landing.
-        // This ensures the App Hub is EXACTLY the same on Android/iOS/PC.
+        // we send them to the chat instead of showing a fake mobile landing.
         if (typeof window !== 'undefined') {
             window.location.replace('/chat');
             return null;

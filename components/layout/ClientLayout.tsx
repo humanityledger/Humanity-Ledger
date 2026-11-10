@@ -38,44 +38,22 @@ const LinkedGate = dynamic(
 // 
 // 
 // Routes that don't need the LinkedGate wrapper (public / self-auth)
-// /chat and /hub handle their own auth — wrapping them with LinkedGate causes
+// /chat handles its own auth — wrapping them with LinkedGate causes
 // redirect loops and blank screen bugs.
 // 
-const PUBLIC_PREFIXES = ['/privacy', '/terms', '/connect', '/sign-up', '/login', '/news', '/chat', '/studio', '/hub', '/academy'];
+const PUBLIC_PREFIXES = ['/privacy', '/terms', '/connect', '/chat', '/studio'];
 
 // 
 // Routes that must NOT get the legacy black Downhead footer
 // 
-const NO_DOWNHEAD_PREFIXES = [
-  '/terminal', '/portfolio', '/academy', '/support',
-  '/privacy', '/terms', '/ticket', '/news', '/connect',
-  '/voss-supremacy', '/predictions', '/ledger',
-  '/gold-registry', '/infrastructure', '/directory', '/company',
-  '/vip', '/faq', '/api-marketplace', '/clearance', '/settings',
-  '/login', '/sign-up', '/legal', '/admin', '/developer', '/forum',
-  '/hub', '/whitepaper', '/manifesto'
-];
+const NO_DOWNHEAD_PREFIXES = ['/privacy', '/terms', '/connect', '/settings', '/legal', '/admin'];
 
 // 
 // Routes that use a bounded-viewport layout (no dead space below content)
 // Everything except the landing page ("/") and the dashboard (managed by
 // LedgerProShell with its own fixed-inset shell) should be fully contained.
 // 
-const BOUNDED_PREFIXES = [
-  '/portfolio', '/academy', '/support', '/news',
-  '/predictions', '/ledger', '/voss-supremacy',
-  '/gold-registry', '/vip', '/developer', '/developers', '/faq',
-  '/ticket', '/settings', '/privacy', '/terms', '/legal',
-  // FIXED: /connect, /sign-up, /login are now bounded — fixed inset-0 overflow-hidden
-  // prevents the black void below content. ConnectPage uses flex fill (not fixed inset-0).
-  '/connect', '/sign-up', '/login',
-  '/admin', '/clearance',
-  '/api-marketplace', '/directory', '/company', '/infrastructure',
-  '/forum', '/chat', '/studio', '/hub', '/whitepaper', '/manifesto',
-  '/docs', // Added to prevent infinite scroll bugs
-  '/blog', // Blog posts are bounded pages
-  '/', // Landing page — prevents white zone below footer
-];
+const BOUNDED_PREFIXES = ['/settings', '/privacy', '/terms', '/legal', '/connect', '/admin', '/chat', '/studio', '/docs', '/'];
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const _pathname = usePathname();
@@ -154,18 +132,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: `NAVIGATED_TO: ${pathname || '/'}` })
       }).catch(() => {});
-      // Funnel step tracking
-      const step = pathname === '/' ? 'LANDING'
-        : pathname.startsWith('/connect') ? 'WALLET_CONNECT'
-        : pathname.startsWith('/terminal') ? 'DASHBOARD'
-        : null;
-      if (step) {
-        fetch('/api/analytics/funnel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ step, ts: Date.now() }),
-        }).catch(() => {});
-      }
     }
   }, [pathname]);
 
@@ -336,7 +302,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     !pathname.startsWith('/sign-up') &&
     !pathname.startsWith('/login') &&
     !pathname.startsWith('/connect') &&
-    !pathname.startsWith('/hub') &&
     !pathname.startsWith('/scan') &&
     (
       pathname.startsWith('/terminal') ||

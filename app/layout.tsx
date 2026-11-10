@@ -41,7 +41,6 @@ import { AntiTamperCore } from "@/components/security/AntiTamperCore";
 
 import { AztecProvider } from "@/context/AztecContext";
 
-import { AztecNativeProvider } from "@/context/AztecNativeContext";
 
 import { WalletConnectProvider } from '@/components/walletconnect/WalletConnectProvider';
 
@@ -597,8 +596,6 @@ export default async function RootLayout({
 
               <AztecProvider>
 
-                <AztecNativeProvider>
-
                   <ClientLayout>
 
                     <CookieProvider>
@@ -620,8 +617,6 @@ export default async function RootLayout({
                     </CookieProvider>
 
                   </ClientLayout>
-
-                </AztecNativeProvider>
 
               </AztecProvider>
 

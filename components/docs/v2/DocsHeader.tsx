@@ -87,7 +87,7 @@ export function DocsHeader({ current }: { current: string }) {
             >
               <Search size={18} strokeWidth={1.9} aria-hidden="true" />
             </button>
-            <Link href="/developers" className={`${s.headerLink} ${s.hideMedium}`}>
+            <Link href="/docs/developers" className={`${s.headerLink} ${s.hideMedium}`}>
               Developers
             </Link>
             <a
@@ -124,7 +124,7 @@ export function DocsHeader({ current }: { current: string }) {
               <DocsNav current={current} onNavigate={() => setDrawerOpen(false)} />
             </div>
             <div className={s.drawerFoot}>
-              <Link href="/developers">Developers</Link>
+              <Link href="/docs/developers">Developers</Link>
               <a href={EXTERNAL_LINKS.github.repo} target="_blank" rel="noopener noreferrer">
                 <Github size={16} strokeWidth={1.75} aria-hidden="true" />
                 GitHub

@@ -35,7 +35,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose/jwt/verify';
 import { APP_FRAME_CSP, isAppFramePath } from './lib/community-apps/framePolicy';
-import { isRetiredApiRoute } from './lib/security/retiredRoutes';
+import { isRetiredApiRoute, retiredPageTarget } from './lib/security/retiredRoutes';
 import { isSessionPayload } from './lib/security/sessionClaims';
 
 // ── Public routes: accessible to EVERYONE (no auth required) ──────────────────
@@ -327,6 +327,13 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
   let earlySession: string | null | undefined;
 
+  // Only Ledger Chat ships. Retired page paths (the old app hub, terminal, portfolio, sign-in pages…)
+  // never render: old links land on the chat, or on /connect for sign-in.
+  if (!pathname.startsWith('/api/')) {
+    const retired = retiredPageTarget(pathname);
+    if (retired) return NextResponse.redirect(new URL(retired, req.url), 308);
+  }
+
   // 1. Edge Rate Limiting for ALL API Routes
   if (pathname.startsWith('/api/')) {
     // T-12: Use the LAST hop of X-Forwarded-For (the Railway proxy IP closest to us).
@@ -387,18 +394,6 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     return publicRes;
   }
 
-
-  // Strict enforcement: ONLY /chat and /portfolio are allowed for authenticated users.
-  // /terminal is strictly redirected to /chat. /hub is allowed.
-  if (pathname === '/terminal' || pathname.startsWith('/terminal/') ) {
-    return NextResponse.redirect(new URL('/chat', req.url));
-  }
-
-  // [FASE 3: App Hub Lock]
-  const LOCKED_ROUTES = ['/dashboard', '/markets', '/governance', '/network', '/qds'];
-  if (LOCKED_ROUTES.some(r => pathname.startsWith(r))) {
-    return NextResponse.redirect(new URL('/chat', req.url));
-  }
 
   // [FASE 18: OFAC / Restricted Jurisdiction Geofencing]
   // Blocks IP addresses from the US and OFAC-sanctioned countries at the edge for PROTECTED app routes.

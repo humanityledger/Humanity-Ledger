@@ -157,7 +157,7 @@ export const RELEASES: Release[] = [
 
 export const changelog: DocPage = {
   slug: "changelog",
-  href: "/changelog",
+  href: "/docs/changelog",
   label: "Changelog",
   summary: "What changed in Ledger Chat, newest first, written from the repository history.",
   keywords: ["changelog", "releases", "updates", "versions", "history", "what's new", "release notes"],

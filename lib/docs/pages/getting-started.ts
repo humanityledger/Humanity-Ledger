@@ -24,7 +24,7 @@ export const overview: DocPage = {
         { title: "Quick start", text: "Sign in, set a PIN and start your first conversation.", href: "/docs/quickstart", icon: "rocket" },
         { title: "Messaging", text: "What is encrypted, what is not, and how to tell the difference.", href: "/docs/ledger-chat", icon: "message" },
         { title: "Architecture", text: "The parts of the system and what each one can see.", href: "/docs/architecture", icon: "server" },
-        { title: "Developer hub", text: "Run the code locally and find your way around the repository.", href: "/developers", icon: "code" },
+        { title: "Developers", text: "Run the code locally and find your way around the repository.", href: "/docs/developers", icon: "code" },
       ],
     },
     { t: "h2", text: "What works today" },

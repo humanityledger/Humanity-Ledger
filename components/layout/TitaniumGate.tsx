@@ -13,10 +13,7 @@ type GateState = 'INTRO' | 'AUTH' | 'APP';
  * legal pages belong here: the terms and the privacy policy must be readable
  * before someone agrees to them. Keep in step with PUBLIC_PATHS in middleware.ts.
  */
-const PUBLIC_PAGES = [
-    '/', '/connect', '/login', '/sign-up', '/terms', '/privacy', '/developers', '/forum', '/news', '/chat', '/studio', '/hub', '/academy',
-    '/docs', '/blog', '/changelog', '/status', '/contact', '/company', '/whitepaper', '/security/audits', '/network/status',
-];
+const PUBLIC_PAGES = ['/', '/connect', '/terms', '/privacy', '/chat', '/studio', '/docs'];
 
 interface GateContextType {
     state: GateState;
@@ -38,7 +35,7 @@ export function TitaniumGate({ children, requiredTier = 'PRO' }: TitaniumGatePro
 
     // Pre-compute isPublicPage synchronously so we can use it as the initial state.
     // This prevents the loader flash on /connect after disconnect.
-    // NOTE: /chat and /hub handle their own auth internally — they must NEVER be
+    // NOTE: /chat handles their own auth internally — they must NEVER be
     // gated here or TitaniumGate will render null causing a blank white screen.
     const initialIsPublicPage = PUBLIC_PAGES.some(
         path => path === pathname || (path !== '/' && pathname?.startsWith(path))
@@ -59,8 +56,8 @@ export function TitaniumGate({ children, requiredTier = 'PRO' }: TitaniumGatePro
         return () => clearTimeout(emergency);
     }, []);
     
-    // Strict Whitelist: connect, docs, terms, privacy, developers, chat and hub are always visible.
-    // /chat and /hub handle their own auth — TitaniumGate must not gate them.
+    // Strict Whitelist: connect, docs, terms, privacy, chat and studio are always visible.
+    // /chat handles its own auth — TitaniumGate must not gate them.
     const isPublicPage = PUBLIC_PAGES.some(
         path => path === pathname || (path !== '/' && pathname?.startsWith(path))
     );

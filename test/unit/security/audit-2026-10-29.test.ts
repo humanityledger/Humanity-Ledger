@@ -28,7 +28,6 @@ vi.mock('next/headers', () => ({
 }));
 vi.mock('@/lib/security/sessionRevocation', () => ({ isSessionTokenRevoked: vi.fn(async () => false) }));
 vi.mock('@/lib/prisma', () => ({ prisma: db, default: db }));
-vi.mock('@/lib/passport/serialize', () => ({ serializePassport: (p: unknown) => p }));
 
 process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdef0123456789abcdef';
 
@@ -38,7 +37,6 @@ import { isCronAuthorized } from '@/lib/security/cronAuth';
 import { isRetiredApiRoute } from '@/lib/security/retiredRoutes';
 import { POST as directPost } from '@/app/api/chat/direct/route';
 import { POST as queuePost } from '@/app/api/chat/queue/route';
-import { PATCH as anchorPatch } from '@/app/api/passport/[slug]/anchor/route';
 
 const VICTIM = '0x00000000000000000000000000000000000beef1';
 const ISSUER = '0x00000000000000000000000000000000000a11ce';
@@ -123,37 +121,6 @@ describe('inbox writes', () => {
   it('chat/direct and chat/queue no longer accept messages', async () => {
     expect((await directPost()).status).toBe(410);
     expect((await queuePost()).status).toBe(410);
-  });
-});
-
-describe('passport anchoring', () => {
-  const patch = (body: unknown) => anchorPatch(
-    new NextRequest('http://localhost/api/passport/abcd-1234/anchor', { method: 'PATCH', body: JSON.stringify(body) }),
-    { params: Promise.resolve({ slug: 'abcd-1234' }) },
-  );
-
-  beforeEach(() => {
-    state.session = { userId: ISSUER };
-    db.productPassport.findUnique.mockResolvedValue({ id: 'p1', issuerAddress: ISSUER, txHash: null, coreEntropy: null, chainId: null });
-  });
-
-  it('refuses a txHash that is not a 32-byte hex string', async () => {
-    expect((await patch({ txHash: 'confirmed!' })).status).toBe(400);
-    expect(db.productPassport.update).not.toHaveBeenCalled();
-  });
-
-  it('refuses a non-integer chainId', async () => {
-    expect((await patch({ chainId: 1.5 })).status).toBe(400);
-  });
-
-  it('refuses re-anchoring to a different transaction', async () => {
-    db.productPassport.findUnique.mockResolvedValue({ id: 'p1', issuerAddress: ISSUER, txHash: '0x' + 'a'.repeat(64), coreEntropy: null, chainId: 1 });
-    expect((await patch({ txHash: '0x' + 'b'.repeat(64) })).status).toBe(409);
-  });
-
-  it('stores a well-formed anchor', async () => {
-    expect((await patch({ txHash: '0x' + 'c'.repeat(64), chainId: 1 })).status).toBe(200);
-    expect(db.productPassport.update).toHaveBeenCalled();
   });
 });
 

@@ -454,12 +454,11 @@ function ConnectedScreen({
           className="w-full grid grid-cols-2 gap-4 mb-14"
         >
           {[
-            { label: 'App Hub', href: '/hub', icon: <LayoutDashboard size={22} strokeWidth={1.5} />, color: 'bg-[#1C1C1E] text-white', border: 'border-transparent' },
             { label: 'Link Session', action: onScan, icon: <ScanLine size={22} strokeWidth={1.5} />, color: 'bg-white text-black', border: 'border-black/10' },
             { label: 'Ledger Chat', href: '/chat', icon: <MessageSquare size={22} strokeWidth={1.5} />, color: 'bg-[#25D366] text-white', border: 'border-transparent' },
-            { label: 'Portfolio', href: '/portfolio', icon: <PieChart size={22} strokeWidth={1.5} />, color: 'bg-[#f5f5f7] text-black', border: 'border-transparent' },
-            { label: 'Studio', href: '/studio/provenance', icon: <Package size={22} strokeWidth={1.5} />, color: 'bg-gradient-to-tr from-purple-500 to-indigo-600 text-white', border: 'border-transparent' },
-            { label: 'Developer Sandbox', href: '/sandbox', icon: <Fingerprint size={22} strokeWidth={1.5} />, color: 'bg-black text-white', border: 'border-transparent' },
+            { label: 'Communities', href: '/communities', icon: <PieChart size={22} strokeWidth={1.5} />, color: 'bg-[#f5f5f7] text-black', border: 'border-transparent' },
+            { label: 'Studio', href: '/studio', icon: <Package size={22} strokeWidth={1.5} />, color: 'bg-gradient-to-tr from-purple-500 to-indigo-600 text-white', border: 'border-transparent' },
+            { label: 'Settings', href: '/settings', icon: <Fingerprint size={22} strokeWidth={1.5} />, color: 'bg-black text-white', border: 'border-transparent' },
           ].map((app, i) => {
             const InnerContent = (
               <div className={`flex flex-col justify-between p-4 h-[120px] rounded-[24px] border ${app.border} ${app.color} shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer`}>
@@ -1215,36 +1214,7 @@ export function MobileLanding() {
     }
   }, [isLinked]);
 
-  //  QR session fulfillment when user arrives via ?session= param 
-  // This handles: desktop generated QR  user scanned on mobile  mobile redirected
-  // with ?session=ID  mobile is now logged in and needs to confirm the handshake.
-  useEffect(() => {
-    if (!isLinked || accountStatus !== 'connected' || !address || !sessionParam) return;
-    const key = `fulfilled_session_${sessionParam}`;
-    if (sessionStorage.getItem(key)) return;
-
-    // Sign then fulfill  API requires EIP-191 proof
-    const message = `Authorize Sovereign Platform Access for session: ${sessionParam}\nAddress: ${address}\nTimestamp: ${Date.now()}`;
-    signMessageAsync({ message })
-      .then((signature) =>
-        fetch(`/api/auth/qr-session?id=${sessionParam}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address, signature, message }),
-        })
-      )
-      .then(res => {
-        if (res.ok) {
-          sessionStorage.setItem(key, 'true');
-          const t = document.createElement('div');
-          t.className = 'fixed top-6 left-4 right-4 z-[99999] bg-emerald-500 text-white text-[11px] font-black uppercase tracking-widest px-5 py-4 rounded-2xl shadow-xl text-center';
-          t.textContent = ' Desktop Platform Unlocked';
-          document.body.appendChild(t);
-          setTimeout(() => t.remove(), 4000);
-        }
-      })
-      .catch(() => {}); // Non-blocking  user already authenticated, this is convenience sync
-  }, [isLinked, address, sessionParam]); // signMessageAsync intentionally omitted  stable wagmi ref
+  // The legacy ?session= fulfilment asked for a signature and posted it to a retired endpoint (410); device linking is /scan.
 
 
 

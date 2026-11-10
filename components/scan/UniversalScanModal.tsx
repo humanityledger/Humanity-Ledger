@@ -184,31 +184,6 @@ export default function UniversalScanModal({
             router.push('/chat');
           }, 900);
           return;
-        } else if (route.type === 'passport' && route.slug) {
-          setSuccessLabel('Opening passport');
-          setStatus('success');
-          setTimeout(() => {
-            onCloseRef.current();
-            router.push(`/passport/${route.slug}`);
-          }, 700);
-          return;
-        } else if (route.type === 'gs1' && route.gtin) {
-          const res = await fetch(`/api/passport/resolve?url=${encodeURIComponent(decodedText)}`);
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            setErrMsg((body as { error?: string }).error || 'No product passport is mapped to this GS1 code yet.');
-            setStatus('error');
-            hasScannedRef.current = false;
-            return;
-          }
-          const data = await res.json();
-          setSuccessLabel('Opening passport');
-          setStatus('success');
-          setTimeout(() => {
-            onCloseRef.current();
-            router.push(`/passport/${data.slug}`);
-          }, 700);
-          return;
         } else {
           setErrMsg(
             'This code is not supported yet. Try a desktop session QR, wallet address, product label URL, or GS1 Digital Link.'

@@ -823,7 +823,7 @@ export function HumanityLanding() {
               </h2>
               <p className={s.lead}>Ledger Chat ships improvements continuously. These are the most recent.</p>
             </div>
-            <Link href="/changelog" className={s.textLink}>
+            <Link href="/docs/changelog" className={s.textLink}>
               Full changelog
               <ArrowUpRight size={16} strokeWidth={2} aria-hidden="true" />
             </Link>

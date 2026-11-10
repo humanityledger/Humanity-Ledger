@@ -62,9 +62,9 @@ export function InstitutionalHeader({ fixed = true, theme = 'dark' }: { fixed?: 
     const pathname = usePathname() ?? '/';
 
     const MENU_ITEMS: Array<{ label: string; href: string; subItems?: Array<{ label: string; href: string }> }> = [
-      { label: 'App Hub', href: "/hub" },
-      { label: 'Portfolio', href: "/portfolio" },
-      { label: 'LedgerChat', href: "/chat" }
+      { label: 'Ledger Chat', href: "/chat" },
+      { label: 'Communities', href: "/communities" },
+      { label: 'Docs', href: "/docs" }
     ];
 
 
@@ -103,11 +103,6 @@ export function InstitutionalHeader({ fixed = true, theme = 'dark' }: { fixed?: 
                 {/* RIGHT: Utility area */}
                 <div className="flex items-center justify-end gap-4 relative z-10 flex-shrink-0 lg:flex-1">
                     <div className="hidden lg:flex items-center gap-4">
-                        {pathname.startsWith('/forum') && (
-                            <Link href="/forum/settings" className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center hover:bg-black/5 transition-colors text-black/60 hover:text-black">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                            </Link>
-                        )}
                         <SystemsUtilityHeader />
                     </div>
 

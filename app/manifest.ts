@@ -50,16 +50,10 @@ export default function manifest(): MetadataRoute.Manifest {
         url: '/chat',
       },
       {
-        name: 'Portfolio',
-        short_name: 'Portfolio',
-        description: 'View your secure zero-knowledge assets',
-        url: '/portfolio',
-      },
-      {
-        name: 'Markets',
-        short_name: 'Markets',
-        description: 'Access institutional market streams',
-        url: '/terminal?tab=markets',
+        name: 'Communities',
+        short_name: 'Communities',
+        description: 'Open your communities',
+        url: '/communities',
       }
     ]
   };

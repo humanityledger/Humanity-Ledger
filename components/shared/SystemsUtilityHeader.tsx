@@ -9,7 +9,6 @@ import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { useUIStore } from '@/lib/store/ui-store';
 import { useSettingsStore } from '@/lib/store/useSettingsStore';
 import { CurrencySwitcher } from './CurrencySwitcher';
-import { useAztecNative } from '@/context/AztecNativeContext';
 import Link from 'next/link';
 
 //  IVORY SYSTEMS UTILITY HEADER 
@@ -19,7 +18,6 @@ export function SystemsUtilityHeader() {
     const { activePanel, setActivePanel } = useUIStore();
     const { nuclearDisconnect } = useSystemSignOut();
     const router = useRouter();
-    const { balance, aztecAddress } = useAztecNative();
 
     const icons: any[] = [];
 
