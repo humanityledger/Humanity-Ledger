@@ -154,7 +154,13 @@ export function AntiTamperCore() {
     });
 
     // ── 5. Keyboard & Context-Menu Hardening ──────────────────────────────
-    const blockContextMenu = (e: MouseEvent) => { e.preventDefault(); };
+    const blockContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('[data-chat-page], [role="menu"], [id^="msg-"], .message-bubble, [data-allow-context]')) {
+        return; // Allow chat message context menu
+      }
+      e.preventDefault();
+    };
 
     const blockKeyboard = (e: KeyboardEvent) => {
       const ctrl  = e.ctrlKey || e.metaKey;

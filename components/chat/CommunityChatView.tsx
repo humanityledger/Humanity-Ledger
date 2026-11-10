@@ -20,6 +20,7 @@ import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
 import { ZkEscrowCard } from '@/components/zk/ZkEscrowCard';
 const ZkStreamManager = dynamic(() => import('@/components/zk/ZkStreamManager').then(m => m.ZkStreamManager), { ssr: false });
 const ZkInvoiceModal = dynamic(() => import('@/components/zk/ZkInvoiceModal').then(m => m.ZkInvoiceModal), { ssr: false });
+import { markDeletedForMe, isHidden } from '@/lib/chat/deleted-messages';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 // Shared sanitizer: no class/style, no remote images, safe links.
@@ -821,11 +822,11 @@ export function CommunityChatView({
 
   // ─── FILTER MESSAGES BY SEARCH & NON-EMPTY ─────────────────────────────────
   const displayMessages = useMemo(() => {
-    const valid = messages.filter(m => m && m.content && m.content.trim().length > 0);
+    const valid = messages.filter(m => m && m.content && m.content.trim().length > 0 && !isHidden(communityId, m.id));
     if (!searchQuery.trim()) return valid;
     const q = searchQuery.toLowerCase();
     return valid.filter(m => m.content.toLowerCase().includes(q));
-  }, [messages, searchQuery]);
+  }, [messages, searchQuery, communityId]);
 
   // ─── GROUPED MESSAGES (group consecutive from same author) ──────────────────
   const groupedMessages = useMemo(() => {
@@ -1119,6 +1120,18 @@ export function CommunityChatView({
               {[
                 { label: 'Reply', icon: Reply, fn: () => { setReplyTo(contextMenu.msg); setContextMenu(null); } },
                 { label: 'Copy text', icon: Copy, fn: () => { navigator.clipboard.writeText(contextMenu.msg.content); toast.success('Copied to clipboard'); setContextMenu(null); } },
+                {
+                  label: 'Delete for me',
+                  icon: Trash2,
+                  fn: () => {
+                    const targetId = contextMenu.msg.id;
+                    markDeletedForMe(communityId, targetId);
+                    markDeletedForMe(null, targetId);
+                    setMessages(prev => prev.filter(m => m.id !== targetId));
+                    setContextMenu(null);
+                    toast.success('Message deleted for you');
+                  }
+                },
                 ...(!isMe(contextMenu.msg) && /^0x[0-9a-fA-F]{40}$/.test(contextMenu.msg.authorAddress || '')
                   ? [
                       // Private payments go to an Aztec address, which the sender enters in the wallet.

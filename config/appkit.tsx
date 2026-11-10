@@ -107,7 +107,6 @@ const metadata = {
     url: appOrigin,
     icons: [`${appOrigin}/logo-mark.png`],
     redirect: {
-        native: 'ledgerchat://',
         universal: typeof window !== 'undefined' ? window.location.origin : 'https://ledgerchat.org',
     },
 }

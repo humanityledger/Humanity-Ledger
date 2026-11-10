@@ -11,6 +11,10 @@ export function ClientFortress() {
   useEffect(() => {
     // 1. DISABLE CONTEXT MENU (Right Click)
     const handleContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('[data-chat-page], [role="menu"], [id^="msg-"], .message-bubble, [data-allow-context]')) {
+        return; // Allow chat message context menu
+      }
       e.preventDefault();
     };
 
