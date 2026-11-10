@@ -22,13 +22,7 @@ export async function GET() {
         // Fallback for missing table/schema mismatch gracefully
         console.warn("[Telemetry Active Error]:", e.message);
         
-        // Return simulated data if table is missing to maintain aesthetics
-        const simulated = [
-            { id: 'sim-1', action: 'VIEW_TOPIC', createdAt: new Date().toISOString(), metadata: { simulated: true } },
-            { id: 'sim-2', action: 'DRAFT_POST', createdAt: new Date(Date.now() - 5000).toISOString(), metadata: { simulated: true } },
-            { id: 'sim-3', action: 'CLICK_LIKE', createdAt: new Date(Date.now() - 12000).toISOString(), metadata: { simulated: true } }
-        ];
-        
-        return NextResponse.json({ success: true, events: simulated, warning: "Using simulated data due to DB missing table." });
+        // Return clean empty array if table is missing, no fake data
+        return NextResponse.json({ success: true, events: [] });
     }
 }

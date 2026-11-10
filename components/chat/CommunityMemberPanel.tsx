@@ -199,21 +199,25 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
 
   // Derive members from native database query
   const members: Member[] = useMemo(() => {
-    if (fetchedMembers) return fetchedMembers;
+    const isDead = (addr?: string) => !addr || addr.toLowerCase().startsWith('0x0000000000000000') || addr === '0x0000...0000';
+
+    if (fetchedMembers) return fetchedMembers.filter(m => !isDead(m.address));
     if (!community) return [];
     
     // If real members array exists from Prisma
     if (community.members && Array.isArray(community.members) && community.members.length > 0) {
-      return community.members.map((m: any) => ({
-        address: m.walletAddress,
-        role: m.role || 'MEMBER',
-        joinedAt: m.joinedAt || new Date().toISOString(),
-        lastActive: new Date(m.joinedAt || Date.now()).toISOString(),
-      }));
+      return community.members
+        .filter((m: any) => !isDead(m.walletAddress))
+        .map((m: any) => ({
+          address: m.walletAddress,
+          role: m.role || 'MEMBER',
+          joinedAt: m.joinedAt || new Date().toISOString(),
+          lastActive: new Date(m.joinedAt || Date.now()).toISOString(),
+        }));
     }
 
-    // Default to owner/creator only — zero mock accounts
-    const ownerAddr = community.ownerAddress || myAddress;
+    // Default to owner/creator only - filter dead 0x0000 address
+    const ownerAddr = !isDead(community.ownerAddress) ? community.ownerAddress : (!isDead(myAddress) ? myAddress : '');
     return ownerAddr ? [
       { address: ownerAddr, role: 'OWNER', joinedAt: community.createdAt || new Date().toISOString() }
     ] : [];

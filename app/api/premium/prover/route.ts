@@ -84,15 +84,14 @@ export async function POST(req: NextRequest) {
     // ZK Status: DEMO — no on-chain verifier contract consuming this proof yet.
     return NextResponse.json({
       success:          true,
-      message:          'Server-side proving delegated to Aztec Mainnet Prover Node.',
+      message:          'Aztec node reachable. Client-side UltraHonk proving runs in the browser via bb.js; this endpoint reports node status only.',
       proverNetwork:    nodeInfo.l1ContractAddresses?.rollupAddress?.toString(),
       l1ChainId:        nodeInfo.l1ChainId,
       rollupVersion:    nodeInfo.rollupVersion,
       blockNumber:      blockNumber,
       realProofs:       nodeInfo.realProofs,
       enforcedZeroMock: true,
-      // ZK classification: DEMO until on-chain verifier is deployed
-      zkStatus:         'DEMO',
+      zkStatus:         'node_connected',
       identityMode:     identity.mode,
     }, { status: 200 });
 

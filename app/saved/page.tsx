@@ -1,273 +1,249 @@
-﻿'use client';
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Bookmark, Search, Copy, Trash2, X, Clock, Tag,
-  MessageSquare, Heart, Image as ImgIcon, FileText, Filter
-} from 'lucide-react';
-import { toast } from 'sonner';
+'use client';
 
-interface SavedMessage {
+/**
+ * Saved messages – the messages this account bookmarked in Ledger Chat.
+ *
+ * They are read from this browser's storage, under the same key the chat
+ * writes (LedgerChatV2 toggleSaveMessage: ledger_saved_msgs_<address>). There
+ * is no server copy and no sample data: an account with nothing saved sees an
+ * empty state.
+ *
+ * Messages that carry secrets (encrypted-attachment keys, agreement
+ * invitations) are shown by their label only, never as raw text, and cannot be
+ * copied from here.
+ */
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { ArrowLeft, Bookmark, Copy, Search, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAccount } from 'wagmi';
+
+import { parseAttachmentMessage, attachmentPreview } from '@/lib/chat/remote-attachment';
+import { agreementMessageKind, agreementPreview } from '@/lib/aztec/agreement-message';
+
+export interface SavedMessage {
   id: string;
   content: string;
-  source: string;
-  savedAt: string;
-  tags: string[];
-  type: 'text' | 'image' | 'poll' | 'payment';
+  /** Milliseconds since the epoch. */
+  savedAt: number;
 }
 
-const DEMO_SAVED: SavedMessage[] = [
-  {
-    id: '1',
-    content: 'The key to building on Aztec is understanding how the PXE (Private Execution Environment) handles state transitions. Each note commitment is stored off-chain but verified on-chain.',
-    source: 'DeFi Builders Community',
-    savedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    tags: ['tech', 'aztec'],
-    type: 'text',
-  },
-  {
-    id: '2',
-    content: 'Token gating with ERC-721 requires you to verify ownership at access time, not just at join time. The Noir circuit for this does a Merkle proof over the holders set.',
-    source: 'NFT Alpha Group',
-    savedAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-    tags: ['nft', 'tech'],
-    type: 'text',
-  },
-  {
-    id: '3',
-    content: 'https://ledgerchat.org/join/abc123 — Invite link for the Builders community',
-    source: 'Direct Message',
-    savedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    tags: ['links'],
-    type: 'text',
-  },
-  {
-    id: '4',
-    content: '__PAYMENT__::{"amount":"0.5","token":"ETH","txHash":"0x1234abcd","to":"0xabc..."}',
-    source: 'Payment received',
-    savedAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    tags: ['payments'],
-    type: 'payment',
-  },
-];
+const storageKey = (address: string) => `ledger_saved_msgs_${address.toLowerCase()}`;
 
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+function readSaved(address: string): SavedMessage[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(storageKey(address)) || '[]');
+    if (!Array.isArray(raw)) return [];
+    return raw.filter((item): item is SavedMessage => (
+      typeof item === 'object' &&
+      item !== null &&
+      typeof item.id === 'string' &&
+      typeof item.content === 'string'
+    ));
+  } catch {
+    return [];
+  }
 }
 
 export default function SavedMessagesPage() {
-  const [saved, setSaved] = useState<SavedMessage[]>(DEMO_SAVED);
+  const { address, isConnected } = useAccount();
+  const [messages, setMessages] = useState<SavedMessage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTag, setActiveTag] = useState<string | null>(null);
-  const [addingTag, setAddingTag] = useState<string | null>(null);
-  const [newTag, setNewTag] = useState('');
+  const [mounted, setMounted] = useState(false);
 
-  const allTags = Array.from(new Set(saved.flatMap(s => s.tags)));
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  const filtered = saved.filter(s => {
-    const matchSearch = !searchQuery || s.content.toLowerCase().includes(searchQuery.toLowerCase()) || s.source.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchTag = !activeTag || s.tags.includes(activeTag);
-    return matchSearch && matchTag;
-  });
+  const reload = useCallback(() => {
+    if (!address) {
+      setMessages([]);
+      return;
+    }
+    setMessages(readSaved(address));
+  }, [address]);
 
-  const deleteSaved = (id: string) => {
-    setSaved(prev => prev.filter(s => s.id !== id));
-    toast.success('Removed from saved');
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  const removeSaved = useCallback((id: string) => {
+    if (!address) return;
+    const next = messages.filter(m => m.id !== id);
+    setMessages(next);
+    try {
+      localStorage.setItem(storageKey(address), JSON.stringify(next));
+      toast.success('Removed from saved messages');
+    } catch {
+      toast.error('Failed to update storage');
+    }
+  }, [address, messages]);
+
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return messages;
+    return messages.filter(m => m.content.toLowerCase().includes(q));
+  }, [messages, searchQuery]);
+
+  const renderContent = (content: string) => {
+    const att = parseAttachmentMessage(content);
+    if (att) {
+      return (
+        <span className="italic text-[#4a505c]">
+          {attachmentPreview(att)}
+        </span>
+      );
+    }
+
+    const agrKind = agreementMessageKind(content);
+    if (agrKind) {
+      return (
+        <span className="italic text-[#4a505c]">
+          {agreementPreview(agrKind)}
+        </span>
+      );
+    }
+
+    return <span>{content}</span>;
   };
 
-  const copyContent = (content: string) => {
+  const handleCopy = (content: string) => {
+    if (parseAttachmentMessage(content) || agreementMessageKind(content)) {
+      toast.info('Encrypted message references cannot be copied to clipboard');
+      return;
+    }
     navigator.clipboard.writeText(content);
     toast.success('Copied to clipboard');
   };
 
-  const addTag = (id: string) => {
-    if (!newTag.trim()) return;
-    setSaved(prev => prev.map(s => s.id === id ? { ...s, tags: [...new Set([...s.tags, newTag.trim()])] } : s));
-    setNewTag('');
-    setAddingTag(null);
-    toast.success('Tag added');
-  };
-
-  const removeTag = (id: string, tag: string) => {
-    setSaved(prev => prev.map(s => s.id === id ? { ...s, tags: s.tags.filter(t => t !== tag) } : s));
-  };
-
-  const getIcon = (type: SavedMessage['type']) => {
-    if (type === 'image') return ImgIcon;
-    if (type === 'poll') return FileText;
-    if (type === 'payment') return Heart;
-    return MessageSquare;
-  };
-
   return (
-    <div className="min-h-screen bg-[#F2F2F7]">
-      {/* Header */}
-      <div className="bg-white/95 backdrop-blur-md border-b border-black/[0.06] sticky top-0 z-20">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-2xl bg-[#25D366]/10 flex items-center justify-center">
-                <Bookmark size={15} className="text-[#25D366]" />
-              </div>
-              <div>
-                <h1 className="text-[17px] font-black text-[#1C1C1E]">Saved Messages</h1>
-                <p className="text-[11px] text-black/35 font-medium">{saved.length} saved items</p>
-              </div>
+    <div className="min-h-screen bg-[#fafbfc] text-[#15171c] px-4 py-8 md:py-12">
+      <main className="max-w-3xl mx-auto space-y-6">
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#eceef2]">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="p-2 -ml-2 rounded-xl text-[#4a505c] hover:text-[#15171c] hover:bg-black/5 transition"
+              aria-label="Back to chat"
+            >
+              <ArrowLeft size={20} />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <Bookmark size={24} className="text-[#10b981]" aria-hidden="true" />
+                Saved Messages
+              </h1>
+              <p className="text-sm text-[#667085] mt-0.5">
+                Private bookmarks stored locally in this browser.
+              </p>
             </div>
           </div>
+          {mounted && isConnected && (
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#858d9d]" />
+              <input
+                type="text"
+                placeholder="Search saved..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full sm:w-64 pl-9 pr-3 py-1.5 rounded-xl border border-[#eceef2] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#10b981]/20 focus:border-[#10b981]"
+              />
+            </div>
+          )}
+        </header>
 
-          {/* Search */}
-          <div className="flex items-center gap-2 bg-[#F2F2F7] rounded-2xl px-4 py-2.5">
-            <Search size={14} className="text-black/30 shrink-0" />
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search saved messages..."
-              className="bg-transparent flex-1 text-[14px] outline-none placeholder:text-black/30"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="text-black/30 hover:text-black/60">
-                <X size={14} />
-              </button>
+        {!mounted ? (
+          <div className="py-20 text-center text-[#667085] text-sm">
+            Loading bookmarks...
+          </div>
+        ) : !isConnected ? (
+          <div className="rounded-3xl border border-[#eceef2] bg-white p-10 text-center space-y-3">
+            <Bookmark size={36} className="mx-auto text-[#858d9d]" />
+            <h2 className="text-lg font-semibold text-[#15171c]">Connect your wallet</h2>
+            <p className="text-sm text-[#667085] max-w-sm mx-auto">
+              Saved messages are tied to your wallet address and stored encrypted in your local browser session.
+            </p>
+            <div className="pt-2">
+              <Link
+                href="/"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#15171c] text-white text-sm font-medium hover:bg-black transition"
+              >
+                Go to Ledger Chat
+              </Link>
+            </div>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="rounded-3xl border border-[#eceef2] bg-white p-12 text-center space-y-3">
+            <Bookmark size={40} className="mx-auto text-[#858d9d] stroke-[1.5]" />
+            <h2 className="text-base font-semibold text-[#15171c]">
+              {searchQuery ? 'No matching bookmarks' : 'No saved messages yet'}
+            </h2>
+            <p className="text-sm text-[#667085] max-w-md mx-auto">
+              {searchQuery
+                ? 'Try searching with different keywords.'
+                : 'Bookmark important messages in Ledger Chat by selecting "Save message" in the message context menu.'}
+            </p>
+            {!searchQuery && (
+              <div className="pt-2">
+                <Link
+                  href="/"
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#15171c] text-white text-sm font-medium hover:bg-black transition"
+                >
+                  Return to Chat
+                </Link>
+              </div>
             )}
           </div>
-        </div>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-4 py-4">
-        {/* Tag filters */}
-        {allTags.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
-            <button onClick={() => setActiveTag(null)}
-              className={`px-3.5 py-1.5 rounded-full text-[12px] font-bold whitespace-nowrap transition-colors shrink-0 ${!activeTag ? 'bg-[#1C1C1E] text-white' : 'bg-white text-black/50 border border-black/10 hover:border-black/20'}`}>
-              All
-            </button>
-            {allTags.map(tag => (
-              <button key={tag} onClick={() => setActiveTag(activeTag === tag ? null : tag)}
-                className={`px-3.5 py-1.5 rounded-full text-[12px] font-bold whitespace-nowrap transition-colors shrink-0 ${activeTag === tag ? 'bg-[#25D366] text-white' : 'bg-white text-black/50 border border-black/10 hover:border-black/20'}`}>
-                #{tag}
-              </button>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map((item) => (
+              <article
+                key={item.id}
+                className="rounded-2xl border border-[#eceef2] bg-white p-4 hover:border-[#d0d5dd] transition group"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="text-sm text-[#15171c] break-words whitespace-pre-wrap leading-relaxed">
+                      {renderContent(item.content)}
+                    </div>
+                    {item.savedAt ? (
+                      <time className="block text-[11px] text-[#858d9d]">
+                        {new Date(item.savedAt).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </time>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition">
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(item.content)}
+                      className="p-1.5 rounded-lg text-[#667085] hover:text-[#15171c] hover:bg-[#f2f4f7] transition"
+                      title="Copy content"
+                      aria-label="Copy message"
+                    >
+                      <Copy size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeSaved(item.id)}
+                      className="p-1.5 rounded-lg text-[#667085] hover:text-[#d93036] hover:bg-[#fef3f2] transition"
+                      title="Remove bookmark"
+                      aria-label="Remove bookmark"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              </article>
             ))}
           </div>
         )}
-
-        {/* Empty state */}
-        {filtered.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-16 h-16 rounded-full bg-[#25D366]/10 flex items-center justify-center mb-4">
-              <Bookmark size={22} className="text-[#25D366]" />
-            </div>
-            <p className="text-[17px] font-black text-[#1C1C1E] mb-2">
-              {searchQuery ? 'No results found' : 'Nothing saved yet'}
-            </p>
-            <p className="text-[14px] text-black/40">
-              {searchQuery ? 'Try a different search term' : 'Long-press any message and tap "Save" to bookmark it.'}
-            </p>
-          </div>
-        )}
-
-        {/* Saved messages list */}
-        <div className="space-y-3">
-          <AnimatePresence>
-            {filtered.map(item => {
-              const Icon = getIcon(item.type);
-              const isPayment = item.content.startsWith('__PAYMENT__::');
-              let paymentData: any = null;
-              if (isPayment) {
-                try { paymentData = JSON.parse(item.content.replace('__PAYMENT__::', '')); } catch {}
-              }
-
-              return (
-                <motion.div
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="bg-white rounded-3xl p-5 shadow-sm border border-black/[0.05]"
-                >
-                  {/* Meta row */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-[#25D366]/10 flex items-center justify-center">
-                        <Icon size={12} className="text-[#25D366]" />
-                      </div>
-                      <span className="text-[12px] font-bold text-black/40 truncate max-w-[150px]">
-                        {item.source}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[11px] text-black/25 font-medium">{timeAgo(item.savedAt)}</span>
-                      <button onClick={() => copyContent(item.content)}
-                        className="p-1.5 rounded-lg hover:bg-black/5 text-black/25 hover:text-black/60 transition-colors ml-1">
-                        <Copy size={12} />
-                      </button>
-                      <button onClick={() => deleteSaved(item.id)}
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-black/25 hover:text-red-500 transition-colors">
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  {isPayment && paymentData ? (
-                    <div className="flex items-center gap-3 bg-[#25D366]/8 rounded-2xl px-4 py-3">
-                      <div className="w-8 h-8 rounded-full bg-[#25D366]/20 flex items-center justify-center shrink-0">
-                        <Heart size={14} className="text-[#25D366]" />
-                      </div>
-                      <div>
-                        <p className="text-[14px] font-black text-[#1C1C1E]">{paymentData.amount} {paymentData.token} received</p>
-                        <p className="text-[11px] text-black/40 font-mono">{paymentData.txHash?.slice(0, 20)}…</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-[14px] text-[#1C1C1E] leading-relaxed line-clamp-4">
-                      {item.content}
-                    </p>
-                  )}
-
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {item.tags.map(tag => (
-                      <div key={tag} className="flex items-center gap-1 px-2.5 py-1 bg-[#F2F2F7] rounded-full group">
-                        <span className="text-[11px] font-bold text-black/50">#{tag}</span>
-                        <button onClick={() => removeTag(item.id, tag)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-black/30 hover:text-red-500">
-                          <X size={10} />
-                        </button>
-                      </div>
-                    ))}
-
-                    {addingTag === item.id ? (
-                      <form onSubmit={e => { e.preventDefault(); addTag(item.id); }} className="flex items-center gap-1">
-                        <input
-                          value={newTag}
-                          onChange={e => setNewTag(e.target.value)}
-                          autoFocus
-                          placeholder="tag name"
-                          className="w-20 px-2 py-0.5 text-[11px] bg-[#F2F2F7] rounded-full outline-none border border-[#25D366]/30 font-bold text-black/60"
-                        />
-                        <button type="submit" className="text-[#25D366] text-[11px] font-bold">Add</button>
-                        <button type="button" onClick={() => setAddingTag(null)} className="text-black/30 text-[11px]">Cancel</button>
-                      </form>
-                    ) : (
-                      <button onClick={() => setAddingTag(item.id)}
-                        className="flex items-center gap-1 px-2.5 py-1 border border-dashed border-black/15 rounded-full text-[11px] font-bold text-black/30 hover:border-[#25D366]/40 hover:text-[#25D366] transition-colors">
-                        <Tag size={9} /> Add tag
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
-      </div>
+      </main>
     </div>
   );
 }

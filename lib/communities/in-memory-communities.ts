@@ -40,44 +40,54 @@ export interface InMemoryCommunity {
 }
 
 // Module-level persistent registry
-const globalCommunities: InMemoryCommunity[] = [
-  {
-    id: 'comm_default_general',
-    name: 'Humanity Ledger Global',
-    description: 'The global sovereign community for all Humanity Ledger participants.',
-    isPrivate: false,
-    ownerAddress: '0x0000000000000000000000000000000000000000',
-    joinCode: 'HL-GLOBAL',
-    slug: 'HL-GLOBAL',
-    membersCount: 4280,
-    channelsCount: 2,
-    channels: [
+const globalOwner = process.env.HL_GLOBAL_COMMUNITY_OWNER || '';
+const globalCommunities: InMemoryCommunity[] = globalOwner
+  ? [
       {
-        id: 'chan_global_0',
-        communityId: 'comm_default_general',
-        name: 'general',
-        description: 'General discussion',
-        isPaid: false,
-        position: 0,
+        id: 'comm_default_general',
+        name: 'Humanity Ledger Global',
+        description: 'The global sovereign community for all Humanity Ledger participants.',
+        isPrivate: false,
+        ownerAddress: globalOwner,
+        joinCode: 'HL-GLOBAL',
+        slug: 'HL-GLOBAL',
+        membersCount: 1,
+        channelsCount: 2,
+        channels: [
+          {
+            id: 'chan_global_0',
+            communityId: 'comm_default_general',
+            name: 'general',
+            description: 'General discussion',
+            isPaid: false,
+            position: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'chan_global_1',
+            communityId: 'comm_default_general',
+            name: 'announcements',
+            description: 'Network-wide announcements',
+            isPaid: false,
+            position: 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        members: [
+          {
+            communityId: 'comm_default_general',
+            walletAddress: globalOwner,
+            role: 'ADMIN',
+            joinedAt: new Date().toISOString(),
+          },
+        ],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
-      {
-        id: 'chan_global_1',
-        communityId: 'comm_default_general',
-        name: 'announcements',
-        description: 'Network-wide announcements',
-        isPaid: false,
-        position: 1,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ],
-    members: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+    ]
+  : [];
 
 export function createInMemoryCommunity(data: {
   name: string;

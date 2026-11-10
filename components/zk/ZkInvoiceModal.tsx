@@ -93,21 +93,20 @@ export function ZkInvoiceModal({
   const [proofStep, setProofStep] = useState('');
   const [proofProgress, setProofProgress] = useState(0);
 
-  // Form State for creating a new invoice
-  const [title, setTitle] = useState('Frontend & Privacy Engineering Sprint');
-  const [recipientTag, setRecipientTag] = useState(initialRecipientTag);
-  const [token, setToken] = useState<'DAI' | 'USDC' | 'ETH'>('DAI');
+  // Form State for creating a new invoice - Clean initial state (no mock data)
+  const [title, setTitle] = useState('');
+  const [recipientTag, setRecipientTag] = useState(initialRecipientTag || '');
+  const [token, setToken] = useState<'DAI' | 'USDC' | 'ETH'>('USDC');
   const [taxRate, setTaxRate] = useState(0);
   const [dueDateDays, setDueDateDays] = useState(14);
-  const [notes, setNotes] = useState('Payment settlement via Aztec zk.money');
+  const [notes, setNotes] = useState('');
 
   const [items, setItems] = useState<Array<{ description: string; quantity: number; unitPrice: number }>>([
-    { description: 'Aztec zk.money Native Chat Integration', quantity: 1, unitPrice: 2500 },
-    { description: 'UltraHonk Prover Pipeline Optimization', quantity: 1, unitPrice: 1500 },
+    { description: '', quantity: 1, unitPrice: 0 },
   ]);
 
   const handleAddItem = () => {
-    setItems([...items, { description: '', quantity: 1, unitPrice: 100 }]);
+    setItems([...items, { description: '', quantity: 1, unitPrice: 0 }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -120,13 +119,19 @@ export function ZkInvoiceModal({
     setItems(updated);
   };
 
-  const subtotal = items.reduce((sum, it) => sum + (it.quantity || 0) * (it.unitPrice || 0), 0);
-  const tax = subtotal * (taxRate / 100);
+  const subtotal = items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0), 0);
+  const tax = subtotal * ((Number(taxRate) || 0) / 100);
   const total = subtotal + tax;
+
+  const isFormValid =
+    title.trim().length > 0 &&
+    recipientTag.trim().length > 0 &&
+    items.length > 0 &&
+    items.every(it => it.description.trim().length > 0 && (Number(it.quantity) || 0) > 0 && (Number(it.unitPrice) || 0) > 0);
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recipientTag || items.length === 0) return;
+    if (!isFormValid) return;
 
     const invoice = createShieldedInvoice({
       title,
@@ -334,6 +339,7 @@ export function ZkInvoiceModal({
               <input
                 type="text"
                 required
+                placeholder="e.g. Protocol Security Audit Milestone 1"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 className="w-full mt-1 bg-[#f2f4f7] border border-black/[0.06] rounded-xl px-3 py-2 text-[13px] font-semibold text-gray-900 outline-none focus:border-[#15171c]"
@@ -342,13 +348,13 @@ export function ZkInvoiceModal({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[12.5px] font-semibold text-gray-500">Client zk.money Tag</label>
+                <label className="text-[12.5px] font-semibold text-gray-500">Client / Recipient Address or Tag</label>
                 <input
                   type="text"
                   required
                   value={recipientTag}
                   onChange={e => setRecipientTag(e.target.value)}
-                  placeholder="zk:client_name"
+                  placeholder="0x... or zk:handle"
                   className="w-full mt-1 bg-[#f2f4f7] border border-black/[0.06] rounded-xl px-3 py-2 text-[13px] tabular-nums outline-none focus:border-[#15171c]"
                 />
               </div>
@@ -359,9 +365,9 @@ export function ZkInvoiceModal({
                   onChange={e => setToken(e.target.value as any)}
                   className="w-full mt-1 bg-[#f2f4f7] border border-black/[0.06] rounded-xl px-3 py-2 text-[13px] font-semibold outline-none"
                 >
-                  <option value="DAI">zkDAI (Aztec)</option>
-                  <option value="USDC">zkUSDC (Aztec)</option>
-                  <option value="ETH">zkETH (Aztec)</option>
+                  <option value="USDC">USDC</option>
+                  <option value="ETH">ETH</option>
+                  <option value="DAI">DAI</option>
                 </select>
               </div>
             </div>
@@ -384,7 +390,7 @@ export function ZkInvoiceModal({
                   <input
                     type="text"
                     required
-                    placeholder="Description of milestone or work"
+                    placeholder="Deliverable description or milestone"
                     value={item.description}
                     onChange={e => handleUpdateItem(idx, 'description', e.target.value)}
                     className="flex-3 bg-[#f2f4f7] border border-black/[0.06] rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#15171c]"
@@ -393,16 +399,17 @@ export function ZkInvoiceModal({
                     type="number"
                     min="1"
                     placeholder="Qty"
-                    value={item.quantity}
-                    onChange={e => handleUpdateItem(idx, 'quantity', parseInt(e.target.value) || 1)}
+                    value={item.quantity || ''}
+                    onChange={e => handleUpdateItem(idx, 'quantity', Math.max(1, parseInt(e.target.value, 10) || 0))}
                     className="w-16 bg-[#f2f4f7] border border-black/[0.06] rounded-xl px-2 py-2 text-[12px] text-center outline-none"
                   />
                   <input
                     type="number"
                     min="0"
+                    step="any"
                     placeholder="Price"
-                    value={item.unitPrice}
-                    onChange={e => handleUpdateItem(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
+                    value={item.unitPrice || ''}
+                    onChange={e => handleUpdateItem(idx, 'unitPrice', Math.max(0, parseFloat(e.target.value) || 0))}
                     className="w-24 bg-[#f2f4f7] border border-black/[0.06] rounded-xl px-2 py-2 text-[12px] tabular-nums outline-none"
                   />
                   {items.length > 1 && (
@@ -421,7 +428,7 @@ export function ZkInvoiceModal({
             {/* Total calculation */}
             <div className="bg-[#f7f8fa] border border-black/[0.06] rounded-2xl p-4 flex justify-between items-center">
               <div className="text-[12px] text-gray-500">
-                Estimated settlement time: <span className="font-semibold text-gray-800">Instant on confirmation</span>
+                Settlement Rail: <span className="font-semibold text-gray-800">Private Aztec Alpha L2 or Public Ethereum L1</span>
               </div>
               <div className="text-right">
                 <span className="text-[12.5px] text-gray-400 font-semibold">Total Due</span>
@@ -433,7 +440,12 @@ export function ZkInvoiceModal({
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-[#15171c] text-white text-[14px] font-semibold rounded-2xl hover:bg-[#000000] transition flex items-center justify-center gap-2 shadow-sm"
+              disabled={!isFormValid}
+              className={`w-full py-3.5 text-white text-[14px] font-semibold rounded-2xl transition flex items-center justify-center gap-2 shadow-sm ${
+                isFormValid
+                  ? 'bg-[#15171c] hover:bg-[#000000] cursor-pointer'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+              }`}
             >
               <FileText size={16} /> Generate & Send Shielded Invoice
             </button>

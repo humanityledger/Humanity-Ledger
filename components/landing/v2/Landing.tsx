@@ -30,6 +30,7 @@ import { SiteFooter } from "./SiteFooter";
 import { ImmersiveField } from "@/components/immersive/ImmersiveField";
 import { SiteNav } from "@/components/immersive/SiteNav";
 import { PhoneShowcase, phoneShowcaseStyles } from "./PhoneShowcase";
+import { FilmSection } from "./FilmSection";
 import s from "./Landing.module.css";
 
 /**
@@ -447,6 +448,9 @@ export function HumanityLanding() {
             <HeroMap className={s.heroMap} />
           </div>
         </section>
+
+        {/* 30-second film – between hero and feature pillars */}
+        <FilmSection />
 
         {/* Introducing Ledger Chat */}
         <section id="ledger-chat" data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="intro-title">

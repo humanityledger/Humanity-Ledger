@@ -352,6 +352,11 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'New PIN must be exactly 6 digits.' }, { status: 400 });
     }
 
+    if (currentPin) {
+      const gatedPut = await pinAttemptGate(userId);
+      if (gatedPut) return gatedPut;
+    }
+
     let storedPinHash: string | null = null;
     let dbId: string | null = null;
     let dbTable: 'user' | 'authUser' = 'user';

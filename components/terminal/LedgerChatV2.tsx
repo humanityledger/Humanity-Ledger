@@ -89,6 +89,7 @@ import { chatDB } from '@/lib/chat/indexeddb';
 import { EncryptedMediaEngine } from '@/lib/chat/media';
 import { SavedMessagesModal } from '@/components/chat/SavedMessagesModal';
 import { KeyboardShortcutsModal } from '@/components/chat/KeyboardShortcutsModal';
+import { hiddenIds, isHidden, markDeletedForMe, markRevoked, shouldHonourRevoke } from '@/lib/chat/deleted-messages';
 
 
 
@@ -3856,7 +3857,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             }
             if (typeof content === 'string' && content.startsWith('__REVOKE__')) {
               const revokeId = content.replace('__REVOKE__', '');
+              markRevoked(revokeId);
               setMessages(prev => prev.filter(m => m.id !== revokeId));
+              chatDB.deleteMessages([revokeId]).catch(() => {});
               continue;
             }
 
@@ -4351,6 +4354,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           if (staleIds.length) chatDB.deleteMessages(staleIds).catch(() => {});
           const localMsgs = (rawLocal || [])
             .filter((m: any) => !(typeof m.id === 'string' && m.id.startsWith('optimistic-')))
+            .filter((m: any) => !isHidden(activePeer, m.id))
             .map((m: any) => (m.sentAtNs > 1e14 ? { ...m, sentAtNs: Math.floor(m.sentAtNs / 1e6) } : m))
             .filter((m: any) => clearTsMsInit === 0 || (m.sentAtNs || 0) > clearTsMsInit);
           if (localMsgs && localMsgs.length > 0 && !cancelled) {
@@ -4551,7 +4555,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           } else if (typeof content === 'string' && content.startsWith('__UNPIN__')) {
             latestPinnedId = null;
           } else if (typeof content === 'string' && content.startsWith('__REVOKE__')) {
-            revokedIds.add(content.replace('__REVOKE__', ''));
+            const revId = content.replace('__REVOKE__', '');
+            revokedIds.add(revId);
+            markRevoked(revId);
+            chatDB.deleteMessages([revId]).catch(() => {});
           // [BUG FIX] Skip __VOTE__ signals from main message list — they are control signals only
           } else if (typeof content === 'string' && content.startsWith('__VOTE__')) {
             // Already processed above — skip rendering as bubble
@@ -4599,7 +4606,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         if (latestPinnedId) setPinnedMessageId(latestPinnedId);
 
         // Apply metadata to actual messages
-        const processedMsgs = mappedMsgs.filter(m => !revokedIds.has(m.id) && (!m.burnAtNs || m.burnAtNs > Date.now()));
+        const processedMsgs = mappedMsgs.filter(m => !revokedIds.has(m.id) && !isHidden(activePeer, m.id) && (!m.burnAtNs || m.burnAtNs > Date.now()));
         for (const m of processedMsgs) {
           if (reactions[m.id]) m.reactions = reactions[m.id];
           if (readReceipts.has(m.id)) m.status = 'read';
@@ -7220,14 +7227,31 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    </button>
                  )}
                  <div className="h-px bg-[#eceef2] my-1 mx-2" />
-                 {/* Delete for me — always available */}
-                 <button role="menuitem" type="button" onClick={() => { setMessages(prev => prev.filter(m => m.id !== contextMenu.id)); setContextMenu(null); toast.success('Message deleted for you'); }} className={`${item} text-[#d93036]`}>
-                   <Trash2 size={16} strokeWidth={1.8} /> <span>Eliminar mensaje para mí</span>
+                 {/* Delete for me – persists via deleted-messages.ts */}
+                 <button role="menuitem" type="button" onClick={() => {
+                   if (contextMenu?.id) {
+                     markDeletedForMe(activePeer, contextMenu.id);
+                     setMessages(prev => prev.filter(m => m.id !== contextMenu.id));
+                     chatDB.deleteMessages([contextMenu.id]).catch(() => {});
+                     setContextMenu(null);
+                     toast.success('Message deleted for you');
+                   }
+                 }} className={`${item} text-[#d93036]`}>
+                   <Trash2 size={16} strokeWidth={1.8} /> <span>Delete for me</span>
                  </button>
-                 {/* Delete for everyone — available if message is mine */}
+                 {/* Delete for everyone – sends __REVOKE__, persisted globally */}
                  {mine && (
-                   <button role="menuitem" type="button" onClick={() => { setMessages(prev => prev.filter(m => m.id !== contextMenu.id)); executeSend(`__REVOKE__${contextMenu.id}`); setContextMenu(null); toast.success('Message deleted for everyone'); }} className={`${item} text-[#d93036]`}>
-                     <Trash2 size={16} strokeWidth={1.8} /> <span className="flex flex-col"><span>Eliminar para todos</span><span className="text-[11.5px] text-[#8a1f23]">Removed from all Ledger Chat clients</span></span>
+                   <button role="menuitem" type="button" onClick={() => {
+                     if (contextMenu?.id) {
+                       markRevoked(contextMenu.id);
+                       setMessages(prev => prev.filter(m => m.id !== contextMenu.id));
+                       chatDB.deleteMessages([contextMenu.id]).catch(() => {});
+                       executeSend(`__REVOKE__${contextMenu.id}`);
+                       setContextMenu(null);
+                       toast.success('Message deleted for everyone');
+                     }
+                   }} className={`${item} text-[#d93036]`}>
+                     <Trash2 size={16} strokeWidth={1.8} /> <span className="flex flex-col"><span>Delete for everyone</span><span className="text-[11.5px] text-[#8a1f23]">Removed from all Ledger Chat clients</span></span>
                    </button>
                  )}
                </div>
