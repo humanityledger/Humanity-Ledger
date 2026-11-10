@@ -41,3 +41,9 @@ const w = pkgDir('@aztec-labs/wallets');
 console.log('wallets version', JSON.parse(fs.readFileSync(path.join(w, 'package.json'), 'utf8')).version);
 show('EmbeddedWallet.create', w, [/static\s+(async\s+)?create\s*\(/], 45);
 show('custom store options', w, [/walletDb|pxe\?\.\s*store|options\.pxe|\.store\b/], 6);
+show('splitPxeOptions', w, [/function\s+splitPxeOptions/], 30);
+const pxeDir = path.join(process.cwd(), 'node_modules', '@aztec-labs', 'pxe');
+if (fs.existsSync(pxeDir)) {
+  console.log('pxe version', JSON.parse(fs.readFileSync(path.join(pxeDir, 'package.json'), 'utf8')).version);
+  show('createPXE (browser)', pxeDir, [/export\s+async\s+function\s+createPXE/], 40);
+} else console.log('@aztec-labs/pxe not hoisted');
