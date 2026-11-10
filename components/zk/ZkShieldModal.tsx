@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, ArrowDownLeft, ArrowUpRight, AlertTriangle, CheckCircle, ExternalLink, Loader2 } from 'lucide-react';
+import { X, Lock, ArrowDownLeft, ArrowUpRight, AlertTriangle, CheckCircle, ExternalLink, Loader2, Shield } from 'lucide-react';
 import { useAccount, useBalance, useSendTransaction, useWriteContract, usePublicClient } from 'wagmi';
 import { parseEther, parseUnits } from 'viem';
 import { toast } from 'sonner';
