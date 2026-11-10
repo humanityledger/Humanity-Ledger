@@ -19,6 +19,8 @@ import { PREMIUM_STICKERS, RenderPremiumSticker } from './StickerPicker';
 import { useLinkPreview, extractFirstUrl, LinkPreviewCard } from './LedgerLinkPreview';
 import dynamic from 'next/dynamic';
 import { isAgreementMessage } from '@/lib/aztec/agreement-message';
+import { parseAttachmentMessage } from '@/lib/chat/remote-attachment';
+import { RemoteAttachmentBubble } from './RemoteAttachmentBubble';
 
 // Loaded only when a conversation contains an agreement message.
 const AgreementCard = dynamic(() => import('./AgreementCard').then((m) => m.AgreementCard), { ssr: false });
@@ -647,6 +649,9 @@ export const MessageBubble = React.memo(({
   const isZkInvoice  = content.startsWith('__ZK_INVOICE__');
   // Escrow / stream invitations and Aztec address announcements (lib/aztec/agreement-message.ts).
   const isAgreement  = isAgreementMessage(content);
+  // Encrypted voice notes, photos, videos and files (lib/chat/remote-attachment.ts).
+  // The message carries the decryption key: it is never shown as text.
+  const remoteAttachment = isAgreement ? null : parseAttachmentMessage(content);
   const isPremium    = content.startsWith('[PREMIUM:') || content.startsWith('__STICKER__[PREMIUM:');
   const isSticker    = content.startsWith('__STICKER__') && !isPremium;
   const isAudio      = content.startsWith('__AUDIO__');
@@ -837,6 +842,8 @@ export const MessageBubble = React.memo(({
 
             {isAgreement ? (
               <AgreementCard raw={content} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={msg.senderInboxId} />
+            ) : remoteAttachment ? (
+              <RemoteAttachmentBubble att={remoteAttachment} isMe={isMe} onOpenLightbox={onOpenLightbox} />
             ) : isSticker ? (
               <StickerBubble content={content} />
             ) : isPoll ? (

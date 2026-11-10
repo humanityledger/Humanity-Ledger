@@ -1,85 +1,72 @@
+/**
+ * POST /api/chat/attachments — store one encrypted chat attachment.
+ *
+ * The body is CIPHERTEXT (application/octet-stream), produced in the sender's
+ * browser by lib/chat/remote-attachment.ts. This route never receives
+ * plaintext media, never sees the key, and stores nothing that identifies the
+ * uploader or the conversation next to the object.
+ *
+ * It used to accept the plaintext file, check its magic bytes and return it
+ * as a base64 data URL that was then embedded in the XMTP message. That gave
+ * the server every voice note in clear and did not reduce the message size.
+ * The magic-byte check now runs on the recipient's device after decryption
+ * (lib/chat/file-sniff.ts).
+ *
+ * Responses:
+ *   200 { url, contentDigest, size }   url = /api/chat/attachments/<id>
+ *   401 not signed in · 413 too large · 415 not octet-stream
+ *   422 { error: 'plaintext_suspected' } the body starts like a plain file
+ *   429 rate limited · 503 { error: 'storage_unavailable' } R2 not configured
+ */
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
+import { r2ConfigFromEnv, r2Put } from '@/lib/storage/r2';
+import { GCM_TAG_BYTES, MAX_ATTACHMENT_BYTES } from '@/lib/chat/remote-attachment';
+import { looksLikePlaintextFile } from '@/lib/chat/file-sniff';
+
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
+
+const MAX_CIPHERTEXT = MAX_ATTACHMENT_BYTES + GCM_TAG_BYTES;
 
 export async function POST(req: Request) {
+  // [SECURITY] Require an authenticated session — never accept files from anonymous clients
+  const caller = await getVerifiedCaller(req);
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const limit = await checkRateLimit(caller, { max: 30, windowSec: 60, prefix: 'chat-att-put' });
+  if (!limit.allowed) return NextResponse.json({ error: 'Too many uploads. Wait a moment.' }, { status: 429 });
+
+  const type = (req.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+  if (type !== 'application/octet-stream') {
+    return NextResponse.json({ error: 'Send the encrypted attachment as application/octet-stream' }, { status: 415 });
+  }
+  const declared = Number(req.headers.get('content-length') || '0');
+  if (declared > MAX_CIPHERTEXT) return NextResponse.json({ error: 'Files can be up to 20 MB' }, { status: 413 });
+
+  const cfg = r2ConfigFromEnv();
+  if (!cfg) return NextResponse.json({ error: 'storage_unavailable' }, { status: 503 });
+
   try {
-    // [SECURITY] Require an authenticated session — never process files from anonymous clients
-    const userId = await getVerifiedCaller(req);
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const body = new Uint8Array(await req.arrayBuffer());
+    if (body.byteLength <= GCM_TAG_BYTES) return NextResponse.json({ error: 'Empty attachment' }, { status: 400 });
+    if (body.byteLength > MAX_CIPHERTEXT) return NextResponse.json({ error: 'Files can be up to 20 MB' }, { status: 413 });
+    // [SECURITY] Refuse what is obviously an unencrypted file, so a buggy or
+    // outdated client cannot silently put plaintext media in the bucket.
+    if (looksLikePlaintextFile(body)) {
+      return NextResponse.json({ error: 'plaintext_suspected' }, { status: 422 });
     }
 
-    const formData = await req.formData();
-    const file = formData.get('file') as File | null;
-    
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-    }
+    const id = crypto.randomBytes(16).toString('hex');
+    await r2Put(cfg, `chat-attachments/${id}`, body);
+    const contentDigest = crypto.createHash('sha256').update(body).digest('hex');
 
-    // [SECURITY] Reduced to 1MB to prevent Redis exhaustion
-    // 1MB raw → ~1.33MB base64 string. At 50-message cap: ~66MB max Redis usage.
-    const MAX_SIZE = 1 * 1024 * 1024; // 1MB
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json({ error: 'File too large. Maximum size is 1MB for system transmission.' }, { status: 413 });
-    }
-
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // [SECURITY — MED-02] Magic Bytes + Client MIME Validation
-    // Never trust client-provided file.type alone. Cross-reference with actual file headers.
-    const magic = new Uint8Array(buffer.slice(0, 12));
-    const isPNG  = magic[0] === 0x89 && magic[1] === 0x50 && magic[2] === 0x4E && magic[3] === 0x47;
-    const isJPEG = magic[0] === 0xFF && magic[1] === 0xD8 && magic[2] === 0xFF;
-    const isGIF  = magic[0] === 0x47 && magic[1] === 0x49 && magic[2] === 0x46; // 'GIF'
-    const isWebP = magic[8] === 0x57 && magic[9] === 0x45 && magic[10] === 0x42 && magic[11] === 0x50; // 'WEBP'
-    // MP4 / M4A signature: 'ftyp' at offset 4
-    const isFtyp = magic[4] === 0x66 && magic[5] === 0x74 && magic[6] === 0x79 && magic[7] === 0x70;
-    const isMP4  = isFtyp && !file.type?.startsWith('audio/');
-    const isM4A  = isFtyp && file.type?.startsWith('audio/');
-    // WebM: EBML header 0x1A45DFA3
-    const isWebM = magic[0] === 0x1A && magic[1] === 0x45 && magic[2] === 0xDF && magic[3] === 0xA3;
-    // OGG: 'OggS'
-    const isOGG  = magic[0] === 0x4F && magic[1] === 0x67 && magic[2] === 0x67 && magic[3] === 0x53;
-
-    // [AUDIO] Accept WebM, OGG, and M4A for voice messages
-    const clientTypeIsAudio = typeof file.type === 'string' && file.type.startsWith('audio/');
-
-    let safeMimeType = 'application/octet-stream';
-    if (isPNG) safeMimeType = 'image/png';
-    else if (isJPEG) safeMimeType = 'image/jpeg';
-    else if (isGIF) safeMimeType = 'image/gif';
-    else if (isWebP) safeMimeType = 'image/webp';
-    else if (isMP4) safeMimeType = 'video/mp4';
-    else if (isM4A || (isFtyp && clientTypeIsAudio)) safeMimeType = 'audio/mp4';
-    else if (isWebM && clientTypeIsAudio) safeMimeType = 'audio/webm';
-    else if (isOGG && clientTypeIsAudio) safeMimeType = 'audio/ogg';
-    else {
-      return NextResponse.json({ error: 'Unsupported file type. Allowed: PNG, JPEG, GIF, WebP, MP4, and audio (WebM, OGG, M4A).' }, { status: 415 });
-    }
-
-    // Generate base64 data URL
-    const base64Data = buffer.toString('base64');
-    
-    // Format required by Ledger Chat message parser: __IMAGE__data:... or __VIDEO__data:...
-    const dataUrl = `data:${safeMimeType};base64,${base64Data}`;
-    
-    const originalName = file.name || 'attachment';
-
-    return NextResponse.json({
-      url: dataUrl,
-      name: originalName,
-      type: safeMimeType,
-      size: buffer.length
-    });
-
-  } catch (error: any) {
-    console.error('[Upload] Error processing attachment:', error);
-    return NextResponse.json({ error: 'Failed to process attachment' }, { status: 500 });
+    return NextResponse.json({ url: `/api/chat/attachments/${id}`, contentDigest, size: body.byteLength });
+  } catch (error) {
+    console.error('[chat/attachments POST] store failed:', error instanceof Error ? error.message : 'unknown');
+    return NextResponse.json({ error: 'storage_unavailable' }, { status: 503 });
   }
 }
-
-// Removed GET method to completely eliminate filesystem dependencies

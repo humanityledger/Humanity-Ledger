@@ -73,6 +73,8 @@ const ZkStreamManager = dynamic(() => import('@/components/zk/ZkStreamManager').
 const ZkInvoiceModal = dynamic(() => import('@/components/zk/ZkInvoiceModal').then(m => m.ZkInvoiceModal), { ssr: false });
 import { encodeStreamPayload } from '@/lib/zk/zkStreaming';
 import { agreementMessageKind, agreementPreview, isAgreementMessage } from '@/lib/aztec/agreement-message';
+import { attachmentPreview, isAttachmentMessage, parseAttachmentMessage } from '@/lib/chat/remote-attachment';
+import { prepareAttachmentMessage, AttachmentError } from '@/lib/chat/send-attachment';
 const AgreementComposer = dynamic(() => import('@/components/chat/AgreementComposer').then(m => m.AgreementComposer), { ssr: false });
 import { encodeInvoicePayload, parseInvoicePayload, type ZkInvoice } from '@/lib/zk/zkInvoice';
 import { LedgerCallsTab } from '@/components/chat/LedgerCallsTab';
@@ -189,6 +191,18 @@ export const isSystemSignal = (content: any): boolean => {
          content.startsWith('__CLEAR__');
 };
 
+/**
+ * Messages whose text carries secrets: agreement invitations (escrow secrets)
+ * and encrypted attachments (the file key). They are only ever shown through
+ * formatMessagePreview(): never copied, quoted in a reply or notified as text.
+ */
+const carriesSecret = (content: unknown): boolean => {
+  if (typeof content !== 'string') return false;
+  // Reply, burn, thread and forward wrappers all end in "__::".
+  const inner = content.startsWith('__') && content.includes('__::') ? (content.split('__::').pop() || '') : content;
+  return isAgreementMessage(content) || isAgreementMessage(inner) || isAttachmentMessage(inner);
+};
+
 export const formatMessagePreview = (content: string): string => {
   if (typeof content !== 'string') return 'Message';
   if (isSystemSignal(content)) return '';
@@ -233,6 +247,9 @@ export const formatMessagePreview = (content: string): string => {
   // Agreement invitations carry secrets: never preview or notify their text.
   const agreementKind = agreementMessageKind(cleanContent);
   if (agreementKind) return agreementPreview(agreementKind);
+  // Encrypted attachments carry their decryption key: never preview or notify their text.
+  const remoteAttachment = parseAttachmentMessage(cleanContent);
+  if (remoteAttachment) return attachmentPreview(remoteAttachment);
 
   // Handle system messages and metadata
   if (cleanContent.startsWith(CALL_LOG_PREFIX)) {
@@ -3095,57 +3112,32 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }
 
         try {
-          // [VOICE FIX] Upload audio to /api/chat/attachments rather than embedding a raw
-          // base64 data URL inline. XMTP has a ~1 MB message cap; a 10-second WebM voice
-          // note encodes to ~200 KB base64 which is fine for short clips but longer ones
-          // exceed the limit silently and are dropped by the relay. Uploading to our
-          // attachment endpoint gives back a compact data-URL (<= 1 MB enforced server-side)
-          // and keeps the XMTP message payload small regardless of recording duration.
-          const audioFile = new File(
-            audioChunksRef.current,
-            `voice_${Date.now()}.${mimeType?.includes('mp4') || mimeType?.includes('m4a') ? 'm4a' : mimeType?.includes('ogg') ? 'ogg' : 'webm'}`,
-            { type: mimeType || 'audio/webm' }
-          );
-
-          const formData = new FormData();
-          formData.append('file', audioFile);
-
-          let audioSrc: string;
-          try {
-            const uploadRes = await fetch('/api/chat/attachments', { method: 'POST', body: formData });
-            if (uploadRes.ok) {
-              const uploadData = await uploadRes.json();
-              // Server returns { url: 'data:audio/...;base64,...', type, name }
-              audioSrc = uploadData.url as string;
-            } else {
-              // Fallback: embed inline — works for short clips under XMTP limit
-              console.warn('[Voice] Attachment upload failed, falling back to inline base64');
-              const reader2 = new FileReader();
-              audioSrc = await new Promise<string>((res, rej) => {
-                reader2.onloadend = () => res(reader2.result as string);
-                reader2.onerror = rej;
-                reader2.readAsDataURL(blob);
-              });
-            }
-          } catch {
-            // Network error — inline fallback
-            const reader2 = new FileReader();
-            audioSrc = await new Promise<string>((res, rej) => {
-              reader2.onloadend = () => res(reader2.result as string);
-              reader2.onerror = rej;
-              reader2.readAsDataURL(blob);
-            });
-          }
-
-          const audioMsg = `__AUDIO__${audioSrc}`;
+          // [VOICE] Encrypted on this device before anything leaves it
+          // (lib/chat/send-attachment.ts): only ciphertext goes to
+          // /api/chat/attachments, and the XMTP message carries the URL, digest
+          // and key. This replaced uploading the plaintext recording, which the
+          // server echoed back as a base64 data URL inside the XMTP message, so
+          // the server heard every voice note and the size limit did not change.
+          // The recorder's own mimeType is used: iOS records audio/mp4 even when
+          // no type was requested.
+          const recordedType = (recorder.mimeType || mimeType || 'audio/webm').split(';')[0];
+          const ext = recordedType.includes('mp4') || recordedType.includes('m4a') ? 'm4a'
+            : recordedType.includes('aac') ? 'aac'
+            : recordedType.includes('ogg') ? 'ogg' : 'webm';
+          const voiceBlob = new Blob(audioChunksRef.current, { type: recordedType });
+          const { message: audioMsg } = await prepareAttachmentMessage(voiceBlob, {
+            filename: `voice_${Date.now()}.${ext}`,
+            mimeType: recordedType,
+            isVoiceNote: true,
+          });
           if (executeSendRef.current) {
             await executeSendRef.current(audioMsg);
           } else {
             toast.error('Open a conversation first');
           }
         } catch (error) {
-          console.error('[Voice] Audio send failed:', error);
-          toast.error('Could not send the voice message');
+          console.error('[Voice] Audio send failed:', error instanceof Error ? error.message : error);
+          toast.error(error instanceof AttachmentError ? error.message : 'Could not send the voice message');
         }
 
         setRecordingSeconds(0);
@@ -4849,11 +4841,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // disappearing timer, never to the plain-text offline outbox (an
     // invitation carries the agreement's secrets).
     const isAgreementMsg = isAgreementMessage(content);
-    if (isAgreementMsg && isOffline) {
-      toast.error('You are offline. Agreements are only sent while connected.');
+    // Encrypted attachments carry their key in the text, like agreements: no
+    // moderation or text transforms (which could alter the key), never the
+    // plain-text offline outbox. Unlike agreements they may be replied to and
+    // keep the chat's disappearing timer.
+    const isAttachmentMsg = isAttachmentMessage(content);
+    const isOpaqueMsg = isAgreementMsg || isAttachmentMsg;
+    if (isOpaqueMsg && isOffline) {
+      toast.error(isAgreementMsg ? 'You are offline. Agreements are only sent while connected.' : 'You are offline. Attachments are only sent while connected.');
       return;
     }
-    const moderationFlag = isAgreementMsg ? null : moderateContent(content);
+    const moderationFlag = isOpaqueMsg ? null : moderateContent(content);
     if (moderationFlag) {
       toast.error(moderationFlag);
       return;
@@ -4878,7 +4876,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
 
     // Native client-side slash commands (/me, /shrug, /code, /table, /urgent, /clear, /online, /away, /dnd)
-    const { transformed, isHandledLocally, action } = isAgreementMsg
+    const { transformed, isHandledLocally, action } = isOpaqueMsg
       ? { transformed: content, isHandledLocally: false, action: undefined as any }
       : transformClientCommand(content, getDisplayName(address || ''));
     if (isHandledLocally) {
@@ -4901,7 +4899,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     content = transformed;
 
     // Bot command interception
-    if (!isAgreementMsg && isBotCommand(content)) {
+    if (!isOpaqueMsg && isBotCommand(content)) {
       const botResponse = await executeBotCommand(content);
       if (botResponse) {
         const cmdMsg = {
@@ -4930,7 +4928,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // Phase 2: Message Quoting
     let finalContent = content;
     if (replyingTo && !isSignal && !isAgreementMsg) {
-      const snippet = (isAgreementMessage(replyingTo.content) ? formatMessagePreview(replyingTo.content) : (replyingTo.content || '')).replace(/__/g, '').slice(0, 80);
+      const snippet = (carriesSecret(replyingTo.content) ? formatMessagePreview(replyingTo.content) : (replyingTo.content || '')).replace(/__/g, '').slice(0, 80);
       finalContent = `__REPLY__${replyingTo.id}__SNIPPET__${snippet}__::${content}`;
       setReplyingTo(null);
     }
@@ -4941,7 +4939,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
 
     // Smart macros
-    if (ledgerSettings?.smart_macros && !isSignal && !isAgreementMsg) {
+    if (ledgerSettings?.smart_macros && !isSignal && !isOpaqueMsg) {
       if (content.trim() === '/add') { finalContent = `My wallet: ${address}`; }
       else if (/^\/pay (\d+\.?\d*)$/.test(content.trim())) {
         const m = content.trim().match(/^\/pay (\d+\.?\d*)$/);
@@ -4949,7 +4947,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       }
     }
     // Tone translator  
-    if (ledgerSettings?.tone_translator && !isSignal && !isAgreementMsg) {
+    if (ledgerSettings?.tone_translator && !isSignal && !isOpaqueMsg) {
       finalContent = finalContent
         .replace(/\bfuck(ing)?\b/gi, 'strongly disagree')
         .replace(/\bshit\b/gi, 'situation')
@@ -5181,42 +5179,38 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, [gifSearch, searchGifs]);
 
   // ─── Hito 4: Scheduled Messages ──────────────────────────────────────────
+  const resetFileInputs = (e?: React.ChangeEvent<HTMLInputElement>) => {
+    try { if (e) e.target.value = ''; } catch {}
+    if (fileRef.current) fileRef.current.value = '';
+    if (cameraRef.current) cameraRef.current.value = '';
+    if (galleryRef.current) galleryRef.current.value = '';
+  };
+
+  // Camera, photo library and document picker. The file is encrypted on this
+  // device and only ciphertext is uploaded (lib/chat/send-attachment.ts); when
+  // file storage is unavailable, files up to 700 KB go inline in the XMTP
+  // message instead, which never touches our server.
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    // Check size limit (~1MB safe for XMTP encoded as Base64)
-    if (file.size > 1024 * 1024) {
-      toast.error('Files can be up to 1 MB');
-      try { e.target.value = ''; } catch {}
-      if (fileRef.current) fileRef.current.value = '';
-      if (cameraRef.current) cameraRef.current.value = '';
-      if (galleryRef.current) galleryRef.current.value = '';
+    if (isOffline) {
+      toast.error('You are offline. Attachments are only sent while connected.');
+      resetFileInputs(e);
       return;
     }
-    
     setIsUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64data = reader.result as string;
-        const msg = `[ATTACHMENT:${file.type || 'application/octet-stream'}]${base64data}|${file.name}`;
-        executeSend(msg);
-        setIsUploading(false);
-        try { e.target.value = ''; } catch {}
-        if (fileRef.current) fileRef.current.value = '';
-        if (cameraRef.current) cameraRef.current.value = '';
-        if (galleryRef.current) galleryRef.current.value = '';
-      };
-      reader.readAsDataURL(file);
+      const { message } = await prepareAttachmentMessage(file, {
+        filename: sanitizeFilename(file.name),
+        mimeType: file.type || 'application/octet-stream',
+      });
+      await executeSend(message);
     } catch (err) {
-      console.error(err);
-      toast.error('Could not attach the file');
+      console.error('[Attachment] send failed:', err instanceof Error ? err.message : err);
+      toast.error(err instanceof AttachmentError ? err.message : 'Could not attach the file');
+    } finally {
       setIsUploading(false);
-      try { e.target.value = ''; } catch {}
-      if (fileRef.current) fileRef.current.value = '';
-      if (cameraRef.current) cameraRef.current.value = '';
-      if (galleryRef.current) galleryRef.current.value = '';
+      resetFileInputs(e);
     }
   };
 
@@ -5289,7 +5283,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     rl.timestamps.push(now);
     let txt = inputText.trim();
     if (replyingTo) {
-      const snippet = (isAgreementMessage(replyingTo.content) ? formatMessagePreview(replyingTo.content) : (replyingTo.content || '')).replace(/__/g, '').slice(0, 80);
+      const snippet = (carriesSecret(replyingTo.content) ? formatMessagePreview(replyingTo.content) : (replyingTo.content || '')).replace(/__/g, '').slice(0, 80);
       txt = `__REPLY__${replyingTo.id}__SNIPPET__${snippet}__::${txt}`;
       setReplyingTo(null);
     }
@@ -5328,17 +5322,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     await executeSend(txt);
   };
   
+  // Returns the text of an encrypted attachment message, or null after telling the user why not.
   const uploadAttachment = async (fileOrBlob: Blob, filename: string): Promise<string | null> => {
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', fileOrBlob, filename);
-      const res = await fetch('/api/chat/attachments', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
-      return `[ATTACHMENT:${data.type}]${data.url}|${data.name}`;
-    } catch (err: any) {
-      alert('Attachment failed: ' + err.message);
+      const { message } = await prepareAttachmentMessage(fileOrBlob, {
+        filename,
+        mimeType: fileOrBlob.type || 'application/octet-stream',
+      });
+      return message;
+    } catch (err) {
+      toast.error(err instanceof AttachmentError ? err.message : 'Could not attach the file');
       return null;
     } finally {
       setIsUploading(false);
@@ -7164,8 +7158,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    <MessagesSquare size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Reply in thread
                  </button>
                  <button role="menuitem" type="button" onClick={() => {
-                   // An agreement invitation holds its secrets; copy only what the card shows.
-                   if (isAgreementMessage(contextMenu.content)) { navigator.clipboard.writeText(formatMessagePreview(contextMenu.content)); toast.success('Copied'); setContextMenu(null); return; }
+                   // An agreement invitation or an encrypted attachment holds secrets; copy only its label.
+                   if (carriesSecret(contextMenu.content)) { navigator.clipboard.writeText(formatMessagePreview(contextMenu.content)); toast.success('Copied'); setContextMenu(null); return; }
                    navigator.clipboard.writeText(contextMenu.content.replace(/^\[.*?\]/, '').replace(/^__BURN_\d+__::/, ''));
                    // A disappearing message is removed from this chat, but a pasted copy is not.
                    if (/^__BURN_\d+__::/.test(contextMenu.content)) toast.success('Copied. This message disappears from the chat; the copy you paste elsewhere does not.');

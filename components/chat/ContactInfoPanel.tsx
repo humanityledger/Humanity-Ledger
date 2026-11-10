@@ -232,7 +232,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
     }
   };
 
-  const mediaCount = messages.filter((m: any) => typeof m.content === 'string' && (m.content.startsWith('__MEDIA__:') || m.content.startsWith('[ATTACHMENT:') || m.content.startsWith('[GIF]'))).length;
+  const mediaCount = messages.filter((m: any) => typeof m.content === 'string' && (m.content.startsWith('__MEDIA__:') || m.content.startsWith('[ATTACHMENT:') || m.content.startsWith('[GIF]') || m.content.startsWith('{"type":"hl.attachment"'))).length;
 
   const exportChat = () => {
     const lines = messages
