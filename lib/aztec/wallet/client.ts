@@ -6,8 +6,16 @@
  *   - an Aztec PXE (Private eXecution Environment) with its own storage in the
  *     browser, created by @aztec-labs/wallets;
  *   - a Schnorr account whose keys are derived from a signature by the user's
- *     Ethereum wallet (see keys.ts), deployed with sponsored fees;
- *   - the three test tokens deployed by scripts/aztec/setup-testnet.mjs.
+ *     Ethereum wallet (see keys.ts);
+ *   - the tokens configured for the network.
+ *
+ * Fees, per network (lib/aztec/fees.ts, lib/aztec/fee-juice.ts):
+ *   - test network: the canonical Sponsored FPC pays, as before;
+ *   - Aztec Alpha (only when enabled in config.ts): Fee Juice. A new account
+ *     waits in phase 'needs-fee-juice' until the user bridges AZTEC from L1
+ *     (bridgeFeeJuice), then deploys itself by claiming that deposit in the
+ *     same transaction. Afterwards it pays from its Fee Juice balance, and any
+ *     further ready deposit is claimed by the next transaction.
  *
  * Every balance shown comes from the token contracts through the PXE. Every
  * action is a real transaction, proven on the device and sent to the Aztec
@@ -17,15 +25,41 @@
  * bundle or the first page load.
  */
 
-import { AZTEC_WALLET_CONFIG, FAUCET_AMOUNT, assertTestNetwork, isWalletConfigured, tokenConfig, type TokenKey } from './config';
-import { deriveAccountKeys, WALLET_TYPED_DATA } from './keys';
+import { AZTEC_WALLET_CONFIG, FAUCET_AMOUNT, assertNetworkAllowed, isWalletConfigured, networkLabel, tokenConfig, walletTypedData, type TokenKey } from './config';
+import { deriveAccountKeys, deriveFeeJuiceClaimSecrets, type WalletTypedData } from './keys';
 import { isValidAztecAddress } from '../grumpkin';
 import { parseUnits } from './amounts';
 import { loadLocalActivity, mergeActivity, upsertActivity, type Activity, type ActivityKind } from './history';
 import { assertFeeChoice, identifyNode } from '../fees';
+import {
+  assertNodeFeeJuiceMatchesPins,
+  bridgeFeeJuice as bridgeOnL1,
+  feePlan,
+  loadClaims,
+  mergeClaims,
+  nextSecretIndex,
+  recoverClaims,
+  saveClaims,
+  type FeeJuiceClaim,
+  type FeePlan,
+  type L1Clients,
+} from '../fee-juice';
+
+/** How many claim secrets are derived (and scanned when recovering deposits). */
+const CLAIM_SECRETS = 16;
 
 
-export type WalletPhase = 'idle' | 'signing' | 'starting' | 'deploying' | 'ready' | 'error';
+export type WalletPhase = 'idle' | 'signing' | 'starting' | 'needs-fee-juice' | 'deploying' | 'ready' | 'error';
+
+/** Fee Juice state on Aztec Alpha (absent on the test network). */
+export interface FeeJuiceState {
+  /** Base units (18 decimals) held by the account. */
+  balance: bigint;
+  /** Deposits made on L1 and not yet claimed, with whether each can be claimed now. */
+  claims: { claim: FeeJuiceClaim; ready: boolean }[];
+  /** How the next transaction will pay. */
+  plan: FeePlan['kind'];
+}
 
 export interface TokenBalance {
   key: TokenKey;
@@ -46,9 +80,11 @@ export interface WalletSnapshot {
   balances: TokenBalance[];
   activity: Activity[];
   busy: boolean;
+  /** Aztec Alpha only. */
+  feeJuice?: FeeJuiceState;
 }
 
-export type SignTypedData = (typedData: typeof WALLET_TYPED_DATA) => Promise<string>;
+export type SignTypedData = (typedData: WalletTypedData) => Promise<string>;
 
 type Listener = (s: WalletSnapshot) => void;
 
@@ -60,6 +96,10 @@ interface Sdk {
   waitForTx: (node: any, txHash: any, opts?: any) => Promise<any>;
   getContractInstanceFromInstantiationParams: (artifact: any, opts: any) => Promise<any>;
   SponsoredFeePaymentMethod: any;
+  FeeJuicePaymentMethodWithClaim: any;
+  getFeeJuiceBalance: (owner: any, node: any) => Promise<bigint>;
+  isL1ToL2MessageReady: (node: any, messageHash: any) => Promise<boolean>;
+  computeSecretHash: (secret: any) => Promise<any>;
   NO_FROM: any;
   NO_WAIT: any;
   SponsoredFPCContract: any;
@@ -68,7 +108,7 @@ interface Sdk {
 }
 
 async function loadSdk(): Promise<Sdk> {
-  const [fields, addresses, node, contracts, fee, account, fpc, token, wallets] = await Promise.all([
+  const [fields, addresses, node, contracts, fee, account, fpc, token, wallets, utils, messaging, crypto] = await Promise.all([
     import('@aztec/aztec.js/fields'),
     import('@aztec/aztec.js/addresses'),
     import('@aztec/aztec.js/node'),
@@ -78,6 +118,9 @@ async function loadSdk(): Promise<Sdk> {
     import('@aztec/noir-contracts.js/SponsoredFPC'),
     import('@aztec/noir-contracts.js/Token'),
     import('@aztec/wallets/embedded'),
+    import('@aztec/aztec.js/utils'),
+    import('@aztec/aztec.js/messaging'),
+    import('@aztec/aztec.js/crypto'),
   ]);
   return {
     Fr: (fields as any).Fr,
@@ -87,6 +130,10 @@ async function loadSdk(): Promise<Sdk> {
     waitForTx: (node as any).waitForTx,
     getContractInstanceFromInstantiationParams: (contracts as any).getContractInstanceFromInstantiationParams,
     SponsoredFeePaymentMethod: (fee as any).SponsoredFeePaymentMethod,
+    FeeJuicePaymentMethodWithClaim: (fee as any).FeeJuicePaymentMethodWithClaim,
+    getFeeJuiceBalance: (utils as any).getFeeJuiceBalance,
+    isL1ToL2MessageReady: (messaging as any).isL1ToL2MessageReady,
+    computeSecretHash: (crypto as any).computeSecretHash,
     NO_FROM: (account as any).NO_FROM,
     NO_WAIT: (contracts as any).NO_WAIT,
     SponsoredFPCContract: (fpc as any).SponsoredFPCContract,
@@ -107,7 +154,7 @@ export function isAztecAddress(value: string): boolean {
 /** Payment request encoded in the receive QR code. */
 export function encodePaymentRequest(aztecAddress: string, token?: TokenKey, amount?: string): string {
   const params = new URLSearchParams();
-  params.set('network', 'testnet');
+  params.set('network', AZTEC_WALLET_CONFIG.network === 'mainnet' ? 'alpha' : 'testnet');
   if (token) params.set('token', token);
   if (amount) params.set('amount', amount);
   return `aztec:${aztecAddress}?${params.toString()}`;
@@ -120,6 +167,11 @@ export function decodePaymentRequest(raw: string): { address: string; token?: To
   const m = /^aztec:(0x[0-9a-fA-F]{64})(?:\?(.*))?$/.exec(text);
   if (!m) return null;
   const params = new URLSearchParams(m[2] ?? '');
+  // A request made for the other network is refused: paying a test network
+  // request with real funds (or the reverse) is never what the user meant.
+  const reqNet = params.get('network');
+  const ourNet = AZTEC_WALLET_CONFIG.network === 'mainnet' ? 'alpha' : 'testnet';
+  if (reqNet && reqNet !== ourNet) return null;
   const token = params.get('token') as TokenKey | null;
   const amount = params.get('amount') ?? undefined;
   return {
@@ -135,6 +187,12 @@ class PrivateWallet {
   private wallet: any = null;
   private me: any = null;
   private fee: any = null;
+  /** Sponsored fee options on the test network; null on Alpha. */
+  private sponsoredFee: any = null;
+  /** Fee Juice claim secrets (Alpha only), derived from the signature at connect. */
+  private claimSecrets: bigint[] = [];
+  private manager: any = null;
+  private claimPoll: ReturnType<typeof setInterval> | null = null;
   private tokens = new Map<TokenKey, any>();
   private faucetAddress: any = null;
   private evmAddress: string | null = null;
@@ -186,7 +244,7 @@ class PrivateWallet {
       }
 
       this.set({ phase: 'signing', step: 'Waiting for your wallet signature', error: undefined });
-      const signature = await signTypedData(WALLET_TYPED_DATA);
+      const signature = await signTypedData(walletTypedData());
 
       this.set({ phase: 'starting', step: 'Starting the private node in your browser' });
       const sdk = (this.sdk ??= await loadSdk());
@@ -194,7 +252,7 @@ class PrivateWallet {
 
       this.node = sdk.createAztecNodeClient(AZTEC_WALLET_CONFIG.nodeUrl, RPC_OPTIONS);
       const info = await this.node.getNodeInfo();
-      assertTestNetwork(Number(info.l1ChainId));
+      assertNetworkAllowed(Number(info.l1ChainId));
       // A node on another rollup or release fails later in obscure ways
       // (unknown classes, rejected proofs); say so now, in words.
       // A different node release is reported; a different rollup or L1 is refused.
@@ -215,14 +273,24 @@ class PrivateWallet {
       }
       this.wallet = await sdk.EmbeddedWallet.create(AZTEC_WALLET_CONFIG.nodeUrl, { nodeClientOptions: RPC_OPTIONS });
 
-      const fpc = await sdk.getContractInstanceFromInstantiationParams(sdk.SponsoredFPCContract.artifact, { salt: new Fr(0) });
-      if (fpc.address.toString().toLowerCase() !== AZTEC_WALLET_CONFIG.sponsoredFpc.toLowerCase()) {
-        throw new Error('The Aztec libraries in this build do not match the network the wallet was set up for.');
+      if (AZTEC_WALLET_CONFIG.network === 'testnet') {
+        const fpc = await sdk.getContractInstanceFromInstantiationParams(sdk.SponsoredFPCContract.artifact, { salt: new Fr(0) });
+        if (fpc.address.toString().toLowerCase() !== AZTEC_WALLET_CONFIG.sponsoredFpc.toLowerCase()) {
+          throw new Error('The Aztec libraries in this build do not match the network the wallet was set up for.');
+        }
+        // Sponsored fees exist only where lib/aztec/fees.ts lists a sponsor (never on Alpha).
+        assertFeeChoice(identity.network ?? 'mainnet', { kind: 'sponsored', fpc: fpc.address.toString() }, AZTEC_WALLET_CONFIG.sponsoredFpc);
+        await this.wallet.registerContract(fpc, sdk.SponsoredFPCContract.artifact);
+        this.sponsoredFee = { paymentMethod: new sdk.SponsoredFeePaymentMethod(fpc.address) };
+        this.fee = this.sponsoredFee;
+      } else {
+        // Alpha: Fee Juice only. The L1 portal and token the node reports must
+        // be the pinned ones, or nothing is ever bridged through it.
+        assertNodeFeeJuiceMatchesPins('mainnet', (info as any).l1ContractAddresses);
+        this.sponsoredFee = null;
+        this.fee = undefined; // pays from the account's Fee Juice balance
+        this.claimSecrets = await deriveFeeJuiceClaimSecrets(signature, CLAIM_SECRETS, Fr.MODULUS);
       }
-      // Sponsored fees exist only where lib/aztec/fees.ts lists a sponsor (never on Alpha).
-      assertFeeChoice(identity.network ?? 'mainnet', { kind: 'sponsored', fpc: fpc.address.toString() }, AZTEC_WALLET_CONFIG.sponsoredFpc);
-      await this.wallet.registerContract(fpc, sdk.SponsoredFPCContract.artifact);
-      this.fee = { paymentMethod: new sdk.SponsoredFeePaymentMethod(fpc.address) };
 
       const keys = await deriveAccountKeys(signature, Fr.MODULUS, Fq.MODULUS);
       const manager = await this.wallet.createSchnorrAccount(
@@ -232,9 +300,10 @@ class PrivateWallet {
         `ledger-${evm.slice(2, 10)}`,
       );
       this.me = manager.address;
+      this.manager = manager;
       this.set({ aztecAddress: this.me.toString() });
 
-      this.set({ step: 'Loading the test tokens' });
+      this.set({ step: AZTEC_WALLET_CONFIG.network === 'mainnet' ? 'Loading tokens' : 'Loading the test tokens' });
       for (const t of AZTEC_WALLET_CONFIG.tokens) {
         const addr = AztecAddress.fromStringUnsafe(t.address);
         const instance = await this.node.getContract(addr);
@@ -245,15 +314,8 @@ class PrivateWallet {
 
       const meta = await this.wallet.getContractMetadata(this.me);
       if (String(meta?.initializationStatus) !== 'INITIALIZED') {
-        this.set({ phase: 'deploying', step: 'Creating your private account on the Aztec test network. The first proof can take a minute.' });
-        const id = `deploy-${this.me.toString()}`;
-        upsertActivity(this.me.toString(), { id, kind: 'deploy', status: 'proving', createdAt: Date.now() });
-        const deploy = await manager.getDeployMethod();
-        const receipt = await this.sendAndWait(() => deploy.send({ from: sdk.NO_FROM, fee: this.fee, wait: sdk.NO_WAIT }), id, 'deploy');
-        if (!receipt) {
-          const detail = this.snapshot.activity.find((a) => a.id === id)?.error;
-          throw new Error(detail ? `Your private account could not be created: ${detail}` : 'Your private account could not be created. Please try again.');
-        }
+        const deployed = await this.deployAccount();
+        if (!deployed) return; // Alpha: waiting for Fee Juice (phase 'needs-fee-juice')
       }
 
       this.set({ phase: 'ready', step: undefined });
@@ -262,6 +324,172 @@ class PrivateWallet {
       this.set({ phase: 'error', step: undefined, error: humanError(err) });
       throw err;
     }
+  }
+
+  /**
+   * Deploys the account. Test network: sponsored. Alpha: only by claiming a
+   * ready Fee Juice deposit in the same transaction; without one the wallet
+   * waits in 'needs-fee-juice' and returns false.
+   */
+  private async deployAccount(): Promise<boolean> {
+    const sdk = this.sdk!;
+    let fee = this.sponsoredFee;
+    let consumed: FeeJuiceClaim | undefined;
+    if (AZTEC_WALLET_CONFIG.network === 'mainnet') {
+      const state = await this.refreshFeeJuice();
+      if (state.plan !== 'claim') {
+        this.set({
+          phase: 'needs-fee-juice',
+          step:
+            state.plan === 'wait-claim'
+              ? 'Your Fee Juice is on its way from Ethereum. Your account is created as soon as it arrives (usually a few minutes).'
+              : 'Your private account needs Fee Juice to be created. Bridge AZTEC from your Ethereum wallet to continue.',
+        });
+        if (state.plan === 'wait-claim') this.pollClaims();
+        return false;
+      }
+      const ready = state.claims.find((c) => c.ready)!.claim;
+      fee = { paymentMethod: this.claimMethod(ready) };
+      consumed = ready;
+    }
+    this.set({ phase: 'deploying', step: `Creating your private account on ${networkLabel()}. The first proof can take a minute.` });
+    const id = `deploy-${this.me.toString()}`;
+    upsertActivity(this.me.toString(), { id, kind: 'deploy', status: 'proving', createdAt: Date.now() });
+    const deploy = await this.manager.getDeployMethod();
+    const receipt = await this.sendAndWait(() => deploy.send({ from: sdk.NO_FROM, fee, wait: sdk.NO_WAIT }), id, 'deploy');
+    if (!receipt) {
+      const detail = this.snapshot.activity.find((a) => a.id === id)?.error;
+      throw new Error(detail ? `Your private account could not be created: ${detail}` : 'Your private account could not be created. Please try again.');
+    }
+    if (consumed) this.dropClaim(consumed);
+    return true;
+  }
+
+  /* ------------------------------------------------------------- Fee Juice */
+
+  private claimMethod(c: FeeJuiceClaim) {
+    const sdk = this.sdk!;
+    const secret = this.claimSecrets[c.secretIndex];
+    if (secret === undefined) throw new Error('This Fee Juice deposit was made with a key this wallet does not have.');
+    return new sdk.FeeJuicePaymentMethodWithClaim(this.me, {
+      claimAmount: BigInt(c.claimAmount),
+      claimSecret: new sdk.Fr(secret),
+      messageLeafIndex: BigInt(c.messageLeafIndex),
+    });
+  }
+
+  private dropClaim(c: FeeJuiceClaim) {
+    const me = this.me.toString();
+    saveClaims(me, loadClaims(me).filter((x) => x.messageHash.toLowerCase() !== c.messageHash.toLowerCase()));
+    const used = consumedIndexes(me);
+    if (!used.includes(c.secretIndex)) {
+      try { localStorage.setItem(CONSUMED_KEY(me), JSON.stringify([...used, c.secretIndex])); } catch {}
+    }
+  }
+
+  /** Reads the Fee Juice balance and pending deposits (Alpha). */
+  async refreshFeeJuice(): Promise<FeeJuiceState> {
+    const sdk = this.sdk!;
+    const me = this.me.toString();
+    const balance = BigInt(await sdk.getFeeJuiceBalance(this.me, this.node));
+    const claims = await Promise.all(
+      loadClaims(me).map(async (claim) => ({
+        claim,
+        ready: await sdk.isL1ToL2MessageReady(this.node, sdk.Fr.fromHexString(claim.messageHash)).catch(() => false),
+      })),
+    );
+    const plan = feePlan({ network: 'mainnet', hasSponsor: false, feeJuiceBalance: balance, minBalance: 1n, claims }).kind;
+    const state: FeeJuiceState = { balance, claims, plan };
+    this.set({ feeJuice: state });
+    return state;
+  }
+
+  /** Fee options for the next transaction, and the deposit it consumes (if any). */
+  private async resolveFee(): Promise<{ fee: any; consumes?: FeeJuiceClaim }> {
+    if (AZTEC_WALLET_CONFIG.network !== 'mainnet') return { fee: this.sponsoredFee };
+    const state = await this.refreshFeeJuice();
+    if (state.plan === 'claim') {
+      const c = state.claims.find((x) => x.ready)!.claim;
+      return { fee: { paymentMethod: this.claimMethod(c) }, consumes: c };
+    }
+    if (state.plan === 'balance') return { fee: undefined };
+    throw new Error(
+      state.plan === 'wait-claim'
+        ? 'Your Fee Juice is still arriving from Ethereum. Try again in a few minutes.'
+        : 'You have no Fee Juice to pay the network fee. Bridge AZTEC from your Ethereum wallet first.',
+    );
+  }
+
+  /**
+   * Bridges `amount` whole AZTEC from the user's Ethereum wallet into Fee
+   * Juice for this account (Alpha only). Returns once the L1 deposit is mined;
+   * the account is created automatically when the deposit reaches Aztec.
+   */
+  async bridgeFeeJuice(l1: L1Clients, amount: string) {
+    if (AZTEC_WALLET_CONFIG.network !== 'mainnet') throw new Error('Fee Juice is only needed on Aztec Alpha. The test network sponsors fees.');
+    if (!this.me || !this.sdk) throw new Error('Open your private wallet first.');
+    const units = parseUnits(amount, 18);
+    const me = this.me.toString();
+    const pending = loadClaims(me);
+    const index = nextSecretIndex(pending, consumedIndexes(me));
+    if (index >= this.claimSecrets.length) throw new Error('Too many unclaimed Fee Juice deposits. Wait for the pending ones to arrive.');
+    const secretHash = (await this.sdk.computeSecretHash(new this.sdk.Fr(this.claimSecrets[index]))).toString();
+    const claim = await bridgeOnL1(l1, { network: 'mainnet', recipient: me, amount: units, secretHash, secretIndex: index });
+    saveClaims(me, mergeClaims(loadClaims(me), [claim]));
+    await this.refreshFeeJuice();
+    this.pollClaims();
+    return claim;
+  }
+
+  /**
+   * Finds this account's Fee Juice deposits on L1 again (after clearing the
+   * browser, or on a new device) by re-deriving claim secrets. `l1.getLogs`
+   * is viem's PublicClient.getLogs.
+   */
+  async recoverFeeJuiceClaims(l1: Required<Pick<L1Clients, 'getLogs'>>) {
+    if (!this.me || !this.sdk) throw new Error('Open your private wallet first.');
+    const me = this.me.toString();
+    const sdk = this.sdk;
+    const found = await recoverClaims(l1, {
+      network: 'mainnet',
+      recipient: me,
+      fromBlock: AZTEC_WALLET_CONFIG.l1FromBlock,
+      maxIndex: this.claimSecrets.length,
+      secretHashForIndex: async (i) => (await sdk.computeSecretHash(new sdk.Fr(this.claimSecrets[i]))).toString(),
+    });
+    const used = new Set(consumedIndexes(me));
+    saveClaims(me, mergeClaims(loadClaims(me), found.filter((c) => !used.has(c.secretIndex))));
+    await this.refreshFeeJuice();
+    return found.length;
+  }
+
+  /** While a deposit is on its way, checks every 15 s and finishes setup when it can be claimed. */
+  private pollClaims() {
+    if (this.claimPoll) return;
+    const started = Date.now();
+    this.claimPoll = setInterval(async () => {
+      if (Date.now() - started > 45 * 60 * 1000 || !this.me) return this.stopPoll();
+      try {
+        const state = await this.refreshFeeJuice();
+        if (state.plan === 'claim' && this.snapshot.phase === 'needs-fee-juice') {
+          this.stopPoll();
+          if (await this.deployAccount()) {
+            this.set({ phase: 'ready', step: undefined });
+            await this.refresh();
+          }
+        } else if (state.plan !== 'wait-claim') {
+          this.stopPoll();
+        }
+      } catch (err) {
+        this.stopPoll();
+        this.set({ phase: 'error', step: undefined, error: humanError(err) });
+      }
+    }, 15_000);
+  }
+
+  private stopPoll() {
+    if (this.claimPoll) clearInterval(this.claimPoll);
+    this.claimPoll = null;
   }
 
   /* --------------------------------------------------------------- reading */
@@ -408,11 +636,13 @@ class PrivateWallet {
       createdAt: Date.now(),
     });
     this.set({ activity: await this.loadActivity() });
+    const { fee, consumes } = await this.resolveFee();
     const receipt = await this.sendAndWait(
-      () => build(contract).send({ from: from ?? this.me, fee: this.fee, wait: this.sdk!.NO_WAIT }),
+      () => build(contract).send({ from: from ?? this.me, fee, wait: this.sdk!.NO_WAIT }),
       id,
       kind,
     );
+    if (receipt && consumes) this.dropClaim(consumes);
     await this.refresh();
     if (!receipt) throw new Error(this.snapshot.activity.find((a) => a.id === id)?.error ?? 'The transaction failed.');
     return receipt;
@@ -472,13 +702,28 @@ class PrivateWallet {
   }
 
   async disconnect() {
+    this.stopPoll();
+    this.claimSecrets = [];
+    this.manager = null;
     await this.wallet?.stop?.().catch(() => {});
     this.wallet = null;
     this.me = null;
     this.tokens.clear();
     this.faucetAddress = null;
     this.evmAddress = null;
-    this.set({ phase: 'idle', aztecAddress: undefined, balances: [], activity: [], step: undefined, error: undefined });
+    this.set({ phase: 'idle', aztecAddress: undefined, balances: [], activity: [], step: undefined, error: undefined, feeJuice: undefined });
+  }
+}
+
+const CONSUMED_KEY = (me: string) => `hl.aztec.feejuice.consumed.${me.toLowerCase()}`;
+
+/** Claim secret indexes already used by a consumed deposit, so they are never reused. */
+function consumedIndexes(me: string): number[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(CONSUMED_KEY(me)) || '[]');
+    return Array.isArray(v) ? v.filter((x) => Number.isInteger(x)) : [];
+  } catch {
+    return [];
   }
 }
 
@@ -493,7 +738,8 @@ export function humanError(err: any): string {
   if (/user (rejected|denied)|rejected the request|denied message signature/i.test(msg)) return 'You declined the signature in your wallet.';
   if (/Balance too low|not enough|insufficient/i.test(msg)) return 'Your balance is too low for this amount.';
   if (/timeout/i.test(msg)) return 'The network took too long to confirm. It may still go through; check again in a minute.';
-  if (/Failed to fetch|fetch failed|NetworkError|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(msg)) return 'Could not reach the Aztec test network. Check your connection and try again.';
+  if (/Failed to fetch|fetch failed|NetworkError|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(msg)) return `Could not reach ${networkLabel()}. Check your connection and try again.`;
+  if (/fee.?juice|insufficient fee payer balance|not enough balance for fee/i.test(msg) && !/Bridge AZTEC|still arriving/.test(msg)) return 'Not enough Fee Juice to pay the network fee. Bridge more AZTEC from your Ethereum wallet.';
   if (/internal error/i.test(msg)) return 'Your wallet reported an internal signing error. Try switching networks or restarting your wallet.';
   return msg.length > 220 ? msg.slice(0, 220) + '…' : msg;
 }

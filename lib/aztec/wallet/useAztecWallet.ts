@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAccount, useSignTypedData } from 'wagmi';
 import { getPrivateWallet, type WalletSnapshot } from './client';
-import type { WALLET_TYPED_DATA } from './keys';
+import type { WalletTypedData } from './keys';
 import { useWalletStore } from '@/lib/store/wallet-store';
 
 /**
@@ -33,7 +33,7 @@ export function useAztecWallet(sessionAddress: string) {
 
   const open = useCallback(async () => {
     let activeAddress: string | null = null;
-    let signFn: (td: typeof WALLET_TYPED_DATA) => Promise<string>;
+    let signFn: (td: WalletTypedData) => Promise<string>;
 
     // Priority 1: External Wagmi wallet
     if (isConnected && connected && connected.toLowerCase() === sessionAddress.toLowerCase()) {
@@ -64,7 +64,7 @@ export function useAztecWallet(sessionAddress: string) {
       throw new Error('The connected wallet is not the account you are signed in with. Switch accounts in your wallet and try again.');
     }
 
-    await getPrivateWallet().connect(activeAddress, async (td: typeof WALLET_TYPED_DATA) => {
+    await getPrivateWallet().connect(activeAddress, async (td: WalletTypedData) => {
       try {
         return await signFn(td);
       } catch (err: any) {

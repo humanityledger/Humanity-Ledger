@@ -6,10 +6,21 @@
  * them is secret except the faucet key, which is published on purpose (see
  * that script).
  *
- * The wallet only ever talks to the Aztec TEST network. `assertTestNetwork`
- * refuses to start against a node that settles on Ethereum mainnet, so a
+ * By default the wallet only talks to the Aztec TEST network, and
+ * `assertNetworkAllowed` refuses a node that settles on Ethereum mainnet, so a
  * mistyped variable cannot point real users at a network with real value.
+ *
+ * Aztec Alpha (mainnet) needs BOTH variables, set on purpose by the operator:
+ *   NEXT_PUBLIC_AZTEC_NETWORK=alpha
+ *   NEXT_PUBLIC_AZTEC_ALPHA_ENABLED=true
+ * On Alpha there is no sponsor and no faucet: fees are paid in Fee Juice
+ * bridged from L1 (lib/aztec/fee-juice.ts), and only tokens listed in
+ * NEXT_PUBLIC_AZTEC_TOKENS that pass lib/aztec/token-check.ts are used.
  */
+import { AZTEC_NETWORKS } from '../sequencer/networks';
+import { WALLET_TYPED_DATA, WALLET_TYPED_DATA_ALPHA, type WalletTypedData } from './keys';
+
+export type WalletNetwork = 'testnet' | 'mainnet';
 
 export type TokenKey = 'USDC' | 'DAI' | 'ETH';
 
@@ -46,28 +57,50 @@ function parseJson<T>(raw: string | undefined): T | null {
 }
 
 // Each variable is read literally so that Next.js inlines it at build time.
-const NODE_URL = process.env.NEXT_PUBLIC_AZTEC_NODE_URL || 'https://aztec-testnet.drpc.org';
-const L1_CHAIN_ID = Number(process.env.NEXT_PUBLIC_AZTEC_L1_CHAIN_ID || TESTNET_L1_CHAIN_ID);
+const NETWORK: WalletNetwork = process.env.NEXT_PUBLIC_AZTEC_NETWORK === 'alpha' ? 'mainnet' : 'testnet';
+const ALPHA_ENABLED = process.env.NEXT_PUBLIC_AZTEC_ALPHA_ENABLED === 'true';
+const NODE_URL = process.env.NEXT_PUBLIC_AZTEC_NODE_URL || AZTEC_NETWORKS[NETWORK].publicNodeRpc;
+const L1_CHAIN_ID = Number(process.env.NEXT_PUBLIC_AZTEC_L1_CHAIN_ID || AZTEC_NETWORKS[NETWORK].l1ChainId);
+/** L1 block from which to look for this site's Fee Juice deposits when recovering claims. */
+const L1_FROM_BLOCK = BigInt(process.env.NEXT_PUBLIC_AZTEC_L1_FROM_BLOCK || '0');
+const EXPLORER = process.env.NEXT_PUBLIC_AZTEC_EXPLORER || (NETWORK === 'testnet' ? 'https://testnet.aztecscan.xyz' : '');
 const SPONSORED_FPC = process.env.NEXT_PUBLIC_AZTEC_SPONSORED_FPC || '';
 const TOKENS_RAW = parseJson<Partial<Record<TokenKey, Omit<TokenConfig, 'key'>>>>(process.env.NEXT_PUBLIC_AZTEC_TOKENS);
 const FAUCET_RAW = parseJson<FaucetConfig>(process.env.NEXT_PUBLIC_AZTEC_FAUCET);
 
 export const AZTEC_WALLET_CONFIG = {
+  network: NETWORK,
+  alphaEnabled: ALPHA_ENABLED,
   nodeUrl: NODE_URL,
   l1ChainId: L1_CHAIN_ID,
-  sponsoredFpc: SPONSORED_FPC,
-  explorer: 'https://testnet.aztecscan.xyz',
+  l1FromBlock: L1_FROM_BLOCK,
+  sponsoredFpc: NETWORK === 'testnet' ? SPONSORED_FPC : '',
+  explorer: EXPLORER,
   rpcMaxBatch: Number(process.env.NEXT_PUBLIC_AZTEC_RPC_MAX_BATCH || 3),
   tokens: TOKEN_ORDER.flatMap((key) => {
     const t = TOKENS_RAW?.[key];
     return t?.address ? [{ key, address: t.address, symbol: t.symbol, decimals: Number(t.decimals) }] : [];
   }) as TokenConfig[],
-  faucet: FAUCET_RAW?.address ? FAUCET_RAW : null,
+  // Test tokens only: there is never a faucet on Alpha.
+  faucet: NETWORK === 'testnet' && FAUCET_RAW?.address ? FAUCET_RAW : null,
 } as const;
 
 /** True when the operator setup has been run and the wallet can work. */
 export function isWalletConfigured(): boolean {
+  if (AZTEC_WALLET_CONFIG.network === 'mainnet') {
+    return AZTEC_WALLET_CONFIG.alphaEnabled && AZTEC_WALLET_CONFIG.tokens.length > 0;
+  }
   return AZTEC_WALLET_CONFIG.tokens.length === TOKEN_ORDER.length && !!AZTEC_WALLET_CONFIG.sponsoredFpc;
+}
+
+/** What the user signs to open the wallet; differs per network (keys.ts). */
+export function walletTypedData(): WalletTypedData {
+  return AZTEC_WALLET_CONFIG.network === 'mainnet' ? WALLET_TYPED_DATA_ALPHA : WALLET_TYPED_DATA;
+}
+
+/** Words for the interface. */
+export function networkLabel(): string {
+  return AZTEC_WALLET_CONFIG.network === 'mainnet' ? 'Aztec Alpha' : 'Aztec test network';
 }
 
 export function tokenConfig(key: TokenKey): TokenConfig {
@@ -82,6 +115,24 @@ export function assertTestNetwork(l1ChainId: number) {
   }
 }
 
+/**
+ * The node must settle where this build was configured to run, and Alpha
+ * must have been enabled on purpose. Replaces assertTestNetwork in the wallet.
+ */
+export function assertNetworkAllowed(l1ChainId: number, cfg: Pick<typeof AZTEC_WALLET_CONFIG, 'network' | 'alphaEnabled'> = AZTEC_WALLET_CONFIG) {
+  const mainnetNode = l1ChainId === AZTEC_NETWORKS.mainnet.l1ChainId;
+  if (cfg.network === 'testnet') {
+    if (mainnetNode) assertTestNetwork(l1ChainId);
+    return;
+  }
+  if (!cfg.alphaEnabled) {
+    throw new Error('Aztec Alpha is not enabled on this server (NEXT_PUBLIC_AZTEC_ALPHA_ENABLED).');
+  }
+  if (!mainnetNode) {
+    throw new Error('This wallet is configured for Aztec Alpha, but the node does not settle on Ethereum mainnet.');
+  }
+}
+
 export function explorerTxUrl(txHash: string) {
-  return `${AZTEC_WALLET_CONFIG.explorer}/tx-effect/${txHash}`;
+  return AZTEC_WALLET_CONFIG.explorer ? `${AZTEC_WALLET_CONFIG.explorer}/tx-effect/${txHash}` : '';
 }

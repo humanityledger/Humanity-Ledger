@@ -18,7 +18,24 @@
  *
  * This replaces two earlier designs that were unsafe: deriving the Aztec key
  * from the public Ethereum address, and deriving it on the server.
+ *
+ * Aztec Alpha (mainnet) uses its own typed data (WALLET_TYPED_DATA_ALPHA), so
+ * it derives a DIFFERENT account from the test network: a signature given on
+ * the test network flow can never spend on Alpha, and the user sees which
+ * network they are opening in the message they sign.
+ *
+ * Fee Juice claim secrets (lib/aztec/fee-juice.ts) are derived from the same
+ * signature, so a deposit bridged from L1 can be claimed from any device:
+ *   claimSecret[i] = HKDF-SHA256(signature, info = "hl/aztec/v1/fee-juice-claim/<i>") mod Fr
  */
+
+/** Shape shared by the test network and Alpha typed data. */
+export interface WalletTypedData {
+  domain: { name: string; version: string };
+  types: { PrivateWallet: readonly { name: string; type: string }[] };
+  primaryType: 'PrivateWallet';
+  message: { purpose: string; network: string; warning: string };
+}
 
 export const WALLET_TYPED_DATA = {
   domain: {
@@ -36,6 +53,18 @@ export const WALLET_TYPED_DATA = {
   message: {
     purpose: 'Open my private payments wallet in Ledger Chat',
     network: 'Aztec test network',
+    warning: 'Only sign this on ledgerchat.org or on your own copy of Ledger Chat. Anyone who has this signature can spend from your private wallet.',
+  },
+} as const;
+
+/** Aztec Alpha: real value. Different message, so a different account and different keys. */
+export const WALLET_TYPED_DATA_ALPHA = {
+  domain: WALLET_TYPED_DATA.domain,
+  types: WALLET_TYPED_DATA.types,
+  primaryType: 'PrivateWallet',
+  message: {
+    purpose: 'Open my private payments wallet in Ledger Chat',
+    network: 'Aztec Alpha (Ethereum mainnet). Real funds.',
     warning: 'Only sign this on ledgerchat.org or on your own copy of Ledger Chat. Anyone who has this signature can spend from your private wallet.',
   },
 } as const;
@@ -92,4 +121,17 @@ export async function deriveAccountKeys(signatureHex: string, frModulus: bigint,
   ]);
   sig.fill(0);
   return { secret, salt, signingKey };
+}
+
+/**
+ * Claim secrets for Fee Juice deposits, indexes [0, count). Deterministic, so
+ * a deposit's secret can be recovered on any device from the same signature.
+ */
+export async function deriveFeeJuiceClaimSecrets(signatureHex: string, count: number, frModulus: bigint): Promise<bigint[]> {
+  const sig = hexToBytes(signatureHex);
+  if (sig.length < 64) throw new Error('Invalid signature.');
+  const out: bigint[] = [];
+  for (let i = 0; i < count; i++) out.push(await fieldElement(sig, `hl/aztec/v1/fee-juice-claim/${i}`, frModulus));
+  sig.fill(0);
+  return out;
 }
