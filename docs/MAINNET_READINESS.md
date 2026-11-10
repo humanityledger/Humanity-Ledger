@@ -76,3 +76,17 @@ An external review cannot be done in code. `docs/AUDIT_SCOPE.md` lists what a re
 3. G6: agreements in the conversation (invitation messages, status, claim, refund, withdraw, cancel).
 4. G5: deploy on Alpha (Stefan), record, preflight green.
 5. Small caps, acknowledgement on; raise caps only with an audit.
+
+## Conditions before raising caps or softening the disclaimers
+
+Caps (`NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS`, per-payment limits) and the "not audited" notices stay as they are until every line below is true and recorded here with a date and a link. Any single one missing keeps the current caps.
+
+1. Third-party audit of `contracts/aztec/escrow` and `contracts/aztec/streams` (including the deposit and creation nullifier changes), findings fixed, report public.
+2. Aztec Alpha release in use has no open critical advisory from Aztec Labs; the node identity pins (`lib/aztec/fees.ts`, `lib/aztec/fee-juice.ts`) match it.
+3. CI "SDK still encrypts the wallet stores" green on the exact SDK version shipped; no plaintext `pxe_data*` / `wallet_data*` store left after one sign-in (manual check in two browsers).
+4. Subresource Integrity active in production (every `<script>` from `/_next/` carries `integrity`), and the proving VK pins (`scripts/zk/check-artifacts.mjs`) green on the deployed commit.
+5. Two-browser runs of: direct payment, escrow fund/release/refund/cancel, stream create/withdraw/cancel, community → DM handoff, each on Alpha with the smallest amount, recorded with tx hashes.
+6. G7 refusal verified: an unverified peer, a peer whose binding proof was edited, and a peer on another network are all blocked before any proof is made.
+7. Incident path written: who can pause the UI rails (config flag), how users are told, and how funds in open agreements are recovered without the operator.
+
+Raising a cap is a config change reviewed by two people; lowering it never needs review.
