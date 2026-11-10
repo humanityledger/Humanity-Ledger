@@ -32,8 +32,9 @@ export interface DirectPolicyInput {
 export function checkDirectPaymentPolicy(p: DirectPolicyInput): PolicyResult {
   const reasons: string[] = [];
   if (p.amount <= 0n) reasons.push('amount must be positive');
-  if (p.network === 'testnet' || p.network === 'local') return reasons.length ? { ok: false, reasons } : { ok: true };
+  // G7 on every network: value only goes to an address with a fresh, verified proof of control.
   if (!p.peerVerified) reasons.push("the payee's Aztec address has no verified proof of control (G7)");
+  if (p.network === 'testnet' || p.network === 'local') return reasons.length ? { ok: false, reasons } : { ok: true };
   if (!p.acknowledgedUnaudited) reasons.push('this app is unaudited and the user has not acknowledged it');
   if (!p.acknowledgedPublicFeePayer) reasons.push('the fee payer is public and the user has not acknowledged it');
   const cap = p.caps?.[p.token.toLowerCase()];

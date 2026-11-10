@@ -45,3 +45,40 @@ describe('wipeLocalAztecStores', () => {
     expect(isWalletStoreName(undefined)).toBe(false);
   });
 });
+
+describe('countLocalAztecStores', () => {
+  it('counts only wallet stores and fails to null, never throws', async () => {
+    const { countLocalAztecStores } = await import('@/lib/aztec/wallet/wipe');
+    expect(await countLocalAztecStores({ listStores: async () => ['pxe_data_1', 'wallet_data_x', 'chat_db'], deleteStore: async () => {} })).toBe(2);
+    expect(await countLocalAztecStores({ listStores: async () => { throw new Error('opfs'); }, deleteStore: async () => {} })).toBeNull();
+  });
+});
+
+describe('per-account encrypted store names and legacy cleanup', () => {
+  const rollup = '0x' + 'ab'.repeat(20);
+  it('names differ by account, network and rollup and never contain the address', async () => {
+    const { walletStoreNames } = await import('@/lib/aztec/wallet/wipe');
+    const a = await walletStoreNames('testnet', rollup, '0x' + '11'.repeat(20));
+    const b = await walletStoreNames('testnet', rollup, '0x' + '22'.repeat(20));
+    const c = await walletStoreNames('mainnet', rollup, '0x' + '11'.repeat(20));
+    const d = await walletStoreNames('testnet', '0x' + 'cd'.repeat(20), '0x' + '11'.repeat(20));
+    expect(new Set([a.pxeName, b.pxeName, c.pxeName, d.pxeName]).size).toBe(4);
+    expect(a.pxeName.includes('1111')).toBe(false);
+    expect(a.pxeName.startsWith('pxe_testnet_abababab_')).toBe(true);
+    expect(a.walletName.startsWith('wallet_')).toBe(true);
+  });
+  it('refuses to name stores without a rollup address (fail-closed)', async () => {
+    const { walletStoreNames } = await import('@/lib/aztec/wallet/wipe');
+    await expect(walletStoreNames('testnet', '', '0x' + '11'.repeat(20))).rejects.toThrow('rollup');
+  });
+  it('legacy cleanup removes only plaintext and shared-name stores', async () => {
+    const { wipeLegacyPlainStores, walletStoreNames } = await import('@/lib/aztec/wallet/wipe');
+    const cur = await walletStoreNames('testnet', rollup, '0x' + '11'.repeat(20));
+    const deleted: string[] = [];
+    const names = ['pxe_data', 'wallet_data_x', 'pxe_testnet', 'wallet_alpha', cur.pxeName, cur.walletName, 'chat_db'];
+    const n = await wipeLegacyPlainStores({ listStores: async () => names, deleteStore: async (x) => { deleted.push(x); } });
+    expect(n).toBe(4);
+    expect(deleted.includes(cur.pxeName)).toBe(false);
+    expect(deleted.includes('chat_db')).toBe(false);
+  });
+});

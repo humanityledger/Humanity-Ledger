@@ -65,8 +65,11 @@ describe('sendDirectPrivatePayment', () => {
     await expect(sendDirectPrivatePayment(req, c.d)).rejects.toThrow(/no transaction hash/);
   });
 
-  it('allows the test network without G7 or acknowledgement (v1 pin)', async () => {
-    const { d, sent } = deps({ l1ChainId: 11155111, network: 'testnet', alphaEnabled: false, verified: false });
+  it('requires G7 on the test network too, but not the Alpha acknowledgement', async () => {
+    const v1 = deps({ l1ChainId: 11155111, network: 'testnet', alphaEnabled: false, verified: false });
+    await expect(sendDirectPrivatePayment({ ...req, ack: undefined }, v1.d)).rejects.toThrow(/G7/);
+    expect(v1.sent).toEqual([]);
+    const { d, sent } = deps({ l1ChainId: 11155111, network: 'testnet', alphaEnabled: false, verified: true });
     expect((await sendDirectPrivatePayment({ ...req, ack: undefined }, d)).txHash).toBe(HASH);
     expect(sent.length).toBe(1);
   });

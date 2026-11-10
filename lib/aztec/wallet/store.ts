@@ -8,8 +8,8 @@
  *   - The stores (pxe_data and wallet_data) MUST be opened with an encryption
  *     key derived from the user's EIP-712 wallet signature via HKDF
  *     (info: "hl/aztec/v1/store").
- *   - Fallback to unencrypted stores (e.g. legacy plain IndexedDB) is strictly
- *     rejected at runtime.
+ *   - There is no fallback: without OPFS + Worker the wallet does not open
+ *     (no unencrypted IndexedDB, no in-memory stand-in).
  */
 
 import { deriveStoreEncryptionKey } from './keys';
@@ -114,41 +114,12 @@ export async function openEncryptedWalletStores(
         await pxeStore.close().catch(() => {});
         throw walletErr;
       }
-    } else {
-      // Non-browser or test runner without Worker/OPFS:
-      // Return memory store interface with encryption verified
-      const createEphemeralStore = () => ({
-        openMap: () => ({
-          get: async () => undefined,
-          set: async () => {},
-          delete: async () => {},
-        }),
-        openSingleton: () => ({
-          get: async () => undefined,
-          set: async () => {},
-          delete: async () => {},
-        }),
-        openMultiMap: () => ({
-          getValues: async () => [],
-          set: async () => {},
-          deleteValue: async () => {},
-        }),
-        openArray: () => ({
-          push: async () => {},
-          getAt: async () => undefined,
-          length: () => 0,
-        }),
-        close: async () => {},
-        isEncrypted: true,
-      });
-
-      return {
-        pxeStore: createEphemeralStore(),
-        walletStore: createEphemeralStore(),
-        isEncrypted: true,
-      };
     }
+    // BLOCKED: security risk. No OPFS/Worker means no encrypted persistent store; a stand-in store would
+    // claim encryption it does not have and lose notes silently. Fail closed: the wallet does not open.
+    throw new EncryptedStoreError('This browser cannot keep an encrypted private wallet (OPFS storage and Web Workers are required). Use a current Chrome, Edge, Firefox or Safari outside private browsing.');
   } catch (err: any) {
+    if (err instanceof EncryptedStoreError) throw err;
     throw new EncryptedStoreError(
       `Failed to open encrypted stores: ${err?.message || err}`,
       err,

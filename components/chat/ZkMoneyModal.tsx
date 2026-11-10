@@ -20,6 +20,8 @@ import { AZTEC_WALLET_CONFIG, networkLabel, type TokenKey } from '@/lib/aztec/wa
 import { directPaymentMessage } from '@/lib/payments/direct-private';
 import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
+import { ProvingStatus } from './ProvingStatus';
+import { useAddressFingerprint } from './useAddressFingerprint';
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 
@@ -87,6 +89,8 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
   const [confirmedFingerprint, setConfirmedFingerprint] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState(0);
+  const fingerprint = useAddressFingerprint(payee?.address);
 
   useEffect(() => {
     setAck(NO_ACK); // per payment and per chat, never persisted
@@ -102,12 +106,14 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
     };
   }, [dmPeerInboxId, selfInboxId]);
 
-  const blocked = !payee?.address || !confirmedFingerprint || (ALPHA && (!payee.verified || !acked(ack)));
+  // G7 on every network; the fingerprint check is an extra out-of-band confirmation, never a substitute.
+  const blocked = !payee?.address || !payee.verified || !fingerprint || !confirmedFingerprint || (ALPHA && !acked(ack));
   const once = useRef(singleFlight()).current; // 4.19: a double tap never pays twice
   const send = () => once(async () => {
     if (busy || blocked) return;
     setBusy(true);
     setError(null);
+    setStartedAt(Date.now());
     try {
       const { sendDirectPrivatePayment } = await import('@/lib/payments/direct-private');
       const { txHash } = await sendDirectPrivatePayment({ token, amount, dmPeerInboxId, selfInboxId, ack });
@@ -123,7 +129,6 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
 
   const field = 'w-full h-11 rounded-xl border border-[#e4e7ec] px-3 text-[16px] text-[#15171c] bg-white';
   const who = peerName || 'This person';
-  const fingerprint = payee?.address ? `${payee.address.slice(2, 6).toUpperCase()}-${payee.address.slice(-4).toUpperCase()}` : null;
 
   return (
     <div className="h-full overflow-y-auto overscroll-contain bg-white p-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] space-y-4" role="dialog" aria-label="Private payment">
@@ -141,13 +146,13 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
           <div className="flex items-center justify-between">
             <span className="text-[12px] font-medium text-[#4a505c]">Recipient Aztec Address</span>
             <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${payee.verified ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
-              {payee.verified ? '✓ Schnorr Verified (G7)' : ALPHA ? '⚠ Verification required on Alpha' : 'Unverified (Testnet)'}
+              {payee.verified ? '✓ Verified (G7)' : 'Not verified: payment blocked'}
             </span>
           </div>
           <div className="flex items-center justify-between font-mono text-[11px] text-[#15171c] bg-white border border-[#e4e7ec] rounded-lg px-2.5 py-1.5">
             <span className="truncate mr-2">{payee.address.slice(0, 14)}…{payee.address.slice(-10)}</span>
             {fingerprint && (
-              <span className="font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-800 flex-shrink-0" title="Cryptographic Address Fingerprint">
+              <span className="font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-800 flex-shrink-0" title="Address fingerprint (SHA-256)">
                 FP: {fingerprint}
               </span>
             )}
@@ -184,6 +189,7 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
       </label>
       <ProvingMemoryNote />
       {ALPHA && <AlphaRiskAck kind="payment" value={ack} onChange={setAck} disabled={busy} />}
+      {busy && <ProvingStatus label="Checking the address, then proving the payment on this device" startedAt={startedAt || Date.now()} />}
       <button type="button" className="w-full min-h-[44px] rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={busy || blocked || !amount} onClick={send}>
         {busy ? 'Proving on this device…' : 'Send privately'}
       </button>

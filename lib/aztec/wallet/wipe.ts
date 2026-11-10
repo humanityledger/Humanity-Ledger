@@ -49,3 +49,57 @@ export async function wipeLocalAztecStores(kv?: KvStoreAdmin): Promise<{ deleted
   }
   return { deleted, failed };
 }
+
+/** How many Aztec wallet stores this browser holds; null when that cannot be read (never throws, never returns names). */
+export async function countLocalAztecStores(kv?: KvStoreAdmin): Promise<number | null> {
+  try {
+    let admin = kv;
+    if (!admin) {
+      const m: any = await import('@aztec-labs/kv-store/sqlite-opfs');
+      if (typeof m.listStores !== 'function') return null;
+      admin = { listStores: m.listStores, deleteStore: m.deleteStore };
+    }
+    return (await admin.listStores()).filter(isWalletStoreName).length;
+  } catch {
+    return null;
+  }
+}
+
+/** Store names for one network + rollup + account; the account appears only as a hash. Throws without a rollup (fail-closed). */
+export async function walletStoreNames(
+  network: 'testnet' | 'mainnet',
+  rollupAddress: string,
+  evmAddress: string,
+  subtle: Pick<SubtleCrypto, 'digest'> = globalThis.crypto.subtle,
+): Promise<{ pxeName: string; walletName: string }> {
+  const rollup = rollupAddress.toLowerCase();
+  if (!/^0x[0-9a-f]{40}$/.test(rollup)) throw new Error('The Aztec node did not report its rollup address.');
+  const d = new Uint8Array(await subtle.digest('SHA-256', new TextEncoder().encode(`hl/aztec-store/v1:${evmAddress.toLowerCase()}`)));
+  const acct = Array.from(d.slice(0, 6), (b) => b.toString(16).padStart(2, '0')).join('');
+  const tag = `${network === 'mainnet' ? 'alpha' : 'testnet'}_${rollup.slice(2, 10)}_${acct}`;
+  return { pxeName: `pxe_${tag}`, walletName: `wallet_${tag}` };
+}
+
+/** Names written by builds before per-account encrypted stores: plaintext pxe_data…/wallet_data…, and the shared per-network names. */
+export const isLegacyStoreName = (n: unknown): n is string =>
+  typeof n === 'string' &&
+  (n.startsWith('pxe_data') || n.startsWith('wallet_data') || ['pxe_testnet', 'wallet_testnet', 'pxe_alpha', 'wallet_alpha'].includes(n));
+
+/** Best effort, never throws: removes legacy stores only (a store open in another tab stays). */
+export async function wipeLegacyPlainStores(kv?: KvStoreAdmin): Promise<number> {
+  try {
+    let admin = kv;
+    if (!admin) {
+      const m: any = await import('@aztec-labs/kv-store/sqlite-opfs');
+      if (typeof m.listStores !== 'function' || typeof m.deleteStore !== 'function') return 0;
+      admin = { listStores: m.listStores, deleteStore: m.deleteStore };
+    }
+    let n = 0;
+    for (const name of (await admin.listStores()).filter(isLegacyStoreName)) {
+      try { await admin.deleteStore(name); n++; } catch { /* open elsewhere */ }
+    }
+    return n;
+  } catch {
+    return 0;
+  }
+}

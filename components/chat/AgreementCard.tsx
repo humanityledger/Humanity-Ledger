@@ -17,12 +17,13 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { singleFlight } from '@/lib/aztec/single-flight';
-import { Lock, Waves, KeyRound, ShieldCheck, AlertTriangle, LoaderCircle } from 'lucide-react';
+import { Lock, Waves, KeyRound, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { summarizeInvite, agreementMessageKind } from '@/lib/aztec/agreement-message';
 import { localStoragePeerBindingStore, peerAztecAddress, recordPeerAnnouncement, sdkBindingCrypto, type AnnouncementResult } from '@/lib/aztec/peer-binding';
 import { getPrivateWallet, humanError, type WalletSnapshot } from '@/lib/aztec/wallet/client';
 import { formatUnits } from '@/lib/aztec/wallet/amounts';
-import { AZTEC_WALLET_CONFIG } from '@/lib/aztec/wallet/config';
+import { AZTEC_WALLET_CONFIG, explorerTxUrl } from '@/lib/aztec/wallet/config';
+import { ProvingStatus } from './ProvingStatus';
 import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
 
@@ -176,6 +177,25 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId, selfInboxId }: Ag
     refresh();
   }, [refresh]);
 
+  // The other side settles from their own device: re-read while the agreement can still change,
+  // every 30 s and when this tab becomes visible. Reads are local simulations; nothing is sent.
+  const open_ = !status || (status.kind === 'escrow' ? status.found && !status.settled : status.found && status.live);
+  useEffect(() => {
+    if (!canRead || !open_) return;
+    const tick = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    const id = setInterval(tick, 30_000);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [canRead, open_, refresh]);
+
+  const [lastTx, setLastTx] = useState<string | null>(null);
+  const [busySince, setBusySince] = useState(0);
+
   // Before the early return: hooks must run in the same order on every render.
   const once = useRef(singleFlight()).current; // 4.19: one accept or settlement action at a time per card
 
@@ -198,6 +218,7 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId, selfInboxId }: Ag
       setError('Ask this person to share their Aztec address in this chat first (Private agreement, Share my Aztec address).');
       return;
     }
+    setBusySince(0);
     setBusy('Checking the invitation');
     try {
       const { acceptChatAgreement } = await import('@/lib/aztec/chat-agreements');
@@ -220,12 +241,16 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId, selfInboxId }: Ag
 
   const act = (action: 'claim' | 'refund' | 'withdraw' | 'cancel') => once(async () => {
     setError(null);
-    setBusy(action === 'claim' ? 'Claiming' : action === 'refund' ? 'Refunding' : action === 'withdraw' ? 'Withdrawing' : 'Cancelling');
+    setBusySince(Date.now());
+    setBusy(action === 'claim' ? 'Claiming: proving on this device' : action === 'refund' ? 'Refunding: proving on this device' : action === 'withdraw' ? 'Withdrawing: proving on this device' : 'Cancelling: proving on this device');
     try {
       const { actOnAgreement } = await import('@/lib/aztec/chat-agreements');
       const amountUnits = action === 'withdraw' && status?.kind === 'stream' ? status.available : undefined;
-      await actOnAgreement(JSON.parse(raw), action, amountUnits);
+      const tx = await actOnAgreement(JSON.parse(raw), action, amountUnits);
+      if (tx && /^0x[0-9a-fA-F]{64}$/.test(tx)) setLastTx(tx);
       await refresh();
+      // The view can lag the inclusion block by one; read once more shortly after.
+      setTimeout(() => void refresh(), 20_000);
     } catch (e) {
       setError(humanError(e));
     } finally {
@@ -310,8 +335,20 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId, selfInboxId }: Ag
       )}
       {error && <Note tone="warn">{error}</Note>}
       {busy && (
-        <p className="mt-3 flex items-center gap-2 text-[13px] text-[#727a88]" role="status">
-          <LoaderCircle size={13} strokeWidth={2} className="animate-spin" aria-hidden="true" /> {busy}
+        <div className="mt-3">
+          <ProvingStatus label={busy} startedAt={busySince || Date.now()} proving={busySince > 0} />
+        </div>
+      )}
+      {lastTx && !busy && (
+        <p className="mt-2 text-[12.5px] text-[#4a505c]">
+          Included on Aztec ·{' '}
+          {explorerTxUrl(lastTx) ? (
+            <a href={explorerTxUrl(lastTx)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
+              view transaction
+            </a>
+          ) : (
+            <span className="font-mono">{short(lastTx)}</span>
+          )}
         </p>
       )}
       {actions && !busy && <div className="mt-3 flex gap-2">{actions}</div>}

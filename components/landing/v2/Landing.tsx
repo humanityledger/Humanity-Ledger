@@ -24,6 +24,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { HLLogo } from "@/components/shared/HLLogo";
+import { AZTEC_WALLET_CONFIG, networkLabel } from "@/lib/aztec/wallet/config";
 import { RemoteLottie } from "@/components/ui/RemoteLottie";
 import { HeroMap } from "./HeroMap";
 import { SiteFooter } from "./SiteFooter";
@@ -238,12 +239,12 @@ const TILES = [
   {
     icon: Users,
     title: "Communities",
-    text: "Run large groups with free and paid channels, announcements, polls and invite links you can revoke at any time.",
+    text: "Run large groups with free and paid channels, announcements, polls and revocable invite links. Paying a member opens a private chat with them, so the community server never sees it.",
   },
   {
     icon: Coins,
     title: "Payments in the chat",
-    text: "Send USDC, USDT or ETH to the person you are talking to, right inside the conversation.",
+    text: "Send test USDC, DAI or ETH privately to the person you are talking to, once their Aztec address is verified.",
   },
   {
     icon: Shield,
@@ -260,16 +261,16 @@ const TILES = [
 const PAYMENT_FEATURES = [
   {
     title: "Proofs made in your browser",
-    text: "The zero knowledge proof for each payment is generated on your device, so the network never sees the amount or the people involved.",
+    text: "The proof for each payment is generated on your device. Your keys and notes stay in this browser's storage and are never sent to our servers.",
   },
   {
-    title: "Private handles",
-    text: "Send shielded DAI, USDC and ETH to a handle instead of a public address, so your main wallet stays out of view.",
+    title: "Verified recipients",
+    text: "Money only goes to an Aztec address the other person signed for. If it cannot be verified, the payment is blocked.",
   },
   {
-    title: "Streaming payments",
-    tag: "In development",
-    text: "Pay salaries and subscriptions continuously from inside a conversation, without leaving a public trail.",
+    title: "Escrow and streaming agreements",
+    tag: "Test network",
+    text: "Lock funds until work is delivered, or pay over time, from inside a conversation. Both sides can see the state on Aztec.",
   },
   {
     title: "Protection against double spending",
@@ -548,8 +549,8 @@ export function HumanityLanding() {
                 Confidential payments, <em>powered by Aztec.</em>
               </h2>
               <p className={s.lead}>
-                Humanity Ledger brings zk.money back inside the app. Payments are proven on your own device, so balances
-                stay hidden and transfers cannot be traced on the blockchain.
+                Payments are proven on your own device and sent as private notes, so the amount and the recipient are not
+                published. The network fee is the exception: on Aztec Alpha it is paid publicly from your account.
               </p>
               <ul className={s.defs}>
                 {PAYMENT_FEATURES.map((f) => (
@@ -570,6 +571,30 @@ export function HumanityLanding() {
                   experimental: only use amounts you are comfortable losing.
                 </span>
               </div>
+              <dl className={s.defs} aria-label="Current state of private payments">
+                <div>
+                  <dt className={s.defTitle}>Network today</dt>
+                  <dd className={s.small} style={{ margin: 0 }}>
+                    {AZTEC_WALLET_CONFIG.network === "testnet"
+                      ? `${networkLabel()}. Test tokens only, nothing here has real value.`
+                      : AZTEC_WALLET_CONFIG.alphaEnabled
+                        ? `${networkLabel()}, with real funds and a cap per payment.`
+                        : "Private payments are switched off on this build."}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={s.defTitle}>What stays private</dt>
+                  <dd className={s.small} style={{ margin: 0 }}>Amount, recipient and the agreement terms. Messages travel separately, end to end encrypted over XMTP.</dd>
+                </div>
+                <div>
+                  <dt className={s.defTitle}>What is public</dt>
+                  <dd className={s.small} style={{ margin: 0 }}>That your Aztec account sent a transaction, and on Alpha the fee it paid in Fee Juice.</dd>
+                </div>
+                <div>
+                  <dt className={s.defTitle}>Who you trust</dt>
+                  <dd className={s.small} style={{ margin: 0 }}>The Aztec network, the contracts (not yet audited) and the code this site serves to your browser. Our servers never hold your keys or notes.</dd>
+                </div>
+              </dl>
               <div style={{ marginTop: 28 }}>
                 <Link href="/docs/zero-knowledge" className={s.textLink}>
                   How private payments work
