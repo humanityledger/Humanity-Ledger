@@ -854,6 +854,9 @@ function unwrap(sim: any): bigint | number | string {
 export function humanError(err: any): string {
   const msg = String(err?.shortMessage || err?.message || err || 'Unknown error');
   if (/user (rejected|denied)|rejected the request|denied message signature/i.test(msg)) return 'You declined the signature in your wallet.';
+  // Encrypted store (lib/aztec/wallet/store.ts): the wallet did not open; nothing was read or sent.
+  if (/decrypt_failed|cannot decode page 1/i.test(msg)) return "This browser's private wallet data could not be decrypted with this wallet's key. Nothing was sent. Remove private wallet data in Settings, then open the wallet again.";
+  if (/\[ENCRYPTED STORE ERROR\]/.test(msg)) return msg.replace(/^.*\[ENCRYPTED STORE ERROR\]\s*/, '').replace(/^Failed to open encrypted stores:\s*/, 'The encrypted wallet storage could not be opened: ');
   // Fee Juice first: "insufficient fee payer balance" would otherwise read as a token balance problem.
   if (/fee.?juice|insufficient fee payer balance|not enough balance for fee/i.test(msg) && !/Bridge AZTEC|still arriving/.test(msg)) return 'Not enough Fee Juice to pay the network fee. Bridge more AZTEC from your Ethereum wallet.';
   if (/existing nullifier|duplicate nullifier|nullifier.*already/i.test(msg)) return 'Already done: this was settled or sent before. Nothing new was sent.';

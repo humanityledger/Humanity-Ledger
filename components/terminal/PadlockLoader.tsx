@@ -27,7 +27,24 @@ interface PadlockLoaderProps {
   onReconnect: () => void;
   onRefreshSession: () => void;
   onClearError: () => void;
+  /** Ends the app session and the wallet connector, then lands on /connect. */
+  onSignOut: () => void;
   connectorName?: string;
+}
+
+/** The app session exists but no usable wallet signer: offer reconnect or sign out, never a local wipe. */
+export function isWalletInitError(initError: string): boolean {
+  const lower = initError.toLowerCase();
+  return (
+    initError.includes('wallet connection lost') ||
+    initError.includes('Connect your wallet') ||
+    lower.includes('unknown signer') ||
+    lower.includes('synchronized from desktop') ||
+    lower.includes('handshake') ||
+    lower.includes('not yet synchronized') ||
+    lower.includes('no active wallet') ||
+    lower.includes('connector')
+  );
 }
 
 function Emblem({ state }: { state: 'idle' | 'working' | 'error' }) {
@@ -50,6 +67,7 @@ export function PadlockLoader({
   onReconnect,
   onRefreshSession,
   onClearError,
+  onSignOut,
   connectorName,
 }: PadlockLoaderProps) {
   const walletInfo = detectConnectedMobileWallet(connectorName);
@@ -67,15 +85,7 @@ export function PadlockLoader({
 
   const lower = initError.toLowerCase();
   const isLimitError = lower.includes('limit') || lower.includes('10/10');
-  const isWalletError =
-    initError.includes('wallet connection lost') ||
-    initError.includes('Connect your wallet') ||
-    lower.includes('unknown signer') ||
-    lower.includes('synchronized from desktop') ||
-    lower.includes('handshake') ||
-    lower.includes('not yet synchronized') ||
-    lower.includes('no active wallet') ||
-    lower.includes('connector');
+  const isWalletError = isWalletInitError(initError);
 
   const state: 'idle' | 'working' | 'error' = initError ? 'error' : isInitializing ? 'working' : 'idle';
 
@@ -113,8 +123,9 @@ export function PadlockLoader({
                   <button type="button" className={s.secondary} onClick={onRefreshSession}>
                     Refresh session
                   </button>
-                  <button type="button" className={s.secondary} style={{ marginTop: '8px' }} onClick={onClearAndRetry}>
-                    Sign in with new wallet
+                  {/* Was "Sign in with new wallet", which wiped this device's message database instead. */}
+                  <button type="button" className={s.secondary} style={{ marginTop: '8px' }} onClick={onSignOut}>
+                    Sign out and connect again
                   </button>
                 </>
               ) : (

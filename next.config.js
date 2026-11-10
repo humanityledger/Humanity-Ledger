@@ -440,6 +440,10 @@ const nextConfig = {
 
     experimental: {
         cpus: 1,
+        // The JS/WASM served to the browser is part of the trusted computing base (it builds proofs and
+        // holds keys). Subresource Integrity pins every script chunk to its build-time sha256 hash, so a
+        // chunk altered on its way (CDN, proxy, cache) is refused by the browser instead of executed.
+        sri: { algorithm: 'sha256' },
         serverActions: {
             // [QUANTUM HARDENING] Block massive payloads at the framework level
             bodySizeLimit: '500kb'

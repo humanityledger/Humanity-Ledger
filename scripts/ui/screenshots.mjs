@@ -15,7 +15,8 @@ const PAGES = [
   ['docs', '/docs/overview'],
   ['docs-privacy', '/docs/privacy'],
   ['chat', '/chat'],
-  ['changelog', '/changelog'],
+  ['changelog', '/docs/changelog'],
+  ['hub-redirect', '/hub'],
 ];
 const VIEWPORTS = [
   ['desktop', { width: 1440, height: 900 }],
@@ -75,6 +76,18 @@ for (const [vpName, viewport] of VIEWPORTS) {
         await page.mouse.move(b.x + b.width * 0.3, b.y + Math.min(160, b.height / 2));
         await page.waitForTimeout(900);
         await page.screenshot({ path: path.join(out, `${name}-${vpName}-glow.png`) });
+      }
+    }
+    // The live 30-second film: capture three chapters as the visitor sees them.
+    const film = name === 'home' ? await page.$('#film') : null;
+    if (film) {
+      await film.scrollIntoViewIfNeeded();
+      for (const [i, tag] of [[0, 'messages'], [1, 'pay'], [2, 'agreement']]) {
+        const tabs = await page.$$('#film [role="tab"]');
+        if (vpName === 'desktop' && tabs[i]) await tabs[i].click();
+        await page.waitForTimeout(3600);
+        await film.screenshot({ path: path.join(out, `film-${tag}-${vpName}.png`) });
+        if (vpName !== 'desktop') break;
       }
     }
     report.push({ page: name, viewport: vpName, finalUrl: page.url(), errors });

@@ -10,12 +10,13 @@ import dynamic from 'next/dynamic';
 import type Peer from 'peerjs';
 import { useSystemAccount } from '@/hooks/useSystemAccount';
 import { useSignMessage, useReconnect } from 'wagmi';
+import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { sendViaOnion, registerAsRelay } from '@/lib/onion/OnionRouter';
 import { useAppKit } from '@reown/appkit/react';
 import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue } from '@/lib/xmtp/client';
 import { QrScanner } from '@/components/terminal/QrScanner';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
-import { PadlockLoader } from '@/components/terminal/PadlockLoader';
+import { PadlockLoader, isWalletInitError } from '@/components/terminal/PadlockLoader';
 import { HLLogo } from '@/components/shared/HLLogo';
 import { TuringShieldGate } from '@/components/auth/TuringShieldGate';
 import { CreateGroupModal } from '../chat/CreateGroupModal';
@@ -350,8 +351,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // so XMTP is not available. We detect this and route them to server-relay messaging.
   const isEmailUser = typeof address === 'string' && (address as string).startsWith('email_');
   const { signMessageAsync } = useSignMessage();
-  const { reconnect } = useReconnect();
+  const { reconnectAsync } = useReconnect();
   const { open: openAppKit } = useAppKit();
+  const { nuclearDisconnect } = useSystemSignOut();
   const effectiveAddress = (address || '0x0') as string;
   const { settings: ledgerSettings, isLoaded: pxeLoaded, updateBatch } = useLedgerSettings(effectiveAddress);
   // SETTINGS ENGINE: Apply all settings as real side effects (CSS vars, localStorage, audio, etc.)
@@ -448,20 +450,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (!isConnected || connector || isSystemHandshake) return;
     let cancelled = false;
     (async () => {
+      // Session says signed in, wagmi has no connector: try to rehydrate it, then stop with a clear choice.
       for (let i = 0; i < 3 && !cancelled; i++) {
         await new Promise(r => setTimeout(r, 800 + i * 600)); // 800ms, 1400ms, 2000ms
-        if (cancelled) { break; }
+        if (cancelled) return;
         try {
-          reconnect();
-          // Zombie-session recovery dispatched (attempt ${i + 1})
-          return;
+          const restored = await reconnectAsync();
+          if (restored.length > 0) return;
         } catch (e) {
           console.warn(`[Ledger Chat] Reconnect attempt ${i + 1} failed:`, e);
         }
       }
+      if (!cancelled) setInitError('Active wallet connection lost or not detected. Reconnect the wallet you signed in with, or sign out and connect again.');
     })();
     return () => { cancelled = true; };
-  }, [isConnected, connector, isSystemHandshake, reconnect]);
+  }, [isConnected, connector, isSystemHandshake, reconnectAsync]);
 
   const [client, setClient] = useState<Client | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
@@ -3463,6 +3466,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [isConnected, address, isEmailUser, client, initError, initClient, forceAutoInit]);
 
+  // Wallet came back (AppKit reconnect, extension unlocked): clear a wallet error once so the auto-init effect retries.
+  // Keyed on the connector, so a failing signer cannot loop.
+  const connectorUid = connector?.uid;
+  useEffect(() => {
+    if (!connectorUid || !initError || !isWalletInitError(initError)) return;
+    setInitError('');
+  }, [connectorUid]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sync contacts to backend debounced
   const persistToLocal = useCallback((arr: ConversationMeta[]) => {
     if (!address) return;
@@ -5481,8 +5492,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           setInitError('');
           setTimeout(() => initClient(), 500);
         }}
-        onReconnect={() => { openAppKit(); }}
-        onRefreshSession={() => { reconnect(); initClient(); }}
+        onReconnect={() => { void openAppKit(); }}
+        onRefreshSession={async () => {
+          // Wait for wagmi to rehydrate the connector before signing; clearing the error lets the auto-init effect retry once.
+          try { await reconnectAsync(); } catch {}
+          setInitError('');
+        }}
+        onSignOut={() => { void nuclearDisconnect(); }}
         onClearError={() => setInitError('')}
         connectorName={connector?.name}
       />

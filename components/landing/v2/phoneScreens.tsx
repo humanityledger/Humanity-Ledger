@@ -8,9 +8,10 @@
  *
  * The Dynamic Island is drawn by the frame, not by the screens.
  *
- * Everything a screen says must be true of the product today: no "verified"
- * badge (peer proof, G7, is open), no "Encrypted" badge on communities (their
- * posts are server-stored), and payments say which Aztec network they run on.
+ * Everything a screen says must be true of the product today. Value only moves
+ * to an Aztec address the other person signed for (G7), so payment and
+ * agreement cards may say "address verified"; communities carry no "Encrypted"
+ * badge (their posts are server-stored); payments say which Aztec network they run on.
  */
 
 import React from "react";
@@ -280,7 +281,7 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
         <span className={s.chatAvatar} style={{ background: "#ece5ff", color: "#5200ff" }}>A</span>
         <span className={s.chatWho}>
           <span className={s.chatName}>Alice</span>
-          <span className={`${s.chatSub} ${s.mono}`}>zk:alice</span>
+          <span className={`${s.chatSub} ${s.mono}`}>0x7f3a…c21e</span>
         </span>
         <Phone size={22} strokeWidth={1.9} />
         <Video size={24} strokeWidth={1.9} />
@@ -313,7 +314,7 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
             </span>
           </div>
           <div className={s.invTitle}>Dinner, Friday</div>
-          <div className={s.invParties}>From zk:alice</div>
+          <div className={s.invParties}>To Alice · Aztec address verified</div>
           <div className={s.invItemRow}>
             <span>Your share</span>
             <span className={s.num}>42.00</span>
@@ -345,6 +346,99 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
         </div>
         <div className={`${s.msgIn} ${at(p, 0.88)}`}>
           Got it, thank you!<span className={s.time}>21:06</span>
+        </div>
+      </div>
+      <Composer />
+    </div>
+  );
+}
+
+/* ── 4b. Private agreement (escrow) ───────────────────────────────── */
+
+/**
+ * An escrow agreement opened from the chat: posted, funded with a proof made
+ * on the device, then released. Same card shape as the real AgreementCard.
+ */
+export function AgreementChatScreen({ p }: ScreenProps) {
+  const proving = p >= 0.34 && p < 0.56;
+  const locked = p >= 0.56 && p < 0.8;
+  const released = p >= 0.8;
+  const status = released ? "Released" : locked ? "Locked" : proving ? "Proving" : "Open";
+  return (
+    <div className={s.screenLight}>
+      <StatusBar />
+      <div className={s.chatHead}>
+        <ArrowLeft size={24} strokeWidth={2} />
+        <span className={s.chatAvatar} style={{ background: "#e6f4ea", color: "#1f7a3a" }}>M</span>
+        <span className={s.chatWho}>
+          <span className={s.chatName}>Marco</span>
+          <span className={`${s.chatSub} ${s.mono}`}>0x91c4…08bd</span>
+        </span>
+        <Phone size={22} strokeWidth={1.9} />
+        <Video size={24} strokeWidth={1.9} />
+      </div>
+      <div className={s.chatBody}>
+        <span className={s.e2ee}>
+          <Lock size={13} strokeWidth={2.2} />
+          End-to-end encrypted · MLS
+        </span>
+        <span className={s.day}>Today</span>
+        <div className={`${s.msgIn} ${s.in}`}>
+          Logo files by Friday. Half now, half on delivery?<span className={s.time}>09:12</span>
+        </div>
+        <div className={`${s.msgOut} ${at(p, 0.08)}`}>
+          Deal. I will lock it in escrow so you know it is there.
+          <span className={s.time}>
+            09:13 <CheckCheck size={15} strokeWidth={2.2} />
+          </span>
+        </div>
+
+        <div className={`${s.ledgerInvoiceCard} ${at(p, 0.18)}`}>
+          <div className={s.invTop}>
+            <span className={s.invDocTag}>
+              <ShieldCheck size={14} strokeWidth={2.2} />
+              Private agreement
+            </span>
+            <span className={`${s.invStatusTag} ${released || locked ? s.invStatusPaid : proving ? s.invStatusProving : s.invStatusUnpaid}`}>
+              <span className={s.invDot} />
+              {status}
+            </span>
+          </div>
+          <div className={s.invTitle}>Escrow · logo design</div>
+          <div className={s.invParties}>To Marco · Aztec address verified</div>
+          <div className={s.invItemRow}>
+            <span>Released on delivery</span>
+            <span className={s.num}>300.00</span>
+          </div>
+          <div className={s.invDivider} />
+          <div className={s.invTotalRow}>
+            <span>Amount</span>
+            <span className={`${s.invTotalVal} ${s.num}`}>300.00 USDC</span>
+          </div>
+          <div className={s.invFooterRow}>
+            <span className={s.invDue}>Aztec testnet</span>
+            <span className={`${s.invActionBtn} ${released ? s.invActionDone : ""}`}>
+              {released ? (
+                <span className={s.invBtnInner}><Check size={14} strokeWidth={2.6} /> Released</span>
+              ) : proving ? (
+                <span className={s.invBtnInner}><span className={s.spinner} /> Making proof</span>
+              ) : locked ? (
+                "Release"
+              ) : (
+                "Fund"
+              )}
+            </span>
+          </div>
+        </div>
+
+        <div className={`${s.msgIn} ${at(p, 0.66)}`}>
+          Files are in the shared folder.<span className={s.time}>17:40</span>
+        </div>
+        <div className={`${s.msgOut} ${at(p, 0.86)}`}>
+          Perfect. Released.
+          <span className={s.time}>
+            17:42 <CheckCheck size={15} strokeWidth={2.2} />
+          </span>
         </div>
       </div>
       <Composer />

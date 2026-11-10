@@ -154,7 +154,8 @@ export function useSystemSignOut() {
                             const lower = db.name.toLowerCase();
                             if (
                                 lower.includes('xmtp') ||
-                                lower.includes('Ledger Chatsecurestore') ||
+                                // (A 'Ledger Chatsecurestore' entry here never matched a lowercased name, so that store was
+                                // always wiped on sign-out. Kept that way on purpose: the more restrictive behaviour.)
                                 lower.includes('ledger_chat_history') ||
                                 // CRITICAL: Preserve the hardware-bound Revolut-style persistence key.
                                 // Deleting this would destroy the non-extractable AES-GCM CryptoKey
