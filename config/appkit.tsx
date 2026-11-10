@@ -187,7 +187,7 @@ const siweConfig = createSIWEConfig({
   },
   signOut: async () => {
     try {
-      await fetch('/api/siwe/logout');
+      await fetch('/api/siwe/logout', { method: 'POST', credentials: 'include' });
     } catch {}
     return true;
   }

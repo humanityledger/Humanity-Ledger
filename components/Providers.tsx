@@ -6,14 +6,10 @@ import { State } from "wagmi";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { AppProvider } from "@/components/AppContext";
 import ClientWeb3Provider from '@/components/ClientWeb3Provider';
-import { WorldProvider } from "@/context/WorldContext";
-import { MarketWebsocketProvider } from "@/context/MarketWebsocketProvider";
 
 import { SessionProvider } from "next-auth/react";
-import { CWIProvider } from "@/lib/bsv/CWIContext";
 import { useEffect } from "react";
 import { WalletConnectionBridge } from "@/components/providers/WalletConnectionBridge";
-import { VIPStoreBootstrap } from "@/components/providers/VIPStoreBootstrap";
 
 export default function Providers({ children, initialState, cookies }: { children: React.ReactNode, initialState?: State, cookies?: string | null }) {
     useEffect(() => {
@@ -28,15 +24,9 @@ export default function Providers({ children, initialState, cookies }: { childre
                 <ClientWeb3Provider cookies={cookies || null}>
                     <SettingsProvider>
                         <LanguageProvider>
-                            <MarketWebsocketProvider>
-                                <WorldProvider>
-                                    <CWIProvider>
-                                        <WalletConnectionBridge />
-                                        <VIPStoreBootstrap />
-                                        {children}
-                                    </CWIProvider>
-                                </WorldProvider>
-                            </MarketWebsocketProvider>
+                            {/* Only Ledger Chat ships: no market websocket (it opened a Binance stream for every visitor), World ID or BSV providers. */}
+                            <WalletConnectionBridge />
+                            {children}
                         </LanguageProvider>
                     </SettingsProvider>
                 </ClientWeb3Provider>

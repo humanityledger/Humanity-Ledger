@@ -23,7 +23,6 @@ import type { Client } from '@xmtp/browser-sdk';
 import { useSettingsStore } from '@/lib/store/useSettingsStore';
 import { useWalletStore } from '@/lib/store/wallet-store';
 import { useAztec } from '@/context/AztecContext';
-import { useAztecNative } from '@/context/AztecNativeContext';
 import { toast } from 'sonner';
 import { chatTextPx, DEFAULT_TEXT_SIZE_LEVEL } from '@/lib/chat/textSize';
 import { loadBlockList, saveBlockList, BLOCK_LIST_EVENT } from '@/lib/chat/blockList';
@@ -99,7 +98,6 @@ import { hiddenIds, isHidden, markDeletedForMe, markRevoked, shouldHonourRevoke 
 
 
 
-// NOTE: QDs state is sourced from AztecNativeContext (DB polling) — no local store needed.
 
 
 interface ConversationMeta {
@@ -363,7 +361,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // [PHASE 2 - SILOING] Consume the sandboxed PXE context for Chat Operations
   // This strictly isolates Chat from the Portfolio state to prevent cross-contamination.
   const { getSiloedPXE } = useAztec();
-  const aztecNative = useAztecNative();
 
   // Mechanical keyboard click sound
   // One AudioContext for every click: browsers cap how many a page may open.

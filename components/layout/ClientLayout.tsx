@@ -132,18 +132,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: `NAVIGATED_TO: ${pathname || '/'}` })
       }).catch(() => {});
-      // Funnel step tracking
-      const step = pathname === '/' ? 'LANDING'
-        : pathname.startsWith('/connect') ? 'WALLET_CONNECT'
-        : pathname.startsWith('/terminal') ? 'DASHBOARD'
-        : null;
-      if (step) {
-        fetch('/api/analytics/funnel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ step, ts: Date.now() }),
-        }).catch(() => {});
-      }
     }
   }, [pathname]);
 
