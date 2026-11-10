@@ -74,9 +74,28 @@ export function LedgerChatVoiceNote({ onSend, onCancel }: LedgerChatVoiceNotePro
         };
         animFrameRef.current = requestAnimationFrame(animate);
 
-        // Set up MediaRecorder
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
-        const recorder = new MediaRecorder(stream, { mimeType });
+        // Candidate-based MIME type negotiation with safe fallback for iOS Safari < 18.4
+        // iOS 14.1–18.3 supports audio/mp4 and audio/aac, but neither webm nor ogg.
+        // If no candidate matches isTypeSupported, pass undefined so the browser uses its native container.
+        const candidates = [
+          'audio/webm;codecs=opus',
+          'audio/webm',
+          'audio/mp4',
+          'audio/aac',
+          'audio/ogg;codecs=opus',
+          'audio/ogg',
+        ];
+        let mimeType = '';
+        if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
+          for (const c of candidates) {
+            if (MediaRecorder.isTypeSupported(c)) {
+              mimeType = c;
+              break;
+            }
+          }
+        }
+
+        const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
         mediaRecorderRef.current = recorder;
         audioChunksRef.current = [];
 
@@ -97,7 +116,12 @@ export function LedgerChatVoiceNote({ onSend, onCancel }: LedgerChatVoiceNotePro
         }, 1000);
       } catch (err: any) {
         if (!mounted) return;
-        setPermissionError('Microphone access denied. Please enable it in your browser settings.');
+        const isPermission = err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError';
+        setPermissionError(
+          isPermission
+            ? 'Microphone access denied. Please enable it in your browser settings.'
+            : `Voice recording unavailable on this device (${err?.message || 'Unsupported audio format'}).`
+        );
         console.error('[VoiceNote] mic error:', err);
       }
     };

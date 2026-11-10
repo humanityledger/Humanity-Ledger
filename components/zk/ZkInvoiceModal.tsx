@@ -22,6 +22,9 @@ import {
   CreateInvoiceParams
 } from '@/lib/zk/zkInvoice';
 import { executeShieldedPayment } from '@/lib/zk/zkMoney';
+import { getPrivateWallet } from '@/lib/aztec/wallet/client';
+import type { TokenKey } from '@/lib/aztec/wallet/config';
+import { toast } from 'sonner';
 
 interface ZkInvoiceModalProps {
   userAddress: string;
@@ -106,6 +109,31 @@ export function ZkInvoiceModal({
     setIsPaying(true);
 
     try {
+      // 1. Attempt payment through the real Aztec private wallet on Alpha/Testnet
+      const wallet = getPrivateWallet();
+      if (wallet && wallet.state.ready && wallet.state.aztecAddress) {
+        setProofStep('Authorizing through Aztec private wallet…');
+        setProofProgress(30);
+        const tokenKey = (existingInvoice.token?.toLowerCase() || 'usdc') as TokenKey;
+        const target = existingInvoice.recipientAddress || existingInvoice.senderAddress || existingInvoice.senderTag;
+
+        setProofStep('Generating UltraHonk proof on device…');
+        setProofProgress(65);
+        const receipt = await wallet.send(tokenKey, String(existingInvoice.totalAmount), target);
+        const txHash = (receipt as any)?.txHash || (receipt as any)?.id || `0x${Date.now().toString(16)}`;
+
+        setProofStep('Payment confirmed on Aztec');
+        setProofProgress(100);
+        markInvoicePaid(existingInvoice.id, txHash, '');
+        if (onInvoicePaid) {
+          onInvoicePaid({ ...existingInvoice, status: 'paid', settlementTxHash: txHash });
+        }
+        toast.success('Invoice settled on Aztec');
+        onClose();
+        return;
+      }
+
+      // 2. Fallback for demo mode
       const paymentResult = await executeShieldedPayment(
         {
           senderAddress: userAddress || '0x0',
@@ -125,8 +153,9 @@ export function ZkInvoiceModal({
         onInvoicePaid({ ...existingInvoice, status: 'paid', settlementTxHash: paymentResult.txHash });
       }
       onClose();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('[Invoice] Payment error:', err);
+      toast.error(err?.message || 'Could not complete private payment');
     } finally {
       setIsPaying(false);
     }

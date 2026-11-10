@@ -197,12 +197,14 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
 
   if (process.env.NEXT_PUBLIC_ZK_MODE !== 'demo') {
     return (
-      <div className="flex flex-col items-center justify-center p-8 gap-4 text-center">
-        <div className="w-12 h-12 rounded-full bg-[#F2F2F7] flex items-center justify-center">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1C7AFF" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <div className="flex flex-col items-center justify-center p-8 gap-4 text-center bg-white rounded-3xl border border-black/[0.08] shadow-xl">
+        <div className="w-12 h-12 rounded-full bg-[#5200FF]/10 flex items-center justify-center text-[#5200FF]">
+          <Shield size={24} strokeWidth={2} />
         </div>
-        <h3 className="text-[17px] font-bold text-[#1C1C1E]">Aztec Testnet Required</h3>
-        <p className="text-[14px] text-[#1C1C1E]/60 max-w-xs">Shielded payments will be available once Aztec testnet integration is complete. All privacy proofs use UltraHonk.</p>
+        <h3 className="text-[17px] font-bold text-[#15171C]">Aztec Alpha (v6.0.0)</h3>
+        <p className="text-[14px] text-[#727a88] max-w-sm leading-relaxed">
+          Shielding and unshielding operate directly in your sovereign Private Wallet with client-side UltraHonk proofs. Open <strong>Private Wallet</strong> from your chat settings to manage your shielded balance.
+        </p>
       </div>
     );
   }
