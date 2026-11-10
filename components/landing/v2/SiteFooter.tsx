@@ -34,7 +34,7 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
       { label: "How it works", href: "/#how-it-works" },
       { label: "Private payments", href: "/#payments" },
       { label: "Download", href: "/#download" },
-      { label: "Network status", href: "/status" },
+      { label: "Network status", href: "/docs/status" },
     ],
   },
   {
@@ -43,17 +43,17 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
       { label: "Documentation", href: "/docs/overview" },
       { label: "Architecture", href: "/docs/architecture" },
       { label: "Whitepaper", href: "/docs/whitepaper" },
-      { label: "Developer hub", href: "/developers" },
+      { label: "Developers", href: "/docs/developers" },
       { label: "Source code", href: EXTERNAL_LINKS.github.repo, external: true },
     ],
   },
   {
     title: "Company",
     links: [
-      { label: "About", href: "/company" },
-      { label: "Blog", href: "/blog" },
-      { label: "Changelog", href: "/changelog" },
-      { label: "Contact", href: "/contact" },
+      { label: "About", href: "/docs/about" },
+      { label: "Blog", href: "/docs/blog" },
+      { label: "Changelog", href: "/docs/changelog" },
+      { label: "Contact", href: "/docs/contact" },
     ],
   },
   {

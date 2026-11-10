@@ -15,7 +15,7 @@ import { messaging, routing, communities, calls, payments, devices } from "./pag
 import { architecture, cryptography, zeroKnowledge, whitepaper } from "./pages/protocol";
 import { securityModel, audits, bugBounty } from "./pages/security";
 import { developers } from "./pages/developers";
-import { about, blog, contact, status } from "./pages/company";
+import { about, blog, contact, status, BLOG_POSTS } from "./pages/company";
 import { brand } from "./pages/brand";
 import { changelog } from "./pages/changelog";
 import { legalNotice, terms, privacy, cookies, contentPolicy, disclaimer } from "./pages/legal";
@@ -30,7 +30,11 @@ export const NAV: NavGroup[] = [
   { title: "Legal", pages: [legalNotice, terms, privacy, cookies, contentPolicy, disclaimer] },
 ];
 
-const ALL: { page: DocPage; group: string }[] = NAV.flatMap((g) => g.pages.map((page) => ({ page, group: g.title })));
+const ALL: { page: DocPage; group: string }[] = [
+  ...NAV.flatMap((g) => g.pages.map((page) => ({ page, group: g.title }))),
+  // Blog posts: routed under /docs, listed from the blog page rather than the sidebar.
+  ...BLOG_POSTS.map((p) => ({ page: p.page, group: "Blog" })),
+];
 
 /** Pages served by app/docs/[slug]. */
 export const DOCS_SLUGS = ALL.filter((e) => e.page.href === `/docs/${e.page.slug}`).map((e) => e.page.slug);
@@ -43,7 +47,6 @@ export const LEGACY_SLUGS: Record<string, string> = {
   "app-hub": "/docs/overview",
   transparency: "/docs/security-model",
   "aml-kyc": "/docs/terms",
-  changelog: "/changelog",
   // Quantum Dots (QD) was a token design that never launched and is no
   // longer part of Humanity Ledger. Old links land on the overview.
   "quantum-dots": "/docs/overview",

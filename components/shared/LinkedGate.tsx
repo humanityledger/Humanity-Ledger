@@ -225,7 +225,7 @@ export function LinkedGate({ children }: { children: React.ReactNode }) {
   //            where the mount effect's state update hasn't propagated yet when
   //            the timer fires, e.g. after a client-side navigation from /sign-up).
   //
-  // This eliminates the "sign-up → /hub → /connect loop" permanently.
+  // This eliminates the old sign-up → hub → connect loop permanently.
   useEffect(() => {
     if (!isMounted) return;
     const isPublic = pathname === '/' ||

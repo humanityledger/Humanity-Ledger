@@ -16,7 +16,7 @@ import { useDynamicIsland, type DynamicIslandPayload } from '@/lib/store/dynamic
 import { Phone, PhoneOff, Wallet, Loader2, Bell, CheckCircle2, ChevronRight } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
-const ISLAND_ALLOWLIST = ['/chat', '/portfolio', '/studio', '/settings', '/hub', '/ledger', '/terminal', '/scan', '/passport'];
+const ISLAND_ALLOWLIST = ['/chat', '/studio', '/settings', '/scan'];
 
 function formatElapsed(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));

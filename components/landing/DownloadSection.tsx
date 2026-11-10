@@ -427,7 +427,7 @@ export function DownloadSection() {
           </div>
           <p className="mt-10 text-[13.5px] text-black/45">
             Nothing here answers your question?{" "}
-            <a href="/support" className="text-[#1a5fb4] underline underline-offset-[3px]">
+            <a href="/docs/contact" className="text-[#1a5fb4] underline underline-offset-[3px]">
               Contact support
             </a>
             .

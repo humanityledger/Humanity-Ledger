@@ -279,3 +279,31 @@ function toRegex(u: string): string {
 export function isRetiredApiRoute(pathname: string): boolean {
   return PATTERNS.some(p => p.test(pathname));
 }
+
+/**
+ * Page paths that belonged to products other than Ledger Chat. Their code was
+ * removed; old links and bookmarks are sent somewhere that exists instead of
+ * a 404. Matching is by whole path segment, so /hubris is not /hub.
+ */
+const RETIRED_PAGES: Record<string, string> = {
+  hub: '/chat', terminal: '/chat', dashboard: '/chat', portfolio: '/chat', markets: '/chat', governance: '/chat',
+  network: '/chat', qds: '/chat', predictions: '/chat', sequencer: '/chat', forum: '/communities', news: '/chat',
+  academy: '/chat', 'cosmic-forge': '/chat', creator: '/chat', vip: '/chat', ticket: '/chat', saved: '/chat',
+  bridge: '/chat', ledger: '/chat', ledgerpost: '/chat', passport: '/chat', registry: '/chat', 'gold-registry': '/chat',
+  'sovereign-intel': '/chat', 'voss-supremacy': '/chat', 'zk-sandbox': '/chat', sandbox: '/chat', demo: '/chat',
+  canary: '/chat', clearance: '/chat', 'mobile-kyc': '/chat', 'test-qd-flow': '/chat', 'test-xmtp': '/chat',
+  infrastructure: '/chat', directory: '/chat', ecosystem: '/', product: '/', protocol: '/', vision: '/', story: '/',
+  manifesto: '/', 'open-letter': '/', partnership: '/', team: '/', 'use-cases': '/', accessibility: '/',
+  architecture: '/docs/architecture', security: '/docs/security-model', roadmap: '/docs/changelog',
+  login: '/connect', 'sign-up': '/connect',
+  'zero-knowledge': '/docs/zero-knowledge', whitepaper: '/docs/whitepaper', blog: '/docs/blog', changelog: '/docs/changelog',
+  company: '/docs/about', contact: '/docs/contact', support: '/docs/contact', status: '/docs/status',
+  developers: '/docs/developers', developer: '/docs/developers', 'api-docs': '/docs/developers',
+  faq: '/docs/overview', 'how-it-works': '/docs/overview',
+};
+
+/** Where a retired page path should go, or null when the path is still served. */
+export function retiredPageTarget(pathname: string): string | null {
+  const first = pathname.split('/')[1] ?? '';
+  return Object.prototype.hasOwnProperty.call(RETIRED_PAGES, first) ? RETIRED_PAGES[first] : null;
+}

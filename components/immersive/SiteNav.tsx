@@ -36,7 +36,7 @@ export const SITE_NAV: NavGroup[] = [
       { label: "How it works", href: "/#how-it-works", hint: "From wallet to first message" },
       { label: "Private payments", href: "/#payments", hint: "Shielded transfers on Aztec" },
       { label: "Download", href: "/#download", hint: "Phone and desktop" },
-      { label: "Network status", href: "/status", hint: "What is up right now" },
+      { label: "Network status", href: "/docs/status", hint: "What is up right now" },
     ],
   },
   {
@@ -44,18 +44,18 @@ export const SITE_NAV: NavGroup[] = [
     items: [
       { label: "Documentation", href: "/docs/overview", hint: "How everything works, honestly" },
       { label: "Architecture", href: "/docs/architecture", hint: "Messaging, identity and payments" },
-      { label: "Developer hub", href: "/developers", hint: "Run it, read it, build on it" },
+      { label: "Developers", href: "/docs/developers", hint: "Run it, read it, build on it" },
       { label: "Source code", href: EXTERNAL_LINKS.github.repo, hint: "Humanity-Ledger on GitHub", external: true },
-      { label: "Changelog", href: "/changelog", hint: "What changed, in plain words" },
+      { label: "Changelog", href: "/docs/changelog", hint: "What changed, in plain words" },
     ],
   },
   {
     label: "Company",
     items: [
-      { label: "About", href: "/company", hint: "Who builds Humanity Ledger" },
-      { label: "Blog", href: "/blog", hint: "Notes from the work" },
+      { label: "About", href: "/docs/about", hint: "Who builds Humanity Ledger" },
+      { label: "Blog", href: "/docs/blog", hint: "Notes from the work" },
       { label: "Security", href: "/docs/audits", hint: "Audits, findings and disclosure" },
-      { label: "Contact", href: "/contact", hint: "Write to us" },
+      { label: "Contact", href: "/docs/contact", hint: "Write to us" },
     ],
   },
 ];
