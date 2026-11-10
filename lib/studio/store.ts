@@ -11,7 +11,7 @@ import { openDB, type IDBPDatabase } from 'idb';
 import type { Artifact } from './artifacts';
 import type { CustomAgent, Effort, PermissionMode, StudioConnectorConfig, StudioMode, StudioPersonalization, TodoItem } from './protocol';
 import type { StudioSkill } from './skills';
-import type { StudioModelId } from './models';
+import { isStudioModel, type StudioModelId } from './models';
 import type { WsFile } from './fs';
 import type { GitLink } from './github';
 
@@ -202,6 +202,31 @@ export interface StudioPrefs {
 /** Secrets and keys stay untouched unless the user removes these. */
 export const DEFAULT_DENY_RULES = ['.env', '.env.*', '**/.env', '**/.env.*', '**/*.pem', '**/*.key', '**/id_rsa*'];
 
+const isPlainObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+
+/** Stored prefs from any older build: every field keeps the default unless the stored value has the same shape. */
+export function sanitizePrefs(stored: unknown, isModel: (v: unknown) => boolean = () => true): StudioPrefs {
+  if (!isPlainObject(stored)) return { ...DEFAULT_PREFS };
+  const out: Record<string, unknown> = { ...DEFAULT_PREFS };
+  for (const [k, def] of Object.entries(DEFAULT_PREFS)) {
+    const v = stored[k];
+    if (v === undefined) continue;
+    if (Array.isArray(def) ? Array.isArray(v) : isPlainObject(def) ? isPlainObject(v) : typeof v === typeof def) out[k] = v;
+  }
+  out.personalization = { ...DEFAULT_PREFS.personalization, ...(isPlainObject(stored.personalization) ? stored.personalization : {}) };
+  const rules = isPlainObject(stored.rules) ? stored.rules : {};
+  out.rules = {
+    allow: Array.isArray(rules.allow) ? rules.allow.filter((x): x is string => typeof x === 'string') : DEFAULT_PREFS.rules.allow,
+    deny: Array.isArray(rules.deny) ? rules.deny.filter((x): x is string => typeof x === 'string') : DEFAULT_PREFS.rules.deny,
+  };
+  if (!isModel(out.defaultModel)) out.defaultModel = DEFAULT_PREFS.defaultModel;
+  return out as unknown as StudioPrefs;
+}
+
+export function isConversationShape(c: unknown): c is Conversation {
+  return isPlainObject(c) && typeof c.id === 'string' && Array.isArray(c.messages) && typeof c.updatedAt === 'number';
+}
+
 export const DEFAULT_PREFS: StudioPrefs = {
   personalization: { style: 'balanced', responseLanguage: 'auto' },
   uiLanguage: 'auto',
@@ -303,7 +328,8 @@ export function createStudioStore(wallet: string) {
   return {
     // ── conversations ──
     async listConversations(): Promise<Conversation[]> {
-      const all = (await (await d()).getAll('conversations')) as Conversation[];
+      // A record written by an older build (or half-written) must not crash the sidebar on every load.
+      const all = ((await (await d()).getAll('conversations')) as Conversation[]).filter(isConversationShape);
       return all.sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || b.updatedAt - a.updatedAt);
     },
     async getConversation(id: string): Promise<Conversation | undefined> {
@@ -408,8 +434,7 @@ export function createStudioStore(wallet: string) {
 
     // ── preferences ──
     async getPrefs(): Promise<StudioPrefs> {
-      const v = (await (await d()).get('kv', 'prefs')) as Partial<StudioPrefs> | undefined;
-      return { ...DEFAULT_PREFS, ...(v ?? {}), personalization: { ...DEFAULT_PREFS.personalization, ...(v?.personalization ?? {}) } };
+      return sanitizePrefs(await (await d()).get('kv', 'prefs'), isStudioModel);
     },
     async putPrefs(p: StudioPrefs): Promise<void> {
       await (await d()).put('kv', p, 'prefs');
