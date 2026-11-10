@@ -45,3 +45,11 @@ describe('wipeLocalAztecStores', () => {
     expect(isWalletStoreName(undefined)).toBe(false);
   });
 });
+
+describe('countLocalAztecStores', () => {
+  it('counts only wallet stores and fails to null, never throws', async () => {
+    const { countLocalAztecStores } = await import('@/lib/aztec/wallet/wipe');
+    expect(await countLocalAztecStores({ listStores: async () => ['pxe_data_1', 'wallet_data_x', 'chat_db'], deleteStore: async () => {} })).toBe(2);
+    expect(await countLocalAztecStores({ listStores: async () => { throw new Error('opfs'); }, deleteStore: async () => {} })).toBeNull();
+  });
+});

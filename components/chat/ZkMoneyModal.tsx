@@ -20,6 +20,7 @@ import { AZTEC_WALLET_CONFIG, networkLabel, type TokenKey } from '@/lib/aztec/wa
 import { directPaymentMessage } from '@/lib/payments/direct-private';
 import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
+import { ProvingStatus } from './ProvingStatus';
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 
@@ -86,6 +87,7 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
   const [ack, setAck] = useState(NO_ACK);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState(0);
 
   useEffect(() => {
     setAck(NO_ACK); // per payment and per chat, never persisted
@@ -100,12 +102,13 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
     };
   }, [dmPeerInboxId, selfInboxId]);
 
-  const blocked = !payee?.address || (ALPHA && (!payee.verified || !acked(ack)));
+  const blocked = !payee?.address || !payee.verified || (ALPHA && !acked(ack));
   const once = useRef(singleFlight()).current; // 4.19: a double tap never pays twice
   const send = () => once(async () => {
     if (busy || blocked) return;
     setBusy(true);
     setError(null);
+    setStartedAt(Date.now());
     try {
       const { sendDirectPrivatePayment } = await import('@/lib/payments/direct-private');
       const { txHash } = await sendDirectPrivatePayment({ token, amount, dmPeerInboxId, selfInboxId, ack });
@@ -129,7 +132,7 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
           ? 'Checking the saved address…'
           : !payee.address
             ? `${who} has not shared an Aztec address in this chat yet.`
-            : `To ${who}: ${payee.address.slice(0, 10)}…${payee.address.slice(-4)} ${payee.verified ? '(verified)' : ALPHA ? '(not verified: ask them to share it again from an up-to-date Ledger Chat)' : '(not verified)'}`}
+            : `To ${who}: ${payee.address.slice(0, 10)}…${payee.address.slice(-4)} ${payee.verified ? '(verified)' : '(not verified: ask them to share it again from an up-to-date Ledger Chat)'}`}
       </p>
       <label className="block text-[13px] text-[#4a505c]">
         Token
@@ -145,6 +148,7 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
       </label>
       <ProvingMemoryNote />
       {ALPHA && <AlphaRiskAck kind="payment" value={ack} onChange={setAck} disabled={busy} />}
+      {busy && <ProvingStatus label="Checking the address, then proving the payment on this device" startedAt={startedAt || Date.now()} />}
       <button type="button" className="w-full min-h-[44px] rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={busy || blocked || !amount} onClick={send}>
         {busy ? 'Proving on this device…' : 'Send privately'}
       </button>

@@ -3,12 +3,8 @@
 import React from 'react';
 import { Waves, X } from 'lucide-react';
 
-// The previous version created "shielded payment streams" in localStorage with
-// a Math.random transaction hash: no tokens moved and nothing reached Aztec,
-// but the UI showed live streaming balances. The PaymentStream contract
-// (contracts/aztec/streams) is compiled and has TXE tests, but it is not
-// deployed and no client calls it yet, so this panel says so instead.
-// Master prompt: DoD "zero fake ZK in the UI".
+// Streams run through Agreements in a direct conversation (components/chat/AgreementComposer.tsx,
+// lib/aztec/chat-agreements.ts). This panel points there; it creates nothing itself.
 
 interface ZkStreamManagerProps {
   userAddress: string;
@@ -29,7 +25,7 @@ export function ZkStreamManager({ onClose, className = '' }: ZkStreamManagerProp
           </div>
           <div>
             <h2 className="text-[15px] font-semibold text-gray-900 leading-tight">Payment streams</h2>
-            <p className="text-[12.5px] text-gray-600">Not available yet</p>
+            <p className="text-[12.5px] text-gray-600">Opened from a direct conversation</p>
           </div>
         </div>
         {onClose && (
@@ -45,10 +41,11 @@ export function ZkStreamManager({ onClose, className = '' }: ZkStreamManagerProp
       </div>
       <div className="px-6 py-6 text-[14px] leading-relaxed text-gray-700 space-y-3">
         <p>
-          Private payment streams are not available yet. The stream contract is written and tested on a local Aztec
-          environment, but it is not deployed to the Aztec test network and this app does not call it.
+          To start a private payment stream, open a direct conversation, tap <span className="font-semibold">+</span>, choose{' '}
+          <span className="font-semibold">Private agreement</span>, then <span className="font-semibold">Stream</span>. The stream runs in its own
+          contract on the Aztec test network and is proven on your device.
         </p>
-        <p>You can send a private one-off payment from the chat; it runs on the Aztec test network.</p>
+        <p>The other person needs a verified Aztec address in that chat. The contracts have no external audit yet.</p>
       </div>
     </div>
   );

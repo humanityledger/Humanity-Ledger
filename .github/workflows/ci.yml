@@ -32,6 +32,25 @@ jobs:
         run: npx next lint
       - name: Forbidden patterns check
         run: node scripts/forbidden-patterns.mjs
+      - name: Unit Tests (Aztec client gates, payments, chat handoff)
+        run: >
+          npx vitest run
+          test/unit/aztec/agreement-invite.test.ts
+          test/unit/aztec/agreement-confirm.test.ts
+          test/unit/aztec/agreement-message.test.ts
+          test/unit/aztec/agreement-policy.test.ts
+          test/unit/aztec/agreement-order.test.ts
+          test/unit/aztec/token-check.test.ts
+          test/unit/aztec/direct-payment.test.ts
+          test/unit/aztec/peer-binding.test.ts
+          test/unit/aztec/fee-juice.test.ts
+          test/unit/aztec/fees.test.ts
+          test/unit/aztec/single-flight.test.ts
+          test/unit/aztec/stream-terms.test.ts
+          test/unit/aztec/wallet-wipe.test.ts
+          test/unit/payments
+          test/unit/auth/wallet-links.test.ts
+          test/unit/chat/value-handoff.test.ts
       - name: Unit Tests (security)
         run: npx vitest run test/unit/security
         env:

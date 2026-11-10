@@ -31,3 +31,20 @@ describe('singleFlight', () => {
     await pending;
   });
 });
+
+describe('valueActionsRunning (local wipe gate)', () => {
+  it('counts actions in flight across guards and drops to 0 after success or failure', async () => {
+    const { valueActionsRunning } = await import('@/lib/aztec/single-flight');
+    const a = singleFlight();
+    const b = singleFlight();
+    let ra!: () => void;
+    const pa = a(() => new Promise<void>((r) => { ra = r; }));
+    const pb = b(async () => { throw new Error('rejected'); });
+    expect(valueActionsRunning()).toBe(2);
+    await expect(pb).rejects.toThrow('rejected');
+    expect(valueActionsRunning()).toBe(1);
+    ra();
+    await pa;
+    expect(valueActionsRunning()).toBe(0);
+  });
+});

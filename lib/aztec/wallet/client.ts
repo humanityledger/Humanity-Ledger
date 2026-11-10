@@ -31,6 +31,7 @@ import { isValidAztecAddress } from '../grumpkin';
 import { parseUnits } from './amounts';
 import { loadLocalActivity, mergeActivity, upsertActivity, type Activity, type ActivityKind } from './history';
 import { assertFeeChoice, identifyNode } from '../fees';
+import { valueActionsRunning } from '../single-flight';
 import { BINDING_SCHEME, bindingStatement, sdkBindingCrypto, verifyAddressProof, type AddressProof } from '../peer-binding';
 import {
   assertNodeFeeJuiceMatchesPins,
@@ -700,6 +701,11 @@ class PrivateWallet {
 
   private tokenTxInFlight = false;
 
+  /** True while anything is being proven or sent; local data must not be removed then. */
+  get transacting(): boolean {
+    return this.tokenTxInFlight || this.state.busy || valueActionsRunning() > 0 || this.state.phase === 'signing' || this.state.phase === 'starting' || this.state.phase === 'deploying';
+  }
+
   private async runLocked(
     kind: ActivityKind,
     key: TokenKey,
@@ -829,10 +835,16 @@ function unwrap(sim: any): bigint | number | string {
 export function humanError(err: any): string {
   const msg = String(err?.shortMessage || err?.message || err || 'Unknown error');
   if (/user (rejected|denied)|rejected the request|denied message signature/i.test(msg)) return 'You declined the signature in your wallet.';
+  // Fee Juice first: "insufficient fee payer balance" would otherwise read as a token balance problem.
+  if (/fee.?juice|insufficient fee payer balance|not enough balance for fee/i.test(msg) && !/Bridge AZTEC|still arriving/.test(msg)) return 'Not enough Fee Juice to pay the network fee. Bridge more AZTEC from your Ethereum wallet.';
+  if (/existing nullifier|duplicate nullifier|nullifier.*already/i.test(msg)) return 'Already done: this was settled or sent before. Nothing new was sent.';
+  if (/out of memory|Array buffer allocation failed|memory access out of bounds|RangeError: .*memory/i.test(msg)) return 'This device ran out of memory while making the proof. Nothing was sent. Try again on a computer.';
+  if (/Assertion failed:\s*(PrivateEscrow|PaymentStream)?:?\s*(.+)/i.test(msg)) return `The contract refused this: ${msg.match(/Assertion failed:\s*(?:PrivateEscrow|PaymentStream)?:?\s*([^'"\n]{1,140})/i)?.[1] ?? 'its conditions are not met'}. Nothing was sent.`;
+  if (/circuit execution failed|proving failed|failed to prove|witness generation/i.test(msg)) return 'The proof could not be made on this device. Nothing was sent. Try again; if it repeats, reopen the private wallet.';
+  if (/tx dropped|invalid tx|transaction .*rejected|rejected by (the )?node|reverted/i.test(msg)) return 'The Aztec node rejected the transaction. Nothing changed. Try again in a minute.';
   if (/Balance too low|not enough|insufficient/i.test(msg)) return 'Your balance is too low for this amount.';
   if (/timeout/i.test(msg)) return 'The network took too long to confirm. It may still go through; check again in a minute.';
   if (/Failed to fetch|fetch failed|NetworkError|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(msg)) return `Could not reach ${networkLabel()}. Check your connection and try again.`;
-  if (/fee.?juice|insufficient fee payer balance|not enough balance for fee/i.test(msg) && !/Bridge AZTEC|still arriving/.test(msg)) return 'Not enough Fee Juice to pay the network fee. Bridge more AZTEC from your Ethereum wallet.';
   if (/internal error/i.test(msg)) return 'Your wallet reported an internal signing error. Try switching networks or restarting your wallet.';
   return msg.length > 220 ? msg.slice(0, 220) + '…' : msg;
 }

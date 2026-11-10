@@ -22,6 +22,7 @@ import { deriveAztecKeySet } from '@/lib/zk/aztecPxe';
 import { ZkPrivacyScore } from '@/components/zk/ZkPrivacyScore';
 import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
 import { ZkSettingsPanel } from '@/components/zk/ZkSettingsPanel';
+import { PrivateWalletStatus } from '@/components/zk/PrivateWalletStatus';
 import { chatTextPx, textSizeLabel, DEFAULT_TEXT_SIZE_LEVEL } from '@/lib/chat/textSize';
 import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { exportableLocalStorage } from '@/lib/settings/exportSafety';
@@ -1150,63 +1151,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           {/* PAYMENTS TAB (Including Native zk.money Aztec Private Payments) */}
           {activeTab === 'payments' && (
             <div className="space-y-6">
-              {/* Shielded Portfolio Overview Card */}
-              <div className="bg-white rounded-[18px] p-5 shadow-sm border border-black/[0.04]">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-black/5 flex items-center justify-center text-[#15171c]">
-                      <Lock size={18} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[16px] text-[#15171c]">Shielded portfolio</span>
-                        <span className="text-[12px] font-semibold bg-black/5 text-[#727a88] px-2 py-0.5 rounded-full">
-                          zk.money
-                        </span>
-                      </div>
-                      <p className="text-[12px] text-[#727a88]">Simulated balances on this device. No real funds move.</p>
-                    </div>
-                  </div>
-                  <span className="text-[12.5px] tabular-nums text-[#15171c] bg-black/5 px-2.5 py-1 rounded-full border border-black/[0.08] flex items-center gap-1.5 font-semibold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#15171c]" />
-                    Demo mode
-                  </span>
-                </div>
-
-                {/* Balances grid */}
-                <div className="grid grid-cols-3 gap-2.5 pt-3 border-t border-black/[0.04]">
-                  <div className="p-3 rounded-xl bg-[#f2f4f7]">
-                    <p className="text-[12px] font-semibold text-[#727a88]">Shielded DAI</p>
-                    <p className="text-[15px] font-semibold tabular-nums text-[#15171c] mt-0.5">{zkBalances.dai || '0.00'}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#f2f4f7]">
-                    <p className="text-[12px] font-semibold text-[#727a88]">Shielded USDC</p>
-                    <p className="text-[15px] font-semibold tabular-nums text-[#15171c] mt-0.5">{zkBalances.usdc || '0.00'}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#f2f4f7]">
-                    <p className="text-[12px] font-semibold text-[#727a88]">Shielded ETH</p>
-                    <p className="text-[15px] font-semibold tabular-nums text-[#15171c] mt-0.5">{zkBalances.eth || '0.00'}</p>
-                  </div>
-                </div>
-
-                {/* Quick Shield / Unshield Actions */}
-                <div className="flex gap-2.5 mt-3.5 pt-3.5 border-t border-black/[0.04]">
-                  <button
-                    type="button"
-                    onClick={() => { setZkShieldMode('shield'); setShowZkShieldModal(true); }}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-[#15171c] hover:bg-black text-white text-[13px] font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
-                  >
-                    <ArrowDownToLine size={15} /> Shield funds
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setZkShieldMode('unshield'); setShowZkShieldModal(true); }}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-[#f2f4f7] hover:bg-[#e4e7ec] text-[#15171c] text-[13px] font-semibold flex items-center justify-center gap-2 transition-colors border border-black/[0.04]"
-                  >
-                    <ArrowUpFromLine size={15} /> Unshield funds
-                  </button>
-                </div>
-              </div>
+              {/* Real private wallet: balances, Fee Juice and local storage, read on this device only. */}
+              <PrivateWalletStatus address={myAddress} />
 
               {/* Sovereign Aztec Identity */}
               <Group title="Your zk handle" footer="Demo feature. The handle is stored on this device and is not yet registered on the Aztec network.">
@@ -1272,45 +1218,6 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     </div>
                   )}
                 </div>
-              </Group>
-
-              {/* Cryptographic Keys & Aztec State */}
-              <Group title="Demo keys and sync" footer="Demo keys derived on this device. They do not control real funds.">
-                {(() => {
-                  const azKey = deriveAztecKeySet(myAddress);
-                  return (
-                    <>
-                      <Row
-                        icon={<Key size={18} />}
-                        label="Aztec viewing key"
-                        sublabel="Demo key, stored on this device"
-                        value={`${azKey.incomingViewingKey.slice(0, 8)}…${azKey.incomingViewingKey.slice(-6)}`}
-                        onTap={() => {
-                          navigator.clipboard.writeText(azKey.incomingViewingKey);
-                          toast.success('Aztec viewing key copied');
-                        }}
-                      />
-                      <Row
-                        icon={<RefreshCw size={18} className={isSyncingAztec ? 'animate-spin' : ''} />}
-                        label="Sync demo balances"
-                        sublabel="Refresh the simulated balances"
-                        value={isSyncingAztec ? 'Syncing' : 'Sync now'}
-                        onTap={async () => {
-                          setIsSyncingAztec(true);
-                          try {
-                            const b = await syncBalanceFromAztec(myAddress);
-                            setZkBalances(b);
-                            toast.success('Balances refreshed');
-                          } catch {
-                            toast.info('Synced with local state');
-                          } finally {
-                            setIsSyncingAztec(false);
-                          }
-                        }}
-                      />
-                    </>
-                  );
-                })()}
               </Group>
 
               {/* Native Crypto Payments */}

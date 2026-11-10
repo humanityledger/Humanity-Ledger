@@ -45,7 +45,7 @@ describe('private rail (Aztec)', () => {
   it('requires a verified payee on Alpha, but not on the test network', () => {
     expect(checkPrivateRail(ok).ok).toBe(true);
     expect(checkPrivateRail({ ...ok, payeeVerified: false }).ok).toBe(false);
-    expect(checkPrivateRail({ ...ok, payeeVerified: false, network: 'testnet' }).ok).toBe(true);
+    expect(checkPrivateRail({ ...ok, payeeVerified: false, network: 'testnet' }).ok).toBe(false);
   });
 
   it('refuses when the wallet is closed, no address was shared, or fees cannot be paid', () => {

@@ -2,6 +2,7 @@
 "use client";
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { parseValueHandoff, VALUE_HANDOFF_EVENT, type ValueHandoff } from '@/lib/chat/value-handoff';
 import { createPortal } from 'react-dom';
 import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Smile, Paperclip, BarChart2, Wallet, Flame, Heart, Image as ImageIcon, Map as MapIcon, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -288,7 +289,7 @@ export const formatMessagePreview = (content: string): string => {
   if (cleanContent.startsWith('__ZK_TIP__')) return '💸 Private tip sent';
   if (cleanContent.startsWith('__ZK_STREAM__')) return '🔁 Payment stream';
   if (cleanContent.startsWith('__ZK_MONEY_PAYMENT__')) return '💰 Private payment';
-  if (cleanContent.startsWith('__ZK_ESCROW__')) return '🔒 Escrow contract';
+  if (cleanContent.startsWith('__ZK_ESCROW__')) return 'Escrow (legacy message)';
   if (cleanContent.startsWith('__REACT__')) return '';
   if (cleanContent.startsWith('__EDIT__')) return 'Message updated';
 
@@ -517,6 +518,25 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setIsMounted(true);
     notificationEngine.init();
   }, []);
+
+  useEffect(() => {
+    const onHandoff = (e: Event) => {
+      const h = parseValueHandoff((e as CustomEvent).detail);
+      if (!h) return;
+      setSidebarTab('chats');
+      setActiveCommunity(null);
+      setPendingValue(h);
+      void handleStartConversationWithPeerRef.current?.(h.peer);
+    };
+    window.addEventListener(VALUE_HANDOFF_EVENT, onHandoff);
+    return () => window.removeEventListener(VALUE_HANDOFF_EVENT, onHandoff);
+  }, []);
+  useEffect(() => {
+    if (!pendingValue || !activePeer || activePeer.toLowerCase() !== pendingValue.peer.toLowerCase()) return;
+    if (pendingValue.action === 'pay') setShowZkModal(true);
+    else setShowAgreementComposer(true);
+    setPendingValue(null);
+  }, [pendingValue, activePeer]);
 
   // [FEATURE] Auto-open chat from URL (simpler contact addition)
   useEffect(() => {
@@ -883,6 +903,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showWalletTransfer, setShowWalletTransfer] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
   const [showZkModal, setShowZkModal] = useState(false);
+  // Community → DM handoff (lib/chat/value-handoff.ts): the modal opens once the DM with that member is active.
+  const [pendingValue, setPendingValue] = useState<ValueHandoff | null>(null);
   const [showZkWallet, setShowZkWallet] = useState(false);
   const [showZkStreamModal, setShowZkStreamModal] = useState(false);
   const [showAgreementComposer, setShowAgreementComposer] = useState(false);
@@ -4756,6 +4778,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // because (!isSystemSignal && sending) returned true while the peer lookup was in-flight.
   const [isStartingConversation, setIsStartingConversation] = useState(false);
 
+  const handleStartConversationWithPeerRef = useRef<((peerAddr: string) => Promise<void>) | null>(null);
   const handleStartConversationWithPeer = async (peerAddr: string) => {
       if (!client || !peerAddr || isStartingConversation) return;
       setIsStartingConversation(true);
@@ -4832,6 +4855,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         setIsStartingConversation(false);
       }
   };
+  handleStartConversationWithPeerRef.current = handleStartConversationWithPeer;
 
   const handleStartConversation = async () => handleStartConversationWithPeer(peerInput);
 

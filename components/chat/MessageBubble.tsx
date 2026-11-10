@@ -9,11 +9,10 @@ import {
 import { bubbleClasses } from '@/lib/chat/bubbleStyles';
 import { toast } from 'sonner';
 import { decodeCallEntry, callEntryLabel, formatDuration, CALL_LOG_PREFIX } from '@/lib/chat/callLog';
-import { parseZkPaymentPayload, parseEscrowPayload, ZkPaymentResult, ZkEscrowState } from '@/lib/zk/zkMoney';
+import { parseZkPaymentPayload, parseEscrowPayload, ZkPaymentResult } from '@/lib/zk/zkMoney';
 import { parseTipPayload, ZkTip } from '@/lib/zk/zkCommunityPayments';
-import { parseStreamPayload, calculateStreamProgress, ZkPaymentStream } from '@/lib/zk/zkStreaming';
+import { parseStreamPayload } from '@/lib/zk/zkStreaming';
 import { parseInvoicePayload, ZkInvoice } from '@/lib/zk/zkInvoice';
-import { ZkEscrowCard } from '@/components/zk/ZkEscrowCard';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { PREMIUM_STICKERS, RenderPremiumSticker } from './StickerPicker';
 import { useLinkPreview, extractFirstUrl, LinkPreviewCard } from './LedgerLinkPreview';
@@ -260,12 +259,15 @@ const ZkPaymentBubble = React.memo(({ content }: { content: string; isMe: boolea
 ZkPaymentBubble.displayName = 'ZkPaymentBubble';
 
 // ─── Escrow ──────────────────────────────────────────────────────────────────
-const ZkEscrowBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
-  const escrow: ZkEscrowState | null = parseEscrowPayload(content);
-  if (!escrow) return null;
+// `__ZK_ESCROW__:` is plain JSON any peer can type: it never renders as an escrow with amounts or actions.
+const ZkEscrowBubble = React.memo(({ content }: { content: string; isMe: boolean }) => {
+  if (!parseEscrowPayload(content)) return null;
   return (
-    <div className="min-w-[260px] max-w-[340px]">
-      <ZkEscrowCard escrow={escrow} currentUserTag={isMe ? escrow.senderTag : escrow.recipientTag} />
+    <div className={`${CARD} min-w-[240px] max-w-[320px] p-4`}>
+      <CardLabel icon={<Lock size={12} strokeWidth={2.2} />}>Escrow (legacy message)</CardLabel>
+      <p className="mt-2 text-[14px] text-[#4a505c] leading-snug">
+        This message is from an older version and is not backed by a contract: nothing is locked, and any amount in it is unverified. Only agreement cards opened from Agreements are on Aztec.
+      </p>
     </div>
   );
 });
@@ -292,52 +294,15 @@ const ZkTipBubble = React.memo(({ content }: { content: string; isMe: boolean })
 ZkTipBubble.displayName = 'ZkTipBubble';
 
 // ─── Payment stream ──────────────────────────────────────────────────────────
-const STREAM_STATUS: Record<string, string> = { active: 'Active', paused: 'Paused', completed: 'Finished', cancelled: 'Cancelled', canceled: 'Cancelled' };
-
+// `__ZK_STREAM__:` is plain JSON any peer can type: no amounts or live "paid" progress from it (same closure as escrow).
 const ZkStreamBubble = React.memo(({ content }: { content: string; isMe: boolean }) => {
-  const stream: ZkPaymentStream | null = parseStreamPayload(content);
-  const [, setTick] = React.useState(0);
-  React.useEffect(() => {
-    if (!stream || stream.status !== 'active') return;
-    const id = setInterval(() => setTick(t => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [stream?.status]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!stream) return null;
-  const progress = calculateStreamProgress(stream);
-  const status = STREAM_STATUS[String(stream.status)] || String(stream.status);
+  if (!parseStreamPayload(content)) return null;
   return (
-    <div className={`${CARD} min-w-[260px] max-w-[320px] p-4`}>
-      <CardLabel
-        icon={<Waves size={13} strokeWidth={2} />}
-        aside={
-          <span className="inline-flex items-center gap-1.5 text-[12px] text-[#4a505c]">
-            <span className={`w-1.5 h-1.5 rounded-full ${stream.status === 'active' ? 'bg-[#1f9d55]' : 'bg-[#a3a9b4]'}`} aria-hidden="true" />
-            {status}
-          </span>
-        }
-      >
-        Payment stream
-      </CardLabel>
-      <p className="text-[24px] font-semibold tracking-[-0.02em] tabular-nums text-[#15171c] mt-2.5">
-        {stream.depositAmount} <span className="text-[15px] font-medium text-[#727a88]">{stream.token}</span>
+    <div className={`${CARD} min-w-[240px] max-w-[320px] p-4`}>
+      <CardLabel icon={<Waves size={13} strokeWidth={2} />}>Payment stream (legacy message)</CardLabel>
+      <p className="mt-2 text-[14px] text-[#4a505c] leading-snug">
+        This message is from an older version and is not backed by a contract: nothing is streaming, and any amount in it is unverified. Real streams are opened from Private agreement → Stream.
       </p>
-      <p className="text-[13px] text-[#727a88] mt-1 truncate">From {stream.senderTag} to {stream.recipientTag}</p>
-      <div className="mt-3">
-        <div className="flex justify-between text-[13px] text-[#4a505c] tabular-nums">
-          <span>{progress.formattedStreamed} {stream.token} paid</span>
-          <span>{progress.percentCompleted.toFixed(0)}%</span>
-        </div>
-        <div className="w-full bg-[#eff1f4] rounded-full h-1.5 overflow-hidden mt-1.5" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress.percentCompleted)}>
-          <div className="bg-[#15171c] h-full transition-[width] duration-1000" style={{ width: `${progress.percentCompleted}%` }} />
-        </div>
-        <p className="text-[13px] text-[#727a88] mt-1.5">
-          {progress.timeRemainingSeconds > 0 ? `About ${Math.ceil(progress.timeRemainingSeconds / 3600)} h left` : 'Fully paid'}
-        </p>
-      </div>
-      {stream.memo && (
-        <p className="mt-3 bg-[#f7f8fa] border border-[#eceef2] px-3 py-2 rounded-xl text-[14px] text-[#4a505c]">{stream.memo}</p>
-      )}
-      <DemoNote />
     </div>
   );
 });
@@ -365,6 +330,7 @@ const ZkInvoiceBubble = React.memo(({ content, isMe }: { content: string; isMe: 
       >
         Invoice {invoice.invoiceNumber}
       </CardLabel>
+      <p className="text-[12px] text-[#727a88] mt-1">Status as sent by the issuer. Paying goes only to their verified Aztec address.</p>
       <p className="text-[15.5px] font-semibold text-[#15171c] mt-2.5 truncate">{invoice.title}</p>
       <p className="text-[13px] text-[#727a88] mt-0.5 truncate">From {invoice.senderTag} to {invoice.recipientTag}</p>
       <div className="mt-3 space-y-1">

@@ -47,3 +47,18 @@ export async function wipeLocalAztecStores(kv?: KvStoreAdmin): Promise<{ deleted
   }
   return { deleted, failed };
 }
+
+/** How many Aztec wallet stores this browser holds; null when that cannot be read (never throws, never returns names). */
+export async function countLocalAztecStores(kv?: KvStoreAdmin): Promise<number | null> {
+  try {
+    let admin = kv;
+    if (!admin) {
+      const m: any = await import('@aztec-labs/kv-store/sqlite-opfs');
+      if (typeof m.listStores !== 'function') return null;
+      admin = { listStores: m.listStores, deleteStore: m.deleteStore };
+    }
+    return (await admin.listStores()).filter(isWalletStoreName).length;
+  } catch {
+    return null;
+  }
+}

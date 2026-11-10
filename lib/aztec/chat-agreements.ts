@@ -105,6 +105,8 @@ async function policyFor(
     claimedAddress: peer.aztecAddress,
   });
   if (!pre.ok || !network) throw new Error(pre.ok ? 'Unknown Aztec network.' : `${pre.reasons[0][0].toUpperCase()}${pre.reasons[0].slice(1)}.`);
+  // G7 on every network before any deploy, post or acceptance.
+  if (!binding.verified) throw new Error("This person's Aztec address is not verified. Ask them to share it again from an up-to-date Ledger Chat.");
   if (network === 'mainnet' && !L.mainnetRecord) throw new Error('The Aztec Alpha deployment record is missing or invalid.');
   const record = network === 'mainnet' ? L.mainnetRecord : L.record;
   return {
@@ -115,7 +117,6 @@ async function policyFor(
       caps: AZTEC_WALLET_CONFIG.agreementCaps,
       acknowledgedUnaudited: ack?.unaudited === true,
       acknowledgedPublicFeePayer: ack?.publicFeePayer === true,
-      // Testnet still accepts v1 (unverified) pins; checkAgreementPolicy requires G7 on Alpha.
       peerVerified: binding.verified,
     },
   };
