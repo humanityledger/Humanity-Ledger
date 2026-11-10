@@ -156,12 +156,12 @@ export function FilmSection() {
 
       <div className={s.stage}>
         <div>
-          <ol className={s.chapters} role="tablist" aria-label="Chapters">
+          <div className={s.chapters} role="tablist" aria-label="Chapters">
             {CHAPTERS.map((c, i) => {
               const on = i === idx;
               return (
-                <li key={c.id}>
                   <button
+                    key={c.id}
                     type="button"
                     role="tab"
                     aria-selected={on}
@@ -169,19 +169,20 @@ export function FilmSection() {
                     className={`${s.chapter} ${on ? s.active : ""}`}
                     onClick={() => go(i)}
                   >
-                    <span className={s.num}>{String(i + 1).padStart(2, "0")}</span>
-                    <span className={s.title}>{c.title}</span>
-                    {on && <p className={s.text}>{c.text}</p>}
-                    {on && (
-                      <span className={s.bar} aria-hidden="true">
-                        <span style={{ transform: `scaleX(${reduced ? 1 : p})` }} />
-                      </span>
-                    )}
+                    <span className={s.row}>
+                      <span className={s.num}>{String(i + 1).padStart(2, "0")}</span>
+                      <span className={s.title}>{c.title}</span>
+                      {on && <span className={s.text}>{c.text}</span>}
+                      {on && (
+                        <span className={s.bar} aria-hidden="true">
+                          <span style={{ transform: `scaleX(${reduced ? 1 : p})` }} />
+                        </span>
+                      )}
+                    </span>
                   </button>
-                </li>
               );
             })}
-          </ol>
+          </div>
           <div className={s.controls}>
             {!reduced && (
               <button type="button" className={s.play} onClick={() => setPlaying((v) => !v)} aria-pressed={!playing}>
