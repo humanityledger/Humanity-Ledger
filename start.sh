@@ -19,10 +19,12 @@ done
 export NEXTAUTH_URL="${NEXTAUTH_URL:-https://ledgerchat.org}"
 export NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-https://ledgerchat.org}"
 export DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/humanity_ledger?schema=public}"
-export DATABASE_URL_UNPOOLED="${DATABASE_URL_UNPOOLED:-postgresql://postgres:postgres@localhost:5432/humanity_ledger?schema=public}"
+# prisma/schema.prisma uses DATABASE_URL_UNPOOLED as directUrl (migrations). Railway Postgres has no pooler,
+# so the same URL is correct when only DATABASE_URL is set; a localhost default here made migrations fail.
+export DATABASE_URL_UNPOOLED="${DATABASE_URL_UNPOOLED:-$DATABASE_URL}"
 export TREASURY_WALLET_ADDRESS="${TREASURY_WALLET_ADDRESS:-0x0000000000000000000000000000000000000000}"
 
-if [ -z "${DATABASE_URL_SET_BY_RAILWAY:-}" ] && echo "$DATABASE_URL" | grep -q "localhost"; then
+if echo "$DATABASE_URL" | grep -q "localhost"; then
   echo "[start.sh] WARNING: DATABASE_URL points at localhost: communities, settings and invites will fail. Set DATABASE_URL to the Postgres service in Railway." >&2
 fi
 
