@@ -531,12 +531,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     window.addEventListener(VALUE_HANDOFF_EVENT, onHandoff);
     return () => window.removeEventListener(VALUE_HANDOFF_EVENT, onHandoff);
   }, []);
-  useEffect(() => {
-    if (!pendingValue || !activePeer || activePeer.toLowerCase() !== pendingValue.peer.toLowerCase()) return;
-    if (pendingValue.action === 'pay') setShowZkModal(true);
-    else setShowAgreementComposer(true);
-    setPendingValue(null);
-  }, [pendingValue, activePeer]);
 
   // [FEATURE] Auto-open chat from URL (simpler contact addition)
   useEffect(() => {
@@ -908,6 +902,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showZkWallet, setShowZkWallet] = useState(false);
   const [showZkStreamModal, setShowZkStreamModal] = useState(false);
   const [showAgreementComposer, setShowAgreementComposer] = useState(false);
+  // Declared after pendingValue, activePeer and the modal state: the deps array is read during render (TDZ otherwise).
+  useEffect(() => {
+    if (!pendingValue || !activePeer || activePeer.toLowerCase() !== pendingValue.peer.toLowerCase()) return;
+    if (pendingValue.action === 'pay') setShowZkModal(true);
+    else setShowAgreementComposer(true);
+    setPendingValue(null);
+  }, [pendingValue, activePeer]);
   const [showZkInvoiceModal, setShowZkInvoiceModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<ZkInvoice | null>(null);
 
