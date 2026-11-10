@@ -214,25 +214,19 @@ export function VoiceCallScreen({ p, active }: ScreenProps) {
 export function VideoCallScreen({ p, active }: ScreenProps) {
   return (
     <div className={`${s.screenVideo} ${active ? s.videoLive : ""}`}>
-      {/* Remote camera: realistic warm photographic video portrait */}
-      <div className={s.remote} aria-hidden="true">
-        <div className={s.photoPortraitBg} />
-        <div className={s.photoPortraitSubject}>
-          {/* Hair & head volume */}
-          <div className={s.portraitHairBack} />
-          <div className={s.portraitNeck} />
-          <div className={s.portraitHead} />
-          <div className={s.portraitHairFront} />
-          {/* Torso & clothing */}
-          <div className={s.portraitShoulders} />
-        </div>
-        <span className={s.bokeh} />
-        <span className={s.bokeh2} />
+      {/* Remote camera: authentic real person video stream */}
+      <div className={s.remote} aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+        <img
+          src="/landing/phones/videocall-person.jpg"
+          alt="Video Call Remote Party"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }}
+        />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 25%, rgba(0,0,0,0.65) 100%)', pointerEvents: 'none' }} />
       </div>
       <StatusBar dark />
       <div className={s.videoTop}>
-        <span className={s.videoName}>Marco Rossi</span>
-        <span className={s.videoMeta}>{clock(12 + Math.floor(p * 80))}</span>
+        <span className={s.videoName}>Comms Weekly</span>
+        <span className={s.videoMeta}>{clock(12 + Math.floor(p * 80))} · 16 people</span>
         <span className={s.videoChips}>
           <span className={s.chip}>
             <Lock size={12} strokeWidth={2.4} /> Encrypted
@@ -243,8 +237,10 @@ export function VideoCallScreen({ p, active }: ScreenProps) {
         </span>
       </div>
       <div className={s.self} aria-hidden="true">
-        <div className={s.selfCam}>
-          <div className={s.selfPerson} />
+        <div className={s.selfCam} style={{ background: '#1c1d22', border: '1px solid rgba(255,255,255,0.2)' }}>
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 600 }}>
+            You
+          </div>
         </div>
       </div>
       <div className={s.videoBar}>
