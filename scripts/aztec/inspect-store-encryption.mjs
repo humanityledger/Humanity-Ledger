@@ -1,11 +1,14 @@
 // Prints how the installed Aztec SDK handles a store encryption key and custom stores,
 // so CI can show whether lib/aztec/wallet/store.ts really encrypts. Read-only.
-import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
-const require = createRequire(import.meta.url);
 
-function pkgDir(name) { return path.dirname(require.resolve(`${name}/package.json`)); }
+function pkgDir(name) {
+  // Exports maps hide package.json; resolve from the project's node_modules instead.
+  const d = path.join(process.cwd(), 'node_modules', ...name.split('/'));
+  if (!fs.existsSync(path.join(d, 'package.json'))) throw new Error(`${name} is not installed`);
+  return d;
+}
 function walk(dir, out = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
