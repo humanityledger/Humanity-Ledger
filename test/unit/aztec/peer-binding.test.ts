@@ -112,6 +112,7 @@ import {
   bindingStatement,
   peerBindingStatus,
   verifiedAnnouncementFor,
+  verifiedPeerBinding,
   verifyAddressProof,
   type AddressProof,
   type BindingCrypto,
@@ -210,5 +211,36 @@ describe('G7 address proofs', () => {
     const body = verifiedAnnouncementFor(ADDR, await proofFor());
     expect((await recordPeerAnnouncement(store, { senderInboxId: SIGNER, peerInboxId: SIGNER, body })).status).toBe('ignored');
     expect(await peerBindingStatus(store, SIGNER)).toEqual({ verified: false });
+  });
+
+  it('verifiedPeerBinding re-verifies the stored proof and ignores a forged verified marker', async () => {
+    const store = memoryPeerBindingStore();
+    await recordPeerAnnouncement(store, { senderInboxId: SIGNER, peerInboxId: SIGNER, selfInboxId: ME_INBOX, body: verifiedAnnouncementFor(ADDR, await proofFor()) }, fakeCrypto);
+    expect(await verifiedPeerBinding(store, SIGNER, ME_INBOX, fakeCrypto)).toEqual({ address: ADDR, verified: true });
+    // Another self inbox: the proof was not made for it.
+    expect((await verifiedPeerBinding(store, SIGNER, 'other', fakeCrypto)).verified).toBe(false);
+    expect((await verifiedPeerBinding(store, SIGNER, '', fakeCrypto)).verified).toBe(false);
+
+    const forged = memoryPeerBindingStore();
+    await forged.set(SIGNER, ADDR);
+    await forged.set(`verified:${SIGNER}`, ADDR);
+    expect((await peerBindingStatus(forged, SIGNER)).verified).toBe(true);
+    expect(await verifiedPeerBinding(forged, SIGNER, ME_INBOX, fakeCrypto)).toEqual({ address: ADDR, verified: false });
+
+    const tampered = memoryPeerBindingStore();
+    const p = await proofFor();
+    await tampered.set(SIGNER, ADDR);
+    await tampered.set(`proof:${SIGNER}`, verifiedAnnouncementFor(ADDR, { ...p, signature: '0x' + '11'.repeat(64) }));
+    expect((await verifiedPeerBinding(tampered, SIGNER, ME_INBOX, fakeCrypto)).verified).toBe(false);
+  });
+
+  it('verifiedPeerBinding is false after a repin to another address, and for a v1 pin', async () => {
+    const store = memoryPeerBindingStore();
+    await recordPeerAnnouncement(store, { senderInboxId: SIGNER, peerInboxId: SIGNER, selfInboxId: ME_INBOX, body: verifiedAnnouncementFor(ADDR, await proofFor()) }, fakeCrypto);
+    await repinPeerAztecAddress(store, SIGNER, h('new'));
+    expect((await verifiedPeerBinding(store, SIGNER, ME_INBOX, fakeCrypto)).verified).toBe(false);
+    const v1 = memoryPeerBindingStore();
+    await recordPeerAnnouncement(v1, { senderInboxId: SIGNER, peerInboxId: SIGNER, body: announcementFor(ADDR) });
+    expect(await verifiedPeerBinding(v1, SIGNER, ME_INBOX, fakeCrypto)).toEqual({ address: ADDR, verified: false });
   });
 });

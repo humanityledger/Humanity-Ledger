@@ -28,8 +28,20 @@ function StudioPageInner() {
   if (!address) {
     return (
       <div className="h-[100dvh] flex flex-col items-center justify-center gap-3 bg-white px-6 text-center">
-        <p className="text-[15px] text-[#15171c]">Open Ledger Chat and unlock your wallet to use Ledger Studio.</p>
-        <button type="button" onClick={() => router.push('/chat')} className="h-10 px-4 rounded-xl bg-[#15171c] text-white text-[14px]">Ledger Chat</button>
+        <p className="text-[15px] text-[#15171c]">Sign in with your wallet to use Ledger Studio.</p>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {/* Back to Studio after sign-in (same-origin path only; the prompt in ?q= is kept). */}
+          <button
+            type="button"
+            onClick={() => router.push(`/connect?redirect=${encodeURIComponent(prompt ? `/studio?q=${encodeURIComponent(prompt.slice(0, 600))}` : '/studio')}`)}
+            className="h-10 px-4 rounded-xl bg-[#15171c] text-white text-[14px]"
+          >
+            Sign in
+          </button>
+          <button type="button" onClick={() => router.push('/chat')} className="h-10 px-4 rounded-xl bg-[#eff1f4] text-[#15171c] text-[14px]">
+            Open Ledger Chat
+          </button>
+        </div>
       </div>
     );
   }

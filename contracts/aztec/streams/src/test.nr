@@ -377,3 +377,38 @@ unconstrained fn stream_view_shows_a_cancelled_stream_as_not_live() {
     let v = view(s, s.sender, 1);
     assert(v.found & !v.live);
 }
+
+// ── SEC-S14: one stream per (salt, sender) ──────────────────────────────────
+// UNCOMPILED in the session that wrote it: run `aztec test` in CI.
+
+#[test(should_fail)]
+unconstrained fn a_second_stream_with_the_same_salt_fails() {
+    let s = setup();
+    let _ = open(s, 1, 11);
+    // Fresh authwit nonce: the failure is the creation nullifier, not a reused authwit.
+    let _ = open(s, 1, 12);
+}
+
+#[test]
+unconstrained fn distinct_salts_from_one_sender_still_work() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    let _ = open(s, 2, 12);
+    assert(balance(s.env, s.token, s.streams) == 2 * TOTAL);
+    s.env.mine_block_at(start + 10);
+    withdraw(s, 1, 5);
+    cancel(s, s.sender, 2);
+    // Stream 1 still holds what was not withdrawn; stream 2 is fully paid out.
+    assert(balance(s.env, s.token, s.streams) == TOTAL - 5);
+}
+
+// Before the fix this stream was created and its funds could never move: the
+// index-0 state nullifier of (1, sender, recipient) already existed.
+#[test(should_fail)]
+unconstrained fn a_salt_cannot_be_reused_after_cancel() {
+    let s = setup();
+    let _ = open(s, 1, 11);
+    cancel(s, s.sender, 1);
+    let _ = open(s, 1, 12);
+}
+

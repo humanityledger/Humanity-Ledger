@@ -12,11 +12,18 @@
  * chat to post in this DM only.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { singleFlight } from '@/lib/aztec/single-flight';
 import { X, KeyRound, Lock, Waves, LoaderCircle } from 'lucide-react';
 import { announcementFor, localStoragePeerBindingStore, peerAztecAddress, verifiedAnnouncementFor } from '@/lib/aztec/peer-binding';
 import { getPrivateWallet, humanError, type WalletSnapshot } from '@/lib/aztec/wallet/client';
-import { AZTEC_WALLET_CONFIG } from '@/lib/aztec/wallet/config';
+import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
+import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
+import { ProvingMemoryNote } from './ProvingMemoryNote';
+import { STREAM_START_SLACK, streamTerms } from '@/lib/aztec/stream-terms';
+import { formatUnits, parseUnits } from '@/lib/aztec/wallet/amounts';
+
+const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 
 const DURATIONS = {
   escrow: [
@@ -39,7 +46,8 @@ export interface AgreementComposerProps {
   peerName: string;
   onClose: () => void;
   /** Posts a message in this DM (an invitation or an announcement). */
-  onSend: (message: string) => Promise<void> | void;
+  /** Resolves true only when the message was handed to XMTP. */
+  onSend: (message: string) => Promise<boolean | void> | boolean | void;
   /** Opens the private wallet when it is closed. */
   onOpenWallet?: () => void;
 }
@@ -58,6 +66,9 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
   const [duration, setDuration] = useState(DURATIONS.escrow[1].s);
   const [step, setStep] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ack, setAck] = useState(NO_ACK);
+  // The acknowledgement is per agreement: never carried across conversations or attempts, never persisted.
+  useEffect(() => setAck(NO_ACK), [dmPeerInboxId]);
   const ready = wallet.phase === 'ready';
 
   const share = async () => {
@@ -80,22 +91,32 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
     }
   };
 
-  const open = async () => {
+  const once = useRef(singleFlight()).current; // 4.19: a double tap never funds two agreements
+  const open = () => once(async () => {
     setError(null);
     if (!peer) return;
     setStep('Preparing');
     try {
       const { openChatAgreement } = await import('@/lib/aztec/chat-agreements');
-      const { raw } = await openChatAgreement({ kind, peerAztecAddress: peer, tokenAddress: token, amount, durationSeconds: duration, onStep: setStep });
-      setStep('Posting the invitation in this chat');
-      await onSend(raw);
+      // 4.13: the invitation is posted before funding; a send that XMTP did not take aborts before any deposit.
+      const post = async (raw: string) => {
+        if ((await onSend(raw)) !== true) throw new Error('not handed to XMTP');
+      };
+      await openChatAgreement({ kind, peerAztecAddress: peer, dmPeerInboxId, selfInboxId: selfInboxId ?? '', ack, post, tokenAddress: token, amount, durationSeconds: duration, onStep: setStep });
       onClose();
     } catch (e) {
-      setError(humanError(e));
+      const name = (e as Error)?.name;
+      // These two carry what the user must do next; humanError would replace them with a generic line.
+      setError(name === 'FundingAfterPostError' || name === 'InvitationNotPostedError' ? (e as Error).message : humanError(e));
+      if (name === 'FundingAfterPostError') {
+        // Plain text, no secrets: the peer learns not to rely on the card until it shows the funds.
+        await Promise.resolve(onSend('The deposit for the agreement I just sent did not complete. Do not rely on it unless its card shows the funds.')).catch(() => {});
+      }
     } finally {
       setStep(null);
+      setAck(NO_ACK);
     }
-  };
+  });
 
   const field = 'w-full h-10 rounded-xl border border-[#e4e7ec] px-3 text-[14px] text-[#15171c] bg-white focus:outline-none focus:ring-2 focus:ring-[#15171c]/15';
   const seg = (on: boolean) => `flex-1 h-9 rounded-full text-[13.5px] font-semibold flex items-center justify-center gap-1.5 ${on ? 'bg-[#15171c] text-white' : 'bg-[#eff1f4] text-[#15171c]'}`;
@@ -106,7 +127,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
         role="dialog"
         aria-modal="true"
         aria-label="Private agreement"
-        className="w-full sm:max-w-[420px] bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-black/10 p-5 max-h-[92vh] overflow-y-auto"
+        className="w-full sm:max-w-[420px] bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-black/10 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[92vh] supports-[height:100dvh]:max-h-[92dvh] overflow-y-auto overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -116,7 +137,9 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
           </button>
         </div>
         <p className="text-[13px] text-[#727a88] mt-1 leading-snug">
-          An escrow or a payment stream in its own contract on the Aztec test network. Amounts and parties stay private. Test tokens only, no value. The contracts have no external audit.
+          {ALPHA
+            ? `An escrow or a payment stream in its own contract on ${networkLabel()}. Real funds. Amounts and parties stay private; the fee payer is public. The contracts have no external audit.`
+            : 'An escrow or a payment stream in its own contract on the Aztec test network. Amounts and parties stay private. Test tokens only, no value. The contracts have no external audit.'}
         </p>
 
         {!ready ? (
@@ -161,7 +184,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                   Token
                   <select className={`${field} mt-1`} value={token} onChange={(e) => setToken(e.target.value)}>
                     {AZTEC_WALLET_CONFIG.tokens.map((t) => (
-                      <option key={t.address} value={t.address}>{t.symbol} (test)</option>
+                      <option key={t.address} value={t.address}>{ALPHA ? t.symbol : `${t.symbol} (test)`}</option>
                     ))}
                   </select>
                 </label>
@@ -177,10 +200,27 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                     ))}
                   </select>
                 </label>
+                {kind === 'stream' && (() => {
+                  // Gap 2.5: the upfront part is shown before anything is proven, never left implicit.
+                  const t = AZTEC_WALLET_CONFIG.tokens.find((x) => x.address === token);
+                  if (!t || !amount) return null;
+                  try {
+                    const { upfront } = streamTerms(parseUnits(amount, t.decimals), duration, 0);
+                    return (
+                      <p className="text-[12.5px] text-[#4a505c] leading-snug" role="note">
+                        A stream starts {STREAM_START_SLACK / 60} minutes in the past, so the network can accept it: {peerName} can withdraw at least {formatUnits(upfront, t.decimals)} {t.symbol} as soon as it lands (plus what accrues while it is proven), and the rest over the duration.
+                      </p>
+                    );
+                  } catch {
+                    return null;
+                  }
+                })()}
                 <p className="text-[12.5px] text-[#727a88] leading-snug">
                   The amount comes from your private balance. Proving runs on this device and can take a few minutes.
                 </p>
-                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !amount || !token} onClick={open}>
+                <ProvingMemoryNote />
+                {ALPHA && <AlphaRiskAck value={ack} onChange={setAck} disabled={!!step} />}
+                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !amount || !token || (ALPHA && !acked(ack))} onClick={open}>
                   {kind === 'escrow' ? 'Open escrow' : 'Open stream'}
                 </button>
               </div>

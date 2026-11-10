@@ -23,6 +23,10 @@ import type { EscrowView, StreamView } from './agreements';
 import { getPrivateWallet } from './wallet/client';
 import { parseUnits } from './wallet/amounts';
 import { AZTEC_WALLET_CONFIG } from './wallet/config';
+import { localStoragePeerBindingStore, sdkBindingCrypto, verifiedPeerBinding } from './peer-binding';
+import { authorizedMainnetRecord, checkAgreementContext } from './agreement-policy';
+import { AZTEC_NETWORKS } from './sequencer/networks';
+import { streamStart, streamTerms } from './stream-terms';
 
 type Kind = 'escrow' | 'streams';
 
@@ -36,11 +40,12 @@ let libs: Promise<{
   contracts: typeof import('@aztec-labs/aztec.js/contracts');
   artifacts: Record<Kind, any>;
   record: any;
+  mainnetRecord: any;
 }> | null = null;
 
 function load() {
   libs ??= (async () => {
-    const [agreements, invite, keyed, fees, fields, addresses, contracts, escrowJson, streamJson, record] = await Promise.all([
+    const [agreements, invite, keyed, fees, fields, addresses, contracts, escrowJson, streamJson, record, mainnetRecord] = await Promise.all([
       import('./agreements'),
       import('./agreement-invite'),
       import('./keyed-deploy'),
@@ -51,12 +56,18 @@ function load() {
       import('../../contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json'),
       import('../../contracts/aztec/streams/target/payment_stream-PaymentStream.json'),
       import('../../deployments/aztec-testnet.json'),
+      import('../../deployments/aztec-mainnet.json'),
     ]);
     const artifacts = {
       escrow: keyed.loadKeyedArtifact((escrowJson as any).default ?? escrowJson),
       streams: keyed.loadKeyedArtifact((streamJson as any).default ?? streamJson),
     };
-    return { agreements, invite, keyed, fees, fields, addresses, contracts, artifacts, record: (record as any).default ?? record };
+    return {
+      agreements, invite, keyed, fees, fields, addresses, contracts, artifacts,
+      record: (record as any).default ?? record,
+      // G5: only fully recorded entries survive; undefined (refuse everything) if the record is malformed.
+      mainnetRecord: authorizedMainnetRecord((mainnetRecord as any).default ?? mainnetRecord, AZTEC_NETWORKS.mainnet),
+    };
   })();
   libs.catch(() => {
     libs = null;
@@ -64,20 +75,64 @@ function load() {
   return libs;
 }
 
-/** The network the open wallet's node is on, for the agreement policy. */
-async function policyFor(ctx: ReturnType<ReturnType<typeof getPrivateWallet>['agreementContext']>) {
+/** What the user explicitly accepted in the risk notice before this agreement (Alpha only). */
+export interface RiskAcknowledgement {
+  unaudited: boolean;
+  publicFeePayer: boolean;
+}
+
+/**
+ * The full agreement policy for the open wallet's node, and the deployment
+ * record that authorises classes on it. The counterparty is resolved here from
+ * the binding store, never taken from the caller, so a UI bug cannot route
+ * value to an unpinned or unverified address.
+ */
+async function policyFor(
+  ctx: ReturnType<ReturnType<typeof getPrivateWallet>['agreementContext']>,
+  peer: { dmPeerInboxId: string; selfInboxId: string; aztecAddress: string },
+  ack: RiskAcknowledgement | undefined,
+) {
   const L = await load();
   const info = await ctx.node.getNodeInfo();
   const network = L.fees.feeNetworkFromL1ChainId(Number(info.l1ChainId));
-  if (!network) throw new Error('Unknown Aztec network.');
-  // Mainnet would also need the mainnet record and caps; the wallet refuses mainnet today.
-  return { network };
+  // G7 is re-verified from the stored proof now; a cached flag is never enough to move value.
+  const binding = await verifiedPeerBinding(localStoragePeerBindingStore(), peer.dmPeerInboxId, peer.selfInboxId, await sdkBindingCrypto());
+  const pre = checkAgreementContext({
+    nodeNetwork: network,
+    buildNetwork: AZTEC_WALLET_CONFIG.network,
+    alphaEnabled: AZTEC_WALLET_CONFIG.alphaEnabled,
+    pinnedAddress: binding.address,
+    claimedAddress: peer.aztecAddress,
+  });
+  if (!pre.ok || !network) throw new Error(pre.ok ? 'Unknown Aztec network.' : `${pre.reasons[0][0].toUpperCase()}${pre.reasons[0].slice(1)}.`);
+  if (network === 'mainnet' && !L.mainnetRecord) throw new Error('The Aztec Alpha deployment record is missing or invalid.');
+  const record = network === 'mainnet' ? L.mainnetRecord : L.record;
+  return {
+    record,
+    policy: {
+      network,
+      mainnetRecord: network === 'mainnet' ? L.mainnetRecord : undefined,
+      caps: AZTEC_WALLET_CONFIG.agreementCaps,
+      acknowledgedUnaudited: ack?.unaudited === true,
+      acknowledgedPublicFeePayer: ack?.publicFeePayer === true,
+      // Testnet still accepts v1 (unverified) pins; checkAgreementPolicy requires G7 on Alpha.
+      peerVerified: binding.verified,
+    },
+  };
 }
 
 export interface OpenRequest {
   kind: 'escrow' | 'stream';
   /** The peer's pinned Aztec address (lib/aztec/peer-binding.ts). */
   peerAztecAddress: string;
+  /** XMTP inbox of the DM peer; the binding store is checked against it. */
+  dmPeerInboxId: string;
+  /** Our own XMTP inbox: the G7 proof must have been made for it. */
+  selfInboxId: string;
+  /** Required on Alpha; ignored by the policy on testnet. */
+  ack?: RiskAcknowledgement;
+  /** Posts the invitation in the DM before funding (4.13); must throw unless XMTP took it. */
+  post: (raw: string) => Promise<void>;
   tokenAddress: string;
   /** Amount in whole tokens, as typed ("12.5"). */
   amount: string;
@@ -86,8 +141,7 @@ export interface OpenRequest {
   onStep?: (step: string) => void;
 }
 
-/** A stream starts slightly in the past so that the next block's timestamp is past its start. */
-const STREAM_START_SLACK = 120;
+// Stream start, rate and upfront accrual: lib/aztec/stream-terms.ts (gap 2.5).
 
 /** Opens an agreement and returns the invitation to post in the conversation. */
 export async function openChatAgreement(r: OpenRequest): Promise<{ raw: string; invite: AgreementInvite }> {
@@ -99,6 +153,8 @@ export async function openChatAgreement(r: OpenRequest): Promise<{ raw: string; 
   const units = parseUnits(r.amount, token.config.decimals);
   if (units <= 0n) throw new Error('Enter an amount above zero.');
   if (!(r.durationSeconds >= 60 && r.durationSeconds <= 365 * 24 * 3600)) throw new Error('Choose a duration between one minute and one year.');
+  // Streams: at least one hour, so the upfront part (STREAM_START_SLACK of accrual) stays small. Checked before any deploy.
+  const terms = r.kind === 'stream' ? streamTerms(units, r.durationSeconds, Math.floor(Date.now() / 1000)) : null;
   const recipient = L.addresses.AztecAddress.fromStringUnsafe(r.peerAztecAddress);
   if (recipient.equals(ctx.me)) throw new Error('That is your own Aztec address.');
 
@@ -119,9 +175,14 @@ export async function openChatAgreement(r: OpenRequest): Promise<{ raw: string; 
     tokenSymbol: token.config.symbol,
     tokenContract: token.contract,
     artifact,
-    send: { fee: ctx.fee },
+    send: { fee: await ctx.prepareFee() },
     classPublished,
-    policy: await policyFor(ctx),
+    beforeFund: async (raw: string) => {
+      r.onStep?.('Posting the invitation in this chat');
+      await r.post(raw);
+      r.onStep?.('Funding the agreement and proving on this device. This can take a few minutes.');
+    },
+    policy: (await policyFor(ctx, { dmPeerInboxId: r.dmPeerInboxId, selfInboxId: r.selfInboxId, aztecAddress: r.peerAztecAddress }, r.ack)).policy,
   };
   r.onStep?.('Creating the agreement contract and proving on this device. This can take a few minutes.');
   const now = Math.floor(Date.now() / 1000);
@@ -131,8 +192,8 @@ export async function openChatAgreement(r: OpenRequest): Promise<{ raw: string; 
       : await L.agreements.openStream({
           ...common,
           total: units,
-          rate: units / BigInt(r.durationSeconds) > 0n ? units / BigInt(r.durationSeconds) : 1n,
-          start: now - STREAM_START_SLACK,
+          rate: terms!.rate,
+          start: () => streamStart(Math.floor(Date.now() / 1000)),
         });
   await ctx.refresh().catch(() => {});
   return { raw: opened.raw, invite: opened.invite };
@@ -148,16 +209,30 @@ export type AcceptResult =
  * contract and checks the deposit against the stored note. The PXE may need
  * a block or two to find a fresh deposit, so "not found" is retried.
  */
-export async function acceptChatAgreement(raw: string, peerAztecAddress: string, onStep?: (s: string) => void): Promise<AcceptResult> {
+export async function acceptChatAgreement(
+  raw: string,
+  peerAztecAddress: string,
+  dmPeerInboxId: string,
+  selfInboxId: string,
+  ack: RiskAcknowledgement | undefined,
+  onStep?: (s: string) => void,
+): Promise<AcceptResult> {
   const ctx = getPrivateWallet().agreementContext();
   const L = await load();
   onStep?.('Checking the invitation');
+  let p: Awaited<ReturnType<typeof policyFor>>;
+  try {
+    p = await policyFor(ctx, { dmPeerInboxId, selfInboxId, aztecAddress: peerAztecAddress }, ack);
+  } catch (e) {
+    return { ok: false, reason: e instanceof Error ? e.message : 'Policy check failed.' };
+  }
   const acc = await L.agreements.acceptInvite({ wallet: ctx.wallet, address: ctx.me }, raw, {
     artifacts: L.artifacts,
-    allowedClassIds: L.invite.currentClassIds(L.record),
+    // Classes come from the record of the node's own network: testnet classes never authorise Alpha.
+    allowedClassIds: L.invite.currentClassIds(p.record),
     allowedTokens: AZTEC_WALLET_CONFIG.tokens.map((t) => t.address),
     peer: peerAztecAddress,
-    policy: await policyFor(ctx),
+    policy: p.policy,
   });
   if (!acc.ok) return acc;
   onStep?.('Reading the deposit from the contract');
@@ -235,7 +310,7 @@ export async function actOnAgreement(inv: AgreementInvite, action: AgreementActi
     } else if (action === 'cancel') call = contract.methods.cancel(salt);
   }
   if (!call) throw new Error('That action does not apply to this agreement.');
-  const sent: any = await call.send({ from: ctx.me, fee: ctx.fee, additionalScopes: [address], wait: { timeout: 600 } });
+  const sent: any = await call.send({ from: ctx.me, fee: await ctx.prepareFee(), additionalScopes: [address], wait: { timeout: 600 } });
   await ctx.refresh().catch(() => {});
   return sent?.receipt?.txHash?.toString?.() ?? sent?.txHash?.toString?.();
 }

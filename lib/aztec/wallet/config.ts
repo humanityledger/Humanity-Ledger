@@ -67,6 +67,24 @@ const EXPLORER = process.env.NEXT_PUBLIC_AZTEC_EXPLORER || (NETWORK === 'testnet
 const SPONSORED_FPC = process.env.NEXT_PUBLIC_AZTEC_SPONSORED_FPC || '';
 const TOKENS_RAW = parseJson<Partial<Record<TokenKey, Omit<TokenConfig, 'key'>>>>(process.env.NEXT_PUBLIC_AZTEC_TOKENS);
 const FAUCET_RAW = parseJson<FaucetConfig>(process.env.NEXT_PUBLIC_AZTEC_FAUCET);
+const CAPS_RAW = parseJson<Record<string, unknown>>(process.env.NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS);
+
+/** Per-token agreement caps in base units, keyed by lowercase Aztec address. Malformed entries are dropped (fail-closed: no cap = refused). */
+export function parseAgreementCaps(raw: Record<string, unknown> | null): Readonly<Record<string, bigint>> {
+  const out: Record<string, bigint> = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return Object.freeze(out);
+  let dropped = 0;
+  for (const [addr, v] of Object.entries(raw)) {
+    // Decimal strings only: no sign, no hex, no exponent; 0 is not a cap.
+    if (!/^0x[0-9a-fA-F]{64}$/.test(addr) || typeof v !== 'string' || !/^[0-9]{1,39}$/.test(v) || BigInt(v) <= 0n) {
+      dropped++;
+      continue;
+    }
+    out[addr.toLowerCase()] = BigInt(v);
+  }
+  if (dropped) console.warn(`NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS: ${dropped} malformed entr${dropped === 1 ? 'y' : 'ies'} ignored`);
+  return Object.freeze(out);
+}
 
 export const AZTEC_WALLET_CONFIG = {
   network: NETWORK,
@@ -81,6 +99,7 @@ export const AZTEC_WALLET_CONFIG = {
     const t = TOKENS_RAW?.[key];
     return t?.address ? [{ key, address: t.address, symbol: t.symbol, decimals: Number(t.decimals) }] : [];
   }) as TokenConfig[],
+  agreementCaps: parseAgreementCaps(CAPS_RAW),
   // Test tokens only: there is never a faucet on Alpha.
   faucet: NETWORK === 'testnet' && FAUCET_RAW?.address ? FAUCET_RAW : null,
 } as const;

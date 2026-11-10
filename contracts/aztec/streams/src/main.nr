@@ -73,6 +73,13 @@
 //            been emitted. The sender's older copies stay in its PXE (they
 //            cannot be nullified without the recipient) and the view skips
 //            them, so a client never shows a stale state.
+//
+//   [SEC-S14] ONE STREAM PER (salt, sender) (10 Nov 2026) — create_stream
+//            publishes a creation nullifier H(salt, sender). A second stream
+//            under the same salt would share the index-0 state nullifier and
+//            be locked forever once the first moves. UNCOMPILED in the
+//            session that wrote it: requires `aztec compile` and the TXE
+//            tests in CI; it changes the class ID.
 // ══════════════════════════════════════════════════════════════════════════════
 
 use aztec::macros::aztec;
@@ -110,6 +117,8 @@ pub contract PaymentStream {
     // Separator of the per-state nullifier shared by withdraw and cancel
     // (SEC-S12). Distinct from every separator in contracts/aztec.
     global DOM_SEP__STREAM_STATE: u32 = 718293051;
+    // Separator of the creation nullifier (SEC-S14). Distinct from every separator in contracts/aztec.
+    global DOM_SEP__STREAM_CREATE: u32 = 718293052;
     // A cancel measures accrual at its anchor block, which the sender's PXE
     // picks. Bounding how long after its anchor a cancel can land bounds what
     // an old anchor can withhold from the recipient: at most
@@ -178,6 +187,12 @@ pub contract PaymentStream {
         assert(total > 0, "PaymentStream: zero total");
         assert(rate > 0, "PaymentStream: zero rate");
         assert(start <= anchor_ts, "PaymentStream: start in future");
+
+        // SEC-S14: one stream per (salt, sender); a second is rejected as an existing
+        // nullifier and the whole transaction, token pull included, does not apply.
+        self.context.push_nullifier_unsafe(
+            poseidon2_hash_with_separator([salt, sender.to_field()], DOM_SEP__STREAM_CREATE),
+        );
 
         // Pull tokens into payment stream contract via private call
         let token_addr = self.storage.token.read();

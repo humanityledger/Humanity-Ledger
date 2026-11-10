@@ -20,6 +20,7 @@ import {
 import { HLLogo } from "@/components/shared/HLLogo";
 import { LivePhone } from "@/components/landing/v2/PhoneShowcase";
 import s from "./ConnectView.module.css";
+import { safeWalletHref, walletHomeLink } from "@/lib/auth/wallet-links";
 
 /**
  * ConnectView — the presentational half of /connect.
@@ -35,6 +36,7 @@ export interface WalletOption {
   id: string;
   name: string;
   hint: string;
+  /** Empty: no verified logo in /public/wallets, a generic wallet icon is shown instead of another brand's. */
   logo: string;
 }
 
@@ -150,7 +152,7 @@ function Choose(p: ConnectViewProps) {
 
       <div className={s.options}>
         {p.wallets.map((w) => (
-          <Option key={w.id} logo={w.logo} name={w.name} hint={w.hint} onClick={() => p.onWallet(w.id)} />
+          <Option key={w.id} logo={w.logo || undefined} icon={Wallet} name={w.name} hint={w.hint} onClick={() => p.onWallet(w.id)} />
         ))}
         <Option
           icon={Wallet}
@@ -259,12 +261,11 @@ function Connecting(p: ConnectViewProps) {
       <div className={s.actions}>
         {p.isMobile && (
           <a
-            href={p.mobileDeepLink || "https://metamask.app.link/"}
+            href={safeWalletHref(p.mobileDeepLink) ?? walletHomeLink(null)}
             className={`${s.btn} ${s.btnPrimary}`}
-            onClick={(e) => {
-              if (p.mobileDeepLink && typeof window !== "undefined") {
-                window.location.href = p.mobileDeepLink!;
-              }
+            onClick={() => {
+              const href = safeWalletHref(p.mobileDeepLink);
+              if (href && typeof window !== "undefined") window.location.href = href;
             }}
           >
             Open {name}
@@ -335,23 +336,15 @@ function Signing(p: ConnectViewProps) {
               // If we have a WalletConnect deep link stored (set by ConnectPage),
               // navigate to it — we are inside a button onClick which IS a user
               // gesture, so Safari 15+ WILL allow this navigation.
-              if (p.mobileDeepLink) {
-                window.location.href = p.mobileDeepLink;
+              const href = safeWalletHref(p.mobileDeepLink);
+              if (href) {
+                window.location.href = href;
                 return;
               }
-              // Fallback: use the preferred wallet's universal link.
-              const pref =
-                sessionStorage.getItem("preferred_mobile_wallet") ||
-                localStorage.getItem("preferred_mobile_wallet") ||
-                "metamask";
-              const links: Record<string, string> = {
-                metamask: "https://metamask.app.link/",
-                rainbow: "https://rainbow.me/",
-                coinbase: "https://go.cb-w.com/",
-                trust: "https://link.trustwallet.com/",
-                okx: "https://www.okx.com/web3",
-              };
-              window.location.href = links[pref] || links.metamask;
+              // Fallback: the preferred wallet's universal link (allowlisted brand only).
+              window.location.href = walletHomeLink(
+                sessionStorage.getItem("preferred_mobile_wallet") || localStorage.getItem("preferred_mobile_wallet"),
+              );
             }}
           >
             Open wallet to sign

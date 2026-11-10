@@ -114,6 +114,8 @@ function FeeJuiceStation({ userAddress }: { userAddress: string }) {
   const [l1Tx, setL1Tx] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [recovering, setRecovering] = useState(false);
+  // Explicit per-deposit consent to what becomes public; never persisted.
+  const [ackPublic, setAckPublic] = useState(false);
   // Idempotency: one deposit at a time, whatever the number of taps.
   const submitting = useRef(false);
 
@@ -142,7 +144,7 @@ function FeeJuiceStation({ userAddress }: { userAddress: string }) {
   const busy = step !== null && step !== 'deposited';
 
   const bridge = useCallback(async () => {
-    if (submitting.current || !units || !walletClient || !publicClient) return;
+    if (submitting.current || !units || !walletClient || !publicClient || !ackPublic) return;
     submitting.current = true;
     setError(null);
     setL1Tx(undefined);
@@ -153,6 +155,7 @@ function FeeJuiceStation({ userAddress }: { userAddress: string }) {
         if (hash) setL1Tx(hash);
       });
       setAmount('');
+      setAckPublic(false);
       refetchAztec();
       toast.success('Deposited on Ethereum. Your Fee Juice arrives on Aztec in a few minutes.');
     } catch (err) {
@@ -161,7 +164,7 @@ function FeeJuiceStation({ userAddress }: { userAddress: string }) {
     } finally {
       submitting.current = false;
     }
-  }, [units, walletClient, publicClient, refetchAztec]);
+  }, [units, walletClient, publicClient, refetchAztec, ackPublic]);
 
   const recover = useCallback(async () => {
     if (!publicClient || recovering) return;
@@ -235,15 +238,21 @@ function FeeJuiceStation({ userAddress }: { userAddress: string }) {
           {switching ? 'Switching…' : 'Switch your wallet to Ethereum mainnet'}
         </button>
       ) : (
+        <>
+        <label className="flex items-start gap-2 text-[12.5px] leading-snug text-[#475467]">
+          <input type="checkbox" className="mt-0.5" checked={ackPublic} disabled={busy} onChange={(e) => setAckPublic(e.target.checked)} />
+          <span>I understand this deposit is public on Ethereum, links my Ethereum and Aztec addresses, and that my Aztec account pays each fee publicly, so my transactions can be linked. Fee Juice cannot be sent back.</span>
+        </label>
         <button
           type="button"
-          disabled={!units || tooMuch || busy || !walletClient}
+          disabled={!units || tooMuch || busy || !walletClient || !ackPublic}
           onClick={bridge}
           className="w-full min-h-[44px] rounded-2xl bg-[#15171C] text-white text-[14px] font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
         >
           {busy ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
           {busy ? STEP_LABEL[step!] : 'Add Fee Juice'}
         </button>
+        </>
       )}
 
       {step && (

@@ -34,6 +34,7 @@ import { randomField } from './random';
 import { poseidon2WithSeparator } from './poseidon';
 import { checkAgreementPolicy, type PolicyInput } from './agreement-policy';
 import { computeKeyedInstance, type KeyedContract, type loadKeyedArtifact } from './keyed-deploy';
+import { postThenFund } from './agreement-order';
 import {
   verifyAgreementInvite,
   type EscrowInvite,
@@ -70,6 +71,8 @@ export interface OpenCommon {
   classPublished: boolean;
   /** Network policy (lib/aztec/agreement-policy.ts); required in practice on mainnet. */
   policy?: AgreementPolicy;
+  /** Posts the invitation (raw JSON) before funding (4.13, agreement-order.ts). Must throw if it was not posted. */
+  beforeFund?: (raw: string) => Promise<void>;
 }
 
 /** The parts of a policy check that do not depend on the agreement itself. */
@@ -135,10 +138,6 @@ export async function openEscrow(c: OpenCommon & { amount: bigint; deadline: num
   const contract = Contract.at(d.address, c.artifact, c.sender.wallet) as AnyInteraction;
   const claimSecret = randomField();
   const escrowId = randomField();
-  const w = await authwit(c, d.address, c.amount);
-  const sent = await contract.methods
-    .deposit(c.recipient, c.amount, BigInt(c.deadline), await claimSecretHash(claimSecret), escrowId, w.nonce)
-    .send({ from: c.sender.address, authWitnesses: [w.witness], wait: { timeout: 900 }, ...c.send });
   const invite: EscrowInvite = {
     type: 'hl.escrow_invite',
     version: 1,
@@ -155,20 +154,26 @@ export async function openEscrow(c: OpenCommon & { amount: bigint; deadline: num
     amount: c.amount.toString(),
     deadline: c.deadline,
   };
-  return { invite, raw: JSON.stringify(invite), contract, txHashes: { deploy: d.deployTx, fund: sent?.receipt?.txHash?.toString() ?? sent?.txHash?.toString() }, blocks: { deploy: d.deployBlock, fund: blockOf(sent) } };
+  const raw = JSON.stringify(invite);
+  // 4.13: the invitation is posted before any token moves.
+  const sent: any = await postThenFund(raw, c.beforeFund, async () => {
+    const w = await authwit(c, d.address, c.amount);
+    return contract.methods
+      .deposit(c.recipient, c.amount, BigInt(c.deadline), await claimSecretHash(claimSecret), escrowId, w.nonce)
+      .send({ from: c.sender.address, authWitnesses: [w.witness], wait: { timeout: 900 }, ...c.send });
+  });
+  return { invite, raw, contract, txHashes: { deploy: d.deployTx, fund: sent?.receipt?.txHash?.toString() ?? sent?.txHash?.toString() }, blocks: { deploy: d.deployBlock, fund: blockOf(sent) } };
 }
 
 /** Opens a payment stream: its own keyed PaymentStream instance, funded with `total`. */
 export async function openStream(
-  c: OpenCommon & { total: bigint; rate: bigint; start: number },
+  c: OpenCommon & { total: bigint; rate: bigint; start: number | (() => number) },
 ): Promise<Opened<StreamInvite>> {
   const d = await deployKeyed(c, c.total);
   const contract = Contract.at(d.address, c.artifact, c.sender.wallet) as AnyInteraction;
   const streamSalt = randomField();
-  const w = await authwit(c, d.address, c.total);
-  const sent = await contract.methods
-    .create_stream(c.recipient, c.total, c.rate, BigInt(c.start), streamSalt, w.nonce)
-    .send({ from: c.sender.address, authWitnesses: [w.witness], wait: { timeout: 900 }, ...c.send });
+  // Resolved after the deploy, right before posting: the deploy's proving time does not add to the upfront accrual.
+  const start = typeof c.start === 'function' ? c.start() : c.start;
   const invite: StreamInvite = {
     type: 'hl.stream_invite',
     version: 1,
@@ -183,9 +188,17 @@ export async function openStream(
     streamSalt: streamSalt.toString(),
     total: c.total.toString(),
     rate: c.rate.toString(),
-    start: c.start,
+    start,
   };
-  return { invite, raw: JSON.stringify(invite), contract, txHashes: { deploy: d.deployTx, fund: sent?.receipt?.txHash?.toString() ?? sent?.txHash?.toString() }, blocks: { deploy: d.deployBlock, fund: blockOf(sent) } };
+  const raw = JSON.stringify(invite);
+  // 4.13: the invitation is posted before any token moves.
+  const sent: any = await postThenFund(raw, c.beforeFund, async () => {
+    const w = await authwit(c, d.address, c.total);
+    return contract.methods
+      .create_stream(c.recipient, c.total, c.rate, BigInt(start), streamSalt, w.nonce)
+      .send({ from: c.sender.address, authWitnesses: [w.witness], wait: { timeout: 900 }, ...c.send });
+  });
+  return { invite, raw, contract, txHashes: { deploy: d.deployTx, fund: sent?.receipt?.txHash?.toString() ?? sent?.txHash?.toString() }, blocks: { deploy: d.deployBlock, fund: blockOf(sent) } };
 }
 
 export type Accepted =

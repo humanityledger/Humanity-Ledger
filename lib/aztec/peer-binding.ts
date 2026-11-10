@@ -203,6 +203,8 @@ export type AnnouncementResult =
   | { status: 'ignored'; reason: string };
 
 const VERIFIED = (peerInboxId: string) => `verified:${peerInboxId}`;
+/** The v2 announcement whose proof was checked; re-verified before value moves (verifiedPeerBinding). */
+const PROOF = (peerInboxId: string) => `proof:${peerInboxId}`;
 
 export function announcementFor(address: string): string {
   const a: AztecAddressAnnouncement = { type: 'hl.aztec_address', version: 1, address: address.toLowerCase() };
@@ -250,11 +252,13 @@ export async function recordPeerAnnouncement(
   const pinned = await store.get(msg.peerInboxId);
   if (pinned === undefined) {
     await store.set(msg.peerInboxId, announced);
+    if (verified) await store.set(PROOF(msg.peerInboxId), JSON.stringify(ann));
     if (verified) await store.set(VERIFIED(msg.peerInboxId), announced);
     return verified ? { status: 'pinned', address: announced, verified: true } : { status: 'pinned', address: announced };
   }
   if (pinned.toLowerCase() === announced) {
     // A proof for the address already pinned (on trust) upgrades it to verified.
+    if (verified) await store.set(PROOF(msg.peerInboxId), JSON.stringify(ann));
     if (verified) await store.set(VERIFIED(msg.peerInboxId), announced);
     return verified ? { status: 'unchanged', address: announced, verified: true } : { status: 'unchanged', address: announced };
   }
@@ -269,6 +273,31 @@ export async function peerBindingStatus(store: PeerBindingStore, peerInboxId: st
   if (!address) return { verified: false };
   const v = await store.get(VERIFIED(peerInboxId));
   return { address, verified: !!v && v.toLowerCase() === address.toLowerCase() };
+}
+
+/**
+ * G7 status for moving value: true only if the stored v2 proof is for exactly
+ * the pinned address and passes a fresh Schnorr + address recomputation now.
+ * The cached `verified:` marker alone is never trusted (storage is writable).
+ * Never throws.
+ */
+export async function verifiedPeerBinding(
+  store: PeerBindingStore,
+  peerInboxId: string,
+  selfInboxId: string,
+  crypto: BindingCrypto,
+): Promise<{ address?: string; verified: boolean }> {
+  try {
+    const address = await store.get(peerInboxId);
+    if (!address) return { verified: false };
+    if (!selfInboxId) return { address, verified: false };
+    const ann = parseAnnouncement(await store.get(PROOF(peerInboxId)));
+    if (!ann || ann.version !== 2 || ann.address.toLowerCase() !== address.toLowerCase()) return { address, verified: false };
+    const check = await verifyAddressProof(ann, { senderInboxId: peerInboxId, selfInboxId }, crypto);
+    return { address, verified: check.ok };
+  } catch {
+    return { verified: false };
+  }
 }
 
 /** The pinned Aztec address of a DM peer, to pass as `peer` to verifyAgreementInvite. */

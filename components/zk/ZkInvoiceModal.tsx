@@ -23,7 +23,8 @@ import {
 } from '@/lib/zk/zkInvoice';
 import { getPrivateWallet, humanError } from '@/lib/aztec/wallet/client';
 import { AZTEC_WALLET_CONFIG, networkLabel, type TokenKey } from '@/lib/aztec/wallet/config';
-import { localStoragePeerBindingStore, peerBindingStatus } from '@/lib/aztec/peer-binding';
+import { localStoragePeerBindingStore, sdkBindingCrypto, verifiedPeerBinding } from '@/lib/aztec/peer-binding';
+import { AlphaRiskAck, NO_ACK, acked } from '@/components/chat/AlphaRiskAck';
 import { checkPrivateRail, invoicePayee } from '@/lib/payments/rails';
 import { NativeCryptoSendModal } from '@/components/chat/NativeCryptoSendModal';
 import { toast } from 'sonner';
@@ -49,6 +50,8 @@ interface ZkInvoiceModalProps {
   existingInvoice?: ZkInvoice;
   /** XMTP inbox ID of the DM peer (the issuer when paying), to find their pinned Aztec address. */
   peerInboxId?: string;
+  /** Our own XMTP inbox, for the G7 proof check. */
+  selfInboxId?: string;
   onClose: () => void;
   onInvoiceCreated?: (invoice: ZkInvoice) => void;
   onInvoicePaid?: (invoice: ZkInvoice) => void;
@@ -61,6 +64,7 @@ export function ZkInvoiceModal({
   recipientAddress: initialRecipientAddress = '',
   existingInvoice,
   peerInboxId,
+  selfInboxId,
   onClose,
   onInvoiceCreated,
   onInvoicePaid,
@@ -69,11 +73,17 @@ export function ZkInvoiceModal({
   const [showPublicRail, setShowPublicRail] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const payingRef = useRef(false);
+  const [ack, setAck] = useState(NO_ACK); // per payment, never persisted
 
   useEffect(() => {
     if (!peerInboxId || !existingInvoice) return;
-    peerBindingStatus(localStoragePeerBindingStore(), peerInboxId).then(setPayeeAztec).catch(() => {});
-  }, [peerInboxId, existingInvoice]);
+    // Display only; sendDirectPrivatePayment re-verifies G7 itself before sending.
+    sdkBindingCrypto()
+      .then((c) => verifiedPeerBinding(localStoragePeerBindingStore(), peerInboxId, selfInboxId ?? '', c))
+      .then(setPayeeAztec)
+      .catch(() => setPayeeAztec({ verified: false }));
+    setAck(NO_ACK);
+  }, [peerInboxId, selfInboxId, existingInvoice]);
 
   const payee = existingInvoice ? invoicePayee(existingInvoice, userAddress) : null;
   const tokenKey = (existingInvoice?.token?.toUpperCase() || 'USDC') as TokenKey;
@@ -159,15 +169,17 @@ export function ZkInvoiceModal({
   };
 
   const handlePayInvoice = async () => {
-    if (!existingInvoice || payingRef.current || !privateRail.ok || !payeeAztec.address) return;
+    if (!existingInvoice || payingRef.current || !privateRail.ok || !payeeAztec.address || !peerInboxId) return;
+    if (AZTEC_WALLET_CONFIG.network === 'mainnet' && !acked(ack)) return;
     payingRef.current = true;
     setIsPaying(true);
     setPayError(null);
     try {
       setProofStep('Making the proof on this device. This can take a minute.');
       setProofProgress(40);
-      const receipt: any = await getPrivateWallet().send(tokenKey, String(existingInvoice.totalAmount), payeeAztec.address);
-      const txHash = receipt?.txHash?.toString?.() ?? '';
+      // Same checks as a chat payment: pinned payee, fresh G7, acknowledgement and cap on Alpha.
+      const { sendDirectPrivatePayment } = await import('@/lib/payments/direct-private');
+      const { txHash } = await sendDirectPrivatePayment({ token: tokenKey, amount: String(existingInvoice.totalAmount), dmPeerInboxId: peerInboxId, selfInboxId: selfInboxId ?? '', ack });
       setProofStep('Payment included on Aztec');
       setProofProgress(100);
       settle(txHash, 'aztec');
@@ -178,6 +190,7 @@ export function ZkInvoiceModal({
     } finally {
       payingRef.current = false;
       setIsPaying(false);
+      setAck(NO_ACK);
     }
   };
 
@@ -289,9 +302,10 @@ export function ZkInvoiceModal({
 
             {existingInvoice.status === 'unpaid' && payee?.ok && (
               <div className="space-y-2">
+                {AZTEC_WALLET_CONFIG.network === 'mainnet' && privateRail.ok && <AlphaRiskAck kind="payment" value={ack} onChange={setAck} disabled={isPaying} />}
                 <button
                   onClick={handlePayInvoice}
-                  disabled={isPaying || !privateRail.ok}
+                  disabled={isPaying || !privateRail.ok || (AZTEC_WALLET_CONFIG.network === 'mainnet' && !acked(ack))}
                   className="w-full min-h-[44px] py-3.5 bg-[#15171c] text-white text-[14px] font-semibold rounded-2xl hover:bg-[#000000] transition flex items-center justify-center gap-2 shadow-sm disabled:opacity-40"
                 >
                   <Shield size={16} /> Pay privately on {networkLabel()} ({existingInvoice.totalAmount} {existingInvoice.token})

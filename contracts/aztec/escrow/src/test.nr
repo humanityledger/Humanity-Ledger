@@ -262,3 +262,39 @@ unconstrained fn escrow_view_reports_a_refunded_escrow_as_settled_to_the_recipie
     assert(recipient_view.found & recipient_view.settled);
     assert(!view(s, s.sender, 1).found);
 }
+
+// ── Deposit nullifier: one deposit per (escrow_id, sender) ──────────────────
+// UNCOMPILED in the session that wrote it: run `aztec test` in CI.
+
+#[test(should_fail)]
+unconstrained fn second_deposit_with_the_same_escrow_id_fails() {
+    let s = setup();
+    let _ = deposit(s, 1, 11);
+    // Fresh authwit nonce: the failure is the deposit nullifier, not a reused authwit.
+    let _ = deposit(s, 1, 12);
+}
+
+#[test]
+unconstrained fn distinct_escrow_ids_from_one_sender_still_work() {
+    let s = setup();
+    let _ = deposit(s, 1, 11);
+    let deadline = deposit(s, 2, 12);
+    assert(balance(s.env, s.token, s.escrow) == 2 * AMOUNT);
+    claim(s, 1, CLAIM_SECRET);
+    s.env.mine_block_at(deadline + 1);
+    refund(s, 2);
+    assert(balance(s.env, s.token, s.recipient) == AMOUNT);
+    assert(balance(s.env, s.token, s.sender) == MINTED - AMOUNT);
+    assert(balance(s.env, s.token, s.escrow) == 0);
+}
+
+// Before the fix this deposit landed and its funds could never move: the
+// settlement nullifier of (1, sender, recipient) already existed.
+#[test(should_fail)]
+unconstrained fn the_same_escrow_id_cannot_be_reused_after_settlement() {
+    let s = setup();
+    let _ = deposit(s, 1, 11);
+    claim(s, 1, CLAIM_SECRET);
+    let _ = deposit(s, 1, 12);
+}
+

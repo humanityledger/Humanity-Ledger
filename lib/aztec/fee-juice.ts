@@ -35,7 +35,7 @@
  *    account on L1 and re-derives their secrets.
  */
 import { AZTEC_NETWORKS, type AztecNetworkId } from './sequencer/networks';
-import type { FeeNetwork } from './fees';
+import { identifyNode, type FeeNetwork } from './fees';
 
 // ─── Pins ───────────────────────────────────────────────────────────────────
 
@@ -69,6 +69,40 @@ export function assertNodeFeeJuiceMatchesPins(
     );
   }
   return pin;
+}
+
+type NodeInfoForValue = Parameters<typeof identifyNode>[0] & {
+  l1ContractAddresses?: Parameters<typeof identifyNode>[0]['l1ContractAddresses'] & Parameters<typeof assertNodeFeeJuiceMatchesPins>[1];
+};
+
+/**
+ * Re-checked right before every value-moving step on Alpha (G1, continuous):
+ * the node behind a fixed URL can change after the wallet opened. Network,
+ * rollup and L1 must match the build; on Alpha the Fee Juice portal and token
+ * must match the pins. A different node release alone is not blocking (as at start).
+ */
+export function assertNodeForValue(info: NodeInfoForValue, build: 'testnet' | 'mainnet'): void {
+  const id = identifyNode(info);
+  if (id.network === undefined) throw new Error('The Aztec node is on an unknown network. Nothing was sent.');
+  if ((id.network === 'mainnet') !== (build === 'mainnet')) throw new Error('The Aztec node is on a different network than this app. Nothing was sent.');
+  const blocking = id.drift.filter((d) => d.field !== 'nodeVersion');
+  if (blocking.length) {
+    throw new Error(`The Aztec node no longer matches this build: ${blocking.map((d) => `${d.field} ${d.actual} (expected ${d.expected})`).join(', ')}. Nothing was sent.`);
+  }
+  if (id.network === 'mainnet') assertNodeFeeJuiceMatchesPins('mainnet', info.l1ContractAddresses);
+}
+
+/**
+ * Fee for agreement transactions on Alpha. An agreement is several
+ * transactions sharing one fee option (deploy, then fund), so a claim is
+ * never attached to it: one claim consumed twice would fail the second step
+ * after the first spent fees. Agreements pay from the balance only.
+ */
+export function agreementFeeCheck(state: { balance: bigint; plan: FeePlan['kind'] }): { ok: true } | { ok: false; reason: string } {
+  if (state.balance > 0n) return { ok: true };
+  if (state.plan === 'claim') return { ok: false, reason: 'Your Fee Juice deposit has arrived but is not claimed yet. Send one private payment first, which claims it, then open the agreement.' };
+  if (state.plan === 'wait-claim') return { ok: false, reason: 'Your Fee Juice is still arriving from Ethereum. Try again in a few minutes.' };
+  return { ok: false, reason: 'You have no Fee Juice to pay the network fee. Bridge AZTEC from your Ethereum wallet first.' };
 }
 
 // ─── Claims ─────────────────────────────────────────────────────────────────

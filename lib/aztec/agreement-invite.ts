@@ -136,9 +136,9 @@ export async function verifyAgreementInvite(raw: string, o: VerifyOptions): Prom
 
 /** Class IDs the deployment record marks as current, per kind. */
 export function currentClassIds(record: {
-  contracts: Array<{ name: string; classId: string; tracksCurrentArtifact?: boolean }>;
+  contracts: Array<{ name: string; classId: string; tracksCurrentArtifact?: boolean; status?: string }>;
 }): Record<KeyedContract, string[]> {
   const pick = (prefix: string) =>
-    [...new Set(record.contracts.filter((c) => c.tracksCurrentArtifact && c.name.startsWith(prefix)).map((c) => c.classId))];
+    [...new Set(record.contracts.filter((c) => c.tracksCurrentArtifact && c.status !== 'do-not-use' && c.name.startsWith(prefix)).map((c) => c.classId))];
   return { escrow: pick('PrivateEscrow'), streams: pick('PaymentStream') };
 }

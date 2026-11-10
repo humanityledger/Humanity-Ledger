@@ -14,6 +14,12 @@
 //            included before the deadline.
 //   refund:  the sender pops its copy after the deadline.
 //   Both publish the same settlement nullifier, so an escrow settles once.
+//   deposit also publishes a deposit nullifier over (escrow_id, sender), so a
+//            sender can fund an escrow_id once: a second deposit under the same
+//            id would share the settlement nullifier and be locked forever
+//            (neither claimable nor refundable once the first settles).
+//            UNCOMPILED in the session that wrote it: requires `aztec compile`
+//            and the TXE tests in CI; it changes the class ID.
 //   escrow_view (utility, runs in the caller's PXE, never proven): the terms
 //            of an escrow as the contract stores them, and whether it has
 //            settled, so a party can check an invitation against the note
@@ -64,6 +70,7 @@ pub contract PrivateEscrow {
 
     global DOM_SEP__CLAIM_SECRET: u32 = 718293041;
     global DOM_SEP__ESCROW_SETTLED: u32 = 718293042;
+    global DOM_SEP__ESCROW_DEPOSIT: u32 = 718293043;
     // Upper bound for a claim's inclusion window; Aztec allows at most 24 h.
     global MAX_TX_LIFETIME: u64 = 3600;
     global TRANSFER_IN_PRIVATE_SELECTOR: FunctionSelector =
@@ -118,6 +125,13 @@ pub contract PrivateEscrow {
         assert(amount > 0, "PrivateEscrow: zero amount");
         assert(deadline > anchor_ts, "PrivateEscrow: deadline in the past");
         assert(escrow_id != 0, "PrivateEscrow: zero escrow id");
+
+        // One deposit per (escrow_id, sender): the node rejects a second one as
+        // an existing nullifier, before any token moves. Bound to the sender so
+        // nobody else holding the id can block it. Hash of a random id: unlinkable.
+        self.context.push_nullifier_unsafe(
+            poseidon2_hash_with_separator([escrow_id, sender.to_field()], DOM_SEP__ESCROW_DEPOSIT),
+        );
 
         // The deposit must land before its own deadline: otherwise a delayed
         // transaction would create an escrow that is already refundable and

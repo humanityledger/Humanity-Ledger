@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  agreementFeeCheck,
   assertNodeFeeJuiceMatchesPins,
+  assertNodeForValue,
   bridgeFeeJuice,
   feePlan,
   loadClaims,
@@ -14,6 +16,7 @@ import {
 } from '@/lib/aztec/fee-juice';
 import { deriveAccountKeys, deriveFeeJuiceClaimSecrets, WALLET_TYPED_DATA, WALLET_TYPED_DATA_ALPHA } from '@/lib/aztec/wallet/keys';
 import { assertNetworkAllowed } from '@/lib/aztec/wallet/config';
+import { AZTEC_NETWORKS } from '@/lib/aztec/sequencer/networks';
 
 const FR = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001n;
 const FQ = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47n;
@@ -170,3 +173,47 @@ describe('bridgeFeeJuice (L1)', () => {
     expect(calls.map((c) => c.fn)).toEqual(['depositToAztecPublic']);
   });
 });
+
+describe('assertNodeForValue (G1 continuous, G2 pins)', () => {
+  const m = AZTEC_NETWORKS.mainnet;
+  const alpha = {
+    l1ChainId: 1,
+    rollupVersion: m.rollupVersion,
+    nodeVersion: m.nodeVersion,
+    l1ContractAddresses: { rollupAddress: m.l1.rollup, feeJuicePortalAddress: m.l1.feeJuicePortal, feeJuiceAddress: m.l1.feeJuice },
+  };
+  const t = AZTEC_NETWORKS.testnet;
+  const test = { l1ChainId: t.l1ChainId, rollupVersion: t.rollupVersion, nodeVersion: t.nodeVersion, l1ContractAddresses: { rollupAddress: t.l1.rollup } };
+
+  it('passes the pinned Alpha node, and a release-only difference', () => {
+    expect(() => assertNodeForValue(alpha, 'mainnet')).not.toThrow();
+    expect(() => assertNodeForValue({ ...alpha, nodeVersion: '9.9.9' }, 'mainnet')).not.toThrow();
+  });
+
+  it('refuses a portal or token other than the pins, or none reported', () => {
+    expect(() => assertNodeForValue({ ...alpha, l1ContractAddresses: { ...alpha.l1ContractAddresses, feeJuicePortalAddress: '0x' + '66'.repeat(20) } }, 'mainnet')).toThrow(/different Fee Juice/);
+    expect(() => assertNodeForValue({ ...alpha, l1ContractAddresses: { ...alpha.l1ContractAddresses, feeJuiceAddress: '0x' + '77'.repeat(20) } }, 'mainnet')).toThrow(/different Fee Juice/);
+    expect(() => assertNodeForValue({ ...alpha, l1ContractAddresses: { rollupAddress: m.l1.rollup } }, 'mainnet')).toThrow(/different Fee Juice/);
+  });
+
+  it('refuses a network other than the build, an unknown network, or rollup drift', () => {
+    expect(() => assertNodeForValue(alpha, 'testnet')).toThrow(/different network/);
+    expect(() => assertNodeForValue(test, 'mainnet')).toThrow(/different network/);
+    expect(() => assertNodeForValue({ ...alpha, l1ChainId: 4242 }, 'mainnet')).toThrow(/unknown network/);
+    expect(() => assertNodeForValue({ ...alpha, rollupVersion: 1 }, 'mainnet')).toThrow(/no longer matches/);
+  });
+
+  it('does not require Fee Juice pins on the test network', () => {
+    expect(() => assertNodeForValue(test, 'testnet')).not.toThrow();
+  });
+});
+
+describe('agreementFeeCheck', () => {
+  it('pays agreements from the balance only, never with a claim', () => {
+    expect(agreementFeeCheck({ balance: 1n, plan: 'claim' })).toEqual({ ok: true });
+    expect(agreementFeeCheck({ balance: 0n, plan: 'claim' }).ok).toBe(false);
+    expect(agreementFeeCheck({ balance: 0n, plan: 'wait-claim' }).ok).toBe(false);
+    expect(agreementFeeCheck({ balance: 0n, plan: 'bridge' }).ok).toBe(false);
+  });
+});
+

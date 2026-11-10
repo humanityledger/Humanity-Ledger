@@ -272,6 +272,8 @@ export function TuringShieldGate({
 }) {
   const [mounted,            setMounted]            = useState(false);
   const [cleared,            setCleared]            = useState(false);
+  // Until the server confirms a session, the PIN cannot be checked: typing it would only bounce to /connect.
+  const [sessionReady,       setSessionReady]       = useState(false);
 
   // Verify flow
   const [pin,                setPin]                = useState('');
@@ -385,6 +387,7 @@ export function TuringShieldGate({
             return;
           }
           document.removeEventListener('visibilitychange', handleVisibilityForGate);
+          setSessionReady(true);
           if (data?.hasPin === false) {
             // Permanence check: if this device/browser already belongs to an existing account,
             // never divert into "Create your security PIN / account" loop again!
@@ -419,6 +422,7 @@ export function TuringShieldGate({
         .catch(() => {
           // Network error — show gate, user will see the PIN input and retry
           document.removeEventListener('visibilitychange', handleVisibilityForGate);
+          setSessionReady(true);
         });
     };
 
@@ -435,7 +439,7 @@ export function TuringShieldGate({
 
   // ─── Verify PIN ─────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(async (code: string) => {
-    if (code.length !== 6 || verifying || locked) return;
+    if (code.length !== 6 || verifying || locked || !sessionReady) return;
     setVerifying(true);
     setPinError(null);
 
@@ -519,7 +523,7 @@ export function TuringShieldGate({
       triggerShake();
       setVerifying(false);
     }
-  }, [verifying, locked, onVerified, triggerShake]);
+  }, [verifying, locked, sessionReady, onVerified, triggerShake]);
 
   // ─── Set new PIN ──────────────────────────────────────────────────────────────
   const handleSetPin = useCallback(async (val?: string | React.MouseEvent) => {
@@ -990,7 +994,7 @@ export function TuringShieldGate({
             <p className="text-[13px] text-black/40 font-medium mt-1.5">
               {locked
                 ? `Unlocks in ${Math.floor(lockoutCountdown / 60)}:${String(lockoutCountdown % 60).padStart(2, '0')}`
-                : 'Enter your PIN to continue'}
+                : sessionReady ? 'Enter your PIN to continue' : 'Checking your session…'}
             </p>
           </div>
 
@@ -1036,9 +1040,9 @@ export function TuringShieldGate({
                         value={pin}
                         onChange={v => { setPin(v); setPinError(null); }}
                         onComplete={handleSubmit}
-                        disabled={verifying}
+                        disabled={verifying || !sessionReady}
                         error={!!pinError}
-                        label={verifying ? 'Checking' : 'Enter your PIN'}
+                        label={!sessionReady ? 'Checking your session' : verifying ? 'Checking' : 'Enter your PIN'}
                       />
                     </motion.div>
 

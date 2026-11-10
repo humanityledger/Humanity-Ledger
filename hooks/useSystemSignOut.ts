@@ -170,7 +170,8 @@ export function useSystemSignOut() {
                     });
                 } else if (window.indexedDB) {
                     // Safari/iOS fallback
-                    ['walletconnect-v2', 'w3m-core-storage', 'w3m-storage', 'wagmi-cache'].forEach(name => {
+                    // HumanityLedgerChatDB: local chat history (may hold agreement invitations); wiped on every path.
+                    ['walletconnect-v2', 'w3m-core-storage', 'w3m-storage', 'wagmi-cache', 'HumanityLedgerChatDB'].forEach(name => {
                         try { window.indexedDB.deleteDatabase(name); } catch(e) {}
                     });
                 }
@@ -254,6 +255,21 @@ export function useSystemSignOut() {
                 } catch (e) {}
             }
             
+            // STEP 8b — Stop the private Aztec wallet (drops its signing key, claim secrets and PXE handle),
+            // then delete its on-device stores (PXE keys, contract secrets, notes): see lib/aztec/wallet/wipe.ts.
+            // JS cannot zeroize bigints; the redirect below discards the heap.
+            try {
+                const { getPrivateWallet } = await import('@/lib/aztec/wallet/client');
+                await Promise.race([getPrivateWallet().disconnect(), new Promise(resolve => setTimeout(resolve, 2000))]);
+                const { wipeLocalAztecStores } = await import('@/lib/aztec/wallet/wipe');
+                const wiped = await Promise.race([
+                    wipeLocalAztecStores(),
+                    new Promise<{ deleted: string[]; failed: string[] }>(resolve => setTimeout(() => resolve({ deleted: [], failed: ['(timed out)'] }), 4000)),
+                ]);
+                // Counts only, never store names in logs. Survives the redirect for the connect page to show.
+                if (wiped.failed.length) sessionStorage.setItem('hl.aztec.wipe_incomplete', String(wiped.failed.length));
+            } catch (e) {}
+
             // STEP 9 — Hard clear cache using caches API if available.
             try {
                 if ('caches' in window) {

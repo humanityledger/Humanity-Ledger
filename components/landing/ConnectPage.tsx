@@ -44,6 +44,12 @@ import { useDynamicIsland } from "@/lib/store/dynamic-island-store";
 import { ConnectView, type ConnectStage, type WalletOption } from "@/components/connect/ConnectView";
 
 import { safeReturnPath } from "@/lib/security/safeRedirect";
+import { walletConnectLink, walletHomeLink } from "@/lib/auth/wallet-links";
+import { withSignTimeout } from "@/lib/auth/sign-timeout";
+import { purgeLegacyHandshakeSecrets } from "@/lib/scan/sessionHandshake";
+
+/** A signature request with no answer after this long is abandoned; a late answer is ignored. */
+const SIGN_TIMEOUT_MS = 120_000;
 const DynamicUniversalScanModal = dynamic(() => import("@/components/scan/UniversalScanModal"), { ssr: false });
 
 const QR_LIFETIME_MS = 240_000;
@@ -52,11 +58,10 @@ const QR_POLL_MS = 2_000;
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    setIsMobile(
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(
-        typeof navigator !== "undefined" ? navigator.userAgent : "",
-      ),
-    );
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+    // iPadOS Safari reports a Mac user agent; touch support tells them apart (no wallet extensions there).
+    const iPadOS = /Macintosh/.test(ua) && typeof navigator !== "undefined" && navigator.maxTouchPoints > 1;
+    setIsMobile(iPadOS || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua));
   }, []);
   return isMobile;
 }
@@ -74,11 +79,12 @@ const DESKTOP_WALLETS: DesktopWallet[] = [
 
 const MOBILE_WALLETS: WalletOption[] = [
   { id: "metamask-browser", name: "MetaMask (Open in App)", hint: "Recommended: opens directly in MetaMask app", logo: "/wallets/metamask.svg" },
-  { id: "metamask-mobile", name: "MetaMask", hint: "Connect via Safari with WalletConnect", logo: "/wallets/metamask.svg" },
+  { id: "metamask-mobile", name: "MetaMask", hint: "Connect from this browser with WalletConnect", logo: "/wallets/metamask.svg" },
   { id: "coinbase-mobile", name: "Coinbase Wallet", hint: "Opens the Coinbase Wallet app", logo: "/wallets/coinbase.png" },
   { id: "rainbow-mobile", name: "Rainbow", hint: "Opens the Rainbow app", logo: "/wallets/rainbow.png" },
-  { id: "trust-mobile", name: "Trust Wallet", hint: "Opens Trust Wallet app", logo: "/wallets/trust.png" },
-  { id: "okx-mobile", name: "OKX Wallet", hint: "Opens OKX app", logo: "/wallets/coinbase.png" },
+  // public/wallets/trust.png was an HTML page saved as .png (broken image); OKX showed Coinbase's logo. Generic icon until real assets are added.
+  { id: "trust-mobile", name: "Trust Wallet", hint: "Opens Trust Wallet app", logo: "" },
+  { id: "okx-mobile", name: "OKX Wallet", hint: "Opens OKX app", logo: "" },
 ];
 
 /** Return path after sign-in. Only same-origin paths are honoured. */
@@ -141,6 +147,8 @@ export default function ConnectPage() {
 
   const redirectingRef = useRef(false);
   const signingRef = useRef(false);
+  // Each signature attempt gets an id; a result from an older, abandoned attempt is never used.
+  const signAttemptRef = useRef(0);
   const signingStartTimeRef = useRef(0);
 
   const effectiveIsConnected = mounted && isConnected && !readDisconnectGuard();
@@ -166,6 +174,16 @@ export default function ConnectPage() {
   /* ── First mount ──────────────────────────────────────────────────────── */
   useEffect(() => {
     setMounted(true);
+    purgeLegacyHandshakeSecrets(); // leftovers from older builds
+    try {
+      // Set by sign-out when an Aztec wallet store could not be deleted (lib/aztec/wallet/wipe.ts).
+      if (sessionStorage.getItem("hl.aztec.wipe_incomplete")) {
+        sessionStorage.removeItem("hl.aztec.wipe_incomplete");
+        toast.warning("Some private wallet data could not be removed from this browser. Close other Ledger Chat tabs and sign out again, or clear this site's data.");
+      }
+    } catch {
+      /* storage unavailable */
+    }
     const p = new URLSearchParams(window.location.search);
     if (p.has("s") && p.has("p")) {
       window.location.replace("/scan?payload=" + encodeURIComponent(window.location.href));
@@ -271,15 +289,12 @@ export default function ConnectPage() {
         // browser's key mixed with the PIN on screen. Only the claim code
         // turns into a session, and only here, in HttpOnly cookies.
         let claim: string | null = null;
-        let seed: string | null = null;
-        let vault: string | null = null;
         try {
           const { deriveSharedSecret, decryptAESGCM } = await import("@/lib/web-crypto");
           const shared = await deriveSharedSecret(ephemeral.privateKey, data.mobilePub, ephemeral.isECDH, qrPin ?? undefined);
           const p = JSON.parse(await decryptAESGCM(shared, data.encryptedPayload, data.iv));
+          // Only the claim is read. Older phones may still send `seed`/`vault`: ignored, never stored.
           if (typeof p.claim === "string") claim = p.claim;
-          if (typeof p.seed === "string") seed = p.seed;
-          if (typeof p.vault === "string") vault = p.vault;
         } catch (e) {
           console.warn("[QR] could not decrypt the phone's answer (wrong PIN?)", e);
         }
@@ -304,10 +319,7 @@ export default function ConnectPage() {
         const addr = String((hd as { address?: string }).address || "").toLowerCase();
         const normalized: string | null = /^0x[0-9a-f]{40}$/.test(addr) ? addr : null;
         if (normalized) {
-          if (seed) localStorage.setItem(`ledger_chat_seed_${normalized}`, seed);
-          if (vault) localStorage.setItem("system_vault_v1", vault);
-        }
-        if (normalized) {
+          purgeLegacyHandshakeSecrets();
           localStorage.setItem("system_session_v2", JSON.stringify({ wallet: normalized, exp: Date.now() + 604_800_000, source: "qr-handshake" }));
           sessionStorage.setItem("system_wallet_addr", normalized);
           sessionStorage.setItem("portfolio_unlocked", "true");
@@ -342,6 +354,8 @@ export default function ConnectPage() {
 
     signingRef.current = true;
     signingStartTimeRef.current = Date.now();
+    const attempt = ++signAttemptRef.current;
+    const stale = () => attempt !== signAttemptRef.current || redirectingRef.current;
     (async () => {
       setAuthStatus("verifying");
       setSignStep(2);
@@ -415,23 +429,12 @@ export default function ConnectPage() {
           Boolean((window as unknown as { ethereum?: unknown }).ethereum);
 
         if (isMobile && !isInAppBrowser) {
-          const brand =
-            sessionStorage.getItem("preferred_mobile_wallet") ||
-            localStorage.getItem("preferred_mobile_wallet") ||
-            "metamask";
-
-          const links: Record<string, string> = {
-            metamask: "https://metamask.app.link/",
-            rainbow: "https://rainbow.me/",
-            coinbase: "https://go.cb-w.com/",
-            trust: "https://link.trustwallet.com/",
-            okx: "https://www.okx.com/web3",
-          };
           // Set the deep link so the "Open wallet to sign" button renders.
           // The button's onClick is a synchronous user-gesture handler and
           // CAN navigate to the wallet app. We must NOT navigate here.
-          const targetUrl = links[brand] || links.metamask;
-          setMobileDeepLink(targetUrl);
+          setMobileDeepLink(
+            walletHomeLink(sessionStorage.getItem("preferred_mobile_wallet") || localStorage.getItem("preferred_mobile_wallet")),
+          );
         }
 
         // Robust mobile signature handling with deep retry on transient relay errors.
@@ -439,9 +442,12 @@ export default function ConnectPage() {
         let signature = "";
         for (let attempt = 0; attempt < 5; attempt++) {
           try {
-            signature = await signMessageAsync({ message });
+            // "expired" is not retried: the user gets "Try again" and a fresh nonce.
+            signature = await withSignTimeout(signMessageAsync({ message }), SIGN_TIMEOUT_MS);
+            if (stale()) return; // a newer attempt or a redirect took over
             if (signature) break;
           } catch (e: unknown) {
+            if (stale()) return;
             const errMsg = ((e as { message?: string })?.message || "").toLowerCase();
             const isUserDecline =
               errMsg.includes("rejected") ||
@@ -486,6 +492,7 @@ export default function ConnectPage() {
           }
         }
 
+        if (stale()) return;
         const vr = await fetch("/api/siwe/verify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -518,6 +525,7 @@ export default function ConnectPage() {
         setAuthStatus("failed");
         signingRef.current = false;
       } catch (e: unknown) {
+        if (stale()) return;
         const m = (e as { message?: string })?.message?.toLowerCase() ?? "";
         if (m.includes("rejected") || m.includes("denied") || m.includes("cancel") || m.includes("user rejected")) {
           setSignError("You declined the signature in your wallet. Nothing was charged and nothing was sent.");
@@ -569,6 +577,7 @@ export default function ConnectPage() {
 
       // 2. If stuck in failed state or hung in verifying after tab background restore, enable auto-retry if still connected
       if (effectiveIsConnected && (authStatus === "failed" || (authStatus === "verifying" && Date.now() - signingStartTimeRef.current > 15_000))) {
+        signAttemptRef.current++; // abandon the hung request before a new one is made
         signingRef.current = false;
         setSignError(null);
         setAuthStatus("idle");
@@ -707,19 +716,10 @@ export default function ConnectPage() {
       //    the homepage link is enough to open the right app.
       // ─────────────────────────────────────────────────────────────────────
 
-      // Universal links per wallet brand (open app store if not installed)
-      const universalLinks: Record<string, string> = {
-        metamask: "https://metamask.app.link/",
-        rainbow: "https://rainbow.me/",
-        coinbase: "https://go.cb-w.com/",
-        trust: "https://link.trustwallet.com/",
-        okx: "https://www.okx.com/web3",
-      };
-
       // SYNCHRONOUS: navigate NOW while we are inside the user-gesture context.
       // This opens the wallet app immediately. We will upgrade this link to a
       // WalletConnect URI once the WC provider fires display_uri.
-      const homepageLink = universalLinks[brand] || universalLinks.metamask;
+      const homepageLink = walletHomeLink(brand);
       setMobileDeepLink(homepageLink);
 
       const wcConnector = connectors.find(
@@ -748,20 +748,8 @@ export default function ConnectPage() {
                 // Build a WalletConnect deep link with the session URI.
                 // These universal links are opened by the already-active wallet app
                 // (via the universal link we opened synchronously above).
-                let targetLink: string;
-                if (brand === "metamask") {
-                  targetLink = `https://metamask.app.link/wc?uri=${encodeURIComponent(uri)}`;
-                } else if (brand === "rainbow") {
-                  targetLink = `https://rainbow.me/wc?uri=${encodeURIComponent(uri)}`;
-                } else if (brand === "coinbase") {
-                  targetLink = `https://go.cb-w.com/wc?uri=${encodeURIComponent(uri)}`;
-                } else if (brand === "trust") {
-                  targetLink = `https://link.trustwallet.com/wc?uri=${encodeURIComponent(uri)}`;
-                } else if (brand === "okx") {
-                  targetLink = `https://www.okx.com/web3/wallet/dapp?dappUrl=${encodeURIComponent(window.location.origin)}&wc=${encodeURIComponent(uri)}`;
-                } else {
-                  targetLink = uri;
-                }
+                // Allowlisted universal link; a malformed URI falls back to the homepage link.
+                const targetLink = walletConnectLink(brand, uri, window.location.origin);
 
                 // Update the deep link stored in state so the "Open wallet to sign"
                 // button always has the most current WC URI.
@@ -796,6 +784,7 @@ export default function ConnectPage() {
   );
 
   const handleDisconnect = useCallback(() => {
+    signAttemptRef.current++; // a signature arriving after Cancel is ignored
     stopQr();
     setView("choose");
     setPendingWallet(null);

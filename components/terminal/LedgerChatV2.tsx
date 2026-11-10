@@ -197,6 +197,9 @@ export const isSystemSignal = (content: any): boolean => {
  * and encrypted attachments (the file key). They are only ever shown through
  * formatMessagePreview(): never copied, quoted in a reply or notified as text.
  */
+/** What may be stored or shown as a conversation's last message: never the text of a secret-bearing message. */
+const lastMessageOf = (content: string): string => (carriesSecret(content) ? formatMessagePreview(content) : content);
+
 const carriesSecret = (content: unknown): boolean => {
   if (typeof content !== 'string') return false;
   // Reply, burn, thread and forward wrappers all end in "__::".
@@ -621,7 +624,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         next = prev.filter(m => m.id !== msgId);
         toast.success('Removed from saved messages');
       } else {
-        next = [{ id: msgId, content: msgContent, savedAt: Date.now() }, ...prev];
+        // A bookmark is plain localStorage: an invitation or attachment key is saved as its preview, never its text.
+        next = [{ id: msgId, content: lastMessageOf(msgContent), savedAt: Date.now() }, ...prev];
         toast.success('Message saved to bookmarks');
       }
       try {
@@ -1531,7 +1535,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, []);
   // Always-fresh ref to executeSend — avoids stale closure in event listeners
-  const executeSendRef = useRef<((content: string) => Promise<void>) | null>(null);
+  const executeSendRef = useRef<((content: string) => Promise<boolean>) | null>(null);
 
   // Detect physical device type (touch + narrow screen = mobile)
   useEffect(() => {
@@ -1771,7 +1775,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           await chatDB.saveConversation({
             peerAddress: senderLower,
             lastAt: ts,
-            lastMessage: content,
+            lastMessage: lastMessageOf(content),
           }).catch(() => {});
         }
       } catch (err) {
@@ -3227,10 +3231,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                      const ts = p.createdAt ? new Date(p.createdAt).getTime() : Date.now();
                      const existing = merged.find(c => c.peerAddress.toLowerCase() === peer);
                      if (!existing) {
-                         merged.push({ peerAddress: peer, lastMessage: p.content.slice(0, 30), lastAt: new Date(ts) });
+                         merged.push({ peerAddress: peer, lastMessage: lastMessageOf(p.content).slice(0, 30), lastAt: new Date(ts) });
                      } else {
                          if (!existing.lastAt || new Date(ts) > new Date(existing.lastAt)) {
-                             existing.lastMessage = p.content.slice(0, 30);
+                             existing.lastMessage = lastMessageOf(p.content).slice(0, 30);
                              existing.lastAt = new Date(ts);
                          }
                      }
@@ -3252,7 +3256,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                      await chatDB.saveConversation({
                        peerAddress: peer,
                        lastAt: ts,
-                       lastMessage: p.content,
+                       lastMessage: lastMessageOf(p.content),
                      }).catch(() => {});
 
                      // If active chat is currently open with this peer, inject immediately
@@ -3267,7 +3271,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           }
 
           if (merged.length > 0) {
-            localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: merged }));
+            localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: merged.map((c: any) => (c.lastMessage ? { ...c, lastMessage: lastMessageOf(c.lastMessage) } : c)) }));
           }
         } catch (e) {
           console.error('[Ledger Chat] Failed to sync contacts/pending from server', e);
@@ -3442,7 +3446,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // Sync contacts to backend debounced
   const persistToLocal = useCallback((arr: ConversationMeta[]) => {
     if (!address) return;
-    localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: arr }));
+    localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: arr.map((c) => (c.lastMessage ? { ...c, lastMessage: lastMessageOf(c.lastMessage) } : c)) }));
     
     // Also backup to server — send x-web3-address so WalletConnect users are accepted
     fetch('/api/chat/contacts', {
@@ -3547,7 +3551,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 
                 setConversations(prev => {
                   const existing = prev.find(c => c.peerAddress?.toLowerCase() === peerLower);
-                  const newEntry = { peerAddress: peerAddress, lastMessage: dm.content, lastAt: new Date(dm.createdAt) };
+                  const newEntry = { peerAddress: peerAddress, lastMessage: lastMessageOf(dm.content), lastAt: new Date(dm.createdAt) };
                   if (existing) {
                     return [newEntry, ...prev.filter(c => c.peerAddress?.toLowerCase() !== peerLower)];
                   }
@@ -4222,7 +4226,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 setConversations(prev => {
                   const updated = prev.map(c =>
                     c.peerAddress.toLowerCase() === currentActivePeer
-                      ? { ...c, lastMessage: content.slice(0, 80), lastAt: new Date() }
+                      ? { ...c, lastMessage: lastMessageOf(content).slice(0, 80), lastAt: new Date() }
                       : c
                   );
                   persistToLocal(updated);
@@ -4267,14 +4271,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 if (exists) {
                   updated = prev.map(c =>
                     c.peerAddress.toLowerCase() === msgConvPeer
-                      ? { ...c, ...(isSystemSignal(content) ? {} : { lastMessage: content.slice(0, 80) }), lastAt: new Date(), unreadCount: countsAsUnread ? (c.unreadCount || 0) + 1 : (fromPeer ? (c.unreadCount || 0) : 0) }
+                      ? { ...c, ...(isSystemSignal(content) ? {} : { lastMessage: lastMessageOf(content).slice(0, 80) }), lastAt: new Date(), unreadCount: countsAsUnread ? (c.unreadCount || 0) + 1 : (fromPeer ? (c.unreadCount || 0) : 0) }
                       : c
                   );
                 } else {
                   needsSync = true;
                   updated = [{
                     peerAddress: msgConvPeer,
-                    lastMessage: isSystemSignal(content) ? '' : content.slice(0, 80),
+                    lastMessage: isSystemSignal(content) ? '' : lastMessageOf(content).slice(0, 80),
                     lastAt: new Date(),
                     unreadCount: countsAsUnread ? 1 : 0,
                   }, ...prev];
@@ -4831,11 +4835,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   const handleStartConversation = async () => handleStartConversationWithPeer(peerInput);
 
-  const executeSend = async (content: string) => {
+  // Resolves true only when XMTP took the message; every refusal or failure resolves false.
+  const executeSend = async (content: string): Promise<boolean> => {
     // 1. App Store Compliance: Content Moderation & Rate Limiting
     if (!checkRateLimit(address || 'anon', 60, 60000)) {
       toast.error('You are sending messages too quickly. Wait a moment.');
-      return;
+      return false;
     }
     // Agreement invitations and Aztec address announcements are sent exactly
     // as built: no reply or thread wrapper, no text transforms, no
@@ -4850,21 +4855,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const isOpaqueMsg = isAgreementMsg || isAttachmentMsg;
     if (isOpaqueMsg && isOffline) {
       toast.error(isAgreementMsg ? 'You are offline. Agreements are only sent while connected.' : 'You are offline. Attachments are only sent while connected.');
-      return;
+      return false;
     }
     const moderationFlag = isOpaqueMsg ? null : moderateContent(content);
     if (moderationFlag) {
       toast.error(moderationFlag);
-      return;
+      return false;
     }
     trackMessageSent(activePeer || undefined);
 
-    if (!client || !activePeer || !content.trim() || !address) return;
+    if (!client || !activePeer || !content.trim() || !address) return false;
     
     const isReaction = content.startsWith('__REACT__');
     const isVote = content.startsWith('__VOTE__');
     const isSignal = isSystemSignal(content);
-    if (!isSignal && sending) return;
+    if (!isSignal && sending) return false;
 
     // Direct local state sync for PIN/UNPIN signals
     if (content.startsWith('__PIN__')) {
@@ -4895,7 +4900,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       }
       setInputText('');
       setShowBotSuggestions(false);
-      return;
+      return false;
     }
     content = transformed;
 
@@ -4920,7 +4925,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         setMessages((prev: any[]) => [...prev, cmdMsg, botMsg].sort((a, b) => a.sentAtNs - b.sentAtNs));
         setInputText('');
         setShowBotSuggestions(false);
-        return; 
+        return false; 
       }
     }
 
@@ -4944,7 +4949,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (content.trim() === '/add') { finalContent = `My wallet: ${address}`; }
       else if (/^\/pay (\d+\.?\d*)$/.test(content.trim())) {
         const m = content.trim().match(/^\/pay (\d+\.?\d*)$/);
-        if (m) { setTransferAmount(m[1]); setShowWalletTransfer(true); setSending(false); return; }
+        if (m) { setTransferAmount(m[1]); setShowWalletTransfer(true); setSending(false); return false; }
       }
     }
     // Tone translator  
@@ -5101,7 +5106,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         // UPDATE LOCAL ADDRESS BOOK
         // Capture stable copies before setState to avoid stale-closure
         // ReferenceError when React replays the updater function.
-        const _lastMessage = displayContent;
+        const _lastMessage = lastMessageOf(displayContent);
         const _peerAddr = activePeer;
         setConversations(prev => {
           const updated = prev.find(c => c.peerAddress.toLowerCase() === _peerAddr.toLowerCase())
@@ -5111,7 +5116,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           return updated;
         });
       }
-      return;
+      return true; // handed to XMTP (published, or stored locally and retried by sendMessage)
 
     } catch (err: any) {
       // [FIX] Removed 'throw err' which was short-circuiting the UI error feedback.
@@ -5125,6 +5130,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           : m
       ));
       console.error('[Chat] executeSend failed:', err);
+      return false;
     } finally {
       if (!isSignal) setSending(false);
     }
@@ -7170,7 +7176,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    <Copy size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Copy
                  </button>
                  <button role="menuitem" type="button" title="Opens Ledger Studio with this message in the composer. Nothing is sent until you press send there." onClick={() => {
-                   const body = contextMenu.content.replace(/^\[.*?\]/, '').replace(/^__REPLY__.*?__::/, '').replace(/^__BURN_\d+__::/, '').trim();
+                   // Never hand an invitation's secrets or an attachment key to Ledger Studio (a server-side model).
+                   const body = carriesSecret(contextMenu.content) ? '' : contextMenu.content.replace(/^\[.*?\]/, '').replace(/^__REPLY__.*?__::/, '').replace(/^__BURN_\d+__::/, '').trim();
                    setContextMenu(null);
                    setStudioOpen({ prompt: body ? `> ${body.slice(0, 6000).split('\n').join('\n> ')}\n\n` : undefined });
                  }} className={item}>
@@ -7197,7 +7204,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                      sender: m?.senderAddress || (m as any)?.sender || (m as any)?.from || (m as any)?.authorAddress || address || 'Unknown', 
                      sentAt: m?.sentAtNs || m?.sentAt || m?.sent || Date.now(), 
                      conversationId: m?.conversationId || (activePeer ? `dm-${activePeer.toLowerCase()}` : 'Unknown'),
-                     content: contextMenu.content
+                     content: lastMessageOf(contextMenu.content)
                    });
                    setContextMenu(null);
                  }} className={item}>
@@ -7591,6 +7598,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
            onClose={() => setShowZkModal(false)}
            myAddress={address || ''}
            recipientAddress={activePeer}
+           recipientName={getDisplayName(activePeer)}
+           dmPeerInboxId={activePeerInboxIdRef.current || activePeer}
+           selfInboxId={(client as any)?.inboxId}
            onSuccess={(paymentPayload, _result) => {
              executeSend(paymentPayload);
              setShowZkModal(false);
@@ -7655,6 +7665,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             recipientTag={selectedInvoice ? selectedInvoice.recipientTag : (activePeer ? getDisplayName(activePeer) : '')}
             existingInvoice={selectedInvoice || undefined}
             peerInboxId={activePeerInboxIdRef.current || undefined}
+            selfInboxId={(client as any)?.inboxId}
             onClose={() => {
               setShowZkInvoiceModal(false);
               setSelectedInvoice(null);

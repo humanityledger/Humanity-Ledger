@@ -15,13 +15,16 @@
  * device with the private wallet.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { singleFlight } from '@/lib/aztec/single-flight';
 import { Lock, Waves, KeyRound, ShieldCheck, AlertTriangle, LoaderCircle } from 'lucide-react';
 import { summarizeInvite, agreementMessageKind } from '@/lib/aztec/agreement-message';
 import { localStoragePeerBindingStore, peerAztecAddress, recordPeerAnnouncement, sdkBindingCrypto, type AnnouncementResult } from '@/lib/aztec/peer-binding';
 import { getPrivateWallet, humanError, type WalletSnapshot } from '@/lib/aztec/wallet/client';
 import { formatUnits } from '@/lib/aztec/wallet/amounts';
 import { AZTEC_WALLET_CONFIG } from '@/lib/aztec/wallet/config';
+import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
+import { ProvingMemoryNote } from './ProvingMemoryNote';
 
 const CARD = 'rounded-2xl bg-white border border-[#e6e8ec] shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
 const BTN = 'h-9 px-3.5 rounded-full text-[13.5px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
@@ -29,6 +32,7 @@ const BTN_PRIMARY = `${BTN} bg-[#15171c] text-white hover:bg-[#2a2d35]`;
 const BTN_SECONDARY = `${BTN} bg-[#eff1f4] text-[#15171c] hover:bg-[#e4e7ec]`;
 
 const store = typeof window === 'undefined' ? null : localStoragePeerBindingStore();
+const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 const short = (v: string) => (v.length > 14 ? `${v.slice(0, 8)}…${v.slice(-4)}` : v);
 const acceptedKey = (instance: string) => `hl.agreement.accepted.${instance.toLowerCase()}`;
 
@@ -125,12 +129,12 @@ export interface AgreementCardProps {
 export const AgreementCard = React.memo(function AgreementCard({ raw, isMe, dmPeerInboxId, senderInboxId, selfInboxId }: AgreementCardProps) {
   const kind = agreementMessageKind(raw);
   if (kind === 'address') return <AddressAnnouncement raw={raw} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={senderInboxId} selfInboxId={selfInboxId} />;
-  return <InviteCard raw={raw} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={senderInboxId} />;
+  return <InviteCard raw={raw} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={senderInboxId} selfInboxId={selfInboxId} />;
 });
 
 type Status = Awaited<ReturnType<typeof import('@/lib/aztec/chat-agreements')['agreementStatus']>>;
 
-function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId }: AgreementCardProps) {
+function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId, selfInboxId }: AgreementCardProps) {
   const summary = useMemo(() => summarizeInvite(raw), [raw]);
   const wallet = useWalletState();
   const ready = wallet?.phase === 'ready';
@@ -146,6 +150,8 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId }: AgreementCardPr
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mismatches, setMismatches] = useState<string[] | null>(null);
+  const [ack, setAck] = useState(NO_ACK);
+  useEffect(() => setAck(NO_ACK), [raw, dmPeerInboxId]); // per invitation, never persisted
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
 
   useEffect(() => {
@@ -170,6 +176,9 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId }: AgreementCardPr
     refresh();
   }, [refresh]);
 
+  // Before the early return: hooks must run in the same order on every render.
+  const once = useRef(singleFlight()).current; // 4.19: one accept or settlement action at a time per card
+
   if (!summary) {
     return <div className={`${CARD} p-4 max-w-[300px] text-[13.5px] text-[#727a88]`}>This agreement message is not valid and was ignored.</div>;
   }
@@ -177,10 +186,10 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId }: AgreementCardPr
   const isEscrow = summary.kind === 'escrow';
   const amount = amountText(summary.amount, summary.token, summary.tokenSymbol);
 
-  const accept = async () => {
+  const accept = () => once(async () => {
     setError(null);
     setMismatches(null);
-    if (!store || !dmPeerInboxId || senderInboxId !== dmPeerInboxId) {
+    if (!store || !dmPeerInboxId || !selfInboxId || senderInboxId !== dmPeerInboxId) {
       setError('Agreements can only be accepted in a direct conversation, from the other person.');
       return;
     }
@@ -192,7 +201,7 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId }: AgreementCardPr
     setBusy('Checking the invitation');
     try {
       const { acceptChatAgreement } = await import('@/lib/aztec/chat-agreements');
-      const r = await acceptChatAgreement(raw, pinned, setBusy);
+      const r = await acceptChatAgreement(raw, pinned, dmPeerInboxId, selfInboxId, ack, setBusy);
       if (!r.ok) setError(`Refused: ${r.reason}.`);
       else if (!r.confirmed) setMismatches(r.mismatches);
       else {
@@ -205,10 +214,11 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId }: AgreementCardPr
       setError(humanError(e));
     } finally {
       setBusy(null);
+      setAck(NO_ACK);
     }
-  };
+  });
 
-  const act = async (action: 'claim' | 'refund' | 'withdraw' | 'cancel') => {
+  const act = (action: 'claim' | 'refund' | 'withdraw' | 'cancel') => once(async () => {
     setError(null);
     setBusy(action === 'claim' ? 'Claiming' : action === 'refund' ? 'Refunding' : action === 'withdraw' ? 'Withdrawing' : 'Cancelling');
     try {
@@ -221,7 +231,7 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId }: AgreementCardPr
     } finally {
       setBusy(null);
     }
-  };
+  });
 
   const deadlinePassed = isEscrow && summary.deadline !== undefined && now > summary.deadline;
   let line: string;
@@ -234,9 +244,12 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId }: AgreementCardPr
   } else if (role === 'recipient' && !accepted) {
     line = isEscrow ? `${isMe ? 'You' : 'They'} offered you ${amount} in escrow.` : `${isMe ? 'You' : 'They'} opened a payment stream to you: ${amount}.`;
     actions = (
-      <button type="button" className={BTN_PRIMARY} disabled={!!busy} onClick={accept}>
-        Verify and accept
-      </button>
+      <div className="space-y-2">
+        {ALPHA && <AlphaRiskAck value={ack} onChange={setAck} disabled={!!busy} />}
+        <button type="button" className={BTN_PRIMARY} disabled={!!busy || (ALPHA && !acked(ack))} onClick={accept}>
+          Verify and accept
+        </button>
+      </div>
     );
   } else if (!status) {
     line = 'Reading the agreement from the contract.';
@@ -249,7 +262,7 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId }: AgreementCardPr
         actions = <button type="button" className={BTN_PRIMARY} disabled={!!busy} onClick={() => act('claim')}>Claim</button>;
       } else line = 'The claim window has closed. The sender can take the funds back.';
     } else {
-      if (!status.found) line = 'Refunded, or not yet visible to your wallet.';
+      if (!status.found) line = 'Not funded, refunded, or not yet visible to your wallet. Never fund it again: open a new agreement instead.';
       else if (status.settled) line = 'Settled: claimed by the recipient or refunded to you.';
       else if (deadlinePassed) {
         line = `Not claimed in time. You can take back ${amount}.`;
@@ -259,7 +272,7 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId }: AgreementCardPr
   } else {
     const d = decimalsOf(summary.token);
     const fmt = (u: bigint) => (d === null ? u.toString() : `${formatUnits(u, d)} ${summary.tokenSymbol}`);
-    if (!status.found) line = 'Not yet visible to your wallet.';
+    if (!status.found) line = status.role === 'sender' ? 'Not funded, or not yet visible to your wallet. Never fund it again: open a new stream instead.' : 'Not yet visible to your wallet.';
     else if (!status.live) line = `Ended. ${fmt(status.withdrawn)} of ${fmt(status.total)} withdrawn before the end.`;
     else if (status.role === 'recipient') {
       line = `${fmt(status.withdrawn)} withdrawn of ${fmt(status.total)}. Available now: ${fmt(status.available)}.`;
@@ -290,7 +303,9 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId }: AgreementCardPr
       {mismatches && (
         <Note tone="warn">
           <AlertTriangle size={13} strokeWidth={2} className="inline mr-1 -mt-0.5" aria-hidden="true" />
-          The contract does not hold what the invitation says ({mismatches.join(', ')}). Do not rely on it.
+          {mismatches.every((m) => m.includes('not found'))
+            ? 'No deposit is visible for this agreement yet. Invitations are posted before they are funded: try Verify and accept again in a few minutes, and do not rely on it until it is confirmed.'
+            : `The contract does not hold what the invitation says (${mismatches.join(', ')}). Do not rely on it.`}
         </Note>
       )}
       {error && <Note tone="warn">{error}</Note>}
@@ -300,6 +315,8 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId }: AgreementCardPr
         </p>
       )}
       {actions && !busy && <div className="mt-3 flex gap-2">{actions}</div>}
+      {/* Claim, refund, withdraw and cancel prove on this device; accepting does not. */}
+      {actions && !busy && (accepted || role === 'sender') && <div className="mt-2"><ProvingMemoryNote /></div>}
       <p className="mt-3 text-[11.5px] text-[#9aa0ab]">Aztec test network · test tokens with no value · contract {short(summary.instanceAddress)}</p>
     </div>
   );

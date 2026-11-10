@@ -1,6 +1,6 @@
 # STRIDE Threat Model — Humanity Ledger
 
-> **Last updated**: 2025-10-20  
+> **Last updated**: 2026-11-10 (T-MSG-07, T-PAY-07)  
 > **Status**: Draft — each threat links to a backlog task or an existing control
 
 ---
@@ -44,6 +44,7 @@ This document covers the five trust boundaries most likely to be attacked:
 | T-MSG-04 | Polling loop leaks metadata about conversation participants to server | Information Disclosure | Remove polling; use XMTP stream only | D-001 |
 | T-MSG-05 | Unknown sender spam | Denial of Service | XMTP consent states — strangers in separate inbox | D-008 |
 | T-MSG-06 | XMTP installation limit exhaustion | Denial of Service | Clear error message; revocation UI | D-007 |
+| T-MSG-07 | Chat data readable at rest in the browser profile: the chat history cache (`HumanityLedgerChatDB`) while signed in, and the XMTP database with its key (`ledger_xmtp_db_key_*` in localStorage) also after sign-out | Information Disclosure | The history cache is deleted on sign-out on every browser path. The XMTP key and database are kept **by design**: deleting them makes every sign-in a new installation (T-MSG-06) and loses local history. Invitation secrets never reach previews, bookmarks, Details, Ledger Studio or the stored last message. Encrypting with the 6-digit PIN was rejected (offline brute force, lock-out risk). **Accepted residual:** anyone with the device profile can read XMTP history; on a shared device, clear the site's data. **Planned mitigation (not built; needs real-browser testing because it touches XMTP client creation):** wrap the random DB key with AES-GCM under a key derived (HKDF) from a deterministic EIP-712 signature over a fixed message (`hl/xmtp-db-key/v1`, domain-separated from the Aztec wallet message), keep only the ciphertext, drop the derived key on sign-out, re-sign at sign-in; non-deterministic smart-wallet signatures fall back to a new installation with a warning; existing keys are wrapped on first use | Accepted 2026-11-10 |
 
 ### 3. Communities
 
@@ -77,6 +78,7 @@ This document covers the five trust boundaries most likely to be attacked:
 | T-PAY-04 | Balance/history from localStorage is fabricated | Information Disclosure | Replace localStorage reads with PXE `balance_of_private` | H-008 |
 | T-PAY-05 | ZK payment routes accept arbitrary amounts without limits | Elevation of Privilege | Amount limits + testnet flag; mainnet requires audit | H-038 ✅ |
 | T-PAY-06 | Sanctions evasion via bridge | Legal / Compliance | Sanctions check on bridge transactions | N-009 |
+| T-PAY-07 | Aztec wallet stores on the device after sign-out (PXE: account keys, agreement contract secrets, notes; `wallet_data`) | Information Disclosure | Sign-out stops the wallet and deletes every `pxe_data*` / `wallet_data*` OPFS store (`lib/aztec/wallet/wipe.ts`); a store it cannot delete (open in another tab) triggers a visible warning. Keys are re-derived from the wallet signature on the next sign-in | 2026-11-10, needs a real-browser check |
 
 ---
 

@@ -34,6 +34,8 @@ import { assertFeeChoice, identifyNode } from '../fees';
 import { BINDING_SCHEME, bindingStatement, sdkBindingCrypto, verifyAddressProof, type AddressProof } from '../peer-binding';
 import {
   assertNodeFeeJuiceMatchesPins,
+  assertNodeForValue,
+  agreementFeeCheck,
   bridgeFeeJuice as bridgeOnL1,
   feePlan,
   loadClaims,
@@ -311,8 +313,15 @@ class PrivateWallet {
       this.set({ aztecAddress: this.me.toString() });
 
       this.set({ step: AZTEC_WALLET_CONFIG.network === 'mainnet' ? 'Loading tokens' : 'Loading the test tokens' });
+      // G3: on Alpha every configured token must run the trusted Token class with the exact
+      // transfer_in_private our contracts call; one failing token refuses the wallet (operator config error).
+      const tokenCheck = AZTEC_WALLET_CONFIG.network === 'mainnet' ? await import('../token-check') : null;
       for (const t of AZTEC_WALLET_CONFIG.tokens) {
         const addr = AztecAddress.fromStringUnsafe(t.address);
+        if (tokenCheck) {
+          const c = await tokenCheck.checkTokenInstance(this.node, t.address, [sdk.TokenContract.artifact]);
+          if (!c.ok) throw new Error(`${t.symbol} is not a token this app can use on ${networkLabel()}: ${c.reason}.`);
+        }
         const instance = await this.node.getContract(addr);
         if (!instance) throw new Error(`${t.symbol} is not deployed on this network. Run the setup script again.`);
         await this.wallet.registerContract(instance, sdk.TokenContract.artifact);
@@ -411,9 +420,16 @@ class PrivateWallet {
     return state;
   }
 
+  /** Alpha: fresh node identity + Fee Juice pins before anything moves value (fail-closed). */
+  private async assertNodeStillPinned() {
+    if (AZTEC_WALLET_CONFIG.network !== 'mainnet') return;
+    assertNodeForValue((await this.node.getNodeInfo()) as any, 'mainnet');
+  }
+
   /** Fee options for the next transaction, and the deposit it consumes (if any). */
   private async resolveFee(): Promise<{ fee: any; consumes?: FeeJuiceClaim }> {
     if (AZTEC_WALLET_CONFIG.network !== 'mainnet') return { fee: this.sponsoredFee };
+    await this.assertNodeStillPinned();
     const state = await this.refreshFeeJuice();
     if (state.plan === 'claim') {
       const c = state.claims.find((x) => x.ready)!.claim;
@@ -435,6 +451,8 @@ class PrivateWallet {
   async bridgeFeeJuice(l1: L1Clients, amount: string | bigint, onStep?: (step: BridgeStep, l1TxHash?: string) => void) {
     if (AZTEC_WALLET_CONFIG.network !== 'mainnet') throw new Error('Fee Juice is only needed on Aztec Alpha. The test network sponsors fees.');
     if (!this.me || !this.sdk) throw new Error('Open your private wallet first.');
+    // The deposit goes to the pinned portal regardless; a drifted node could never deliver the claim.
+    await this.assertNodeStillPinned();
     const units = typeof amount === 'bigint' ? amount : parseUnits(amount, 18);
     const me = this.me.toString();
     const pending = loadClaims(me);
@@ -669,6 +687,27 @@ class PrivateWallet {
     from?: any,
   ) {
     if (this.snapshot.phase !== 'ready') throw new Error('The private wallet is not open yet.');
+    // 4.19: one token transaction at a time from this tab, whatever surface started it. Two in parallel
+    // would also pick the same ready Fee Juice claim, and the second would fail after proving.
+    if (this.tokenTxInFlight) throw new Error('Another private transaction is still being proven on this device. Wait for it to finish.');
+    this.tokenTxInFlight = true;
+    try {
+      return await this.runLocked(kind, key, units, counterparty, build, from);
+    } finally {
+      this.tokenTxInFlight = false;
+    }
+  }
+
+  private tokenTxInFlight = false;
+
+  private async runLocked(
+    kind: ActivityKind,
+    key: TokenKey,
+    units: bigint,
+    counterparty: string | undefined,
+    build: (contract: any) => any,
+    from?: any,
+  ) {
     const contract = this.tokens.get(key);
     const id = `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     upsertActivity(this.me.toString(), {
@@ -735,7 +774,14 @@ class PrivateWallet {
       wallet: this.wallet,
       me: this.me,
       node: this.node,
-      fee: this.fee,
+      /** Fee option for agreement transactions; on Alpha re-checks the node and requires a Fee Juice balance. */
+      prepareFee: async () => {
+        if (AZTEC_WALLET_CONFIG.network !== 'mainnet') return this.fee;
+        await this.assertNodeStillPinned();
+        const c = agreementFeeCheck(await this.refreshFeeJuice());
+        if (!c.ok) throw new Error(c.reason);
+        return undefined; // pay from the account's Fee Juice balance
+      },
       /** The token contract bound to this wallet, by token address (configured tokens only). */
       tokenAt: (address: string) => {
         const t = AZTEC_WALLET_CONFIG.tokens.find((x) => x.address.toLowerCase() === address.toLowerCase());

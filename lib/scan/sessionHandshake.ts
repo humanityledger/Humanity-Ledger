@@ -2,6 +2,28 @@
  * Desktop ↔ mobile session QR handshake (extracted from QRScannerModal).
  */
 
+/**
+ * `ledger_chat_seed_<address>` and `system_vault_v1` were copied between
+ * devices by the QR handshake and stored in plain localStorage, but nothing
+ * in the app reads them (XMTP uses its own key, lib/xmtp/client.ts). A secret
+ * nobody needs is only exposure: they are no longer sent, received or kept,
+ * and leftovers are removed. Never throws.
+ */
+export function purgeLegacyHandshakeSecrets(storage: Pick<Storage, 'length' | 'key' | 'removeItem'> | undefined = typeof localStorage !== 'undefined' ? localStorage : undefined): number {
+  if (!storage) return 0;
+  try {
+    const doomed: string[] = [];
+    for (let i = 0; i < storage.length; i++) {
+      const k = storage.key(i);
+      if (k && (k === 'system_vault_v1' || k.startsWith('ledger_chat_seed_'))) doomed.push(k);
+    }
+    doomed.forEach((k) => storage.removeItem(k));
+    return doomed.length;
+  } catch {
+    return 0;
+  }
+}
+
 export type SessionHandshakeResult =
   | { ok: true; cleanup?: () => void }
   | { ok: false; message: string; needsWallet?: boolean };
@@ -218,13 +240,9 @@ export async function completeSessionHandshake(
   const claim = Array.from(claimBytes, b => b.toString(16).padStart(2, '0')).join('');
   const claimHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(claim))))
     .map(b => b.toString(16).padStart(2, '0')).join('');
-  let payloadStr = JSON.stringify({ claim });
-  try {
-    const normAddr = resolvedAddress;
-    const seed = normAddr ? localStorage.getItem(`ledger_chat_seed_${normAddr}`) : null;
-    const vault = localStorage.getItem('system_vault_v1');
-    payloadStr = JSON.stringify({ claim, seed, vault });
-  } catch { /* storage unavailable: send the claim alone */ }
+  // The claim alone: no seed or vault leaves this device (purgeLegacyHandshakeSecrets).
+  const payloadStr = JSON.stringify({ claim });
+  purgeLegacyHandshakeSecrets();
 
   const encrypted = await encryptAESGCM(shared, payloadStr);
   const postBody: Record<string, unknown> = {
@@ -257,47 +275,10 @@ export async function completeSessionHandshake(
     return { ok: false, message: `Handshake error: ${errText}. Please try again.` };
   }
 
-  // ────────────────────────────────────────────────────────────────
-  // STEP 3: Optional seed sync back from desktop
-  // ────────────────────────────────────────────────────────────────
-  let seedAttempts = 0;
-  const pollSeed = setInterval(async () => {
-    seedAttempts++;
-    if (seedAttempts > 10) {
-      clearInterval(pollSeed);
-      return;
-    }
-    try {
-      const sRes = await fetch(`/api/auth/qr-sync-seed?uuid=${uuid}`, {
-        credentials: 'include',
-        cache: 'no-store',
-      });
-      if (sRes.ok) {
-        const sData = await sRes.json();
-        if (sData.encryptedSeed && sData.iv) {
-          clearInterval(pollSeed);
-          const { decryptAESGCM } = await import('@/lib/web-crypto');
-          const decryptedRaw = await decryptAESGCM(shared, sData.encryptedSeed, sData.iv);
-          try {
-            const payload = JSON.parse(decryptedRaw);
-            const finalAddr = resolvedAddress;
-            if (finalAddr) {
-              if (payload.seed) localStorage.setItem(`ledger_chat_seed_${finalAddr}`, payload.seed);
-              if (payload.vault) localStorage.setItem('system_vault_v1', payload.vault);
-            }
-          } catch {
-            if (resolvedAddress) {
-              localStorage.setItem(`ledger_chat_seed_${resolvedAddress}`, decryptedRaw);
-            }
-          }
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-  }, 1000);
+  // STEP 3 (seed sync back from the desktop) is removed: the seed it carried
+  // was never used, and storing it in plain localStorage was only exposure.
 
   // Return cleanup so callers can clear the interval on component unmount
   // (prevents ghost polling after the scan page is navigated away from)
-  return { ok: true, cleanup: () => clearInterval(pollSeed) };
+  return { ok: true, cleanup: () => {} };
 }
