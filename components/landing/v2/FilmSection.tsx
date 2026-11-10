@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Play, Pause, Volume2, VolumeX, ShieldCheck, Zap } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX } from "lucide-react";
 import s from "./Landing.module.css";
 
 interface FilmChapter {
@@ -139,21 +139,9 @@ export function FilmSection() {
       aria-labelledby="film-title"
     >
       <div className={`${s.sectionHead} ${s.filmHead}`}>
-        <div className={s.filmBadgeRow}>
-          <span className={s.filmPill}>
-            <ShieldCheck size={14} className="text-[#10b981]" /> Aztec Alpha L2 Ready
-          </span>
-          <span className={s.filmPill}>
-            <Zap size={14} className="text-[#f59e0b]" /> 30s Protocol Film • 4K 60FPS
-          </span>
-        </div>
         <h2 id="film-title" className={s.h2}>
           Everything Ledger Chat can do. <em>In 30 seconds.</em>
         </h2>
-        <p className={s.lead}>
-          End-to-end encrypted messaging, shielded freelance invoices, zero-knowledge settlement,
-          and WebRTC peer-to-peer calling — demonstrated in one continuous take.
-        </p>
       </div>
 
       <div className={s.filmWrap} onClick={togglePlay} role="region" aria-label="Video Player">
