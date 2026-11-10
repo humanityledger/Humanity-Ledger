@@ -54,12 +54,14 @@ export default function GlobalError({
                          msg.includes('timeout') ||
                          msg.includes('unhandled promise');
     if (isWagmiCrash) {
-      console.warn("WalletConnect/Wagmi Provider crashed. Purging session to prevent white screen of death...");
+      // Reload once to recover the provider. Never mark the session as signed out here: a crash anywhere
+      // (any message containing "timeout") used to set __disconnected__, so the next load showed every
+      // page (Studio included) as signed out for the rest of the tab. Signing out is only nuclearDisconnect.
+      const key = 'global_provider_reload_attempted';
       try {
-        sessionStorage.setItem('__disconnected__', '1');
-        localStorage.removeItem('system_session_v2');
-      } catch {}
-      // We wait a tiny bit so logs can flush, then reload
+        if (sessionStorage.getItem(key)) { sessionStorage.removeItem(key); return; }
+        sessionStorage.setItem(key, '1');
+      } catch { return; }
       setTimeout(() => window.location.reload(), 100);
       return;
     }

@@ -10,6 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useSystemAccount } from '@/hooks/useSystemAccount';
+import { StudioErrorBoundary } from '@/components/studio/StudioErrorBoundary';
 
 const LedgerStudio = dynamic(() => import('@/components/studio/LedgerStudio').then(m => ({ default: m.LedgerStudio })), {
   ssr: false,
@@ -48,7 +49,9 @@ function StudioPageInner() {
   // Fixed to the viewport so the app shell's own layout and scrolling never crop it.
   return (
     <div className="fixed inset-0 z-[60] bg-white">
-      <LedgerStudio key={address.toLowerCase()} wallet={address} initialPrompt={prompt} onExit={() => router.push('/chat')} />
+      <StudioErrorBoundary wallet={address} onExit={() => router.push('/chat')}>
+        <LedgerStudio key={address.toLowerCase()} wallet={address} initialPrompt={prompt} onExit={() => router.push('/chat')} />
+      </StudioErrorBoundary>
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMT
 import { QrScanner } from '@/components/terminal/QrScanner';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { PadlockLoader, isWalletInitError } from '@/components/terminal/PadlockLoader';
+import { StudioErrorBoundary } from '@/components/studio/StudioErrorBoundary';
 import { HLLogo } from '@/components/shared/HLLogo';
 import { TuringShieldGate } from '@/components/auth/TuringShieldGate';
 import { CreateGroupModal } from '../chat/CreateGroupModal';
@@ -7378,7 +7379,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         {/* Ledger Studio, full screen over the chat */}
         {studioOpen && effectiveAddress && typeof document !== 'undefined' && createPortal(
           <div className="fixed inset-0 z-[600] bg-white" data-ledger-studio="">
-            <LedgerStudio key={effectiveAddress.toLowerCase()} wallet={effectiveAddress} initialPrompt={studioOpen.prompt} onExit={() => setStudioOpen(null)} />
+            <StudioErrorBoundary wallet={effectiveAddress} onExit={() => setStudioOpen(null)}>
+              <LedgerStudio key={effectiveAddress.toLowerCase()} wallet={effectiveAddress} initialPrompt={studioOpen.prompt} onExit={() => setStudioOpen(null)} />
+            </StudioErrorBoundary>
           </div>,
           document.body
         )}
