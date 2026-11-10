@@ -21,6 +21,7 @@ import { HLLogo } from "@/components/shared/HLLogo";
 import { LivePhone } from "@/components/landing/v2/PhoneShowcase";
 import s from "./ConnectView.module.css";
 import { safeWalletHref, walletHomeLink } from "@/lib/auth/wallet-links";
+import { openMobileWalletApp, detectConnectedMobileWallet } from "@/lib/wallet/mobileWallet";
 
 /**
  * ConnectView — the presentational half of /connect.
@@ -333,21 +334,15 @@ function Signing(p: ConnectViewProps) {
             className={`${s.btn} ${s.btnPrimary}`}
             onClick={() => {
               if (typeof window === "undefined") return;
-              // If we have a WalletConnect deep link stored (set by ConnectPage),
-              // navigate to it — we are inside a button onClick which IS a user
-              // gesture, so Safari 15+ WILL allow this navigation.
               const href = safeWalletHref(p.mobileDeepLink);
               if (href) {
                 window.location.href = href;
                 return;
               }
-              // Fallback: the preferred wallet's universal link (allowlisted brand only).
-              window.location.href = walletHomeLink(
-                sessionStorage.getItem("preferred_mobile_wallet") || localStorage.getItem("preferred_mobile_wallet"),
-              );
+              openMobileWalletApp();
             }}
           >
-            Open wallet to sign
+            Open {detectConnectedMobileWallet().name} to sign
           </button>
         )}
         <button type="button" className={s.btnText} onClick={p.onDisconnect}>

@@ -10,7 +10,8 @@ import {
 } from 'lucide-react';
 import { getShieldedBalances, syncBalanceFromAztec, calculatePrivacyScore, getZkTransactionHistory, ZkShieldedBalance } from '@/lib/zk/zkMoney';
 import { getIdentity, createIdentity, updateIdentity, ZkIdentity } from '@/lib/zk/zkIdentity';
-import { deriveAztecKeySet, checkAztecNodeStatus } from '@/lib/zk/aztecPxe';
+import { checkAztecNodeStatus } from '@/lib/zk/aztecPxe';
+import { getPrivateWallet } from '@/lib/aztec/wallet/client';
 import { getUserStreams } from '@/lib/zk/zkStreaming';
 import { getUserInvoices } from '@/lib/zk/zkInvoice';
 import { ZkBridgePortal } from './ZkBridgePortal';
@@ -38,7 +39,8 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
   const [newHandle, setNewHandle] = useState('');
   const [shieldMode, setShieldMode] = useState<'shield' | 'unshield' | null>(null);
 
-  const keySet = deriveAztecKeySet(userAddress);
+  const activeWallet = typeof window !== 'undefined' ? getPrivateWallet().state : null;
+  const activeAztecAddress = activeWallet?.aztecAddress;
   const txHistory = getZkTransactionHistory(userAddress);
   const streams = getUserStreams(userAddress);
   const invoices = getUserInvoices(userAddress);
@@ -298,7 +300,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                     </div>
                     <div>
                       <div className="text-[16px] font-black text-[#1C1C1E]">{identity?.zkHandle || 'Not registered'}</div>
-                      <div className="text-[11px] text-black/50 font-mono">Humanity Ledger Sovereign Identity</div>
+                      <div className="text-[11px] text-black/50 font-mono">Humanity Ledger Confidential Identity</div>
                     </div>
                     {identity?.verified && (
                       <span className="ml-auto text-[10px] font-bold bg-black/5 text-[#1C1C1E] px-2 py-0.5 rounded-full border border-black/10">
@@ -313,7 +315,11 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                     </div>
                     <div className="flex justify-between">
                       <span className="text-black/40">Aztec Address</span>
-                      <span className="text-black/80">{keySet.aztecAddress.slice(0, 16)}...{keySet.aztecAddress.slice(-6)}</span>
+                      <span className="text-black/80">
+                        {activeAztecAddress
+                          ? `${activeAztecAddress.slice(0, 14)}...${activeAztecAddress.slice(-6)}`
+                          : 'Derived upon confidential connection'}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-black/40">Reputation</span>
@@ -389,51 +395,61 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
               </div>
             )}
 
-            {/* ─── Keys Tab ────────────────────────────────────────────────────── */}
+            {/* ─── Keys / Security Tab ────────────────────────────────────────── */}
             {tab === 'keys' && (
               <div className="space-y-4">
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-                  <AlertTriangle size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-[12px] text-amber-800">
-                    <strong>Private keys are derived client-side only.</strong> They are never transmitted to any server. These keys control your shielded Aztec notes.
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3">
+                  <Lock size={16} className="text-emerald-700 mt-0.5 flex-shrink-0" />
+                  <div className="text-[12px] text-emerald-900 leading-relaxed">
+                    <strong>Zero-Custody Cryptographic Enclave:</strong> Real Aztec keys (sk_m, nsk_m, ivsk_m) are derived exclusively in local Web Worker memory and never exposed to the DOM or transmitted over the network.
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setShowKeys(!showKeys)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#f0f2f5] rounded-xl text-[12px] font-bold text-gray-700 hover:bg-[#e4e6eb] transition"
-                >
-                  {showKeys ? <EyeOff size={14} /> : <Eye size={14} />}
-                  {showKeys ? 'Hide Sensitive Keys' : 'Reveal Cryptographic Keys'}
-                </button>
-
                 <div className="space-y-3">
-                  {[
-                    { label: 'Master Secret Key (sk_m)', desc: 'Root derivation key for all Aztec keys', key: 'sk', value: keySet.masterSecretKey },
-                    { label: 'Nullifier Secret Key (nsk_m)', desc: 'Used to compute note nullifiers (prevents double spend)', key: 'nsk', value: keySet.nullifierSecretKey },
-                    { label: 'Incoming Viewing Key (ivsk_m)', desc: 'Allows scanning blocks for notes sent to you', key: 'ivsk', value: keySet.incomingViewingKey },
-                    { label: 'Outgoing Viewing Key (ovsk_m)', desc: 'Allows auditing outgoing transactions', key: 'ovsk', value: keySet.outgoingViewingKey },
-                    { label: 'Nullifier Public Key (Np_k)', desc: 'Used by senders to encrypt notes for you', key: 'npk', value: keySet.nullifierPublicKey },
-                    { label: 'Shielded Aztec Address', desc: 'Your fully private payment address on Aztec', key: 'aztec_addr', value: keySet.aztecAddress },
-                  ].map(({ label, desc, key, value }) => (
-                    <div key={key} className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <div className="text-[12px] font-bold text-gray-900">{label}</div>
-                          <div className="text-[10px] text-gray-400 mt-0.5">{desc}</div>
-                        </div>
-                        <button
-                          onClick={() => handleCopy(value, key)}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-black/5 text-gray-400 hover:text-black transition"
-                        >
-                          {copied === key ? <Check size={13} className="text-[#1C1C1E]" /> : <Copy size={13} />}
-                        </button>
-                      </div>
-                      <div className="font-mono text-[11px] text-gray-600 bg-white border border-black/[0.05] rounded-xl px-3 py-2 break-all">
-                        {showKeys ? value : value.slice(0, 10) + '•'.repeat(40) + value.slice(-4)}
-                      </div>
+                  <div className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[13px] font-bold text-gray-900">Encrypted Storage at Rest (OPFS)</div>
+                      <span className="text-[10.5px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+                        AES-256 Encrypted
+                      </span>
                     </div>
-                  ))}
+                    <p className="text-[11.5px] text-gray-500 leading-normal">
+                      Local PXE notes and account database are encrypted using SQLCipher over Origin Private File System (OPFS). Keys are derived via HKDF-SHA256 from your wallet signature.
+                    </p>
+                    <div className="font-mono text-[11px] text-gray-700 bg-white border border-black/[0.05] rounded-xl px-3 py-2">
+                      Store Info: hl/aztec/v1/store (32-byte derived key)
+                    </div>
+                  </div>
+
+                  <div className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[13px] font-bold text-gray-900">Proving Bundle Integrity</div>
+                      <span className="text-[10.5px] font-bold bg-black/5 text-[#1C1C1E] px-2 py-0.5 rounded-full border border-black/10">
+                        UltraHonk BN254
+                      </span>
+                    </div>
+                    <p className="text-[11.5px] text-gray-500 leading-normal">
+                      Client-side proofs use Barretenberg 5.3.0 with SHA-256 verification keys pinned against on-chain contract verifiers.
+                    </p>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[11px] font-mono text-gray-600">Verification Endpoint: /api/security/integrity</span>
+                      <a
+                        href="/api/security/integrity"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11.5px] font-semibold text-[#15171c] hover:underline flex items-center gap-1"
+                      >
+                        Inspect Manifest <ExternalLink size={12} />
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-4 space-y-2">
+                    <div className="text-[13px] font-bold text-gray-900">Memory & Storage Hygiene</div>
+                    <p className="text-[11.5px] text-gray-500 leading-normal">
+                      Upon session sign-out, all local OPFS stores and IndexedDB message caches are purged via the secure wipe routine.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

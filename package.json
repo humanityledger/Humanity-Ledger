@@ -37,6 +37,7 @@
     "lint": "next lint",
     "check:copy": "node scripts/check-forbidden-copy.mjs",
     "check:artifacts": "node scripts/zk/check-artifacts.mjs",
+    "verify:integrity": "npx tsx scripts/verify-bundle-integrity.ts",
     "check:chrome": "node scripts/check-chat-chrome.mjs",
     "audit": "slither . --print human-summary",
     "audit:prepare": "slither . --print human-summary --exclude-dependencies --solc-remaps \"@openzeppelin=node_modules/@openzeppelin\"",

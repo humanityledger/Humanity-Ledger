@@ -48,6 +48,21 @@ export function hiddenIds(peer?: string | null, storage: Storage | undefined = g
     }
   } catch {}
 
+  // Global deleted for me (when peer is null/global or cross-conversation fallback)
+  if (scopeFor(peer) !== 'global') {
+    try {
+      const rawGlobalDeleted = storage.getItem(getDeletedKey(null));
+      if (rawGlobalDeleted) {
+        const arr = JSON.parse(rawGlobalDeleted);
+        if (Array.isArray(arr)) {
+          for (const id of arr) {
+            if (typeof id === 'string') set.add(id);
+          }
+        }
+      }
+    } catch {}
+  }
+
   // Globally revoked
   try {
     const rawRevoked = storage.getItem(getRevokedKey());

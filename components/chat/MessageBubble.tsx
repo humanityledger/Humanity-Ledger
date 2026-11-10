@@ -648,7 +648,8 @@ export const MessageBubble = React.memo(({
     controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 30 } });
   };
 
-  const handleLongPressStart = () => {
+  const handleLongPressStart = (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e && 'button' in e && (e as React.MouseEvent).button !== 0) return;
     pressTimer.current = setTimeout(() => {
       if (navigator.vibrate) navigator.vibrate(12);
       setShowTapback(true);
@@ -755,6 +756,7 @@ export const MessageBubble = React.memo(({
 
       <motion.div
         id={`msg-${msg.id}`}
+        data-allow-context="true"
         initial={isMe
           ? { opacity: 0, scale: 0.88, y: 10 }
           : { opacity: 0, y: -6 }
@@ -769,6 +771,7 @@ export const MessageBubble = React.memo(({
       >
         <motion.div
           drag="x"
+          data-allow-context="true"
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={{ left: 0.2, right: 0 }}
           onDragEnd={handleDragEnd}
@@ -783,6 +786,7 @@ export const MessageBubble = React.memo(({
           onMouseLeave={handleLongPressEnd}
           onContextMenu={(e) => {
             e.preventDefault();
+            if (pressTimer.current) clearTimeout(pressTimer.current);
             setShowTapback(false);
             onContextMenu(e, msg.id, content);
           }}

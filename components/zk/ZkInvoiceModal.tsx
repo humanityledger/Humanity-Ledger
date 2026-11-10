@@ -26,6 +26,7 @@ import { AZTEC_WALLET_CONFIG, networkLabel, type TokenKey } from '@/lib/aztec/wa
 import { localStoragePeerBindingStore, sdkBindingCrypto, verifiedPeerBinding } from '@/lib/aztec/peer-binding';
 import { AlphaRiskAck, NO_ACK, acked } from '@/components/chat/AlphaRiskAck';
 import { ProvingStatus } from '@/components/chat/ProvingStatus';
+import { useAddressFingerprint } from '@/components/chat/useAddressFingerprint';
 import { checkPrivateRail, invoicePayee } from '@/lib/payments/rails';
 import { NativeCryptoSendModal } from '@/components/chat/NativeCryptoSendModal';
 import { toast } from 'sonner';
@@ -71,6 +72,7 @@ export function ZkInvoiceModal({
   onInvoicePaid,
 }: ZkInvoiceModalProps) {
   const [payeeAztec, setPayeeAztec] = useState<{ address?: string; verified: boolean }>({ verified: false });
+  const issuerFingerprint = useAddressFingerprint(payeeAztec.address);
   const [showPublicRail, setShowPublicRail] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const payingRef = useRef(false);
@@ -292,6 +294,25 @@ export function ZkInvoiceModal({
 
             {existingInvoice.status === 'unpaid' && payee?.ok && (
               <div className="space-y-2">
+                {payeeAztec.address && (
+                  <div className="rounded-2xl border border-black/[0.08] bg-[#f9fafb] p-3 text-[12px] space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 font-medium">Issuer Aztec Address:</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${payeeAztec.verified ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                        {payeeAztec.verified ? '✓ Verified (G7)' : 'Not verified: payment blocked'}
+                      </span>
+                    </div>
+                    <div className="font-mono text-[11px] text-gray-800 flex justify-between items-center bg-white border border-black/[0.06] rounded-lg px-2.5 py-1.5">
+                      <span className="truncate mr-2">{payeeAztec.address.slice(0, 16)}…{payeeAztec.address.slice(-8)}</span>
+                      <span className="font-bold bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[10.5px] flex-shrink-0">
+                        FP: {issuerFingerprint ?? '…'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500">
+                      G7 confirms the issuer signed for this address. For large amounts, read this fingerprint with them over another channel.
+                    </p>
+                  </div>
+                )}
                 {AZTEC_WALLET_CONFIG.network === 'mainnet' && privateRail.ok && <AlphaRiskAck kind="payment" value={ack} onChange={setAck} disabled={isPaying} />}
                 <button
                   onClick={handlePayInvoice}

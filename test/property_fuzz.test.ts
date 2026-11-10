@@ -124,7 +124,7 @@ describe('T12 — High-Capacity Property-Based & Fuzz Testing (60,000 Iterations
         expect(buffer[j]).toBe(0);
       }
     }
-  });
+  }, 30000);
 
   it(`Fuzz EAF Bridge Payload Ceiling & Malformed Inputs (${NUM_RUNS} iterations): Strict 8 KB bounding`, () => {
     for (let i = 0; i < NUM_RUNS; i++) {

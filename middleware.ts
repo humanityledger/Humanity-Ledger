@@ -98,6 +98,7 @@ const PUBLIC_PREFIXES = [
   // '/api/chat/', (Removed from public routes for security)
   '/api/call/',          // Group call room API
   '/api/provenance/',    // Provenance log API called on XMTP connect
+  '/api/security/integrity', // Public verifiable proving bundle integrity manifest
   '/api/chat/presence',  // Safe chat presence heartbeat / query
   '/api/gif/',           // GIF search proxy and fallback catalog
   '/api/link-preview',   // Safe SSRF-guarded OpenGraph link preview
@@ -484,10 +485,13 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   // [SECURITY] B-016 / B-017: Unified strict CSP with nonce per request (N-05)
   response.headers.set('Content-Security-Policy', buildCsp(nonce));
 
-  // [SECURITY] Cross-Origin Isolation for Barretenberg WASM Multithreading (SharedArrayBuffer)
+  // [SECURITY] Cross-Origin Isolation for Barretenberg WASM & Client Proving Isolation
   if (req.nextUrl.pathname.startsWith('/prove')) {
     response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
     response.headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
+  } else if (req.nextUrl.pathname.startsWith('/chat')) {
+    response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+    response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
   }
 
   // [SECURITY] Additional hardening headers

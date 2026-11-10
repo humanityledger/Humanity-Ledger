@@ -1,4 +1,4 @@
-﻿/**
+/**
  * lib/aztec/wallet/keys.ts
  *
  * Derives the keys of a person's Aztec account from a signature by their own
@@ -134,4 +134,17 @@ export async function deriveFeeJuiceClaimSecrets(signatureHex: string, count: nu
   for (let i = 0; i < count; i++) out.push(await fieldElement(sig, `hl/aztec/v1/fee-juice-claim/${i}`, frModulus));
   sig.fill(0);
   return out;
+}
+
+/**
+ * 32-byte store encryption key for the embedded wallet's OPFS SQLite stores
+ * (PXE data and wallet data). Derived via HKDF with info 'hl/aztec/v1/store'.
+ * Keys in memory are zeroized after derivation to prevent lingering key copies.
+ */
+export async function deriveStoreEncryptionKey(signatureHex: string): Promise<Uint8Array> {
+  const sig = hexToBytes(signatureHex);
+  if (sig.length < 64) throw new Error('Invalid signature.');
+  const key = await hkdf(sig, 'hl/aztec/v1/store', 32);
+  sig.fill(0);
+  return key;
 }

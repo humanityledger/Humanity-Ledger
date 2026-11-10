@@ -5486,6 +5486,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         onReconnect={() => { openAppKit(); }}
         onRefreshSession={() => { reconnect(); initClient(); }}
         onClearError={() => setInitError('')}
+        connectorName={connector?.name}
       />
       </TuringShieldGate>
     );
@@ -6191,6 +6192,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 } catch {}
 
                 const filteredMsgs = messages.filter(m => {
+                  if (isHidden(activePeer, m.id)) return false;
                   if (m.conversationId?.toLowerCase() !== convId.toLowerCase()) return false;
                   if (m.burnAtNs && m.burnAtNs <= Date.now()) return false;
                   
@@ -7262,6 +7264,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                  <button role="menuitem" type="button" onClick={() => {
                    if (contextMenu?.id) {
                      markDeletedForMe(activePeer, contextMenu.id);
+                    markDeletedForMe(null, contextMenu.id);
                      setMessages(prev => prev.filter(m => m.id !== contextMenu.id));
                      chatDB.deleteMessages([contextMenu.id]).catch(() => {});
                      setContextMenu(null);

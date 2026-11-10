@@ -279,7 +279,24 @@ class PrivateWallet {
         await this.wallet.stop().catch(() => {});
         this.wallet = null;
       }
-      this.wallet = await sdk.EmbeddedWallet.create(AZTEC_WALLET_CONFIG.nodeUrl, { nodeClientOptions: RPC_OPTIONS });
+
+      this.set({ step: 'Initializing encrypted storage' });
+      const { openEncryptedWalletStores } = await import('./store');
+      const networkPrefix = AZTEC_WALLET_CONFIG.network === 'mainnet' ? 'alpha' : 'testnet';
+      const stores = await openEncryptedWalletStores(signature, {
+        pxeName: `pxe_${networkPrefix}`,
+        walletName: `wallet_${networkPrefix}`,
+      });
+
+      this.wallet = await sdk.EmbeddedWallet.create(AZTEC_WALLET_CONFIG.nodeUrl, {
+        nodeClientOptions: RPC_OPTIONS,
+        pxe: {
+          store: stores.pxeStore,
+        },
+        walletDb: {
+          store: stores.walletStore,
+        },
+      });
 
       if (AZTEC_WALLET_CONFIG.network === 'testnet') {
         const fpc = await sdk.getContractInstanceFromInstantiationParams(sdk.SponsoredFPCContract.artifact, { salt: new Fr(0) });

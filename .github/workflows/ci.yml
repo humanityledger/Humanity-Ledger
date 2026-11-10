@@ -32,6 +32,8 @@ jobs:
         run: npx next lint
       - name: Forbidden patterns check
         run: node scripts/forbidden-patterns.mjs
+      - name: Inspect SDK store encryption API (diagnostic)
+        run: node scripts/aztec/inspect-store-encryption.mjs
       - name: Unit Tests (Aztec client gates, payments, chat handoff)
         run: >
           npx vitest run
@@ -48,6 +50,8 @@ jobs:
           test/unit/aztec/single-flight.test.ts
           test/unit/aztec/stream-terms.test.ts
           test/unit/aztec/wallet-wipe.test.ts
+          test/unit/aztec/store-encryption.test.ts
+          test/unit/aztec/address-fingerprint.test.ts
           test/unit/payments
           test/unit/auth/wallet-links.test.ts
           test/unit/chat/value-handoff.test.ts

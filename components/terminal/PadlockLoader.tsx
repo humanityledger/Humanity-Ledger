@@ -2,6 +2,7 @@
 
 import React from 'react';
 import s from './PadlockLoader.module.css';
+import { detectConnectedMobileWallet, openMobileWalletApp, isMobileDevice } from '@/lib/wallet/mobileWallet';
 
 /**
  * PadlockLoader: the screen Ledger Chat shows before the encrypted channel is
@@ -26,6 +27,7 @@ interface PadlockLoaderProps {
   onReconnect: () => void;
   onRefreshSession: () => void;
   onClearError: () => void;
+  connectorName?: string;
 }
 
 function Emblem({ state }: { state: 'idle' | 'working' | 'error' }) {
@@ -48,7 +50,21 @@ export function PadlockLoader({
   onReconnect,
   onRefreshSession,
   onClearError,
+  connectorName,
 }: PadlockLoaderProps) {
+  const walletInfo = detectConnectedMobileWallet(connectorName);
+
+  React.useEffect(() => {
+    if (isWaitingForSignature && isMobileDevice()) {
+      const timer = setTimeout(() => {
+        try {
+          openMobileWalletApp(connectorName);
+        } catch {}
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isWaitingForSignature, connectorName]);
+
   const lower = initError.toLowerCase();
   const isLimitError = lower.includes('limit') || lower.includes('10/10');
   const isWalletError =
@@ -126,20 +142,14 @@ export function PadlockLoader({
                 <p className={s.hint}>
                   Approve the signature request in your wallet. It is free and sends no transaction.
                 </p>
-                {typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
+                {isMobileDevice() && (
                   <button
                     type="button"
-                    className={s.secondary}
-                    style={{ marginTop: '14px', width: '100%' }}
-                    onClick={() => {
-                      const pref = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('preferred_mobile_wallet')) || 'metamask';
-                      if (pref === 'metamask') window.location.href = 'metamask://';
-                      else if (pref === 'rainbow') window.location.href = 'rainbow://';
-                      else if (pref === 'coinbase') window.location.href = 'cbwallet://';
-                      else window.location.href = 'metamask://';
-                    }}
+                    className={s.primary}
+                    style={{ marginTop: '16px', width: '100%' }}
+                    onClick={() => openMobileWalletApp(connectorName)}
                   >
-                    Open wallet to approve
+                    Open {walletInfo.name} to approve
                   </button>
                 )}
               </>

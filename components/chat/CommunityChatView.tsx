@@ -17,6 +17,7 @@ import { parseInvoicePayload } from '@/lib/zk/zkInvoice';
 const ZkWalletPanel = dynamic(() => import('@/components/zk/ZkWalletPanel').then(m => m.ZkWalletPanel), { ssr: false });
 import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
 import { requestValueHandoff } from '@/lib/chat/value-handoff';
+import { markDeletedForMe, isHidden } from '@/lib/chat/deleted-messages';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 // Shared sanitizer: no class/style, no remote images, safe links.
@@ -772,11 +773,11 @@ export function CommunityChatView({
 
   // ─── FILTER MESSAGES BY SEARCH & NON-EMPTY ─────────────────────────────────
   const displayMessages = useMemo(() => {
-    const valid = messages.filter(m => m && m.content && m.content.trim().length > 0);
+    const valid = messages.filter(m => m && m.content && m.content.trim().length > 0 && !isHidden(communityId, m.id));
     if (!searchQuery.trim()) return valid;
     const q = searchQuery.toLowerCase();
     return valid.filter(m => m.content.toLowerCase().includes(q));
-  }, [messages, searchQuery]);
+  }, [messages, searchQuery, communityId]);
 
   // ─── GROUPED MESSAGES (group consecutive from same author) ──────────────────
   const groupedMessages = useMemo(() => {
@@ -1070,6 +1071,18 @@ export function CommunityChatView({
               {[
                 { label: 'Reply', icon: Reply, fn: () => { setReplyTo(contextMenu.msg); setContextMenu(null); } },
                 { label: 'Copy text', icon: Copy, fn: () => { navigator.clipboard.writeText(contextMenu.msg.content); toast.success('Copied to clipboard'); setContextMenu(null); } },
+                {
+                  label: 'Delete for me',
+                  icon: Trash2,
+                  fn: () => {
+                    const targetId = contextMenu.msg.id;
+                    markDeletedForMe(communityId, targetId);
+                    markDeletedForMe(null, targetId);
+                    setMessages(prev => prev.filter(m => m.id !== targetId));
+                    setContextMenu(null);
+                    toast.success('Message deleted for you');
+                  }
+                },
                 ...(!isMe(contextMenu.msg) && /^0x[0-9a-fA-F]{40}$/.test(contextMenu.msg.authorAddress || '')
                   ? [
                       // Private value moves in the 1:1 chat with this member (G7, nothing on the community server).
