@@ -1,0 +1,104 @@
+[
+  {
+    "page": "home",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NWI2MmNkNmEtNjU5MS00ZDQzLWJjMmEtMDFlZmVlMjc5MzJk' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "connect",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/connect",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ZTg2ZGJmN2MtMTZmNS00ZWJmLWEzODQtNGJmMTkzODRhZjQ5' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/overview",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NjRlNGJkMTAtNjJmNC00OGQzLWE3NmMtODgzM2I2ZTU1MTk2' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-privacy",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/privacy",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-M2Y1OWRkZDQtMDY1My00YzgzLWE5OWYtYjY1YmQxOGQxNTE2' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "chat",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/chat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ODc0ZWJiZDUtMmNlNy00OWZlLTkyZDEtZWY3ZGIyZGM3MDMy' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "page": "changelog",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/changelog",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MWMwMWU0MDMtNDc2Yy00NzVjLWJhMmMtZWZiZmNlZjk0NzRk' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "home",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MTM0OWM4ZDEtYWQwNC00NTJlLWIzYWYtYjZmODgyOGRlMDY5' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "connect",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/connect",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MTllNmU0MGEtNzI1NC00MWYxLWFmZjctYWMwMWI0NGVlZThk' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/overview",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-OTAxNWQ1NGItNzljNC00ZTI5LWI5NWEtODE4ZjU1ZTkzNDg4' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-privacy",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/privacy",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MDI2MzZhZTgtZDcwYi00MmU1LWFkMmYtZGIyNTc4NjQyNDg4' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "chat",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/chat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ODRmNDhjNGYtYmNlNy00ZjU4LWIzNDgtYWRjODdkNzdmMjBj' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "page": "changelog",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/changelog",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NTEyMmUyM2UtMWZkYS00YTI0LTlhMTMtZmM0NTRhODQ1ODMw' 'wasm-unsafe-eval' htt"
+    ]
+  }
+]
