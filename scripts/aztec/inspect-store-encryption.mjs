@@ -1,49 +1,43 @@
-// Prints how the installed Aztec SDK handles a store encryption key and custom stores,
-// so CI can show whether lib/aztec/wallet/store.ts really encrypts. Read-only.
+// Fails CI if the installed Aztec SDK stops honouring what lib/aztec/wallet/store.ts relies on:
+// a 32-byte encryptionKey on AztecSQLiteOPFSStore.open (sqlite3mc page encryption), the custom
+// PXE store (pxe.store -> createPXE options.store), the custom wallet DB store (walletDb.store),
+// and listStores/deleteStore for wipes. Read-only; prints what it checked.
 import fs from 'node:fs';
 import path from 'node:path';
 
-function pkgDir(name) {
-  // Exports maps hide package.json; resolve from the project's node_modules instead.
-  const d = path.join(process.cwd(), 'node_modules', ...name.split('/'));
-  if (!fs.existsSync(path.join(d, 'package.json'))) throw new Error(`${name} is not installed`);
-  return d;
+const nm = (...p) => path.join(process.cwd(), 'node_modules', '@aztec-labs', ...p);
+const read = (...p) => {
+  const f = nm(...p);
+  if (!fs.existsSync(f)) throw new Error(`missing ${path.relative(process.cwd(), f)}`);
+  return fs.readFileSync(f, 'utf8');
+};
+const version = (pkg) => JSON.parse(read(pkg, 'package.json')).version;
+
+const checks = [
+  ['kv-store: open(log, name, ephemeral, poolDirectory, encryptionKey)', () => /static async open\(log, name, ephemeral = false, poolDirectory, encryptionKey\)/.test(read('kv-store', 'dest', 'sqlite-opfs', 'store.js'))],
+  ['kv-store: rejects keys that are not 32 bytes', () => /encryptionKey\.length !== 32/.test(read('kv-store', 'dest', 'sqlite-opfs', 'store.js'))],
+  ['kv-store: sqlite3mc decrypt_failed error exists', () => /decrypt_failed/.test(read('kv-store', 'dest', 'sqlite-opfs', 'errors.js'))],
+  ['kv-store: key is passed to the worker', () => /encryptionKey/.test(read('kv-store', 'dest', 'sqlite-opfs', 'worker.js'))],
+  ['kv-store: listStores and deleteStore exported', () => {
+    const idx = read('kv-store', 'dest', 'sqlite-opfs', 'index.js');
+    const all = idx + fs.readdirSync(nm('kv-store', 'dest', 'sqlite-opfs')).filter((f) => f.endsWith('.js')).map((f) => read('kv-store', 'dest', 'sqlite-opfs', f)).join('\n');
+    return /listStores/.test(all) && /deleteStore/.test(all) && /export \*|listStores/.test(idx);
+  }],
+  ['wallets: splitPxeOptions forwards pxe.store', () => /const \{[^}]*\bstore\b[^}]*\} = pxe;[\s\S]{0,300}creation: \{[\s\S]{0,200}\bstore,/.test(read('wallets', 'dest', 'embedded', 'embedded_wallet.js'))],
+  ['wallets: browser create uses options.walletDb?.store', () => /options\.walletDb\?\.store/.test(read('wallets', 'dest', 'embedded', 'entrypoints', 'browser.js'))],
+  ['pxe: createPXE uses options.store before the default store (bundle)', () => /const store = options\.store \?\?/.test(read('pxe', 'dest', 'entrypoints', 'client', 'bundle', 'utils.js'))],
+  ['pxe: createPXE uses options.store before the default store (lazy)', () => /const store = options\.store \?\?/.test(read('pxe', 'dest', 'entrypoints', 'client', 'lazy', 'utils.js'))],
+];
+
+console.log(`kv-store ${version('kv-store')} · wallets ${version('wallets')} · pxe ${version('pxe')}`);
+let failed = 0;
+for (const [name, fn] of checks) {
+  let ok = false;
+  try { ok = fn(); } catch (e) { console.log(`   ${e.message}`); }
+  console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}`);
+  if (!ok) failed++;
 }
-function walk(dir, out = []) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    if (e.isDirectory() && e.name !== 'node_modules') walk(p, out);
-    else if (/\.(js|d\.ts)$/.test(e.name)) out.push(p);
-  }
-  return out;
+if (failed) {
+  console.log(`\n${failed} check(s) failed: the wallet stores may no longer be encrypted with this SDK. Do not ship.`);
+  process.exit(1);
 }
-function show(label, dir, patterns, ctx = 25) {
-  console.log(`\n===== ${label} (${dir})`);
-  let hits = 0;
-  for (const f of walk(dir)) {
-    const lines = fs.readFileSync(f, 'utf8').split('\n');
-    lines.forEach((l, i) => {
-      if (patterns.some((re) => re.test(l)) && hits < 12) {
-        hits++;
-        console.log(`--- ${path.relative(dir, f)}:${i + 1}`);
-        console.log(lines.slice(Math.max(0, i - 2), i + ctx).join('\n'));
-      }
-    });
-  }
-  if (!hits) console.log('(no match)');
-  return hits;
-}
-const kv = pkgDir('@aztec-labs/kv-store');
-console.log('kv-store version', JSON.parse(fs.readFileSync(path.join(kv, 'package.json'), 'utf8')).version);
-show('AztecSQLiteOPFSStore.open', kv, [/static\s+(async\s+)?open\s*\(/]);
-show('encryption in kv-store', kv, [/PRAGMA\s+key|encryption|encrypt|cipher|sqlcipher/i], 8);
-const w = pkgDir('@aztec-labs/wallets');
-console.log('wallets version', JSON.parse(fs.readFileSync(path.join(w, 'package.json'), 'utf8')).version);
-show('EmbeddedWallet.create', w, [/static\s+(async\s+)?create\s*\(/], 45);
-show('custom store options', w, [/walletDb|pxe\?\.\s*store|options\.pxe|\.store\b/], 6);
-show('splitPxeOptions', w, [/function\s+splitPxeOptions/], 30);
-const pxeDir = path.join(process.cwd(), 'node_modules', '@aztec-labs', 'pxe');
-if (fs.existsSync(pxeDir)) {
-  console.log('pxe version', JSON.parse(fs.readFileSync(path.join(pxeDir, 'package.json'), 'utf8')).version);
-  show('createPXE (browser)', pxeDir, [/export\s+async\s+function\s+createPXE/], 40);
-} else console.log('@aztec-labs/pxe not hoisted');

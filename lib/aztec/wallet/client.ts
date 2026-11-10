@@ -282,11 +282,11 @@ class PrivateWallet {
 
       this.set({ step: 'Initializing encrypted storage' });
       const { openEncryptedWalletStores } = await import('./store');
-      const networkPrefix = AZTEC_WALLET_CONFIG.network === 'mainnet' ? 'alpha' : 'testnet';
-      const stores = await openEncryptedWalletStores(signature, {
-        pxeName: `pxe_${networkPrefix}`,
-        walletName: `wallet_${networkPrefix}`,
-      });
+      // One encrypted store pair per network, rollup and account: a second account on this browser
+      // never hits decrypt_failed on someone else's store, and a new rollup never reuses stale notes.
+      const { walletStoreNames, wipeLegacyPlainStores } = await import('./wipe');
+      const names = await walletStoreNames(AZTEC_WALLET_CONFIG.network, String((info as any).l1ContractAddresses?.rollupAddress ?? ''), evm);
+      const stores = await openEncryptedWalletStores(signature, names);
 
       this.wallet = await sdk.EmbeddedWallet.create(AZTEC_WALLET_CONFIG.nodeUrl, {
         nodeClientOptions: RPC_OPTIONS,
@@ -297,6 +297,8 @@ class PrivateWallet {
           store: stores.walletStore,
         },
       });
+      // Encrypted stores are open: plaintext stores from earlier versions only hold copies of keys and notes.
+      void wipeLegacyPlainStores();
 
       if (AZTEC_WALLET_CONFIG.network === 'testnet') {
         const fpc = await sdk.getContractInstanceFromInstantiationParams(sdk.SponsoredFPCContract.artifact, { salt: new Fr(0) });

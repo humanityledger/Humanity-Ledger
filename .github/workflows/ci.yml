@@ -32,7 +32,7 @@ jobs:
         run: npx next lint
       - name: Forbidden patterns check
         run: node scripts/forbidden-patterns.mjs
-      - name: Inspect SDK store encryption API (diagnostic)
+      - name: SDK still encrypts the wallet stores (kv-store, wallets, pxe)
         run: node scripts/aztec/inspect-store-encryption.mjs
       - name: Unit Tests (Aztec client gates, payments, chat handoff)
         run: >
