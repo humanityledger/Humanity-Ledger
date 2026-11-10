@@ -18,7 +18,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Lock, Waves, KeyRound, ShieldCheck, AlertTriangle, LoaderCircle } from 'lucide-react';
 import { summarizeInvite, agreementMessageKind } from '@/lib/aztec/agreement-message';
-import { localStoragePeerBindingStore, peerAztecAddress, recordPeerAnnouncement, type AnnouncementResult } from '@/lib/aztec/peer-binding';
+import { localStoragePeerBindingStore, peerAztecAddress, recordPeerAnnouncement, sdkBindingCrypto, type AnnouncementResult } from '@/lib/aztec/peer-binding';
 import { getPrivateWallet, humanError, type WalletSnapshot } from '@/lib/aztec/wallet/client';
 import { formatUnits } from '@/lib/aztec/wallet/amounts';
 import { AZTEC_WALLET_CONFIG } from '@/lib/aztec/wallet/config';
@@ -68,26 +68,39 @@ function Note({ tone, children }: { tone: 'info' | 'warn' | 'ok'; children: Reac
 }
 
 /** An Aztec address the peer shared in this conversation; pinned on first use. */
-function AddressAnnouncement({ raw, isMe, dmPeerInboxId, senderInboxId }: { raw: string; isMe: boolean; dmPeerInboxId?: string; senderInboxId?: string }) {
+function AddressAnnouncement({ raw, isMe, dmPeerInboxId, senderInboxId, selfInboxId }: { raw: string; isMe: boolean; dmPeerInboxId?: string; senderInboxId?: string; selfInboxId?: string }) {
   const [result, setResult] = useState<AnnouncementResult | null>(null);
-  const address = useMemo(() => {
+  const { address, signed } = useMemo(() => {
     try {
-      return String(JSON.parse(raw).address || '');
+      const j = JSON.parse(raw);
+      return { address: String(j.address || ''), signed: j.version === 2 };
     } catch {
-      return '';
+      return { address: '', signed: false };
     }
   }, [raw]);
 
   useEffect(() => {
     if (isMe || !store || !dmPeerInboxId || !senderInboxId) return;
-    recordPeerAnnouncement(store, { senderInboxId, peerInboxId: dmPeerInboxId, body: raw }).then(setResult).catch(() => {});
-  }, [raw, isMe, dmPeerInboxId, senderInboxId]);
+    // Signed (v2) announcements are checked with the Aztec SDK before anything is pinned (G7).
+    (signed ? sdkBindingCrypto() : Promise.resolve(undefined))
+      .then((crypto) => recordPeerAnnouncement(store, { senderInboxId, peerInboxId: dmPeerInboxId, body: raw, selfInboxId }, crypto))
+      .then(setResult)
+      .catch(() => setResult({ status: 'ignored', reason: 'could not check the proof' }));
+  }, [raw, isMe, dmPeerInboxId, senderInboxId, selfInboxId, signed]);
 
   return (
     <div className={`${CARD} min-w-[240px] max-w-[320px] p-4`}>
       <Label icon={<KeyRound size={13} strokeWidth={2} />}>{isMe ? 'You shared your Aztec address' : 'Shared their Aztec address'}</Label>
       <p className="mt-2 font-mono text-[12.5px] text-[#15171c] break-all">{address}</p>
-      {!isMe && result?.status === 'pinned' && <Note tone="ok">Saved for this chat. Agreements from this person must come from this address.</Note>}
+      {!isMe && (result?.status === 'pinned' || result?.status === 'unchanged') && result.verified && (
+        <Note tone="ok">Verified: this person proved they control this Aztec address. Saved for this chat.</Note>
+      )}
+      {!isMe && result?.status === 'pinned' && !result.verified && (
+        <Note tone="info">Saved for this chat on trust: this address was shared without a proof, so it cannot receive payments on Aztec Alpha.</Note>
+      )}
+      {!isMe && result?.status === 'rejected' && (
+        <Note tone="warn">Security warning: this address was NOT saved. Its proof failed ({result.reason}). Do not send funds to it, and check with this person another way.</Note>
+      )}
       {!isMe && result?.status === 'conflict' && (
         <Note tone="warn">
           This is not the address saved for this person ({short(result.pinned)}). It was not saved. Confirm the change with them another way before trusting it.
@@ -105,11 +118,13 @@ export interface AgreementCardProps {
   dmPeerInboxId?: string;
   /** The XMTP inbox that sent this message. */
   senderInboxId?: string;
+  /** Our own XMTP inbox (checks G7 proofs). */
+  selfInboxId?: string;
 }
 
-export const AgreementCard = React.memo(function AgreementCard({ raw, isMe, dmPeerInboxId, senderInboxId }: AgreementCardProps) {
+export const AgreementCard = React.memo(function AgreementCard({ raw, isMe, dmPeerInboxId, senderInboxId, selfInboxId }: AgreementCardProps) {
   const kind = agreementMessageKind(raw);
-  if (kind === 'address') return <AddressAnnouncement raw={raw} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={senderInboxId} />;
+  if (kind === 'address') return <AddressAnnouncement raw={raw} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={senderInboxId} selfInboxId={selfInboxId} />;
   return <InviteCard raw={raw} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={senderInboxId} />;
 });
 

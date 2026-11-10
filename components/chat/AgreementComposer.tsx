@@ -14,7 +14,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { X, KeyRound, Lock, Waves, LoaderCircle } from 'lucide-react';
-import { announcementFor, localStoragePeerBindingStore, peerAztecAddress } from '@/lib/aztec/peer-binding';
+import { announcementFor, localStoragePeerBindingStore, peerAztecAddress, verifiedAnnouncementFor } from '@/lib/aztec/peer-binding';
 import { getPrivateWallet, humanError, type WalletSnapshot } from '@/lib/aztec/wallet/client';
 import { AZTEC_WALLET_CONFIG } from '@/lib/aztec/wallet/config';
 
@@ -34,6 +34,8 @@ const DURATIONS = {
 export interface AgreementComposerProps {
   /** XMTP inbox of the other person in this DM. */
   dmPeerInboxId: string;
+  /** Our own XMTP inbox, to bind the address proof to this conversation (G7). */
+  selfInboxId?: string;
   peerName: string;
   onClose: () => void;
   /** Posts a message in this DM (an invitation or an announcement). */
@@ -42,7 +44,7 @@ export interface AgreementComposerProps {
   onOpenWallet?: () => void;
 }
 
-export function AgreementComposer({ dmPeerInboxId, peerName, onClose, onSend, onOpenWallet }: AgreementComposerProps) {
+export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClose, onSend, onOpenWallet }: AgreementComposerProps) {
   const [wallet, setWallet] = useState<WalletSnapshot>(() => getPrivateWallet().state);
   useEffect(() => getPrivateWallet().subscribe(setWallet), []);
   const [peer, setPeer] = useState<string | undefined>();
@@ -61,8 +63,21 @@ export function AgreementComposer({ dmPeerInboxId, peerName, onClose, onSend, on
   const share = async () => {
     setError(null);
     if (!wallet.aztecAddress) return;
-    await onSend(announcementFor(wallet.aztecAddress));
-    onClose();
+    // With both inbox IDs known, share a signed (version 2) announcement the
+    // peer can verify (G7). Without them, fall back to the unsigned one, which
+    // the peer pins on trust and which cannot receive payments on Alpha.
+    const isInbox = (v?: string) => !!v && !/^0x[0-9a-fA-F]{40}$/.test(v);
+    try {
+      if (isInbox(selfInboxId) && isInbox(dmPeerInboxId)) {
+        const proof = await getPrivateWallet().aztecAddressProof(selfInboxId!, dmPeerInboxId);
+        await onSend(verifiedAnnouncementFor(wallet.aztecAddress, proof));
+      } else {
+        await onSend(announcementFor(wallet.aztecAddress));
+      }
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not share your address.');
+    }
   };
 
   const open = async () => {

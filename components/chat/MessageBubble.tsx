@@ -841,7 +841,7 @@ export const MessageBubble = React.memo(({
             </AnimatePresence>
 
             {isAgreement ? (
-              <AgreementCard raw={content} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={msg.senderInboxId} />
+              <AgreementCard raw={content} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={msg.senderInboxId} selfInboxId={clientInboxId} />
             ) : remoteAttachment ? (
               <RemoteAttachmentBubble att={remoteAttachment} isMe={isMe} onOpenLightbox={onOpenLightbox} />
             ) : isSticker ? (

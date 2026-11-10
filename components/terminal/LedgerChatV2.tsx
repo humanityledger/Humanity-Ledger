@@ -41,7 +41,7 @@ import { LedgerChatStatusBar } from '@/components/chat/LedgerChatStatusBar';
 import { useLedgerChatPresence } from '@/hooks/useLedgerChatPresence';
 import { LedgerChatSearchModal } from '@/components/chat/LedgerChatSearchModal';
 import { LedgerChatCallHistory } from '@/components/chat/LedgerChatCallHistory';
-import { LedgerChatVoiceNote } from '@/components/chat/LedgerChatVoiceNote';
+import { extensionForRecording, pickRecordingMimeType } from '@/lib/chat/recording';
 import { moderateContent, sanitizeFilename, isAllowedMimeType, checkRateLimit } from '@/lib/utils/contentFilter';
 import { ledgerAnalytics, trackMessageSent, trackCallStarted, trackCallAnswered, trackAttachmentSent, trackFeatureUsed } from '@/lib/utils/ledgerAnalytics';
 import { notificationEngine } from '@/lib/wallet/NotificationEngine';
@@ -3072,14 +3072,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         console.warn('[Voice] Initial getUserMedia failed, trying fallback...', initialErr);
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       }
-      // Proper mimeType detection: Opus/WebM for desktop browsers, AAC/MP4 for Safari/iOS
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-        ? 'audio/webm'
-        : MediaRecorder.isTypeSupported('audio/mp4')
-        ? 'audio/mp4'
-        : '';
+      // One rule for every browser (lib/chat/recording.ts): AAC/MP4 first, which
+      // plays everywhere including older iOS, then Opus/WebM, then plain MP4.
+      const mimeType = pickRecordingMimeType(MediaRecorder.isTypeSupported?.bind(MediaRecorder));
 
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       audioChunksRef.current = [];
@@ -3104,7 +3099,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
         if (audioChunksRef.current.length === 0) return;
 
-        const blob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
+        // The recorder reports what it actually produced (iOS records audio/mp4 even unasked).
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || mimeType || 'audio/mp4' });
         if (blob.size < 400) {
             console.warn('[Voice] Recording too short, ignoring.');
             setRecordingSeconds(0);
@@ -3120,10 +3116,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           // the server heard every voice note and the size limit did not change.
           // The recorder's own mimeType is used: iOS records audio/mp4 even when
           // no type was requested.
-          const recordedType = (recorder.mimeType || mimeType || 'audio/webm').split(';')[0];
-          const ext = recordedType.includes('mp4') || recordedType.includes('m4a') ? 'm4a'
-            : recordedType.includes('aac') ? 'aac'
-            : recordedType.includes('ogg') ? 'ogg' : 'webm';
+          const recordedType = (blob.type || 'audio/mp4').split(';')[0];
+          const ext = extensionForRecording(recordedType);
           const voiceBlob = new Blob(audioChunksRef.current, { type: recordedType });
           const { message: audioMsg } = await prepareAttachmentMessage(voiceBlob, {
             filename: `voice_${Date.now()}.${ext}`,
@@ -7538,6 +7532,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
            isOpen={showWalletTransfer}
            recipientAddress={activePeer}
            defaultToken={(ledgerSettings as any)?.default_token}
+           presetAmount={transferAmount || undefined}
            onClose={() => { setShowWalletTransfer(false); setTransferAmount(''); }}
            onSent={(txHash, amount, token) => {
              const payload = JSON.stringify({ amount, token, txHash, to: activePeer });
@@ -7602,6 +7597,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
        {showAgreementComposer && activePeer && (
          <AgreementComposer
            dmPeerInboxId={activePeerInboxIdRef.current || activePeer}
+           selfInboxId={(client as any)?.inboxId}
            peerName={getDisplayName(activePeer)}
            onClose={() => setShowAgreementComposer(false)}
            onSend={(message: string) => executeSend(message)}
@@ -7634,6 +7630,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             recipientAddress={selectedInvoice?.recipientAddress || activePeer || ''}
             recipientTag={selectedInvoice ? selectedInvoice.recipientTag : (activePeer ? getDisplayName(activePeer) : '')}
             existingInvoice={selectedInvoice || undefined}
+            peerInboxId={activePeerInboxIdRef.current || undefined}
             onClose={() => {
               setShowZkInvoiceModal(false);
               setSelectedInvoice(null);
@@ -7645,7 +7642,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               toast.success('Invoice sent');
             }}
             onInvoicePaid={() => {
-              toast.success('Invoice settled on Aztec');
               setSelectedInvoice(null);
               setShowZkInvoiceModal(false);
             }}

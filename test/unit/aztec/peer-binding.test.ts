@@ -104,3 +104,111 @@ describe('localStoragePeerBindingStore', () => {
     expect(r.status).toBe('conflict');
   });
 });
+
+// ─── G7: signed announcements (version 2) ───────────────────────────────────
+import { createHash } from 'node:crypto';
+import {
+  BINDING_SCHEME,
+  bindingStatement,
+  peerBindingStatus,
+  verifiedAnnouncementFor,
+  verifyAddressProof,
+  type AddressProof,
+  type BindingCrypto,
+} from '@/lib/aztec/peer-binding';
+
+const h = (s: string) => '0x' + createHash('sha256').update(s).digest('hex');
+/** Deterministic stand-in for Schnorr + address derivation: same rules, no WASM. */
+const fakeCrypto: BindingCrypto = {
+  async messageField(statement) {
+    return h(statement);
+  },
+  async verify(msg, pk, sig) {
+    return sig === h(msg + pk.x) + h(msg + pk.y).slice(2);
+  },
+  async accountAddress({ signingPublicKey, salt, publicKeys }) {
+    return h(signingPublicKey.x + signingPublicKey.y + salt + publicKeys);
+  },
+};
+const SIGNER = 'signerinbox01';
+const ME_INBOX = 'myinbox02';
+const PK = { x: h('x'), y: h('y') };
+const SALT = h('salt');
+const KEYS = '0x' + 'ab'.repeat(200);
+const ADDR = h(PK.x + PK.y + SALT + KEYS);
+
+async function proofFor(recipient = ME_INBOX, signer = SIGNER, address = ADDR): Promise<AddressProof> {
+  const msg = await fakeCrypto.messageField(bindingStatement(address, signer, recipient));
+  return {
+    scheme: BINDING_SCHEME,
+    signingPublicKey: PK,
+    salt: SALT,
+    publicKeys: KEYS,
+    signerInboxId: signer,
+    recipientInboxId: recipient,
+    signature: h(msg + PK.x) + h(msg + PK.y).slice(2),
+  };
+}
+
+describe('G7 address proofs', () => {
+  it('signs the exact statement format', () => {
+    expect(bindingStatement('0xABC', 'a', 'b')).toBe('hl/aztec-binding/v1 | 0xabc | a | dm:b');
+  });
+
+  it('pins a verified address, and the status reports it verified', async () => {
+    const store = memoryPeerBindingStore();
+    const body = verifiedAnnouncementFor(ADDR, await proofFor());
+    const r = await recordPeerAnnouncement(store, { senderInboxId: SIGNER, peerInboxId: SIGNER, selfInboxId: ME_INBOX, body }, fakeCrypto);
+    expect(r).toEqual({ status: 'pinned', address: ADDR, verified: true });
+    expect(await peerBindingStatus(store, SIGNER)).toEqual({ address: ADDR, verified: true });
+  });
+
+  it('rejects a proof replayed to someone else, claimed by another sender, or with a bad signature', async () => {
+    const ann = { type: 'hl.aztec_address' as const, version: 2 as const, address: ADDR, proof: await proofFor('someoneelse') };
+    expect(await verifyAddressProof(ann, { senderInboxId: SIGNER, selfInboxId: ME_INBOX }, fakeCrypto)).toEqual({ ok: false, reason: 'the proof was made for someone else (replayed)' });
+    const mine = { ...ann, proof: await proofFor() };
+    expect((await verifyAddressProof(mine, { senderInboxId: 'mallory', selfInboxId: ME_INBOX }, fakeCrypto)).ok).toBe(false);
+    const forged = { ...mine, proof: { ...mine.proof, signature: '0x' + '11'.repeat(64) } };
+    expect(await verifyAddressProof(forged, { senderInboxId: SIGNER, selfInboxId: ME_INBOX }, fakeCrypto)).toEqual({ ok: false, reason: 'the signature does not verify' });
+  });
+
+  it('rejects an address that the keys in the proof do not produce, and never pins it', async () => {
+    const store = memoryPeerBindingStore();
+    const other = h('attacker address');
+    const body = verifiedAnnouncementFor(other, await proofFor(ME_INBOX, SIGNER, other));
+    const r = await recordPeerAnnouncement(store, { senderInboxId: SIGNER, peerInboxId: SIGNER, selfInboxId: ME_INBOX, body }, fakeCrypto);
+    expect(r).toEqual({ status: 'rejected', address: other, reason: 'the keys in the proof do not produce this address' });
+    expect(await peerBindingStatus(store, SIGNER)).toEqual({ verified: false });
+  });
+
+  it('upgrades a trusted pin to verified, keeps v1 pins unverified, and never replaces a pin silently', async () => {
+    const store = memoryPeerBindingStore();
+    await recordPeerAnnouncement(store, { senderInboxId: SIGNER, peerInboxId: SIGNER, body: announcementFor(ADDR) });
+    expect(await peerBindingStatus(store, SIGNER)).toEqual({ address: ADDR, verified: false });
+    const body = verifiedAnnouncementFor(ADDR, await proofFor());
+    expect(await recordPeerAnnouncement(store, { senderInboxId: SIGNER, peerInboxId: SIGNER, selfInboxId: ME_INBOX, body }, fakeCrypto)).toEqual({ status: 'unchanged', address: ADDR, verified: true });
+    expect((await peerBindingStatus(store, SIGNER)).verified).toBe(true);
+
+    const pk2 = { x: h('x2'), y: h('y2') };
+    const addr2 = h(pk2.x + pk2.y + SALT + KEYS);
+    const msg2 = await fakeCrypto.messageField(bindingStatement(addr2, SIGNER, ME_INBOX));
+    const p2: AddressProof = { ...(await proofFor()), signingPublicKey: pk2, signature: h(msg2 + pk2.x) + h(msg2 + pk2.y).slice(2) };
+    const r = await recordPeerAnnouncement(store, { senderInboxId: SIGNER, peerInboxId: SIGNER, selfInboxId: ME_INBOX, body: verifiedAnnouncementFor(addr2, p2) }, fakeCrypto);
+    expect(r.status).toBe('conflict');
+    expect(await peerBindingStatus(store, SIGNER)).toEqual({ address: ADDR, verified: true });
+  });
+
+  it('a repin to another address drops the verified status', async () => {
+    const store = memoryPeerBindingStore();
+    await recordPeerAnnouncement(store, { senderInboxId: SIGNER, peerInboxId: SIGNER, selfInboxId: ME_INBOX, body: verifiedAnnouncementFor(ADDR, await proofFor()) }, fakeCrypto);
+    await repinPeerAztecAddress(store, SIGNER, h('new'));
+    expect((await peerBindingStatus(store, SIGNER)).verified).toBe(false);
+  });
+
+  it('does not pin a signed announcement it cannot check', async () => {
+    const store = memoryPeerBindingStore();
+    const body = verifiedAnnouncementFor(ADDR, await proofFor());
+    expect((await recordPeerAnnouncement(store, { senderInboxId: SIGNER, peerInboxId: SIGNER, body })).status).toBe('ignored');
+    expect(await peerBindingStatus(store, SIGNER)).toEqual({ verified: false });
+  });
+});

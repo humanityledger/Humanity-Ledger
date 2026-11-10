@@ -129,7 +129,7 @@ Pilar = hoy + (100 − hoy) × (peso de tareas "Hecha" ÷ peso total del pilar).
 | D-015 | Respuestas citadas coherentes en DM y grupos (tipo de contenido reply) | `MessageBubble.tsx` | Prueba en ambos tipos de chat | P2 | Pendiente |
 | D-016 | Reacciones como tipo de contenido XMTP, sin PATCH al servidor | `CommunityMessageReactions.tsx` L115 | 0 peticiones al servidor al reaccionar en privado | P1 | Pendiente |
 | D-017 | Adjuntos cifrados en el cliente (remote attachment) en almacenamiento de objetos, máximo 100 MB | nuevo `lib/chat/attachments.ts` | El objeto almacenado no se puede leer sin la clave | P1 | Pendiente |
-| D-018 | Onda real en notas de voz: picos calculados al grabar y enviados con la nota | `CustomAudioPlayer.tsx` L113–116, `LedgerChatVoiceNote.tsx` | Dos notas distintas muestran ondas distintas | P1 | Pendiente |
+| D-018 | Onda real en notas de voz: picos calculados al grabar y enviados con la nota | `CustomAudioPlayer.tsx` L113–116, recorder in `LedgerChatV2.tsx` | Dos notas distintas muestran ondas distintas | P1 | Pendiente |
 | D-019 | Mensajes efímeros con temporizador: borrado local y aviso de caducidad | `BurnTimerSheet.tsx` | El mensaje desaparece en ambos dispositivos al vencer | P2 | Pendiente |
 | D-020 | Búsqueda local de mensajes con índice cifrado en el dispositivo | nuevo `lib/chat/search.ts` | Buscar en 10.000 mensajes en < 200 ms | P2 | Pendiente |
 | D-021 | Historial paginado y virtualizado | `VirtualizedMessageList.tsx` | Memoria estable al hacer scroll por 10.000 mensajes | P1 | Pendiente |

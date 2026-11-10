@@ -98,7 +98,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
     { key: 'keys', label: 'Crypto Keys', icon: <Key size={15} /> },
     { key: 'privacy', label: 'Privacy', icon: <Lock size={15} /> },
     { key: 'streams', label: 'Streams', icon: <Waves size={15} /> },
-    { key: 'bridge', label: 'Bridge', icon: <Layers size={15} /> },
+    { key: 'bridge', label: 'Network fees', icon: <Layers size={15} /> },
     { key: 'sequencer', label: 'Sequencer & V6', icon: <Server size={15} /> },
   ];
 
@@ -478,7 +478,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
               />
             )}
 
-            {/* ─── Bridge Tab ──────────────────────────────────────────────────── */}
+            {/* ─── Network fees: Fee Juice station on Aztec Alpha (ZkBridgePortal) ── */}
             {tab === 'bridge' && (
               <ZkBridgePortal userAddress={userAddress} />
             )}

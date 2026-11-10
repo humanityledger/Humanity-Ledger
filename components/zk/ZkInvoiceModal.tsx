@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText,
@@ -21,10 +21,25 @@ import {
   ZkInvoice,
   CreateInvoiceParams
 } from '@/lib/zk/zkInvoice';
-import { executeShieldedPayment } from '@/lib/zk/zkMoney';
-import { getPrivateWallet } from '@/lib/aztec/wallet/client';
-import type { TokenKey } from '@/lib/aztec/wallet/config';
+import { getPrivateWallet, humanError } from '@/lib/aztec/wallet/client';
+import { AZTEC_WALLET_CONFIG, networkLabel, type TokenKey } from '@/lib/aztec/wallet/config';
+import { localStoragePeerBindingStore, peerBindingStatus } from '@/lib/aztec/peer-binding';
+import { checkPrivateRail, invoicePayee } from '@/lib/payments/rails';
+import { NativeCryptoSendModal } from '@/components/chat/NativeCryptoSendModal';
 import { toast } from 'sonner';
+
+/**
+ * Settling an invoice. The payee is always the invoice's ISSUER
+ * (senderAddress). Two rails, both real:
+ *  - private: Aztec private transfer to the issuer's Aztec address, which must
+ *    have been shared in this DM (peer-binding.ts) and, on Alpha, verified;
+ *  - public: an Ethereum mainnet transfer to the issuer's Ethereum address
+ *    (NativeCryptoSendModal, recorded only once mined).
+ * When the private rail is unavailable or fails (a failed Aztec transaction
+ * moves nothing), the public rail stays one tap away. No simulated payment
+ * and no invented transaction hash: an invoice is marked paid only with a
+ * real receipt.
+ */
 
 interface ZkInvoiceModalProps {
   userAddress: string;
@@ -32,6 +47,8 @@ interface ZkInvoiceModalProps {
   recipientTag?: string;
   recipientAddress?: string;
   existingInvoice?: ZkInvoice;
+  /** XMTP inbox ID of the DM peer (the issuer when paying), to find their pinned Aztec address. */
+  peerInboxId?: string;
   onClose: () => void;
   onInvoiceCreated?: (invoice: ZkInvoice) => void;
   onInvoicePaid?: (invoice: ZkInvoice) => void;
@@ -43,10 +60,34 @@ export function ZkInvoiceModal({
   recipientTag: initialRecipientTag = '',
   recipientAddress: initialRecipientAddress = '',
   existingInvoice,
+  peerInboxId,
   onClose,
   onInvoiceCreated,
   onInvoicePaid,
 }: ZkInvoiceModalProps) {
+  const [payeeAztec, setPayeeAztec] = useState<{ address?: string; verified: boolean }>({ verified: false });
+  const [showPublicRail, setShowPublicRail] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+  const payingRef = useRef(false);
+
+  useEffect(() => {
+    if (!peerInboxId || !existingInvoice) return;
+    peerBindingStatus(localStoragePeerBindingStore(), peerInboxId).then(setPayeeAztec).catch(() => {});
+  }, [peerInboxId, existingInvoice]);
+
+  const payee = existingInvoice ? invoicePayee(existingInvoice, userAddress) : null;
+  const tokenKey = (existingInvoice?.token?.toUpperCase() || 'USDC') as TokenKey;
+  const [walletState, setWalletState] = useState(() => (typeof window === 'undefined' ? null : getPrivateWallet().state));
+  useEffect(() => getPrivateWallet().subscribe(setWalletState), []);
+  const privateRail = checkPrivateRail({
+    walletPhase: walletState?.phase ?? 'idle',
+    payeeAztec: payeeAztec.address,
+    payeeVerified: payeeAztec.verified,
+    selfAztec: walletState?.aztecAddress,
+    tokenConfigured: AZTEC_WALLET_CONFIG.tokens.some((t) => t.key === tokenKey),
+    feePlan: walletState?.feeJuice?.plan,
+    network: AZTEC_WALLET_CONFIG.network,
+  });
   // If viewing/paying existing invoice
   const [isPaying, setIsPaying] = useState(false);
   const [proofStep, setProofStep] = useState('');
@@ -104,59 +145,33 @@ export function ZkInvoiceModal({
     onClose();
   };
 
-  const handlePayInvoice = async () => {
+  const settle = (txHash: string, rail: 'aztec' | 'ethereum') => {
     if (!existingInvoice) return;
+    markInvoicePaid(existingInvoice.id, txHash, '');
+    onInvoicePaid?.({ ...existingInvoice, status: 'paid', settlementTxHash: txHash, settledAt: Date.now() });
+    toast.success(rail === 'aztec' ? `Invoice paid privately on ${networkLabel()}` : 'Invoice paid on Ethereum');
+    onClose();
+  };
+
+  const handlePayInvoice = async () => {
+    if (!existingInvoice || payingRef.current || !privateRail.ok || !payeeAztec.address) return;
+    payingRef.current = true;
     setIsPaying(true);
-
+    setPayError(null);
     try {
-      // 1. Attempt payment through the real Aztec private wallet on Alpha/Testnet
-      const wallet = getPrivateWallet();
-      if (wallet && wallet.state.ready && wallet.state.aztecAddress) {
-        setProofStep('Authorizing through Aztec private wallet…');
-        setProofProgress(30);
-        const tokenKey = (existingInvoice.token?.toLowerCase() || 'usdc') as TokenKey;
-        const target = existingInvoice.recipientAddress || existingInvoice.senderAddress || existingInvoice.senderTag;
-
-        setProofStep('Generating UltraHonk proof on device…');
-        setProofProgress(65);
-        const receipt = await wallet.send(tokenKey, String(existingInvoice.totalAmount), target);
-        const txHash = (receipt as any)?.txHash || (receipt as any)?.id || `0x${Date.now().toString(16)}`;
-
-        setProofStep('Payment confirmed on Aztec');
-        setProofProgress(100);
-        markInvoicePaid(existingInvoice.id, txHash, '');
-        if (onInvoicePaid) {
-          onInvoicePaid({ ...existingInvoice, status: 'paid', settlementTxHash: txHash });
-        }
-        toast.success('Invoice settled on Aztec');
-        onClose();
-        return;
-      }
-
-      // 2. Fallback for demo mode
-      const paymentResult = await executeShieldedPayment(
-        {
-          senderAddress: userAddress || '0x0',
-          recipientTag: existingInvoice.senderTag,
-          amount: existingInvoice.totalAmount,
-          token: existingInvoice.token,
-          memo: `Payment for ${existingInvoice.invoiceNumber}`,
-        },
-        (step, progress) => {
-          setProofStep(step);
-          setProofProgress(progress);
-        }
-      );
-
-      markInvoicePaid(existingInvoice.id, paymentResult.txHash, paymentResult.nullifierHash);
-      if (onInvoicePaid) {
-        onInvoicePaid({ ...existingInvoice, status: 'paid', settlementTxHash: paymentResult.txHash });
-      }
-      onClose();
+      setProofStep('Making the proof on this device. This can take a minute.');
+      setProofProgress(40);
+      const receipt: any = await getPrivateWallet().send(tokenKey, String(existingInvoice.totalAmount), payeeAztec.address);
+      const txHash = receipt?.txHash?.toString?.() ?? '';
+      setProofStep('Payment included on Aztec');
+      setProofProgress(100);
+      settle(txHash, 'aztec');
     } catch (err: any) {
-      console.error('[Invoice] Payment error:', err);
-      toast.error(err?.message || 'Could not complete private payment');
+      // A failed Aztec transaction changes nothing: no funds left the wallet.
+      console.error('[Invoice] private payment failed:', err?.message || err);
+      setPayError(`${humanError(err)} Nothing was sent. You can try again or pay on Ethereum.`);
     } finally {
+      payingRef.current = false;
       setIsPaying(false);
     }
   };
@@ -263,14 +278,52 @@ export function ZkInvoiceModal({
               </div>
             )}
 
-            {existingInvoice.status === 'unpaid' && (
-              <button
-                onClick={handlePayInvoice}
-                disabled={isPaying}
-                className="w-full py-3.5 bg-[#15171c] text-white text-[14px] font-semibold rounded-2xl hover:bg-[#000000] transition flex items-center justify-center gap-2 shadow-sm"
-              >
-                <Shield size={16} /> Settle Privately via Aztec ({existingInvoice.totalAmount} {existingInvoice.token})
-              </button>
+            {existingInvoice.status === 'unpaid' && payee && !payee.ok && (
+              <p className="text-[13px] text-gray-600">{payee.reason}</p>
+            )}
+
+            {existingInvoice.status === 'unpaid' && payee?.ok && (
+              <div className="space-y-2">
+                <button
+                  onClick={handlePayInvoice}
+                  disabled={isPaying || !privateRail.ok}
+                  className="w-full min-h-[44px] py-3.5 bg-[#15171c] text-white text-[14px] font-semibold rounded-2xl hover:bg-[#000000] transition flex items-center justify-center gap-2 shadow-sm disabled:opacity-40"
+                >
+                  <Shield size={16} /> Pay privately on {networkLabel()} ({existingInvoice.totalAmount} {existingInvoice.token})
+                </button>
+                {!privateRail.ok && <p className="text-[12.5px] text-gray-500">{privateRail.reason}</p>}
+                {AZTEC_WALLET_CONFIG.network === 'testnet' && privateRail.ok && (
+                  <p className="text-[12.5px] text-gray-500">The private rail uses Aztec test network tokens, which have no value.</p>
+                )}
+                {payError && <p role="alert" className="text-[13px] text-[#d93036]">{payError}</p>}
+
+                <button
+                  onClick={() => setShowPublicRail(true)}
+                  disabled={isPaying}
+                  className="w-full min-h-[44px] py-3 bg-[#f2f4f7] text-[#15171c] text-[14px] font-semibold rounded-2xl hover:bg-[#e4e7ec] transition flex items-center justify-center gap-2 disabled:opacity-40"
+                >
+                  <CreditCard size={16} /> Pay publicly on Ethereum ({existingInvoice.totalAmount} {existingInvoice.token})
+                </button>
+                <p className="text-[12px] text-gray-500 leading-relaxed">
+                  Ethereum pays the issuer&apos;s address {payee.payee!.slice(0, 8)}…{payee.payee!.slice(-6)} with real {existingInvoice.token}. Anyone can see the amount and both addresses.
+                </p>
+              </div>
+            )}
+
+            {showPublicRail && payee?.ok && (
+              <NativeCryptoSendModal
+                isOpen
+                title={`Pay ${existingInvoice.invoiceNumber}`}
+                recipientAddress={payee.payee!}
+                defaultToken={existingInvoice.token}
+                presetAmount={String(existingInvoice.totalAmount)}
+                lockAmount
+                onClose={() => setShowPublicRail(false)}
+                onSent={(txHash) => {
+                  setShowPublicRail(false);
+                  settle(txHash, 'ethereum');
+                }}
+              />
             )}
           </div>
         ) : (

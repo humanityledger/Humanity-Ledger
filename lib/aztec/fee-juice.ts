@@ -196,6 +196,7 @@ export const FEE_JUICE_PORTAL_ABI = [
 
 export const ERC20_ABI = [
   { type: 'function', name: 'balanceOf', stateMutability: 'view', inputs: [{ name: 'a', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
+  { type: 'function', name: 'decimals', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'uint8' }] },
   {
     type: 'function',
     name: 'allowance',
@@ -221,7 +222,21 @@ export interface L1Clients {
   writeContract: (args: any) => Promise<`0x${string}`>;
   waitForTransactionReceipt: (args: { hash: `0x${string}` }) => Promise<{ status: string; logs: any[]; transactionHash: string }>;
   getLogs?: (args: any) => Promise<any[]>;
+  /** ETH balance of `account` (viem getBalance). Enables the L1 gas check. */
+  getBalance?: (args: { address: `0x${string}` }) => Promise<bigint>;
+  /** viem estimateFeesPerGas. Enables the L1 gas check. */
+  estimateFeesPerGas?: () => Promise<{ maxFeePerGas?: bigint; gasPrice?: bigint }>;
 }
+
+/** Stages of a deposit, for the interface. */
+export type BridgeStep = 'checking' | 'approving' | 'approval-confirming' | 'depositing' | 'deposit-confirming' | 'deposited';
+
+/**
+ * Upper bound on L1 gas for approve + deposit. The deposit itself is sent
+ * with twice its estimate; 60k approve + 2 x 125k deposit covers the Inbox
+ * insert at a subtree boundary with room to spare.
+ */
+export const L1_GAS_BUDGET = 310_000n;
 
 const to32 = (hex: string) => ('0x' + hex.replace(/^0x/, '').toLowerCase().padStart(64, '0')) as `0x${string}`;
 
@@ -234,7 +249,9 @@ const to32 = (hex: string) => ('0x' + hex.replace(/^0x/, '').toLowerCase().padSt
 export async function bridgeFeeJuice(
   l1: L1Clients,
   args: { network: AztecNetworkId; recipient: string; amount: bigint; secretHash: string; secretIndex: number },
+  onStep: (step: BridgeStep, l1TxHash?: string) => void = () => {},
 ): Promise<FeeJuiceClaim> {
+  onStep('checking');
   const pin = pinnedFeeJuice(args.network);
   if (l1.chainId !== pin.l1ChainId) {
     throw new Error(`Switch your wallet to ${AZTEC_NETWORKS[args.network].l1ChainName} to add Fee Juice.`);
@@ -246,10 +263,23 @@ export async function bridgeFeeJuice(
   const balance: bigint = await l1.readContract({ address: token, abi: ERC20_ABI, functionName: 'balanceOf', args: [l1.account] });
   if (balance < args.amount) throw new Error('Your Ethereum wallet does not hold enough AZTEC for this amount.');
 
+  // Refuse before the approval if the wallet cannot also pay for the deposit:
+  // an approval followed by a deposit that runs out of ETH strands nothing,
+  // but it costs gas and confuses people.
+  if (l1.getBalance && l1.estimateFeesPerGas) {
+    const [eth, fees] = await Promise.all([l1.getBalance({ address: l1.account }), l1.estimateFeesPerGas()]);
+    const price = fees.maxFeePerGas ?? fees.gasPrice ?? 0n;
+    if (price > 0n && eth < L1_GAS_BUDGET * price) {
+      throw new Error('Your Ethereum wallet does not hold enough ETH to pay Ethereum gas for the approval and the deposit.');
+    }
+  }
+
   const allowance: bigint = await l1.readContract({ address: token, abi: ERC20_ABI, functionName: 'allowance', args: [l1.account, portal] });
   if (allowance < args.amount) {
     // Exact amount, never an unlimited approval.
+    onStep('approving');
     const h = await l1.writeContract({ address: token, abi: ERC20_ABI, functionName: 'approve', args: [portal, args.amount], account: l1.account });
+    onStep('approval-confirming', h);
     const r = await l1.waitForTransactionReceipt({ hash: h });
     if (r.status !== 'success') throw new Error('The approval failed on Ethereum. Nothing was bridged.');
   }
@@ -261,13 +291,16 @@ export async function bridgeFeeJuice(
     args: [to32(args.recipient), args.amount, to32(args.secretHash)],
     account: l1.account,
   } as const;
+  onStep('depositing');
   const gas = (await l1.estimateContractGas(call)) * 2n;
   const hash = await l1.writeContract({ ...call, gas });
+  onStep('deposit-confirming', hash);
   const receipt = await l1.waitForTransactionReceipt({ hash });
   if (receipt.status !== 'success') throw new Error('The deposit failed on Ethereum. Your AZTEC was not moved.');
 
   const ev = await findDepositEvent(receipt.logs, portal, args.recipient, args.amount, args.secretHash);
   if (!ev) throw new Error('The deposit was mined but its event was not found. Do not bridge again; reload to recover it.');
+  onStep('deposited', hash);
   return {
     recipient: args.recipient.toLowerCase(),
     claimAmount: args.amount.toString(),
@@ -357,5 +390,7 @@ export function l1ClientsFromViem(publicClient: any, walletClient: any): L1Clien
     writeContract: (a) => walletClient.writeContract({ ...a, chain: walletClient.chain }),
     waitForTransactionReceipt: (a) => publicClient.waitForTransactionReceipt(a),
     getLogs: (a) => publicClient.getLogs(a),
+    getBalance: (a) => publicClient.getBalance(a),
+    estimateFeesPerGas: () => publicClient.estimateFeesPerGas(),
   };
 }

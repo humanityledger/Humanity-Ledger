@@ -31,6 +31,7 @@ import { isValidAztecAddress } from '../grumpkin';
 import { parseUnits } from './amounts';
 import { loadLocalActivity, mergeActivity, upsertActivity, type Activity, type ActivityKind } from './history';
 import { assertFeeChoice, identifyNode } from '../fees';
+import { BINDING_SCHEME, bindingStatement, sdkBindingCrypto, verifyAddressProof, type AddressProof } from '../peer-binding';
 import {
   assertNodeFeeJuiceMatchesPins,
   bridgeFeeJuice as bridgeOnL1,
@@ -40,6 +41,7 @@ import {
   nextSecretIndex,
   recoverClaims,
   saveClaims,
+  type BridgeStep,
   type FeeJuiceClaim,
   type FeePlan,
   type L1Clients,
@@ -192,6 +194,9 @@ class PrivateWallet {
   /** Fee Juice claim secrets (Alpha only), derived from the signature at connect. */
   private claimSecrets: bigint[] = [];
   private manager: any = null;
+  /** Schnorr signing key (Fq) and salt (Fr), kept in memory for G7 address proofs only. */
+  private signingKey: any = null;
+  private salt: any = null;
   private claimPoll: ReturnType<typeof setInterval> | null = null;
   private tokens = new Map<TokenKey, any>();
   private faucetAddress: any = null;
@@ -301,6 +306,8 @@ class PrivateWallet {
       );
       this.me = manager.address;
       this.manager = manager;
+      this.signingKey = new Fq(keys.signingKey);
+      this.salt = new Fr(keys.salt);
       this.set({ aztecAddress: this.me.toString() });
 
       this.set({ step: AZTEC_WALLET_CONFIG.network === 'mainnet' ? 'Loading tokens' : 'Loading the test tokens' });
@@ -425,16 +432,16 @@ class PrivateWallet {
    * Juice for this account (Alpha only). Returns once the L1 deposit is mined;
    * the account is created automatically when the deposit reaches Aztec.
    */
-  async bridgeFeeJuice(l1: L1Clients, amount: string) {
+  async bridgeFeeJuice(l1: L1Clients, amount: string | bigint, onStep?: (step: BridgeStep, l1TxHash?: string) => void) {
     if (AZTEC_WALLET_CONFIG.network !== 'mainnet') throw new Error('Fee Juice is only needed on Aztec Alpha. The test network sponsors fees.');
     if (!this.me || !this.sdk) throw new Error('Open your private wallet first.');
-    const units = parseUnits(amount, 18);
+    const units = typeof amount === 'bigint' ? amount : parseUnits(amount, 18);
     const me = this.me.toString();
     const pending = loadClaims(me);
     const index = nextSecretIndex(pending, consumedIndexes(me));
     if (index >= this.claimSecrets.length) throw new Error('Too many unclaimed Fee Juice deposits. Wait for the pending ones to arrive.');
     const secretHash = (await this.sdk.computeSecretHash(new this.sdk.Fr(this.claimSecrets[index]))).toString();
-    const claim = await bridgeOnL1(l1, { network: 'mainnet', recipient: me, amount: units, secretHash, secretIndex: index });
+    const claim = await bridgeOnL1(l1, { network: 'mainnet', recipient: me, amount: units, secretHash, secretIndex: index }, onStep);
     saveClaims(me, mergeClaims(loadClaims(me), [claim]));
     await this.refreshFeeJuice();
     this.pollClaims();
@@ -490,6 +497,44 @@ class PrivateWallet {
   private stopPoll() {
     if (this.claimPoll) clearInterval(this.claimPoll);
     this.claimPoll = null;
+  }
+
+  /* ----------------------------------------------------------- G7 binding */
+
+  /**
+   * Proof that this wallet controls its Aztec address, for one DM: a Schnorr
+   * signature by the account's signing key over the binding statement
+   * (peer-binding.ts). The proof is checked locally before it is returned,
+   * so a derivation mismatch is caught here and never sent.
+   */
+  async aztecAddressProof(signerInboxId: string, recipientInboxId: string): Promise<AddressProof> {
+    if (this.snapshot.phase !== 'ready' || !this.me || !this.signingKey || !this.manager) {
+      throw new Error('Open your private wallet first.');
+    }
+    const [{ Schnorr }, bn] = await Promise.all([import('@aztec-labs/foundation/crypto/schnorr'), import('@aztec-labs/foundation/curves/bn254')]);
+    const Fr = (bn as any).Fr;
+    const crypto = await sdkBindingCrypto();
+    const schnorr = new (Schnorr as any)();
+    const pk = await schnorr.computePublicKey(this.signingKey);
+    const address = this.me.toString().toLowerCase();
+    const msg = Fr.fromHexString(await crypto.messageField(bindingStatement(address, signerInboxId, recipientInboxId)));
+    const sig = await schnorr.constructSignature(msg, this.signingKey);
+    const proof: AddressProof = {
+      scheme: BINDING_SCHEME,
+      signingPublicKey: { x: pk.x.toString(), y: pk.y.toString() },
+      salt: this.salt.toString(),
+      publicKeys: this.manager.getInstance().publicKeys.toString(),
+      signerInboxId,
+      recipientInboxId,
+      signature: sig.toString(),
+    };
+    const check = await verifyAddressProof(
+      { type: 'hl.aztec_address', version: 2, address, proof },
+      { senderInboxId: signerInboxId, selfInboxId: recipientInboxId },
+      crypto,
+    );
+    if (!check.ok) throw new Error(`Could not prove control of your Aztec address: ${check.reason}.`);
+    return proof;
   }
 
   /* --------------------------------------------------------------- reading */
@@ -705,6 +750,8 @@ class PrivateWallet {
     this.stopPoll();
     this.claimSecrets = [];
     this.manager = null;
+    this.signingKey = null;
+    this.salt = null;
     await this.wallet?.stop?.().catch(() => {});
     this.wallet = null;
     this.me = null;

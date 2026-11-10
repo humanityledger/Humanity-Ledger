@@ -92,7 +92,7 @@ The attachment drawer in `components/terminal/LedgerChatV2.tsx` must contain ONL
 *Note: `live location` (which spammed messages via `watchPosition`), `tip`, and `gif` are completely removed from the drawer.*
 
 #### Voice Note Audio Pipeline
-1. **Recording:** `components/chat/LedgerChatVoiceNote.tsx` records via MediaRecorder with dynamic MIME detection (`audio/webm;codecs=opus` on Chromium, `audio/mp4` / `audio/aac` on iOS Safari).
+1. **Recording:** the recorder in `components/terminal/LedgerChatV2.tsx` (MIME choice in `lib/chat/recording.ts`) records via MediaRecorder with dynamic MIME detection (`audio/webm;codecs=opus` on Chromium, `audio/mp4` / `audio/aac` on iOS Safari).
 2. **Transport:** Audio blobs must NOT be embedded directly as huge base64 strings in XMTP (which causes silent drops above 1MB). They must POST to `/api/chat/attachments`, where magic bytes validate against audio signatures, returning a clean payload.
 3. **Playback:** `CustomAudioPlayer.tsx` must await `audio.play()` and catch browser autoplay rejections gracefully without breaking the play/pause state machine.
 

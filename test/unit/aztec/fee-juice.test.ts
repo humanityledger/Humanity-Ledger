@@ -148,6 +148,22 @@ describe('bridgeFeeJuice (L1)', () => {
     expect(calls[1].args.args[0]).toBe(ME);
   });
 
+  it('refuses before any approval when ETH cannot cover Ethereum gas', async () => {
+    const { l1, calls } = fakeL1({
+      getBalance: async () => 10n ** 15n, // 0.001 ETH
+      estimateFeesPerGas: async () => ({ maxFeePerGas: 10n ** 10n }), // 10 gwei -> 0.0031 ETH needed
+    });
+    await expect(bridgeFeeJuice(l1, args)).rejects.toThrow(/enough ETH/);
+    expect(calls.length).toBe(0);
+  });
+
+  it('reports each stage with the Ethereum transaction hash', async () => {
+    const { l1 } = fakeL1();
+    const steps: string[] = [];
+    await expect(bridgeFeeJuice(l1, args, (s) => steps.push(s))).rejects.toThrow(/event was not found/);
+    expect(steps).toEqual(['checking', 'approving', 'approval-confirming', 'depositing', 'deposit-confirming']);
+  });
+
   it('skips the approval when the allowance already covers the amount', async () => {
     const { l1, calls } = fakeL1({ allowance: 10n ** 18n });
     await expect(bridgeFeeJuice(l1, args)).rejects.toThrow(/event was not found/);
