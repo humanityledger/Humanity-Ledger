@@ -20,7 +20,9 @@ export interface KvStoreAdmin {
   deleteStore(name: string): Promise<void>;
 }
 
-export const isWalletStoreName = (n: unknown): n is string => typeof n === 'string' && (n.startsWith('pxe_data') || n.startsWith('wallet_data'));
+export const isWalletStoreName = (n: unknown): n is string =>
+  typeof n === 'string' &&
+  (n.startsWith('pxe_data') || n.startsWith('wallet_data') || n.startsWith('pxe_') || n.startsWith('wallet_'));
 
 /** Deletes every Aztec wallet store; never throws. `failed` lists what is left on the device. */
 export async function wipeLocalAztecStores(kv?: KvStoreAdmin): Promise<{ deleted: string[]; failed: string[] }> {

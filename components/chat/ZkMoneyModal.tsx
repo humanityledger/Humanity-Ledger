@@ -84,11 +84,13 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
   const [token, setToken] = useState<TokenKey>(AZTEC_WALLET_CONFIG.tokens[0]?.key ?? 'USDC');
   const [amount, setAmount] = useState('');
   const [ack, setAck] = useState(NO_ACK);
+  const [confirmedFingerprint, setConfirmedFingerprint] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setAck(NO_ACK); // per payment and per chat, never persisted
+    setConfirmedFingerprint(false);
     setPayee(null);
     let live = true;
     import('@/lib/aztec/peer-binding')
@@ -100,7 +102,7 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
     };
   }, [dmPeerInboxId, selfInboxId]);
 
-  const blocked = !payee?.address || (ALPHA && (!payee.verified || !acked(ack)));
+  const blocked = !payee?.address || !confirmedFingerprint || (ALPHA && (!payee.verified || !acked(ack)));
   const once = useRef(singleFlight()).current; // 4.19: a double tap never pays twice
   const send = () => once(async () => {
     if (busy || blocked) return;
@@ -121,6 +123,8 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
 
   const field = 'w-full h-11 rounded-xl border border-[#e4e7ec] px-3 text-[16px] text-[#15171c] bg-white';
   const who = peerName || 'This person';
+  const fingerprint = payee?.address ? `${payee.address.slice(2, 6).toUpperCase()}-${payee.address.slice(-4).toUpperCase()}` : null;
+
   return (
     <div className="h-full overflow-y-auto overscroll-contain bg-white p-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] space-y-4" role="dialog" aria-label="Private payment">
       <h2 className="text-[17px] font-semibold text-[#15171c]">Private payment</h2>
@@ -129,8 +133,43 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
           ? 'Checking the saved address…'
           : !payee.address
             ? `${who} has not shared an Aztec address in this chat yet.`
-            : `To ${who}: ${payee.address.slice(0, 10)}…${payee.address.slice(-4)} ${payee.verified ? '(verified)' : ALPHA ? '(not verified: ask them to share it again from an up-to-date Ledger Chat)' : '(not verified)'}`}
+            : `To ${who}:`}
       </p>
+
+      {payee?.address && (
+        <div className="rounded-xl border border-[#e4e7ec] bg-[#f9fafb] p-3 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] font-medium text-[#4a505c]">Recipient Aztec Address</span>
+            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${payee.verified ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+              {payee.verified ? '✓ Schnorr Verified (G7)' : ALPHA ? '⚠ Verification required on Alpha' : 'Unverified (Testnet)'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between font-mono text-[11px] text-[#15171c] bg-white border border-[#e4e7ec] rounded-lg px-2.5 py-1.5">
+            <span className="truncate mr-2">{payee.address.slice(0, 14)}…{payee.address.slice(-10)}</span>
+            {fingerprint && (
+              <span className="font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-800 flex-shrink-0" title="Cryptographic Address Fingerprint">
+                FP: {fingerprint}
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-[#727a88] leading-tight">
+            Verification confirms control of the signing key. For large amounts, always confirm this fingerprint directly with {who}.
+          </p>
+          <label className="flex items-start gap-2 pt-1 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="mt-0.5 rounded border-gray-300 text-black focus:ring-black"
+              checked={confirmedFingerprint}
+              onChange={(e) => setConfirmedFingerprint(e.target.checked)}
+              disabled={busy}
+            />
+            <span className="text-[11.5px] text-[#4a505c]">
+              I confirm the recipient fingerprint ({fingerprint}) matches {who}
+            </span>
+          </label>
+        </div>
+      )}
+
       <label className="block text-[13px] text-[#4a505c]">
         Token
         <select className={`${field} mt-1`} value={token} disabled={busy} onChange={(e) => setToken(e.target.value as TokenKey)}>
