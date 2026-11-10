@@ -475,26 +475,76 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
         </div>
       </div>
 
-      {/* ── MOBILE TAB BAR (3 primary tabs only — Pure Typography) ───────────── */}
-      <div className="relative sm:hidden flex items-center border-b border-black/5 bg-white shrink-0">
-        {(['posts', 'chat', 'apps'] as const).map(tab => (
+      {/* ── AZTEC LABS SOBER NAVIGATION STRIP (All Core Features Directly Accessible) ── */}
+      <div className="flex items-center gap-1 overflow-x-auto px-4 py-2 bg-[#fcfdfe] border-b border-[#e4e7ec] scrollbar-none shrink-0 select-none">
+        <button
+          type="button"
+          onClick={() => setActiveTab('posts')}
+          className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors shrink-0 ${
+            activeTab === 'posts' ? 'bg-[#15171c] text-white shadow-sm' : 'text-[#475061] hover:bg-[#f2f4f7]'
+          }`}
+        >
+          Posts
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('chat')}
+          className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors shrink-0 ${
+            activeTab === 'chat' ? 'bg-[#15171c] text-white shadow-sm' : 'text-[#475061] hover:bg-[#f2f4f7]'
+          }`}
+        >
+          Chat & Channels
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowMembersPanel(true)}
+          className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-[#475061] hover:bg-[#f2f4f7] transition-colors shrink-0"
+        >
+          View Members
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowSearchPanel(true)}
+          className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-[#475061] hover:bg-[#f2f4f7] transition-colors shrink-0"
+        >
+          Search Messages
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowPinnedPanel(true)}
+          className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-[#475061] hover:bg-[#f2f4f7] transition-colors shrink-0"
+        >
+          Pinned Messages
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('governance')}
+          className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors shrink-0 ${
+            activeTab === 'governance' ? 'bg-[#15171c] text-white shadow-sm' : 'text-[#475061] hover:bg-[#f2f4f7]'
+          }`}
+        >
+          Governance
+        </button>
+        {isAdmin && (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 flex flex-col items-center justify-center py-3 px-2 transition-colors ${
-              activeTab === tab ? 'text-[#15171c] font-semibold' : 'text-black/35 font-medium'
+            type="button"
+            onClick={() => setActiveTab('analytics')}
+            className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors shrink-0 ${
+              activeTab === 'analytics' ? 'bg-[#15171c] text-white shadow-sm' : 'text-[#475061] hover:bg-[#f2f4f7]'
             }`}
           >
-            <span className="text-[13px] capitalize">{tab}</span>
-            {activeTab === tab && (
-              <span className="absolute bottom-0 w-8 h-[2px] bg-[#15171c] rounded-full" />
-            )}
+            Analytics
           </button>
-        ))}
-        {/* Advanced tab indicator strip — shown when on treasury/gov/analytics/settings */}
-        {['treasury','governance','analytics','settings'].includes(activeTab) && (
-          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black/10 rounded-full" />
         )}
+        <button
+          type="button"
+          onClick={() => setActiveTab('settings')}
+          className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors shrink-0 ${
+            activeTab === 'settings' ? 'bg-[#15171c] text-white shadow-sm' : 'text-[#475061] hover:bg-[#f2f4f7]'
+          }`}
+        >
+          Community Settings
+        </button>
       </div>
 
       {/* ── MAIN CONTENT ───────────────────────────────────────────────────── */}
