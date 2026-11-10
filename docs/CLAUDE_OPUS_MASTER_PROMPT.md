@@ -24,6 +24,9 @@ Before writing code or architecting changes, you must understand the exact curre
    - **Critical Truth:** In `lib/zk/zkMoney.ts` (line 565), `executeShieldedPayment()` requires `process.env.NEXT_PUBLIC_ZK_MODE === 'demo'`. It simulates transaction hashes using `randomHex(32)` and updates local state.
    - In `lib/zk/aztecPxe.ts`, key derivation (Grumpkin/BN254) and SMT-32 nullifier verification are calculated locally via `@noble/hashes` (SHA256) rather than executing real WASM Barretenberg constraint systems against an active Aztec Sequencer node.
    - **Protocol Context:** Legacy `zk.money` (Aztec Connect) was sunset in March 2023. Aztec Labs is developing the generalized **Aztec Network** using **Noir smart contracts** and client-side **PXE (Private eXecution Environment)**. Aztec Network is currently in Alpha Testnet/Devnet.
+5. **Hardware Mockups on `/connect` & Landing Page (NEEDS WORLD-CLASS OVERHAUL):**
+   - The landing page and `/connect` page use hybrid CSS/raster mockups (`components/landing/v2/PhoneShowcase.tsx` and `ConnectView.tsx`). The user has flagged that previous images were poorly framed, cropped, and inconsistent.
+   - The iPhone representations must surpass `signal.org` in aesthetic and technical perfection: pure vector titanium bezels, Dynamic Island, photorealistic glass shaders, and dynamic, interactive UI rendering of real Ledger Chat messages, invoices, and call states.
 
 ---
 
@@ -37,8 +40,8 @@ flowchart TD
     A --> C["2. Aztec Brand System & Docs (/docs/brand)"]
     A --> D["3. Chat Feature Hardening (+ Menu & Audio)"]
     A --> E["4. Communities Resilience & Sober UI"]
-    A --> F["5. iPhone Signal-Surpassing Presentation"]
-    A --> G["6. Aztec Real Node Integration (zk.money Parity)"]
+    A --> F["5. Abyssal iPhone Mockups (/connect & Landing)"]
+    A --> G["6. 100% Native Mainnet Aztec (Eliminate Testnet/Mock)"]
 ```
 
 ---
@@ -120,61 +123,85 @@ In `components/chat/CommunityView.tsx`, the horizontal navigation strip exposes:
 
 ---
 
-### Pillar 5: Signal-Surpassing iPhone Presentation
+### Pillar 5: iPhone Showcase Overhaul (`/connect` & Landing Page — Surpassing Signal)
 
-In `components/landing/v2/PhoneShowcase.tsx` and `PhoneShowcase.module.css`:
-1. Use pure CSS hardware frames (`.iphoneFrame` with 54px corner radius, titanium bezels, and responsive diagonal scroll matrix) instead of fragile external photographs.
-2. Render interactive, live vector components inside the frame:
-   - Dynamic Island aperture with pulsing connection indicator.
-   - Shielded Aztec invoice split cards (`ZkInvoiceBubble`).
-   - WebRTC encrypted voice and video call states.
-   - Multi-channel community feeds.
+#### The Problem
+The user highlighted that current photos and mockups on `/connect` and the landing page are visually defective, poorly proportioned, and undermine protocol credibility. Signal (`signal.org`) is the industry benchmark for hardware presentation. We must exceed Signal's standard with mathematically flawless vector frames.
+
+#### Technical Specifications for Mockups
+1. **Hardware Frame Engineering (`PhoneShowcase.module.css` & `PhoneShowcase.tsx`):**
+   - **Titanium Bezel:** Pure CSS/SVG device body modeled after iPhone 15 Pro / 16 Pro dimensions (390px $\times$ 844px at 1x base; 430px $\times$ 932px Pro Max).
+   - **Corner Radius:** Mathematically continuous superellipse corners (`border-radius: 54px`), avoiding harsh CSS box corners.
+   - **Dynamic Island:** Integrated pill container (120px $\times$ 34px) with camera lens refraction, FaceID sensor dot, and active status animations (e.g. green privacy dot when encrypted calls are active, lock icon for MLS sessions).
+   - **Glass Specular Shader:** Multi-stop CSS linear and radial gradients simulating studio softbox lighting across the display glass with a high-end ambient drop shadow:
+     ```css
+     box-shadow: 
+       0 0 0 1px rgba(255, 255, 255, 0.15) inset,
+       0 20px 40px -15px rgba(0, 0, 0, 0.4),
+       0 40px 100px -20px rgba(82, 0, 255, 0.12); /* Subtle Aztec Violet halo */
+     ```
+2. **Live Screen Content Inside the Mockup:**
+   - **On `/connect` (`ConnectView.tsx` - `LivePhone`):** Show the real Ledger Chat conversation view with an active Aztec Shielded Invoice (`ZkInvoiceBubble`), verified cryptographic tag (`zk:alice`), MLS end-to-end encryption pill, and native message bubbles in pristine light/dark themes.
+   - **On Landing Page (`PhoneShowcase.tsx`):** Scroll-driven stage presenting 4 interactive screens:
+     1. *Direct Messages:* Encrypted MLS conversation with private invoice settlement.
+     2. *Voice Calls:* WebRTC call interface with noise suppression and DTLS-SRTP encryption badge.
+     3. *Video Calls:* Encrypted face-to-face stream with IP-shielding relay notice.
+     4. *Communities:* Multi-channel sovereign discussion space with token governance.
 
 ---
 
-### Pillar 6: Aztec Testnet-to-Mainnet Migration Roadmap (zk.money Parity)
+### Pillar 6: Aztec Testnet-to-Mainnet Migration Roadmap (Zero Mock, 100% Native zk.money Parity)
 
-To graduate from local simulation to true on-chain Aztec Network integration:
+#### The Goal
+Completely eradicate `NEXT_PUBLIC_ZK_MODE === 'demo'`, simulated `randomHex(32)` transaction hashes, and fake client-side balance states. Move to real on-chain zero-knowledge execution on the Aztec Network.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as User (Safari/Chrome)
+    actor User as User (Safari/Chrome Mobile)
     participant Client as Ledger Chat Client
-    participant PXE as Aztec PXE (Web Worker)
+    participant Worker as Web Worker (PXE + bb.js WASM)
     participant AC as Aztec Account Contract (Schnorr/ECDSA)
-    participant Token as Aztec Noir Token Contract
-    participant Sequencer as Aztec Sequencer / Node
+    participant Token as Noir Token Contract (Aztec L2)
+    participant Sequencer as Aztec Sequencer Node (Rollup)
+    participant L1Portal as Ethereum L1 Portal (Sepolia/Mainnet)
 
-    User->>Client: Send 100 USDC to zk:alice
-    Client->>PXE: Request Private Transfer
-    PXE->>AC: Authenticate via Ethereum Wallet Signature
-    PXE->>Token: transfer_private(from, to, amount)
-    PXE->>PXE: Generate UltraHonk Proof (WASM Barretenberg)
-    PXE->>Sequencer: Submit Tx with Proof + Encrypted Logs + Nullifier
-    Sequencer-->>Client: Tx Effect Confirmed on Rollup Block
-    Client-->>User: Shielded Payment Settled (AztecScan verified)
+    Note over User,L1Portal: Step 1: Shield L1 Funds (zk.money Deposit)
+    User->>L1Portal: Deposit 100 USDC into L1 Portal
+    L1Portal-->>Sequencer: Cross-chain deposit message consumed in rollup block
+    Sequencer-->>Worker: Mint private note commitment for User's Aztec Address
+
+    Note over User,L1Portal: Step 2: Native Shielded Transfer in Ledger Chat
+    User->>Client: Send 50 USDC to zk:marcus in chat
+    Client->>Worker: executeShieldedPayment({ recipient: 'zk:marcus', amount: 50, token: 'USDC' })
+    Worker->>AC: Authenticate transfer using Ethereum wallet signature
+    Worker->>Token: transfer_private(from_notes, to_address, 50)
+    Worker->>Worker: Generate UltraHonk Proof via Barretenberg WASM (in background thread)
+    Worker->>Sequencer: Send Tx (Proof + Encrypted Logs + Nullifier Hash)
+    Sequencer-->>Client: Tx Effect confirmed in Block #N (AztecScan verified)
+    Client-->>User: Display settled Shielded Payment Receipt in Chat Bubble
 ```
 
-#### Step-by-Step Implementation Checklist
-1. **Replace Mock Prover:**
-   - Migrate `lib/zk/zkMoney.ts` from `randomHex` mock transactions to `@aztec-labs/aztec.js` (or `@aztec/aztec.js`).
-   - Connect client to Aztec RPC node (`NEXT_PUBLIC_AZTEC_NODE_URL`).
-2. **Browser PXE Initialization:**
-   - Run Aztec PXE in a dedicated Web Worker using `@aztec/bb.js` and Barretenberg WASM so proof computation does not block the UI thread.
-   - Store private note commitments in IndexedDB via Aztec's persistent key-value store.
-3. **Noir Contract Deployment:**
-   - Deploy standard Noir `TokenContract` on Aztec Testnet.
-   - Expose methods: `transfer_private`, `shield`, `unshield`, and `batch_transfer`.
-4. **Account Abstraction:**
-   - Derive Aztec accounts using the user's Ethereum wallet via `EcdsaAccountContract` or `SchnorrAccountContract`.
-5. **Cross-Chain Portal:**
-   - Deploy L1 Portal contract on Ethereum Sepolia/Mainnet to bridge real USDC into Aztec shielded notes.
+#### Technical Mainnet Requirements
+1. **Real Aztec PXE in Client Web Worker:**
+   - Initialize `@aztec-labs/aztec.js` (or `@aztec/aztec.js` v0.x) inside a dedicated Web Worker (`lib/zk/prover.worker.ts`) to prevent freezing the UI on mobile during proof generation.
+   - Load the Barretenberg WASM binary (`@aztec/bb.js`) with multi-threading (SIMD enabled).
+2. **True Account Abstraction (EIP-712 Signing):**
+   - Implement `EcdsaAccountContract` or `SchnorrAccountContract` where the user's Aztec spending keys are deterministically derived from an EIP-712 signature of the user's primary Ethereum wallet (`window.ethereum` or WalletConnect session).
+   - Zero seed phrases to remember; the Ethereum wallet remains the single sovereign key.
+3. **Noir Smart Contracts Deployment:**
+   - Compile and deploy the canonical Noir `TokenContract` on Aztec Testnet/Mainnet with private balances stored in encrypted UTXO note trees.
+   - Implement native escrow and streaming contracts in Noir for `AgreementComposer`.
+4. **Gasless Fee Shielding (Paymaster / Fee Juice):**
+   - Integrate Aztec Paymasters so users sending private USDC do not need public Aztec gas tokens. Fees are paid directly from the shielded token balance via fee-paying circuits.
+5. **L1 $\leftrightarrow$ L2 Portal Integration:**
+   - Connect `executeShieldDeposit()` to an Ethereum smart contract portal that locks ERC-20 USDC and deposits note commitments into the Aztec Rollup.
 
 ---
 
 ## 4. STRICT OPERATIONAL RULES FOR CLAUDE OPUS
 
 1. **Maintain Cryptographic Integrity:** Never bypass authentication checks, never introduce Web2 email/password credentials, and never store unencrypted messages or private keys on servers.
-2. **Preserve Comments & Type Safety:** Retain existing security comments, invariant explanations, and TypeScript types.
-3. **Mobile First:** Ensure all touch targets adhere to Apple HIG (44pt minimum) and viewport safe-area insets (`env(safe-area-inset-bottom)`) are respected.
+2. **Zero Mock Acceptance:** Reject fake simulated proofs. If a real Aztec RPC node is unreachable, the UI must display a clear, informative sovereign network status rather than fabricating random hex hashes.
+3. **Preserve Comments & Type Safety:** Retain existing security comments, invariant explanations, and TypeScript types across all files.
+4. **Mobile First:** Ensure all touch targets adhere to Apple HIG (44pt minimum) and viewport safe-area insets (`env(safe-area-inset-bottom)`) are respected on iOS Safari and Android Chrome.
