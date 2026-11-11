@@ -39,6 +39,22 @@ own wallet; no private key is ever typed into a terminal or sent to anyone.
    explorer link; a payment not confirmed in time stays *pending* — check before sending again.
 5. **Record it** in `docs/MAINNET_READINESS.md` (G2, G6, G7: first real run).
 
+## If the private wallet does not open
+
+- **"Waiting for your wallet signature" that never ends.** The wallet extension never answered.
+  Keep one wallet extension enabled for the site, open the wallet again and press *Sign* in the
+  popup. After two minutes the app stops waiting and says so.
+- **"Open in another Ledger Chat tab or window".** One browser profile has one open private
+  wallet. Opening it in a new tab now asks the other tab to close it (like *Use here* in WhatsApp
+  Web); a tab in the middle of a payment keeps it until the payment ends. A failed open no longer
+  keeps the storage locked, and a page left in the back/forward cache closes its wallet.
+- **"Could not reach …" / Safari "Load failed".** The browser could not reach the public Aztec
+  node (rate limit of the free endpoint, an extension or network blocking its host). The wallet
+  then retries the same request through this site's relay, `/api/aztec/node` (signed-in sessions
+  only; public `aztec_` node methods only; same pinned node; node identity still checked). The
+  relay is used only after a direct failure. `AZTEC_NODE_RELAY=off` turns it off on the server,
+  `AZTEC_NODE_RELAY_UPSTREAMS` (comma-separated, server only) sets the nodes it forwards to.
+
 ## Stop switch
 
 Set `AZTEC_VALUE_MODE=exits-only` on the Railway service to pause new payments at once without

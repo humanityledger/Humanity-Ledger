@@ -358,9 +358,12 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     if (!isDev || !isLocalhost) {
       if (!pathname.startsWith('/api/auth/session')) {
         earlySession = await extractSessionAddress(req);
+        // The private wallet's node relay (fallback route, app/api/aztec/node) syncs in bursts:
+        // its own bucket, so a sync never starves the chat's requests or the other way round.
+        const relay = pathname === '/api/aztec/node';
         const rateLimitRes = earlySession
-          ? applyRateLimit('u:' + earlySession, 600)
-          : applyRateLimit('ip:' + clientIp, 150);
+          ? applyRateLimit((relay ? 'relay:' : 'u:') + earlySession, relay ? 1200 : 600)
+          : applyRateLimit((relay ? 'relay-ip:' : 'ip:') + clientIp, relay ? 60 : 150);
         if (rateLimitRes) return rateLimitRes;
       }
     }

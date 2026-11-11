@@ -14,6 +14,9 @@ import {
   VideoOff,
 } from 'lucide-react';
 import s from './CallScreens.module.css';
+import { formatCallDuration } from '@/lib/calls/format';
+
+export { formatCallDuration };
 
 /**
  * Call screens for Ledger Chat.
@@ -180,37 +183,100 @@ export function OutgoingCallScreen({
 }
 
 /** The light background of an audio call in progress. */
+/**
+ * The call's running time. It ticks on its own, so the chat around it does not re-render every
+ * second during a call (it used to: the whole chat, once a second, for the length of the call).
+ */
+export function CallClock({ startedAt }: { startedAt: number | null }) {
+  const [, tick] = React.useState(0);
+  React.useEffect(() => {
+    if (!startedAt) return;
+    const id = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [startedAt]);
+  return <>{formatCallDuration(startedAt ? (Date.now() - startedAt) / 1000 : 0)}</>;
+}
+
+/**
+ * Moves an element with the loudness of a stream: ~12 updates a second, written straight to the
+ * element's style (no React state, so nothing re-renders), and the analyser is never connected to
+ * the speakers (the <audio> element plays the voice).
+ */
+function useVoicePulse(stream: MediaStream | null | undefined, active: boolean, target: React.RefObject<HTMLElement | null>) {
+  React.useEffect(() => {
+    const el = target.current;
+    if (!active || !stream || !el || !stream.getAudioTracks().length) return;
+    const Ctx: typeof AudioContext | undefined = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!Ctx) return;
+    let ctx: AudioContext | null = null;
+    let id: ReturnType<typeof setInterval> | null = null;
+    try {
+      ctx = new Ctx({ latencyHint: 'interactive' });
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 64;
+      analyser.smoothingTimeConstant = 0.6;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      let last = -1;
+      id = setInterval(() => {
+        if (document.visibilityState === 'hidden') return;
+        analyser.getByteFrequencyData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) sum += data[i];
+        const level = Math.round(Math.min(sum / data.length, 60) / 6); // 0..10
+        if (level === last) return;
+        last = level;
+        el.style.transform = `scale(${1 + level / 100})`;
+      }, 80);
+    } catch {
+      /* no analyser on this browser: no pulse */
+    }
+    return () => {
+      if (id) clearInterval(id);
+      el.style.transform = '';
+      ctx?.close().catch(() => {});
+    };
+  }, [stream, active, target]);
+}
+
 export function AudioCallStage({
   peerName,
   peerAddress,
   photo,
   connected,
+  startedAt = null,
   durationLabel,
   poorConnection,
-  audioLevel = 0,
+  levelStream,
 }: {
   peerName: string;
   peerAddress?: string | null;
   photo?: string | null;
   connected: boolean;
-  durationLabel: string;
+  /** When the call was answered; shows a running clock. */
+  startedAt?: number | null;
+  /** Fixed label instead of the clock. */
+  durationLabel?: string;
   poorConnection?: boolean;
-  audioLevel?: number;
+  /** The other person's stream, for the voice pulse. */
+  levelStream?: MediaStream | null;
 }) {
-  // A gentle pulse with the other person's voice, capped so it never jumps.
-  const scale = connected ? 1 + Math.min(audioLevel, 60) / 600 : 1;
+  const pulse = React.useRef<HTMLDivElement>(null);
+  useVoicePulse(levelStream, connected, pulse);
   return (
     <div className={`${s.stage} ${connected ? s.still : ''}`}>
       <div className={s.avatarWrap}>
         <span className={s.ring} />
         <span className={s.ring} />
-        <CallAvatar name={peerName} address={peerAddress} photo={photo} scale={scale} />
+        <div ref={pulse} style={{ transition: 'transform 90ms linear', willChange: 'transform' }}>
+          <CallAvatar name={peerName} address={peerAddress} photo={photo} />
+        </div>
       </div>
       <div>
         <p className={s.name}>{peerName}</p>
         <p className={`${s.status} ${poorConnection ? s.statusWarn : ''}`} role="status">
           <span className={`${s.dot} ${connected ? (poorConnection ? s.dotWarn : s.dotLive) : ''}`} aria-hidden="true" />
-          {!connected ? 'Connecting' : poorConnection ? 'Weak connection' : durationLabel}
+          {!connected ? 'Connecting' : poorConnection ? 'Weak connection' : durationLabel ?? <CallClock startedAt={startedAt} />}
         </p>
       </div>
     </div>
@@ -247,7 +313,7 @@ export function CallControls({
           <SwitchCamera size={21} strokeWidth={1.9} />
         </button>
       )}
-      {isVideo && onScreenShare && (
+      {onScreenShare && (
         <button
           type="button"
           className={`${s.control} ${screenSharing ? s.controlOn : ''}`}
