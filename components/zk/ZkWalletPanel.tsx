@@ -348,6 +348,10 @@ function Gate(props: {
           of your private wallet in this browser; we never receive them.
         </p>
         <p className="mt-2">
+          Some wallets show &ldquo;simulation failed&rdquo; for this message. That is expected: it is a signature, not a
+          transaction, so there is nothing to simulate. Check that the site is ledgerchat.org and the message names Humanity Ledger.
+        </p>
+        <p className="mt-2">
           {ALPHA
             ? `The first time, your private account is also created on ${networkLabel()}, paid with Fee Juice you bridge from your Ethereum wallet. That takes about a minute once the Fee Juice arrives.`
             : 'The first time, your private account is also created on the Aztec test network. That takes about a minute.'}

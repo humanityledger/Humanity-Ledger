@@ -666,7 +666,9 @@ export function TuringShieldGate({
 
   // Pre-mount / SSR: render a neutral loading screen matching the PIN gate style.
   // Avoids hydration mismatches (server and client initial render match 1:1) and prevents blank white flash.
-  if (!mounted) {
+  // With the PIN screen off (lib/auth/pin-lock.ts) the same neutral screen stays until the session check
+  // clears the gate: the PIN pad must never appear, not even for the moment the check takes.
+  if (!mounted || (!cleared && !settingPin && !pinLockEnabled())) {
     return (
       <div
         className="fixed inset-0 z-[99999] flex items-center justify-center"
