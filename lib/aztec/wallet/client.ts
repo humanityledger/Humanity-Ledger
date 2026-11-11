@@ -865,6 +865,8 @@ export function humanError(err: any): string {
   if (/user (rejected|denied)|rejected the request|denied message signature/i.test(msg)) return 'You declined the signature in your wallet.';
   if (msg === EXITS_ONLY_MESSAGE || msg === VALUE_MODE_UNCONFIRMED_MESSAGE) return msg;
   // Encrypted store (lib/aztec/wallet/store.ts): the wallet did not open; nothing was read or sent.
+  // Each store holds an origin-wide lock on its OPFS pool while open: another tab or window has this wallet open.
+  if (/SqlitePoolBusyError|is already in use by another store instance/i.test(msg)) return 'Your private wallet is already open in another Ledger Chat tab or window. Close it there, then open the wallet here again. Nothing was sent.';
   if (/decrypt_failed|cannot decode page 1/i.test(msg)) return "This browser's private wallet data could not be decrypted with this wallet's key. Nothing was sent. Remove private wallet data in Settings, then open the wallet again.";
   if (/\[ENCRYPTED STORE ERROR\]/.test(msg)) return msg.replace(/^.*\[ENCRYPTED STORE ERROR\]\s*/, '').replace(/^Failed to open encrypted stores:\s*/, 'The encrypted wallet storage could not be opened: ');
   // Fee Juice first: "insufficient fee payer balance" would otherwise read as a token balance problem.
