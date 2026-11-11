@@ -6,6 +6,7 @@
  * (MetaMask, Trust Wallet, Rainbow, Coinbase Wallet, Zerion, Phantom, OKX, Bitget, etc.)
  * and handles app redirection and wake reconnection.
  */
+import { safeNativeWalletLink } from '@/lib/auth/wallet-links';
 
 export interface MobileWalletInfo {
   name: string;
@@ -150,8 +151,10 @@ export function detectConnectedMobileWallet(connectorName?: string): MobileWalle
 export function openMobileWalletApp(connectorName?: string): void {
   if (typeof window === 'undefined') return;
   const { deepLink } = detectConnectedMobileWallet(connectorName);
+  // The peer's redirect comes from the wallet's own session metadata: only an app scheme is followed.
+  const href = safeNativeWalletLink(deepLink) ?? 'metamask://';
   try {
-    window.location.href = deepLink;
+    window.location.href = href;
   } catch (err) {
     console.warn('[MobileWallet] Failed to open deep link:', err);
   }
