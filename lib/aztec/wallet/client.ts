@@ -32,6 +32,7 @@ import { parseUnits } from './amounts';
 import { loadLocalActivity, mergeActivity, upsertActivity, type Activity, type ActivityKind } from './history';
 import { assertFeeChoice, identifyNode } from '../fees';
 import { valueActionsRunning } from '../single-flight';
+import { assertNewValueAllowed, EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '../value-mode';
 import { BINDING_SCHEME, bindingStatement, sdkBindingCrypto, verifyAddressProof, type AddressProof } from '../peer-binding';
 import {
   assertNodeFeeJuiceMatchesPins,
@@ -638,7 +639,8 @@ class PrivateWallet {
   /* --------------------------------------------------------------- actions */
 
   /** Moves tokens from the public balance into private notes. */
-  shield(key: TokenKey, amount: string) {
+  async shield(key: TokenKey, amount: string) {
+    await assertNewValueAllowed();
     const units = parseUnits(amount, tokenConfig(key).decimals);
     return this.run('shield', key, units, undefined, (c) => c.methods.transfer_to_private(this.me, units));
   }
@@ -647,11 +649,14 @@ class PrivateWallet {
   async unshield(key: TokenKey, amount: string, to?: string) {
     const units = parseUnits(amount, tokenConfig(key).decimals);
     const target = to ? await this.validAddress(to) : this.me;
+    // To your own public balance is an exit; to anyone else it is a payment.
+    if (!(target.equals?.(this.me) ?? target === this.me)) await assertNewValueAllowed();
     return this.run('unshield', key, units, to?.toLowerCase(), (c) => c.methods.transfer_to_public(this.me, target, units, 0));
   }
 
   /** Sends a private payment. Only the recipient can see the amount and the sender. */
   async send(key: TokenKey, amount: string, to: string) {
+    await assertNewValueAllowed();
     const units = parseUnits(amount, tokenConfig(key).decimals);
     const target = await this.validAddress(to);
     if (target.equals?.(this.me)) throw new Error('That is your own address.');
@@ -854,6 +859,7 @@ function unwrap(sim: any): bigint | number | string {
 export function humanError(err: any): string {
   const msg = String(err?.shortMessage || err?.message || err || 'Unknown error');
   if (/user (rejected|denied)|rejected the request|denied message signature/i.test(msg)) return 'You declined the signature in your wallet.';
+  if (msg === EXITS_ONLY_MESSAGE || msg === VALUE_MODE_UNCONFIRMED_MESSAGE) return msg;
   // Encrypted store (lib/aztec/wallet/store.ts): the wallet did not open; nothing was read or sent.
   if (/decrypt_failed|cannot decode page 1/i.test(msg)) return "This browser's private wallet data could not be decrypted with this wallet's key. Nothing was sent. Remove private wallet data in Settings, then open the wallet again.";
   if (/\[ENCRYPTED STORE ERROR\]/.test(msg)) return msg.replace(/^.*\[ENCRYPTED STORE ERROR\]\s*/, '').replace(/^Failed to open encrypted stores:\s*/, 'The encrypted wallet storage could not be opened: ');

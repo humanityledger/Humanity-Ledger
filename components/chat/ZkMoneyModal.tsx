@@ -22,6 +22,8 @@ import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
 import { ProvingStatus } from './ProvingStatus';
 import { useAddressFingerprint } from './useAddressFingerprint';
+import { useValueMode } from '@/lib/aztec/useValueMode';
+import { EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '@/lib/aztec/value-mode';
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 
@@ -107,7 +109,9 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
   }, [dmPeerInboxId, selfInboxId]);
 
   // G7 on every network; the fingerprint check is an extra out-of-band confirmation, never a substitute.
-  const blocked = !payee?.address || !payee.verified || !fingerprint || !confirmedFingerprint || (ALPHA && !acked(ack));
+  const valueMode = useValueMode();
+  const paused = valueMode && valueMode.mode !== 'open' ? (valueMode.unconfirmed ? VALUE_MODE_UNCONFIRMED_MESSAGE : EXITS_ONLY_MESSAGE) : null;
+  const blocked = !!paused || !payee?.address || !payee.verified || !fingerprint || !confirmedFingerprint || (ALPHA && !acked(ack));
   const once = useRef(singleFlight()).current; // 4.19: a double tap never pays twice
   const send = () => once(async () => {
     if (busy || blocked) return;
@@ -190,6 +194,7 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
       <ProvingMemoryNote />
       {ALPHA && <AlphaRiskAck kind="payment" value={ack} onChange={setAck} disabled={busy} />}
       {busy && <ProvingStatus label="Checking the address, then proving the payment on this device" startedAt={startedAt || Date.now()} />}
+      {paused && <p role="status" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{paused}</p>}
       <button type="button" className="w-full min-h-[44px] rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={busy || blocked || !amount} onClick={send}>
         {busy ? 'Proving on this device…' : 'Send privately'}
       </button>
