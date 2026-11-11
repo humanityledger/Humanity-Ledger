@@ -6,6 +6,15 @@ import { getPrivateWallet, type WalletSnapshot } from './client';
 import type { WalletTypedData } from './keys';
 import { useWalletStore } from '@/lib/store/wallet-store';
 import { getSelfLink, remoteSign } from '@/lib/link/channel';
+import { withSignTimeout } from '@/lib/auth/sign-timeout';
+
+/**
+ * A wallet that never answers (its popup closed without Sign or Cancel, two wallet extensions
+ * competing for the page, a WalletConnect relay drop) used to leave the private wallet on
+ * "Waiting for your wallet signature" forever. After this long it stops with a clear error and
+ * the Open button works again.
+ */
+const SIGN_WAIT_MS = 120_000;
 
 /**
  * React binding for the private payments wallet.
@@ -73,11 +82,15 @@ export function useAztecWallet(sessionAddress: string) {
       throw new Error('The connected wallet is not the account you are signed in with. Switch accounts in your wallet and try again.');
     }
 
+    const remote = !isConnected && !isLocalConnected; // the phone signs; remoteSign has its own wait
     await getPrivateWallet().connect(activeAddress, async (td: WalletTypedData) => {
       try {
-        return await signFn(td);
+        return remote ? await signFn(td) : await withSignTimeout(signFn(td), SIGN_WAIT_MS);
       } catch (err: any) {
         const msg = String(err?.shortMessage || err?.message || err || '');
+        if (/signature request expired/i.test(msg)) {
+          throw new Error('Your wallet did not answer. Open your wallet extension: if a signature request is waiting there, sign it; if not, tap Open private wallet again. If several wallet extensions are installed, keep only the one you signed in with enabled for this site.');
+        }
         if (/user (rejected|denied)|rejected the request|denied message signature/i.test(msg)) throw err;
         console.error('[ZkWallet] signTypedData failed:', err);
         throw new Error(
