@@ -75,7 +75,7 @@ const ZkStreamManager = dynamic(() => import('@/components/zk/ZkStreamManager').
 const ZkInvoiceModal = dynamic(() => import('@/components/zk/ZkInvoiceModal').then(m => m.ZkInvoiceModal), { ssr: false });
 import { encodeStreamPayload } from '@/lib/zk/zkStreaming';
 import { agreementMessageKind, agreementPreview, isAgreementMessage } from '@/lib/aztec/agreement-message';
-import { networkLabel } from '@/lib/aztec/wallet/config';
+import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 import { attachmentPreview, isAttachmentMessage, parseAttachmentMessage } from '@/lib/chat/remote-attachment';
 import { prepareAttachmentMessage, AttachmentError } from '@/lib/chat/send-attachment';
 const AgreementComposer = dynamic(() => import('@/components/chat/AgreementComposer').then(m => m.AgreementComposer), { ssr: false });
@@ -5729,7 +5729,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       {[
                         { label: 'New chat', icon: <SquarePen size={16} strokeWidth={1.75} />, onClick: () => document.getElementById('ledger-new-chat-input')?.focus() },
                         { label: 'New group', icon: <Users size={16} strokeWidth={1.75} />, onClick: () => setShowCreateGroup(true) },
-                        { label: 'Private wallet (testnet)', icon: <Lock size={16} strokeWidth={1.75} />, onClick: () => setShowZkWallet(true) },
+                        { label: AZTEC_WALLET_CONFIG.network === 'mainnet' ? 'Private wallet' : 'Private wallet (testnet)', icon: <Lock size={16} strokeWidth={1.75} />, onClick: () => setShowZkWallet(true) },
                         { label: 'Appearance', icon: <Palette size={16} strokeWidth={1.75} />, onClick: () => setShowThemePicker(true) },
                         { label: 'Settings', icon: <Settings size={16} strokeWidth={1.75} />, onClick: () => setShowFullSettings(true) },
                       ].map((item, i) => (
@@ -6759,7 +6759,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   );
                 })}
               </ul>
-              <p className="mt-6 text-[12px] text-[#727a88]">Messaging by XMTP · Private wallet on the Aztec testnet</p>
+              <p className="mt-6 text-[12px] text-[#727a88]">Messaging by XMTP · Private wallet on {networkLabel()}</p>
             </div>
           </div>
         )}
