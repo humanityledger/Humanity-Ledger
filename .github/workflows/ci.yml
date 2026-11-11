@@ -57,6 +57,7 @@ jobs:
           test/unit/aztec/deployments-registry.test.ts
           test/unit/aztec/value-mode.test.ts
           test/unit/security/audit-2026-11-11.test.ts
+          test/unit/auth/pin-lock.test.ts
           test/unit/aztec/store-encryption.test.ts
           test/unit/aztec/address-fingerprint.test.ts
           test/unit/payments

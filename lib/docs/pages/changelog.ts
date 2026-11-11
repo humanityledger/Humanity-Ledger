@@ -27,6 +27,7 @@ export const RELEASES: Release[] = [
     title: "Not yet released",
     note: "In the repository, waiting for the next deployment.",
     changes: [
+      { kind: "improved", text: "Ledger Chat no longer asks for a PIN when you open it or when you create an account: connect your wallet, sign, and you are in. The PIN never encrypted anything; it was a lock in front of the screen. A PIN you already set is kept on the server and ignored until the screen returns." },
       { kind: "security", text: "An exits-only switch: when we turn it on, the app refuses new private payments, shielding and agreements, and still lets you claim, refund, cancel and withdraw what is already open. It stops our interface only; the Aztec contracts cannot be paused, and it is not a rollback." },
       { kind: "security", text: "Dozens of old server routes from the removed terminal, forum, market, network and wallet products that nothing called now answer 410 before any code runs." },
       { kind: "security", text: "Server routes for group calls, community invite tokens, token gates and some sign-in helpers, which no screen uses, now answer 410. The sign-in and chat flows are unchanged." },

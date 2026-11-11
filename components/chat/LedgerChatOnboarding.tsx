@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, ChevronRight, Check, MapPin, AtSign, User, Shield, Bell, Lock, Fingerprint, Sparkles, Globe, Key } from 'lucide-react';
 import { useLedgerSettings } from '@/components/terminal/LedgerChatSettings';
+import { pinLockEnabled } from '@/lib/auth/pin-lock';
 
 interface OnboardingProps {
   address: string;
@@ -84,7 +85,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
       setStep(3);
     } else if (step === 3) {
       // If PIN is already configured in storage / TuringShieldGate, advance directly to final confirmation
-      if (typeof window !== 'undefined' && (localStorage.getItem('ledger_pin_configured') === 'true' || sessionStorage.getItem('__enclave_clearance_v2__') === 'granted')) {
+      if (!pinLockEnabled() || (typeof window !== 'undefined' && (localStorage.getItem('ledger_pin_configured') === 'true' || sessionStorage.getItem('__enclave_clearance_v2__') === 'granted'))) {
         setStep(5);
       } else {
         setStep(4);
@@ -174,7 +175,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
     onComplete();
   };
 
-  const totalSteps = 5;
+  const totalSteps = pinLockEnabled() ? 5 : 4;
 
   const fadeVariants: any = {
     initial: { opacity: 0, filter: 'blur(10px)', y: 20 },

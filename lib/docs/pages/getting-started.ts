@@ -21,7 +21,7 @@ export const overview: DocPage = {
     {
       t: "cards",
       items: [
-        { title: "Quick start", text: "Sign in, set a PIN and start your first conversation.", href: "/docs/quickstart", icon: "rocket" },
+        { title: "Quick start", text: "Sign in with your wallet and start your first conversation.", href: "/docs/quickstart", icon: "rocket" },
         { title: "Messaging", text: "What is encrypted, what is not, and how to tell the difference.", href: "/docs/ledger-chat", icon: "message" },
         { title: "Architecture", text: "The parts of the system and what each one can see.", href: "/docs/architecture", icon: "server" },
         { title: "Developers", text: "Run the code locally and find your way around the repository.", href: "/docs/developers", icon: "code" },
@@ -52,7 +52,7 @@ export const overview: DocPage = {
     {
       t: "defs",
       items: [
-        { term: "Getting started", text: "Accounts, sign in and the PIN that protects Ledger Chat on your devices." },
+        { term: "Getting started", text: "Accounts, sign in and the PIN screen, which is currently off." },
         { term: "Ledger Chat", text: "Each feature of the messenger, what it does and what it reveals." },
         { term: "Protocol", text: "The architecture, the encryption in use and the whitepaper." },
         { term: "Security", text: "Our security model, the findings that are still open and how to report a new one." },
@@ -100,10 +100,6 @@ export const quickstart: DocPage = {
         {
           title: "Connect your wallet",
           text: "Choose your wallet from the list. Your wallet asks you to connect, then to sign a short message. Signing is free and writes nothing to the blockchain. It only proves that the address is yours.",
-        },
-        {
-          title: "Create a PIN",
-          text: "Choose a six digit PIN. Ledger Chat asks for it when you open the app on a device, so someone who picks up your unlocked computer cannot read your conversations. See [Your PIN](/docs/pin).",
         },
         {
           title: "Allow secure messaging",
@@ -202,11 +198,15 @@ export const pin: DocPage = {
   label: "Your PIN",
   summary: "What the six digit PIN protects, how it is stored, and what to do if you forget it.",
   keywords: ["pin", "enclave", "lock", "passcode", "code", "locked out", "forgot pin", "reset pin", "attempts"],
-  updated: "2026-10-21",
+  updated: "2026-11-11",
   blocks: [
     {
       t: "p",
-      text: "Ledger Chat asks for a six digit PIN when you open it. The PIN stops someone who picks up a device where you are signed in, such as a shared or unattended computer, from opening your conversations in the app.",
+      text: "**Since 11 November 2026 Ledger Chat does not ask for the PIN, and does not ask you to create one.** It was stopping people from getting in, and it is only a lock in front of the screen. You still sign in with your wallet. The rest of this page describes the PIN screen for when it returns.",
+    },
+    {
+      t: "p",
+      text: "When it is on, Ledger Chat asks for a six digit PIN when you open it. The PIN stops someone who picks up a device where you are signed in, such as a shared or unattended computer, from opening your conversations in the app.",
     },
     { t: "h2", text: "What the PIN does and does not do" },
     {

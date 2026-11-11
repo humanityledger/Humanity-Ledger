@@ -325,7 +325,7 @@ export const whitepaper: DocPage = {
     { t: "h2", text: "8. Device protection", id: "pin" },
     {
       t: "p",
-      text: "Access to Ledger Chat on a device is gated by a six digit PIN. The server stores Argon2id of the PIN with a per account salt and a server held pepper, limits concurrent hashing work, and allows eight attempts per five minute window. The PIN gates the interface; it is not used to derive message keys.",
+      text: "Since 11 November 2026 the PIN screen is off (build flag `NEXT_PUBLIC_ENCLAVE_PIN_LOCK`); sign in with the wallet is the only requirement. When it is on, access to Ledger Chat on a device is gated by a six digit PIN. The server stores Argon2id of the PIN with a per account salt and a server held pepper, limits concurrent hashing work, and allows eight attempts per five minute window. The PIN gates the interface; it is not used to derive message keys.",
     },
     { t: "h2", text: "9. Threat model", id: "threat-model" },
     {
