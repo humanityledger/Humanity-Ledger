@@ -190,7 +190,6 @@ const nextConfig = {
         const aztecJsRoot = path.resolve(__dirname, 'node_modules/@aztec-labs/aztec.js/dest/api');
         const noirRoot   = path.resolve(__dirname, 'node_modules/@aztec-labs/noir-contracts.js/dest');
         const walletsRoot = path.resolve(__dirname, 'node_modules/@aztec-labs/wallets/dest/embedded/entrypoints');
-        const kvRoot     = path.resolve(__dirname, 'node_modules/@aztec-labs/kv-store/dest');
         const aztecSubpaths = {
             // aztec.js subpaths
             '@aztec/aztec.js/fields':    path.join(aztecJsRoot, 'fields.js'),
@@ -213,8 +212,8 @@ const nextConfig = {
             '@aztec/noir-contracts.js/Token':        path.join(noirRoot, 'Token.js'),
             // wallets/embedded
             '@aztec/wallets/embedded': path.join(walletsRoot, 'browser.js'),
-            // kv-store
-            '@aztec/kv-store/deprecated/indexeddb': path.join(kvRoot, 'indexeddb', 'index.js'),
+            // (The kv-store/deprecated/indexeddb alias pointed at a file 6.0.0 does not ship and nothing in the
+            // app imports it; the wallet uses @aztec-labs/kv-store/sqlite-opfs through lib/aztec/wallet/store.ts.)
         };
         // Mirror aliases for @aztec-labs/ scope
         const aztecLabsSubpaths = Object.fromEntries(
