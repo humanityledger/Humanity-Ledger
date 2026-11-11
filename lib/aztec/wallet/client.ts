@@ -367,6 +367,7 @@ class PrivateWallet {
       }
 
       this.set({ phase: 'ready', step: undefined });
+      await this.registerChatPeers().catch(() => 0);
       await this.refreshQuietly();
     } catch (err: any) {
       // Say where it stopped; the raw error goes to the console for support.
@@ -575,6 +576,7 @@ class PrivateWallet {
           this.stopPoll();
           if (await this.deployAccount()) {
             this.set({ phase: 'ready', step: undefined });
+            await this.registerChatPeers().catch(() => 0);
             await this.refreshQuietly();
           }
         } else if (state.plan !== 'wait-claim') {
@@ -634,6 +636,8 @@ class PrivateWallet {
 
   async refresh(): Promise<void> {
     if (!this.wallet || !this.me) return;
+    // Contacts pinned since the last refresh become known senders, so their payments are found.
+    await this.registerChatPeers().catch(() => 0);
     const balances: TokenBalance[] = [];
     for (const t of AZTEC_WALLET_CONFIG.tokens) {
       const c = this.tokens.get(t.key);
@@ -751,6 +755,31 @@ class PrivateWallet {
    * a payment from a new person is only discovered once their address is
    * known to your wallet.
    */
+  /**
+   * Makes every chat contact whose Aztec address is pinned in a DM (lib/aztec/peer-binding.ts,
+   * keys `hl.aztec_peer.<inbox>`) a known sender of this wallet, so a private payment from them
+   * shows up by itself: Aztec finds incoming notes only from senders the wallet knows. Before,
+   * the receiver had to paste the sender's address under Receive. Registering an address only
+   * affects which incoming notes are looked for; it trusts nothing.
+   */
+  private registeredPeers = new Set<string>();
+  async registerChatPeers(): Promise<number> {
+    if (!this.wallet || !this.sdk || !this.me) return 0;
+    let added = 0;
+    const keys: string[] = [];
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k?.startsWith('hl.aztec_peer.')) keys.push(k); } } catch { return 0; }
+    for (const k of keys) {
+      const addr = (localStorage.getItem(k) || '').trim();
+      if (!isAztecAddress(addr) || addr.toLowerCase() === this.me.toString().toLowerCase() || this.registeredPeers.has(addr.toLowerCase())) continue;
+      try {
+        await this.wallet.registerSender(this.sdk.AztecAddress.fromStringUnsafe(addr), `chat-${addr.slice(2, 10)}`);
+        this.registeredPeers.add(addr.toLowerCase());
+        added++;
+      } catch { /* the next refresh tries again */ }
+    }
+    return added;
+  }
+
   async addSender(aztecAddress: string) {
     if (!isAztecAddress(aztecAddress)) throw new Error('That is not an Aztec address.');
     await this.wallet.registerSender(this.sdk!.AztecAddress.fromStringUnsafe(aztecAddress), `sender-${aztecAddress.slice(2, 10)}`);
