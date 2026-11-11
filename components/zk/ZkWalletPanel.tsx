@@ -35,6 +35,9 @@ import {
 import { formatUnits } from '@/lib/aztec/wallet/amounts';
 import type { Activity } from '@/lib/aztec/wallet/history';
 
+// Fee Juice (Aztec Alpha only): wagmi-heavy, so loaded on demand.
+const FeeJuiceStation = dynamic(() => import('@/components/zk/ZkBridgePortal').then((m) => m.FeeJuiceStation), { ssr: false });
+
 const QrScanner = dynamic(() => import('@/components/terminal/QrScanner').then((m) => m.QrScanner), { ssr: false });
 
 interface ZkWalletPanelProps {
@@ -50,12 +53,12 @@ interface ZkWalletPanelProps {
   onPaymentSent?: (info: { txHash: string; token: TokenKey }) => void;
 }
 
-type Sheet = 'shield' | 'unshield' | 'send' | 'receive' | null;
+type Sheet = 'shield' | 'unshield' | 'send' | 'receive' | 'fees' | null;
 
 const INK = '#15171c';
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 /** Shield, Unshield and Send need a configured token; Receive only shows the address. */
-const sheetAvailable = (s: Exclude<Sheet, null>) => s === 'receive' || hasPrivateTokens();
+const sheetAvailable = (s: Exclude<Sheet, null>) => s === 'receive' || (s === 'fees' ? ALPHA : hasPrivateTokens());
 /** First configured wallet slot (on Alpha the operator's token may sit in any slot). */
 const FIRST_TOKEN: TokenKey = AZTEC_WALLET_CONFIG.tokens[0]?.key ?? 'USDC';
 /** What the user sees for a slot: the configured symbol (e.g. HLC), never the internal key. */
@@ -85,6 +88,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
     setRefreshing(true);
     try {
       await wallet.refresh();
+      if (ALPHA) await wallet.refreshFeeJuice();
     } catch (err) {
       toast.error(humanError(err));
     } finally {
@@ -95,8 +99,13 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
   // Refresh every 30 seconds while open, to pick up incoming payments.
   useEffect(() => {
     if (!ready || !wallet) return;
+    // Alpha: the Fee Juice balance is shown with the balances, so read it on open and with every refresh.
+    if (ALPHA) wallet.refreshFeeJuice().catch(() => {});
     const t = setInterval(() => {
-      if (!wallet.state.busy) wallet.refresh().catch(() => {});
+      if (!wallet.state.busy) {
+        wallet.refresh().catch(() => {});
+        if (ALPHA) wallet.refreshFeeJuice().catch(() => {});
+      }
     }, 30_000);
     return () => clearInterval(t);
   }, [ready, wallet]);
@@ -161,7 +170,16 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4">
-        {!ready ? (
+        {!ready && state.phase === 'needs-fee-juice' ? (
+          <div className="bg-white rounded-2xl border border-black/[0.06] overflow-hidden">
+            <div className="px-5 pt-5 text-[14px] font-semibold">Add Fee Juice to create your private account</div>
+            <p className="px-5 mt-1.5 text-[12.5px] leading-relaxed text-black/55">
+              On {networkLabel()} every transaction, including the one that creates your account, pays its network fee in Fee Juice.
+              Bridge AZTEC from your Ethereum wallet here; your account is created automatically when it arrives.
+            </p>
+            <FeeJuiceStation userAddress={address} />
+          </div>
+        ) : !ready ? (
           <Gate
             phase={state.phase}
             step={state.step}
@@ -174,6 +192,30 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
           />
         ) : (
           <>
+            {state.error && (
+              <div role="status" className="flex gap-2 rounded-xl bg-[#fff7e6] border border-[#f5dfb0] px-3 py-2.5 text-[12.5px] leading-snug text-[#7a5200]">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                <span>{state.error}</span>
+              </div>
+            )}
+            {ALPHA && (
+              <button
+                type="button"
+                onClick={() => setSheet('fees')}
+                className="w-full flex items-center justify-between gap-3 rounded-2xl bg-white border border-black/[0.06] px-4 py-3 text-left hover:border-black/20 transition-colors"
+              >
+                <span className="min-w-0">
+                  <span className="block text-[12px] font-semibold text-black/50">Fee Juice for network fees</span>
+                  <span className="block text-[14px] font-semibold tabular-nums">
+                    {state.feeJuice ? formatUnits(state.feeJuice.balance, 18, 4) : '…'}
+                    {state.feeJuice && state.feeJuice.claims.length > 0 && (
+                      <span className="ml-2 text-[11.5px] font-medium text-black/45">+ {state.feeJuice.claims.length} on the way</span>
+                    )}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[12.5px] font-semibold text-black/70 bg-black/5 px-3 py-1 rounded-full">Add</span>
+              </button>
+            )}
             {hasPrivateTokens() ? (
               <div className="grid grid-cols-4 gap-2">
                 <ActionButton icon={ArrowDownToLine} label="Shield" sub="Public → private" onClick={() => setSheet('shield')} />
@@ -247,6 +289,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
             {sheet === 'unshield' && <ShieldForm mode="unshield" onDone={() => setSheet(null)} />}
             {sheet === 'send' && <SendForm onDone={() => setSheet(null)} onPaymentSent={onPaymentSent} />}
             {sheet === 'receive' && <ReceiveView aztecAddress={state.aztecAddress!} />}
+            {sheet === 'fees' && <FeeJuiceStation userAddress={address} />}
           </SheetFrame>
         )}
       </AnimatePresence>
@@ -261,6 +304,7 @@ const SHEET_TITLE: Record<Exclude<Sheet, null>, string> = {
   unshield: 'Unshield',
   send: 'Send privately',
   receive: 'Receive',
+  fees: 'Network fees',
 };
 
 function fmt(a: Activity) {
@@ -491,7 +535,7 @@ function ActivityList({ items }: { items: Activity[] }) {
                     )}
                   </span>
                   <span className={`block text-[11.5px] ${a.status === 'failed' ? 'text-[#c0362c]' : 'text-black/45'}`}>
-                    {a.status === 'failed' && a.error ? a.error : STATUS_LABEL[a.status]}
+                    {(a.status === 'failed' || a.status === 'pending') && a.error ? a.error : STATUS_LABEL[a.status]}
                     {a.blockNumber ? ` · block ${a.blockNumber}` : ''}
                   </span>
                 </span>
