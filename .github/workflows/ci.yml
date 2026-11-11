@@ -63,6 +63,7 @@ jobs:
           test/unit/payments
           test/unit/auth/wallet-links.test.ts
           test/unit/auth/linked-devices.test.ts
+          test/unit/auth/qr-link-e2e.test.ts
           test/unit/chat/value-handoff.test.ts
       - name: Unit Tests (security)
         run: npx vitest run test/unit/security

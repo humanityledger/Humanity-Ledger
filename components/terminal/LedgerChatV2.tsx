@@ -472,7 +472,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   const [client, setClient] = useState<Client | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
-  const [isWaitingForSignature, setIsWaitingForSignature] = useState(false);
+  const [isWaitingForSignature, setIsWaitingForSignatureState] = useState(false);
+  // Read by the start-up safety timer: time spent waiting for a signature (wallet app, or the
+  // phone approving for a linked computer) does not count as a hang.
+  const waitingSigRef = useRef(false);
+  const setIsWaitingForSignature = useCallback((v: boolean) => { waitingSigRef.current = v; setIsWaitingForSignatureState(v); }, []);
   const [initError, setInitError] = useState('');
   
   // BIOMETRIC LOCK STATE
@@ -3473,16 +3477,22 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // Skip email users — they don't have a wallet signer for XMTP.
     if (isConnected && address && !isEmailUser && !client && !initInFlight.current && !initError) {
       initClient();
-      // [SAFETY TIMEOUT] If init hasn't resolved in 45s, reset state to unblock the UI
-      const safetyTimer = setTimeout(() => {
-        if (initInFlight.current) {
+      // [SAFETY TIMEOUT] 45 s of start-up work without an answer (not counting time waiting for a
+      // signature) resets the state to unblock the UI.
+      let busyMs = 0;
+      const safetyTimer = setInterval(() => {
+        if (!initInFlight.current) { clearInterval(safetyTimer); return; }
+        if (waitingSigRef.current) return;
+        busyMs += 1_000;
+        if (busyMs >= 45_000) {
+          clearInterval(safetyTimer);
           console.warn('[LedgerChat] Init safety timeout reached - resetting state');
           setIsInitializing(false);
           initInFlight.current = false;
           setInitError('Connection timed out. Please tap "Enter Ledger Chat" to retry.');
         }
-      }, 45_000);
-      return () => clearTimeout(safetyTimer);
+      }, 1_000);
+      return () => clearInterval(safetyTimer);
     }
   }, [isConnected, address, isEmailUser, client, initError, initClient, forceAutoInit]);
 
