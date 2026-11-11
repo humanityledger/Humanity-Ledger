@@ -135,7 +135,7 @@ export const zeroKnowledge: DocPage = {
   label: "Private payments on Aztec",
   summary: "How the private payments wallet works, what it hides, what it does not, and why it runs on a test network.",
   keywords: ["zk", "zero knowledge", "aztec", "shielded", "private payment", "proof", "noir", "notes", "nullifier", "shield", "unshield", "send", "receive", "qr", "testnet", "privacy", "wallet", "escrow", "stream", "agreement"],
-  updated: "2026-11-05",
+  updated: "2026-11-11",
   blocks: [
     {
       t: "hint",
@@ -224,7 +224,8 @@ export const zeroKnowledge: DocPage = {
       items: [
         { label: "Private balances, send and receive", state: "partial", text: "Working on the Aztec test network. Contracts not independently audited." },
         { label: "Bridge from Ethereum", state: "development", text: "Moving real tokens from Ethereum into Aztec and back needs a bridge contract on each side. It is not built." },
-        { label: "Agreements (escrow and payment stream)", state: "partial", text: "In conversations on the Aztec test network. Contracts not independently audited." },
+        { label: "Agreements (escrow and payment stream)", state: "partial", text: "In conversations on the Aztec test network. Contracts not independently audited. Two hardening changes to the contract source (a nullifier on each deposit and on each stream creation) are not compiled into the deployed contracts yet, so the app uses the previous versions until they are." },
+        { label: "Pausing new payments", state: "partial", text: "We can switch the app to exits only: new payments and agreements are refused, while claiming, refunding, cancelling and withdrawing keep working. This stops our interface, not the contracts, which have no pause. A modified client can still call them." },
         { label: "Aztec Alpha (mainnet)", state: "unavailable", text: "Alpha runs the same version 6.0.0, but it holds real value and has no sponsored fees. The wallet refuses it until the gates in our mainnet readiness plan are met, including fees paid in Fee Juice and limits for unaudited contracts." },
       ],
     },
@@ -324,7 +325,7 @@ export const whitepaper: DocPage = {
     { t: "h2", text: "8. Device protection", id: "pin" },
     {
       t: "p",
-      text: "Access to Ledger Chat on a device is gated by a six digit PIN. The server stores Argon2id of the PIN with a per account salt and a server held pepper, limits concurrent hashing work, and allows eight attempts per five minute window. The PIN gates the interface; it is not used to derive message keys.",
+      text: "Since 11 November 2026 the PIN screen is off (build flag `NEXT_PUBLIC_ENCLAVE_PIN_LOCK`); sign in with the wallet is the only requirement. When it is on, access to Ledger Chat on a device is gated by a six digit PIN. The server stores Argon2id of the PIN with a per account salt and a server held pepper, limits concurrent hashing work, and allows eight attempts per five minute window. The PIN gates the interface; it is not used to derive message keys.",
     },
     { t: "h2", text: "9. Threat model", id: "threat-model" },
     {

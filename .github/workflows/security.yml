@@ -42,6 +42,13 @@ jobs:
             const vulns = report.metadata?.vulnerabilities ?? {};
             const blocking = (vulns.high ?? 0) + (vulns.critical ?? 0);
             console.log('Vulnerability summary:', JSON.stringify(vulns));
+            // Say what is vulnerable and how it gets installed: a bare count cannot be acted on.
+            for (const [name, v] of Object.entries(report.vulnerabilities ?? {})) {
+              console.log('- ' + name + ' [' + v.severity + '] range ' + v.range + (v.isDirect ? ' (direct dependency)' : ' (transitive)'));
+              for (const via of v.via ?? []) console.log('    via ' + (typeof via === 'string' ? via : via.title + ' ' + via.url + ' affects ' + via.range));
+              console.log('    installed at ' + (v.nodes ?? []).join(', '));
+              console.log('    fix ' + (v.fixAvailable === true ? 'available (npm audit fix)' : v.fixAvailable ? 'needs ' + v.fixAvailable.name + '@' + v.fixAvailable.version : 'none published'));
+            }
             if (blocking > 0) {
               console.error('BLOCKED: ' + blocking + ' HIGH/CRITICAL vulnerabilities found.');
               process.exit(1);

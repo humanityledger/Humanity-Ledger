@@ -222,10 +222,12 @@ try {
                 email: false, // Strictly Web3 - No Web2 Email logins
                 socials: false, // Strictly Web3 - No Google/Apple/X logins
                 emailShowWallets: false,
-                swaps: true,
-                onramp: true,
-                send: true,
-                receive: true,
+                // Third-party wallet actions inside the Reown modal (swap and onramp providers). Not part of
+                // Ledger Chat: payments go through the Aztec wallet. Off so the modal only connects and signs.
+                swaps: false,
+                onramp: false,
+                send: false,
+                receive: false,
             },
             themeMode: 'light',
             themeVariables: {

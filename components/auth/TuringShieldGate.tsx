@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Check, CircleHelp, Clock, Lock, Mail, X } from 'lucide-react';
+import { pinLockEnabled } from '@/lib/auth/pin-lock';
 
 // ─── Session clearance ────────────────────────────────────────────────────────
 // DUAL STORAGE: sessionStorage (primary) + localStorage (fallback)
@@ -388,6 +389,8 @@ export function TuringShieldGate({
           }
           document.removeEventListener('visibilitychange', handleVisibilityForGate);
           setSessionReady(true);
+          // PIN screen off (lib/auth/pin-lock.ts): the server confirmed a session, so let the chat open.
+          if (!pinLockEnabled()) { setCleared(true); return; }
           if (data?.hasPin === false) {
             // Permanence check: if this device/browser already belongs to an existing account,
             // never divert into "Create your security PIN / account" loop again!
@@ -423,6 +426,8 @@ export function TuringShieldGate({
           // Network error — show gate, user will see the PIN input and retry
           document.removeEventListener('visibilitychange', handleVisibilityForGate);
           setSessionReady(true);
+          // With the PIN screen off there is nothing to type; the chat reports its own request errors.
+          if (!pinLockEnabled()) setCleared(true);
         });
     };
 

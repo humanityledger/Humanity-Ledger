@@ -16,7 +16,8 @@
 
 export class InvitationNotPostedError extends Error {
   constructor(cause?: unknown) {
-    super('The invitation could not be posted in this chat. Nothing was deposited.');
+    // A pause decided right before posting keeps its own words: nothing was posted or deposited.
+    super(cause instanceof Error && cause.name === 'ValuePausedError' ? cause.message : 'The invitation could not be posted in this chat. Nothing was deposited.');
     this.name = 'InvitationNotPostedError';
     (this as any).cause = cause;
   }

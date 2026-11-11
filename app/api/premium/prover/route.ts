@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     // ── Verify Aztec Mainnet node is alive (Zero-Mock mandate) ───────────────
     console.log(`[Prover] Delegating ZK proof generation for tier: ${userTier} | address: ${issuerAddress.slice(0, 12)}…`);
-    const { createAztecNodeClient } = await import('@aztec/aztec.js/node');
+    const { createAztecNodeClient } = await import('@aztec-labs/aztec.js/node');
     const nodeUrl = process.env.AZTEC_NODE_URL || 'https://node.aztec.network';
     const node    = createAztecNodeClient(nodeUrl);
 

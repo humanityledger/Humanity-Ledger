@@ -311,7 +311,7 @@ const EXPERIENCE = [
   {
     icon: KeyRound,
     title: "Lock it your way",
-    text: "Protect the app on your device with a PIN or your device's biometrics, so a borrowed laptop does not mean an open inbox.",
+    text: "Turn on the app lock in Settings, so a borrowed laptop does not mean an open inbox.",
   },
   {
     icon: Sparkles,

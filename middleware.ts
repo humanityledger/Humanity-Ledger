@@ -93,10 +93,10 @@ const PUBLIC_PREFIXES = [
   '/api/webhooks/stripe',
   '/api/webhooks/',
   '/api/health',
+  '/api/aztec/value-mode', // exits-only switch; public, only ever restricts
   '/api/status',
   '/api/registry/',
   // '/api/chat/', (Removed from public routes for security)
-  '/api/call/',          // Group call room API
   '/api/provenance/',    // Provenance log API called on XMTP connect
   '/api/security/integrity', // Public verifiable proving bundle integrity manifest
   '/api/chat/presence',  // Safe chat presence heartbeat / query

@@ -15,7 +15,7 @@ import { LEGAL_ENTITY, LEGAL_EMAIL_LINK, PROVIDER_LINE } from "@/lib/constants/l
  *     before public launch.
  */
 
-const REVIEWED = "2026-10-23";
+const REVIEWED = "2026-11-11";
 const CONTACT = LEGAL_EMAIL_LINK;
 
 /* -------------------------------------------------------------------------- */
@@ -450,12 +450,12 @@ const riskBlocks: Block[] = [
   { t: "h2", text: "Private payments run on a test network" },
   {
     t: "p",
-    text: "The private payments wallet uses the Aztec **test network**. Its tokens have no value and may disappear if the network is reset. The Aztec mainnet runs a different version (5.2.0 at the time of writing) that our wallet does not support, and Aztec itself describes its mainnet as alpha, where bugs, including critical ones, are expected. We will not connect the wallet to a network with real value until our contracts have been audited.",
+    text: "The private payments wallet uses the Aztec **test network**. Its tokens have no value and may disappear if the network is reset. Since 3 November 2026 the Aztec mainnet (Alpha) runs the same version, 6.0.0, but our wallet refuses it, and Aztec itself describes its mainnet as alpha, where bugs, including critical ones, are expected. We will not connect the wallet to a network with real value until our contracts have been audited.",
   },
   { t: "h2", text: "Networks we do not control" },
   {
     t: "p",
-    text: "Payments depend on Ethereum and on Aztec, and messages depend on XMTP. Any of them can be slow, unavailable or affected by vulnerabilities of their own. In August 2026 Aztec's contributors reported a critical vulnerability in the proving system of Alpha V5.",
+    text: "Payments depend on Ethereum and on Aztec, and messages depend on XMTP. Any of them can be slow, unavailable or affected by vulnerabilities of their own. In August 2026 Aztec's contributors reported a critical vulnerability in the proving system of Alpha V5, fixed in version 6. Aztec's contracts cannot be paused by anyone, including us.",
   },
   { t: "h2", text: "Your keys" },
   {

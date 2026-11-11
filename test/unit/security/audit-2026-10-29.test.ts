@@ -192,8 +192,8 @@ describe('/api/user/search auth required (A-027)', () => {
 describe('qr-sync-seed ownership enforcement (A-024)', () => {
   // These tests rely on mocks set up at the top of the file.
   // We need redis + qr-init cookie. We test the logic branch directly.
-  it('isRetiredApiRoute does not cover qr-sync-seed (it is a live route)', () => {
-    expect(isRetiredApiRoute('/api/auth/qr-sync-seed')).toBe(false);
+  it('qr-sync-seed is retired (2026-11-11): no client calls it, so the seed bridge is closed', () => {
+    expect(isRetiredApiRoute('/api/auth/qr-sync-seed')).toBe(true);
   });
 });
 

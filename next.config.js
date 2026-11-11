@@ -184,13 +184,12 @@ const nextConfig = {
         // in a CJS Next.js build context.
         const aztecStub = path.resolve(__dirname, './lib/aztec/aztec-stub.js');
         // Both scopes resolve to the 6.0.0 release (@aztec-labs/*), the version
-        // the networks run. The @aztec/* packages in node_modules are an older
-        // nightly whose artifacts differ (the sponsored FPC they compute does
-        // not exist on testnet), so the browser must never load them.
+        // the networks run. The @aztec/* nightly packages are no longer installed
+        // (only @aztec/bb.js remains), so a specifier missing from this list fails
+        // the build; scripts/aztec/check-sdk-single-version.mjs checks it in CI.
         const aztecJsRoot = path.resolve(__dirname, 'node_modules/@aztec-labs/aztec.js/dest/api');
         const noirRoot   = path.resolve(__dirname, 'node_modules/@aztec-labs/noir-contracts.js/dest');
         const walletsRoot = path.resolve(__dirname, 'node_modules/@aztec-labs/wallets/dest/embedded/entrypoints');
-        const kvRoot     = path.resolve(__dirname, 'node_modules/@aztec-labs/kv-store/dest');
         const aztecSubpaths = {
             // aztec.js subpaths
             '@aztec/aztec.js/fields':    path.join(aztecJsRoot, 'fields.js'),
@@ -204,13 +203,17 @@ const nextConfig = {
             '@aztec/aztec.js/wallet':    path.join(aztecJsRoot, 'wallet.js'),
             '@aztec/aztec.js/abi':       path.join(aztecJsRoot, 'abi.js'),
             '@aztec/aztec.js/keys':      path.join(aztecJsRoot, 'keys.js'),
+            // Fee Juice balance and L1->L2 message readiness (lib/aztec/wallet/client.ts). Without these two
+            // entries the browser took them from the @aztec/* nightly while everything else was 6.0.0.
+            '@aztec/aztec.js/utils':     path.join(aztecJsRoot, 'utils.js'),
+            '@aztec/aztec.js/messaging': path.join(aztecJsRoot, 'messaging.js'),
             // noir-contracts.js subpaths
             '@aztec/noir-contracts.js/SponsoredFPC': path.join(noirRoot, 'SponsoredFPC.js'),
             '@aztec/noir-contracts.js/Token':        path.join(noirRoot, 'Token.js'),
             // wallets/embedded
             '@aztec/wallets/embedded': path.join(walletsRoot, 'browser.js'),
-            // kv-store
-            '@aztec/kv-store/deprecated/indexeddb': path.join(kvRoot, 'indexeddb', 'index.js'),
+            // (The kv-store/deprecated/indexeddb alias pointed at a file 6.0.0 does not ship and nothing in the
+            // app imports it; the wallet uses @aztec-labs/kv-store/sqlite-opfs through lib/aztec/wallet/store.ts.)
         };
         // Mirror aliases for @aztec-labs/ scope
         const aztecLabsSubpaths = Object.fromEntries(

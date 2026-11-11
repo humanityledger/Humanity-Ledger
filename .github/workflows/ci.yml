@@ -32,6 +32,10 @@ jobs:
         run: npx next lint
       - name: Forbidden patterns check
         run: node scripts/forbidden-patterns.mjs
+      - name: One Aztec SDK (@aztec-labs, pinned), aliases resolve
+        run: node scripts/aztec/check-sdk-single-version.mjs
+      - name: Contract artifacts were compiled from the sources in this tree
+        run: node scripts/aztec/check-artifact-sources.mjs
       - name: SDK still encrypts the wallet stores (kv-store, wallets, pxe)
         run: node scripts/aztec/inspect-store-encryption.mjs
       - name: Unit Tests (Aztec client gates, payments, chat handoff)
@@ -50,6 +54,10 @@ jobs:
           test/unit/aztec/single-flight.test.ts
           test/unit/aztec/stream-terms.test.ts
           test/unit/aztec/wallet-wipe.test.ts
+          test/unit/aztec/deployments-registry.test.ts
+          test/unit/aztec/value-mode.test.ts
+          test/unit/security/audit-2026-11-11.test.ts
+          test/unit/auth/pin-lock.test.ts
           test/unit/aztec/store-encryption.test.ts
           test/unit/aztec/address-fingerprint.test.ts
           test/unit/payments
