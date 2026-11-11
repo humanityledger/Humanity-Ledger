@@ -24,7 +24,7 @@ export type HintTone = "info" | "warning" | "danger" | "success";
 
 export type FeatureState = "available" | "partial" | "development" | "unavailable";
 
-export type FigureKind = "architecture" | "message-path";
+export type FigureKind = "architecture" | "message-path" | "ecosystem" | "device-link" | "private-payment" | "studio-path";
 
 export type IconName =
   | "message"

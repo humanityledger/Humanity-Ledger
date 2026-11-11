@@ -1341,3 +1341,41 @@
 }
 
 /* The 30-second film lives in FilmSection.module.css. */
+
+/* Protocol section: links under the ecosystem map */
+.protocolLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.protocolLink {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(21, 23, 28, 0.14);
+  background: #ffffff;
+  color: #15171c;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.protocolLink:hover {
+  background: #f2f4f7;
+  border-color: rgba(21, 23, 28, 0.28);
+}
+
+.protocolLink:first-child {
+  background: #15171c;
+  border-color: #15171c;
+  color: #ffffff;
+}
+
+.protocolLink:first-child:hover {
+  background: #2b2f36;
+}
