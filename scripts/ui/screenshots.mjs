@@ -14,6 +14,8 @@ const PAGES = [
   ['connect', '/connect'],
   ['docs', '/docs/overview'],
   ['docs-privacy', '/docs/privacy'],
+  ['docs-ecosystem', '/docs/ecosystem'],
+  ['docs-whitepaper', '/docs/whitepaper'],
   ['chat', '/chat'],
   ['changelog', '/docs/changelog'],
   ['hub-redirect', '/hub'],
