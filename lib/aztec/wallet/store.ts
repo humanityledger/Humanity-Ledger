@@ -21,6 +21,17 @@ export class EncryptedStoreError extends Error {
   }
 }
 
+/** Prefix the kv-store uses for per-store pool directories (OPFS_POOL_DIR_PREFIX in @aztec-labs/kv-store 6.0.0). */
+export const STORE_POOL_PREFIX = '.aztec-kv-';
+
+/**
+ * The OPFS pool directory of one store: the kv-store's own convention (storePoolDirectory), so that its
+ * listStores / deleteStore, used to wipe the wallet on sign-out, find and remove these stores.
+ */
+export function storePoolDirectoryFor(kv: { storePoolDirectory?: (name: string) => string }, name: string): string {
+  return typeof kv?.storePoolDirectory === 'function' ? kv.storePoolDirectory(name) : `${STORE_POOL_PREFIX}${name}`;
+}
+
 export interface EncryptedStoresResult {
   pxeStore: any;
   walletStore: any;
@@ -81,18 +92,24 @@ export async function openEncryptedWalletStores(
 
     if (hasOpfs && hasWorker) {
       // In browser with OPFS and Worker support, open persistent encrypted SQLite stores
-      const [{ createLogger }, { AztecSQLiteOPFSStore }] = await Promise.all([
+      const [{ createLogger }, kv] = await Promise.all([
         import('@aztec-labs/foundation/log'),
         import('@aztec-labs/kv-store/sqlite-opfs'),
       ]);
+      const { AztecSQLiteOPFSStore } = kv as any;
 
       const log = createLogger('embedded-wallet:encrypted-stores');
+      // One OPFS pool directory per store. Each persistent store holds an origin-wide Web Lock on its
+      // pool directory until it is closed; with both stores in the default pool ".aztec-kv" the second
+      // open always failed with SqlitePoolBusyError, so the wallet could never open (SDK 6.0.0).
+      const pxePool = storePoolDirectoryFor(kv, pxeName);
+      const walletPool = storePoolDirectoryFor(kv, walletName);
       const pxeKey = await getFreshKey();
       const pxeStore = await AztecSQLiteOPFSStore.open(
         log.createChild('pxe:data'),
         pxeName,
         false,
-        undefined,
+        pxePool,
         pxeKey,
       );
 
@@ -102,7 +119,7 @@ export async function openEncryptedWalletStores(
           log.createChild('wallet:data'),
           walletName,
           false,
-          undefined,
+          walletPool,
           walletKey,
         );
         return {
