@@ -1,0 +1,21 @@
+{
+  "$comment": "Sources that are deliberately ahead of their committed artifact. Checked by scripts/aztec/check-artifact-sources.mjs on every PR. The app deploys and recognises the ARTIFACT (class IDs in deployments/aztec-testnet.json), not this source. To clear an entry: let the 'Aztec contracts' workflow recompile, record the new class IDs (old ones tracksCurrentArtifact=false), run the testnet e2e, then delete the entry.",
+  "pending": [
+    {
+      "source": "contracts/aztec/escrow/src/main.nr",
+      "contract": "PrivateEscrow",
+      "sha256": "d86b17a769227eb482c733bd3c59afe0422af810c63ccd44be375317615e82ab",
+      "since": "313623e",
+      "reason": "deposit nullifier over (escrow_id, sender) added to the source; artifact and deployed class predate it",
+      "compiledOn": "claude/alpha-hardening-2026-11-10@00d451c (aztec compile 6.0.0 + TXE tests green, not merged)"
+    },
+    {
+      "source": "contracts/aztec/streams/src/main.nr",
+      "contract": "PaymentStream",
+      "sha256": "7d59956d5ab27b9b034d7cd97db2d49bf1ac803d6de7e99c6914c17acae3148c",
+      "since": "313623e",
+      "reason": "creation nullifier over (salt, sender) added to the source; artifact and deployed class predate it",
+      "compiledOn": "claude/alpha-hardening-2026-11-10@00d451c (aztec compile 6.0.0 + TXE tests green, not merged)"
+    }
+  ]
+}
