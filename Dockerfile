@@ -120,8 +120,10 @@ ARG NEXT_PUBLIC_AZTEC_VALUE_MODE
 ARG NEXT_PUBLIC_AZTEC_RPC_MAX_BATCH
 ARG NEXT_PUBLIC_AZTEC_SPONSORED_FPC
 ARG NEXT_PUBLIC_AZTEC_FAUCET
-# "warn" until the preflight confirms every token in deployments/aztec-mainnet.json; then "strict".
-ARG AZTEC_ALPHA_CONFIG_CHECK=warn
+# strict: a token or cap that does not match deployments/aztec-mainnet.json fails the build, so the
+# previous deployment keeps running. Every recorded token has been confirmed by the mainnet preflight.
+# Set AZTEC_ALPHA_CONFIG_CHECK=warn on the service only to diagnose, never as the normal state.
+ARG AZTEC_ALPHA_CONFIG_CHECK=strict
 
 # Step 0: check the Alpha configuration against deployments/aztec-mainnet.json (no-op off Alpha)
 RUN node scripts/aztec/check-alpha-config.mjs

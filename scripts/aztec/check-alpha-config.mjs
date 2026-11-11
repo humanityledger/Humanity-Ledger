@@ -17,10 +17,11 @@
  *   - L1 chain 1, Alpha enabled on purpose, an explorer set; a recorded token
  *     still pending the preflight (deployBlock 0) is reported.
  *
- * Mode (AZTEC_ALPHA_CONFIG_CHECK): "warn" (default) prints problems and exits 0;
- * "strict" exits 1 on any error. Strict is switched on once the preflight has
- * confirmed every recorded token. Nothing here is secret: every value checked is
- * public (NEXT_PUBLIC_*) and is printed as such.
+ * Mode (AZTEC_ALPHA_CONFIG_CHECK): "strict" exits 1 on any error, so a wrong
+ * build never replaces the running one; the Dockerfile sets it by default since
+ * the preflight confirmed HLC (11 November 2026). "warn" (the default when the
+ * script is run by hand) prints the same problems and exits 0. Nothing here is
+ * secret: every value checked is public (NEXT_PUBLIC_*) and is printed as such.
  */
 import fs from 'node:fs';
 import path from 'node:path';
