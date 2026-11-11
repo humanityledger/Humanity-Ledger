@@ -9,7 +9,7 @@
   "sponsoredFpc": null,
   "audit": null,
   "contracts": [],
-  "$tokensComment": "Private tokens the wallet may list on Alpha (NEXT_PUBLIC_AZTEC_TOKENS must match these: scripts/aztec/check-alpha-config.mjs). key is the wallet's internal slot, never shown to users; symbol is what users see. deployBlock 0 means not yet confirmed: the preflight (test/live/aztec-mainnet-preflight.live.test.ts) reads the block of deployTx from the node and prints it, together with the instance's class ID; both are then written here. Nothing is invented. HLC is issued by Humanity Ledger, is not backed by and has no relation to USDC.",
+  "$tokensComment": "Private tokens the wallet may list on Alpha (NEXT_PUBLIC_AZTEC_TOKENS must match these: scripts/aztec/check-alpha-config.mjs). key is the wallet's internal slot, never shown to users; symbol is what users see. deployBlock 0 (status pending-preflight) means not yet confirmed: the preflight (test/live/aztec-mainnet-preflight.live.test.ts) reads the block of deployTx from the node and prints it, together with the instance's class ID; both are then written here. Nothing is invented. HLC is issued by Humanity Ledger, is not backed by and has no relation to USDC.",
   "tokens": [
     {
       "key": "USDC",
@@ -19,11 +19,12 @@
       "address": "0x2cd0f3775d129210ecf2165e338e1b6b708f2243ac1b30feb0ac49875366e55d",
       "admin": "0x01c7e18f1751ea94e3d63aad2d0b7221642ad299454f769103f0d32364ce549b",
       "artifact": "@aztec-labs/noir-contracts.js/Token",
-      "classId": null,
+      "classId": "0x067df4ddda0b0872ef604f47f3681d5e8c0de98280ac6b79963851c055ba91e0",
       "deployTx": "0x0dfc7146b9f807432d06bccf43d3cea88e849455f8f62372ea2b93d41be29136",
-      "deployBlock": 0,
+      "deployBlock": 24544,
       "deployedOn": "2026-11-11",
-      "status": "pending-preflight"
+      "status": "active",
+      "confirmedBy": "Aztec mainnet preflight run 42990431384 (11 Nov 2026): deploy tx checkpointed in L2 block 24544, instance deployer = admin, checkTokenInstance ok (Token)"
     }
   ]
 }
