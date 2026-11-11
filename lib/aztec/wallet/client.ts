@@ -114,18 +114,18 @@ interface Sdk {
 
 async function loadSdk(): Promise<Sdk> {
   const [fields, addresses, node, contracts, fee, account, fpc, token, wallets, utils, messaging, crypto] = await Promise.all([
-    import('@aztec/aztec.js/fields'),
-    import('@aztec/aztec.js/addresses'),
-    import('@aztec/aztec.js/node'),
-    import('@aztec/aztec.js/contracts'),
-    import('@aztec/aztec.js/fee'),
-    import('@aztec/aztec.js/account'),
-    import('@aztec/noir-contracts.js/SponsoredFPC'),
-    import('@aztec/noir-contracts.js/Token'),
-    import('@aztec/wallets/embedded'),
-    import('@aztec/aztec.js/utils'),
-    import('@aztec/aztec.js/messaging'),
-    import('@aztec/aztec.js/crypto'),
+    import('@aztec-labs/aztec.js/fields'),
+    import('@aztec-labs/aztec.js/addresses'),
+    import('@aztec-labs/aztec.js/node'),
+    import('@aztec-labs/aztec.js/contracts'),
+    import('@aztec-labs/aztec.js/fee'),
+    import('@aztec-labs/aztec.js/account'),
+    import('@aztec-labs/noir-contracts.js/SponsoredFPC'),
+    import('@aztec-labs/noir-contracts.js/Token'),
+    import('@aztec-labs/wallets/embedded'),
+    import('@aztec-labs/aztec.js/utils'),
+    import('@aztec-labs/aztec.js/messaging'),
+    import('@aztec-labs/aztec.js/crypto'),
   ]);
   return {
     Fr: (fields as any).Fr,

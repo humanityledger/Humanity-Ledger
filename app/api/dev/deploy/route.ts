@@ -40,7 +40,7 @@ export async function GET() {
   // Check connectivity to Aztec node
   let nodeInfo: any = null;
   try {
-    const { createAztecNodeClient } = await import('@aztec/aztec.js/node');
+    const { createAztecNodeClient } = await import('@aztec-labs/aztec.js/node');
     const node = createAztecNodeClient(nodeUrl);
     const [blockNumber, info] = await Promise.all([
       node.getBlockNumber(),
