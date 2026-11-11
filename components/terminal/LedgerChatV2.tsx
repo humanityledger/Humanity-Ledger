@@ -322,7 +322,8 @@ import { playReceiveSound } from '../../lib/utils/sounds';
 import { MessageBubble } from '../chat/MessageBubble';
 import { PinPrompt } from '@/components/chat/pin/PinPrompt';
 import { IncomingCallScreen, OutgoingCallScreen, AudioCallStage, CallControls, CallClock } from '@/components/chat/call/CallScreens';
-import { callConstraints, callVideo, CALL_AUDIO, tuneOpusSdp, tuneSenders, loadIceServers } from '@/lib/calls/media';
+import { callConstraints, callVideo, CALL_AUDIO, tuneOpusSdp, tuneSenders, loadIceConfig, peerServerOptions } from '@/lib/calls/media';
+import { DISCONNECTED_GRACE_MS, RESUME_ATTEMPT_MS, RESUME_DEADLINE_MS, acceptResume, glareKeepsMine, isResumeMeta, resumeDelay, shouldDialResume } from '@/lib/calls/resume';
 /** Opus tuned for speech on every offer and answer (lib/calls/media.ts). */
 const CALL_SDP = { sdpTransform: (sdp: string) => tuneOpusSdp(sdp) };
 import { Archive, ArchiveRestore, ChevronLeft, ChevronUp, ChevronDown, MessageSquare, Plus, ArrowUp, WifiOff, Pin, Check, ScanQrCode, Camera, FileText, Sticker, ListChecks, CreditCard, Receipt, Waves, Navigation, Timer, Info, LoaderCircle, Minimize2, Mail, ShieldCheck, Reply, Forward, Pencil, Flag, MessagesSquare, Globe } from 'lucide-react';
@@ -1987,7 +1988,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const thisKey = peerInitKey; // capture for closure
 
     // ICE servers from the server (short-lived TURN credentials) while PeerJS loads.
-    Promise.all([import('peerjs'), loadIceServers()]).then(([peerjsModule, iceServers]) => {
+    Promise.all([import('peerjs'), loadIceConfig()]).then(([peerjsModule, ice]) => {
+      const iceServers = ice.iceServers;
       if (destroyed) return; // component unmounted before import resolved
       const Peer = (peerjsModule as any).default?.Peer || (peerjsModule as any).Peer || (peerjsModule as any).default;
 
@@ -2005,6 +2007,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       const peer = new Peer(stablePeerId, {
         debug: 0,
+        // Our own PeerServer when NEXT_PUBLIC_PEERJS_HOST is set, else the public PeerJS cloud.
+        ...peerServerOptions(),
         config: {
           iceTransportPolicy: ((ledgerSettings as any)?.webrtc_ip_masking ? 'relay' : 'all') as RTCIceTransportPolicy,
           // Few servers: every extra STUN/TURN server slows candidate gathering. Our TURN (from
@@ -2072,6 +2076,30 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           return;
         }
 
+        // A resume (network change) or an upgrade to video: a new connection for the SAME call.
+        if (isResumeMeta(connection.metadata)) {
+          if (!acceptResume({ callState: callStateRef.current, remoteId: callRemoteIdRef.current, fromId: connection.peer, hasLocalStream: !!localStreamRef.current })) {
+            try { connection.close(); } catch {}
+            return;
+          }
+          const mine = pendingResumeRef.current;
+          if (mine) {
+            // Both sides dialled at once: one connection survives, chosen the same way on both.
+            if (glareKeepsMine(myPeerIdRef.current, connection.peer)) { try { connection.close(); } catch {} return; }
+            pendingResumeRef.current = null;
+            // Our own upgrade lost the tie: the camera is already in our stream, so it goes on theirs.
+            if (upgradeRef.current === mine) { upgradeRef.current = null; preUpgradeRef.current = null; }
+            try { mine.close(); } catch {}
+          }
+          if (connection.metadata.callType === 'video' && callTypeRef.current !== 'video') {
+            callTypeRef.current = 'video';
+            setCallType('video');
+          }
+          connection.answer(localStreamRef.current!, CALL_SDP);
+          wireCallRef.current(connection, { resume: true });
+          return;
+        }
+
         if (callStateRef.current === 'ringing' || callStateRef.current === 'idle') {
           // Receiver gets the call before clicking Answer — store it for answerCall()
           // If we were idle, the WebRTC packet beat the XMTP packet. Trigger ringing.
@@ -2118,7 +2146,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           console.warn('[Ledger Chat:PeerJS] ID unavailable — re-init with session suffix');
           schedulePeerReinit(1000);
         } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error' || err.type === 'socket-closed') {
-          // Network error — re-init with full backoff
+          // Only the signalling socket failed. During a call, destroying the peer would close the
+          // call's media connections too: 'disconnected' below reconnects the socket instead.
+          if (callStateRef.current !== 'idle') return;
           console.warn('[Ledger Chat:PeerJS] Network error — scheduling re-init');
           schedulePeerReinit(2000);
         } else if (err.type === 'peer-unavailable') {
@@ -2134,12 +2164,40 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       });
 
       peer.on('disconnected', () => {
+        // During a call the media keeps flowing peer to peer without the signalling socket (a
+        // network change drops it first). Destroying the peer would end the call, so reconnect the
+        // socket, every 3 s, keeping the same id; a clean re-init waits until the call is over.
+        if (callStateRef.current !== 'idle') {
+          console.warn('[Ledger Chat:PeerJS] Signalling dropped during a call — reconnecting, call kept');
+          const retry = () => {
+            if (destroyed || peer.destroyed || !peer.disconnected) return;
+            if (callStateRef.current === 'idle') { schedulePeerReinit(500); return; }
+            try { peer.reconnect(); } catch {}
+            setTimeout(retry, 3000);
+          };
+          retry();
+          return;
+        }
         console.warn('[Ledger Chat:PeerJS] Disconnected — destroying and scheduling re-init');
-        // [FIX] Don't call peer.reconnect() — it can hang indefinitely on mobile
-        // (iOS WKWebView, Android WebView) if the server connection is fully lost.
-        // Instead, destroy and trigger a clean re-init via peerInitKey.
+        // Outside a call: peer.reconnect() can hang on mobile WebViews when the server connection
+        // is fully lost, so destroy and re-init cleanly via peerInitKey.
         schedulePeerReinit(1500);
       });
+
+      // TURN credentials are short-lived: refresh them before they expire. PeerJS reads its config
+      // for every new connection, so the next call (or resume) uses the fresh ones.
+      let iceTimer: ReturnType<typeof setTimeout> | null = null;
+      const refreshIce = (inMs: number) => {
+        iceTimer = setTimeout(async () => {
+          if (destroyed || peer.destroyed) return;
+          const next = await loadIceConfig();
+          if (destroyed || peer.destroyed) return;
+          try { (peer as any).options.config = { ...(peer as any).options.config, iceServers: next.iceServers }; } catch {}
+          refreshIce(next.refreshInMs);
+        }, inMs);
+      };
+      refreshIce(ice.refreshInMs);
+      peer.on('close', () => { if (iceTimer) clearTimeout(iceTimer); });
 
       peer.on('close', () => {
         console.warn('[Ledger Chat:PeerJS] Peer closed');
@@ -2328,9 +2386,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   };
   // One way to wire every call connection (outgoing, answered, reverse-dialled): the other
   // person's stream plays through the single <audio> element, and sending is tuned once connected.
-  const wireCallRef = useRef<(conn: any) => void>(() => {});
-  wireCallRef.current = (conn: any) => {
+  const wireCallRef = useRef<(conn: any, opts?: { resume?: boolean }) => void>(() => {});
+  wireCallRef.current = (conn: any, opts: { resume?: boolean } = {}) => {
     conn.on('stream', (rStream: MediaStream) => {
+      // A resume connection becomes the call's connection once it carries the other person;
+      // the old one (still playing until now) is then closed: make before break.
+      if (opts.resume && activeConnectionRef.current !== conn) adoptConnectionRef.current(conn);
+      if (activeConnectionRef.current === conn || !activeConnectionRef.current) {
+        callRemoteIdRef.current = conn.peer;
+        if (!callMyIdRef.current) callMyIdRef.current = myPeerIdRef.current;
+      }
+      watchIceRef.current(conn);
       setRemoteStream(rStream);
       setCallState('active');
       stopRingtone();
@@ -2346,6 +2412,103 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     conn.on('close', () => endCallIfCurrentRef.current(conn));
     conn.on('error', () => endCallIfCurrentRef.current(conn));
   };
+  // ── Keeping the call alive (lib/calls/resume.ts) ──────────────────────────────
+  // The remote peer id of the call and our own id when it connected: a resume goes to the
+  // first, and is dialled by us if the second changed.
+  const callRemoteIdRef = useRef<string>('');
+  const callMyIdRef = useRef<string>('');
+  const pendingResumeRef = useRef<any>(null);
+  const pendingResumeAtRef = useRef(0);
+  const reconnectRef = useRef<{ deadline: number; attempt: number; timer: ReturnType<typeof setTimeout> | null } | null>(null);
+  const [callReconnecting, setCallReconnecting] = useState(false);
+  const remoteHasVideo = !!remoteStream?.getVideoTracks().length;
+  const localHasVideo = !!localStream?.getVideoTracks().some((t) => t.readyState === 'live');
+  const stopReconnectRef = useRef<() => void>(() => {});
+  stopReconnectRef.current = () => {
+    const r = reconnectRef.current;
+    reconnectRef.current = null;
+    if (r?.timer) clearTimeout(r.timer);
+    setCallReconnecting(false);
+  };
+  const adoptConnectionRef = useRef<(conn: any) => void>(() => {});
+  adoptConnectionRef.current = (conn: any) => {
+    const old = activeConnectionRef.current;
+    activeConnectionRef.current = conn;
+    setActiveConnection(conn);
+    if (pendingResumeRef.current === conn) pendingResumeRef.current = null;
+    stopReconnectRef.current();
+    if (old && old !== conn) { try { old.close(); } catch {} }
+  };
+  /** Dials a new connection for the running call. False when it cannot right now (signalling down). */
+  const dialResumeRef = useRef<(reason: 'network' | 'upgrade') => any>(() => null);
+  dialResumeRef.current = (reason) => {
+    const livePeer = peerInstanceRef.current;
+    const remote = callRemoteIdRef.current;
+    const stream = localStreamRef.current;
+    if (!livePeer || livePeer.destroyed || livePeer.disconnected || !remote || !stream) return null;
+    if (pendingResumeRef.current) { try { pendingResumeRef.current.close(); } catch {} }
+    const conn = livePeer.call(remote, stream, {
+      metadata: { kind: 'resume', callType: callTypeRef.current === 'video' ? 'video' : 'audio', reason },
+      ...CALL_SDP,
+    });
+    if (!conn) return null;
+    pendingResumeRef.current = conn;
+    pendingResumeAtRef.current = Date.now();
+    wireCallRef.current(conn, { resume: true });
+    return conn;
+  };
+  const beginReconnectRef = useRef<() => void>(() => {});
+  beginReconnectRef.current = () => {
+    if (reconnectRef.current || callStateRef.current !== 'active') return;
+    reconnectRef.current = { deadline: Date.now() + RESUME_DEADLINE_MS, attempt: 0, timer: null };
+    setCallReconnecting(true);
+    const tick = () => {
+      const r = reconnectRef.current;
+      if (!r || callStateRef.current !== 'active') return;
+      if (Date.now() > r.deadline) {
+        stopReconnectRef.current();
+        toast.error('The call lost its connection.');
+        executeSendRef.current?.('__CALL_HANGUP__').catch(() => {});
+        performEndCallRef.current();
+        return;
+      }
+      // A new attempt only when none is under way: ICE over a relay can take a few seconds, and a
+      // retry must not cut an attempt that was about to connect.
+      const busy = pendingResumeRef.current && Date.now() - pendingResumeAtRef.current < RESUME_ATTEMPT_MS;
+      if (!busy && shouldDialResume({ isCaller: isCallerRef.current, myId: myPeerIdRef.current, myIdAtStart: callMyIdRef.current })) {
+        dialResumeRef.current('network');
+      }
+      r.attempt += 1;
+      r.timer = setTimeout(tick, Math.max(1_000, resumeDelay(r.attempt)));
+    };
+    tick();
+  };
+  /** ICE "disconnected" for a moment starts recovery at once; PeerJS itself waits for "failed". */
+  const watchIceRef = useRef<(conn: any) => void>(() => {});
+  const watchedRef = useRef<WeakSet<object>>(new WeakSet());
+  watchIceRef.current = (conn: any) => {
+    const pc: RTCPeerConnection | undefined = conn?.peerConnection;
+    if (!pc || watchedRef.current.has(pc)) return;
+    watchedRef.current.add(pc);
+    let grace: ReturnType<typeof setTimeout> | null = null;
+    pc.addEventListener('iceconnectionstatechange', () => {
+      const st = pc.iceConnectionState;
+      if (st === 'connected' || st === 'completed') {
+        if (grace) { clearTimeout(grace); grace = null; }
+        // The old path came back by itself before a resume did: keep it.
+        if (activeConnectionRef.current === conn && reconnectRef.current) {
+          stopReconnectRef.current();
+          if (pendingResumeRef.current) { try { pendingResumeRef.current.close(); } catch {} pendingResumeRef.current = null; }
+        }
+      } else if (st === 'disconnected' && !grace) {
+        grace = setTimeout(() => {
+          grace = null;
+          if (activeConnectionRef.current === conn && pc.iceConnectionState !== 'connected' && pc.iceConnectionState !== 'completed') beginReconnectRef.current();
+        }, DISCONNECTED_GRACE_MS);
+      }
+    });
+  };
+
   // Keep refs in sync with state
   useEffect(() => { activeConnectionRef.current = activeConnection; }, [activeConnection]);
   useEffect(() => { remoteStreamRef.current = remoteStream; }, [remoteStream]);
@@ -2360,6 +2523,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const ls = localStreamRef.current;
     const rs = remoteStreamRef.current;
     const ac = activeConnectionRef.current;
+    // Forget the call before closing its connections: their 'close' must not start a recovery.
+    activeConnectionRef.current = null;
+    callStateRef.current = 'idle';
+    stopReconnectRef.current();
+    if (pendingResumeRef.current) { try { pendingResumeRef.current.close(); } catch {} pendingResumeRef.current = null; }
+    callRemoteIdRef.current = '';
+    callMyIdRef.current = '';
     if (ls) { try { ls.getTracks().forEach(t => t.stop()); } catch {} }
     if (rs) { try { rs.getTracks().forEach(t => t.stop()); } catch {} }
     if (ac) { try { ac.close(); } catch {} }
@@ -2399,7 +2569,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const endCallIfCurrentRef = useRef<(conn: any) => void>(() => {});
   endCallIfCurrentRef.current = (conn: any) => {
     const active = activeConnectionRef.current;
-    if (!active || active === conn) performEndCallRef.current();
+    if (active && active !== conn) {
+      // A resume attempt that failed: an upgrade to video the other app could not take is undone.
+      if (pendingResumeRef.current === conn) {
+        pendingResumeRef.current = null;
+        if (upgradeRef.current === conn) undoUpgradeRef.current();
+      }
+      return;
+    }
+    // The connection of a running call dropped (network change, ICE failed): recover. A hang-up
+    // arrives as __CALL_HANGUP__ over XMTP and ends the call; the recovery has a deadline anyway.
+    if (active === conn && callStateRef.current === 'active') { beginReconnectRef.current(); return; }
+    performEndCallRef.current();
   };
 
   // ─── startCall: Initiates an outgoing call ───────────────────────────────────
@@ -2451,6 +2632,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         stream.getTracks().forEach(t => t.stop());
         return;
       }
+      rememberMediaPermission();
       setLocalStream(stream);
       setCallType(type);
       callTypeRef.current = type;
@@ -2554,6 +2736,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         stream.getTracks().forEach(t => t.stop());
         return;
       }
+      rememberMediaPermission();
       setLocalStream(stream);
       if (myVideoRef.current) myVideoRef.current.srcObject = stream;
 
@@ -2654,58 +2837,25 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   };
 
+  // Straight to the call: startCall/answerCall make the one getUserMedia request and explain any
+  // refusal. A separate "permission" request used to come first: it opened the microphone (and,
+  // to answer a voice call, the camera) a second time, delayed every first call, and its stream
+  // was never stopped, so the devices stayed in use after the call.
+  const rememberMediaPermission = () => {
+    if (!hasMediaPermission) {
+      try { vault.setItem('ledger_media_perm', 'true'); } catch {}
+      setHasMediaPermission(true);
+    }
+  };
   const handleStartCall = async (type: 'audio' | 'video', targetPeerOverride?: string) => {
     if (targetPeerOverride && activePeer !== targetPeerOverride) {
       setActivePeer(targetPeerOverride);
     }
-    if (hasMediaPermission) {
-      startCall(type, targetPeerOverride);
-      return;
-    }
-    // Request browser permission directly — no intermediary modal
-    try {
-      const constraints = type === 'video' ? { audio: true, video: true } : { audio: true, video: false };
-      await navigator.mediaDevices.getUserMedia(constraints);
-      vault.setItem('ledger_media_perm', 'true');
-      setHasMediaPermission(true);
-      startCall(type, targetPeerOverride);
-    } catch (e: any) {
-      const errName = e?.name || '';
-      if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
-        toast.error('Microphone or camera access is blocked. Allow it in your browser settings.', { duration: 6000 });
-      } else if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
-        toast.error('No microphone or camera was found');
-      } else if (errName === 'NotReadableError' || errName === 'TrackStartError') {
-        toast.error('Another app is using your microphone or camera. Close it and try again.', { duration: 6000 });
-      } else {
-        toast.error('Could not start call. Please try again.');
-      }
-    }
+    startCall(type, targetPeerOverride);
   };
 
   const handleAnswerCall = async () => {
-    if (hasMediaPermission) {
-      answerCall();
-      return;
-    }
-    // Request browser permission directly — no intermediary modal
-    try {
-      await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-      vault.setItem('ledger_media_perm', 'true');
-      setHasMediaPermission(true);
-      answerCall();
-    } catch (e: any) {
-      const errName = e?.name || '';
-      if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
-        toast.error('Microphone or camera access is blocked. Allow it in your browser settings.', { duration: 6000 });
-      } else if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
-        toast.error('No microphone or camera was found');
-      } else if (errName === 'NotReadableError' || errName === 'TrackStartError') {
-        toast.error('Another app is using your microphone or camera. Close it and try again.', { duration: 6000 });
-      } else {
-        toast.error('Could not answer the call. Please try again.');
-      }
-    }
+    answerCall();
   };
 
   // ─── declineCall: Receiver declines ─────────────────────────────────────────
@@ -2807,10 +2957,56 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // ─── toggleCamera ────────────────────────────────────────────────────────────
   const toggleCamera = useCallback(() => {
     if (!localStream) return;
+    // No camera yet (a voice call, or the side that was upgraded to video): add one in place.
+    if (!localStream.getVideoTracks().length) { void enableCameraRef.current(); return; }
     const nextOff = !isCamOff;
     localStream.getVideoTracks().forEach(t => { t.enabled = !nextOff; });
     setIsCamOff(nextOff);
   }, [localStream, isCamOff]);
+
+  // ─── Voice → video without hanging up ────────────────────────────────────────
+  // The camera is added to our stream and sent on a resume connection (lib/calls/resume.ts); the
+  // voice keeps going on the old one until the new one carries the call.
+  const upgradeRef = useRef<any>(null);
+  const preUpgradeRef = useRef<{ stream: MediaStream; type: 'audio' | 'video'; track: MediaStreamTrack } | null>(null);
+  const undoUpgradeRef = useRef<() => void>(() => {});
+  undoUpgradeRef.current = () => {
+    const prev = preUpgradeRef.current;
+    preUpgradeRef.current = null;
+    upgradeRef.current = null;
+    if (!prev) return;
+    try { prev.track.stop(); } catch {}
+    setLocalStream(prev.stream);
+    callTypeRef.current = prev.type;
+    setCallType(prev.type);
+    toast.error("Your contact's app could not switch to video. The voice call goes on.");
+  };
+  const enableCameraRef = useRef<() => Promise<void>>(async () => {});
+  enableCameraRef.current = async () => {
+    const current = localStreamRef.current;
+    if (!current || callStateRef.current !== 'active' || upgradeRef.current) return;
+    let track: MediaStreamTrack | undefined;
+    try {
+      const cam = await navigator.mediaDevices.getUserMedia({ video: callVideo(activeCamera) });
+      track = cam.getVideoTracks()[0];
+    } catch (e: any) {
+      toast.error(e?.name === 'NotAllowedError' ? 'Camera access is blocked. Allow it in your browser settings.' : 'Could not turn on your camera.');
+      return;
+    }
+    if (!track || !localStreamRef.current || callStateRef.current !== 'active') { try { track?.stop(); } catch {} return; }
+    const prevType: 'audio' | 'video' = callTypeRef.current === 'video' ? 'video' : 'audio';
+    const next = new MediaStream([...current.getAudioTracks(), track]);
+    preUpgradeRef.current = { stream: current, type: prevType, track };
+    setLocalStream(next);
+    setIsCamOff(false);
+    callTypeRef.current = 'video';
+    setCallType('video');
+    const conn = dialResumeRef.current('upgrade');
+    if (!conn) { undoUpgradeRef.current(); return; }
+    upgradeRef.current = conn;
+    // Adopted (stream arrived): the upgrade is done and nothing is undone any more.
+    conn.on('stream', () => { if (upgradeRef.current === conn) { upgradeRef.current = null; preUpgradeRef.current = null; } });
+  };
 
   // ─── toggleVoiceIsolation ────────────────────────────────────────────────────────
   const toggleVoiceIsolation = useCallback(async () => {
@@ -6661,9 +6857,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       ) as React.ReactNode) : null}
 
       {/* ── Call in progress ─────────────────────────────────────── */}
+      {/* Layout follows what is really sent: the other person's video only if their stream has a
+          camera, our own preview only if ours does (after a voice→video switch they may differ). */}
       {callState === 'active' && isMounted && (
         isCallMinimized ? createPortal(
-          callType === 'video' ? (
+          callType === 'video' && remoteHasVideo ? (
             <motion.div
               drag
               dragConstraints={{ top: 0, left: 0, right: typeof window !== 'undefined' ? window.innerWidth - 120 : 0, bottom: typeof window !== 'undefined' ? window.innerHeight - 160 : 0 }}
@@ -6701,19 +6899,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
             {/* Background: the other person's video, or their name and picture for a voice call */}
             <div className="absolute inset-0">
-              {callType === 'video' ? (
-                remoteStream ? (
-                  <video
-                    ref={el => { if (el && el.srcObject !== remoteStream) el.srcObject = remoteStream; }}
-                    autoPlay playsInline muted className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <AudioCallStage
-                    peerName={activePeer ? getDisplayName(activePeer) : 'Unknown'}
-                    peerAddress={activePeer}
-                    connected={false}
-                  />
-                )
+              {callType === 'video' && remoteHasVideo ? (
+                <video
+                  ref={el => { if (el && el.srcObject !== remoteStream) el.srcObject = remoteStream; }}
+                  autoPlay playsInline muted className="w-full h-full object-cover"
+                />
               ) : (
                 <AudioCallStage
                   peerName={activePeer ? getDisplayName(activePeer) : 'Unknown'}
@@ -6721,6 +6911,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   connected={!!remoteStream}
                   startedAt={callStartedAt}
                   poorConnection={networkQuality === 'poor'}
+                  reconnecting={callReconnecting}
                   levelStream={remoteStream}
                 />
               )}
@@ -6753,7 +6944,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 initial={{ x: 0, y: 0 }}
                 className="absolute top-[84px] right-4 z-20 cursor-grab active:cursor-grabbing"
               >
-                {!isCamOff && localStream ? (
+                {!isCamOff && localHasVideo ? (
                   <div className="w-28 h-40 md:w-36 md:h-52 rounded-2xl overflow-hidden ring-1 ring-white/30 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.6)] bg-[#15171c]">
                     <video
                       ref={el => { if (el && el.srcObject !== localStream) el.srcObject = localStream; }}
@@ -6814,7 +7005,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
             {/* Weak connection notice, video only (voice shows it under the name) */}
             <AnimatePresence>
-              {networkQuality === 'poor' && callType === 'video' && (
+              {callReconnecting && callType === 'video' && (
+                <motion.div
+                  key="reconnecting"
+                  initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+                  role="status"
+                  className="absolute top-[120px] left-1/2 -translate-x-1/2 bg-white text-[#15171c] text-[13px] font-medium px-3.5 py-2 rounded-full z-30 flex items-center gap-2 shadow-[0_8px_24px_-8px_rgba(16,24,40,0.35)]"
+                >
+                  <Wifi size={14} strokeWidth={2} className="text-[#b7791f]" aria-hidden="true" /> Reconnecting…
+                </motion.div>
+              )}
+              {!callReconnecting && networkQuality === 'poor' && callType === 'video' && (
                 <motion.div
                   initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
                   role="status"
@@ -6828,12 +7029,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             {/* Controls */}
             <div className="absolute bottom-0 inset-x-0 z-30 flex justify-center" style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom, 32px))' }}>
               <CallControls
-                tone={callType === 'video' && !!remoteStream ? 'dark' : 'light'}
+                tone={callType === 'video' && remoteHasVideo ? 'dark' : 'light'}
                 isVideo={callType === 'video'}
                 micMuted={isMicMuted}
-                cameraOff={isCamOff}
+                cameraOff={isCamOff || !localHasVideo}
                 screenSharing={isScreenSharing}
-                onSwitchCamera={switchCamera}
+                onSwitchCamera={localHasVideo ? switchCamera : undefined}
                 onScreenShare={canShareScreen ? toggleScreenShare : undefined}
                 onToggleCamera={toggleCamera}
                 onToggleMic={toggleMic}

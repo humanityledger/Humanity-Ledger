@@ -247,6 +247,7 @@ export function AudioCallStage({
   startedAt = null,
   durationLabel,
   poorConnection,
+  reconnecting,
   levelStream,
 }: {
   peerName: string;
@@ -258,6 +259,8 @@ export function AudioCallStage({
   /** Fixed label instead of the clock. */
   durationLabel?: string;
   poorConnection?: boolean;
+  /** The connection dropped and the call is recovering (lib/calls/resume.ts). */
+  reconnecting?: boolean;
   /** The other person's stream, for the voice pulse. */
   levelStream?: MediaStream | null;
 }) {
@@ -274,9 +277,9 @@ export function AudioCallStage({
       </div>
       <div>
         <p className={s.name}>{peerName}</p>
-        <p className={`${s.status} ${poorConnection ? s.statusWarn : ''}`} role="status">
-          <span className={`${s.dot} ${connected ? (poorConnection ? s.dotWarn : s.dotLive) : ''}`} aria-hidden="true" />
-          {!connected ? 'Connecting' : poorConnection ? 'Weak connection' : durationLabel ?? <CallClock startedAt={startedAt} />}
+        <p className={`${s.status} ${poorConnection || reconnecting ? s.statusWarn : ''}`} role="status">
+          <span className={`${s.dot} ${connected ? (poorConnection || reconnecting ? s.dotWarn : s.dotLive) : ''}`} aria-hidden="true" />
+          {!connected ? 'Connecting' : reconnecting ? 'Reconnecting…' : poorConnection ? 'Weak connection' : durationLabel ?? <CallClock startedAt={startedAt} />}
         </p>
       </div>
     </div>
@@ -308,7 +311,7 @@ export function CallControls({
 }) {
   return (
     <div className={`${s.controls} ${tone === 'light' ? s.controlsLight : s.controlsDark}`} role="toolbar" aria-label="Call controls">
-      {isVideo && onSwitchCamera && (
+      {isVideo && onSwitchCamera && !cameraOff && (
         <button type="button" className={s.control} onClick={onSwitchCamera} aria-label="Switch camera" title="Switch camera">
           <SwitchCamera size={21} strokeWidth={1.9} />
         </button>
@@ -325,7 +328,7 @@ export function CallControls({
           <MonitorUp size={21} strokeWidth={1.9} />
         </button>
       )}
-      {isVideo && onToggleCamera && (
+      {onToggleCamera && (
         <button
           type="button"
           className={`${s.control} ${cameraOff ? s.controlOn : ''}`}
