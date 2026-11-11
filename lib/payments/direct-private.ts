@@ -118,6 +118,8 @@ export function directPaymentMessage(p: { token: TokenKey; txHash: string; sende
       ? `I sent you a private payment in ${symbol} on ${networkLabel()}. The amount is private; the network fee is paid publicly by my account. `
       : `I sent you a private payment in ${symbol} test tokens on the Aztec test network. Only you and I can see the amount. `) +
     `Transaction: ${p.txHash}${url ? ` (${url})` : ''}.` +
-    (p.senderAztec ? ` If it does not show in your private wallet, add my Aztec address under Receive: ${p.senderAztec}` : '')
+    // The receiver's wallet already knows chat contacts as senders (PrivateWallet.registerChatPeers);
+    // the address stays as a fallback for a wallet opened before this chat pinned it.
+    (p.senderAztec ? ` It appears in your private wallet after a sync; if not, add my Aztec address under Receive: ${p.senderAztec}` : '')
   );
 }
