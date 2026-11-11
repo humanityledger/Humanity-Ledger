@@ -131,8 +131,12 @@ describe('retired routes', () => {
   });
 
   it('keeps the routes the app uses', () => {
-    for (const p of ['/api/push/send', '/api/chat/communities/c1/proposals', '/api/chat/onion/relay', '/api/auth/send-code']) {
+    for (const p of ['/api/push/send', '/api/chat/communities/c1/proposals', '/api/chat/onion/relay']) {
       expect(isRetiredApiRoute(p)).toBe(false);
+    }
+    // Email sign-in was removed later (2026-11-11): wallet (SIWE) or a linked phone only.
+    for (const p of ['/api/auth/send-code', '/api/auth/verify-code', '/api/auth/check-email']) {
+      expect(isRetiredApiRoute(p)).toBe(true);
     }
   });
 });

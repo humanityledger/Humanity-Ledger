@@ -42,7 +42,8 @@ import { AntiTamperCore } from "@/components/security/AntiTamperCore";
 import { AztecProvider } from "@/context/AztecContext";
 
 
-import { WalletConnectProvider } from '@/components/walletconnect/WalletConnectProvider';
+// No global WalletConnect *wallet* SDK (WalletConnectProvider): it opened a second WalletConnect core and
+// relay WebSocket on every page, for a pairing screen nothing in the app shows. Sign-in uses AppKit.
 
 const inter = Inter({ 
   subsets: ['latin'], 
@@ -611,8 +612,6 @@ export default async function RootLayout({
                       {/* Cookie banner completely eradicated per user request */}
 
                       <ClientOverlays />
-
-                      <WalletConnectProvider />
 
                     </CookieProvider>
 

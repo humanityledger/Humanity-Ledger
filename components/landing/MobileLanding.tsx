@@ -23,7 +23,6 @@ import { RemoteLottie } from '@/components/ui/RemoteLottie';
 import { SafeErrorBoundary } from '@/components/ui/SafeErrorBoundary';
 import { ImmersiveManifestoLanding } from "./ImmersiveManifestoLanding";
 import { HumanityLedgerTweetFeed } from "./HumanityLedgerTweetFeed";
-import { EmailLoginModal } from "@/components/auth/EmailLoginModal";
 
 
 import { safeReturnPath } from "@/lib/security/safeRedirect";
@@ -634,7 +633,6 @@ export function MobileLanding() {
   // which causes Chrome Android to silently block metamask:// navigations.
   const [wcDeepLink, setWcDeepLink] = useState<string | null>(null);
   const [wcTargetWallet, setWcTargetWallet] = useState<string>('metamask');
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -1453,16 +1451,6 @@ export function MobileLanding() {
             <div className="flex-1 h-px bg-black/8" />
           </div>
 
-          {/* Email sign-in */}
-          <WalletOption
-            logo="https://www.svgrepo.com/show/513867/email-letter.svg"
-            name="Sign in with Email"
-            badge="One-time code. No wallet needed."
-            loading={false}
-            onClick={() => setEmailModalOpen(true)}
-            delay={0}
-          />
-
           {/* QR Code Scanner */}
           <WalletOption
             logo="/favicon.png"
@@ -1482,10 +1470,6 @@ export function MobileLanding() {
         </p>
       </motion.div>
 
-
-      {mounted && typeof document !== 'undefined' && (
-        <EmailLoginModal isOpen={emailModalOpen} onClose={() => setEmailModalOpen(false)} />
-      )}
 
       {mounted && typeof document !== 'undefined' && (
         <DynamicUniversalScanModal

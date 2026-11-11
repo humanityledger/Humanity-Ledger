@@ -106,9 +106,10 @@ const metadata = {
     description: 'Decentralized Encrypted Messenger on Humanity Ledger',
     url: appOrigin,
     icons: [`${appOrigin}/logo-mark.png`],
-    redirect: {
-        universal: typeof window !== 'undefined' ? window.location.origin : 'https://ledgerchat.org',
-    },
+    // No `redirect`: it is for native apps (deep links back into an app). For a website, a wallet that
+    // follows `redirect.universal` opens ledgerchat.org in a NEW browser tab, away from the tab waiting
+    // for the approval. On iOS 17+ a wallet cannot return to the browser by itself; the visitor taps
+    // "‹ Safari" and /connect resumes (visibilitychange). Android wallets go to the background.
 }
 
 export const wagmiAdapter = new WagmiAdapter({
@@ -186,6 +187,23 @@ const siweConfig = createSIWEConfig({
   }
 });
 
+/**
+ * One-Click Auth, phone browsers only (Safari, Chrome; no wallet injected in the page): AppKit asks the
+ * wallet to connect AND sign the SIWE message in one trip (`wc_sessionAuthenticate` where the wallet
+ * supports it, else connect then sign inside the AppKit sheet). Without it the visitor goes to the wallet
+ * twice and, on iPhone, comes back by hand twice. The signature is checked by the same /api/siwe/verify,
+ * which sets the session cookies. /connect then only waits for the session (ConnectPage.tsx).
+ * Off unless NEXT_PUBLIC_ONE_CLICK_AUTH=true: switch it on after the two-phone check in docs/CONNECT.md.
+ */
+function isPhoneBrowserWithoutWallet(): boolean {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const iPadOS = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+    const phone = iPadOS || /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    return phone && !(window as any).ethereum;
+}
+export const ONE_CLICK_AUTH = process.env.NEXT_PUBLIC_ONE_CLICK_AUTH === 'true' && isPhoneBrowserWithoutWallet();
+
 let appKitInitialized = false;
 
 try {
@@ -197,6 +215,7 @@ try {
             defaultNetwork: dedicatedMainnet,
             projectId,
             metadata,
+            ...(ONE_CLICK_AUTH ? { siweConfig } : {}),
             enableWalletConnect: true,
             enableInjected: true,
             allowUnsupportedChain: true,
@@ -226,7 +245,7 @@ try {
             },
             themeMode: 'light',
             themeVariables: {
-                '--w3m-accent': '#5200FF',                    // Aztec purple
+                '--w3m-accent': '#15171c',                    // Ledger Chat ink, as on the landing page
                 '--w3m-border-radius-master': '1.5rem',       // slightly less extreme for mobile hit areas
                 '--w3m-font-family': 'Inter, sans-serif',
                 '--w3m-z-index': 99999,  // must be above our fixed inset-0 container                    

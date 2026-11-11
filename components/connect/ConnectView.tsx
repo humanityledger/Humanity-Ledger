@@ -11,7 +11,6 @@ import {
   KeyRound,
   LoaderCircle,
   Lock,
-  Mail,
   QrCode,
   RefreshCw,
   ScanQrCode,
@@ -57,7 +56,6 @@ export interface ConnectViewProps {
 
   onWallet: (id: string) => void;
   onOtherWallets: () => void;
-  onEmail: () => void;
   onPhone: () => void;
   onBack: () => void;
   onRetry: () => void;
@@ -166,7 +164,6 @@ function Choose(p: ConnectViewProps) {
       <div className={s.divider}>or</div>
 
       <div className={s.options}>
-        <Option icon={Mail} name="Continue with email" hint="We email you a code to sign in" onClick={p.onEmail} />
         {p.isMobile ? (
           <Option
             icon={ScanQrCode}
@@ -254,8 +251,8 @@ function Connecting(p: ConnectViewProps) {
       )}
       <h1 className={s.title}>Waiting for {name}</h1>
       <p className={s.subtitle}>
-        {p.isMobile 
-          ? `Open ${name} to approve the connection. Tap the button below if the app did not open automatically.`
+        {p.isMobile
+          ? `Approve the connection in ${name}, then come back to this page: on iPhone, tap "‹ Safari" at the top left (iOS does not let a wallet return to the browser by itself). This page carries on as soon as you are back.`
           : `Approve the connection request in ${name}. If nothing appears, open the extension from your browser toolbar.`}
       </p>
       <span className={s.waiting} role="status">
@@ -274,20 +271,6 @@ function Connecting(p: ConnectViewProps) {
           >
             Open {name}
           </a>
-        )}
-        {p.isMobile && (
-          <button
-            type="button"
-            className={`${s.btn} ${s.btnSecondary}`}
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                const cleanUrl = window.location.host + window.location.pathname + window.location.search;
-                window.location.href = `https://metamask.app.link/dapp/${cleanUrl}`;
-              }
-            }}
-          >
-            Open in MetaMask App
-          </button>
         )}
         <button type="button" className={`${s.btn} ${s.btnSecondary}`} onClick={p.onCancelPending}>
           Cancel

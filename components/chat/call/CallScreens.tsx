@@ -142,17 +142,30 @@ export function OutgoingCallScreen({
   peerAddress,
   photo,
   isVideo,
+  preview,
   onCancel,
 }: {
   peerName: string;
   peerAddress?: string | null;
   photo?: string | null;
   isVideo: boolean;
+  /** Our own camera while it rings (video calls), mirrored like a mirror. */
+  preview?: MediaStream | null;
   onCancel: () => void;
 }) {
   return (
     <div className={s.screen} role="dialog" aria-modal="true" aria-label={`Calling ${peerName}`}>
       <Top label={isVideo ? 'Video call' : 'Voice call'} isVideo={isVideo} />
+      {isVideo && preview && preview.getVideoTracks().length > 0 && (
+        <video
+          ref={(el) => { if (el && el.srcObject !== preview) el.srcObject = preview; }}
+          autoPlay
+          playsInline
+          muted
+          aria-label="Your camera"
+          style={{ position: 'absolute', top: 84, right: 16, width: 112, height: 160, objectFit: 'cover', borderRadius: 16, transform: 'scaleX(-1)', background: '#15171c', boxShadow: '0 18px 40px -12px rgba(16,24,40,0.45)', zIndex: 2 }}
+        />
+      )}
 
       <div className={s.centre}>
         <div className={s.avatarWrap}>

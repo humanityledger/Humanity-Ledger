@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHmac } from 'node:crypto';
 import { CALL_AUDIO, FALLBACK_ICE, callConstraints, callVideo, loadIceConfig, loadIceServers, peerServerOptions, preferRed, tuneOpusSdp, tuneSenders } from '@/lib/calls/media';
+import { finishCallMetrics, markFirstAudio, markSetup, recentCallMetrics, sampleHeap, startCallMetrics } from '@/lib/calls/metrics';
 import { RESUME_ATTEMPT_MS, RESUME_DEADLINE_MS, acceptResume, basePeerId, glareKeepsMine, isResumeMeta, resumeDelay, shouldDialResume } from '@/lib/calls/resume';
 
 const root = path.resolve(__dirname, '../../..');
@@ -185,7 +186,7 @@ describe('call resume: network changes and voice → video', () => {
   });
 
   it('a resume replaces the connection only once it carries the other person (make before break)', () => {
-    expect(chat).toMatch(/if \(opts\.resume && activeConnectionRef\.current !== conn\) adoptConnectionRef\.current\(conn\);/);
+    expect(chat).toMatch(/if \(opts\.resume && activeConnectionRef\.current !== conn\) \{\s*adoptConnectionRef\.current\(conn\);/);
     expect(chat).toMatch(/if \(isResumeMeta\(connection\.metadata\)\) \{\s*if \(!acceptResume\(/);
     expect(chat).toMatch(/connection\.answer\(localStreamRef\.current!, CALL_SDP\);\s*wireCallRef\.current\(connection, \{ resume: true \}\);/);
   });
@@ -282,5 +283,51 @@ describe('private wallet memory', () => {
     const src = read('lib/aztec/wallet/client.ts');
     expect(src).toMatch(/document\.visibilityState === 'hidden' && this\.stores && !this\.transacting && this\.snapshot\.phase === 'ready'/);
     expect(src).toMatch(/void this\.release\(IDLE_CLOSED_MESSAGE\)/);
+  });
+});
+
+describe('call visibility and measurements', () => {
+  const chat = read('components/terminal/LedgerChatV2.tsx');
+
+  it('cancelling an outgoing call stops the other phone ringing', () => {
+    expect(chat).toMatch(/onCancel=\{\(\) => endCallRef\.current\(\)\}/);
+    expect(chat).not.toMatch(/onCancel=\{\(\) => performEndCallRef\.current\?\.\(\)\}/);
+  });
+
+  it('shows the call screen while connecting, not the chat', () => {
+    expect(chat).toMatch(/\(callState === 'active' \|\| callState === 'connecting'\) && isMounted && \(/);
+  });
+
+  it('a voice the browser refuses to play gets a button, not a silent call', () => {
+    expect(chat).toMatch(/if \(err\?\.name === 'NotAllowedError'\) setAudioBlocked\(true\);/);
+    expect(chat).toMatch(/\{audioBlocked && \(/);
+  });
+
+  it('a shared screen disappears when the sharer stops, without waiting for a timeout', () => {
+    expect(chat).toMatch(/t\?\.addEventListener\('ended'/);
+    expect(chat).toMatch(/t\?\.addEventListener\('mute'/);
+  });
+
+  it('own camera is mirrored while ringing too', () => {
+    expect(read('components/chat/call/CallScreens.tsx')).toMatch(/preview\.getVideoTracks\(\)\.length > 0[\s\S]{0,400}transform: 'scaleX\(-1\)'/);
+  });
+
+  it('measures setup time, first audio, route and memory, on this device only', () => {
+    const store = new Map<string, string>();
+    const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v); } };
+    const m = startCallMetrics('caller', 'audio', 1_000);
+    markSetup(m, 1_800);
+    markSetup(m, 9_999); // first one counts
+    markFirstAudio(m, 2_100);
+    sampleHeap(m, { memory: { usedJSHeapSize: 150 * 1_048_576 } });
+    sampleHeap(m, {}); // no performance.memory (Safari, Firefox): nothing recorded
+    expect(m).toMatchObject({ setupMs: 800, firstAudioMs: 1_100, heapMb: [150], resumes: 0 });
+    const list = finishCallMetrics(m, storage, 5_000);
+    expect(list).toHaveLength(1);
+    expect(finishCallMetrics(m, storage, 6_000)).toHaveLength(1); // not recorded twice
+    for (let i = 0; i < 15; i++) finishCallMetrics(startCallMetrics('callee', 'video', i), storage, i + 1);
+    expect(recentCallMetrics(storage)).toHaveLength(10);
+    expect(chat).toMatch(/finishCallMetrics\(callMetricsRef\.current\);/);
+    expect(read('lib/calls/metrics.ts')).not.toMatch(/fetch\(/);
   });
 });
