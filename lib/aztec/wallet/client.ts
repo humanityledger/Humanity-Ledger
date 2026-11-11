@@ -911,6 +911,10 @@ export function humanError(err: any): string {
   if (/tx dropped|invalid tx|transaction .*rejected|rejected by (the )?node|reverted/i.test(msg)) return 'The Aztec node rejected the transaction. Nothing changed. Try again in a minute.';
   if (/Balance too low|not enough|insufficient/i.test(msg)) return 'Your balance is too low for this amount.';
   if (/timeout/i.test(msg)) return 'The network took too long to confirm. It may still go through; check again in a minute.';
+  // A page loaded before a deploy asks for code chunks of the old build, which no longer exist.
+  if (/dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk [\w-]+ failed|error loading dynamically imported/i.test(msg)) {
+    return 'Ledger Chat was updated while this page was open. Reload the page, then open the wallet again. Nothing was sent.';
+  }
   if (/Failed to fetch|fetch failed|NetworkError|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(msg)) {
     // Name the service when the error does; a browser extension or firewall blocking one host looks the same as no connection.
     const host = msg.match(/https?:\/\/([a-z0-9.-]+)/i)?.[1];

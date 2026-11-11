@@ -45,3 +45,17 @@ describe('ZkWalletPanel on Aztec Alpha', () => {
     expect(panel).toMatch(/sheet === 'fees' && <FeeJuiceStation/);
   });
 });
+
+describe('humanError: network failures say what failed', () => {
+  it('a stale page after a deploy asks for a reload, not a connection check', async () => {
+    const { humanError } = await import('@/lib/aztec/wallet/client');
+    expect(humanError(new TypeError('Failed to fetch dynamically imported module: https://ledgerchat.org/_next/static/chunks/123.js'))).toMatch(/updated while this page was open/);
+    expect(humanError(new Error('ChunkLoadError: Loading chunk 4521 failed.'))).toMatch(/Reload the page/);
+  });
+  it('a plain network failure names the host when the error does and keeps the raw reason', async () => {
+    const { humanError } = await import('@/lib/aztec/wallet/client');
+    const m = humanError(new Error('fetch failed: https://aztec-mainnet.drpc.org'));
+    expect(m).toMatch(/Could not reach aztec-mainnet\.drpc\.org/);
+    expect(m).toMatch(/\(fetch failed/);
+  });
+});
