@@ -4,6 +4,7 @@ import { useAccount } from 'wagmi';
 import { useState, useEffect, useRef } from 'react';
 import { useWalletStore } from '@/lib/store/wallet-store';
 import { getAddress } from 'viem';
+import { getSelfLink } from '@/lib/link/channel';
 
 /**
  * [Cryptographic HANDSHAKE] Account Bridge — Hardware-Bound Persistence Edition
@@ -267,6 +268,34 @@ export function useSystemAccount() {
             isLocalSystemWallet: false,
             needsWalletReconnect: false,
             isZkVerified: false,
+            isChecking: false,
+        };
+    }
+
+    //  Priority 0: a computer linked by QR to the phone (lib/link/channel.ts)
+    // Its account is the phone's wallet, held by the server session; it has no wallet of its own.
+    // Before this, the sign-in left "local wallet" markers (system_wallet_addr, portfolio_unlocked)
+    // and an unrelated browser extension could win, so chat start-up asked a wallet that is not
+    // there and failed with "Active wallet connection lost". A wallet actually connected here
+    // with the same address still signs locally (Priority 1).
+    const linkedSelf = !isGuarded && typeof window !== 'undefined' ? getSelfLink() : null;
+    const wagmiIsLinkedWallet = !!linkedSelf && wagmiAccount.isConnected && wagmiAccount.address?.toLowerCase() === linkedSelf.wallet;
+    if (linkedSelf && !wagmiIsLinkedWallet) {
+        return {
+            address: linkedSelf.wallet as `0x${string}`,
+            isConnected: true,
+            isConnecting: false,
+            isReconnecting: false,
+            isDisconnected: false,
+            status: 'connected' as const,
+            chain: undefined,
+            chainId: 1,
+            connector: undefined,
+            isSystemHandshake: true,
+            isLocalSystemWallet: false,
+            isLinkedDevice: true,
+            needsWalletReconnect: false,
+            isZkVerified,
             isChecking: false,
         };
     }
