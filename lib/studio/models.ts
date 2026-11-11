@@ -1,17 +1,26 @@
 /**
  * Ledger Studio models and plans (shared by client and server).
  *
- * Prices are Anthropic list prices per million tokens (platform.claude.com
- * pricing page, checked 2026-10-27). They are used only to meter usage
- * against a plan's budget, never to bill anyone directly.
+ * Provider: Groq (OpenAI-compatible Chat Completions, https://api.groq.com/openai/v1),
+ * on its free tier. Migrated from Anthropic on 11 November 2026 (lib/studio/groq.ts).
+ *
+ * Groq's free tier costs the operator nothing, but its limits are per organisation,
+ * shared by every Studio user, and per model (console.groq.com/docs/rate-limits,
+ * checked 2026-11-11): for each model below, 30 requests/minute, 1,000 requests/day,
+ * 8,000 tokens/minute and 200,000 tokens/day.
+ *
+ * So Studio still meters usage, in "capacity units": every token (prompt or output)
+ * counts the same, at a nominal $1 per million tokens. Nobody is billed; the plans'
+ * daily and monthly allowances below are therefore token allowances (0.05 = 50,000
+ * tokens), and they exist so one wallet cannot use up the shared daily capacity.
  */
 
-export type StudioModelId = 'claude-haiku-5-5' | 'claude-sonnet-5-5' | 'claude-opus-5-5';
+export type StudioModelId = 'openai/gpt-oss-120b' | 'openai/gpt-oss-20b' | 'qwen/qwen3.8-27b';
 
 export interface TokenPrices {
   input: number;
   output: number;
-  /** 5-minute cache write (the only TTL Studio uses). */
+  /** Groq has no separate cache pricing; kept for the shared usage shape. */
   cacheWrite: number;
   cacheRead: number;
 }
@@ -21,48 +30,89 @@ export interface StudioModel {
   label: string;
   blurb: { en: string; es: string };
   prices: TokenPrices;
-  /** Haiku 5.5 is priced higher when the whole prompt is over this many tokens. */
+  /** Kept for the shared shape; no Groq model is priced by prompt length. */
   longPrompt?: { overTokens: number; prices: TokenPrices };
   /** Minimum plan that may use it. */
   plan: StudioPlanId;
-  /** Studio's cap per API call (the models allow 128K; thinking counts toward it). */
+  /** The model's own completion limit. Each call is further capped by the tokens-per-minute limit. */
   maxOutputTokens: number;
+  /** Reasoning efforts the model accepts (Groq `reasoning_effort`). */
+  efforts: readonly ('low' | 'medium' | 'high')[];
+  /** Groq lists it as a preview model ("may be discontinued at short notice"). */
+  preview?: boolean;
 }
 
+/** Capacity units: every token counts the same, $1 per million (nominal, never billed). */
+const UNIT: TokenPrices = { input: 1, output: 1, cacheWrite: 1, cacheRead: 1 };
+
 export const STUDIO_MODELS: Record<StudioModelId, StudioModel> = {
-  'claude-haiku-5-5': {
-    id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5',
+  'openai/gpt-oss-120b': {
+    id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B',
+    blurb: { en: 'Most capable. Code, research and writing.', es: 'El más capaz. Código, investigación y escritura.' },
+    prices: UNIT, plan: 'free', maxOutputTokens: 65_536, efforts: ['low', 'medium', 'high'],
+  },
+  'openai/gpt-oss-20b': {
+    id: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B',
     blurb: { en: 'Fastest. Quick questions and drafts.', es: 'El más rápido. Preguntas rápidas y borradores.' },
-    prices: { input: 0.10, output: 0.50, cacheWrite: 0.125, cacheRead: 0.01 },
-    longPrompt: { overTokens: 100_000, prices: { input: 0.50, output: 2.50, cacheWrite: 0.625, cacheRead: 0.05 } },
-    plan: 'free', maxOutputTokens: 16_000,
+    prices: UNIT, plan: 'free', maxOutputTokens: 65_536, efforts: ['low', 'medium', 'high'],
   },
-  'claude-sonnet-5-5': {
-    id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5',
-    blurb: { en: 'Best balance for code, research and writing.', es: 'El mejor equilibrio para código, investigación y escritura.' },
-    prices: { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.10 },
-    plan: 'free', maxOutputTokens: 32_000,
-  },
-  'claude-opus-5-5': {
-    id: 'claude-opus-5-5', label: 'Claude Opus 5.5',
-    blurb: { en: 'Most capable, for hard engineering problems.', es: 'El más capaz, para problemas de ingeniería difíciles.' },
-    prices: { input: 4, output: 20, cacheWrite: 5, cacheRead: 0.20 },
-    plan: 'pro', maxOutputTokens: 64_000,
+  'qwen/qwen3.8-27b': {
+    id: 'qwen/qwen3.8-27b', label: 'Qwen 3.8 27B',
+    blurb: { en: 'Preview model on Groq. May be withdrawn at short notice.', es: 'Modelo en vista previa en Groq. Puede retirarse sin aviso.' },
+    prices: UNIT, plan: 'free', maxOutputTokens: 16_384, efforts: ['low', 'medium', 'high'], preview: true,
   },
 };
 
-export const DEFAULT_MODEL: StudioModelId = 'claude-sonnet-5-5';
-export const TITLE_MODEL: StudioModelId = 'claude-haiku-5-5';
+export const DEFAULT_MODEL: StudioModelId = 'openai/gpt-oss-120b';
+export const TITLE_MODEL: StudioModelId = 'openai/gpt-oss-20b';
 
-/** $10 per 1,000 searches; web fetch has no extra fee beyond tokens. */
-export const WEB_SEARCH_USD = 0.01;
+/**
+ * Models tried, in order, when the chosen one is rate limited: each Groq model has its
+ * own per-minute and per-day bucket, so falling back spreads the shared free capacity.
+ */
+export const MODEL_FALLBACKS: Record<StudioModelId, readonly StudioModelId[]> = {
+  'openai/gpt-oss-120b': ['openai/gpt-oss-20b', 'qwen/qwen3.8-27b'],
+  'openai/gpt-oss-20b': ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b'],
+  'qwen/qwen3.8-27b': ['openai/gpt-oss-120b', 'openai/gpt-oss-20b'],
+};
+
+/** What Studio can do on this provider. The interface hides what is not available. */
+export const STUDIO_CAPABILITIES = {
+  /** Groq's built-in browser search is not documented together with function tools; off. */
+  webSearch: false,
+  /** Studio's code sandbox ran on Anthropic's containers; Groq has no equivalent file sandbox. */
+  sandbox: false,
+  /** MCP connectors were Anthropic's MCP connector; not available on this provider. */
+  connectors: false,
+  /** The Groq models above read text only: images and PDFs are described, not seen. */
+  images: false,
+} as const;
+
+/**
+ * Old ids saved on devices before the migration (claude-*), or a model Groq withdrew,
+ * map to the default, so a stored chat or preference never breaks the picker.
+ */
+export function normalizeModel(v: unknown): StudioModelId {
+  return isStudioModel(v) ? v : DEFAULT_MODEL;
+}
+
+/** Allowance units shown as tokens (1 unit = 1,000,000 tokens), e.g. "12K tokens". */
+export function formatUnits(units: number, lang = 'en'): string {
+  const tokens = Math.max(0, Math.round(units * 1_000_000));
+  let n: string;
+  try { n = new Intl.NumberFormat(lang, { notation: 'compact', maximumFractionDigits: 1 }).format(tokens); } catch { n = String(tokens); }
+  return `${n} tokens`;
+}
+
+/** No web search on this provider; kept so usage records keep their shape. */
+export const WEB_SEARCH_USD = 0;
 
 export type StudioPlanId = 'free' | 'pro';
 
 export interface StudioPlan {
   id: StudioPlanId;
   label: string;
-  /** Metered budget, in USD of model usage. */
+  /** Allowance in capacity units ($1 = 1,000,000 tokens, nominal). */
   dailyBudgetUsd: number;
   monthlyBudgetUsd: number;
   maxWebSearchesPerRequest: number;
@@ -73,28 +123,29 @@ export interface StudioPlan {
   requestsPerHourPerIp: number;
   maxConnectors: number;
   maxFileMb: number;
-  /** Estimated prompt size (tokens) Studio accepts per request. */
+  /** Estimated size (tokens) of what the browser may send per request. Older messages are
+   *  then left out of each call as needed to fit the provider's tokens-per-minute limit. */
   maxInputTokens: number;
   priceLabel: string;
 }
 
 export const STUDIO_PLANS: Record<StudioPlanId, StudioPlan> = {
   free: {
-    id: 'free', label: 'Free', dailyBudgetUsd: 0.15, monthlyBudgetUsd: 2,
-    maxWebSearchesPerRequest: 3, maxWebFetchesPerRequest: 2, maxFetchContentTokens: 20_000, requestsPerHourPerIp: 40,
-    maxConnectors: 1, maxFileMb: 5, maxInputTokens: 150_000, priceLabel: '0 €',
+    id: 'free', label: 'Free', dailyBudgetUsd: 0.05, monthlyBudgetUsd: 0.6,
+    maxWebSearchesPerRequest: 0, maxWebFetchesPerRequest: 0, maxFetchContentTokens: 0, requestsPerHourPerIp: 40,
+    maxConnectors: 0, maxFileMb: 5, maxInputTokens: 150_000, priceLabel: '0 €',
   },
   pro: {
-    id: 'pro', label: 'Pro', dailyBudgetUsd: 3, monthlyBudgetUsd: 15,
-    maxWebSearchesPerRequest: 8, maxWebFetchesPerRequest: 5, maxFetchContentTokens: 60_000, requestsPerHourPerIp: 300,
-    maxConnectors: 5, maxFileMb: 20, maxInputTokens: 600_000, priceLabel: '20 € / mes',
+    id: 'pro', label: 'Pro', dailyBudgetUsd: 0.15, monthlyBudgetUsd: 2,
+    maxWebSearchesPerRequest: 0, maxWebFetchesPerRequest: 0, maxFetchContentTokens: 0, requestsPerHourPerIp: 120,
+    maxConnectors: 0, maxFileMb: 20, maxInputTokens: 300_000, priceLabel: '20 € / mes',
   },
 };
 
-/** Effort levels per plan (higher effort thinks longer and costs more). */
+/** Reasoning efforts per plan (Groq `reasoning_effort`: low, medium, high). */
 export const PLAN_EFFORTS: Record<StudioPlanId, readonly string[]> = {
   free: ['low', 'medium', 'high'],
-  pro: ['low', 'medium', 'high', 'xhigh', 'max'],
+  pro: ['low', 'medium', 'high'],
 };
 
 export function planAllowsModel(plan: StudioPlanId, model: StudioModelId): boolean {
@@ -113,68 +164,38 @@ export interface TokenUsage {
   cache_creation_input_tokens?: number | null;
   cache_read_input_tokens?: number | null;
   server_tool_use?: { web_search_requests?: number | null; web_fetch_requests?: number | null; code_execution_requests?: number | null } | null;
-  /** With compaction on, each sampling step; compaction steps are not in the top-level counts. */
   iterations?: { type?: string; input_tokens?: number | null; output_tokens?: number | null; cache_creation_input_tokens?: number | null; cache_read_input_tokens?: number | null }[] | null;
 }
 
-/**
- * Code execution is billed by container time (5-minute minimum at $0.05/h
- * once the organisation's free hours are used). Studio meters every run at
- * that minimum so the free hours are never counted on.
- */
-export const CODE_EXECUTION_USD = 0.05 * (5 / 60);
-
-/** Prices that apply to a prompt of this many tokens (input + cache writes + cache reads). */
-export function pricesFor(model: StudioModelId, promptTokens: number): TokenPrices | null {
-  const m = STUDIO_MODELS[model];
-  if (!m) return null;
-  return m.longPrompt && promptTokens > m.longPrompt.overTokens ? m.longPrompt.prices : m.prices;
+/** Prices (capacity units) for a model. */
+export function pricesFor(model: StudioModelId, _promptTokens: number): TokenPrices | null {
+  return STUDIO_MODELS[model]?.prices ?? null;
 }
 
-/** Estimated USD cost of one API response. */
+/** Capacity units used by one response (every token counts the same). */
 export function estimateCostUsd(model: StudioModelId, u: TokenUsage): number {
-  const inTok = u.input_tokens ?? 0;
-  const outTok = u.output_tokens ?? 0;
-  const cw = u.cache_creation_input_tokens ?? 0;
-  const cr = u.cache_read_input_tokens ?? 0;
-  const p = pricesFor(model, inTok + cw + cr);
+  const p = pricesFor(model, 0);
   if (!p) return 0;
-  const searches = u.server_tool_use?.web_search_requests ?? 0;
-  const runs = u.server_tool_use?.code_execution_requests ?? 0;
-  let usd = (inTok * p.input + cw * p.cacheWrite + cr * p.cacheRead + outTok * p.output) / 1_000_000 + searches * WEB_SEARCH_USD + runs * CODE_EXECUTION_USD;
-  // Compaction steps are billed on top of the top-level counts.
-  for (const it of u.iterations ?? []) {
-    if (it?.type !== 'compaction') continue;
-    const ci = it.input_tokens ?? 0;
-    const cp = pricesFor(model, ci + (it.cache_read_input_tokens ?? 0) + (it.cache_creation_input_tokens ?? 0)) ?? p;
-    usd += (ci * cp.input + (it.cache_creation_input_tokens ?? 0) * cp.cacheWrite + (it.cache_read_input_tokens ?? 0) * cp.cacheRead + (it.output_tokens ?? 0) * cp.output) / 1_000_000;
-  }
-  return Math.round(usd * 1_000_000) / 1_000_000;
+  const tokens = (u.input_tokens ?? 0) + (u.output_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0);
+  return Math.round(((tokens * p.input) / 1_000_000) * 1_000_000) / 1_000_000;
 }
 
-/**
- * The most one turn's first API call can cost, before anything is cached:
- * the whole prompt at the uncached price, the output it may write, and every
- * search and page read the plan allows (each page is input to later steps).
- */
-export function worstCaseFirstCallUsd(model: StudioModelId, plan: StudioPlan, promptTokens: number, maxOutputTokens: number): number {
+/** The most one turn's first call can use: the prompt plus the output it may write. */
+export function worstCaseFirstCallUsd(model: StudioModelId, _plan: StudioPlan, promptTokens: number, maxOutputTokens: number): number {
   const p = pricesFor(model, promptTokens);
   if (!p) return 0;
-  const fetched = plan.maxWebFetchesPerRequest * plan.maxFetchContentTokens;
-  const usd = (promptTokens * p.input + fetched * p.input * 2 + maxOutputTokens * p.output) / 1_000_000 + plan.maxWebSearchesPerRequest * WEB_SEARCH_USD;
-  return Math.round(usd * 1_000_000) / 1_000_000;
+  return Math.round(((promptTokens * p.input + maxOutputTokens * p.output) / 1_000_000) * 1_000_000) / 1_000_000;
 }
 
-/** Cost of the prompt alone, uncached. */
+/** Capacity units of the prompt alone. */
 export function promptCostUsd(model: StudioModelId, promptTokens: number): number {
   const p = pricesFor(model, promptTokens);
   return p ? (promptTokens * p.input) / 1_000_000 : 0;
 }
 
-/** The most output tokens the remaining budget pays for (at the long-prompt price, to be safe). */
+/** The most output tokens the remaining allowance pays for. */
 export function affordableOutputTokens(model: StudioModelId, budgetUsd: number): number {
   const m = STUDIO_MODELS[model];
   if (!m || budgetUsd <= 0) return 0;
-  const out = (m.longPrompt?.prices ?? m.prices).output;
-  return Math.floor((budgetUsd / out) * 1_000_000);
+  return Math.floor((budgetUsd / m.prices.output) * 1_000_000);
 }

@@ -79,11 +79,24 @@ Esta guía se escribió leyendo `docker-compose.yml`, `package.json` y `middlewa
 The Apps tab of a community works without any extra setup for the four ready-made apps (poll, sign-up, shared list, "when can we meet"). Writing an app from a description needs a language model on the server, set in `.env.local`:
 
 ```
-ANTHROPIC_API_KEY=...            # Anthropic Messages API (default model: claude-sonnet-5-5)
+GROQ_API_KEY=gsk_...             # free key from https://console.groq.com/keys (same as Ledger Studio)
 # or any OpenAI-compatible server, including a local one:
 OPENAI_API_KEY=...
 OPENAI_BASE_URL=http://localhost:11434/v1
-COMMUNITY_APPS_MODEL=...         # required with OPENAI_API_KEY; overrides the Anthropic default otherwise
+COMMUNITY_APPS_MODEL=...         # required with OPENAI_API_KEY; with Groq, one of the Studio models
 ```
 
 Only the member's description (and, when revising, the app's current code) is sent to the provider. The tables are `CommunityApp` and `CommunityAppEntry` (migration `20261023190000_community_apps`). How the sandbox works: `lib/community-apps/framePolicy.ts`.
+
+## Ledger Studio (AI workspace)
+
+Studio runs on Groq's free tier since November 2026 (it used Anthropic before). It needs one variable, on the server only:
+
+```
+GROQ_API_KEY=gsk_...             # required: free key from https://console.groq.com/keys
+GROQ_MODEL=openai/gpt-oss-120b   # optional default: openai/gpt-oss-120b | openai/gpt-oss-20b | qwen/qwen3.8-27b
+GROQ_TPM_LIMIT=8000              # optional: tokens per minute per model of your Groq plan (8000 on the free tier)
+STUDIO_FREE_DAILY_GLOBAL_USD=0.5 # optional: daily ceiling for all Free wallets together, in units of 1M tokens
+```
+
+`npm run studio:check` checks the key and the models without using any quota. The free tier allows about 8,000 tokens per minute per model, shared by everyone: each call is sized to fit (the oldest messages of a long chat are left out of that call, and the person is told), and when a model is busy Studio answers with another one. Web search, MCP connectors, the code sandbox and reading images or PDFs are not available on Groq, so Studio does not offer them.

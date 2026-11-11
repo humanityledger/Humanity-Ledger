@@ -77,7 +77,7 @@ describe('what a chat changed', () => {
 
 describe('Markdown export', () => {
   const conv: Conversation = {
-    id: 'c1', projectId: null, title: 'Fix: the parser / bug', model: 'claude-sonnet-5-5', skillIds: [], createdAt: Date.UTC(2026, 9, 28), updatedAt: 0,
+    id: 'c1', projectId: null, title: 'Fix: the parser / bug', model: 'openai/gpt-oss-120b', skillIds: [], createdAt: Date.UTC(2026, 9, 28), updatedAt: 0,
     totalCostUsd: 0, totalTokens: 0, apiMessages: [], mode: 'code',
     messages: [
       { id: 'u', role: 'user', text: 'Please fix it', createdAt: 0, attachments: [{ name: 'log.txt', mime: 'text/plain', size: 3 }] },
@@ -93,7 +93,7 @@ describe('Markdown export', () => {
   it('writes the conversation with changed files and safe links', () => {
     const md = conversationMarkdown(conv);
     expect(md.startsWith('# Fix: the parser / bug\n')).toBe(true);
-    expect(md).toContain('2026-10-28 · Code · claude-sonnet-5-5');
+    expect(md).toContain('2026-10-28 · Code · openai/gpt-oss-120b');
     expect(md).toContain('## You\n\nPlease fix it');
     expect(md).toContain('📎 log.txt');
     expect(md).toContain('/compact');

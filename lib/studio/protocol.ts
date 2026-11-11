@@ -119,17 +119,17 @@ export const chatRequestSchema = z.object({
     files: z.array(z.object({ path: z.string().max(300), content: z.string().max(MAX_FILE_CHARS) })).max(MAX_WS_FILES),
     binaries: z.array(z.object({ path: z.string().max(300), size: z.number().int().nonnegative() })).max(MAX_WS_FILES).optional(),
   }).optional(),
-  /** STUDIO.md: what the project wants Studio to remember (like CLAUDE.md). */
+  /** STUDIO.md: what the project wants Studio to remember. */
   memory: z.string().max(40_000).optional(),
   todos: z.array(todoSchema).max(50).optional(),
+  /** Sent by older clients; ignored since the Groq migration (no code sandbox). */
   sandbox: z.object({ enabled: z.boolean(), containerId: z.string().max(128).optional() }).optional(),
   agents: z.array(z.object({
     id: z.string().max(64), name: z.string().max(80), description: z.string().max(500),
     instructions: z.string().max(12_000), tools: z.enum(['readonly', 'edit']), model: z.string().max(64).optional(),
   })).max(20).optional(),
   /**
-   * Permission rules (globs on workspace paths, like Claude Code's allow/deny
-   * rules). deny always wins, in every mode; allow skips the approval in "ask".
+   * Permission rules (globs on workspace paths, allow/deny). deny always wins, in every mode; allow skips the approval in "ask".
    */
   rules: z.object({
     allow: z.array(z.string().max(200)).max(50).optional(),
@@ -163,15 +163,16 @@ export type StudioEvent =
   | { type: 'plan'; id: string; plan: string }
   | { type: 'question'; id: string; question: string; options?: string[] }
   | { type: 'subagent'; id: string; name: string; description: string; phase: 'start' | 'end'; summary?: string }
-  | { type: 'container'; id: string; expiresAt?: string }
-  | { type: 'compacted' }
-  | { type: 'citation'; url: string; title?: string; citedText?: string }
   | { type: 'artifact'; artifact: { id: string; title: string; type: string; language?: string; content: string }; created: boolean }
   | { type: 'messages'; messages: { role: 'assistant' | 'user'; content: unknown[] }[] }
   | { type: 'usage'; inputTokens: number; outputTokens: number; costUsd: number; webSearches: number; remainingTodayUsd: number; contextTokens?: number }
   | { type: 'error'; code: string; message: string }
-  /** Why an answer ended early: cut off by length, refused, budget, time or step limit. */
-  | { type: 'notice'; code: 'MAX_TOKENS' | 'REFUSAL' | 'BUDGET' | 'TIME_LIMIT' | 'STEP_LIMIT' | 'SYNC_FAILED' }
+  /**
+   * Why an answer ended early (cut off by length, refused, budget, time or step
+   * limit), or TRIMMED: older messages were left out to fit the free tier's
+   * per-minute token limit.
+   */
+  | { type: 'notice'; code: 'MAX_TOKENS' | 'REFUSAL' | 'BUDGET' | 'TIME_LIMIT' | 'STEP_LIMIT' | 'TRIMMED' }
   | { type: 'done'; stopReason: string | null };
 
 export function encodeEvent(e: StudioEvent): string {

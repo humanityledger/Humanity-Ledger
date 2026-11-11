@@ -5,7 +5,7 @@ vi.mock('@/lib/prisma', () => ({ prisma: {} }));
 vi.mock('@/lib/redis/client', () => ({ redisClient: {}, safeRedisGet: vi.fn(async () => null), safeRedisSet: vi.fn(async () => 'OK') }));
 
 import { applyArtifactCommand, fileNameFor, normalizeArtifactId, sandboxDocument, toSnapshot, type Artifact, type ArtifactSnapshot } from '@/lib/studio/artifacts';
-import { affordableOutputTokens, estimateCostUsd, isStudioModel, planAllowsModel, STUDIO_PLANS } from '@/lib/studio/models';
+import { affordableOutputTokens, DEFAULT_MODEL, estimateCostUsd, formatUnits, isStudioModel, normalizeModel, planAllowsModel, STUDIO_CAPABILITIES, STUDIO_MODELS, STUDIO_PLANS } from '@/lib/studio/models';
 import { planForTier, tierFromCache, usageKeys } from '@/lib/studio/metering';
 import { estimateInputTokens, sanitizeMessages } from '@/lib/studio/sanitize';
 import { cleanTitle } from '@/lib/studio/prompt';
@@ -13,7 +13,10 @@ import { appendUserTurn, attachmentBlock, attachmentKind, compactHistory, plainT
 import { fold, searchStudio } from '@/lib/studio/search';
 import { chatRequestSchema, createEventParser, encodeEvent, type StudioEvent } from '@/lib/studio/protocol';
 import { buildSystemPrompt, STUDIO_IDENTITY } from '@/lib/studio/prompt';
-import { AgentError, buildTools, describeApiError, markCacheBreakpoint, MCP_BETA, runAgent, sanitizeConnectors } from '@/lib/studio/agent';
+import { AgentError, buildTools, describeApiError, runAgent } from '@/lib/studio/agent';
+import { ProviderError } from '@/lib/studio/groq';
+import { modelFromArg } from '@/lib/studio/commands';
+import { fakeClient } from './fake-client';
 import { skillsById, BUILTIN_SKILLS } from '@/lib/studio/skills';
 import { parseCsv } from '@/lib/studio/csv';
 import { resolveUiLang, STRINGS } from '@/lib/studio/i18n';
@@ -79,32 +82,44 @@ describe('artifacts', () => {
 });
 
 describe('models and plans', () => {
-  it('estimates cost with cache multipliers and searches', () => {
-    const usd = estimateCostUsd('claude-sonnet-5-5', { input_tokens: 1_000_000, output_tokens: 100_000, cache_creation_input_tokens: 1_000_000, cache_read_input_tokens: 1_000_000, server_tool_use: { web_search_requests: 3 } });
-    // Sonnet 5.5 list prices: 2 (input) + 1 (output) + 2.5 (5m write) + 0.10 (read) + 0.03 (searches)
-    expect(usd).toBeCloseTo(5.63, 6);
+  it('meters every token the same (capacity units, never billed)', () => {
+    // 1 unit = 1M tokens of any kind.
+    expect(estimateCostUsd('openai/gpt-oss-120b', { input_tokens: 1_000_000, output_tokens: 500_000 })).toBeCloseTo(1.5, 6);
+    expect(estimateCostUsd('openai/gpt-oss-20b', { input_tokens: 2_000, output_tokens: 1_000 })).toBeCloseTo(0.003, 6);
     expect(estimateCostUsd('nope' as any, { input_tokens: 5 })).toBe(0);
+    expect(formatUnits(0.05, 'en')).toBe('50K tokens');
   });
 
-  it('prices Haiku prompts over 100K tokens at the higher tier', () => {
-    expect(estimateCostUsd('claude-haiku-5-5', { input_tokens: 100_000, output_tokens: 1_000_000 })).toBeCloseTo(0.01 + 0.5, 6);
-    // 60K new + 50K cached = 110K prompt tokens: the whole request uses the long-prompt prices.
-    expect(estimateCostUsd('claude-haiku-5-5', { input_tokens: 60_000, cache_read_input_tokens: 50_000, output_tokens: 1_000 })).toBeCloseTo((60_000 * 0.5 + 50_000 * 0.05 + 1_000 * 2.5) / 1e6, 6);
+  it('works out how much output the allowance pays for', () => {
+    expect(affordableOutputTokens('openai/gpt-oss-120b', 0.01)).toBe(10_000);
+    expect(affordableOutputTokens('openai/gpt-oss-120b', 0)).toBe(0);
   });
 
-  it('works out how much output the budget pays for', () => {
-    expect(affordableOutputTokens('claude-sonnet-5-5', 0.1)).toBe(10_000);
-    expect(affordableOutputTokens('claude-sonnet-5-5', 0)).toBe(0);
-    expect(affordableOutputTokens('claude-haiku-5-5', 0.025)).toBe(10_000); // long-prompt price, to be safe
-  });
-
-  it('gates Opus to Pro', () => {
-    expect(planAllowsModel('free', 'claude-opus-5-5')).toBe(false);
-    expect(planAllowsModel('pro', 'claude-opus-5-5')).toBe(true);
-    expect(planAllowsModel('free', 'claude-haiku-5-5')).toBe(true);
-    expect(isStudioModel('claude-sonnet-5-5')).toBe(true);
-    expect(isStudioModel('gpt-4')).toBe(false);
+  it('offers only Groq models, all on the Free plan', () => {
+    for (const id of Object.keys(STUDIO_MODELS) as (keyof typeof STUDIO_MODELS)[]) {
+      expect(planAllowsModel('free', id)).toBe(true);
+      expect(STUDIO_MODELS[id].plan).toBe('free');
+    }
+    expect(isStudioModel('openai/gpt-oss-120b')).toBe(true);
+    expect(isStudioModel('claude-sonnet-5-5')).toBe(false);
     expect(isStudioModel('toString')).toBe(false);
+    expect(DEFAULT_MODEL).toBe('openai/gpt-oss-120b');
+  });
+
+  it('maps ids saved before the migration to the default model', () => {
+    expect(normalizeModel('claude-opus-5-5')).toBe(DEFAULT_MODEL);
+    expect(normalizeModel(undefined)).toBe(DEFAULT_MODEL);
+    expect(normalizeModel('qwen/qwen3.8-27b')).toBe('qwen/qwen3.8-27b');
+    expect(modelFromArg('120b')).toBe('openai/gpt-oss-120b');
+    expect(modelFromArg('gpt-oss-20b')).toBe('openai/gpt-oss-20b');
+    expect(modelFromArg('fast')).toBe('openai/gpt-oss-20b');
+    expect(modelFromArg('qwen')).toBe('qwen/qwen3.8-27b');
+    expect(modelFromArg('opus')).toBeNull();
+  });
+
+  it('says which features the provider does not have', () => {
+    expect(STUDIO_CAPABILITIES).toEqual({ webSearch: false, sandbox: false, connectors: false, images: false });
+    expect(STUDIO_PLANS.free.maxConnectors).toBe(0);
   });
 
   it('maps tiers to plans', () => {
@@ -222,7 +237,8 @@ describe('protocol', () => {
   });
 
   it('validates requests', () => {
-    const ok = chatRequestSchema.safeParse({ model: 'claude-sonnet-5-5', messages: [{ role: 'user', content: 'hi' }], connectors: [{ id: 'k', name: 'gh', url: 'https://mcp.example.com/mcp', enabled: true }] });
+    // Older clients still send connectors and tool toggles: accepted (and ignored by the route).
+    const ok = chatRequestSchema.safeParse({ model: 'openai/gpt-oss-120b', messages: [{ role: 'user', content: 'hi' }], connectors: [{ id: 'k', name: 'gh', url: 'https://mcp.example.com/mcp', enabled: true }], tools: { webSearch: true } });
     expect(ok.success).toBe(true);
     expect(chatRequestSchema.safeParse({ model: 'x', messages: [] }).success).toBe(false);
     expect(chatRequestSchema.safeParse({ model: 'x', messages: [{ role: 'system', content: 'x' }] }).success).toBe(false);
@@ -231,12 +247,13 @@ describe('protocol', () => {
 });
 
 describe('system prompt', () => {
-  it('caches the stable prefix and adds per-request context after it', () => {
+  it('puts the stable prefix first and per-request context after it', () => {
     const blocks = buildSystemPrompt({ timezone: 'Europe/Madrid', personalization: { callMe: 'Ana', style: 'concise', responseLanguage: 'es', instructions: 'Use TypeScript.' }, skills: [{ id: 's', name: 'Review', instructions: 'Worst first.' }], artifacts: [{ id: 'a', title: 'A "x"', type: 'code', language: 'ts', content: 'let a' }] }, new Date('2026-10-27T10:00:00Z'));
     expect(blocks[0].text).toBe(STUDIO_IDENTITY);
-    expect(blocks[0].cache_control).toEqual({ type: 'ephemeral' });
+    expect(STUDIO_IDENTITY).toContain('Groq');
+    expect(STUDIO_IDENTITY).not.toMatch(/Claude|Anthropic/);
+    expect(JSON.stringify(blocks)).not.toContain('cache_control');
     const dyn = blocks[blocks.length - 1].text;
-    expect(blocks[blocks.length - 1].cache_control).toBeUndefined();
     expect(dyn).toContain('Europe/Madrid');
     expect(dyn).toContain('Always answer in Spanish');
     expect(dyn).toContain('called Ana');
@@ -245,10 +262,9 @@ describe('system prompt', () => {
     expect(dyn).toContain('<user_preferences>');
   });
 
-  it('puts project knowledge in the cached block and rejects odd time zones', () => {
+  it('puts project knowledge in its own block and rejects odd time zones', () => {
     const blocks = buildSystemPrompt({ timezone: '"><script>', project: { name: 'P<1>', instructions: 'Be brief', knowledge: [{ name: 'spec.md', text: 'SPEC' }] } });
     expect(blocks).toHaveLength(3);
-    expect(blocks[1].cache_control).toEqual({ type: 'ephemeral' });
     expect(blocks[1].text).toContain('<project name="P&lt;1&gt;">');
     expect(blocks[1].text).toContain('SPEC');
     expect(blocks[2].text).toContain('(UTC)');
@@ -256,98 +272,43 @@ describe('system prompt', () => {
 });
 
 describe('agent helpers', () => {
-  const req = (over: any = {}) => chatRequestSchema.parse({ model: 'claude-sonnet-5-5', messages: [{ role: 'user', content: 'hi' }], ...over });
-
-  it('keeps only enabled https connectors, unique names, capped by plan', () => {
-    const r = req({ connectors: [
-      { id: '1', name: 'GitHub', url: 'https://a.example.com/mcp', enabled: true },
-      { id: '2', name: 'github', url: 'https://b.example.com/mcp', enabled: true, token: ' t ' },
-      { id: '3', name: 'plain', url: 'http://c.example.com/mcp', enabled: true },
-      { id: '4', name: 'off', url: 'https://d.example.com/mcp', enabled: false },
-    ] });
-    const pro = sanitizeConnectors(r, STUDIO_PLANS.pro);
-    expect(pro.map(c => c.name)).toEqual(['github', 'github-x']);
-    expect(pro[1].token).toBe('t');
-    expect(sanitizeConnectors(r, STUDIO_PLANS.free)).toHaveLength(1);
+  it('chat mode has only the artifact tool on Groq', () => {
+    expect(buildTools().map(t => t.name)).toEqual(['artifact']);
   });
 
-  it('builds tools from the toggles', () => {
-    const all = buildTools(req(), STUDIO_PLANS.free, [{ name: 'gh' }]);
-    expect(all.map(t => t.name ?? t.type)).toEqual(['artifact', 'web_search', 'web_fetch', 'mcp_toolset']);
-    expect(all[1].max_uses).toBe(STUDIO_PLANS.free.maxWebSearchesPerRequest);
-    const none = buildTools(req({ tools: { webSearch: false, webFetch: false } }), STUDIO_PLANS.free, []);
-    expect(none.map(t => t.name)).toEqual(['artifact']);
-  });
-
-  it('marks the last user block for caching', () => {
-    const m: any[] = [{ role: 'user', content: 'hello' }];
-    markCacheBreakpoint(m);
-    expect(m[0].content[0]).toEqual({ type: 'text', text: 'hello', cache_control: { type: 'ephemeral' } });
-    const a: any[] = [{ role: 'assistant', content: [{ type: 'text', text: 'x' }] }];
-    markCacheBreakpoint(a);
-    expect(a[0].content[0].cache_control).toBeUndefined();
-  });
-
-  it('maps provider errors', () => {
-    expect(describeApiError({ status: 401 }).code).toBe('PROVIDER_AUTH');
-    expect(describeApiError({ status: 429 }).code).toBe('PROVIDER_BUSY');
-    expect(describeApiError({ status: 529 }).code).toBe('PROVIDER_OVERLOADED');
+  it('maps provider errors to clear codes', () => {
+    expect(describeApiError(new ProviderError('PROVIDER_AUTH', 'Invalid API Key', 401))).toMatchObject({ code: 'PROVIDER_AUTH', status: 502 });
+    expect(describeApiError(new ProviderError('PROVIDER_AUTH', 'x', 401)).message).toContain('GROQ_API_KEY');
+    const busy = describeApiError(new ProviderError('PROVIDER_BUSY', 'busy', 429, 12));
+    expect(busy).toMatchObject({ code: 'PROVIDER_BUSY', status: 429 });
+    expect(busy.message).toContain('12 seconds');
+    expect(describeApiError(new ProviderError('PROVIDER_DAILY_LIMIT', 'used up', 429)).code).toBe('PROVIDER_DAILY_LIMIT');
+    expect(describeApiError(new ProviderError('PROVIDER_OVERLOADED', 'x', 503)).code).toBe('PROVIDER_OVERLOADED');
+    expect(describeApiError(new ProviderError('CONTEXT_TOO_LARGE', 'too long', 413))).toMatchObject({ code: 'CONTEXT_TOO_LARGE', status: 413 });
+    expect(describeApiError(new ProviderError('BAD_REQUEST', 'bad', 400))).toMatchObject({ code: 'BAD_REQUEST', status: 400 });
     expect(describeApiError({ name: 'AbortError' }).code).toBe('ABORTED');
-    expect(describeApiError({ status: 400, message: 'bad' })).toMatchObject({ code: 'BAD_REQUEST', status: 400 });
-    // Operator billing/setup errors never reach users verbatim.
-    const credit = describeApiError({ status: 400, message: '400 {"error":{"message":"Your credit balance is too low to access the Anthropic API."}}' });
-    expect(credit).toMatchObject({ code: 'PROVIDER_SETUP', status: 503 });
-    expect(credit.message).not.toMatch(/credit/i);
-    expect(describeApiError({ status: 400, message: 'This API key is not scoped to a workspace' }).code).toBe('PROVIDER_SETUP');
-    expect(describeApiError(new Error('x')).code).toBe('PROVIDER_ERROR');
+    // Anything unexpected never reaches users verbatim.
+    const other = describeApiError(new Error('secret internals'));
+    expect(other.code).toBe('PROVIDER_ERROR');
+    expect(other.message).not.toContain('secret');
   });
 });
 
-/** A fake SDK client that replays scripted responses through the stream API. */
-function fakeClient(responses: any[]) {
-  const calls: any[] = [];
-  const client = {
-    beta: {
-      messages: {
-        stream(params: any) {
-          calls.push(JSON.parse(JSON.stringify(params)));
-          const res = responses.shift();
-          let handler: ((e: any) => void) | null = null;
-          return {
-            on(_name: string, fn: (e: any) => void) { handler = fn; return this; },
-            async finalMessage() {
-              if (res.started) handler?.({ type: 'message_start', message: { usage: res.started } });
-              if (res.error) {
-                for (const t of res.partialText ?? []) handler?.({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: t } });
-                throw res.error;
-              }
-              res.content.forEach((b: any, index: number) => {
-                handler?.({ type: 'content_block_start', index, content_block: b.type === 'text' ? { type: 'text', text: '' } : b });
-                if (b.type === 'text') handler?.({ type: 'content_block_delta', index, delta: { type: 'text_delta', text: b.text } });
-              });
-              return res;
-            },
-          };
-        },
-      },
-    },
-  };
-  return { client: client as any, calls };
-}
-
 describe('runAgent', () => {
-  const base = { model: 'claude-sonnet-5-5', messages: [{ role: 'user', content: 'Build a page' }] };
+  const base = { model: 'openai/gpt-oss-120b', messages: [{ role: 'user', content: 'Build a page' }] };
+  const M = 'openai/gpt-oss-120b' as const;
 
   it('applies artifact tool calls, answers them and continues to the final answer', async () => {
     const { client, calls } = fakeClient([
       { content: [{ type: 'text', text: 'Creating it.' }, { type: 'tool_use', id: 'tu1', name: 'artifact', input: { command: 'create', id: 'page', type: 'html', title: 'Page', content: '<p>x</p>' } }], stop_reason: 'tool_use', usage: { input_tokens: 100, output_tokens: 50 } },
-      { content: [{ type: 'text', text: 'Done.' }], stop_reason: 'end_turn', usage: { input_tokens: 120, output_tokens: 10, cache_read_input_tokens: 100 } },
+      { content: [{ type: 'text', text: 'Done.' }], stop_reason: 'end_turn', usage: { input_tokens: 120, output_tokens: 10 } },
     ]);
     const events: StudioEvent[] = [];
-    const res = await runAgent({ client, req: chatRequestSchema.parse(base), model: 'claude-sonnet-5-5', plan: STUDIO_PLANS.free, emit: e => events.push(e) });
+    const res = await runAgent({ client, req: chatRequestSchema.parse(base), model: M, plan: STUDIO_PLANS.free, emit: e => events.push(e) });
 
     expect(calls).toHaveLength(2);
-    expect(calls[0].betas).toBeUndefined();
+    expect(calls[0].tools.map((t: any) => t.name)).toEqual(['artifact']);
+    expect(calls[0].system[0].text).toContain('Ledger Studio');
     expect(calls[1].messages.at(-1).content[0]).toMatchObject({ type: 'tool_result', tool_use_id: 'tu1' });
     const art = events.find(e => e.type === 'artifact') as any;
     expect(art.artifact).toMatchObject({ id: 'page', content: '<p>x</p>' });
@@ -356,7 +317,8 @@ describe('runAgent', () => {
     expect(produced.map((m: any) => m.role)).toEqual(['assistant', 'user', 'assistant']);
     expect(res.usage.input_tokens).toBe(220);
     expect(res.stopReason).toBe('end_turn');
-    expect(res.costUsd).toBeGreaterThan(0);
+    expect(res.costUsd).toBeCloseTo(280 / 1e6, 9);
+    expect(res.model).toBe(M);
   });
 
   it('returns tool errors to the model instead of failing', async () => {
@@ -364,40 +326,33 @@ describe('runAgent', () => {
       { content: [{ type: 'tool_use', id: 'tu1', name: 'artifact', input: { command: 'update', id: 'ghost', old_str: 'a', new_str: 'b' } }], stop_reason: 'tool_use', usage: {} },
       { content: [{ type: 'text', text: 'Sorry.' }], stop_reason: 'end_turn', usage: {} },
     ]);
-    await runAgent({ client, req: chatRequestSchema.parse(base), model: 'claude-sonnet-5-5', plan: STUDIO_PLANS.free, emit: () => {} });
+    await runAgent({ client, req: chatRequestSchema.parse(base), model: M, plan: STUDIO_PLANS.free, emit: () => {} });
     expect(calls[1].messages.at(-1).content[0]).toMatchObject({ type: 'tool_result', is_error: true });
   });
 
-  it('sends a paused turn back unchanged and merges the continuation', async () => {
-    const search = { type: 'server_tool_use', id: 'st1', name: 'web_search', input: { query: 'aztec v6' } };
-    const { client, calls } = fakeClient([
-      { content: [search], stop_reason: 'pause_turn', usage: { server_tool_use: { web_search_requests: 1 } } },
-      { content: [{ type: 'text', text: 'Found it.' }], stop_reason: 'end_turn', usage: {} },
-    ]);
+  it('reports the fallback model and tells the user when old messages were left out', async () => {
+    const { client } = fakeClient([{ content: [{ type: 'text', text: 'ok' }], model: 'openai/gpt-oss-20b', trimmed: 4 }]);
     const events: StudioEvent[] = [];
-    const res = await runAgent({ client, req: chatRequestSchema.parse(base), model: 'claude-sonnet-5-5', plan: STUDIO_PLANS.free, emit: e => events.push(e) });
-    expect(calls[1].messages.at(-1)).toEqual({ role: 'assistant', content: [search] });
-    const produced = (events.find(e => e.type === 'messages') as any).messages;
-    expect(produced).toHaveLength(1);
-    expect(produced[0].content).toHaveLength(2);
-    expect(res.usage.webSearches).toBe(1);
-    expect(events.some(e => e.type === 'tool' && (e as any).detail === 'aztec v6')).toBe(true);
+    const res = await runAgent({ client, req: chatRequestSchema.parse(base), model: M, plan: STUDIO_PLANS.free, emit: e => events.push(e) });
+    expect(res.model).toBe('openai/gpt-oss-20b');
+    expect(events.filter(e => e.type === 'notice').map((e: any) => e.code)).toEqual(['TRIMMED']);
   });
 
-  it('enables the MCP beta only with connectors', async () => {
-    const { client, calls } = fakeClient([{ content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: {} }]);
-    await runAgent({ client, req: chatRequestSchema.parse({ ...base, connectors: [{ id: '1', name: 'gh', url: 'https://mcp.example.com/mcp', token: 'secret', enabled: true }] }), model: 'claude-sonnet-5-5', plan: STUDIO_PLANS.free, emit: () => {} });
-    expect(calls[0].betas).toEqual([MCP_BETA]);
-    expect(calls[0].mcp_servers).toEqual([{ type: 'url', url: 'https://mcp.example.com/mcp', name: 'gh', authorization_token: 'secret' }]);
+  it('maps saved efforts to what Groq takes', async () => {
+    const { client, calls } = fakeClient([{ content: [{ type: 'text', text: 'a' }] }, { content: [{ type: 'text', text: 'b' }] }, { content: [{ type: 'text', text: 'c' }] }]);
+    await runAgent({ client, req: chatRequestSchema.parse({ ...base, effort: 'low' }), model: M, plan: STUDIO_PLANS.free, emit: () => {} });
+    await runAgent({ client, req: chatRequestSchema.parse({ ...base, effort: 'max' }), model: M, plan: STUDIO_PLANS.free, emit: () => {} });
+    await runAgent({ client, req: chatRequestSchema.parse(base), model: M, plan: STUDIO_PLANS.free, emit: () => {} });
+    expect(calls.map(c => c.reasoning_effort)).toEqual(['low', 'high', undefined]);
   });
 
-  const artifactCall = (id: string) => ({ content: [{ type: 'tool_use', id, name: 'artifact', input: { command: 'create', id: `a-${id}`, type: 'code', content: 'x' } }], stop_reason: 'tool_use', usage: { input_tokens: 10_000, output_tokens: 10_000 } });
+  const artifactCall = (id: string) => ({ content: [{ type: 'tool_use', id, name: 'artifact', input: { command: 'create', id: `a-${id}`, type: 'code', content: 'x' } }], stop_reason: 'tool_use' as const, usage: { input_tokens: 10_000, output_tokens: 10_000 } });
 
-  it('stops when the budget is spent and says so', async () => {
-    // Each call costs 0.02 + 0.10 = $0.12 on Sonnet; a $0.15 budget allows two.
+  it('stops when the allowance is spent and says so', async () => {
+    // Each call uses 20K tokens = 0.02 units; 0.035 units allow two.
     const { client, calls } = fakeClient([artifactCall('t1'), artifactCall('t2'), artifactCall('t3')]);
     const events: StudioEvent[] = [];
-    const res = await runAgent({ client, req: chatRequestSchema.parse(base), model: 'claude-sonnet-5-5', plan: STUDIO_PLANS.free, emit: e => events.push(e), budgetUsd: 0.15 });
+    const res = await runAgent({ client, req: chatRequestSchema.parse(base), model: M, plan: STUDIO_PLANS.free, emit: e => events.push(e), budgetUsd: 0.035 });
     expect(calls).toHaveLength(2);
     expect(res.stopReason).toBe('budget');
     expect(events.some(e => e.type === 'notice' && (e as any).code === 'BUDGET')).toBe(true);
@@ -407,23 +362,23 @@ describe('runAgent', () => {
     expect(produced.at(-1).content[0].type).toBe('tool_result');
   });
 
-  it('caps max_tokens by the remaining budget, but never below the floor', async () => {
+  it('caps max_tokens by the remaining allowance, but never below the floor', async () => {
     const { client, calls } = fakeClient([{ content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: {} }]);
-    await runAgent({ client, req: chatRequestSchema.parse(base), model: 'claude-sonnet-5-5', plan: STUDIO_PLANS.free, emit: () => {}, budgetUsd: 0.1 });
+    await runAgent({ client, req: chatRequestSchema.parse(base), model: M, plan: STUDIO_PLANS.free, emit: () => {}, budgetUsd: 0.01 });
     expect(calls[0].max_tokens).toBe(10_000);
     const tiny = fakeClient([{ content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: {} }]);
-    await runAgent({ client: tiny.client, req: chatRequestSchema.parse(base), model: 'claude-sonnet-5-5', plan: STUDIO_PLANS.free, emit: () => {}, budgetUsd: 0.001 });
-    expect(tiny.calls[0].max_tokens).toBe(4_096);
+    await runAgent({ client: tiny.client, req: chatRequestSchema.parse(base), model: M, plan: STUDIO_PLANS.free, emit: () => {}, budgetUsd: 0.0001 });
+    expect(tiny.calls[0].max_tokens).toBe(1_024);
     const rich = fakeClient([{ content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: {} }]);
-    await runAgent({ client: rich.client, req: chatRequestSchema.parse(base), model: 'claude-sonnet-5-5', plan: STUDIO_PLANS.pro, emit: () => {}, budgetUsd: 100 });
-    expect(rich.calls[0].max_tokens).toBe(32_000);
+    await runAgent({ client: rich.client, req: chatRequestSchema.parse(base), model: M, plan: STUDIO_PLANS.pro, emit: () => {}, budgetUsd: 100 });
+    expect(rich.calls[0].max_tokens).toBe(65_536);
   });
 
   it('does not start a call past the deadline', async () => {
     let t = 0;
     const { client, calls } = fakeClient([artifactCall('t1'), artifactCall('t2')]);
     const events: StudioEvent[] = [];
-    const res = await runAgent({ client, req: chatRequestSchema.parse(base), model: 'claude-sonnet-5-5', plan: STUDIO_PLANS.pro, emit: e => events.push(e), deadlineAt: 100_000, now: () => (t += 60_000) });
+    const res = await runAgent({ client, req: chatRequestSchema.parse(base), model: M, plan: STUDIO_PLANS.pro, emit: e => events.push(e), deadlineAt: 100_000, now: () => (t += 60_000) });
     expect(calls).toHaveLength(1);
     expect(res.stopReason).toBe('time_limit');
     expect(events.some(e => e.type === 'notice' && (e as any).code === 'TIME_LIMIT')).toBe(true);
@@ -431,20 +386,27 @@ describe('runAgent', () => {
 
   it('still reports what a stopped or failed call used', async () => {
     const abort = Object.assign(new Error('Request was aborted.'), { name: 'AbortError' });
-    const { client } = fakeClient([{ started: { input_tokens: 50_000, cache_read_input_tokens: 0 }, partialText: ['x'.repeat(3_000)], error: abort }]);
-    const err = await runAgent({ client, req: chatRequestSchema.parse(base), model: 'claude-sonnet-5-5', plan: STUDIO_PLANS.free, emit: () => {} }).catch(e => e);
+    const { client } = fakeClient([{ promptTokens: 5_000, partialText: ['x'.repeat(3_000)], error: abort }]);
+    const err = await runAgent({ client, req: chatRequestSchema.parse(base), model: M, plan: STUDIO_PLANS.free, emit: () => {} }).catch(e => e);
     expect(err).toBeInstanceOf(AgentError);
-    expect(err.partial.usage.input_tokens).toBe(50_000);
+    expect(err.partial.usage.input_tokens).toBe(5_000);
     expect(err.partial.usage.output_tokens).toBe(1_000);
-    // 50K * $2/M + 1K * $10/M
-    expect(err.partial.costUsd).toBeCloseTo(0.11, 6);
+    expect(err.partial.costUsd).toBeCloseTo(6_000 / 1e6, 9);
     expect(describeApiError(err).code).toBe('ABORTED');
+  });
+
+  it('meters a rate-limited call that failed and keeps the code', async () => {
+    const { client } = fakeClient([{ promptTokens: 2_000, error: new ProviderError('PROVIDER_BUSY', 'busy', 429, 30) }]);
+    const err = await runAgent({ client, req: chatRequestSchema.parse(base), model: M, plan: STUDIO_PLANS.free, emit: () => {} }).catch(e => e);
+    expect(err).toBeInstanceOf(AgentError);
+    expect(err.partial.usage.input_tokens).toBe(2_000);
+    expect(describeApiError(err).code).toBe('PROVIDER_BUSY');
   });
 
   it('answers a tool call that was cut off, so the next turn is accepted', async () => {
     const { client } = fakeClient([{ content: [{ type: 'text', text: 'Writing' }, { type: 'tool_use', id: 'tu9', name: 'artifact', input: {} }], stop_reason: 'max_tokens', usage: {} }]);
     const events: StudioEvent[] = [];
-    await runAgent({ client, req: chatRequestSchema.parse(base), model: 'claude-sonnet-5-5', plan: STUDIO_PLANS.free, emit: e => events.push(e) });
+    await runAgent({ client, req: chatRequestSchema.parse(base), model: M, plan: STUDIO_PLANS.free, emit: e => events.push(e) });
     const produced = (events.find(e => e.type === 'messages') as any).messages;
     expect(produced.map((m: any) => m.role)).toEqual(['assistant', 'user']);
     expect(produced[1].content[0]).toMatchObject({ type: 'tool_result', tool_use_id: 'tu9', is_error: true });
@@ -452,10 +414,6 @@ describe('runAgent', () => {
     expect(events.some(e => e.type === 'artifact')).toBe(false);
   });
 
-  it('ignores connector URLs with embedded credentials', () => {
-    const r = chatRequestSchema.parse({ ...base, connectors: [{ id: '1', name: 'x', url: 'https://user:pass@mcp.example.com/', enabled: true }] });
-    expect(sanitizeConnectors(r, STUDIO_PLANS.pro)).toEqual([]);
-  });
 });
 
 describe('sanitizeMessages', () => {
@@ -464,11 +422,23 @@ describe('sanitizeMessages', () => {
   it('rejects references to server-side files, containers and URL sources', () => {
     expect(sanitizeMessages(user([{ type: 'document', source: { type: 'file', file_id: 'file_123' } }])).ok).toBe(false);
     expect(sanitizeMessages(user([{ type: 'image', source: { type: 'url', url: 'http://169.254.169.254/' } }])).ok).toBe(false);
-    expect(sanitizeMessages(user([{ type: 'container_upload', file_id: 'f' }])).ok).toBe(false);
     expect(sanitizeMessages(user([{ type: 'tool_result', tool_use_id: 't', content: [{ type: 'document', source: { type: 'file', file_id: 'x' } }] }])).ok).toBe(false);
-    // Nested deep inside an assistant block, too.
-    const forged = [{ role: 'user', content: 'hi' }, { role: 'assistant', content: [{ type: 'web_fetch_tool_result', tool_use_id: 's', content: { type: 'web_fetch_result', content: { type: 'document', source: { type: 'file', file_id: 'x' } } } }] }, { role: 'user', content: 'next' }] as any;
-    expect(sanitizeMessages(forged).ok).toBe(false);
+    // A legacy sandbox upload alone is not a message.
+    expect(sanitizeMessages(user([{ type: 'container_upload', file_id: 'f' }])).ok).toBe(false);
+  });
+
+  it('keeps chats saved before the Groq migration usable', () => {
+    // Resource references in old assistant blocks are dropped; the provider never reads them.
+    const old = [
+      { role: 'user', content: [{ type: 'text', text: 'run it' }, { type: 'container_upload', file_id: 'file_1' }] },
+      { role: 'assistant', content: [{ type: 'bash_code_execution_tool_result', tool_use_id: 's', content: { type: 'bash_code_execution_result', content: [{ type: 'bash_code_execution_output', file_id: 'file_2' }] } }, { type: 'text', text: 'ran' }] },
+      { role: 'user', content: 'next' },
+    ] as any;
+    const r = sanitizeMessages(old);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(JSON.stringify(r.messages)).not.toMatch(/file_id|container_upload/);
+    expect(r.messages[0].content).toEqual([{ type: 'text', text: 'run it' }]);
   });
 
   it('rejects block types that are not allowed for the role', () => {
@@ -525,23 +495,6 @@ describe('cleanTitle', () => {
   });
 });
 
-describe('workspace header', () => {
-  it('is sent only for a valid workspace ID', async () => {
-    const { studioWorkspaceHeaders } = await import('@/lib/studio/workspace');
-    const prev = process.env.ANTHROPIC_WORKSPACE_ID;
-    try {
-      delete process.env.ANTHROPIC_WORKSPACE_ID;
-      expect(studioWorkspaceHeaders()).toBeUndefined();
-      process.env.ANTHROPIC_WORKSPACE_ID = ' wrkspc_01TestWorkspace0000000 ';
-      expect(studioWorkspaceHeaders()).toEqual({ 'anthropic-workspace-id': 'wrkspc_01TestWorkspace0000000' });
-      process.env.ANTHROPIC_WORKSPACE_ID = 'wrkspc_x\r\nX-Injected: 1';
-      expect(studioWorkspaceHeaders()).toBeUndefined();
-    } finally {
-      if (prev === undefined) delete process.env.ANTHROPIC_WORKSPACE_ID; else process.env.ANTHROPIC_WORKSPACE_ID = prev;
-    }
-  });
-});
-
 describe('skills, csv and i18n', () => {
   it('built-ins win over custom skills with the same id', () => {
     const m = skillsById([{ id: BUILTIN_SKILLS[0].id, name: 'evil', description: '', instructions: 'x' }, { id: 'mine', name: 'Mine', description: '', instructions: 'y' }]);
@@ -557,5 +510,14 @@ describe('skills, csv and i18n', () => {
     expect(Object.keys(STRINGS.es).sort()).toEqual(Object.keys(STRINGS.en).sort());
     expect(resolveUiLang('es')).toBe('es');
     expect(resolveUiLang('en')).toBe('en');
+  });
+
+  it('names Groq, not Anthropic, in what users read', () => {
+    for (const l of ['en', 'es'] as const) {
+      const all = JSON.stringify(STRINGS[l]);
+      expect(all).not.toMatch(/Anthropic|Claude|Opus|Sonnet|Haiku/);
+      expect(STRINGS[l].privacyBody).toContain('Groq');
+      expect(STRINGS[l].notConfigured).toContain('GROQ_API_KEY');
+    }
   });
 });

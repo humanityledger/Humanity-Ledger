@@ -434,7 +434,7 @@ function NewApp({ base, lang, data, busy, onBack, onTemplate, onCreated }: {
             <div className="border-l-2 border-[var(--hl-border-strong)] pl-3 py-1">
               <p className="text-[13.5px] text-[var(--hl-ink)]">Writing apps from a description is not set up on this server.</p>
               <p className="mt-1 text-[12.5px] text-[var(--hl-ink-3)]">
-                It needs <span className="font-mono">ANTHROPIC_API_KEY</span>, or <span className="font-mono">OPENAI_API_KEY</span> with <span className="font-mono">COMMUNITY_APPS_MODEL</span>. The ready-made apps below work without it.
+                It needs <span className="font-mono">GROQ_API_KEY</span>, or <span className="font-mono">OPENAI_API_KEY</span> with <span className="font-mono">COMMUNITY_APPS_MODEL</span>. The ready-made apps below work without it.
               </p>
             </div>
           )}

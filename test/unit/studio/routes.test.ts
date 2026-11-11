@@ -1,7 +1,7 @@
 /**
  * The Studio API routes, end to end: real route handlers, real metering and
- * locking logic, against a fake Redis, a scripted Anthropic SDK, mocked auth,
- * Prisma and Stripe.
+ * locking logic and the real Groq client, against a fake Redis, a scripted
+ * Groq API (global fetch, OpenAI-compatible SSE), mocked auth, Prisma and Stripe.
  */
 import { vi } from 'vitest';
 import { NextRequest } from 'next/server';
@@ -76,40 +76,32 @@ vi.mock('@/lib/prisma', () => ({
 vi.mock('@/lib/payments/stripe', () => ({
   stripe: { checkout: { sessions: { create: h.stripeCreate } }, billingPortal: { sessions: { create: async () => ({ url: 'https://billing.stripe.com/p/session/x' }) } } },
 }));
-vi.mock('@anthropic-ai/sdk', () => {
-  class Anthropic {
-    beta = {
-      messages: {
-        stream(params: any, options: any) {
-          h.calls.push({ params: JSON.parse(JSON.stringify(params)), options });
-          const step = h.script.shift();
-          let handler: ((e: any) => void) | null = null;
-          return {
-            on(_n: string, fn: (e: any) => void) { handler = fn; return this; },
-            async finalMessage() {
-              if (step.started) handler?.({ type: 'message_start', message: { usage: step.started } });
-              for (const t of step.text ?? []) handler?.({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: t } });
-              if (step.error) throw step.error;
-              return step.response;
-            },
-          };
-        },
-      },
-    };
-    messages = {
-      create: async () => ({ content: [{ type: 'text', text: '"**Contrato** de escrow."' }], usage: { input_tokens: 40, output_tokens: 6 } }),
-    };
-    constructor() {
-      (this.beta as any).files = {
-        upload: async (p: any) => { h.files.push(['upload', p.file?.name]); return { id: 'file_upload00001' }; },
-        delete: async (id: string) => { h.files.push(['delete', id]); return { id }; },
-        retrieveMetadata: async (id: string) => ({ id, filename: 'out.txt', size_bytes: 5, downloadable: true }),
-        download: async () => new Response('hello'),
-      };
-    }
+
+/**
+ * Groq's API, scripted. A step is either an answer ({ text, response }) streamed as
+ * chat.completion.chunk SSE, an HTTP error ({ status, body, headers }), or an answer that
+ * fails part-way ({ text, streamError }). With no step left it answers a title.
+ */
+function groqFetch(url: string, init: any): Promise<Response> {
+  const params = JSON.parse(init.body);
+  h.calls.push({ url, params, headers: init.headers, signal: init.signal });
+  const step = h.script.shift() ?? { text: ['"**Contrato** de escrow."'], response: { content: [{ type: 'text', text: '"**Contrato** de escrow."' }], stop_reason: 'end_turn', usage: { input_tokens: 40, output_tokens: 6 } } };
+  if (step.status) return Promise.resolve(new Response(JSON.stringify(step.body ?? {}), { status: step.status, headers: { 'content-type': 'application/json', ...(step.headers ?? {}) } }));
+  const chunks: any[] = [];
+  for (const t of step.text ?? []) chunks.push({ choices: [{ index: 0, delta: { content: t } }] });
+  if (step.streamError) chunks.push({ error: step.streamError });
+  else {
+    const r = step.response ?? { content: [], stop_reason: 'end_turn', usage: {} };
+    (r.content ?? []).filter((b: any) => b.type === 'tool_use').forEach((b: any, index: number) => {
+      chunks.push({ choices: [{ index: 0, delta: { tool_calls: [{ index, id: b.id, type: 'function', function: { name: b.name, arguments: JSON.stringify(b.input ?? {}) } }] } }] });
+    });
+    const finish = r.stop_reason === 'tool_use' ? 'tool_calls' : r.stop_reason === 'max_tokens' ? 'length' : 'stop';
+    chunks.push({ choices: [{ index: 0, delta: {}, finish_reason: finish }], x_groq: { usage: { prompt_tokens: r.usage?.input_tokens ?? 0, completion_tokens: r.usage?.output_tokens ?? 0 } } });
   }
-  return { default: Anthropic, toFile: async (data: any, name: string) => ({ name, data }) };
-});
+  const enc = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({ start(c) { for (const ch of chunks) c.enqueue(enc.encode(`data: ${JSON.stringify(ch)}\n\n`)); c.enqueue(enc.encode('data: [DONE]\n\n')); c.close(); } });
+  return Promise.resolve(new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } }));
+}
 
 import { POST as chat } from '@/app/api/studio/chat/route';
 import { POST as title } from '@/app/api/studio/title/route';
@@ -120,7 +112,7 @@ import { usageKeys } from '@/lib/studio/metering';
 const req = (body: unknown, headers: Record<string, string> = { 'content-type': 'application/json' }) =>
   new NextRequest('http://localhost:3000/api/studio/chat', { method: 'POST', headers, body: typeof body === 'string' ? body : JSON.stringify(body) });
 
-const turn = (over: Record<string, unknown> = {}) => ({ model: 'claude-sonnet-5-5', messages: [{ role: 'user', content: 'Hola' }], ...over });
+const turn = (over: Record<string, unknown> = {}) => ({ model: 'openai/gpt-oss-120b', messages: [{ role: 'user', content: 'Hola' }], ...over });
 
 async function events(res: Response) {
   const text = await res.text();
@@ -143,7 +135,10 @@ beforeEach(() => {
   h.files.length = 0;
   h.user = { tier: 'FREE', isPro: false, stripeCustomerId: null, stripeSubscriptionId: null, email: null };
   h.stripeCreate.mockClear();
-  process.env.ANTHROPIC_API_KEY = 'test-key';
+  vi.stubGlobal('fetch', vi.fn(groqFetch));
+  process.env.GROQ_API_KEY = 'gsk_test-key';
+  delete process.env.GROQ_MODEL;
+  delete process.env.GROQ_TPM_LIMIT;
   process.env.STRIPE_SECRET_KEY = 'sk_test_x';
   process.env.STRIPE_PRICE_STUDIO_PRO = 'price_x';
   process.env.NEXT_PUBLIC_APP_URL = 'https://app.example';
@@ -151,7 +146,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.GROQ_API_KEY;
+  vi.unstubAllGlobals();
 });
 
 describe('POST /api/studio/chat: refusals', () => {
@@ -160,11 +156,14 @@ describe('POST /api/studio/chat: refusals', () => {
     expect((await chat(req(turn()))).status).toBe(401);
   });
 
-  it('says when Studio is not configured', async () => {
-    delete process.env.ANTHROPIC_API_KEY;
+  it('says when Studio is not configured (no GROQ_API_KEY)', async () => {
+    delete process.env.GROQ_API_KEY;
     const res = await chat(req(turn()));
     expect(res.status).toBe(503);
-    expect((await res.json()).error).toBe('NOT_CONFIGURED');
+    const j = await res.json();
+    expect(j.error).toBe('NOT_CONFIGURED');
+    expect(j.message).toContain('GROQ_API_KEY');
+    expect(h.calls).toHaveLength(0);
   });
 
   it('only accepts JSON bodies (no text/plain form posts)', async () => {
@@ -180,9 +179,16 @@ describe('POST /api/studio/chat: refusals', () => {
     expect(h.calls).toHaveLength(0);
   });
 
-  it('keeps Opus for Pro', async () => {
+  it('answers a chat saved with a claude-* model on the default Groq model', async () => {
+    h.script.push(ok('ok'));
     const res = await chat(req(turn({ model: 'claude-opus-5-5' })));
-    expect(res.status).toBe(402);
+    expect(res.status).toBe(200);
+    await events(res);
+    expect(h.calls[0].params.model).toBe('openai/gpt-oss-120b');
+    process.env.GROQ_MODEL = 'openai/gpt-oss-20b';
+    h.script.push(ok('ok'));
+    await events(await chat(req(turn({ model: 'claude-opus-5-5' }))));
+    expect(h.calls[1].params.model).toBe('openai/gpt-oss-20b');
   });
 
   it('refuses prompts bigger than the plan allows', async () => {
@@ -193,7 +199,7 @@ describe('POST /api/studio/chat: refusals', () => {
   });
 
   it('refuses when today\'s budget is spent', async () => {
-    h.redis.store.set(usageKeys(h.wallet).day, String(150_000)); // $0.15 in micro-dollars
+    h.redis.store.set(usageKeys(h.wallet).day, String(50_000)); // 0.05 units (50K tokens), the Free daily allowance
     const res = await chat(req(turn()));
     expect(res.status).toBe(429);
     expect((await res.json()).error).toBe('LIMIT_REACHED');
@@ -216,7 +222,7 @@ describe('POST /api/studio/chat: refusals', () => {
   });
 
   it('refuses a prompt that costs more than the allowance left', async () => {
-    h.redis.store.set(usageKeys(h.wallet).day, String(149_000)); // $0.001 left today
+    h.redis.store.set(usageKeys(h.wallet).day, String(49_000)); // 1K tokens left today
     const res = await chat(req(turn({ messages: [{ role: 'user', content: 'x'.repeat(30_000) }] })));
     expect(res.status).toBe(429);
     expect((await res.json()).error).toBe('OVER_BUDGET');
@@ -234,9 +240,9 @@ describe('POST /api/studio/chat: refusals', () => {
   });
 
   it('holds the worst case of a Free turn against the shared ceiling before calling the model', async () => {
-    // $0.20 left in the shared pool, less than one Free turn's worst case
-    // (prompt + 2 page reads + output + 3 searches), so it must not start.
-    process.env.STUDIO_FREE_DAILY_GLOBAL_USD = '0.2';
+    // 5K tokens left in the shared pool, less than one Free call's worst case
+    // (one call is up to the 8K tokens-per-minute limit), so it must not start.
+    process.env.STUDIO_FREE_DAILY_GLOBAL_USD = '0.005';
     const res = await chat(req(turn()));
     expect(res.status).toBe(429);
     expect((await res.json()).error).toBe('FREE_CAPACITY');
@@ -261,65 +267,108 @@ describe('POST /api/studio/chat: a turn', () => {
     const ev = await events(res);
     expect(ev.map(e => e.type)).toEqual(['start', 'text', 'messages', 'usage', 'done']);
     expect(ev.find(e => e.type === 'text').delta).toBe('¡Hola!');
-    // 1,000 in * $2/M + 200 out * $10/M = $0.004
-    expect(ev.find(e => e.type === 'usage').costUsd).toBeCloseTo(0.004, 6);
+    // 1,000 in + 200 out = 1,200 tokens = 0.0012 units
+    expect(ev.find(e => e.type === 'usage').costUsd).toBeCloseTo(0.0012, 6);
     const k = usageKeys(h.wallet);
-    expect(Number(h.redis.store.get(k.day))).toBe(4_000);
-    expect(Number(h.redis.store.get(k.globalFreeDay))).toBe(4_000);
+    expect(Number(h.redis.store.get(k.day))).toBe(1_200);
+    expect(Number(h.redis.store.get(k.globalFreeDay))).toBe(1_200);
     expect(Number(h.redis.store.get(k.requests))).toBe(1);
     expect(h.redis.store.has(`studio:lock:${h.wallet}`)).toBe(false);
   });
 
-  it('sends what the API needs and nothing the client tried to add', async () => {
+  it('sends Groq what it needs and nothing the client tried to add', async () => {
     h.script.push(ok('ok'));
     await events(await chat(req(turn({
       messages: [{ role: 'user', content: [{ type: 'text', text: 'hi', cache_control: { type: 'ephemeral', ttl: '1h' } }] }],
-      connectors: [{ id: '1', name: 'gh', url: 'http://insecure.example/mcp', enabled: true }],
+      connectors: [{ id: '1', name: 'gh', url: 'https://mcp.example/mcp', enabled: true, token: 'secret' }],
+      tools: { webSearch: true, webFetch: true },
     }))));
-    const p = h.calls[0].params;
-    expect(p.model).toBe('claude-sonnet-5-5');
-    expect(p.betas).toBeUndefined(); // the http connector was dropped
-    expect(p.mcp_servers).toBeUndefined();
-    // Our own breakpoint only (no 1-hour TTL from the client).
-    expect(p.messages[0].content[0].cache_control).toEqual({ type: 'ephemeral' });
-    // Limited by what today's budget leaves after the prompt: ($0.15 - 3,004 est. tokens
-    // at $2/M) / $10 per M = 14,399 tokens.
-    expect(p.max_tokens).toBe(14_399);
-    expect(h.calls[0].options.signal).toBeDefined();
+    const c = h.calls[0];
+    expect(c.url).toBe('https://api.groq.com/openai/v1/chat/completions');
+    expect(c.headers.Authorization).toBe('Bearer gsk_test-key');
+    const p = c.params;
+    expect(p.model).toBe('openai/gpt-oss-120b');
+    expect(p.stream).toBe(true);
+    expect(p.messages[0].role).toBe('system');
+    expect(p.messages[0].content).toContain('Groq');
+    expect(p.messages.at(-1)).toEqual({ role: 'user', content: 'hi' });
+    expect(p.tools.map((t: any) => t.function.name)).toEqual(['artifact']);
+    expect(p.reasoning_format).toBeUndefined(); // GPT-OSS does not take it
+    const body = JSON.stringify(p);
+    for (const gone of ['cache_control', 'mcp', 'secret', 'web_search']) expect(body).not.toContain(gone);
+    // The whole call fits the free tier's 8,000 tokens per minute.
+    expect(p.max_completion_tokens).toBeGreaterThanOrEqual(1_024);
+    expect(p.max_completion_tokens).toBeLessThanOrEqual(7_360);
+    expect(c.signal).toBeDefined();
   });
 
-  it('meters a turn that fails part-way and still releases the lock', async () => {
-    h.script.push({ started: { input_tokens: 20_000 }, text: ['x'.repeat(300)], error: Object.assign(new Error('boom'), { status: 500 }) });
+  it('answers with another model when the chosen one is rate limited, and says which', async () => {
+    h.script.push({ status: 429, body: { error: { message: 'Rate limit reached for model `openai/gpt-oss-120b` on tokens per minute (TPM): Limit 8000, Used 7900, Requested 900.' } }, headers: { 'retry-after': '7' } });
+    h.script.push(ok('Hola desde 20B'));
     const ev = await events(await chat(req(turn())));
-    expect(ev.find(e => e.type === 'error').code).toBe('PROVIDER_ERROR');
-    expect(ev.at(-1)).toEqual({ type: 'done', stopReason: 'error' });
-    // 20,000 * $2/M + 100 * $10/M = $0.041
-    expect(Number(h.redis.store.get(usageKeys(h.wallet).day))).toBe(41_000);
+    expect(h.calls.map(c => c.params.model)).toEqual(['openai/gpt-oss-120b', 'openai/gpt-oss-20b']);
+    expect(ev.find(e => e.type === 'text').delta).toBe('Hola desde 20B');
+    expect(ev.at(-1)).toEqual({ type: 'done', stopReason: 'end_turn' });
+  });
+
+  it('gives a clear error when every model is out of today\'s free capacity', async () => {
+    for (let i = 0; i < 3; i++) h.script.push({ status: 429, body: { error: { message: 'Rate limit reached on tokens per day (TPD): Limit 200000, Used 200000.' } } });
+    const ev = await events(await chat(req(turn())));
+    expect(ev.find(e => e.type === 'error')).toMatchObject({ code: 'PROVIDER_DAILY_LIMIT' });
+    expect(h.calls).toHaveLength(3);
     expect(h.redis.store.has(`studio:lock:${h.wallet}`)).toBe(false);
   });
 
-  it('meters a turn the user stopped', async () => {
-    h.script.push({ started: { input_tokens: 10_000 }, text: ['abc'], error: Object.assign(new Error('Request was aborted.'), { name: 'AbortError' }) });
+  it('tells the operator to check GROQ_API_KEY when Groq rejects it', async () => {
+    h.script.push({ status: 401, body: { error: { message: 'Invalid API Key', code: 'invalid_api_key' } } });
     const ev = await events(await chat(req(turn())));
-    expect(ev.find(e => e.type === 'error').code).toBe('ABORTED');
-    expect(Number(h.redis.store.get(usageKeys(h.wallet).day))).toBe(20_010);
+    const err = ev.find(e => e.type === 'error');
+    expect(err.code).toBe('PROVIDER_AUTH');
+    expect(err.message).toContain('GROQ_API_KEY');
+    expect(h.calls).toHaveLength(1); // a bad key is not retried on other models
   });
 
-  it('reads a Pro tier from the JSON tier cache and allows Opus', async () => {
+  it('meters a turn that fails part-way and still releases the lock', async () => {
+    h.script.push({ text: ['x'.repeat(300)], streamError: { message: 'internal error', type: 'internal_server_error', status: 500 } });
+    const ev = await events(await chat(req(turn())));
+    expect(ev.find(e => e.type === 'error').code).toBe('PROVIDER_OVERLOADED');
+    expect(ev.at(-1)).toEqual({ type: 'done', stopReason: 'error' });
+    // The prompt it sent plus the 300 characters it streamed (100 tokens) are counted.
+    expect(Number(h.redis.store.get(usageKeys(h.wallet).day))).toBeGreaterThan(100);
+    expect(h.redis.store.has(`studio:lock:${h.wallet}`)).toBe(false);
+  });
+
+  it('shortens a long conversation to fit and tells the user', async () => {
+    const long: any[] = [];
+    for (let i = 0; i < 30; i++) long.push({ role: 'user', content: `q${i} ${'x'.repeat(2_000)}` }, { role: 'assistant', content: [{ type: 'text', text: 'y'.repeat(2_000) }] });
+    long.push({ role: 'user', content: 'and now?' });
+    h.script.push(ok('ok'));
+    const ev = await events(await chat(req(turn({ messages: long }))));
+    expect(ev.filter(e => e.type === 'notice').map(e => e.code)).toContain('TRIMMED');
+    const sent = h.calls[0].params.messages;
+    expect(sent.length).toBeLessThan(long.length);
+    expect(sent.at(-1)).toEqual({ role: 'user', content: 'and now?' });
+    expect(sent[1].role).toBe('user');
+  });
+
+  it('reads a Pro tier from the JSON tier cache, and Qwen asks for parsed reasoning', async () => {
     h.redis.store.set(`tier:${h.wallet}`, JSON.stringify({ tier: 'STUDIO_PRO', kycStatus: 'UNVERIFIED' }));
     h.script.push(ok('ok'));
-    const res = await chat(req(turn({ model: 'claude-opus-5-5' })));
+    const res = await chat(req(turn({ model: 'qwen/qwen3.8-27b' })));
     expect(res.status).toBe(200);
     await events(res);
-    expect(h.calls[0].params.model).toBe('claude-opus-5-5');
+    expect(h.calls[0].params.model).toBe('qwen/qwen3.8-27b');
+    expect(h.calls[0].params.reasoning_format).toBe('parsed');
     expect(h.redis.store.has(usageKeys(h.wallet).globalFreeDay)).toBe(false); // Pro does not use the free pool
   });
 });
 
 describe('POST /api/studio/title', () => {
-  it('returns a clean, metered title', async () => {
+  it('returns a clean, metered title from the small model', async () => {
     const res = await title(new NextRequest('http://localhost:3000/api/studio/title', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: 'quiero un contrato de escrow' }) }));
     expect(await res.json()).toEqual({ title: 'Contrato de escrow' });
+    expect(h.calls[0].params.model).toBe('openai/gpt-oss-20b');
+    expect(h.calls[0].params.reasoning_effort).toBe('low');
     expect(Number(h.redis.store.get(usageKeys(h.wallet).day))).toBeGreaterThan(0);
   });
 
@@ -334,7 +383,8 @@ describe('GET /api/studio/usage', () => {
   it('reports the plan and configuration', async () => {
     const res = await usageRoute(new NextRequest('http://localhost:3000/api/studio/usage'));
     const j = await res.json();
-    expect(j).toMatchObject({ configured: true, checkoutAvailable: true });
+    expect(j).toMatchObject({ configured: true, checkoutAvailable: true, provider: 'groq', defaultModel: 'openai/gpt-oss-120b', tpmLimit: 8_000 });
+    expect(j.capabilities).toEqual({ webSearch: false, sandbox: false, connectors: false, images: false });
     expect(j.usage.plan.id).toBe('free');
     expect(res.headers.get('cache-control')).toBe('no-store');
   });
@@ -377,7 +427,6 @@ describe('POST /api/studio/chat: Code mode', () => {
     workspace: { files: [{ path: 'a.txt', content: 'hello' }] },
     ...over,
   });
-  const owned = (kind: 'containers' | 'files', ids: string[]) => h.redis.store.set(`studio:${kind}:${h.wallet}`, JSON.stringify(ids));
 
   it('only resumes a turn that is waiting, with answers for its own calls', async () => {
     const waiting = [{ role: 'user', content: 'go' }, { role: 'assistant', content: [{ type: 'tool_use', id: 'toolu_1', name: 'write_file', input: { path: 'b.txt', content: 'x' } }] }];
@@ -389,50 +438,25 @@ describe('POST /api/studio/chat: Code mode', () => {
     expect(res.status).toBe(200);
     const ev = await events(res);
     expect(ev.find(e => e.type === 'file')?.change).toMatchObject({ path: 'b.txt', content: 'x', op: 'create' });
-    expect(h.calls[0].params.messages.at(-1).content[0]).toMatchObject({ type: 'tool_result', tool_use_id: 'toolu_1' });
+    // Groq gets the call and its result as OpenAI tool messages.
+    const sent = h.calls[0].params.messages;
+    expect(sent.at(-2)).toMatchObject({ role: 'assistant', tool_calls: [{ id: 'toolu_1', type: 'function', function: { name: 'write_file' } }] });
+    expect(sent.at(-1)).toMatchObject({ role: 'tool', tool_call_id: 'toolu_1' });
   });
 
-  it('refuses sandbox outputs and containers this wallet did not create', async () => {
+  it('keeps Code chats from before the migration working, without a sandbox', async () => {
     const out = [
-      { role: 'user', content: 'run' },
-      { role: 'assistant', content: [{ type: 'bash_code_execution_tool_result', tool_use_id: 'srvtoolu_1', content: { type: 'bash_code_execution_result', stdout: '', stderr: '', return_code: 0, content: [{ type: 'bash_code_execution_output', file_id: 'file_someoneelse1' }] } }] },
+      { role: 'user', content: [{ type: 'text', text: 'run' }, { type: 'container_upload', file_id: 'file_old' }] },
+      { role: 'assistant', content: [{ type: 'bash_code_execution_tool_result', tool_use_id: 'srvtoolu_1', content: { type: 'bash_code_execution_result', stdout: '', stderr: '', return_code: 0, content: [{ type: 'bash_code_execution_output', file_id: 'file_someoneelse1' }] } }, { type: 'text', text: 'ran' }] },
       { role: 'user', content: 'again' },
     ];
-    expect((await chat(req(code({ messages: out })))).status).toBe(400);
-    owned('files', ['file_someoneelse1']);
     h.script.push(ok('ok'));
-    expect((await chat(req(code({ messages: out })))).status).toBe(200);
-
-    // Someone else's container is dropped, not used.
-    h.script.push(ok('ok'));
-    await events(await chat(req(code({ sandbox: { enabled: true, containerId: 'cntr_notmine0001' } }))));
-    expect(h.calls.at(-1).params.container).toBeUndefined();
-    expect(h.calls.at(-1).params.tools.map((x: any) => x.name)).toContain('code_execution');
-    owned('containers', ['cntr_mine00000001']);
-    h.script.push(ok('ok'));
-    await events(await chat(req(code({ sandbox: { enabled: true, containerId: 'cntr_mine00000001' } }))));
-    expect(h.calls.at(-1).params.container).toBe('cntr_mine00000001');
-  });
-
-  it('remembers the new container and deletes the uploaded workspace copy', async () => {
-    h.script.push({ response: { content: [{ type: 'tool_use', id: 'toolu_s', name: 'sync_sandbox', input: {} }], stop_reason: 'tool_use', usage: { input_tokens: 500, output_tokens: 20 } } });
-    h.script.push({ response: { content: [{ type: 'text', text: 'ran' }], stop_reason: 'end_turn', container: { id: 'cntr_fresh000001' }, usage: { input_tokens: 600, output_tokens: 20 } } });
-    const ev = await events(await chat(req(code({ sandbox: { enabled: true } }))));
-    expect(ev.find(e => e.type === 'container')).toMatchObject({ id: 'cntr_fresh000001' });
-    expect(h.calls[1].params.messages.at(-1).content.some((b: any) => b.type === 'container_upload')).toBe(true);
-    expect(h.files).toEqual([['upload', expect.stringMatching(/^ledger-workspace-.*\.zip$/)], ['delete', 'file_upload00001']]);
-    expect(JSON.parse(h.redis.store.get(`studio:containers:${h.wallet}`)!)).toEqual(['cntr_fresh000001']);
-    // The stored history has no reference to the uploaded file.
-    expect(JSON.stringify(ev.find(e => e.type === 'messages'))).not.toContain('file_upload00001');
-  });
-
-  it('does not offer the sandbox in Chat mode or while planning', async () => {
-    h.script.push(ok('ok'));
-    await events(await chat(req(turn({ sandbox: { enabled: true } }))));
-    expect(h.calls.at(-1).params.tools.map((x: any) => x.name ?? x.type)).not.toContain('code_execution');
-    h.script.push(ok('ok'));
-    await events(await chat(req(code({ permission: 'plan', sandbox: { enabled: true } }))));
-    expect(h.calls.at(-1).params.tools.map((x: any) => x.name ?? x.type)).not.toContain('code_execution');
+    const res = await chat(req(code({ messages: out, sandbox: { enabled: true, containerId: 'cntr_old' } })));
+    expect(res.status).toBe(200);
+    await events(res);
+    const body = JSON.stringify(h.calls[0].params);
+    expect(body).not.toMatch(/file_old|file_someoneelse1|cntr_old|container|code_execution/);
+    expect(h.calls[0].params.tools.map((t: any) => t.function.name)).not.toContain('sync_sandbox');
   });
 
   it('refuses a workspace over the size limit', async () => {

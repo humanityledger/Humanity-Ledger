@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createStudioClient } from '@/lib/studio/client';
+import { createStudioClient, serverDefaultModel, studioApiKey, studioTpmLimit } from '@/lib/studio/client';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { chatRequestSchema, encodeEvent, MAX_REQUEST_BYTES, type StudioEvent } from '@/lib/studio/protocol';
-import { affordableOutputTokens, DEFAULT_MODEL, isStudioModel, planAllowsModel, promptCostUsd, STUDIO_MODELS, worstCaseFirstCallUsd } from '@/lib/studio/models';
+import { affordableOutputTokens, isStudioModel, planAllowsModel, promptCostUsd, STUDIO_MODELS, worstCaseFirstCallUsd } from '@/lib/studio/models';
 import { acquireTurnLock, readUsage, recordUsage, releaseFreeCapacity, releaseTurnLock, reserveFreeCapacity, resolvePlan, type FreeReservation } from '@/lib/studio/metering';
 import { AgentError, describeApiError, MIN_OUTPUT_TOKENS, runAgent, type AgentResult } from '@/lib/studio/agent';
 import { checkRateLimit, getClientIP } from '@/lib/security/rateLimiter';
 import { estimateInputTokens, sanitizeMessages, validateTurnShape } from '@/lib/studio/sanitize';
-import { createSandboxIo, deleteUploads, outputFileIdsIn, ownedIds, rememberOwned } from '@/lib/studio/sandbox';
 import { MAX_WS_TEXT_CHARS } from '@/lib/studio/fs';
 
 export const runtime = 'nodejs';
@@ -25,8 +24,13 @@ const json = (status: number, body: Record<string, unknown>) =>
  *
  * The conversation lives on the user's device and is sent with each turn;
  * this route stores none of it. It meters usage per wallet, enforces the
- * plan (models, budget, prompt size, connectors) and runs the agent loop.
+ * plan (models, budget, prompt size) and runs the agent loop.
  * CSRF is enforced by the middleware for every API mutation.
+ *
+ * Provider: Groq (GROQ_API_KEY), since November 2026. Each model call is
+ * fitted to the free tier's tokens-per-minute limit by lib/studio/groq.ts,
+ * so a long conversation still gets an answer: its oldest messages are left
+ * out of that call (the browser keeps the full history).
  */
 export async function POST(req: NextRequest) {
   const startedAt = Date.now();
@@ -34,8 +38,8 @@ export async function POST(req: NextRequest) {
   if (auth.errorResponse) return auth.errorResponse;
   const wallet = auth.walletAddress;
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return json(503, { error: 'NOT_CONFIGURED', message: 'Ledger Studio is not configured on this server yet (ANTHROPIC_API_KEY).' });
+  const apiKey = studioApiKey();
+  if (!apiKey) return json(503, { error: 'NOT_CONFIGURED', message: 'Ledger Studio is not configured on this server yet: the operator needs to set GROQ_API_KEY.' });
 
   if (!(req.headers.get('content-type') || '').toLowerCase().startsWith('application/json')) {
     return json(415, { error: 'BAD_REQUEST', message: 'Send JSON.' });
@@ -58,27 +62,17 @@ export async function POST(req: NextRequest) {
     return json(413, { error: 'TOO_LARGE', message: 'The workspace is too large. Remove some files.' });
   }
 
-  // Sandbox outputs in the history must be files this wallet's sandbox made.
-  let ownedFileIds: Set<string> | undefined;
-  if (outputFileIdsIn(request.messages).length) {
-    const owned = await ownedIds('files', wallet);
-    if (!owned) return json(503, { error: 'METERING_UNAVAILABLE', message: 'Studio cannot check this conversation right now. Try again in a minute.' });
-    ownedFileIds = owned;
-  }
-  const clean = sanitizeMessages(request.messages, { ownedFileIds });
+  const clean = sanitizeMessages(request.messages);
   if (!clean.ok) return json(400, { error: 'BAD_REQUEST', message: clean.error });
   request.messages = clean.messages;
-
-  // Code execution: only in Code mode, and only this wallet's own container.
-  const sandboxOn = request.mode === 'code' && !!request.sandbox?.enabled && request.permission !== 'plan';
-  if (!sandboxOn) request.sandbox = undefined;
-  else if (request.sandbox?.containerId) {
-    const owned = await ownedIds('containers', wallet);
-    if (!owned?.has(request.sandbox.containerId)) request.sandbox = { enabled: true };
-  }
+  // Not available on this provider; older clients may still send them.
+  request.sandbox = undefined;
+  request.connectors = undefined;
+  request.tools = undefined;
 
   const plan = await resolvePlan(wallet);
-  const model = isStudioModel(request.model) ? request.model : DEFAULT_MODEL;
+  // Unknown ids (for example a claude-* model saved before the migration) fall back to the server default.
+  const model = isStudioModel(request.model) ? request.model : serverDefaultModel();
   if (!planAllowsModel(plan.id, model)) {
     return json(402, { error: 'PLAN_REQUIRED', message: `${STUDIO_MODELS[model].label} is part of Studio Pro.` });
   }
@@ -90,6 +84,8 @@ export async function POST(req: NextRequest) {
   }
 
   const estimated = estimateInputTokens(request);
+  // What one call can actually send: each call is fitted to the per-minute limit.
+  const perCallPrompt = Math.min(estimated, studioTpmLimit());
   if (estimated > plan.maxInputTokens) {
     return json(413, {
       error: 'CONTEXT_TOO_LARGE',
@@ -119,11 +115,11 @@ export async function POST(req: NextRequest) {
   // cost more than what is left (otherwise one request could spend many days
   // of allowance at once).
   const budgetUsd = Math.min(usage.remainingTodayUsd, usage.remainingMonthUsd);
-  const firstPromptUsd = promptCostUsd(model, estimated);
+  const firstPromptUsd = promptCostUsd(model, perCallPrompt);
   if (firstPromptUsd > budgetUsd) {
     return json(429, {
       error: 'OVER_BUDGET',
-      message: 'This conversation is longer than what is left of your Studio allowance. Start a new chat, remove files, pick a lighter model, or wait for the allowance to renew.',
+      message: 'What is left of today\'s Studio allowance is not enough for this conversation. Start a new chat, remove files, or wait for the allowance to renew.',
       resetsAt: usage.remainingMonthUsd < usage.remainingTodayUsd ? usage.resetsMonthAt : usage.resetsDayAt,
       plan: plan.id,
     });
@@ -137,14 +133,14 @@ export async function POST(req: NextRequest) {
   let reservation: FreeReservation | null = null;
   if (plan.id === 'free') {
     const maxOut = Math.max(MIN_OUTPUT_TOKENS, Math.min(STUDIO_MODELS[model].maxOutputTokens, affordableOutputTokens(model, budgetUsd - firstPromptUsd)));
-    reservation = await reserveFreeCapacity(worstCaseFirstCallUsd(model, plan, estimated, maxOut));
+    reservation = await reserveFreeCapacity(worstCaseFirstCallUsd(model, plan, perCallPrompt, Math.min(maxOut, studioTpmLimit())));
     if (!reservation) {
       await releaseTurnLock(wallet, lock);
       return freeCapacityResponse();
     }
   }
 
-  const client = createStudioClient(apiKey, { maxRetries: 2, timeout: TURN_DEADLINE_MS });
+  const client = createStudioClient(apiKey, { timeout: TURN_DEADLINE_MS });
   const abort = new AbortController();
   req.signal.addEventListener('abort', () => abort.abort());
 
@@ -155,12 +151,6 @@ export async function POST(req: NextRequest) {
       const emit = (e: StudioEvent) => {
         if (closed) return;
         try { controller.enqueue(encoder.encode(encodeEvent(e))); } catch { closed = true; }
-      };
-      const keep = async (r: AgentResult) => {
-        // Remember what this wallet's sandbox owns; drop the workspace copies.
-        if (r.containerId) await rememberOwned('containers', wallet, [r.containerId]).catch(() => {});
-        if (r.outputFileIds.length) await rememberOwned('files', wallet, r.outputFileIds).catch(() => {});
-        if (r.uploadedFileIds.length) await deleteUploads(client, r.uploadedFileIds);
       };
       const record = async (r: AgentResult) => {
         const u = r.usage;
@@ -179,19 +169,16 @@ export async function POST(req: NextRequest) {
       try {
         const result = await runAgent({
           client, req: request, model, plan, emit, signal: abort.signal, budgetUsd, firstPromptUsd, deadlineAt: startedAt + TURN_DEADLINE_MS,
-          sandboxIo: sandboxOn ? createSandboxIo(client) : undefined,
         });
         await record(result);
-        await keep(result);
         emit({ type: 'done', stopReason: result.stopReason });
       } catch (e) {
         // Usage up to the failure (or the Stop button) is still metered.
         if (e instanceof AgentError) {
           await record(e.partial).catch(() => {});
-          await keep(e.partial).catch(() => {});
         }
         const d = describeApiError(e);
-        // Never log the request: it holds the user's conversation and connector tokens.
+        // Never log the request: it holds the user's conversation.
         if (d.code !== 'ABORTED') console.error('[studio/chat]', d.code, (e instanceof AgentError ? (e.original as any)?.status : (e as any)?.status) ?? '');
         emit({ type: 'error', code: d.code, message: d.message });
         emit({ type: 'done', stopReason: 'error' });

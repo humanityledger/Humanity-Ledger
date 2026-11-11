@@ -66,7 +66,6 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, '.'),
       'server-only': path.resolve(__dirname, 'test/mocks/empty.js'),
-      '@anthropic-ai/sdk': path.resolve(__dirname, 'test/mocks/anthropic-mock.js'),
     },
   },
 });
