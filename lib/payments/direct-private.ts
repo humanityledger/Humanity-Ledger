@@ -110,10 +110,13 @@ export async function sendDirectPrivatePayment(r: DirectPaymentRequest, deps?: D
 export function directPaymentMessage(p: { token: TokenKey; txHash: string; senderAztec?: string; network?: 'testnet' | 'mainnet' }): string {
   const mainnet = (p.network ?? AZTEC_WALLET_CONFIG.network) === 'mainnet';
   const url = explorerTxUrl(p.txHash);
+  // The chat names the configured symbol (e.g. HLUSD), never the internal key: on Alpha the key
+  // "USDC" may hold the operator's own token, and the message must not read as real USDC.
+  const symbol = AZTEC_WALLET_CONFIG.tokens.find((t) => t.key === p.token)?.symbol ?? p.token;
   return (
     (mainnet
-      ? `I sent you a private payment in ${p.token} on ${networkLabel()}. The amount is private; the network fee is paid publicly by my account. `
-      : `I sent you a private payment in ${p.token} test tokens on the Aztec test network. Only you and I can see the amount. `) +
+      ? `I sent you a private payment in ${symbol} on ${networkLabel()}. The amount is private; the network fee is paid publicly by my account. `
+      : `I sent you a private payment in ${symbol} test tokens on the Aztec test network. Only you and I can see the amount. `) +
     `Transaction: ${p.txHash}${url ? ` (${url})` : ''}.` +
     (p.senderAztec ? ` If it does not show in your private wallet, add my Aztec address under Receive: ${p.senderAztec}` : '')
   );
