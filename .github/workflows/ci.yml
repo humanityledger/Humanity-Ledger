@@ -55,6 +55,7 @@ jobs:
           test/unit/aztec/stream-terms.test.ts
           test/unit/aztec/wallet-wipe.test.ts
           test/unit/aztec/deployments-registry.test.ts
+          test/unit/aztec/value-mode.test.ts
           test/unit/aztec/store-encryption.test.ts
           test/unit/aztec/address-fingerprint.test.ts
           test/unit/payments

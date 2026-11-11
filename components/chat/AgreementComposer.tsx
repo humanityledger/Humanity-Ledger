@@ -23,6 +23,8 @@ import { ProvingMemoryNote } from './ProvingMemoryNote';
 import { ProvingStatus } from './ProvingStatus';
 import { STREAM_START_SLACK, streamTerms } from '@/lib/aztec/stream-terms';
 import { formatUnits, parseUnits } from '@/lib/aztec/wallet/amounts';
+import { useValueMode } from '@/lib/aztec/useValueMode';
+import { EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '@/lib/aztec/value-mode';
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 
@@ -58,6 +60,8 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
   useEffect(() => getPrivateWallet().subscribe(setWallet), []);
   const [peer, setPeer] = useState<string | undefined>();
   const [peerVerified, setPeerVerified] = useState(false);
+  const valueMode = useValueMode();
+  const paused = valueMode && valueMode.mode !== 'open' ? (valueMode.unconfirmed ? VALUE_MODE_UNCONFIRMED_MESSAGE : EXITS_ONLY_MESSAGE) : null;
   useEffect(() => {
     setPeerVerified(false);
     peerAztecAddress(localStoragePeerBindingStore(), dmPeerInboxId).then(setPeer).catch(() => setPeer(undefined));
@@ -238,7 +242,8 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                 </p>
                 <ProvingMemoryNote />
                 {ALPHA && <AlphaRiskAck value={ack} onChange={setAck} disabled={!!step} />}
-                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !amount || !token || !peerVerified || (ALPHA && !acked(ack))} onClick={open}>
+                {paused && <p role="status" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{paused}</p>}
+                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !!paused || !amount || !token || !peerVerified || (ALPHA && !acked(ack))} onClick={open}>
                   {kind === 'escrow' ? 'Open escrow' : 'Open stream'}
                 </button>
               </div>

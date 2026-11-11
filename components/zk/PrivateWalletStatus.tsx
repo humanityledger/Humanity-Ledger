@@ -14,6 +14,8 @@ import { getPrivateWallet, humanError } from '@/lib/aztec/wallet/client';
 import { AZTEC_WALLET_CONFIG, isWalletConfigured, networkLabel } from '@/lib/aztec/wallet/config';
 import { formatUnits } from '@/lib/aztec/wallet/amounts';
 import { countLocalAztecStores, wipeLocalAztecStores } from '@/lib/aztec/wallet/wipe';
+import { useValueMode } from '@/lib/aztec/useValueMode';
+import { EXITS_ONLY_MESSAGE } from '@/lib/aztec/value-mode';
 
 const PLAN_TEXT: Record<string, string> = {
   balance: 'Fees are paid from your Fee Juice balance.',
@@ -26,6 +28,7 @@ export function PrivateWalletStatus({ address }: { address: string }) {
   const { state, open } = useAztecWallet(address);
   const alpha = AZTEC_WALLET_CONFIG.network === 'mainnet';
   const ready = state.phase === 'ready';
+  const valueMode = useValueMode();
   const [stores, setStores] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState<'open' | 'refresh' | 'wipe' | null>(null);
@@ -115,6 +118,10 @@ export function PrivateWalletStatus({ address }: { address: string }) {
             </div>
           ))}
         </div>
+      )}
+
+      {valueMode?.mode === 'exits-only' && !valueMode.unconfirmed && (
+        <p role="status" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{EXITS_ONLY_MESSAGE}</p>
       )}
 
       {alpha && ready && (

@@ -93,6 +93,7 @@ const PUBLIC_PREFIXES = [
   '/api/webhooks/stripe',
   '/api/webhooks/',
   '/api/health',
+  '/api/aztec/value-mode', // exits-only switch; public, only ever restricts
   '/api/status',
   '/api/registry/',
   // '/api/chat/', (Removed from public routes for security)
