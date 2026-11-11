@@ -56,6 +56,10 @@ const INK = '#15171c';
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 /** Shield, Unshield and Send need a configured token; Receive only shows the address. */
 const sheetAvailable = (s: Exclude<Sheet, null>) => s === 'receive' || hasPrivateTokens();
+/** First configured wallet slot (on Alpha the operator's token may sit in any slot). */
+const FIRST_TOKEN: TokenKey = AZTEC_WALLET_CONFIG.tokens[0]?.key ?? 'USDC';
+/** What the user sees for a slot: the configured symbol (e.g. HLC), never the internal key. */
+const symbolOf = (key: TokenKey) => AZTEC_WALLET_CONFIG.tokens.find((t) => t.key === key)?.symbol ?? key;
 const short = (s?: string, n = 6) => (s ? `${s.slice(0, n + 2)}…${s.slice(-n)}` : '');
 
 /* -------------------------------------------------------------------------- */
@@ -598,7 +602,7 @@ function SubmitButton({ busy, children, disabled }: { busy: boolean; children: R
 
 function ShieldForm({ mode, onDone }: { mode: 'shield' | 'unshield'; onDone: () => void }) {
   const { state, wallet } = useAztecWallet('');
-  const [token, setToken] = useState<TokenKey>('USDC');
+  const [token, setToken] = useState<TokenKey>(FIRST_TOKEN);
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
   const bal = state.balances.find((b) => b.key === token);
@@ -629,7 +633,7 @@ function ShieldForm({ mode, onDone }: { mode: 'shield' | 'unshield'; onDone: () 
           : 'Moves tokens from your private notes to your public Aztec balance. The amount becomes visible on the network.'}
       </p>
       <TokenPicker value={token} onChange={setToken} />
-      <AmountField value={amount} onChange={setAmount} max={max} decimals={bal?.decimals ?? 18} symbol={bal?.symbol ?? token} />
+      <AmountField value={amount} onChange={setAmount} max={max} decimals={bal?.decimals ?? 18} symbol={bal?.symbol ?? symbolOf(token)} />
       <SubmitButton busy={busy} disabled={!amount || max === 0n}>
         {mode === 'shield' ? 'Shield' : 'Unshield'}
       </SubmitButton>
@@ -639,7 +643,7 @@ function ShieldForm({ mode, onDone }: { mode: 'shield' | 'unshield'; onDone: () 
 
 function SendForm({ onDone, onPaymentSent }: { onDone: () => void; onPaymentSent?: (info: { txHash: string; token: TokenKey }) => void }) {
   const { state, wallet } = useAztecWallet('');
-  const [token, setToken] = useState<TokenKey>('USDC');
+  const [token, setToken] = useState<TokenKey>(FIRST_TOKEN);
   const [amount, setAmount] = useState('');
   const [to, setTo] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -707,7 +711,7 @@ function SendForm({ onDone, onPaymentSent }: { onDone: () => void; onPaymentSent
         </div>
       )}
       <TokenPicker value={token} onChange={setToken} />
-      <AmountField value={amount} onChange={setAmount} max={bal?.privateUnits ?? 0n} decimals={bal?.decimals ?? 18} symbol={bal?.symbol ?? token} />
+      <AmountField value={amount} onChange={setAmount} max={bal?.privateUnits ?? 0n} decimals={bal?.decimals ?? 18} symbol={bal?.symbol ?? symbolOf(token)} />
       <p className="text-[12px] leading-relaxed text-black/50">
         Paid from your private balance. The network sees that a transaction happened, not the amount, you or the recipient.
         Check the address: a payment cannot be reversed.
@@ -721,7 +725,7 @@ function SendForm({ onDone, onPaymentSent }: { onDone: () => void; onPaymentSent
 
 function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
   const { wallet } = useAztecWallet('');
-  const [token, setToken] = useState<TokenKey>('USDC');
+  const [token, setToken] = useState<TokenKey>(FIRST_TOKEN);
   const [amount, setAmount] = useState('');
   const [sender, setSender] = useState('');
   const [adding, setAdding] = useState(false);
