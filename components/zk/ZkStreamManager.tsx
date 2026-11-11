@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Waves, X } from 'lucide-react';
+import { networkLabel } from '@/lib/aztec/wallet/config';
 
 // Streams run through Agreements in a direct conversation (components/chat/AgreementComposer.tsx,
 // lib/aztec/chat-agreements.ts). This panel points there; it creates nothing itself.
@@ -43,7 +44,7 @@ export function ZkStreamManager({ onClose, className = '' }: ZkStreamManagerProp
         <p>
           To start a private payment stream, open a direct conversation, tap <span className="font-semibold">+</span>, choose{' '}
           <span className="font-semibold">Private agreement</span>, then <span className="font-semibold">Stream</span>. The stream runs in its own
-          contract on the Aztec test network and is proven on your device.
+          contract on {networkLabel()} and is proven on your device.
         </p>
         <p>The other person needs a verified Aztec address in that chat. The contracts have no external audit yet.</p>
       </div>

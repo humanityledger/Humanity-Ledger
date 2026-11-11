@@ -347,7 +347,11 @@ function Gate(props: {
           Your wallet will ask you to sign a message. It is free and sends no transaction. The signature creates the keys
           of your private wallet in this browser; we never receive them.
         </p>
-        <p className="mt-2">The first time, your private account is also created on the Aztec test network. That takes about a minute.</p>
+        <p className="mt-2">
+          {ALPHA
+            ? `The first time, your private account is also created on ${networkLabel()}, paid with Fee Juice you bridge from your Ethereum wallet. That takes about a minute once the Fee Juice arrives.`
+            : 'The first time, your private account is also created on the Aztec test network. That takes about a minute.'}
+        </p>
       </>
     );
   }
@@ -450,7 +454,9 @@ function ActivityList({ items }: { items: Activity[] }) {
         <div className="py-8 flex flex-col items-center gap-2 text-black/45">
           <Clock size={20} />
           <span className="text-[13px] font-semibold text-black/70">No transactions yet</span>
-          <span className="text-[12px] text-center max-w-[220px]">Get test tokens, shield them, then send a private payment.</span>
+          <span className="text-[12px] text-center max-w-[220px]">
+            {ALPHA ? 'Shield tokens, then send a private payment.' : 'Get test tokens, shield them, then send a private payment.'}
+          </span>
         </div>
       ) : (
         <ul className="divide-y divide-black/[0.04]">

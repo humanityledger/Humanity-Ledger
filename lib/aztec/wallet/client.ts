@@ -249,7 +249,11 @@ class PrivateWallet {
   private async doConnect(evm: string, signTypedData: SignTypedData) {
     try {
       if (!isWalletConfigured()) {
-        throw new Error('The private wallet has not been set up on this server yet. The operator needs to run scripts/aztec/setup-testnet.mjs.');
+        throw new Error(
+          AZTEC_WALLET_CONFIG.network === 'mainnet'
+            ? 'The private wallet is not enabled on this server: Aztec Alpha needs NEXT_PUBLIC_AZTEC_ALPHA_ENABLED=true.'
+            : 'The private wallet has not been set up on this server yet. The operator needs to run scripts/aztec/setup-testnet.mjs.',
+        );
       }
 
       this.set({ phase: 'signing', step: 'Waiting for your wallet signature', error: undefined });

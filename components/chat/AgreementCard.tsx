@@ -22,7 +22,7 @@ import { summarizeInvite, agreementMessageKind } from '@/lib/aztec/agreement-mes
 import { localStoragePeerBindingStore, peerAztecAddress, recordPeerAnnouncement, sdkBindingCrypto, type AnnouncementResult } from '@/lib/aztec/peer-binding';
 import { getPrivateWallet, humanError, type WalletSnapshot } from '@/lib/aztec/wallet/client';
 import { formatUnits } from '@/lib/aztec/wallet/amounts';
-import { AZTEC_WALLET_CONFIG, explorerTxUrl } from '@/lib/aztec/wallet/config';
+import { AZTEC_WALLET_CONFIG, explorerTxUrl, networkLabel } from '@/lib/aztec/wallet/config';
 import { ProvingStatus } from './ProvingStatus';
 import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
@@ -354,7 +354,10 @@ function InviteCard({ raw, isMe, dmPeerInboxId, senderInboxId, selfInboxId }: Ag
       {actions && !busy && <div className="mt-3 flex gap-2">{actions}</div>}
       {/* Claim, refund, withdraw and cancel prove on this device; accepting does not. */}
       {actions && !busy && (accepted || role === 'sender') && <div className="mt-2"><ProvingMemoryNote /></div>}
-      <p className="mt-3 text-[11.5px] text-[#9aa0ab]">Aztec test network · test tokens with no value · contract {short(summary.instanceAddress)}</p>
+      <p className="mt-3 text-[11.5px] text-[#9aa0ab]">
+        {AZTEC_WALLET_CONFIG.network === 'mainnet' ? `${networkLabel()} · real funds, not audited` : 'Aztec test network · test tokens with no value'} · contract{' '}
+        {short(summary.instanceAddress)}
+      </p>
     </div>
   );
 }
