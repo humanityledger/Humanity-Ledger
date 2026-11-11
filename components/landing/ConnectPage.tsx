@@ -40,7 +40,6 @@ import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import { useUIStore } from "@/lib/store/ui-store";
 import { useSystemSignOut } from "@/hooks/useSystemSignOut";
-import { EmailLoginModal } from "@/components/auth/EmailLoginModal";
 import { useDynamicIsland } from "@/lib/store/dynamic-island-store";
 import { ConnectView, type ConnectStage, type WalletOption } from "@/components/connect/ConnectView";
 
@@ -48,6 +47,7 @@ import { safeReturnPath } from "@/lib/security/safeRedirect";
 import { withSignTimeout } from "@/lib/auth/sign-timeout";
 import { purgeLegacyHandshakeSecrets } from "@/lib/scan/sessionHandshake";
 import { setSelfLink } from "@/lib/link/channel";
+import { ONE_CLICK_AUTH } from "@/config/appkit";
 
 /** A signature request with no answer after this long is abandoned; a late answer is ignored. */
 const SIGN_TIMEOUT_MS = 120_000;
@@ -79,8 +79,9 @@ const DESKTOP_WALLETS: DesktopWallet[] = [
 ];
 
 const MOBILE_WALLETS: WalletOption[] = [
-  { id: "metamask-browser", name: "MetaMask (Open in App)", hint: "Recommended: opens directly in MetaMask app", logo: "/wallets/metamask.svg" },
-  { id: "metamask-mobile", name: "MetaMask", hint: "Connect from this browser with WalletConnect", logo: "/wallets/metamask.svg" },
+  // Every option signs in from THIS browser (Safari, Chrome) through the wallet app; none sends the
+  // visitor into a wallet's in-app browser, where their session would live in another browser.
+  { id: "metamask-mobile", name: "MetaMask", hint: "Opens the MetaMask app, you stay in this browser", logo: "/wallets/metamask.svg" },
   { id: "coinbase-mobile", name: "Coinbase Wallet", hint: "Opens the Coinbase Wallet app", logo: "/wallets/coinbase.png" },
   { id: "rainbow-mobile", name: "Rainbow", hint: "Opens the Rainbow app", logo: "/wallets/rainbow.png" },
   // public/wallets/trust.png was an HTML page saved as .png (broken image); OKX showed Coinbase's logo. Generic icon until real assets are added.
@@ -147,7 +148,6 @@ export default function ConnectPage() {
   const qrTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [showMobileScanner, setShowMobileScanner] = useState(false);
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   const redirectingRef = useRef(false);
   const signingRef = useRef(false);
@@ -424,6 +424,47 @@ export default function ConnectPage() {
         }
       } catch {
         /* fall through to a fresh signature */
+      }
+
+      // One-Click Auth (config/appkit.tsx): AppKit already had the wallet sign the SIWE message and
+      // /api/siwe/verify set the session. Asking for a second signature here would send the visitor to
+      // the wallet again; wait for that session instead, for this address only.
+      const inAppWallet = typeof window !== "undefined" && Boolean((window as unknown as { ethereum?: unknown }).ethereum);
+      if (ONE_CLICK_AUTH && !inAppWallet) {
+        const deadline = Date.now() + SIGN_TIMEOUT_MS;
+        while (!stale() && Date.now() < deadline) {
+          await new Promise((r) => setTimeout(r, 1_500));
+          if (stale()) return;
+          if (document.visibilityState !== "visible") continue;
+          try {
+            const r = await fetch("/api/auth/verify-session", { cache: "no-store", credentials: "include" });
+            const d = r.ok ? await r.json() : null;
+            if (d?.authenticated && d.user?.address?.toLowerCase() === address.toLowerCase()) {
+              if (stale()) return;
+              try {
+                const addrLower = address.toLowerCase();
+                localStorage.setItem("system_session_v2", JSON.stringify({ wallet: addrLower, exp: Date.now() + 604_800_000, source: "siwe" }));
+                sessionStorage.setItem("system_wallet_addr", addrLower);
+                localStorage.setItem("system_wallet_addr", addrLower);
+                clearDisconnectGuard();
+              } catch {
+                /* storage unavailable */
+              }
+              setSignStep(3);
+              setLinked(true);
+              redirectingRef.current = true;
+              window.location.replace(returnPathFromQuery());
+              return;
+            }
+          } catch {
+            /* keep waiting */
+          }
+        }
+        if (stale()) return;
+        setSignError("The sign-in was not completed in your wallet. Tap 'Try again'.");
+        setAuthStatus("failed");
+        signingRef.current = false;
+        return;
       }
 
       try {
@@ -787,7 +828,6 @@ export default function ConnectPage() {
         qrExpired={qrExpired}
         onWallet={(id) => (isMobile ? handleMobileWallet(id) : handleDesktopWallet(id))}
         onOtherWallets={openAppKitSafe}
-        onEmail={() => setEmailModalOpen(true)}
         onPhone={handlePhone}
         onBack={handleBack}
         onRetry={handleRetry}
@@ -812,7 +852,6 @@ export default function ConnectPage() {
           }}
         />
       )}
-      <EmailLoginModal isOpen={emailModalOpen} onClose={() => setEmailModalOpen(false)} />
 
       {/* AppKit's web component, used by the mobile wallet hand-off. */}
       <div aria-hidden="true" style={{ position: "absolute", opacity: 0, width: 1, height: 1, pointerEvents: "none", overflow: "hidden" }}>

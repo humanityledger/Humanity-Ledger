@@ -66,6 +66,25 @@ variables: `NEXT_PUBLIC_PEERJS_HOST` (e.g. `peer.ledgerchat.org`), and if needed
 switch, people on a page loaded before the deploy cannot reach people on the new one until they
 reload.
 
+## What the screen shows, state by state
+
+| State | Screen |
+|---|---|
+| calling | "Calling", with your own camera (mirrored) for a video call; Cancel stops the other phone ringing |
+| ringing | Incoming call: Decline, Answer |
+| connecting | The call screen with "Connecting" (it used to show the chat for up to 30 s) |
+| active | Voice: name and clock; video: the other person's camera, yours small and mirrored |
+| reconnecting | "Reconnecting…" (voice: under the name; video: a pill; minimised: the green bar) |
+| voice refused by the browser (iOS) | "Tap to hear …" button above the controls |
+| screen shared to you | Their screen over the call; it goes away as soon as they stop |
+
+## Measurements
+
+Each call records, on the device only (`lib/calls/metrics.ts`): time to the other person's stream
+(`setupMs`), time to their voice playing (`firstAudioMs`), route (direct or relay) and round trip,
+recoveries, and JavaScript memory every 30 s (Chrome and Edge). The last 10 calls are in
+`sessionStorage["hl.call.metrics"]`; in the console, `window.__ledgerCalls` after a call ends.
+
 ## Validation checklist (two real devices)
 
 Do each on two devices signed in as different accounts, with the browser console open where you can.
@@ -89,7 +108,10 @@ Do each on two devices signed in as different accounts, with the browser console
    `packetsLost` / `packetsReceived` under 2 % on a normal network. With RED negotiated (Chrome/Edge
    on both sides) the audio codec shows `red`.
 9. **Hang-up and decline** end the call on both sides, and the call log shows the real duration.
-10. **Devices released.** After a call the camera light is off and the browser shows no microphone
+10. **Measurements.** After each call, in the console, `window.__ledgerCalls.at(-1)`: `firstAudioMs`
+    under 2000 on Wi-Fi, under 3000 through TURN; `heapMb` stays flat over a 30-minute call.
+11. **Cancel while ringing.** Caller cancels: the callee's phone stops ringing at once.
+12. **Devices released.** After a call the camera light is off and the browser shows no microphone
     in use.
 
 ## Known limits

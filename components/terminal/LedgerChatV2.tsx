@@ -323,6 +323,7 @@ import { MessageBubble } from '../chat/MessageBubble';
 import { PinPrompt } from '@/components/chat/pin/PinPrompt';
 import { IncomingCallScreen, OutgoingCallScreen, AudioCallStage, CallControls, CallClock } from '@/components/chat/call/CallScreens';
 import { callConstraints, callVideo, CALL_AUDIO, tuneOpusSdp, tuneSenders, loadIceConfig, peerServerOptions } from '@/lib/calls/media';
+import { finishCallMetrics, markFirstAudio, markSetup, sampleHeap, startCallMetrics, type CallMetrics } from '@/lib/calls/metrics';
 import { DISCONNECTED_GRACE_MS, RESUME_ATTEMPT_MS, RESUME_DEADLINE_MS, acceptResume, glareKeepsMine, isResumeMeta, resumeDelay, shouldDialResume } from '@/lib/calls/resume';
 /** Opus tuned for speech on every offer and answer (lib/calls/media.ts). */
 const CALL_SDP = { sdpTransform: (sdp: string) => tuneOpusSdp(sdp) };
@@ -2066,7 +2067,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             try { screenInRef.current?.close(); } catch {}
             screenInRef.current = connection;
             connection.answer(undefined, CALL_SDP);
-            connection.on('stream', (st: MediaStream) => { if (screenInRef.current === connection) setRemoteScreen(st); });
+            connection.on('stream', (st: MediaStream) => {
+              if (screenInRef.current !== connection) return;
+              setRemoteScreen(st);
+              // The sharer stopping sends no "close" through PeerJS: the track tells. "ended" ends the
+              // share; "mute" (no frames for a moment) hides it until frames come back.
+              const t = st.getVideoTracks()[0];
+              let hide: ReturnType<typeof setTimeout> | null = null;
+              t?.addEventListener('ended', () => { if (screenInRef.current === connection) { screenInRef.current = null; setRemoteScreen(null); try { connection.close(); } catch {} } });
+              t?.addEventListener('mute', () => { if (hide) clearTimeout(hide); hide = setTimeout(() => { if (screenInRef.current === connection) setRemoteScreen(null); }, 1500); });
+              t?.addEventListener('unmute', () => { if (hide) { clearTimeout(hide); hide = null; } if (screenInRef.current === connection) setRemoteScreen(st); });
+            });
             const done = () => { if (screenInRef.current === connection) { screenInRef.current = null; setRemoteScreen(null); } };
             connection.on('close', done);
             connection.on('error', done);
@@ -2309,7 +2320,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
     if (remoteAudioRef.current && remoteStream && remoteAudioRef.current.srcObject !== remoteStream) {
       remoteAudioRef.current.srcObject = remoteStream;
-      remoteAudioRef.current.play().catch(e => console.warn('Audio play blocked:', e));
+      playRemoteAudio();
     }
   }, [callState, remoteStream]);
 
@@ -2355,6 +2366,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           if (key !== lastRoute) {
             lastRoute = key;
             setCallRoute({ kind: kind as any, rttMs });
+            if (callMetricsRef.current) { callMetricsRef.current.route = kind as any; callMetricsRef.current.rttMs = rttMs; }
           }
         }
       } catch {}
@@ -2391,7 +2403,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     conn.on('stream', (rStream: MediaStream) => {
       // A resume connection becomes the call's connection once it carries the other person;
       // the old one (still playing until now) is then closed: make before break.
-      if (opts.resume && activeConnectionRef.current !== conn) adoptConnectionRef.current(conn);
+      if (opts.resume && activeConnectionRef.current !== conn) {
+        adoptConnectionRef.current(conn);
+        if (callMetricsRef.current) callMetricsRef.current.resumes += 1;
+      }
       if (activeConnectionRef.current === conn || !activeConnectionRef.current) {
         callRemoteIdRef.current = conn.peer;
         if (!callMyIdRef.current) callMyIdRef.current = myPeerIdRef.current;
@@ -2405,8 +2420,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = rStream;
         // Call audio always plays (never gated on a notification setting).
-        remoteAudioRef.current.play().catch(err => console.warn('[Audio] play() blocked:', err));
+        playRemoteAudio();
       }
+      markSetup(callMetricsRef.current);
       void tuneSenders(conn.peerConnection);
     });
     conn.on('close', () => endCallIfCurrentRef.current(conn));
@@ -2421,6 +2437,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const pendingResumeAtRef = useRef(0);
   const reconnectRef = useRef<{ deadline: number; attempt: number; timer: ReturnType<typeof setTimeout> | null } | null>(null);
   const [callReconnecting, setCallReconnecting] = useState(false);
+  // Measurements of this call, on this device only (lib/calls/metrics.ts).
+  const callMetricsRef = useRef<CallMetrics | null>(null);
+  // iOS can refuse to play the other person's voice without a tap on this page: then a button says so,
+  // instead of a silent call.
+  const [audioBlocked, setAudioBlocked] = useState(false);
+  const playRemoteAudio = () => {
+    const el = remoteAudioRef.current;
+    if (!el) return;
+    // The voice actually playing is "first audio" (the element is the one always-mounted <audio>).
+    el.onplaying = () => markFirstAudio(callMetricsRef.current);
+    el.play().then(() => setAudioBlocked(false)).catch((err: any) => {
+      if (err?.name === 'NotAllowedError') setAudioBlocked(true);
+      else console.warn('[Audio] play() failed:', err);
+    });
+  };
   const remoteHasVideo = !!remoteStream?.getVideoTracks().length;
   const localHasVideo = !!localStream?.getVideoTracks().some((t) => t.readyState === 'live');
   const stopReconnectRef = useRef<() => void>(() => {});
@@ -2509,6 +2540,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     });
   };
 
+  useEffect(() => {
+    if (callState !== 'active') return;
+    sampleHeap(callMetricsRef.current);
+    const id = setInterval(() => sampleHeap(callMetricsRef.current), 30_000);
+    return () => clearInterval(id);
+  }, [callState]);
+
   // Keep refs in sync with state
   useEffect(() => { activeConnectionRef.current = activeConnection; }, [activeConnection]);
   useEffect(() => { remoteStreamRef.current = remoteStream; }, [remoteStream]);
@@ -2523,6 +2561,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const ls = localStreamRef.current;
     const rs = remoteStreamRef.current;
     const ac = activeConnectionRef.current;
+    finishCallMetrics(callMetricsRef.current);
+    callMetricsRef.current = null;
+    setAudioBlocked(false);
     // Forget the call before closing its connections: their 'close' must not start a recovery.
     activeConnectionRef.current = null;
     callStateRef.current = 'idle';
@@ -2592,6 +2633,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const startCall = async (type: 'audio' | 'video', targetPeerOverride?: string) => {
     const targetPeer = targetPeerOverride || activePeer;
     if (!targetPeer) return;
+    callMetricsRef.current = startCallMetrics('caller', type);
     
     // Ensure state updates if called from history list
     if (targetPeerOverride && activePeer !== targetPeerOverride) {
@@ -2717,6 +2759,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     stopRingtone();
     // [ANDROID FIX] Use callStateRef.current instead of the stale React state closure.
     if (callStateRef.current !== 'ringing') return;
+    callMetricsRef.current = startCallMetrics('callee', callTypeRef.current === 'video' ? 'video' : 'audio');
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       toast.error('This browser cannot use your microphone or camera. Try a current version of Chrome, Edge, Firefox or Safari.');
       return;
@@ -6829,7 +6872,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           </div>
         )}
 
-      {/* NOTE: remoteAudioRef lives ONLY inside the active call portal below to avoid ref conflicts */}
 
       {/* ── Incoming Call Screen (state: ringing) ──────────────────────────────── */}
       {callState === 'ringing' && isMounted && typeof document !== 'undefined'
@@ -6851,7 +6893,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           peerName={activePeer ? getDisplayName(activePeer) : 'Unknown'}
           peerAddress={activePeer}
           isVideo={callTypeRef.current === 'video'}
-          onCancel={() => performEndCallRef.current?.()}
+          preview={callTypeRef.current === 'video' ? localStream : null}
+          // endCall, not just a local clean-up: the other phone must stop ringing now.
+          onCancel={() => endCallRef.current()}
         />,
         document.body
       ) as React.ReactNode) : null}
@@ -6859,7 +6903,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       {/* ── Call in progress ─────────────────────────────────────── */}
       {/* Layout follows what is really sent: the other person's video only if their stream has a
           camera, our own preview only if ours does (after a voice→video switch they may differ). */}
-      {callState === 'active' && isMounted && (
+      {/* 'connecting' (answered, media on its way) shows the call screen too: it used to show
+          nothing for up to 30 s between tapping Answer and hearing the other person. */}
+      {(callState === 'active' || callState === 'connecting') && isMounted && (
         isCallMinimized ? createPortal(
           callType === 'video' && remoteHasVideo ? (
             <motion.div
@@ -6888,7 +6934,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             >
               <span className="flex items-center gap-2 text-[14px] font-medium">
                 <Phone size={15} strokeWidth={2} aria-hidden="true" />
-                Return to call with {activePeer ? getDisplayName(activePeer) : 'your contact'}
+                {callReconnecting ? 'Reconnecting…' : `Return to call with ${activePeer ? getDisplayName(activePeer) : 'your contact'}`}
               </span>
               <span className="text-[14px] font-medium tabular-nums"><CallClock startedAt={callStartedAt} /></span>
             </button>
@@ -7025,6 +7071,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {audioBlocked && (
+              <button
+                type="button"
+                onClick={playRemoteAudio}
+                className="absolute bottom-[132px] left-1/2 -translate-x-1/2 z-30 bg-[#15171c] text-white text-[14px] font-semibold px-4 py-2.5 rounded-full shadow-lg"
+              >
+                Tap to hear {activePeer ? getDisplayName(activePeer) : 'your contact'}
+              </button>
+            )}
 
             {/* Controls */}
             <div className="absolute bottom-0 inset-x-0 z-30 flex justify-center" style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom, 32px))' }}>
