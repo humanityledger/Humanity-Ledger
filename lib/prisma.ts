@@ -151,8 +151,23 @@ type SystemPrismaClient = PrismaClient & {
   verificationCode: VerificationCodeDelegate;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { normalizeDatabaseUrl, describeDatabaseUrl } = require('./db/url.js') as {
+    normalizeDatabaseUrl: (raw: string | undefined) => string | undefined;
+    describeDatabaseUrl: (raw: string | undefined) => { ok: boolean; repaired?: boolean; problem?: string; host?: string };
+};
+
+let dbUrlReported = false;
 function getSanitizedDatabaseUrl(): string {
-    const rawUrl = process.env.DATABASE_URL;
+    // Paste errors in the Railway variable (quotes, "DATABASE_URL=" in the value, spaces) are repaired;
+    // anything else is reported once, without the password (lib/db/url.js).
+    const rawUrl = normalizeDatabaseUrl(process.env.DATABASE_URL);
+    if (!dbUrlReported && process.env.DATABASE_URL) {
+        dbUrlReported = true;
+        const d = describeDatabaseUrl(process.env.DATABASE_URL);
+        if (!d.ok) console.error(`[db] DATABASE_URL is unusable: ${d.problem}. Set it in Railway to \${{PgBouncer.DATABASE_URL}} (or \${{Postgres.DATABASE_URL}}).`);
+        else if (d.repaired) console.warn(`[db] DATABASE_URL had quotes, spaces or its own name in the value; repaired (host ${d.host}). Fix the Railway variable too.`);
+    }
     if (!rawUrl || rawUrl.trim() === '') {
         return 'postgresql://postgres:postgres@localhost:5432/humanity_ledger?schema=public';
     }

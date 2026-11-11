@@ -62,6 +62,7 @@ jobs:
           test/unit/aztec/address-fingerprint.test.ts
           test/unit/aztec/node-route.test.ts
           test/unit/aztec/tab-handoff.test.ts
+          test/unit/aztec/wallet-open-tokens.test.ts
           test/unit/aztec/store-pools.test.ts
           test/unit/payments
           test/unit/auth/wallet-links.test.ts

@@ -87,7 +87,7 @@ describe('private wallet: stores are never left locked', () => {
 
   it('frees an earlier attempt before opening, and a failed open before reporting it', () => {
     expect(src).toMatch(/await this\.teardown\(\);\s*const sdk = \(this\.sdk \?\?= await loadSdk\(\)\);/);
-    expect(src).toMatch(/console\.error\('\[private wallet\] open failed'[\s\S]{0,300}await this\.teardown\(\);\s*this\.set\(\{ phase: 'error'/);
+    expect(src).toMatch(/console\.error\('\[private wallet\] open failed'[\s\S]{0,300}await this\.teardown\(\);\s*this\.set\(\{\s*phase: 'error'/);
   });
 
   it('closes the stores themselves, not only the PXE', () => {
