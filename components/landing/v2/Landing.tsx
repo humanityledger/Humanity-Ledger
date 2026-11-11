@@ -28,6 +28,7 @@ import { AZTEC_WALLET_CONFIG, networkLabel } from "@/lib/aztec/wallet/config";
 import { RemoteLottie } from "@/components/ui/RemoteLottie";
 import { HeroMap } from "./HeroMap";
 import { SiteFooter } from "./SiteFooter";
+import { Figure } from "@/components/docs/v2/Figures";
 import { ImmersiveField } from "@/components/immersive/ImmersiveField";
 import { SiteNav } from "@/components/immersive/SiteNav";
 import { PhoneShowcase, phoneShowcaseStyles } from "./PhoneShowcase";
@@ -515,6 +516,25 @@ export function HumanityLanding() {
               </li>
             ))}
           </ol>
+        </section>
+
+        {/* The protocol, open to inspection (diagram shared with /docs/ecosystem) */}
+        <section id="protocol" data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="protocol-title">
+          <div className={s.sectionHead}>
+            <p className={s.eyebrow}>Protocol</p>
+            <h2 id="protocol-title" className={s.h2}>
+              Built in the open. <em>Checked by anyone.</em>
+            </h2>
+            <p className={s.lead}>
+              One account, your wallet, and four groups of services on top of it. Every part is published with its design, its limits and its tests.
+            </p>
+          </div>
+          <Figure kind="ecosystem" caption="Live: in use. Experimental: works, with stated limits. In development: built, not yet switched on." />
+          <div className={s.protocolLinks}>
+            <Link href="/docs/whitepaper" className={s.protocolLink}>Read the whitepaper</Link>
+            <Link href="/docs/ecosystem" className={s.protocolLink}>Ecosystem and source code</Link>
+            <Link href="/docs/whitepaper#linked-devices" className={s.protocolLink}>How linking a computer works</Link>
+          </div>
         </section>
 
         {/* What you can do */}

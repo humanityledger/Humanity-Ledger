@@ -244,12 +244,12 @@ export const whitepaper: DocPage = {
   title: "The Humanity Ledger platform paper",
   summary: "A technical description of the platform: its design goals, each subsystem, the threat model and the open problems.",
   keywords: ["whitepaper", "paper", "yellow paper", "technical", "specification", "design", "threat model", "research"],
-  updated: "2026-10-21",
+  updated: "2026-11-11",
   blocks: [
     {
       t: "hint",
       tone: "info",
-      text: "Revised 21 October 2026. This revision replaces earlier versions that described components the product does not use, such as Waku routing and a Double Ratchet over X3DH. The current design is described below.",
+      text: "Revised 11 November 2026: linked devices (2.1), private payments on Aztec Alpha with their fees (7), and Ledger Studio on open models (8). The 21 October revision had replaced earlier versions that described components the product does not use, such as Waku routing and a Double Ratchet over X3DH.",
     },
     { t: "h2", text: "Abstract", id: "abstract" },
     {
@@ -279,6 +279,16 @@ export const whitepaper: DocPage = {
       t: "p",
       text: "Accounts can also be created with an email address and a one time code. Such accounts are identified internally by a random identifier rather than an address, and are marked so that routes requiring a wallet can refuse them explicitly.",
     },
+    { t: "h3", text: "2.1 Linked devices", id: "linked-devices" },
+    {
+      t: "p",
+      text: "A computer is used the way WhatsApp Web or Signal Desktop is: it becomes a linked device of the phone that holds the account, and it never receives the wallet. The computer generates an ephemeral P-256 key pair and shows its public key in a QR code that expires after four minutes. The signed-in phone scans it, shows a description of the computer taken from its own request (for example Chrome on macOS) and links nothing until the person confirms. It then encrypts to the computer's key, through ECDH and HKDF-SHA256, a random claim code, a device identifier and a fresh 256-bit channel key. The server keeps only that ciphertext and the SHA-256 of the claim; it mints the computer's session and releases it, in HttpOnly cookies, only to the browser that opened the code and proves it decrypted the claim.",
+    },
+    {
+      t: "p",
+      text: "When the computer needs a wallet signature, to register its own XMTP installation or to open the private wallet, it sends the request through our server sealed with AES-256-GCM under the channel key, with the request identifier and its kind bound as associated data, so an answer cannot be replayed onto another request. The phone states what the signature is for and signs only on approval. A computer cannot link further devices or answer requests. The phone lists linked computers and unlinks any of them at once by revoking its session token; at most five are linked, and a link lasts seven days.",
+    },
+    { t: "figure", kind: "device-link", caption: "Figure 1. Linking a computer from the phone. The server relays ciphertext and holds no key that opens it." },
     { t: "h2", text: "3. Direct messages", id: "messages" },
     {
       t: "p",
@@ -288,7 +298,7 @@ export const whitepaper: DocPage = {
       t: "p",
       text: "XMTP nodes store ciphertext so that offline recipients can collect it. At the time of writing they are operated by a single company and retain payloads without a time limit. Decrypted history is stored in the browser.",
     },
-    { t: "figure", kind: "message-path", caption: "Figure 1. The two delivery paths for a direct message." },
+    { t: "figure", kind: "message-path", caption: "Figure 2. The two delivery paths for a direct message." },
     { t: "h3", text: "3.1 The fallback relay", id: "fallback" },
     {
       t: "p",
@@ -316,18 +326,34 @@ export const whitepaper: DocPage = {
     { t: "h2", text: "7. Private payments", id: "private-payments" },
     {
       t: "p",
-      text: "A private payments wallet runs on the Aztec test network, version 6.0.0, which settles on Ethereum Sepolia. The client derives the secret of a Schnorr account contract from an EIP-712 signature by the user's wallet using HKDF-SHA256, so the same wallet always recovers the same account and the server never holds a spending key. A Private eXecution Environment runs in the browser with IndexedDB storage, decrypts the user's notes and generates proofs locally. Account deployment and transaction fees are paid by Aztec's sponsored fee payment contract.",
+      text: "The private wallet runs on Aztec Alpha, the Aztec network that settles on Ethereum mainnet, with Aztec's standard token contract and the operator's token HLC. The client derives the secret of a Schnorr account contract from an EIP-712 signature by the user's wallet using HKDF-SHA256, so the same wallet always recovers the same account and the server never holds a spending key. A Private eXecution Environment runs in the browser with encrypted storage, decrypts the user's notes and generates proofs on the device. Before any step that moves value the client re-reads the node's identity (L1 chain, rollup version and address, Fee Juice portal and token) and refuses a node that differs from the pins compiled into the build.",
     },
     {
       t: "p",
-      text: "Balances are held in instances of Aztec's standard token contract. Shielding calls `transfer_to_private`, unshielding calls `transfer_to_public`, and a private payment calls `transfer_private_to_private`. Shielding and unshielding reveal the address and the amount by construction; a private payment reveals only that a transaction occurred. Transaction history is assembled by the client from its own notes and receipts. A bridge to Ethereum is not built, the tokens are test tokens without value, and the contracts have not been independently audited.",
+      text: "A payment from a direct message goes only to the Aztec address the peer announced in that conversation with a Schnorr signature by its account key, which the client re-verifies every time value moves. Amounts are capped per token by the operator, and the sender acknowledges that the contracts are unaudited and that the fee payer is public. The transfer calls `transfer_private_to_private`: the amount and the recipient stay private. The receiver's wallet registers every chat contact with a pinned address as a known sender, so the new note is discovered on its next sync without any manual step.",
     },
-    { t: "h2", text: "8. Device protection", id: "pin" },
+    { t: "figure", kind: "private-payment", caption: "Figure 3. A private payment between two people in a direct message." },
+    { t: "h3", text: "7.1 Fees", id: "fees" },
+    {
+      t: "p",
+      text: "Alpha has no sponsored fee contract, so every transaction, including the one that creates the account, pays in Fee Juice: AZTEC bridged one way from Ethereum through the enshrined FeeJuicePortal. A new account waits until a deposit arrives and deploys itself by claiming it in the same transaction. Claim secrets are derived from the wallet signature, so a deposit is recoverable from Ethereum on any device. Paying a fee from one's own balance makes the account the visible fee payer of its transactions.",
+    },
+    {
+      t: "p",
+      text: "Because most people hold no AZTEC, a contact can pay the fees for them. The new user shares a link that carries their Aztec address and the hash of a claim secret reserved for this purpose; the contact deposits AZTEC for that address from their own Ethereum wallet. Only the recipient can claim it, and the deposit is public on Ethereum: the contact's address, the recipient's Aztec address and the amount.",
+    },
+    { t: "h2", text: "8. Ledger Studio", id: "studio" },
+    {
+      t: "p",
+      text: "Ledger Studio, the AI workspace, runs on open-weight models (GPT-OSS 120B and 20B, Qwen) served by Groq at no cost to users. Conversations are stored on the user's device and sent with each turn; the server keeps none of them. It checks the session, the plan and an allowance counted in tokens, then fits each call to the provider's limit of 8,000 tokens per minute by leaving out the oldest messages first and telling the user. A model that is busy falls back to another. Studio is not end to end encrypted: what is sent to it is processed by the provider.",
+    },
+    { t: "figure", kind: "studio-path", caption: "Figure 4. One Studio turn, from the browser to the model and back." },
+    { t: "h2", text: "9. Device protection", id: "pin" },
     {
       t: "p",
       text: "Since 11 November 2026 the PIN screen is off (build flag `NEXT_PUBLIC_ENCLAVE_PIN_LOCK`); sign in with the wallet is the only requirement. When it is on, access to Ledger Chat on a device is gated by a six digit PIN. The server stores Argon2id of the PIN with a per account salt and a server held pepper, limits concurrent hashing work, and allows eight attempts per five minute window. The PIN gates the interface; it is not used to derive message keys.",
     },
-    { t: "h2", text: "9. Threat model", id: "threat-model" },
+    { t: "h2", text: "10. Threat model", id: "threat-model" },
     {
       t: "table",
       head: ["Adversary", "Can", "Cannot"],
@@ -337,15 +363,16 @@ export const whitepaper: DocPage = {
         ["An XMTP node operator", "See encrypted messages, their size and timing, and the conversations they belong to.", "Read them."],
         ["An observer on the user's network", "See which services the user connects to and when.", "Read any content protected by TLS."],
         ["Someone with the user's unlocked device", "Open Ledger Chat if they know the PIN. Read data stored by the browser with developer tools, even without it.", "Sign in on another device without the wallet."],
+        ["Someone who tricks the user into scanning their QR code", "Ask to be linked. The phone names the computer and asks for confirmation; once linked, read and send messages until unlinked.", "Obtain the wallet, or any signature the user does not approve on the phone."],
         ["Malware on the user's device", "Everything the user can see.", "Nothing prevents this. No software only design can."],
       ],
     },
-    { t: "h2", text: "10. Scaling", id: "scaling" },
+    { t: "h2", text: "11. Scaling", id: "scaling" },
     {
       t: "p",
       text: "Web servers are stateless. PostgreSQL is reached through a connection pooler, with a direct connection reserved for migrations. Online status is written to Redis with an expiry rather than to the database. Remaining single instance state, such as device linking codes held in memory, and polling in parts of the interface are the current limits on horizontal scaling.",
     },
-    { t: "h2", text: "11. Open problems", id: "open-problems" },
+    { t: "h2", text: "12. Open problems", id: "open-problems" },
     {
       t: "ul",
       items: [
@@ -354,6 +381,8 @@ export const whitepaper: DocPage = {
         "Encrypting attachments before upload.",
         "An independent audit of the contracts and a penetration test of the application.",
         "Self hosted call signalling, so that call setup does not depend on a public service.",
+        "A private fee payer on Aztec, so that a user's transactions cannot be linked to each other through the public fee payer.",
+        "Post-quantum key exchange for linked devices and messages, for example hybrid ML-KEM, once MLS and the browser support it.",
       ],
     },
     { t: "h2", text: "References", id: "references" },
@@ -368,6 +397,45 @@ export const whitepaper: DocPage = {
         "[XMTP documentation](https://docs.xmtp.org)",
         "[Aztec documentation](https://docs.aztec.network)",
       ],
+    },
+  ],
+};
+
+export const ecosystem: DocPage = {
+  slug: "ecosystem",
+  href: "/docs/ecosystem",
+  label: "Ecosystem and source",
+  title: "Ecosystem and source code",
+  summary: "Every part of Humanity Ledger, how ready it is, and where its code lives.",
+  keywords: ["open source", "source code", "github", "ecosystem", "components", "status", "public goods", "map"],
+  updated: "2026-11-11",
+  blocks: [
+    {
+      t: "p",
+      text: "Humanity Ledger is one account, your wallet, and four groups of services built on it. The map shows each one and how ready it is today. The code of all of them is published, so anyone can check what it does.",
+    },
+    { t: "figure", kind: "ecosystem", caption: "The platform today. Live: in use. Experimental: works, with stated limits. In development: built, not yet switched on." },
+    { t: "h2", text: "Where the code lives", id: "code" },
+    {
+      t: "cards",
+      items: [
+        { title: "Linked devices", text: "QR linking and the end-to-end signing channel between phone and computer.", href: "https://github.com/humanityledger/Humanity-Ledger/blob/main/lib/auth/linkedDevices.ts", icon: "smartphone", external: true },
+        { title: "Messaging client", text: "XMTP client, MLS conversations and delivery.", href: "https://github.com/humanityledger/Humanity-Ledger/tree/main/lib/xmtp", icon: "message", external: true },
+        { title: "Private wallet", text: "Aztec account, proofs on the device, Fee Juice and network pins.", href: "https://github.com/humanityledger/Humanity-Ledger/tree/main/lib/aztec", icon: "wallet", external: true },
+        { title: "Circuits and contracts", text: "Noir circuits and Aztec contracts for agreements, with their verification keys.", href: "https://github.com/humanityledger/Humanity-Ledger/tree/main/circuits", icon: "code", external: true },
+        { title: "Ledger Studio", text: "Agent loop, Groq client and token metering.", href: "https://github.com/humanityledger/Humanity-Ledger/tree/main/lib/studio", icon: "server", external: true },
+        { title: "Security tests", text: "Adversarial, invariant and end-to-end protocol tests run on every change.", href: "https://github.com/humanityledger/Humanity-Ledger/tree/main/test", icon: "shield", external: true },
+      ],
+    },
+    { t: "h2", text: "Licence", id: "licence" },
+    {
+      t: "p",
+      text: "The code is source available, not open source: the licence lets you read and audit it, not reuse it. See [Content and copyright](/docs/content-policy).",
+    },
+    { t: "h2", text: "How each part works", id: "design" },
+    {
+      t: "p",
+      text: "The [whitepaper](/docs/whitepaper) describes every subsystem with its diagrams, the threat model and the open problems. Security reports go to [Security](/docs/security-model).",
     },
   ],
 };
