@@ -143,7 +143,13 @@ export function networkLabel(): string {
 
 export function tokenConfig(key: TokenKey): TokenConfig {
   const t = AZTEC_WALLET_CONFIG.tokens.find((x) => x.key === key);
-  if (!t) throw new Error(`Token ${key} is not configured. Run scripts/aztec/setup-testnet.mjs.`);
+  if (!t) {
+    throw new Error(
+      AZTEC_WALLET_CONFIG.network === 'mainnet'
+        ? `Token ${key} is not configured on ${networkLabel()} (NEXT_PUBLIC_AZTEC_TOKENS).`
+        : `Token ${key} is not configured. Run scripts/aztec/setup-testnet.mjs.`,
+    );
+  }
   return t;
 }
 

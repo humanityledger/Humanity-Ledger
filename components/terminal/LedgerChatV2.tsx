@@ -75,6 +75,7 @@ const ZkStreamManager = dynamic(() => import('@/components/zk/ZkStreamManager').
 const ZkInvoiceModal = dynamic(() => import('@/components/zk/ZkInvoiceModal').then(m => m.ZkInvoiceModal), { ssr: false });
 import { encodeStreamPayload } from '@/lib/zk/zkStreaming';
 import { agreementMessageKind, agreementPreview, isAgreementMessage } from '@/lib/aztec/agreement-message';
+import { networkLabel } from '@/lib/aztec/wallet/config';
 import { attachmentPreview, isAttachmentMessage, parseAttachmentMessage } from '@/lib/chat/remote-attachment';
 import { prepareAttachmentMessage, AttachmentError } from '@/lib/chat/send-attachment';
 const AgreementComposer = dynamic(() => import('@/components/chat/AgreementComposer').then(m => m.AgreementComposer), { ssr: false });
@@ -6522,8 +6523,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             // ── Interactive ──────────────────────────────────────────
                             { id: 'poll',      color: '#10B981', iconPath: <ListChecks size={19} strokeWidth={1.8} />,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
                             // ── Crypto & Aztec Private Payments ──────────────────────────
-                            { id: 'zkmoney',   color: '#1C1C1E', iconPath: <ShieldCheck size={19} strokeWidth={1.8} />, label: 'Private payment', sublabel: 'Aztec test network', onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
-                            { id: 'agreement', color: '#1C1C1E', iconPath: <Waves size={19} strokeWidth={1.8} />, label: 'Private agreement', sublabel: 'Escrow or payment stream, Aztec test network', onClick: () => { setShowAgreementComposer(true); setShowAppDrawer(false); } },
+                            { id: 'zkmoney',   color: '#1C1C1E', iconPath: <ShieldCheck size={19} strokeWidth={1.8} />, label: 'Private payment', sublabel: networkLabel(), onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
+                            { id: 'agreement', color: '#1C1C1E', iconPath: <Waves size={19} strokeWidth={1.8} />, label: 'Private agreement', sublabel: `Escrow or payment stream, ${networkLabel()}`, onClick: () => { setShowAgreementComposer(true); setShowAppDrawer(false); } },
                             { id: 'zkinvoice', color: '#1C1C1E', iconPath: <Receipt size={19} strokeWidth={1.8} />, label: 'Private invoice', sublabel: 'Request a private payment', onClick: () => { setShowZkInvoiceModal(true); setShowAppDrawer(false); } },
                             { id: 'payment',   color: '#1C1C1E', iconPath: <CreditCard size={19} strokeWidth={1.8} />,     label: 'Payment',        sublabel: 'Send tokens from your wallet',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
                             // ── Security ──────────────────────────────────────────────
@@ -7229,7 +7230,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                  </button>
                  {!mine && activePeer && (
                    <>
-                     <button role="menuitem" type="button" title="Private payment on the Aztec test network, signed in your browser." onClick={() => { setContextMenu(null); setShowZkModal(true); }} className={item}>
+                     <button role="menuitem" type="button" title={`Private payment on ${networkLabel()}, signed in your browser.`} onClick={() => { setContextMenu(null); setShowZkModal(true); }} className={item}>
                        <ShieldCheck size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Send private payment
                      </button>
                      <button role="menuitem" type="button" title="Payment from your Ethereum wallet. You sign it in your wallet." onClick={() => { setContextMenu(null); setShowWalletTransfer(true); }} className={item}>
