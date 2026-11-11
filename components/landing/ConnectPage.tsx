@@ -47,6 +47,7 @@ import { ConnectView, type ConnectStage, type WalletOption } from "@/components/
 import { safeReturnPath } from "@/lib/security/safeRedirect";
 import { withSignTimeout } from "@/lib/auth/sign-timeout";
 import { purgeLegacyHandshakeSecrets } from "@/lib/scan/sessionHandshake";
+import { setSelfLink } from "@/lib/link/channel";
 
 /** A signature request with no answer after this long is abandoned; a late answer is ignored. */
 const SIGN_TIMEOUT_MS = 120_000;
@@ -126,7 +127,10 @@ export default function ConnectPage() {
   const { nuclearDisconnect } = useSystemSignOut();
 
   const [mounted, setMounted] = useState(false);
+  // A computer starts on the QR code (WhatsApp Web style); a phone signs in with its wallet.
   const [view, setView] = useState<"choose" | "qr">("choose");
+  const desktopQrStartedRef = useRef(false);
+  const qrRefreshesRef = useRef(0);
 
   const [pendingWallet, setPendingWallet] = useState<{ id: string; name: string; logo: string } | null>(null);
   const [authStatus, setAuthStatus] = useState<"idle" | "verifying" | "failed">("idle");
@@ -264,14 +268,31 @@ export default function ConnectPage() {
       setQrData(url.toString());
       setSyncStatus("AWAITING");
       qrTimerRef.current = setTimeout(() => {
-        setQrExpired(true);
         setQrSession(null);
         setSyncStatus("IDLE");
+        // Like WhatsApp Web: a fresh code a few times while the page is in view, then a button.
+        if (qrRefreshesRef.current < 4 && document.visibilityState === "visible") {
+          qrRefreshesRef.current++;
+          startQrRef.current?.();
+        } else {
+          setQrExpired(true);
+        }
       }, QR_LIFETIME_MS);
     } catch {
       setSyncStatus("ERROR");
     }
   }, []);
+
+  const startQrRef = useRef<(() => void) | null>(null);
+  useEffect(() => { startQrRef.current = startQr; }, [startQr]);
+
+  // On a computer the code is the first thing shown, unless this browser has a wallet to sign in with right now.
+  useEffect(() => {
+    if (!mounted || isMobile || desktopQrStartedRef.current || isLinked || effectiveIsConnected) return;
+    desktopQrStartedRef.current = true;
+    setView("qr");
+    startQr();
+  }, [mounted, isMobile, isLinked, effectiveIsConnected, startQr]);
 
   const stopQr = useCallback(() => {
     if (qrTimerRef.current) clearTimeout(qrTimerRef.current);
@@ -303,12 +324,17 @@ export default function ConnectPage() {
         // browser's key mixed with the PIN on screen. Only the claim code
         // turns into a session, and only here, in HttpOnly cookies.
         let claim: string | null = null;
+        let linkFromPhone: { deviceId: string; key: string; wallet: string } | null = null;
         try {
           const { deriveSharedSecret, decryptAESGCM } = await import("@/lib/web-crypto");
           const shared = await deriveSharedSecret(ephemeral.privateKey, data.mobilePub, ephemeral.isECDH, qrPin ?? undefined);
           const p = JSON.parse(await decryptAESGCM(shared, data.encryptedPayload, data.iv));
-          // Only the claim is read. Older phones may still send `seed`/`vault`: ignored, never stored.
+          // The claim, and the channel key for signing requests to the phone (lib/link/channel.ts).
+          // Older phones may still send `seed`/`vault`: ignored, never stored.
           if (typeof p.claim === "string") claim = p.claim;
+          if (typeof p.deviceId === "string" && typeof p.channelKey === "string" && typeof p.wallet === "string") {
+            linkFromPhone = { deviceId: p.deviceId, key: p.channelKey, wallet: p.wallet };
+          }
         } catch (e) {
           console.warn("[QR] could not decrypt the phone's answer (wrong PIN?)", e);
         }
@@ -334,6 +360,10 @@ export default function ConnectPage() {
         const normalized: string | null = /^0x[0-9a-f]{40}$/.test(addr) ? addr : null;
         if (normalized) {
           purgeLegacyHandshakeSecrets();
+          const did = (hd as { deviceId?: string }).deviceId;
+          if (linkFromPhone && linkFromPhone.wallet.toLowerCase() === normalized && did === linkFromPhone.deviceId) {
+            setSelfLink(linkFromPhone);
+          }
           localStorage.setItem("system_session_v2", JSON.stringify({ wallet: normalized, exp: Date.now() + 604_800_000, source: "qr-handshake" }));
           sessionStorage.setItem("system_wallet_addr", normalized);
           sessionStorage.setItem("portfolio_unlocked", "true");
@@ -727,6 +757,11 @@ export default function ConnectPage() {
     setView("choose");
   }, [stopQr]);
 
+  const handleRefreshQr = useCallback(() => {
+    qrRefreshesRef.current = 0;
+    startQr();
+  }, [startQr]);
+
   /* ── Stage ────────────────────────────────────────────────────────────── */
   if (!mounted) return <div style={{ minHeight: "100vh", background: "#ffffff" }} />;
 
@@ -747,7 +782,7 @@ export default function ConnectPage() {
         signStep={signStep}
         errorMessage={signError}
         mobileDeepLink={mobileDeepLink}
-        qr={qrData ? <QRCodeSVG value={qrData} size={172} level="M" bgColor="#ffffff" fgColor="#15171c" /> : null}
+        qr={qrData ? <QRCodeSVG value={qrData} size={204} level="M" bgColor="#ffffff" fgColor="#15171c" /> : null}
         qrPin={qrPin}
         qrExpired={qrExpired}
         onWallet={(id) => (isMobile ? handleMobileWallet(id) : handleDesktopWallet(id))}
@@ -761,7 +796,7 @@ export default function ConnectPage() {
           setPendingWallet(null);
           setMobileDeepLink(null);
         }}
-        onRefreshQr={startQr}
+        onRefreshQr={handleRefreshQr}
         onLinkDevice={() => setShowMobileScanner(true)}
       />
 

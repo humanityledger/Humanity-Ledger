@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { useAccount, useBalance, useDisconnect, useSignMessage } from 'wagmi';
 import { toast } from 'sonner';
-import { QRCodeSVG } from 'qrcode.react';
 import { useLedgerSettings } from '../terminal/LedgerChatSettings';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
@@ -31,6 +30,7 @@ import { loadBlockList, saveBlockList } from '@/lib/chat/blockList';
 import { downscaleAvatar, pushPublicProfile } from '@/lib/chat/profileSync';
 import { WALLPAPER_OPTIONS } from './WallpaperPickerSheet';
 import { CHAT_THEMES, findChatTheme } from '@/lib/chat/themes';
+import { LinkedDevicesPanel } from '@/components/link/LinkedDevicesPanel';
 
 function downloadSettingsBackup(): void {
   const data = exportableLocalStorage();
@@ -149,19 +149,6 @@ const Group = ({ title, footer, children }: {
     {footer && (
       <p className="text-[12px] text-[#727a88] px-1 mt-2 leading-relaxed">{footer}</p>
     )}
-  </div>
-);
-
-// ─── Real ISO-Compliant QR Code (Scannable by Any Camera / Phone) ─────────────
-const DeviceQRCode = ({ data, size = 200 }: { data: string; size?: number }) => (
-  <div className="p-3 bg-white rounded-[16px] shadow-sm flex items-center justify-center">
-    <QRCodeSVG
-      value={data || 'https://ledgerchat.org/chat'}
-      size={size}
-      level="M"
-      includeMargin={false}
-      className="rounded-[10px]"
-    />
   </div>
 );
 
@@ -520,7 +507,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
   // Signing in on another device needs no secret, so the QR code is only a
   // convenient way to open the sign in page there.
-  const connectUrl = typeof window !== 'undefined' ? `${window.location.origin}/connect` : '';
+  const walletAddrForDevices = (myAddress || address || '') as string;
 
   return (
     <motion.div
@@ -724,11 +711,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 </div>
               </div>
 
-              <Group title="Devices" footer="Your account is your wallet. To use Ledger Chat on another device, sign in there with the same wallet.">
+              <Group title="Devices" footer="Your phone holds your account. Link a computer by scanning the code shown on ledgerchat.org, like WhatsApp Web.">
                 <Row
                   icon={<Smartphone size={18} />}
-                  label="Use on another device"
-                  sublabel="Open the sign in page on your phone or computer"
+                  label="Linked devices"
+                  sublabel="Link a computer, see and unlink your devices"
                   onTap={() => setModal('linked_devices')}
                 />
                 <Row
@@ -1303,52 +1290,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <div className="w-10 h-1 rounded-full bg-[#e4e7ec]" />
               </div>
 
-              {/* ── Devices ── */}
+              {/* ── Linked devices (WhatsApp / Signal model) ── */}
               {modal === 'linked_devices' && (
-                <div className="px-6 pb-6">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-[20px] font-semibold text-[#15171c]">Use Ledger Chat on another device</h3>
-                    <button type="button" onClick={() => setModal(null)} aria-label="Close" className="w-8 h-8 rounded-full bg-[#f2f4f7] flex items-center justify-center shrink-0">
-                      <X size={16} className="text-[#727a88]" />
-                    </button>
-                  </div>
-                  <p className="text-[14px] text-[#727a88] mb-5 leading-relaxed">
-                    Your account is your wallet, so there is nothing to transfer. Sign in with the same wallet on the other device.
-                  </p>
-
-                  <div className="flex justify-center mb-3">
-                    {connectUrl ? <DeviceQRCode data={connectUrl} size={180} /> : null}
-                  </div>
-                  <p className="text-[13px] text-[#727a88] text-center mb-4">
-                    Scan this code with the other device to open the sign in page. It contains no secret.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => { navigator.clipboard?.writeText(connectUrl).then(() => toast.success('Link copied')).catch(() => toast.error('Could not copy the link')); }}
-                    className="w-full h-11 rounded-xl bg-[#eff1f4] hover:bg-[#e4e7ec] text-[#15171c] text-[15px] font-medium flex items-center justify-center gap-2 mb-5 transition-colors"
-                  >
-                    <Copy size={16} strokeWidth={1.9} /> Copy sign in link
-                  </button>
-
-                  <div className="bg-[#f7f8fa] rounded-2xl p-4 mb-4">
-                    <p className="text-[13px] font-medium text-[#727a88] mb-3">How it works</p>
-                    {[
-                      'Open the link on the other device',
-                      'Choose your wallet and sign the message',
-                      'That device creates its own encryption keys',
-                    ].map((text, i) => (
-                      <div key={text} className="flex items-start gap-3 mb-2 last:mb-0">
-                        <span className="w-6 h-6 rounded-full bg-[#15171c] text-white text-[12.5px] font-semibold flex items-center justify-center shrink-0">{i + 1}</span>
-                        <p className="text-[14px] text-[#15171c] leading-snug pt-[2px]">{text}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <p className="flex items-start gap-2 text-[13px] text-[#4a505c] leading-relaxed">
-                    <ShieldCheck size={15} strokeWidth={1.9} className="mt-[2px] shrink-0 text-[#727a88]" aria-hidden="true" />
-                    Your keys never leave a device and Ledger Chat never sees your wallet's private key.
-                  </p>
-                </div>
+                <LinkedDevicesPanel address={walletAddrForDevices} onClose={() => setModal(null)} />
               )}
 
               {/* ── Privacy Selector ── */}

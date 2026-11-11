@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyJWT } from '@/lib/jwt';
 import { QR_UUID_RE, hashClaim, qrClaimKey, qrEphKey, qrSessionKey, sameHash, takeOnce } from '@/lib/security/qrLogin';
+import { addDevice, DEVICE_ID_RE } from '@/lib/auth/linkedDevices';
+import { revokeFingerprint, tokenFingerprint } from '@/lib/security/sessionRevocation';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +20,9 @@ export const dynamic = 'force-dynamic';
  *
  * Before 2026-10-28 this endpoint took a raw JWT from the page and set it as
  * the session; the token had reached the page in clear through qr-poll.
+ *
+ * The computer is then recorded as a linked device of the wallet (its label and the
+ * fingerprint of its token), so the phone can list it and unlink it (lib/auth/linkedDevices.ts).
  */
 export async function POST(req: NextRequest) {
   try {
@@ -31,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     const raw = await takeOnce(qrClaimKey(uuid));
     if (!raw) return NextResponse.json({ error: 'This QR sign-in has expired. Refresh the code.' }, { status: 410 });
-    let rec: { jwt?: string; claimHash?: string; wallet?: string } = {};
+    let rec: { jwt?: string; claimHash?: string; wallet?: string; deviceId?: string; label?: string } = {};
     try { rec = JSON.parse(raw); } catch { rec = {}; }
     if (!rec.jwt || !rec.claimHash || !sameHash(hashClaim(claim), rec.claimHash)) {
       return NextResponse.json({ error: 'The code could not be verified. Scan the QR code again.' }, { status: 401 });
@@ -42,6 +47,13 @@ export async function POST(req: NextRequest) {
     const address = String(payload.sub || payload.address || '').toLowerCase();
     if (!/^0x[0-9a-f]{40}$/.test(address)) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    }
+    const deviceId = typeof rec.deviceId === 'string' && DEVICE_ID_RE.test(rec.deviceId) ? rec.deviceId : null;
+    if (deviceId) {
+      const exp = typeof payload.exp === 'number' ? payload.exp * 1000 : Date.now() + 604_800_000;
+      const dropped = await addDevice(address, { id: deviceId, label: String(rec.label || 'Computer'), createdAt: Date.now(), tokenFp: tokenFingerprint(rec.jwt), expiresAt: exp });
+      // Past the limit of linked computers the oldest one is signed out.
+      await Promise.all(dropped.map(d => revokeFingerprint(d.tokenFp, (d.expiresAt - Date.now()) / 1000)));
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
@@ -57,7 +69,7 @@ export async function POST(req: NextRequest) {
       domain: cookieDomain,
     };
 
-    const response = NextResponse.json({ success: true, address });
+    const response = NextResponse.json({ success: true, address, deviceId });
     // hl_session is the primary cookie (middleware, getSession); the legacy names keep older readers working.
     response.cookies.set('hl_session', rec.jwt, base);
     response.cookies.set('ledger_session', rec.jwt, base);

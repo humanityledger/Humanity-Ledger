@@ -77,16 +77,10 @@ export async function requireWallet(req?: NextRequest | Request): Promise<Requir
     }
   }
 
-  // Fallback: Check authenticated handshake cookie
-  const reqObj: any = req;
-  const cookieHandshake = reqObj?.cookies?.get?.('system_handshake')?.value;
-  if (cookieHandshake && ETH_ADDR_REGEX.test(cookieHandshake)) {
-    return {
-      walletAddress: cookieHandshake.toLowerCase(),
-      userId: cookieHandshake.toLowerCase(),
-      isEmailUser: false,
-    };
-  }
+  // `system_handshake` is NOT a session: it is a readable, non-HttpOnly hint any page (or any
+  // person, in their own browser) can set to any address. It used to be accepted here, so on a
+  // route the middleware lets through without a JWT (/api/auth/*, public reads) setting it to a
+  // victim's address was enough to act as them. Removed 2026-11-11; only a verified JWT counts.
 
   // A-015: Security hardening — Never trust client-injected headers
   // (x-wallet-address, x-web3-address) to resolve identity.
