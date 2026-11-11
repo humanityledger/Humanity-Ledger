@@ -97,7 +97,6 @@ const PUBLIC_PREFIXES = [
   '/api/status',
   '/api/registry/',
   // '/api/chat/', (Removed from public routes for security)
-  '/api/call/',          // Group call room API
   '/api/provenance/',    // Provenance log API called on XMTP connect
   '/api/security/integrity', // Public verifiable proving bundle integrity manifest
   '/api/chat/presence',  // Safe chat presence heartbeat / query

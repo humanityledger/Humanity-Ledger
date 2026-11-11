@@ -73,8 +73,20 @@ describe('retired list', () => {
   it('never retires routes called from outside the repository', () => {
     const external = /^\/api\/(webhooks|payments|internal|admin|v1|siwe|auth|chat|aztec|call|user|identity|moderation|geo|golden-ticket|security\/csp-report|notifications\/ingest)\b/;
     // Earlier audits retired some of these on purpose; this audit must add none.
-    const added = RETIRED_API_ROUTES.slice(RETIRED_API_ROUTES.indexOf('/api/academy/parse-document'));
+    const added = RETIRED_API_ROUTES.slice(RETIRED_API_ROUTES.indexOf('/api/academy/parse-document'), RETIRED_API_ROUTES.indexOf('/api/auth/me'));
     expect(added.filter(r => external.test(r))).toEqual([]);
+  });
+
+  it('answers 410 for the second pass (calls, invites, gates, auth helpers, Aztec operator routes)', () => {
+    for (const p of ['/api/call/token', '/api/call/room/abc/join', '/api/call/join/abc', '/api/chat/communities/c1/invite', '/api/chat/communities/c1/gate', '/api/auth/me', '/api/identity/token', '/api/aztec/deploy-token', '/api/auth/qr-sync-seed', '/api/chat/telemetry', '/api/moderation/status']) {
+      expect(isRetiredApiRoute(p)).toBe(true);
+    }
+  });
+
+  it('keeps the community apps routes the UI uses', () => {
+    for (const p of ['/api/chat/communities/c1/apps', '/api/chat/communities/c1/apps/a1', '/api/chat/communities/c1/apps/a1/state', '/api/chat/communities/c1/apps/a1/frame', '/api/chat/communities/join', '/api/chat/communities/c1/posts', '/api/chat/attachments/abc']) {
+      expect(isRetiredApiRoute(p)).toBe(false);
+    }
   });
 
   it('keeps the scheduled and health routes served', () => {

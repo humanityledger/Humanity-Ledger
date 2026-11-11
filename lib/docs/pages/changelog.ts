@@ -29,6 +29,7 @@ export const RELEASES: Release[] = [
     changes: [
       { kind: "security", text: "An exits-only switch: when we turn it on, the app refuses new private payments, shielding and agreements, and still lets you claim, refund, cancel and withdraw what is already open. It stops our interface only; the Aztec contracts cannot be paused, and it is not a rollback." },
       { kind: "security", text: "Dozens of old server routes from the removed terminal, forum, market, network and wallet products that nothing called now answer 410 before any code runs." },
+      { kind: "security", text: "Server routes for group calls, community invite tokens, token gates and some sign-in helpers, which no screen uses, now answer 410. The sign-in and chat flows are unchanged." },
       { kind: "fixed", text: "A page that tried to load a market stream from a route that no longer exists was removed." },
       { kind: "fixed", text: "The legal pages no longer say the Aztec mainnet runs an older version than the test network; both run 6.0.0 since 3 November 2026. The wallet still refuses the mainnet." },
       { kind: "new", text: "Private agreements in conversations: open an escrow or a payment stream to the person you are talking to, on the Aztec test network. The recipient verifies the invitation against the contract before accepting, and both of you can claim, refund, withdraw or cancel from the conversation." },

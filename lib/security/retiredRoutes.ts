@@ -324,6 +324,30 @@ export const RETIRED_API_ROUTES: readonly string[] = [
   '/api/wallet/swap/quote',
   '/api/wallet/transaction/status',
   '/api/wallet/transactions',
+  // 2026-11-11 (second pass): live handlers with no caller in the client, libraries, scripts or
+  // workflows, and no UI planned. Calls, community invite tokens and token gates, auth/identity
+  // helpers and Aztec operator routes. Delete a line to bring one back, then review its authentication.
+  '/api/auth/me',
+  '/api/auth/check-email',
+  '/api/auth/kyc-qr-poll',
+  '/api/auth/studio',
+  '/api/auth/qr-sync-seed',
+  '/api/identity/token',
+  '/api/aztec/anchor',
+  '/api/aztec/deploy-token',
+  '/api/aztec/migrate-identity',
+  '/api/aztec/sequencer/health',
+  '/api/aztec/sequencer/overview',
+  '/api/call/room',
+  '/api/call/room/[roomId]',
+  '/api/call/room/[roomId]/join',
+  '/api/call/room/[roomId]/moderate',
+  '/api/call/join/[roomId]',
+  '/api/call/token',
+  '/api/chat/communities/[id]/invite',
+  '/api/chat/communities/[id]/gate',
+  '/api/chat/telemetry',
+  '/api/moderation/status',
 ];
 
 const PATTERNS = RETIRED_API_ROUTES.map(u => new RegExp("" + toRegex(u)));
