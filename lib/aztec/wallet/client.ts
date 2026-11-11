@@ -97,6 +97,8 @@ export interface WalletSnapshot {
   busy: boolean;
   /** Aztec Alpha only. */
   feeJuice?: FeeJuiceState;
+  /** The raw reason the wallet did not open, for support (no keys in it): shown behind "Copy details". */
+  errorDetail?: string;
 }
 
 export type SignTypedData = (typedData: WalletTypedData) => Promise<string>;
@@ -368,7 +370,7 @@ class PrivateWallet {
       // or this tab would report itself as "another tab".
       await this.teardown();
       const sdk = (this.sdk ??= await loadSdk());
-      const { Fr, Fq, AztecAddress } = sdk;
+      const { Fr, Fq } = sdk;
 
       // Direct to the public node, with this site's relay as the fallback route (node-fetch.ts).
       this.node = sdk.createAztecNodeClient(AZTEC_WALLET_CONFIG.nodeUrl, await walletNodeClientOptions(RPC_OPTIONS.maxBatchSize));
@@ -441,20 +443,10 @@ class PrivateWallet {
       this.set({ aztecAddress: this.me.toString() });
 
       this.set({ step: AZTEC_WALLET_CONFIG.network === 'mainnet' ? 'Loading tokens' : 'Loading the test tokens' });
-      // G3: on Alpha every configured token must run the trusted Token class with the exact
-      // transfer_in_private our contracts call; one failing token refuses the wallet (operator config error).
-      const tokenCheck = AZTEC_WALLET_CONFIG.network === 'mainnet' ? await import('../token-check') : null;
-      for (const t of AZTEC_WALLET_CONFIG.tokens) {
-        const addr = AztecAddress.fromStringUnsafe(t.address);
-        if (tokenCheck) {
-          const c = await tokenCheck.checkTokenInstance(this.node, t.address, [sdk.TokenContract.artifact]);
-          if (!c.ok) throw new Error(`${t.symbol} is not a token this app can use on ${networkLabel()}: ${c.reason}.`);
-        }
-        const instance = await this.node.getContract(addr);
-        if (!instance) throw new Error(`${t.symbol} is not deployed on this network. Run the setup script again.`);
-        await this.wallet.registerContract(instance, sdk.TokenContract.artifact);
-        this.tokens.set(t.key, sdk.TokenContract.at(addr, this.wallet));
-      }
+      // A token that cannot be checked or loaded right now (a slow node, a dropped request) no longer
+      // keeps the whole wallet shut: it is left out, said so, and retried on Sync. A token that fails
+      // the G3 check is still never used (ensureTokens).
+      const tokenIssues = await this.ensureTokens();
 
       const meta = await this.wallet.getContractMetadata(this.me);
       if (String(meta?.initializationStatus) !== 'INITIALIZED') {
@@ -462,8 +454,9 @@ class PrivateWallet {
         if (!deployed) return; // Alpha: waiting for Fee Juice (phase 'needs-fee-juice')
       }
 
-      this.set({ phase: 'ready', step: undefined });
+      this.set({ phase: 'ready', step: undefined, errorDetail: undefined });
       await this.refreshQuietly();
+      if (tokenIssues.length) this.set({ error: tokenIssuesMessage(tokenIssues) });
     } catch (err: any) {
       // Say where it stopped; the raw error goes to the console for support.
       const where = this.snapshot.step;
@@ -471,7 +464,12 @@ class PrivateWallet {
       // A wallet that did not open must not keep its stores locked: the next try, here or in
       // another tab, would otherwise be told the wallet is open somewhere else.
       await this.teardown();
-      this.set({ phase: 'error', step: undefined, error: where ? `${humanError(err)} (Step: ${where}.)` : humanError(err) });
+      this.set({
+        phase: 'error',
+        step: undefined,
+        error: where ? `${humanError(err)} (Step: ${where}.)` : humanError(err),
+        errorDetail: errorDetailFor(where, err),
+      });
       throw err;
     }
   }
@@ -729,15 +727,47 @@ class PrivateWallet {
     return proof;
   }
 
+  /**
+   * Registers the configured tokens that are not registered yet. On Alpha each one must pass the G3
+   * check first (trusted Token class with the exact transfer_in_private); one that fails is never
+   * used. Returns the tokens left out, with why, instead of refusing the whole wallet.
+   */
+  private async ensureTokens(): Promise<string[]> {
+    const sdk = this.sdk!;
+    const issues: string[] = [];
+    const tokenCheck = AZTEC_WALLET_CONFIG.network === 'mainnet' ? await import('../token-check') : null;
+    for (const t of AZTEC_WALLET_CONFIG.tokens) {
+      if (this.tokens.has(t.key)) continue;
+      try {
+        const addr = sdk.AztecAddress.fromStringUnsafe(t.address);
+        if (tokenCheck) {
+          const c = await tokenCheck.checkTokenInstance(this.node, t.address, [sdk.TokenContract.artifact]);
+          if (!c.ok) { issues.push(`${t.symbol}: ${c.reason}`); continue; }
+        }
+        const instance = await this.node.getContract(addr);
+        if (!instance) { issues.push(`${t.symbol}: not deployed on ${networkLabel()}`); continue; }
+        await this.wallet.registerContract(instance, sdk.TokenContract.artifact);
+        this.tokens.set(t.key, sdk.TokenContract.at(addr, this.wallet));
+      } catch (err) {
+        console.warn(`[private wallet] ${t.symbol} not loaded`, err);
+        issues.push(`${t.symbol}: ${humanError(err)}`);
+      }
+    }
+    return issues;
+  }
+
   /* --------------------------------------------------------------- reading */
 
   async refresh(): Promise<void> {
     if (!this.wallet || !this.me) return;
     // Contacts pinned since the last refresh become known senders, so their payments are found.
     await this.registerChatPeers().catch(() => 0);
+    // A token left out at open time is tried again on every sync.
+    const tokenIssues = this.tokens.size < AZTEC_WALLET_CONFIG.tokens.length ? await this.ensureTokens() : [];
     const balances: TokenBalance[] = [];
     for (const t of AZTEC_WALLET_CONFIG.tokens) {
       const c = this.tokens.get(t.key);
+      if (!c) continue;
       const [priv, pub] = await Promise.all([
         c.methods.balance_of_private(this.me).simulate({ from: this.me }),
         c.methods.balance_of_public(this.me).simulate({ from: this.me }),
@@ -750,7 +780,7 @@ class PrivateWallet {
         publicUnits: BigInt(unwrap(pub)),
       });
     }
-    this.set({ balances, activity: await this.loadActivity(), error: undefined });
+    this.set({ balances, activity: await this.loadActivity(), error: tokenIssues.length ? tokenIssuesMessage(tokenIssues) : undefined });
   }
 
   private async loadActivity(): Promise<Activity[]> {
@@ -919,6 +949,7 @@ class PrivateWallet {
     from?: any,
   ) {
     const contract = this.tokens.get(key);
+    if (!contract) throw new Error(`${tokenConfig(key).symbol} is not available in your wallet right now. Tap Sync, then try again. Nothing was sent.`);
     const id = `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     upsertActivity(this.me.toString(), {
       id,
@@ -1054,6 +1085,18 @@ export const UNCONFIRMED_MESSAGE =
 /** waitForTx gave up waiting; the transaction itself was handed to the network. */
 export function isConfirmationTimeout(err: any): boolean {
   return /timeout|timed out|took too long/i.test(String(err?.name ?? '') + ' ' + String(err?.message ?? err ?? ''));
+}
+
+/** Said once the wallet is open but a token could not be loaded. */
+export function tokenIssuesMessage(issues: string[]): string {
+  return `Your wallet is open, but ${issues.join('; ')}. Payments in that token are off until it loads: tap Sync to try again.`;
+}
+
+/** Step and raw error, for "Copy details" (never keys: errors of the SDK and the node carry none). */
+export function errorDetailFor(step: string | undefined, err: any): string {
+  const raw = String(err?.stack || err?.message || err || 'Unknown error');
+  const causes = Array.isArray(err?.errors) ? ` | causes: ${err.errors.map((e: any) => String(e?.message ?? e)).join(' | ')}` : '';
+  return `Ledger Chat private wallet · ${AZTEC_WALLET_CONFIG.network} · step: ${step ?? 'unknown'} · ${new Date().toISOString()}\n${raw}${causes}`.slice(0, 2000);
 }
 
 export function humanError(err: any): string {

@@ -186,6 +186,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
             phase={state.phase}
             step={state.step}
             error={state.error}
+            errorDetail={state.errorDetail}
             configured={isWalletConfigured()}
             walletConnected={walletConnected}
             sameAccount={sameAccount}
@@ -374,6 +375,7 @@ function Gate(props: {
   phase: string;
   step?: string;
   error?: string;
+  errorDetail?: string;
   configured: boolean;
   walletConnected: boolean;
   sameAccount: boolean;
@@ -417,7 +419,24 @@ function Gate(props: {
       {props.error && props.phase === 'error' && (
         <div className="mt-3 flex gap-2 rounded-xl bg-[#fdeeec] px-3 py-2.5 text-[12.5px] text-[#c0362c]">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-          <span>{props.error}</span>
+          <span className="min-w-0">
+            {props.error}
+            {props.errorDetail && (
+              <button
+                type="button"
+                className="block mt-1.5 underline font-medium"
+                onClick={() => {
+                  // The exact reason, for support: step and raw error, never keys.
+                  navigator.clipboard?.writeText(props.errorDetail!).then(
+                    () => toast.success('Details copied. Paste them to support.'),
+                    () => toast.error('Could not copy. Select the text in the console instead.'),
+                  );
+                }}
+              >
+                Copy details
+              </button>
+            )}
+          </span>
         </div>
       )}
       {working ? (
