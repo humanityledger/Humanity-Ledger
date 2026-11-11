@@ -9,6 +9,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAccount, useSignMessage, useSignTypedData } from 'wagmi';
+import { useAppKit } from '@reown/appkit/react';
 import { Laptop, Loader2, ShieldCheck, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { getPeers, getSelfLink, hasPeers, open as openSealed, removePeer, seal, SIGN_PURPOSE, type SignPayload } from '@/lib/link/channel';
@@ -22,6 +23,7 @@ export function LinkedDeviceApprover({ wallet }: { wallet?: string | null }) {
   const { address, isConnected, connector } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { signTypedDataAsync } = useSignTypedData();
+  const { open: openAppKit } = useAppKit();
   const [current, setCurrent] = useState<{ req: Pending; payload: SignPayload } | null>(null);
   const [busy, setBusy] = useState(false);
   const seen = useRef(new Set<string>());
@@ -77,8 +79,14 @@ export function LinkedDeviceApprover({ wallet }: { wallet?: string | null }) {
     const { req, payload } = current;
     const peer = getPeers()[req.deviceId];
     if (!peer) { setCurrent(null); return; }
-    if (!isConnected || !address || address.toLowerCase() !== me) {
-      toast.error('Connect the wallet of this account on this phone to approve.');
+    if (!isConnected || !address) {
+      // The wallet session on this phone has ended: reconnect it, then tap Approve again.
+      toast.message('Reconnect your wallet, then tap Approve again.');
+      try { openAppKit(); } catch { /* no modal */ }
+      return;
+    }
+    if (address.toLowerCase() !== me) {
+      toast.error('The wallet connected on this phone is not the one of this account. Switch accounts in your wallet.');
       return;
     }
     setBusy(true);
@@ -102,7 +110,7 @@ export function LinkedDeviceApprover({ wallet }: { wallet?: string | null }) {
     } finally {
       setBusy(false);
     }
-  }, [current, busy, isConnected, address, me, signMessageAsync, signTypedDataAsync, connector, decline]);
+  }, [current, busy, isConnected, address, me, signMessageAsync, signTypedDataAsync, connector, decline, openAppKit]);
 
   if (!current) return null;
   const purpose = SIGN_PURPOSE[current.req.kind];
