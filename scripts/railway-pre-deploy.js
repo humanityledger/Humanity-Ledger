@@ -5,6 +5,23 @@
 
 const { execSync } = require('child_process');
 const { Client } = require('pg');
+const { normalizeDatabaseUrl, describeDatabaseUrl } = require('../lib/db/url.js');
+
+// Paste errors in the Railway variables are repaired before Prisma reads them (the CLI below
+// inherits this environment); anything else is said in words, without the password.
+for (const key of ['DATABASE_URL', 'DATABASE_URL_UNPOOLED']) {
+  const raw = process.env[key];
+  if (!raw) continue;
+  const d = describeDatabaseUrl(raw);
+  if (d.ok && d.repaired) {
+    process.env[key] = normalizeDatabaseUrl(raw);
+    console.warn(`[pre-deploy] ${key} had quotes, spaces or its own name in the value; repaired for this run (host ${d.host}). Fix the Railway variable.`);
+  } else if (!d.ok) {
+    console.error(`[pre-deploy] ${key} is unusable: ${d.problem}. In Railway set DATABASE_URL to \${{PgBouncer.DATABASE_URL}} and DATABASE_URL_UNPOOLED to \${{Postgres.DATABASE_URL}}.`);
+  } else {
+    console.info(`[pre-deploy] ${key} ok (host ${d.host}).`);
+  }
+}
 
 async function resolveStuckMigrations(databaseUrl) {
   let client;
