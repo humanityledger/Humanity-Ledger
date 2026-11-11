@@ -360,10 +360,26 @@ class PrivateWallet {
       }
 
       this.set({ phase: 'ready', step: undefined });
-      await this.refresh();
+      await this.refreshQuietly();
     } catch (err: any) {
-      this.set({ phase: 'error', step: undefined, error: humanError(err) });
+      // Say where it stopped; the raw error goes to the console for support.
+      const where = this.snapshot.step;
+      console.error('[private wallet] open failed', where ? `at "${where}"` : '', err);
+      this.set({ phase: 'error', step: undefined, error: where ? `${humanError(err)} (Step: ${where}.)` : humanError(err) });
       throw err;
+    }
+  }
+
+  /**
+   * Reads balances and activity once the wallet is open. A failure here (a slow node, a sync hiccup) is
+   * shown as a notice and never turns an open wallet, a created account or a sent payment into an error:
+   * that would ask the user to sign again or, worse, to send a payment that already went through.
+   */
+  private async refreshQuietly() {
+    try {
+      await this.refresh();
+    } catch (err) {
+      this.set({ error: `Your wallet is open, but the latest balances could not be read: ${humanError(err)} Use Sync to try again.` });
     }
   }
 
@@ -525,7 +541,7 @@ class PrivateWallet {
           this.stopPoll();
           if (await this.deployAccount()) {
             this.set({ phase: 'ready', step: undefined });
-            await this.refresh();
+            await this.refreshQuietly();
           }
         } else if (state.plan !== 'wait-claim') {
           this.stopPoll();
@@ -599,7 +615,7 @@ class PrivateWallet {
         publicUnits: BigInt(unwrap(pub)),
       });
     }
-    this.set({ balances, activity: await this.loadActivity() });
+    this.set({ balances, activity: await this.loadActivity(), error: undefined });
   }
 
   private async loadActivity(): Promise<Activity[]> {
@@ -761,7 +777,8 @@ class PrivateWallet {
       kind,
     );
     if (receipt && consumes) this.dropClaim(consumes);
-    await this.refresh();
+    // Confirmed means confirmed: a failed balance read afterwards must not read as a failed payment.
+    await this.refreshQuietly();
     if (!receipt) throw new Error(this.snapshot.activity.find((a) => a.id === id)?.error ?? 'The transaction failed.');
     return receipt;
   }
@@ -771,9 +788,10 @@ class PrivateWallet {
     const me = this.me.toString();
     this.inflight++;
     this.set({});
+    let txHash: string | undefined;
     try {
       const sent = await sendFn();
-      const txHash = sent.txHash?.toString?.() ?? String(sent.txHash);
+      txHash = sent.txHash?.toString?.() ?? String(sent.txHash);
       upsertActivity(me, { id, kind, txHash, status: 'pending', createdAt: Date.now() });
       this.set({ activity: await this.loadActivity() });
       const receipt = await this.sdk!.waitForTx(this.node, sent.txHash, { timeout: 600, interval: 2 });
@@ -787,6 +805,12 @@ class PrivateWallet {
       });
       return receipt;
     } catch (err: any) {
+      if (txHash && isConfirmationTimeout(err)) {
+        // Sent but not confirmed in time: it may still be included. Never shown as failed, so nobody sends it twice.
+        upsertActivity(me, { id, kind, txHash, status: 'pending', error: UNCONFIRMED_MESSAGE, createdAt: Date.now() });
+        this.set({ error: UNCONFIRMED_MESSAGE });
+        throw new Error(UNCONFIRMED_MESSAGE);
+      }
       upsertActivity(me, { id, kind, status: 'failed', error: humanError(err), createdAt: Date.now() });
       return null;
     } finally {
@@ -860,10 +884,19 @@ function unwrap(sim: any): bigint | number | string {
   return typeof v === 'object' && v !== null && 'toBigInt' in v ? v.toBigInt() : v;
 }
 
+/** Shown when a transaction was sent but not confirmed in time; it may still be included. */
+export const UNCONFIRMED_MESSAGE =
+  'Sent, but not confirmed yet after 10 minutes. It may still go through: check your activity and balance before sending again.';
+
+/** waitForTx gave up waiting; the transaction itself was handed to the network. */
+export function isConfirmationTimeout(err: any): boolean {
+  return /timeout|timed out|took too long/i.test(String(err?.name ?? '') + ' ' + String(err?.message ?? err ?? ''));
+}
+
 export function humanError(err: any): string {
   const msg = String(err?.shortMessage || err?.message || err || 'Unknown error');
   if (/user (rejected|denied)|rejected the request|denied message signature/i.test(msg)) return 'You declined the signature in your wallet.';
-  if (msg === EXITS_ONLY_MESSAGE || msg === VALUE_MODE_UNCONFIRMED_MESSAGE) return msg;
+  if (msg === EXITS_ONLY_MESSAGE || msg === VALUE_MODE_UNCONFIRMED_MESSAGE || msg === UNCONFIRMED_MESSAGE) return msg;
   // Encrypted store (lib/aztec/wallet/store.ts): the wallet did not open; nothing was read or sent.
   // Each store holds an origin-wide lock on its OPFS pool while open: another tab or window has this wallet open.
   if (/SqlitePoolBusyError|is already in use by another store instance/i.test(msg)) return 'Your private wallet is already open in another Ledger Chat tab or window. Close it there, then open the wallet here again. Nothing was sent.';
@@ -878,7 +911,15 @@ export function humanError(err: any): string {
   if (/tx dropped|invalid tx|transaction .*rejected|rejected by (the )?node|reverted/i.test(msg)) return 'The Aztec node rejected the transaction. Nothing changed. Try again in a minute.';
   if (/Balance too low|not enough|insufficient/i.test(msg)) return 'Your balance is too low for this amount.';
   if (/timeout/i.test(msg)) return 'The network took too long to confirm. It may still go through; check again in a minute.';
-  if (/Failed to fetch|fetch failed|NetworkError|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(msg)) return `Could not reach ${networkLabel()}. Check your connection and try again.`;
+  // A page loaded before a deploy asks for code chunks of the old build, which no longer exist.
+  if (/dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk [\w-]+ failed|error loading dynamically imported/i.test(msg)) {
+    return 'Ledger Chat was updated while this page was open. Reload the page, then open the wallet again. Nothing was sent.';
+  }
+  if (/Failed to fetch|fetch failed|NetworkError|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(msg)) {
+    // Name the service when the error does; a browser extension or firewall blocking one host looks the same as no connection.
+    const host = msg.match(/https?:\/\/([a-z0-9.-]+)/i)?.[1];
+    return `Could not reach ${host ?? networkLabel()}. Check your connection, and that no extension or firewall blocks it, then try again. (${msg.slice(0, 120)})`;
+  }
   if (/internal error/i.test(msg)) return 'Your wallet reported an internal signing error. Try switching networks or restarting your wallet.';
   return msg.length > 220 ? msg.slice(0, 220) + '…' : msg;
 }

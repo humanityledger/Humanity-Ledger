@@ -82,7 +82,8 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
   );
 }
 
-function FeeJuiceStation({ userAddress }: { userAddress: string }) {
+/** Fee Juice for the private wallet on Aztec Alpha: balance, bridge from Ethereum, deposits on their way. Also shown inside the wallet panel. */
+export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
   const { state, open, walletConnected, sameAccount } = useAztecWallet(userAddress);
   const { address: evm, isConnected } = useAccount();
   const chainId = useChainId();

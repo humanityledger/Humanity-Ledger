@@ -478,11 +478,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [biometricChecking, setBiometricChecking] = useState(false);
 
   useEffect(() => {
-    // If setting is off, always unlocked
-    if (!ledgerSettings?.biometric_lock) {
-      setIsBiometricallyUnlocked(true);
-      return;
-    }
+    // App lock off: nothing to unlock. The lock screen is rendered only while the lock is on (below), so the
+    // state is left untouched here: a lock switched on later (settings arriving after the defaults) still engages.
+    if (!ledgerSettings?.biometric_lock) return;
     // If already unlocked, do nothing
     if (isBiometricallyUnlocked) return;
 
@@ -5400,7 +5398,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setPrevMsgCount(messages.length);
   }, [messages.length]);
 
-  if (!isBiometricallyUnlocked) {
+  // Only when the optional app lock is on. With it off (the default) the lock screen must never render:
+  // it used to show for the first render of every visit, before the effect above marked the app unlocked.
+  if (ledgerSettings?.biometric_lock && !isBiometricallyUnlocked) {
     // The lock screen checks the PIN with the server. It used to unlock on
     // any key press, which made it a picture of a lock rather than a lock.
     return (
