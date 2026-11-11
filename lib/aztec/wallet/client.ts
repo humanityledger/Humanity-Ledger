@@ -32,6 +32,8 @@ import { parseUnits } from './amounts';
 import { loadLocalActivity, mergeActivity, upsertActivity, type Activity, type ActivityKind } from './history';
 import { assertFeeChoice, identifyNode } from '../fees';
 import { valueActionsRunning } from '../single-flight';
+import { walletNodeClientOptions, isTransientNodeError } from './node-fetch';
+import { BUSY_ELSEWHERE_MESSAGE, HANDED_OFF_MESSAGE, PAUSED_MESSAGE, createTabHandoff, isStoreBusyError } from './tab-handoff';
 import { assertNewValueAllowed, EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '../value-mode';
 import { BINDING_SCHEME, bindingStatement, sdkBindingCrypto, verifyAddressProof, type AddressProof } from '../peer-binding';
 import {
@@ -215,8 +217,89 @@ class PrivateWallet {
   private listeners = new Set<Listener>();
   private inflight = 0;
   private connecting: Promise<void> | null = null;
+  /** The encrypted stores this tab holds open (each holds an origin-wide lock on its OPFS pool). */
+  private stores: { pxeStore: any; walletStore: any } | null = null;
+  private handoff: ReturnType<typeof createTabHandoff> | null = null;
 
   private snapshot: WalletSnapshot = { phase: 'idle', balances: [], activity: [], busy: false };
+
+  constructor() {
+    if (typeof window === 'undefined') return;
+    // Opening the wallet in another tab asks this one to close it (tab-handoff.ts).
+    this.handoff = createTabHandoff({
+      holds: () => this.stores !== null,
+      canRelease: () => !this.transacting && !this.connecting,
+      release: () => this.release(HANDED_OFF_MESSAGE),
+    });
+    // Safari and Chrome keep a page in the back/forward cache with its locks held: a frozen
+    // page would keep the wallet "open in another tab" with no tab to close. Close it on the way out.
+    window.addEventListener('pagehide', (ev) => {
+      if ((ev as PageTransitionEvent).persisted && this.stores && !this.transacting) {
+        void this.release(PAUSED_MESSAGE);
+      }
+    });
+  }
+
+  /**
+   * Stops the PXE and closes both encrypted stores, freeing their locks. Keys held in memory for
+   * address proofs are dropped. Idempotent; never throws.
+   */
+  private async teardown() {
+    this.stopPoll();
+    const wallet = this.wallet;
+    const stores = this.stores;
+    this.wallet = null;
+    this.stores = null;
+    this.me = null;
+    this.manager = null;
+    this.signingKey = null;
+    this.salt = null;
+    this.claimSecrets = [];
+    this.tokens.clear();
+    const settle = (p: Promise<unknown> | undefined) =>
+      Promise.race([Promise.resolve(p).catch(() => {}), new Promise((r) => setTimeout(r, 4_000))]);
+    if (wallet) await settle(wallet.stop?.());
+    // stop() may already have closed them; closing again is harmless and makes sure the locks go.
+    if (stores) {
+      await settle(stores.walletStore?.close?.());
+      await settle(stores.pxeStore?.close?.());
+    }
+  }
+
+  /** Closes the wallet in this tab (handed to another tab, or page frozen); it can be opened again. */
+  private async release(message: string) {
+    await this.teardown();
+    this.evmAddress = null;
+    this.set({ phase: 'error', step: undefined, error: message, aztecAddress: undefined, balances: [], feeJuice: undefined });
+  }
+
+  /** Opens the stores; if another tab holds them, asks it to hand the wallet over, then retries. */
+  private async openStores(signature: string, names: { pxeName?: string; walletName?: string }) {
+    const { openEncryptedWalletStores } = await import('./store');
+    try {
+      return await openEncryptedWalletStores(signature, names);
+    } catch (err) {
+      if (!isStoreBusyError(err) || !this.handoff) throw err;
+      this.set({ step: 'Closing the private wallet in your other Ledger Chat tab' });
+      const answer = await this.handoff.requestRelease();
+      if (answer === 'busy') throw new Error(BUSY_ELSEWHERE_MESSAGE);
+      if (answer === 'none') throw err;
+      // The other tab closed its stores; its locks can take a moment to be let go.
+      let last: unknown = err;
+      for (let i = 0; i < 8; i++) {
+        await new Promise((r) => setTimeout(r, 250 + i * 150));
+        try {
+          return await openEncryptedWalletStores(signature, names);
+        } catch (e) {
+          last = e;
+          if (!isStoreBusyError(e)) throw e;
+        }
+      }
+      throw last;
+    } finally {
+      this.set({ step: 'Initializing encrypted storage' });
+    }
+  }
 
   /* ------------------------------------------------------------------ state */
 
@@ -267,10 +350,14 @@ class PrivateWallet {
       const signature = await signTypedData(walletTypedData());
 
       this.set({ phase: 'starting', step: 'Starting the private node in your browser' });
+      // A wallet left from an earlier attempt in this tab still holds its stores: free them first,
+      // or this tab would report itself as "another tab".
+      await this.teardown();
       const sdk = (this.sdk ??= await loadSdk());
       const { Fr, Fq, AztecAddress } = sdk;
 
-      this.node = sdk.createAztecNodeClient(AZTEC_WALLET_CONFIG.nodeUrl, RPC_OPTIONS);
+      // Direct to the public node, with this site's relay as the fallback route (node-fetch.ts).
+      this.node = sdk.createAztecNodeClient(AZTEC_WALLET_CONFIG.nodeUrl, await walletNodeClientOptions(RPC_OPTIONS.maxBatchSize));
       const info = await this.node.getNodeInfo();
       assertNetworkAllowed(Number(info.l1ChainId));
       // A node on another rollup or release fails later in obscure ways
@@ -287,21 +374,16 @@ class PrivateWallet {
         );
       }
 
-      if (this.wallet) {
-        await this.wallet.stop().catch(() => {});
-        this.wallet = null;
-      }
-
       this.set({ step: 'Initializing encrypted storage' });
-      const { openEncryptedWalletStores } = await import('./store');
       // One encrypted store pair per network, rollup and account: a second account on this browser
       // never hits decrypt_failed on someone else's store, and a new rollup never reuses stale notes.
       const { walletStoreNames, wipeLegacyPlainStores } = await import('./wipe');
       const names = await walletStoreNames(AZTEC_WALLET_CONFIG.network, String((info as any).l1ContractAddresses?.rollupAddress ?? ''), evm);
-      const stores = await openEncryptedWalletStores(signature, names);
+      const stores = await this.openStores(signature, names);
+      this.stores = stores;
 
-      this.wallet = await sdk.EmbeddedWallet.create(AZTEC_WALLET_CONFIG.nodeUrl, {
-        nodeClientOptions: RPC_OPTIONS,
+      // The same node client (and route) for the PXE as for the checks above.
+      this.wallet = await sdk.EmbeddedWallet.create(this.node, {
         pxe: {
           store: stores.pxeStore,
         },
@@ -372,6 +454,9 @@ class PrivateWallet {
       // Say where it stopped; the raw error goes to the console for support.
       const where = this.snapshot.step;
       console.error('[private wallet] open failed', where ? `at "${where}"` : '', err);
+      // A wallet that did not open must not keep its stores locked: the next try, here or in
+      // another tab, would otherwise be told the wallet is open somewhere else.
+      await this.teardown();
       this.set({ phase: 'error', step: undefined, error: where ? `${humanError(err)} (Step: ${where}.)` : humanError(err) });
       throw err;
     }
@@ -912,15 +997,8 @@ class PrivateWallet {
   }
 
   async disconnect() {
-    this.stopPoll();
-    this.claimSecrets = [];
-    this.manager = null;
-    this.signingKey = null;
-    this.salt = null;
-    await this.wallet?.stop?.().catch(() => {});
-    this.wallet = null;
-    this.me = null;
-    this.tokens.clear();
+    // Closes the stores too: sign-out then deletes them, which a locked store would refuse.
+    await this.teardown();
     this.faucetAddress = null;
     this.evmAddress = null;
     this.set({ phase: 'idle', aztecAddress: undefined, balances: [], activity: [], step: undefined, error: undefined, feeJuice: undefined });
@@ -965,7 +1043,14 @@ export function isConfirmationTimeout(err: any): boolean {
 }
 
 export function humanError(err: any): string {
+  // Several node requests failing together (the PXE's allToCompletion: "N of M concurrent operations
+  // failed"): explain the first reason that is not just the network, else the network failure.
+  if (Array.isArray(err?.errors) && err.errors.length) {
+    const reasons: unknown[] = err.errors;
+    return humanError(reasons.find((r) => !isTransientNodeError(r)) ?? reasons[0]);
+  }
   const msg = String(err?.shortMessage || err?.message || err || 'Unknown error');
+  if (msg === HANDED_OFF_MESSAGE || msg === BUSY_ELSEWHERE_MESSAGE || msg === PAUSED_MESSAGE) return msg;
   if (/user (rejected|denied)|rejected the request|denied message signature/i.test(msg)) return 'You declined the signature in your wallet.';
   if (msg === EXITS_ONLY_MESSAGE || msg === VALUE_MODE_UNCONFIRMED_MESSAGE || msg === UNCONFIRMED_MESSAGE) return msg;
   // Encrypted store (lib/aztec/wallet/store.ts): the wallet did not open; nothing was read or sent.
@@ -986,7 +1071,8 @@ export function humanError(err: any): string {
   if (/dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk [\w-]+ failed|error loading dynamically imported/i.test(msg)) {
     return 'Ledger Chat was updated while this page was open. Reload the page, then open the wallet again. Nothing was sent.';
   }
-  if (/Failed to fetch|fetch failed|NetworkError|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(msg)) {
+  // Safari says "Load failed", Firefox "NetworkError", Chrome "Failed to fetch"; the relay (node-fetch.ts) was tried too.
+  if (/Failed to fetch|fetch failed|Load failed|network connection was lost|NetworkError|Error fetching from host|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|Too Many Requests|Service Unavailable|Bad Gateway/i.test(msg)) {
     // Name the service when the error does; a browser extension or firewall blocking one host looks the same as no connection.
     const host = msg.match(/https?:\/\/([a-z0-9.-]+)/i)?.[1];
     return `Could not reach ${host ?? networkLabel()}. Check your connection, and that no extension or firewall blocks it, then try again. (${msg.slice(0, 120)})`;
