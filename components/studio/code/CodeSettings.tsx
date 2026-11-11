@@ -104,10 +104,6 @@ export function CodeSettings({ api }: { api: StudioApi }) {
           <Toggle on={p.autoContinue} onChange={v => setP({ ...p, autoContinue: v })} labelText={t.autoContinue} />
         </div>
         <div className="flex items-start justify-between gap-4">
-          <div><p className="text-[13.5px] font-medium">{t.sandbox}</p><p className={hint}>{t.sandboxHint} {t.sandboxNoticeBody}</p></div>
-          <Toggle on={p.sandbox} onChange={v => setP({ ...p, sandbox: v, acceptedSandboxNotice: p.acceptedSandboxNotice || v })} labelText={t.sandbox} />
-        </div>
-        <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[13.5px] font-medium">{t.notifyLabel}</p>
             <p className={hint}>{t.notifyHint}</p>

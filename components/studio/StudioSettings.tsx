@@ -1,20 +1,23 @@
 'use client';
 
 /**
- * Studio settings: personalization, language, skills, connectors, usage and
- * plan, and the data on this device.
+ * Studio settings: personalization, language, skills, usage and plan (with
+ * the AI provider's status), and the data on this device.
+ *
+ * Since the Groq migration (Nov 2026) there are no MCP connectors or web
+ * search settings: the provider has no equivalent (see STUDIO_CAPABILITIES).
  */
 
 import React, { useEffect, useState } from 'react';
-import { Check, Download, Plug, Plus, Sparkles, Trash2, User, Gauge, Database, X, Globe, SquareTerminal } from 'lucide-react';
+import { Check, Download, Plus, Sparkles, Trash2, User, Gauge, Database, X, Globe, SquareTerminal, Cpu } from 'lucide-react';
 import type { StudioApi } from './useStudio';
 import { CodeSettings } from './code/CodeSettings';
 import { BUILTIN_SKILLS, MAX_SKILL_CHARS, type StudioSkill } from '@/lib/studio/skills';
-import { STUDIO_LANGUAGES, type StudioConnectorConfig, type StudioLanguage } from '@/lib/studio/protocol';
-import { STUDIO_MODELS, STUDIO_PLANS, planAllowsModel, type StudioModelId } from '@/lib/studio/models';
+import { STUDIO_LANGUAGES, type StudioLanguage } from '@/lib/studio/protocol';
+import { formatUnits, normalizeModel, STUDIO_MODELS, STUDIO_PLANS, planAllowsModel, type StudioModelId } from '@/lib/studio/models';
 import { uid } from '@/lib/studio/store';
 
-export type SettingsTab = 'general' | 'code' | 'skills' | 'connectors' | 'usage' | 'data';
+export type SettingsTab = 'general' | 'code' | 'skills' | 'usage' | 'data';
 
 const LANG_LABEL: Record<StudioLanguage, string> = {
   auto: '', es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ro: 'Română',
@@ -37,13 +40,11 @@ function Bar({ value, max }: { value: number; max: number }) {
 }
 
 export function StudioSettings({ api, initialTab = 'general', onClose }: { api: StudioApi; initialTab?: SettingsTab; onClose: () => void }) {
-  const { t, prefs, savePrefs, connectors, saveConnectors, usage, plan, startCheckout, store, refreshUsage } = api;
+  const { t, lang, prefs, savePrefs, usage, plan, startCheckout, store, refreshUsage } = api;
   const [tab, setTab] = useState<SettingsTab>(initialTab);
   const [p, setP] = useState(prefs);
   const [saved, setSaved] = useState(false);
   const [editingSkill, setEditingSkill] = useState<StudioSkill | null>(null);
-  const [newConn, setNewConn] = useState<{ name: string; url: string; token: string }>({ name: '', url: '', token: '' });
-  const [connError, setConnError] = useState('');
   const [busy, setBusy] = useState(false);
   const [checkoutMsg, setCheckoutMsg] = useState('');
 
@@ -61,37 +62,9 @@ export function StudioSettings({ api, initialTab = 'general', onClose }: { api: 
     { id: 'general', label: t.personalization, icon: <User size={16} /> },
     { id: 'code', label: t.codeTab, icon: <SquareTerminal size={16} /> },
     { id: 'skills', label: t.skills, icon: <Sparkles size={16} /> },
-    { id: 'connectors', label: t.connectors, icon: <Plug size={16} /> },
     { id: 'usage', label: `${t.usage} · ${t.plan}`, icon: <Gauge size={16} /> },
     { id: 'data', label: t.dataTab, icon: <Database size={16} /> },
   ];
-
-  const maxConnectors = usage?.usage.plan.maxConnectors ?? STUDIO_PLANS[plan].maxConnectors;
-  const enabledConnectors = connectors.filter(c => c.enabled).length;
-
-  const addConnector = async () => {
-    setConnError('');
-    const name = newConn.name.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').slice(0, 64);
-    let url: URL | null = null;
-    try { url = new URL(newConn.url.trim()); } catch { url = null; }
-    if (!name) { setConnError(t.connectorName); return; }
-    // Same limits as the server (protocol.ts), so a saved connector never makes every request fail.
-    if (!url || url.protocol !== 'https:' || url.username || url.password || url.toString().length > 500) { setConnError(t.connectorUrl); return; }
-    if (newConn.token.trim().length > 4_000) { setConnError(t.connectorToken); return; }
-    if (connectors.some(c => c.name === name)) { setConnError(`${t.connectorName}: ${name}`); return; }
-    const c: StudioConnectorConfig = { id: uid('k_'), name, url: url.toString(), token: newConn.token.trim() || undefined, enabled: enabledConnectors < maxConnectors };
-    await saveConnectors([...connectors, c]);
-    setNewConn({ name: '', url: '', token: '' });
-  };
-
-  const toggleConnector = async (id: string) => {
-    const list = connectors.map(c => {
-      if (c.id !== id) return c;
-      if (!c.enabled && enabledConnectors >= maxConnectors) return c;
-      return { ...c, enabled: !c.enabled };
-    });
-    await saveConnectors(list);
-  };
 
   const saveSkill = async (s: StudioSkill) => {
     const clean: StudioSkill = { ...s, name: s.name.trim().slice(0, 120) || 'Skill', description: s.description.trim().slice(0, 300), instructions: s.instructions.slice(0, MAX_SKILL_CHARS) };
@@ -129,7 +102,8 @@ export function StudioSettings({ api, initialTab = 'general', onClose }: { api: 
   };
 
   const u = usage?.usage;
-  const fmtUsd = (n: number) => `$${n.toFixed(n < 1 ? 3 : 2)}`;
+  // Allowance units are tokens (1 unit = 1M tokens), shown as tokens: Studio costs the user nothing.
+  const fmtUnits = (n: number) => formatUnits(n, lang);
 
   return (
     <div className="fixed inset-0 z-[320] bg-[#15171c]/30 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
@@ -200,16 +174,13 @@ export function StudioSettings({ api, initialTab = 'general', onClose }: { api: 
                 </div>
                 <div>
                   <label className={label} htmlFor="st-model">{t.model}</label>
-                  <select id="st-model" className={input} value={p.defaultModel} onChange={e => setP({ ...p, defaultModel: e.target.value as StudioModelId })}>
+                  <select id="st-model" className={input} value={normalizeModel(p.defaultModel)} onChange={e => setP({ ...p, defaultModel: e.target.value as StudioModelId })}>
                     {Object.values(STUDIO_MODELS).map(m => (
                       <option key={m.id} value={m.id} disabled={!planAllowsModel(plan, m.id)}>{m.label}{m.plan === 'pro' ? ` (${t.proOnly})` : ''}</option>
                     ))}
                   </select>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="flex items-center gap-2 text-[14px] text-[#15171c]"><input type="checkbox" checked={p.webSearch} onChange={e => setP({ ...p, webSearch: e.target.checked })} /> {t.webSearch}</label>
-                  <label className="flex items-center gap-2 text-[14px] text-[#15171c]"><input type="checkbox" checked={p.webFetch} onChange={e => setP({ ...p, webFetch: e.target.checked })} /> {t.webFetch}</label>
-                </div>
+                <p className={hint}>{t.modelHint}</p>
                 <button type="button" onClick={save} className={primary}>{saved ? <><Check size={15} className="inline mr-1" />{t.saved}</> : t.save}</button>
               </div>
             )}
@@ -278,55 +249,41 @@ export function StudioSettings({ api, initialTab = 'general', onClose }: { api: 
               </div>
             )}
 
-            {tab === 'connectors' && (
-              <div className="space-y-5 max-w-xl">
-                <p className="text-[13.5px] text-[#4a505c]">{t.connectorsHint}</p>
-                <p className="text-[12.5px] text-[#727a88]">{enabledConnectors} / {maxConnectors} {t.enabled.toLowerCase()}</p>
-                <ul className="space-y-2">
-                  {connectors.map(c => (
-                    <li key={c.id} className="flex items-center gap-3 p-3 rounded-xl border border-[#e4e7ec]">
-                      <Plug size={16} className="text-[#4a505c] shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium text-[#15171c]">{c.name}</p>
-                        <p className="text-[12px] text-[#727a88] truncate">{c.url}{c.token ? ` · ${t.tokenSaved}` : ''}</p>
-                      </div>
-                      <label className="flex items-center gap-1.5 text-[12.5px] text-[#4a505c]">
-                        <input type="checkbox" checked={c.enabled} onChange={() => toggleConnector(c.id)} disabled={!c.enabled && enabledConnectors >= maxConnectors} /> {t.enabled}
-                      </label>
-                      <button type="button" aria-label={t.delete} className="text-[#d93036]" onClick={() => saveConnectors(connectors.filter(x => x.id !== c.id))}><Trash2 size={15} /></button>
-                    </li>
-                  ))}
-                </ul>
-                <div className="p-4 rounded-2xl border border-dashed border-[#d0d5dd] space-y-3">
-                  <h3 className="text-[14px] font-semibold text-[#15171c]">{t.addConnector}</h3>
-                  <input className={input} placeholder={t.connectorName} value={newConn.name} onChange={e => setNewConn({ ...newConn, name: e.target.value })} />
-                  <input className={input} placeholder="https://mcp.example.com/mcp" inputMode="url" value={newConn.url} onChange={e => setNewConn({ ...newConn, url: e.target.value })} aria-label={t.connectorUrl} />
-                  <input className={input} placeholder={t.connectorToken} type="password" autoComplete="off" value={newConn.token} onChange={e => setNewConn({ ...newConn, token: e.target.value })} />
-                  {connError && <p className="text-[12.5px] text-[#d93036]">{connError}</p>}
-                  <button type="button" className={primary} onClick={addConnector} disabled={connectors.length >= 10}><Plus size={14} className="inline mr-1" />{t.addConnector}</button>
-                </div>
-              </div>
-            )}
-
             {tab === 'usage' && (
               <div className="space-y-6 max-w-xl">
+                {/* The AI provider, as the server reports it (/api/studio/usage). */}
+                {usage && (
+                  <div className="p-4 rounded-2xl border border-[#e4e7ec] flex items-start gap-3">
+                    <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${usage.configured ? 'bg-[#e9f7ef] text-[#0f6b45]' : 'bg-[#fdf2f2] text-[#b42318]'}`}><Cpu size={17} /></span>
+                    <div className="min-w-0 text-[13px]">
+                      <p className="font-medium text-[#15171c]">{t.providerTitle}: Groq · <span className={usage.configured ? 'text-[#0f6b45]' : 'text-[#b42318]'}>{usage.configured ? t.providerReady : t.providerMissing}</span></p>
+                      {usage.configured && (
+                        <p className="text-[#4a505c] mt-0.5">
+                          {t.model}: {STUDIO_MODELS[normalizeModel(usage.defaultModel)].label}
+                          {usage.tpmLimit ? ` · ${usage.tpmLimit.toLocaleString(lang)} ${t.tokensPerMinute}` : ''}
+                        </p>
+                      )}
+                      <p className={hint}>{t.providerHint}</p>
+                    </div>
+                  </div>
+                )}
                 {!usage ? <p className="text-[13.5px] text-[#727a88]">…</p> : !usage.configured ? (
                   <p className="text-[13.5px] text-[#4a505c]">{t.notConfigured}</p>
                 ) : u && (
                   <>
                     <div className="grid gap-4">
                       <div>
-                        <div className="flex justify-between text-[13px] mb-1.5"><span className="font-medium text-[#15171c]">{t.today}</span><span className="text-[#4a505c]">{fmtUsd(u.todayUsd)} {t.of} {fmtUsd(u.plan.dailyBudgetUsd)}</span></div>
+                        <div className="flex justify-between text-[13px] mb-1.5"><span className="font-medium text-[#15171c]">{t.today}</span><span className="text-[#4a505c]">{fmtUnits(u.todayUsd)} {t.of} {fmtUnits(u.plan.dailyBudgetUsd)}</span></div>
                         <Bar value={u.todayUsd} max={u.plan.dailyBudgetUsd} />
                         <p className={hint}>{t.resetsAt} {new Date(u.resetsDayAt).toLocaleString()}</p>
                       </div>
                       <div>
-                        <div className="flex justify-between text-[13px] mb-1.5"><span className="font-medium text-[#15171c]">{t.thisMonth}</span><span className="text-[#4a505c]">{fmtUsd(u.monthUsd)} {t.of} {fmtUsd(u.plan.monthlyBudgetUsd)}</span></div>
+                        <div className="flex justify-between text-[13px] mb-1.5"><span className="font-medium text-[#15171c]">{t.thisMonth}</span><span className="text-[#4a505c]">{fmtUnits(u.monthUsd)} {t.of} {fmtUnits(u.plan.monthlyBudgetUsd)}</span></div>
                         <Bar value={u.monthUsd} max={u.plan.monthlyBudgetUsd} />
                         <p className={hint}>{t.resetsAt} {new Date(u.resetsMonthAt).toLocaleDateString()}</p>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[[u.monthRequests, t.requests], [u.monthSearches, t.searches], [u.monthTokens, t.tokens]].map(([n, l]) => (
+                      <div className="grid grid-cols-2 gap-2">
+                        {[[u.monthRequests, t.requests], [u.monthTokens, t.tokens]].map(([n, l]) => (
                           <div key={String(l)} className="p-3 rounded-xl bg-[#f8f9fb]">
                             <p className="text-[17px] font-semibold text-[#15171c] tabular-nums">{Number(n).toLocaleString()}</p>
                             <p className="text-[12px] text-[#727a88]">{l}</p>

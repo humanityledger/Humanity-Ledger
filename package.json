@@ -75,7 +75,6 @@
     "node": ">=22.0.0"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "1.3.0",
     "@auth/prisma-adapter": "^2.11.3",
     "@aztec-labs/accounts": "6.0.0",
     "@aztec-labs/aztec.js": "6.0.0",

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createStudioClient } from '@/lib/studio/client';
+import { createStudioClient, studioApiKey } from '@/lib/studio/client';
 import { z } from 'zod';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { estimateCostUsd, TITLE_MODEL } from '@/lib/studio/models';
@@ -12,11 +12,15 @@ export const dynamic = 'force-dynamic';
 
 const schema = z.object({ text: z.string().min(1).max(4_000) });
 
-/** POST /api/studio/title — a short title for a new conversation (Haiku, metered). */
+/**
+ * POST /api/studio/title — a short title for a new conversation, written by
+ * the small Groq model (TITLE_MODEL, with fallbacks) and metered like a turn.
+ * Any failure just means "no title": the chat keeps its default name.
+ */
 export async function POST(req: NextRequest) {
   const auth = await requireWallet(req);
   if (auth.errorResponse) return auth.errorResponse;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = studioApiKey();
   if (!apiKey) return NextResponse.json({ error: 'NOT_CONFIGURED' }, { status: 503 });
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
@@ -32,15 +36,21 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const client = createStudioClient(apiKey, { maxRetries: 1, timeout: 20_000 });
-    const msg = await client.messages.create({
-      model: TITLE_MODEL,
-      max_tokens: 30,
-      system: TITLE_PROMPT,
-      messages: [{ role: 'user', content: parsed.data.text }],
-    });
-    await recordUsage(auth.walletAddress, estimateCostUsd(TITLE_MODEL, msg.usage as any), (msg.usage.input_tokens ?? 0) + (msg.usage.output_tokens ?? 0), 0, usage.plan.id);
-    const title = cleanTitle(msg.content.map(b => (b.type === 'text' ? b.text : '')).join(''));
+    const client = createStudioClient(apiKey, { timeout: 20_000 });
+    const deadlineAt = Date.now() + 20_000;
+    const msg = await client.complete(
+      {
+        model: TITLE_MODEL,
+        max_tokens: 1_024, // gpt-oss reasons before it answers; the title itself is a few words
+        system: [{ type: 'text', text: TITLE_PROMPT }],
+        messages: [{ role: 'user', content: parsed.data.text }],
+        tools: [],
+        reasoning_effort: 'low',
+      },
+      { signal: req.signal, deadlineAt },
+    );
+    await recordUsage(auth.walletAddress, estimateCostUsd(TITLE_MODEL, msg.usage), msg.usage.input_tokens + msg.usage.output_tokens, 0, usage.plan.id);
+    const title = cleanTitle(msg.content.map((b: any) => (b?.type === 'text' ? String(b.text ?? '') : '')).join(''));
     return NextResponse.json({ title: title || null });
   } catch {
     return NextResponse.json({ title: null });

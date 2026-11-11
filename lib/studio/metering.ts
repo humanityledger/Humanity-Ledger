@@ -1,14 +1,20 @@
 /**
  * Server-side plan resolution and usage metering for Ledger Studio.
  *
- * Usage is metered in estimated USD of model cost per wallet, per UTC day
- * and per UTC month, in Redis (fast, shared by every instance). A request is
- * refused before it reaches the model when today's or this month's budget is
- * spent, and refused outright when the meter cannot be read: Studio spends
- * money on every call, so it fails closed.
+ * Usage is metered per wallet, per UTC day and per UTC month, in Redis (fast,
+ * shared by every instance). Since the Groq migration (Nov 2026) the meter
+ * counts capacity units, not money: 1 unit = 1,000,000 tokens of any kind
+ * (the fields keep their historical *Usd names). Nothing is billed; the units
+ * share out the free Groq tier fairly. A request is refused before it reaches
+ * the model when today's or this month's allowance is used up, and refused
+ * outright when the meter cannot be read, so the shared quota cannot be
+ * drained by one wallet while Redis is down (fails closed).
  *
  * The Free plan also has a shared daily ceiling for all wallets together
- * (STUDIO_FREE_DAILY_GLOBAL_USD), because wallets cost nothing to create.
+ * (STUDIO_FREE_DAILY_GLOBAL_USD, in units), because wallets cost nothing to
+ * create. Its default, 0.5 units (500K tokens a day), stays under what the
+ * free Groq tier serves per day across Studio's models, leaving room for
+ * titles and Community Apps.
  */
 
 import { randomBytes } from 'crypto';
@@ -76,7 +82,7 @@ const MICRO = 1_000_000;
 
 export function freeGlobalDailyCapUsd(): number {
   const v = Number(process.env.STUDIO_FREE_DAILY_GLOBAL_USD);
-  return Number.isFinite(v) && v >= 0 ? v : 25;
+  return Number.isFinite(v) && v >= 0 ? v : 0.5;
 }
 
 async function readInt(key: string): Promise<{ n: number; ok: boolean }> {

@@ -2,12 +2,16 @@
  * Server-side checks on the conversation the browser sends.
  *
  * The history comes from the user's device, so it is untrusted input to OUR
- * API key. Anything that could make the API reach resources of Humanity
- * Ledger's Anthropic organization (uploaded files, containers), fetch URLs
- * on its behalf, or change how a request is billed (cache_control with a
- * 1-hour TTL) is rejected or stripped here. Assistant blocks that the API
- * itself produced (search results, thinking, MCP calls) pass through
- * unchanged, because the API requires them back verbatim.
+ * API key. User turns may only carry text, inline attachments and tool
+ * results; references to server-side resources (file ids, containers) and
+ * URL sources are rejected there.
+ *
+ * Since the Groq migration (Nov 2026) the provider only ever reads text,
+ * tool calls and tool results (lib/studio/groq.ts toChatMessages). Older
+ * conversations from the Anthropic days may still hold sandbox and search
+ * blocks: in assistant turns their resource references are dropped quietly
+ * and legacy container_upload blocks in user turns are skipped, so those
+ * conversations keep working.
  */
 
 import type { StudioChatRequest } from './protocol';
@@ -30,8 +34,6 @@ export type SanitizeResult = { ok: true; messages: StudioChatRequest['messages']
 
 interface CleanCtx {
   role: 'user' | 'assistant';
-  /** Code execution output files this wallet's sandbox produced. */
-  ownedFileIds?: Set<string>;
 }
 
 function clean(value: unknown, depth: number, path: string, ctx: CleanCtx): { ok: true; value: unknown } | { ok: false; error: string } {
@@ -49,13 +51,9 @@ function clean(value: unknown, depth: number, path: string, ctx: CleanCtx): { ok
     const out: Record<string, unknown> = {};
     const obj = value as Record<string, unknown>;
     for (const [k, v] of Object.entries(obj)) {
-      if (k === 'cache_control') continue; // Studio sets its own breakpoints
-      // The one exception: a sandbox output the API produced for this wallet,
-      // sent back verbatim as the API requires.
-      if (k === 'file_id' && ctx.role === 'assistant' && obj.type === 'bash_code_execution_output' && typeof v === 'string' && ctx.ownedFileIds?.has(v)) {
-        out[k] = v;
-        continue;
-      }
+      if (k === 'cache_control') continue; // legacy prompt-cache markers; never forwarded
+      // Legacy sandbox outputs in assistant turns: the reference is dropped, the text stays.
+      if (FORBIDDEN_KEYS.has(k) && ctx.role === 'assistant') continue;
       if (FORBIDDEN_KEYS.has(k)) return { ok: false, error: `"${k}" is not allowed in Studio messages.` };
       if (k === 'source' && v && typeof v === 'object' && FORBIDDEN_SOURCE_TYPES.has(String((v as any).type))) {
         return { ok: false, error: `Attachments must be sent inline; "${(v as any).type}" sources are not allowed.` };
@@ -69,9 +67,8 @@ function clean(value: unknown, depth: number, path: string, ctx: CleanCtx): { ok
   return { ok: true, value };
 }
 
-export interface SanitizeOptions {
-  ownedFileIds?: Set<string>;
-}
+/** Kept for call-site compatibility; there are no options since the Groq migration. */
+export type SanitizeOptions = Record<string, never>;
 
 /**
  * A turn may end waiting for the user (an approval, a plan or a question). The browser resumes it by sending the history ending with that
@@ -94,13 +91,16 @@ export function validateTurnShape(req: Pick<StudioChatRequest, 'messages' | 'res
   return null;
 }
 
-export function sanitizeMessages(messages: StudioChatRequest['messages'], opts: SanitizeOptions = {}): SanitizeResult {
+export function sanitizeMessages(messages: StudioChatRequest['messages'], _opts: SanitizeOptions = {}): SanitizeResult {
   if (!messages.length || messages[0].role !== 'user') return { ok: false, error: 'The conversation must start with a user message.' };
   const out: StudioChatRequest['messages'] = [];
   for (let i = 0; i < messages.length; i++) {
     const m = messages[i];
     if (typeof m.content === 'string') { out.push({ role: m.role, content: m.content }); continue; }
-    for (const b of m.content) {
+    // Legacy: files copied into the old code sandbox. Nothing reads them now.
+    const content = m.role === 'user' ? m.content.filter(b => (b as any)?.type !== 'container_upload') : m.content;
+    if (m.role === 'user' && !content.length) return { ok: false, error: 'A user message has no content.' };
+    for (const b of content) {
       const type = String((b as any)?.type);
       const allowed = m.role === 'user' ? USER_BLOCKS.has(type) : !ASSISTANT_FORBIDDEN_BLOCKS.has(type);
       if (!allowed) return { ok: false, error: `Block type "${type.slice(0, 40)}" is not allowed in a ${m.role} message.` };
@@ -110,7 +110,7 @@ export function sanitizeMessages(messages: StudioChatRequest['messages'], opts: 
         if (!okSource) return { ok: false, error: 'Attachments must be sent inline (base64).' };
       }
     }
-    const r = clean(m.content, 0, `messages[${i}]`, { role: m.role, ownedFileIds: opts.ownedFileIds });
+    const r = clean(content, 0, `messages[${i}]`, { role: m.role });
     if (!r.ok) return r;
     out.push({ role: m.role, content: r.value as any });
   }

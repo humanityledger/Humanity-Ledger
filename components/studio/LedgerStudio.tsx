@@ -4,8 +4,12 @@
  * Ledger Studio: an AI workspace inside Ledger Chat.
  *
  * Chats, projects (instructions + knowledge files + skills), artifacts with
- * preview/edit/versions, web search and page reading with sources, remote
- * MCP connectors, personalization, language, usage and plan.
+ * preview/edit/versions, Code mode, personalization, language, usage and plan.
+ *
+ * AI provider: Groq (free tier), since November 2026. Web search, MCP
+ * connectors, the code sandbox and image/PDF reading were Anthropic features
+ * with no Groq equivalent, so their controls are gone (STUDIO_CAPABILITIES);
+ * chats saved before still show their old sources and tool steps.
  *
  * Studio is deliberately separate from encrypted chats: nothing from a
  * Ledger Chat conversation reaches Studio unless the person sends it here.
@@ -13,8 +17,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlertTriangle, ArrowLeft, ArrowUp, Check, ChevronDown, Code2, FileText, FolderOpen, Globe, Image as ImageIcon, Loader2,
-  Menu, MoreHorizontal, Paperclip, Pencil, Pin, PinOff, Plug, Plus, Search, Settings, Sparkles, Square, Trash2, X, BookOpen, FolderPlus, Shapes,
+  AlertTriangle, ArrowLeft, ArrowUp, Check, ChevronDown, Code2, FileText, FolderOpen, Image as ImageIcon, Loader2,
+  Menu, MoreHorizontal, Paperclip, Pencil, Pin, PinOff, Plus, Search, Settings, Sparkles, Square, Trash2, X, BookOpen, FolderPlus, Shapes,
   SquareTerminal, MessageSquare, Files, ShieldCheck, Gauge, Box, History, Undo2, ListTodo, Github, Download, Clock3, AtSign,
 } from 'lucide-react';
 import { mentionAtCaret, mentionedPaths, rankPaths } from '@/lib/studio/ws-client';
@@ -31,7 +35,7 @@ import type { Artifact } from '@/lib/studio/artifacts';
 import type { WsFile } from '@/lib/studio/fs';
 import type { Effort, PermissionMode, ResumeResult } from '@/lib/studio/protocol';
 import { searchStudio } from '@/lib/studio/search';
-import { PLAN_EFFORTS, STUDIO_MODELS, STUDIO_PLANS, planAllowsModel, type StudioModelId } from '@/lib/studio/models';
+import { formatUnits, isStudioModel, normalizeModel, PLAN_EFFORTS, STUDIO_MODELS, STUDIO_PLANS, planAllowsModel, type StudioModelId } from '@/lib/studio/models';
 import { skillsById } from '@/lib/studio/skills';
 import type { StudioStrings } from '@/lib/studio/i18n';
 import { COMPACT_PROMPT, INIT_PROMPT, matchCommands, modelFromArg, parseCommand, REVIEW_PROMPT, type BuiltinCommandId } from '@/lib/studio/commands';
@@ -58,7 +62,7 @@ function hostOf(url: string): string {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
 }
 
-const NO_RETRY = new Set(['NOT_CONFIGURED', 'ABORTED', 'NO_SESSION', 'TOO_LARGE', 'CONTEXT_TOO_LARGE', 'PROVIDER_AUTH', 'OVER_BUDGET', 'RATE_LIMITED']);
+const NO_RETRY = new Set(['NOT_CONFIGURED', 'ABORTED', 'NO_SESSION', 'TOO_LARGE', 'CONTEXT_TOO_LARGE', 'PROVIDER_AUTH', 'PROVIDER_DAILY_LIMIT', 'OVER_BUDGET', 'RATE_LIMITED']);
 
 /** Known errors are shown in the interface language; others use the server's text. */
 function errorText(e: { code: string; message: string }, t: StudioStrings): string {
@@ -74,7 +78,11 @@ function errorText(e: { code: string; message: string }, t: StudioStrings): stri
     case 'TOO_LARGE': return t.errTooLarge;
     case 'OVER_BUDGET': return t.errOverBudget;
     case 'RATE_LIMITED': return t.errRateLimited;
-    case 'PROVIDER_BUSY': case 'PROVIDER_OVERLOADED': case 'PROVIDER_ERROR': case 'PROVIDER_SETUP': case 'NETWORK': return t.errProvider;
+    // Groq free tier: per-minute limit (try again shortly), per-day limit (tomorrow), or a bad key.
+    case 'PROVIDER_BUSY': return t.errProviderBusy;
+    case 'PROVIDER_DAILY_LIMIT': return t.errProviderDaily;
+    case 'PROVIDER_AUTH': return t.errProviderAuth;
+    case 'PROVIDER_OVERLOADED': case 'PROVIDER_ERROR': case 'PROVIDER_SETUP': case 'NETWORK': return t.errProvider;
     default: return e.message || t.error;
   }
 }
@@ -86,7 +94,8 @@ function noticeText(code: NonNullable<DisplayMessage['notice']>, t: StudioString
     case 'BUDGET': return t.noticeBudget;
     case 'TIME_LIMIT': return t.noticeTime;
     case 'STEP_LIMIT': return t.noticeSteps;
-    case 'SYNC_FAILED': return t.noticeSyncFailed;
+    case 'TRIMMED': return t.noticeTrimmed;
+    case 'SYNC_FAILED': return t.noticeSyncFailed; // chats saved before the Groq migration
   }
 }
 
@@ -288,7 +297,10 @@ function MessageView({
           </div>
         ))}
         {typeof m.costUsd === 'number' && !streaming && (
-          <p className="mt-1.5 text-[11px] text-[#a3a9b4]">{m.model ? STUDIO_MODELS[m.model as StudioModelId]?.label ?? m.model : ''} · ${m.costUsd.toFixed(4)} · {relTime(m.createdAt, lang)}</p>
+          <p className="mt-1.5 text-[11px] text-[#a3a9b4]">
+            {/* Older answers (Anthropic era) recorded dollars; only Groq answers are shown in tokens. */}
+            {m.model ? STUDIO_MODELS[m.model as StudioModelId]?.label ?? m.model : ''}{isStudioModel(m.model) ? ` · ${formatUnits(m.costUsd, lang)}` : ''} · {relTime(m.createdAt, lang)}
+          </p>
         )}
       </div>
     </div>
@@ -313,7 +325,6 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
   const [mentionOff, setMentionOff] = useState<number | null>(null);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [focusPath, setFocusPath] = useState<string | null>(null);
-  const [sandboxNotice, setSandboxNotice] = useState(false);
   const [slashIndex, setSlashIndex] = useState(0);
   const [showTodos, setShowTodos] = useState(false);
   const [wsIntent, setWsIntent] = useState<'github' | null>(null);
@@ -335,7 +346,8 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
 
-  const currentModel: StudioModelId = active?.model ?? draftModel ?? prefs.defaultModel;
+  // A chat saved with a claude-* model (before the Groq migration) shows and uses the default.
+  const currentModel: StudioModelId = normalizeModel(active?.model ?? draftModel ?? prefs.defaultModel);
   const currentSkills: string[] = active?.skillIds ?? draftSkills;
   const skillMap = useMemo(() => skillsById(prefs.customSkills), [prefs.customSkills]);
   const activeProject = projects.find(p => p.id === (active?.projectId ?? activeProjectId)) ?? null;
@@ -391,14 +403,9 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
     setFileErrors(rejected.map(r => `${r.name}: ${r.reason}`));
   }, [prepareFiles]);
 
-  const toggleSandbox = useCallback(() => {
-    if (!prefs.sandbox && !prefs.acceptedSandboxNotice) { setSandboxNotice(true); return; }
-    savePrefs({ ...prefs, sandbox: !prefs.sandbox });
-  }, [prefs, savePrefs]);
-
   /** Built-in slash commands. Returns true when handled locally. */
   const runBuiltin = useCallback(async (id: BuiltinCommandId, args: string): Promise<boolean> => {
-    const needsCode = ['plan', 'ask', 'auto', 'init', 'review', 'files', 'todos', 'rewind', 'sandbox'].includes(id);
+    const needsCode = ['plan', 'ask', 'auto', 'init', 'review', 'files', 'todos', 'rewind'].includes(id);
     if (needsCode && !code) await setChatMode('code');
     switch (id) {
       case 'help': setText('/'); return true;
@@ -418,12 +425,7 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
         else setPicker('effort');
         return true;
       }
-      case 'sandbox': {
-        const on = args.trim().toLowerCase();
-        if ((on === 'on' && !prefs.sandbox) || (on === 'off' && prefs.sandbox) || !on) toggleSandbox();
-        return true;
-      }
-      case 'cost': toast(`${t.costLine}: $${(active?.totalCostUsd ?? 0).toFixed(4)} · ${(active?.totalTokens ?? 0).toLocaleString(lang)} tokens`); return true;
+      case 'cost': toast(`${t.costLine}: ${(active?.totalTokens ?? 0).toLocaleString(lang)} tokens · ${t.freeOfCharge}`); return true;
       case 'memory': setSettingsTab('code'); return true;
       case 'agents': case 'commands': setSettingsTab('code'); return true;
       case 'files': setWorkspaceOpen(true); setOpenArtifactId(null); return true;
@@ -441,7 +443,7 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
       case 'review': await send(REVIEW_PROMPT.replace('{what}', args ? ` (${args})` : ''), [], { label: 'review', mode: 'code' }); return true;
     }
     return false;
-  }, [code, setChatMode, newChat, setChatPermission, t, plan, setChatModel, setChatEffort, prefs.sandbox, toggleSandbox, active, lang, setOpenArtifactId, checkpoints, rewind, send]);
+  }, [code, setChatMode, newChat, setChatPermission, t, plan, setChatModel, setChatEffort, active, lang, setOpenArtifactId, checkpoints, rewind, send]);
 
   const submit = useCallback(async () => {
     if (!text.trim() && !pendingFiles.length) return;
@@ -695,7 +697,6 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
         })()}
         <div className="flex gap-1">
           <button type="button" onClick={() => setSettingsTab('general')} className="flex-1 h-9 px-2.5 rounded-lg flex items-center gap-2 text-[13px] text-[#2b2f36] hover:bg-[#eceef2]"><Settings size={15} /> {t.settings}</button>
-          <button type="button" onClick={() => setSettingsTab('connectors')} aria-label={t.connectors} title={t.connectors} className="w-9 h-9 rounded-lg flex items-center justify-center text-[#2b2f36] hover:bg-[#eceef2]"><Plug size={15} /></button>
           {plan === 'free' && <button type="button" onClick={goUpgrade} className="h-9 px-2.5 rounded-lg text-[12.5px] font-medium text-[#15171c] bg-white border border-[#e4e7ec] hover:bg-[#fbfbfc]">{t.pro}</button>}
         </div>
       </div>
@@ -732,7 +733,7 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
             {(activeProject || active) && (
               <p className="text-[11.5px] text-[#727a88] truncate">
                 {activeProject ? <><FolderOpen size={11} className="inline -mt-0.5 mr-1" />{activeProject.name}</> : null}
-                {active && active.totalCostUsd > 0 ? `${activeProject ? ' · ' : ''}${t.costThisChat}: $${active.totalCostUsd.toFixed(3)}` : ''}
+                {active && active.totalTokens > 0 ? `${activeProject ? ' · ' : ''}${t.costThisChat}: ${active.totalTokens.toLocaleString(lang)} tokens` : ''}
               </p>
             )}
           </div>
@@ -951,10 +952,6 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
               <div className="flex items-center gap-1 px-2 pb-2">
                 <input ref={fileRef} type="file" multiple className="hidden" onChange={e => { if (e.target.files) addFiles(e.target.files); e.target.value = ''; }} />
                 <button type="button" onClick={() => fileRef.current?.click()} aria-label={t.attach} title={t.attach} className="w-9 h-9 rounded-full flex items-center justify-center text-[#4a505c] hover:bg-[#f2f4f7]"><Paperclip size={17} /></button>
-                <button type="button" aria-pressed={prefs.webSearch} onClick={() => savePrefs({ ...prefs, webSearch: !prefs.webSearch, webFetch: !prefs.webSearch })} title={t.webSearch}
-                  className={`h-9 px-2.5 rounded-full flex items-center gap-1.5 text-[12.5px] ${prefs.webSearch ? 'bg-[#e8f0fe] text-[#1a4fb8]' : 'text-[#4a505c] hover:bg-[#f2f4f7]'}`}>
-                  <Globe size={15} /><span className={code ? 'hidden' : 'hidden sm:inline'}>{t.webSearch}</span>
-                </button>
                 {code && (
                   <div className="relative">
                     <button type="button" onClick={() => setPicker(picker === 'permission' ? null : 'permission')} aria-expanded={picker === 'permission'} title={t.permission}
@@ -981,12 +978,12 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
                 <div className="relative">
                   <button type="button" onClick={() => setPicker(picker === 'effort' ? null : 'effort')} aria-expanded={picker === 'effort'} title={`${t.effort} · ${t.effortHint}`}
                     className={`h-9 px-2.5 rounded-full flex items-center gap-1.5 text-[12.5px] ${effort !== 'auto' ? 'bg-[#f1ecfe] text-[#5b34c7]' : 'text-[#4a505c] hover:bg-[#f2f4f7]'}`}>
-                    <Gauge size={15} />{effort !== 'auto' ? <span>{EFFORT_LABEL(t)[effort]}</span> : <span className="hidden lg:inline">{t.effort}</span>}
+                    <Gauge size={15} />{effort !== 'auto' ? <span>{EFFORT_LABEL(t)[effort === 'xhigh' || effort === 'max' ? 'high' : effort]}</span> : <span className="hidden lg:inline">{t.effort}</span>}
                   </button>
                   {picker === 'effort' && (
                     <div className="absolute bottom-11 left-0 z-30 w-60 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.25)] p-1.5">
                       <p className="px-2.5 pt-1 pb-1.5 text-[11.5px] text-[#727a88]">{t.effortHint}</p>
-                      {(['auto', 'low', 'medium', 'high', 'xhigh', 'max'] as const).map(e => {
+                      {(['auto', 'low', 'medium', 'high'] as const).map(e => {
                         const allowed = e === 'auto' || (PLAN_EFFORTS[plan] as readonly string[]).includes(e);
                         return (
                           <button key={e} type="button" onClick={() => { if (!allowed) { setPicker(null); goUpgrade(); return; } setChatEffort(e); setPicker(null); }}
@@ -1000,12 +997,6 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
                     </div>
                   )}
                 </div>
-                {code && (
-                  <button type="button" aria-pressed={prefs.sandbox} onClick={toggleSandbox} title={`${t.sandbox} · ${t.sandboxHint}`}
-                    className={`h-9 px-2.5 rounded-full flex items-center gap-1.5 text-[12.5px] ${prefs.sandbox ? 'bg-[#e9f7ef] text-[#0f6b45]' : 'text-[#4a505c] hover:bg-[#f2f4f7]'}`}>
-                    <span className="relative"><Box size={15} />{prefs.sandbox && <span className="absolute -right-0.5 -top-0.5 w-1.5 h-1.5 rounded-full bg-[#12805c]" />}</span><span className="hidden lg:inline">{t.sandbox}</span>
-                  </button>
-                )}
                 {/* On phones in Code mode the bar is full: skills stay reachable from the chat's settings. */}
                 <div className={`relative ${code && !currentSkills.length ? 'hidden sm:block' : ''}`}>
                   <button type="button" onClick={() => setPicker(picker === 'skills' ? null : 'skills')} aria-expanded={picker === 'skills'}
@@ -1035,7 +1026,7 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
                   <button type="button" onClick={() => setPicker(picker === 'model' ? null : 'model')} aria-expanded={picker === 'model'} aria-label={t.model}
                     className="h-9 px-2.5 rounded-full flex items-center gap-1 text-[12.5px] text-[#4a505c] hover:bg-[#f2f4f7] whitespace-nowrap">
                     {(() => {
-                      const short = STUDIO_MODELS[currentModel]?.label.replace('Claude ', '') ?? currentModel;
+                      const short = STUDIO_MODELS[currentModel].label;
                       return <><span className="sm:hidden">{short.split(' ')[0]}</span><span className="hidden sm:inline">{short}</span></>;
                     })()}<ChevronDown size={14} />
                   </button>
@@ -1084,21 +1075,6 @@ export function LedgerStudio({ wallet, onExit, initialPrompt }: LedgerStudioProp
         <div className="fixed inset-0 z-[250] lg:static lg:z-auto lg:w-[46%] lg:max-w-[760px] lg:min-w-[380px] lg:border-l border-[#eceef2]">
           <ArtifactPanel artifact={openArtifact} t={t} streaming={streaming} onClose={() => setOpenArtifactId(null)}
             onSaveEdit={saveArtifactEdit} onRestore={restoreArtifactVersion} />
-        </div>
-      )}
-
-      {/* Sandbox notice, before running code the first time */}
-      {sandboxNotice && (
-        <div className="fixed inset-0 z-[400] bg-[#15171c]/40 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={() => setSandboxNotice(false)}>
-          <div role="alertdialog" aria-modal="true" aria-labelledby="studio-sandbox-title" onClick={e => e.stopPropagation()} className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)]">
-            <span className="w-10 h-10 rounded-xl bg-[#e9f7ef] text-[#0f6b45] flex items-center justify-center mb-3"><Box size={19} /></span>
-            <h2 id="studio-sandbox-title" className="text-[17px] font-semibold tracking-[-0.01em]">{t.sandboxNoticeTitle}</h2>
-            <p className="mt-2 text-[14px] leading-[1.55] text-[#4a505c]">{t.sandboxNoticeBody}</p>
-            <div className="mt-5 flex gap-2">
-              <button type="button" onClick={() => setSandboxNotice(false)} className="flex-1 h-11 rounded-xl border border-[#e4e7ec] text-[14px] hover:bg-[#f2f4f7]">{t.cancel}</button>
-              <button type="button" autoFocus onClick={() => { savePrefs({ ...prefs, sandbox: true, acceptedSandboxNotice: true }); setSandboxNotice(false); }} className="flex-1 h-11 rounded-xl bg-[#15171c] text-white text-[14px] font-medium">{t.sandboxAccept}</button>
-            </div>
-          </div>
         </div>
       )}
 

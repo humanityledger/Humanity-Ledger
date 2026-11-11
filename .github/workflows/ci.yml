@@ -63,6 +63,8 @@ jobs:
           test/unit/payments
           test/unit/auth/wallet-links.test.ts
           test/unit/chat/value-handoff.test.ts
+          test/unit/studio
+          test/unit/studio-store-sanitize.test.ts
       - name: Unit Tests (security)
         run: npx vitest run test/unit/security
         env:

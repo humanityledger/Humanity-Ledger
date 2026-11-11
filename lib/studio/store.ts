@@ -11,7 +11,7 @@ import { openDB, type IDBPDatabase } from 'idb';
 import type { Artifact } from './artifacts';
 import type { CustomAgent, Effort, PermissionMode, StudioConnectorConfig, StudioMode, StudioPersonalization, TodoItem } from './protocol';
 import type { StudioSkill } from './skills';
-import { isStudioModel, type StudioModelId } from './models';
+import { DEFAULT_MODEL, isStudioModel, type StudioModelId } from './models';
 import type { WsFile } from './fs';
 import type { GitLink } from './github';
 
@@ -105,7 +105,8 @@ export interface DisplayMessage {
   model?: string;
   costUsd?: number;
   /** Why the answer ended early (see StudioEvent "notice"). */
-  notice?: 'MAX_TOKENS' | 'REFUSAL' | 'BUDGET' | 'TIME_LIMIT' | 'STEP_LIMIT' | 'SYNC_FAILED';
+  /** SYNC_FAILED only appears in chats saved before the Groq migration (old code sandbox). */
+  notice?: 'MAX_TOKENS' | 'REFUSAL' | 'BUDGET' | 'TIME_LIMIT' | 'STEP_LIMIT' | 'TRIMMED' | 'SYNC_FAILED';
   // ── Code mode ──
   reasoning?: string;
   fileChanges?: FileChangeMeta[];
@@ -139,8 +140,6 @@ export interface Conversation {
   permission?: PermissionMode;
   effort?: Effort;
   todos?: TodoItem[];
-  /** The code sandbox container this chat reuses. */
-  containerId?: string;
   pending?: PendingInteraction | null;
   /** When the API history was last summarized (earlier checkpoints cannot rewind the conversation). */
   compactedAt?: number;
@@ -176,8 +175,6 @@ export interface StudioPrefs {
   personalization: StudioPersonalization;
   uiLanguage: 'auto' | 'es' | 'en';
   defaultModel: StudioModelId;
-  webSearch: boolean;
-  webFetch: boolean;
   customSkills: StudioSkill[];
   acceptedPrivacy: boolean;
   // ── Code mode ──
@@ -185,14 +182,12 @@ export interface StudioPrefs {
   permission: PermissionMode;
   /** 'auto': let the model decide. */
   effort: Effort | 'auto';
-  sandbox: boolean;
   /** Keep going on its own when a long task hits the time or step limit (up to 3 times). */
   autoContinue: boolean;
-  /** Personal memory for every Code chat (like ~/.claude/CLAUDE.md). Projects add STUDIO.md. */
+  /** Personal memory for every Code chat. Projects add STUDIO.md. */
   memory: string;
   customCommands: CustomCommand[];
   customAgents: CustomAgent[];
-  acceptedSandboxNotice: boolean;
   /** Path globs Studio may change without asking (allow) or may never change (deny). */
   rules: { allow: string[]; deny: string[] };
   /** Show a browser notification when a turn ends while the tab is in the background. */
@@ -230,20 +225,17 @@ export function isConversationShape(c: unknown): c is Conversation {
 export const DEFAULT_PREFS: StudioPrefs = {
   personalization: { style: 'balanced', responseLanguage: 'auto' },
   uiLanguage: 'auto',
-  defaultModel: 'claude-sonnet-5-5',
-  webSearch: true,
-  webFetch: true,
+  // Groq since Nov 2026; a saved claude-* default is replaced by this when prefs load.
+  defaultModel: DEFAULT_MODEL,
   customSkills: [],
   acceptedPrivacy: false,
   defaultMode: 'chat',
   permission: 'ask',
   effort: 'auto',
-  sandbox: false,
   autoContinue: true,
   memory: '',
   customCommands: [],
   customAgents: [],
-  acceptedSandboxNotice: false,
   rules: { allow: [], deny: DEFAULT_DENY_RULES },
   notify: false,
 };

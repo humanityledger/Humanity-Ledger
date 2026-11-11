@@ -5,7 +5,7 @@
  */
 
 export type BuiltinCommandId =
-  | 'help' | 'clear' | 'compact' | 'plan' | 'ask' | 'auto' | 'code' | 'chat' | 'model' | 'effort' | 'sandbox'
+  | 'help' | 'clear' | 'compact' | 'plan' | 'ask' | 'auto' | 'code' | 'chat' | 'model' | 'effort'
   | 'cost' | 'memory' | 'init' | 'review' | 'agents' | 'commands' | 'rewind' | 'files' | 'todos';
 
 export interface BuiltinCommand {
@@ -25,9 +25,8 @@ export const BUILTIN_COMMANDS: BuiltinCommand[] = [
   { id: 'plan', code: true },
   { id: 'ask', code: true },
   { id: 'auto', code: true },
-  { id: 'model', args: 'opus | sonnet | haiku' },
-  { id: 'effort', args: 'auto | low | medium | high | xhigh | max' },
-  { id: 'sandbox', args: 'on | off', code: true },
+  { id: 'model', args: '120b | 20b | qwen' },
+  { id: 'effort', args: 'auto | low | medium | high' },
   { id: 'init', code: true },
   { id: 'review', args: '[what]', code: true },
   { id: 'memory' },
@@ -101,10 +100,12 @@ export const COMPACT_PROMPT = [
 
 export const CONTINUE_PROMPT = 'Continue where you left off.';
 
+/** /model argument → Studio model id (Groq models since Nov 2026). */
 export function modelFromArg(arg: string): string | null {
-  const a = arg.trim().toLowerCase();
-  if (a.startsWith('opus')) return 'claude-opus-5-5';
-  if (a.startsWith('sonnet')) return 'claude-sonnet-5-5';
-  if (a.startsWith('haiku')) return 'claude-haiku-5-5';
+  const a = arg.trim().toLowerCase().replace(/^openai\//, '').replace(/^gpt-?oss-?/, '');
+  if (!a) return null;
+  if (a.startsWith('120') || a === 'large' || a === 'best') return 'openai/gpt-oss-120b';
+  if (a.startsWith('20') || a === 'fast' || a === 'small') return 'openai/gpt-oss-20b';
+  if (a.startsWith('qwen')) return 'qwen/qwen3.8-27b';
   return null;
 }

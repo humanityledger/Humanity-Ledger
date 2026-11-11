@@ -7,28 +7,32 @@
  * Nothing else is: no messages, no member list, no addresses.
  *
  * Providers, first one configured wins:
- *   ANTHROPIC_API_KEY                         Anthropic Messages API
+ *   GROQ_API_KEY                              Groq (the same client as Ledger Studio,
+ *                                             lib/studio/groq.ts: free tier, fitted to
+ *                                             its tokens-per-minute limit, model fallback)
  *   OPENAI_API_KEY (+ OPENAI_BASE_URL)        any OpenAI-compatible endpoint,
  *                                             including a local model server
  * COMMUNITY_APPS_MODEL overrides the model name. It is required for the
  * OpenAI-compatible path, because model names differ per server.
+ * (Anthropic was removed on 11 November 2026.)
  */
 
 import { APP_TEMPLATES } from './templates';
 import { validateAppHtml } from './validate';
-import { studioWorkspaceHeaders } from '@/lib/studio/workspace';
+import { createStudioClient, serverDefaultModel, studioApiKey } from '@/lib/studio/client';
+import { ProviderError } from '@/lib/studio/groq';
+import { isStudioModel } from '@/lib/studio/models';
 
 export class GenerationUnavailableError extends Error {}
 export class GenerationFailedError extends Error {
   constructor(message: string, public problems: string[] = []) { super(message); }
 }
 
-const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-5-5';
 const MAX_OUTPUT_TOKENS = 16000;
 const TIMEOUT_MS = 150_000;
 
 export function generationConfigured(): boolean {
-  return !!process.env.ANTHROPIC_API_KEY || (!!process.env.OPENAI_API_KEY && !!process.env.COMMUNITY_APPS_MODEL);
+  return !!studioApiKey() || (!!process.env.OPENAI_API_KEY && !!process.env.COMMUNITY_APPS_MODEL);
 }
 
 const EXAMPLE = APP_TEMPLATES.find(t => t.id === 'list')!.html.trim();
@@ -106,27 +110,19 @@ function parseReply(text: string): ModelReply {
   return { title, summary, html };
 }
 
-async function callAnthropic(system: string, user: string, signal: AbortSignal): Promise<string> {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    signal,
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY as string,
-      'anthropic-version': '2023-06-01',
-      // Keys not limited to one workspace must name it (see lib/studio/client.ts).
-      ...(studioWorkspaceHeaders() ?? {}),
-    },
-    body: JSON.stringify({
-      model: process.env.COMMUNITY_APPS_MODEL || DEFAULT_ANTHROPIC_MODEL,
-      max_tokens: MAX_OUTPUT_TOKENS,
-      system,
-      messages: [{ role: 'user', content: user }],
-    }),
-  });
-  const body: any = await res.json().catch(() => ({}));
-  if (!res.ok) throw new GenerationFailedError(`The model provider answered ${res.status}: ${body?.error?.message || 'no detail'}`);
-  return (body.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
+async function callGroq(system: string, user: string, signal: AbortSignal): Promise<string> {
+  const override = process.env.COMMUNITY_APPS_MODEL;
+  const model = isStudioModel(override) ? override : serverDefaultModel();
+  try {
+    const r = await createStudioClient(studioApiKey() as string, { timeout: TIMEOUT_MS }).complete(
+      { model, max_tokens: MAX_OUTPUT_TOKENS, system: [{ type: 'text', text: system }], messages: [{ role: 'user', content: user }], tools: [], reasoning_effort: 'low' },
+      { signal },
+    );
+    return r.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
+  } catch (e) {
+    if (e instanceof ProviderError) throw new GenerationFailedError(e.message);
+    throw e;
+  }
 }
 
 async function callOpenAICompatible(system: string, user: string, signal: AbortSignal): Promise<string> {
@@ -148,13 +144,13 @@ async function callOpenAICompatible(system: string, user: string, signal: AbortS
 
 async function complete(user: string): Promise<string> {
   if (!generationConfigured()) {
-    throw new GenerationUnavailableError('No model is configured on this server. Set ANTHROPIC_API_KEY, or OPENAI_API_KEY with COMMUNITY_APPS_MODEL.');
+    throw new GenerationUnavailableError('No model is configured on this server. Set GROQ_API_KEY, or OPENAI_API_KEY with COMMUNITY_APPS_MODEL.');
   }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    return process.env.ANTHROPIC_API_KEY
-      ? await callAnthropic(SYSTEM, user, controller.signal)
+    return studioApiKey()
+      ? await callGroq(SYSTEM, user, controller.signal)
       : await callOpenAICompatible(SYSTEM, user, controller.signal);
   } catch (e: any) {
     if (e?.name === 'AbortError') throw new GenerationFailedError('The model took too long. Try a shorter description.');

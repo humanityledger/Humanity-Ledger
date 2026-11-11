@@ -4,12 +4,15 @@ import { sanitizePrefs, isConversationShape, DEFAULT_PREFS } from '@/lib/studio/
 
 describe('sanitizePrefs', () => {
   it('falls back field by field on wrong shapes', () => {
-    const p = sanitizePrefs({ customSkills: 'x', rules: { allow: 'a' }, webSearch: 'yes', defaultModel: 'claude-sonnet-4-5', memory: 'm' }, (v) => v === 'claude-sonnet-5-5');
+    // A device that used Studio before the Groq migration: claude-* default, web search and sandbox prefs.
+    const p = sanitizePrefs({ customSkills: 'x', rules: { allow: 'a' }, webSearch: true, sandbox: true, defaultModel: 'claude-sonnet-5-5', memory: 'm' }, (v) => v === 'openai/gpt-oss-20b');
     expect(Array.isArray(p.customSkills)).toBe(true);
     expect(p.rules.allow).toEqual([]);
     expect(p.rules.deny).toEqual(DEFAULT_PREFS.rules.deny);
-    expect(p.webSearch).toBe(DEFAULT_PREFS.webSearch);
+    expect('webSearch' in p).toBe(false);
+    expect('sandbox' in p).toBe(false);
     expect(p.defaultModel).toBe(DEFAULT_PREFS.defaultModel);
+    expect(DEFAULT_PREFS.defaultModel).toBe('openai/gpt-oss-120b');
     expect(p.memory).toBe('m');
   });
   it('handles missing or garbage records', () => {

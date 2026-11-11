@@ -19,7 +19,8 @@ describe('slash commands', () => {
     expect(parseCommand('/test the parser', custom)).toMatchObject({ kind: 'custom', prompt: 'Write tests for the parser and run them.' });
     expect(parseCommand('/nope', custom)).toEqual({ kind: 'unknown', name: 'nope' });
     expect(expandTemplate('Review the code', 'carefully')).toBe('Review the code\n\ncarefully');
-    expect(modelFromArg('Opus')).toBe('claude-opus-5-5');
+    expect(modelFromArg('120b')).toBe('openai/gpt-oss-120b');
+    expect(modelFromArg('Opus')).toBeNull(); // Anthropic models are gone since the Groq migration
     expect(modelFromArg('gpt')).toBeNull();
   });
   it('suggests commands as you type', () => {
