@@ -85,6 +85,8 @@ import { SLASH_COMMANDS, transformClientCommand, isBotCommand, executeBotCommand
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
 import { LedgerCommunitiesTab } from '@/components/chat/LedgerCommunitiesTab';
 import { CommunityView } from '@/components/chat/CommunityView';
+import { getSelfLink, remoteSign, RemoteSignError } from '@/lib/link/channel';
+import { LinkedDeviceApprover } from '@/components/link/LinkedDeviceApprover';
 import { LedgerSettingsFull } from '@/components/chat/LedgerSettingsFull';
 import { LottieSendButton } from '@/components/chat/LottieSendButton';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
@@ -470,7 +472,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   const [client, setClient] = useState<Client | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
-  const [isWaitingForSignature, setIsWaitingForSignature] = useState(false);
+  const [isWaitingForSignature, setIsWaitingForSignatureState] = useState(false);
+  // Read by the start-up safety timer: time spent waiting for a signature (wallet app, or the
+  // phone approving for a linked computer) does not count as a hang.
+  const waitingSigRef = useRef(false);
+  const setIsWaitingForSignature = useCallback((v: boolean) => { waitingSigRef.current = v; setIsWaitingForSignatureState(v); }, []);
   const [initError, setInitError] = useState('');
   
   // BIOMETRIC LOCK STATE
@@ -3330,6 +3336,22 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const wagmiSigner = {
       getAddress: async () => address as string,
       signMessage: async (msg: string | Uint8Array) => {
+        // A computer linked by QR has no wallet: its phone signs, after the person approves there
+        // (lib/link/channel.ts). XMTP asks this once, to register this computer's installation.
+        const linked = !connector && !isLocalSystemWallet && address ? getSelfLink(address) : null;
+        if (linked) {
+          const text = typeof msg === 'string' ? msg : new TextDecoder().decode(msg as Uint8Array);
+          setIsWaitingForSignature(true);
+          try {
+            toast.message('Approve on your phone', { description: 'Open Ledger Chat on your phone to turn on chats on this computer.' });
+            return await remoteSign({ kind: 'xmtp', message: text }, { wallet: address });
+          } catch (e: any) {
+            if (e instanceof RemoteSignError) throw new Error(e.message);
+            throw e;
+          } finally {
+            setIsWaitingForSignature(false);
+          }
+        }
         if (isLocalSystemWallet) {
             const wallet = await useWalletStore.getState().getConnectedWallet();
             if (wallet) {
@@ -3397,11 +3419,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       } catch (err: any) {
         attempts++;
         const errorMsg = err?.message || '';
-        const isReject = err?.code === 4001 || errorMsg.toLowerCase().includes('reject') || errorMsg.toLowerCase().includes('deny');
+        // "…on your phone" / "Your phone…": a linked computer's request was declined or timed out (lib/link/channel.ts).
+        const isReject = err?.code === 4001 || errorMsg.toLowerCase().includes('reject') || errorMsg.toLowerCase().includes('deny')
+          || /on your phone|your phone did not|unlinked from your phone|not linked to your phone/i.test(errorMsg);
 
         // Immediately stop retrying if user actively rejected the prompt
         if (isReject) {
-          setInitError('Identity authorization rejected. You must approve the Ledger Chat signature to proceed.');
+          setInitError(/phone/i.test(errorMsg) ? errorMsg : 'Identity authorization rejected. You must approve the Ledger Chat signature to proceed.');
           setIsInitializing(false);
           initInFlight.current = false;
           return;
@@ -3446,23 +3470,29 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }
       }
     }
-  }, [address, isMobile, signMessageAsync, isSystemHandshake, loadConversations, isLocalSystemWallet]);
+  }, [address, isMobile, signMessageAsync, isSystemHandshake, loadConversations, isLocalSystemWallet, connector]);
 
   useEffect(() => {
     // Aggressive Auto-Init: Trigger for all connected users including mobile.
     // Skip email users — they don't have a wallet signer for XMTP.
     if (isConnected && address && !isEmailUser && !client && !initInFlight.current && !initError) {
       initClient();
-      // [SAFETY TIMEOUT] If init hasn't resolved in 45s, reset state to unblock the UI
-      const safetyTimer = setTimeout(() => {
-        if (initInFlight.current) {
+      // [SAFETY TIMEOUT] 45 s of start-up work without an answer (not counting time waiting for a
+      // signature) resets the state to unblock the UI.
+      let busyMs = 0;
+      const safetyTimer = setInterval(() => {
+        if (!initInFlight.current) { clearInterval(safetyTimer); return; }
+        if (waitingSigRef.current) return;
+        busyMs += 1_000;
+        if (busyMs >= 45_000) {
+          clearInterval(safetyTimer);
           console.warn('[LedgerChat] Init safety timeout reached - resetting state');
           setIsInitializing(false);
           initInFlight.current = false;
           setInitError('Connection timed out. Please tap "Enter Ledger Chat" to retry.');
         }
-      }, 45_000);
-      return () => clearTimeout(safetyTimer);
+      }, 1_000);
+      return () => clearInterval(safetyTimer);
     }
   }, [isConnected, address, isEmailUser, client, initError, initClient, forceAutoInit]);
 
@@ -5559,6 +5589,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           children (the two-panel layout) can resolve their height against the viewport.
           Without this, TuringShieldGate's Fragment return gives no height context. */}
       <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
+      {/* Phone: approves what linked computers ask to sign (WhatsApp/Signal model). */}
+      <LinkedDeviceApprover wallet={address} />
       {lockedChatPeer && (
         <PinPrompt
           title="This chat is locked"

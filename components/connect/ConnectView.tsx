@@ -170,12 +170,12 @@ function Choose(p: ConnectViewProps) {
         {p.isMobile ? (
           <Option
             icon={ScanQrCode}
-            name="Pair with a computer"
-            hint="Optional: Link an active desktop session"
+            name="Link a computer"
+            hint="Scan the code shown on ledgerchat.org on your computer"
             onClick={p.onPhone}
           />
         ) : (
-          <Option icon={QrCode} name="Use your phone" hint="Scan a code to sign in on this computer" onClick={p.onPhone} />
+          <Option icon={QrCode} name="Use your phone" hint="Scan a code with Ledger Chat on your phone" onClick={p.onPhone} />
         )}
       </div>
 
@@ -187,15 +187,16 @@ function Choose(p: ConnectViewProps) {
   );
 }
 
+/**
+ * The computer's sign-in, WhatsApp Web style: the phone holds the account and links this
+ * computer by scanning the code and confirming. The computer never gets the wallet; the phone
+ * approves each signature it needs (lib/auth/linkedDevices.ts).
+ */
 function QrStage(p: ConnectViewProps) {
   return (
     <>
-      <button type="button" className={s.back} onClick={p.onBack}>
-        <ArrowLeft size={16} strokeWidth={1.75} aria-hidden="true" />
-        Back
-      </button>
-      <h1 className={s.title}>Sign in with your phone</h1>
-      <p className={s.subtitle}>Use a phone where you are already signed in to Ledger Chat.</p>
+      <h1 className={s.title}>Use Ledger Chat on this computer</h1>
+      <p className={s.subtitle}>Link it to Ledger Chat on your phone, like WhatsApp Web or Signal Desktop.</p>
 
       <div className={s.qrCard}>
         <div className={s.qrBox}>
@@ -212,13 +213,6 @@ function QrStage(p: ConnectViewProps) {
           )}
         </div>
 
-        {p.qrPin && !p.qrExpired && (
-          <div className={s.code}>
-            <span className={s.codeLabel}>Your phone should show this code</span>
-            <span className={s.codeValue}>{p.qrPin}</span>
-          </div>
-        )}
-
         {!p.qrExpired && (
           <span className={s.waiting} role="status">
             <LoaderCircle size={14} strokeWidth={2} className={s.spin} aria-hidden="true" />
@@ -228,10 +222,19 @@ function QrStage(p: ConnectViewProps) {
       </div>
 
       <ol className={s.qrSteps}>
-        <li><span>Open your phone camera or QR code scanner app.</span></li>
-        <li><span>Scan this code — your phone opens Ledger Chat.</span></li>
-        <li><span>Connect your wallet on your phone to link this computer instantly.</span></li>
+        <li><span>Open Ledger Chat on your phone. First time? Go to ledgerchat.org on your phone and sign in with your wallet: that creates your account.</span></li>
+        <li><span>Tap <strong>Settings → Linked devices → Link a device</strong>.</span></li>
+        <li><span>Point your phone at this code and confirm on your phone.</span></li>
       </ol>
+
+      <p className={s.legal}>
+        Your chats stay end-to-end encrypted. This computer never receives your wallet: when it needs a signature, your phone shows what it is and you approve it there.
+      </p>
+
+      <button type="button" className={s.back} onClick={p.onBack}>
+        <Wallet size={16} strokeWidth={1.75} aria-hidden="true" />
+        Sign in with a wallet on this computer instead
+      </button>
     </>
   );
 }

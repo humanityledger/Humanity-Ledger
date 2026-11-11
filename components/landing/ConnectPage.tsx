@@ -35,6 +35,7 @@ import dynamic from "next/dynamic";
 import { useAccount, useChainId, useConnect, useSignMessage } from "wagmi";
 import { SiweMessage } from "siwe";
 import { useAppKit } from "@reown/appkit/react";
+import { allowAutoRedirect, clearLocalSessionMarkers, hasServerSession } from "@/lib/auth/session-check";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import { useUIStore } from "@/lib/store/ui-store";
@@ -44,9 +45,9 @@ import { useDynamicIsland } from "@/lib/store/dynamic-island-store";
 import { ConnectView, type ConnectStage, type WalletOption } from "@/components/connect/ConnectView";
 
 import { safeReturnPath } from "@/lib/security/safeRedirect";
-import { walletConnectLink, walletHomeLink } from "@/lib/auth/wallet-links";
 import { withSignTimeout } from "@/lib/auth/sign-timeout";
 import { purgeLegacyHandshakeSecrets } from "@/lib/scan/sessionHandshake";
+import { setSelfLink } from "@/lib/link/channel";
 
 /** A signature request with no answer after this long is abandoned; a late answer is ignored. */
 const SIGN_TIMEOUT_MS = 120_000;
@@ -126,7 +127,10 @@ export default function ConnectPage() {
   const { nuclearDisconnect } = useSystemSignOut();
 
   const [mounted, setMounted] = useState(false);
+  // A computer starts on the QR code (WhatsApp Web style); a phone signs in with its wallet.
   const [view, setView] = useState<"choose" | "qr">("choose");
+  const desktopQrStartedRef = useRef(false);
+  const qrRefreshesRef = useRef(0);
 
   const [pendingWallet, setPendingWallet] = useState<{ id: string; name: string; logo: string } | null>(null);
   const [authStatus, setAuthStatus] = useState<"idle" | "verifying" | "failed">("idle");
@@ -213,11 +217,25 @@ export default function ConnectPage() {
         return false;
       }
     })();
-    if (hasCookie || hasLocal) {
-      setLinked(true);
-      const t = setTimeout(() => window.location.replace(returnPathFromQuery()), 500);
-      return () => clearTimeout(t);
-    }
+    if (!hasCookie && !hasLocal) return;
+    // Local hints are not a session: only the server's answer (the same one the chat gate gets) may
+    // send the user on. Without it the hints are stale and are cleared, or /connect and /chat bounce
+    // the user between them forever (in-app wallet browsers especially).
+    let live = true;
+    (async () => {
+      const ok = await hasServerSession();
+      if (!live) return;
+      if (ok && allowAutoRedirect()) {
+        setLinked(true);
+        redirectingRef.current = true;
+        window.location.replace(returnPathFromQuery());
+      } else {
+        clearLocalSessionMarkers();
+      }
+    })();
+    return () => {
+      live = false;
+    };
   }, [setLinked]);
 
   /* ── QR handshake: only while the QR view is open ─────────────────────── */
@@ -250,14 +268,31 @@ export default function ConnectPage() {
       setQrData(url.toString());
       setSyncStatus("AWAITING");
       qrTimerRef.current = setTimeout(() => {
-        setQrExpired(true);
         setQrSession(null);
         setSyncStatus("IDLE");
+        // Like WhatsApp Web: a fresh code a few times while the page is in view, then a button.
+        if (qrRefreshesRef.current < 4 && document.visibilityState === "visible") {
+          qrRefreshesRef.current++;
+          startQrRef.current?.();
+        } else {
+          setQrExpired(true);
+        }
       }, QR_LIFETIME_MS);
     } catch {
       setSyncStatus("ERROR");
     }
   }, []);
+
+  const startQrRef = useRef<(() => void) | null>(null);
+  useEffect(() => { startQrRef.current = startQr; }, [startQr]);
+
+  // On a computer the code is the first thing shown, unless this browser has a wallet to sign in with right now.
+  useEffect(() => {
+    if (!mounted || isMobile || desktopQrStartedRef.current || isLinked || effectiveIsConnected) return;
+    desktopQrStartedRef.current = true;
+    setView("qr");
+    startQr();
+  }, [mounted, isMobile, isLinked, effectiveIsConnected, startQr]);
 
   const stopQr = useCallback(() => {
     if (qrTimerRef.current) clearTimeout(qrTimerRef.current);
@@ -289,12 +324,17 @@ export default function ConnectPage() {
         // browser's key mixed with the PIN on screen. Only the claim code
         // turns into a session, and only here, in HttpOnly cookies.
         let claim: string | null = null;
+        let linkFromPhone: { deviceId: string; key: string; wallet: string } | null = null;
         try {
           const { deriveSharedSecret, decryptAESGCM } = await import("@/lib/web-crypto");
           const shared = await deriveSharedSecret(ephemeral.privateKey, data.mobilePub, ephemeral.isECDH, qrPin ?? undefined);
           const p = JSON.parse(await decryptAESGCM(shared, data.encryptedPayload, data.iv));
-          // Only the claim is read. Older phones may still send `seed`/`vault`: ignored, never stored.
+          // The claim, and the channel key for signing requests to the phone (lib/link/channel.ts).
+          // Older phones may still send `seed`/`vault`: ignored, never stored.
           if (typeof p.claim === "string") claim = p.claim;
+          if (typeof p.deviceId === "string" && typeof p.channelKey === "string" && typeof p.wallet === "string") {
+            linkFromPhone = { deviceId: p.deviceId, key: p.channelKey, wallet: p.wallet };
+          }
         } catch (e) {
           console.warn("[QR] could not decrypt the phone's answer (wrong PIN?)", e);
         }
@@ -320,6 +360,10 @@ export default function ConnectPage() {
         const normalized: string | null = /^0x[0-9a-f]{40}$/.test(addr) ? addr : null;
         if (normalized) {
           purgeLegacyHandshakeSecrets();
+          const did = (hd as { deviceId?: string }).deviceId;
+          if (linkFromPhone && linkFromPhone.wallet.toLowerCase() === normalized && did === linkFromPhone.deviceId) {
+            setSelfLink(linkFromPhone);
+          }
           localStorage.setItem("system_session_v2", JSON.stringify({ wallet: normalized, exp: Date.now() + 604_800_000, source: "qr-handshake" }));
           sessionStorage.setItem("system_wallet_addr", normalized);
           sessionStorage.setItem("portfolio_unlocked", "true");
@@ -370,7 +414,7 @@ export default function ConnectPage() {
         });
         if (r.ok) {
           const d = await r.json();
-          if (d.authenticated && d.user?.address?.toLowerCase() === address.toLowerCase()) {
+          if (d.authenticated && d.user?.address?.toLowerCase() === address.toLowerCase() && (await hasServerSession()) && allowAutoRedirect()) {
             setSignStep(3);
             setLinked(true);
             redirectingRef.current = true;
@@ -429,12 +473,11 @@ export default function ConnectPage() {
           Boolean((window as unknown as { ethereum?: unknown }).ethereum);
 
         if (isMobile && !isInAppBrowser) {
-          // Set the deep link so the "Open wallet to sign" button renders.
-          // The button's onClick is a synchronous user-gesture handler and
-          // CAN navigate to the wallet app. We must NOT navigate here.
-          setMobileDeepLink(
-            walletHomeLink(sessionStorage.getItem("preferred_mobile_wallet") || localStorage.getItem("preferred_mobile_wallet")),
-          );
+          // No stored link: the "Open … to sign" button then opens the wallet that is actually connected,
+          // by the native deep link from its WalletConnect session (lib/wallet/mobileWallet.ts, validated).
+          // WalletConnect recommends deep links over universal links, which iOS may open in the browser;
+          // and the brand tapped on this page may not be the wallet picked in the AppKit sheet.
+          setMobileDeepLink(null);
         }
 
         // Robust mobile signature handling with deep retry on transient relay errors.
@@ -565,7 +608,7 @@ export default function ConnectPage() {
         const r = await fetch("/api/auth/verify-session", { cache: "no-store", credentials: "include" });
         if (r.ok) {
           const d = await r.json();
-          if (d.authenticated && d.user?.address) {
+          if (d.authenticated && d.user?.address && (await hasServerSession()) && allowAutoRedirect()) {
             setSignStep(3);
             setLinked(true);
             redirectingRef.current = true;
@@ -667,117 +710,14 @@ export default function ConnectPage() {
         return;
       }
 
-      // [MOBILE FIX] For ALL wallet taps on mobile (Safari / Chrome), open the AppKit
-      // modal instead of deep-linking into the wallet's internal browser.
-      //
-      // WHY THIS IS THE CORRECT APPROACH:
-      //   The old code did: window.location.href = "metamask.app.link/dapp/[url]"
-      //   This opened the page INSIDE MetaMask's WebView which:
-      //     a) Has broken zoom / viewport scaling
-      //     b) Is not scalable to other wallets
-      //     c) Requires users to leave Safari permanently
-      //
-      //   The correct WalletConnect v2 mobile flow is:
-      //     1. AppKit modal appears (bottom sheet on mobile)
-      //     2. User taps their wallet — AppKit opens it via a universal link with wc:// URI
-      //     3. Wallet signs and WalletConnect relay delivers the SIWE signature back
-      //     4. Safari/Chrome NEVER navigates away — the signed session arrives via WebSocket
-      //
-      //   showQrModal: true in wagmiAdapter enables this flow automatically.
-
+      // Safari / Chrome on a phone: AppKit alone opens the wallet. Its sheet creates the WalletConnect
+      // pairing and opens the chosen wallet from the user's tap (the only moment iOS allows it), then
+      // delivers the session back over the relay. This page used to start a second pairing of its own in
+      // parallel and navigate from an async callback (which iOS blocks): the wallet got one pairing, the
+      // page waited on the other, and the sheet stayed on "Continue in MetaMask".
       const w = MOBILE_WALLETS.find((x) => x.id === walletId);
       if (w) setPendingWallet({ id: w.id, name: w.name, logo: w.logo });
-
-      // Open AppKit modal — it shows a bottom sheet with wallet options on mobile
-      openAppKitSafe();
-
-      // ─────────────────────────────────────────────────────────────────────
-      // iOS / Android deep-link strategy (iOS Safari user-gesture constraint)
-      //
-      // iOS Safari blocks ANY programmatic navigation that happens inside an
-      // async callback (e.g. after `await` or `setTimeout` or inside a WC
-      // event listener) because those are no longer part of the original user
-      // gesture. window.location.href assignments and window.open() both fail
-      // silently in async contexts. The correct fix is:
-      //
-      //  a) SYNCHRONOUSLY call window.location.href = universalLink RIGHT NOW
-      //     inside this synchronous click handler — before any async work.
-      //     This is always allowed and opens/activates the wallet app.
-      //  b) Start WalletConnect in the background after the redirect.
-      //  c) When the user returns from the wallet app, Safari fires
-      //     `visibilitychange` and the `onVisibilityChange` auto-heal effect
-      //     detects the now-available session and completes sign-in.
-      //
-      // Universal links (https://metamask.app.link/) are preferred over
-      // native schemes (metamask://) because:
-      //  - They work even if the wallet app is not installed (opens App Store).
-      //  - They survive iOS 15+ link-interception policies.
-      //  - WalletConnect URI is appended after we have it; for the first tap
-      //    the homepage link is enough to open the right app.
-      // ─────────────────────────────────────────────────────────────────────
-
-      // SYNCHRONOUS: navigate NOW while we are inside the user-gesture context.
-      // This opens the wallet app immediately. We will upgrade this link to a
-      // WalletConnect URI once the WC provider fires display_uri.
-      const homepageLink = walletHomeLink(brand);
-      setMobileDeepLink(homepageLink);
-
-      const wcConnector = connectors.find(
-        (c) => c.id === "walletConnect" || (c as { type?: string }).type === "walletConnect",
-      );
-
-      if (wcConnector) {
-        // Start connecting immediately — display_uri fires within ~1s
-        (async () => {
-          try {
-            const provider = (await wcConnector.getProvider()) as any;
-            if (provider && typeof provider.once === "function") {
-              let fired = false;
-              const fallbackTimer = setTimeout(() => {
-                if (!fired) {
-                  // WC timed out — user is probably already in the wallet app
-                  // from the synchronous navigation above. No further action needed.
-                  console.warn("[MobileWallet] WC display_uri timeout — user already redirected via universal link");
-                }
-              }, 6000);
-
-              provider.once("display_uri", (uri: string) => {
-                fired = true;
-                clearTimeout(fallbackTimer);
-
-                // Build a WalletConnect deep link with the session URI.
-                // These universal links are opened by the already-active wallet app
-                // (via the universal link we opened synchronously above).
-                // Allowlisted universal link; a malformed URI falls back to the homepage link.
-                const targetLink = walletConnectLink(brand, uri, window.location.origin);
-
-                // Update the deep link stored in state so the "Open wallet to sign"
-                // button always has the most current WC URI.
-                setMobileDeepLink(targetLink);
-
-                // Attempt navigation — this may or may not succeed depending on
-                // whether we are still inside a user-gesture stack. If it succeeds,
-                // the wallet is re-opened with the WC session URI. If it fails
-                // (async context, iOS), the user can tap the "Open wallet" button
-                // which IS in a user-gesture context and will navigate correctly.
-                try {
-                  window.location.href = targetLink;
-                } catch {
-                  /* navigation blocked — button tap will handle it */
-                }
-              });
-            }
-            connect({ connector: wcConnector });
-          } catch (err) {
-            console.warn("[MobileWallet] WC provider error, falling back to universal link:", err);
-            // User is already in the wallet app from the synchronous redirect — no further action needed.
-          }
-        })();
-        return;
-      }
-
-      // No WC connector at all — navigate to the wallet homepage (already done above synchronously)
-      // and open AppKit as a secondary option in case WC becomes available.
+      setMobileDeepLink(null);
       openAppKitSafe();
     },
     [connect, connectors, openAppKitSafe],
@@ -817,6 +757,11 @@ export default function ConnectPage() {
     setView("choose");
   }, [stopQr]);
 
+  const handleRefreshQr = useCallback(() => {
+    qrRefreshesRef.current = 0;
+    startQr();
+  }, [startQr]);
+
   /* ── Stage ────────────────────────────────────────────────────────────── */
   if (!mounted) return <div style={{ minHeight: "100vh", background: "#ffffff" }} />;
 
@@ -837,7 +782,7 @@ export default function ConnectPage() {
         signStep={signStep}
         errorMessage={signError}
         mobileDeepLink={mobileDeepLink}
-        qr={qrData ? <QRCodeSVG value={qrData} size={172} level="M" bgColor="#ffffff" fgColor="#15171c" /> : null}
+        qr={qrData ? <QRCodeSVG value={qrData} size={204} level="M" bgColor="#ffffff" fgColor="#15171c" /> : null}
         qrPin={qrPin}
         qrExpired={qrExpired}
         onWallet={(id) => (isMobile ? handleMobileWallet(id) : handleDesktopWallet(id))}
@@ -851,7 +796,7 @@ export default function ConnectPage() {
           setPendingWallet(null);
           setMobileDeepLink(null);
         }}
-        onRefreshQr={startQr}
+        onRefreshQr={handleRefreshQr}
         onLinkDevice={() => setShowMobileScanner(true)}
       />
 

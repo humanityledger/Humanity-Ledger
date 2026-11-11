@@ -5,6 +5,7 @@ import { useAccount, useSignTypedData } from 'wagmi';
 import { getPrivateWallet, type WalletSnapshot } from './client';
 import type { WalletTypedData } from './keys';
 import { useWalletStore } from '@/lib/store/wallet-store';
+import { getSelfLink, remoteSign } from '@/lib/link/channel';
 
 /**
  * React binding for the private payments wallet.
@@ -28,8 +29,9 @@ export function useAztecWallet(sessionAddress: string) {
   const localStoreAddr = useWalletStore(s => s.address);
   const isLocalConnected = !!localStoreAddr && !!sessionAddress && localStoreAddr.toLowerCase() === sessionAddress.toLowerCase();
 
+  const linkedComputer = typeof window !== 'undefined' && !connected && !!sessionAddress && !!getSelfLink(sessionAddress);
   const sameAccount =
-    (!!sessionAddress && !!connected && connected.toLowerCase() === sessionAddress.toLowerCase()) || isLocalConnected;
+    (!!sessionAddress && !!connected && connected.toLowerCase() === sessionAddress.toLowerCase()) || isLocalConnected || linkedComputer;
 
   const open = useCallback(async () => {
     let activeAddress: string | null = null;
@@ -57,6 +59,13 @@ export function useAztecWallet(sessionAddress: string) {
       }
     }
 
+    // Priority 3: a computer linked by QR asks its phone, which shows the request and signs on approval.
+    // The signed message is the same one a wallet would sign here (key derivation is unchanged).
+    if (!activeAddress && !isConnected && sessionAddress && getSelfLink(sessionAddress)) {
+      activeAddress = sessionAddress;
+      signFn = async (td) => remoteSign({ kind: 'aztec', typedData: td as any }, { wallet: sessionAddress });
+    }
+
     if (!activeAddress || !signFn!) {
       if (!isConnected && !isLocalConnected) {
         throw new Error('Connect the wallet you signed in with to open your private wallet.');
@@ -82,7 +91,7 @@ export function useAztecWallet(sessionAddress: string) {
     state,
     wallet: typeof window === 'undefined' ? null : getPrivateWallet(),
     open,
-    walletConnected: isConnected || isLocalConnected,
+    walletConnected: isConnected || isLocalConnected || linkedComputer,
     sameAccount,
   };
 }

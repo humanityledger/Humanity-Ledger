@@ -79,6 +79,7 @@ export function useSystemSignOut() {
                     'system_vault_v1',
                     'system_pending_wakeup',
                     'system_wallet_addr',  // Extra guard
+                    'hl.link.self.v1',     // this computer's channel to the phone (lib/link/channel.ts)
                 ];
                 targets.forEach(t => localStorage.removeItem(t));
                 // Failsafe: also nuke via direct key in case the key was stored differently

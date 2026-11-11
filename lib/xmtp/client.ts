@@ -231,7 +231,13 @@ export async function getXMTPClient(
   }
 
   //  Use Standard Wallet Signer 
-  const signer = buildXmtpSigner(wagmiSigner);
+  // The time a signature takes (the person switching to the wallet app, or approving on their
+  // phone for a computer linked by QR) does not count against the start-up watchdog below.
+  let signing = 0;
+  const signer = buildXmtpSigner({
+    getAddress: wagmiSigner.getAddress,
+    signMessage: async (m) => { signing++; try { return await wagmiSigner.signMessage(m); } finally { signing--; } },
+  });
 
   //  Retrieve or Generate Local DB Encryption Key 
   // Passing this key prevents XMTP from prompting a signature on every reload
@@ -257,10 +263,22 @@ export async function getXMTPClient(
 
   let client: Client;
   try {
-    // Client.create wrapped in 8s timeout — WASM load or network hang must NEVER freeze UI
-    const createTimeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('XMTP_INIT_TIMEOUT: Client.create timed out after 20s. WASM or network may be unavailable.')), 20000)
-    );
+    // Watchdog: 20 s of Client.create work (WASM load, network), not counting time spent waiting
+    // for a signature — a WASM or network hang must never freeze the UI, a person signing must
+    // never be cut off.
+    let watchdog: ReturnType<typeof setInterval> | undefined;
+    const createTimeout = new Promise<never>((_, reject) => {
+      let busyMs = 0;
+      watchdog = setInterval(() => {
+        if (signing > 0) return;
+        busyMs += 500;
+        if (busyMs >= 20_000) {
+          clearInterval(watchdog);
+          reject(new Error('XMTP_INIT_TIMEOUT: Client.create timed out after 20s. WASM or network may be unavailable.'));
+        }
+      }, 500);
+    });
+    createTimeout.catch(() => {});
     client = await Promise.race([
       Client.create(signer, {
         env: XMTP_ENV,
@@ -269,7 +287,7 @@ export async function getXMTPClient(
         appVersion: 'LedgerNetwork-Privacy-Node/1.0.0-obfuscated',
       }),
       createTimeout,
-    ]) as Client;
+    ]).finally(() => clearInterval(watchdog)) as Client;
   } catch (err: any) {
     const errorMsg = err?.message || '';
     if (

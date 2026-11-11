@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Check, CircleHelp, Clock, Lock, Mail, X } from 'lucide-react';
 import { pinLockEnabled } from '@/lib/auth/pin-lock';
+import { clearLocalSessionMarkers } from '@/lib/auth/session-check';
 
 // ─── Session clearance ────────────────────────────────────────────────────────
 // DUAL STORAGE: sessionStorage (primary) + localStorage (fallback)
@@ -381,8 +382,10 @@ export function TuringShieldGate({
               setTimeout(checkEnclave, delay);
               return;
             }
-            // All retries exhausted — redirect to connect
+            // All retries exhausted — redirect to connect. The server has no session, so the local sign-in
+            // hints are stale: clear them, or /connect would read them and send the user straight back here.
             document.removeEventListener('visibilitychange', handleVisibilityForGate);
+            clearLocalSessionMarkers();
             const dest = typeof window !== 'undefined' ? window.location.pathname : '/chat';
             window.location.replace(`/connect?redirect=${encodeURIComponent(dest)}`);
             return;
