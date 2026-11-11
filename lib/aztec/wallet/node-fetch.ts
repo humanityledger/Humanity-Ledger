@@ -40,7 +40,11 @@ export function isTransientNodeError(err: unknown): boolean {
 function relayRefused(err: unknown): boolean {
   const e = err as any;
   const text = `${e?.message ?? e ?? ''}`;
-  return isTransientNodeError(err) || /Unauthori[sz]ed|Forbidden|Authentication required|relay is turned off|Relay refused|could not be reached|No Aztec node is configured|Not Found|Too Large|Unsupported Media|\b(401|403|404|413|415)\b/i.test(text);
+  if (isTransientNodeError(err)) return true;
+  // The relay's own messages (app/api/aztec/node/route.ts) and the middleware's sign-in refusal.
+  if (/Authentication required|relay is turned off|Relay refused|could not be reached|No Aztec node is configured|Request too large|Content-Type must be/i.test(text)) return true;
+  // Bare HTTP status texts, case-sensitive: a node message such as "tx not found" is not one.
+  return /^(Unauthorized|Forbidden|Not Found|Payload Too Large|Unsupported Media Type)$/.test(text.trim()) || /\b(401|403|404|413|415)\b/.test(text);
 }
 
 export interface NodeFetchOptions {
