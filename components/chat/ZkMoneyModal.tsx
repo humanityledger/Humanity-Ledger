@@ -16,7 +16,7 @@ import { singleFlight } from '@/lib/aztec/single-flight';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ZkWalletPanel } from '@/components/zk/ZkWalletPanel';
 import { getPrivateWallet, humanError, type WalletSnapshot } from '@/lib/aztec/wallet/client';
-import { AZTEC_WALLET_CONFIG, networkLabel, type TokenKey } from '@/lib/aztec/wallet/config';
+import { AZTEC_WALLET_CONFIG, NO_PRIVATE_TOKENS_MESSAGE, hasPrivateTokens, networkLabel, type TokenKey } from '@/lib/aztec/wallet/config';
 import { directPaymentMessage } from '@/lib/payments/direct-private';
 import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
@@ -50,7 +50,15 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
     onSuccess(directPaymentMessage({ token, txHash, senderAztec: getPrivateWallet().state.aztecAddress }), { txHash, token });
 
   let body: React.ReactNode;
-  if (dmPeerInboxId && ready) {
+  if (dmPeerInboxId && ready && !hasPrivateTokens()) {
+    // Alpha with Fee Juice only: no token to pay with yet, so no payment form.
+    body = (
+      <div className="h-full bg-white p-5 pt-[max(1.25rem,env(safe-area-inset-top))] text-[14px] text-[#4a505c]">
+        {NO_PRIVATE_TOKENS_MESSAGE}
+        <button type="button" className="mt-4 block h-10 px-4 rounded-full bg-[#15171c] text-white font-semibold" onClick={onClose}>Close</button>
+      </div>
+    );
+  } else if (dmPeerInboxId && ready) {
     body = <DirectPaymentForm dmPeerInboxId={dmPeerInboxId} selfInboxId={selfInboxId ?? ''} peerName={recipientName} onClose={onClose} onPaid={posted} />;
   } else if (dmPeerInboxId || !ALPHA) {
     // Wallet not open yet (DM: only to open it, no typed-address payment posted), or a test-network community.

@@ -104,13 +104,32 @@ export const AZTEC_WALLET_CONFIG = {
   faucet: NETWORK === 'testnet' && FAUCET_RAW?.address ? FAUCET_RAW : null,
 } as const;
 
-/** True when the operator setup has been run and the wallet can work. */
-export function isWalletConfigured(): boolean {
-  if (AZTEC_WALLET_CONFIG.network === 'mainnet') {
-    return AZTEC_WALLET_CONFIG.alphaEnabled && AZTEC_WALLET_CONFIG.tokens.length > 0;
+type WalletReadiness = Pick<typeof AZTEC_WALLET_CONFIG, 'network' | 'alphaEnabled' | 'tokens' | 'sponsoredFpc'>;
+
+/**
+ * True when the operator setup has been run and the wallet can work.
+ *
+ * On Alpha, enabling Alpha on purpose is enough: the wallet opens, creates the
+ * account from bridged Fee Juice and pays fees with it, even before any private
+ * token is configured. Token flows stay off until hasPrivateTokens() is true,
+ * and every configured token still has to pass token-check.ts when the wallet
+ * opens (fail-closed).
+ */
+export function isWalletConfigured(cfg: WalletReadiness = AZTEC_WALLET_CONFIG): boolean {
+  if (cfg.network === 'mainnet') {
+    return cfg.alphaEnabled;
   }
-  return AZTEC_WALLET_CONFIG.tokens.length === TOKEN_ORDER.length && !!AZTEC_WALLET_CONFIG.sponsoredFpc;
+  return cfg.tokens.length === TOKEN_ORDER.length && !!cfg.sponsoredFpc;
 }
+
+/** True when at least one private token is configured (Shield, Unshield, Send, agreements). */
+export function hasPrivateTokens(cfg: Pick<typeof AZTEC_WALLET_CONFIG, 'tokens'> = AZTEC_WALLET_CONFIG): boolean {
+  return cfg.tokens.length > 0;
+}
+
+/** Shown wherever a token flow would be, while no private token is configured. */
+export const NO_PRIVATE_TOKENS_MESSAGE =
+  'Only Fee Juice is available for now. Private tokens will be switched on once they are configured.';
 
 /** What the user signs to open the wallet; differs per network (keys.ts). */
 export function walletTypedData(): WalletTypedData {

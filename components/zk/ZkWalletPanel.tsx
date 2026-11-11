@@ -29,7 +29,9 @@ import {
 } from 'lucide-react';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
 import { decodePaymentRequest, encodePaymentRequest, humanError, type TokenBalance } from '@/lib/aztec/wallet/client';
-import { AZTEC_WALLET_CONFIG, FAUCET_AMOUNT, explorerTxUrl, isWalletConfigured, type TokenKey } from '@/lib/aztec/wallet/config';
+import {
+  AZTEC_WALLET_CONFIG, FAUCET_AMOUNT, NO_PRIVATE_TOKENS_MESSAGE, explorerTxUrl, hasPrivateTokens, isWalletConfigured, networkLabel, type TokenKey,
+} from '@/lib/aztec/wallet/config';
 import { formatUnits } from '@/lib/aztec/wallet/amounts';
 import type { Activity } from '@/lib/aztec/wallet/history';
 
@@ -51,6 +53,9 @@ interface ZkWalletPanelProps {
 type Sheet = 'shield' | 'unshield' | 'send' | 'receive' | null;
 
 const INK = '#15171c';
+const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
+/** Shield, Unshield and Send need a configured token; Receive only shows the address. */
+const sheetAvailable = (s: Exclude<Sheet, null>) => s === 'receive' || hasPrivateTokens();
 const short = (s?: string, n = 6) => (s ? `${s.slice(0, n + 2)}…${s.slice(-n)}` : '');
 
 /* -------------------------------------------------------------------------- */
@@ -111,7 +116,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
           <div className="min-w-0">
             <div className="text-[16px] font-semibold tracking-tight">Private wallet</div>
             <div className="mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-black/45">
-              Aztec test network · tokens have no value
+              {networkLabel()} · {ALPHA ? 'real funds, not audited' : 'tokens have no value'}
             </div>
           </div>
           <button
@@ -165,12 +170,23 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
           />
         ) : (
           <>
-            <div className="grid grid-cols-4 gap-2">
-              <ActionButton icon={ArrowDownToLine} label="Shield" sub="Public → private" onClick={() => setSheet('shield')} />
-              <ActionButton icon={ArrowUpFromLine} label="Unshield" sub="Private → public" onClick={() => setSheet('unshield')} />
-              <ActionButton icon={Send} label="Send" sub="Private" onClick={() => setSheet('send')} />
-              <ActionButton icon={QrCode} label="Receive" sub="QR code" onClick={() => setSheet('receive')} />
-            </div>
+            {hasPrivateTokens() ? (
+              <div className="grid grid-cols-4 gap-2">
+                <ActionButton icon={ArrowDownToLine} label="Shield" sub="Public → private" onClick={() => setSheet('shield')} />
+                <ActionButton icon={ArrowUpFromLine} label="Unshield" sub="Private → public" onClick={() => setSheet('unshield')} />
+                <ActionButton icon={Send} label="Send" sub="Private" onClick={() => setSheet('send')} />
+                <ActionButton icon={QrCode} label="Receive" sub="QR code" onClick={() => setSheet('receive')} />
+              </div>
+            ) : (
+              <>
+                <p role="status" className="rounded-2xl bg-white border border-black/[0.05] px-4 py-3 text-[13px] leading-relaxed text-black/60">
+                  {NO_PRIVATE_TOKENS_MESSAGE}
+                </p>
+                <div className="grid grid-cols-1 gap-2">
+                  <ActionButton icon={QrCode} label="Receive" sub="QR code" onClick={() => setSheet('receive')} />
+                </div>
+              </>
+            )}
 
             {AZTEC_WALLET_CONFIG.faucet && <Faucet disabled={state.busy} />}
 
@@ -210,7 +226,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
             </div>
 
             <p className="px-1 pb-2 text-center text-[11.5px] leading-relaxed text-black/40">
-              Proofs are made on this device and sent to the Aztec test network. Our server never sees your keys, your
+              Proofs are made on this device and sent to {ALPHA ? networkLabel() : 'the Aztec test network'}. Our server never sees your keys, your
               balances or who you pay.{' '}
               <Link href="/docs/zero-knowledge" className="underline underline-offset-2">
                 How it works
@@ -221,7 +237,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
       </div>
 
       <AnimatePresence>
-        {sheet && ready && (
+        {sheet && ready && sheetAvailable(sheet) && (
           <SheetFrame key={sheet} title={SHEET_TITLE[sheet]} onClose={() => setSheet(null)}>
             {sheet === 'shield' && <ShieldForm mode="shield" onDone={() => setSheet(null)} />}
             {sheet === 'unshield' && <ShieldForm mode="unshield" onDone={() => setSheet(null)} />}

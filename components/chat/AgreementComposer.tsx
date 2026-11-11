@@ -17,7 +17,7 @@ import { singleFlight } from '@/lib/aztec/single-flight';
 import { X, KeyRound, Lock, Waves } from 'lucide-react';
 import { announcementFor, localStoragePeerBindingStore, peerAztecAddress, verifiedAnnouncementFor } from '@/lib/aztec/peer-binding';
 import { getPrivateWallet, humanError, type WalletSnapshot } from '@/lib/aztec/wallet/client';
-import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
+import { AZTEC_WALLET_CONFIG, NO_PRIVATE_TOKENS_MESSAGE, hasPrivateTokens, networkLabel } from '@/lib/aztec/wallet/config';
 import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
 import { ProvingStatus } from './ProvingStatus';
@@ -61,7 +61,10 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
   const [peer, setPeer] = useState<string | undefined>();
   const [peerVerified, setPeerVerified] = useState(false);
   const valueMode = useValueMode();
-  const paused = valueMode && valueMode.mode !== 'open' ? (valueMode.unconfirmed ? VALUE_MODE_UNCONFIRMED_MESSAGE : EXITS_ONLY_MESSAGE) : null;
+  // No configured token (Alpha, Fee Juice only): nothing to fund an agreement with; sharing the address still works.
+  const paused = !hasPrivateTokens()
+    ? NO_PRIVATE_TOKENS_MESSAGE
+    : valueMode && valueMode.mode !== 'open' ? (valueMode.unconfirmed ? VALUE_MODE_UNCONFIRMED_MESSAGE : EXITS_ONLY_MESSAGE) : null;
   useEffect(() => {
     setPeerVerified(false);
     peerAztecAddress(localStoragePeerBindingStore(), dmPeerInboxId).then(setPeer).catch(() => setPeer(undefined));
