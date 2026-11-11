@@ -578,8 +578,9 @@
 }
 
 .qrBox {
-  width: 212px;
-  height: 212px;
+  /* Large enough for a phone camera at arm's length, like WhatsApp Web's code. */
+  width: min(256px, 72vw);
+  height: min(256px, 72vw);
   padding: 14px;
   border-radius: 20px;
   background: #ffffff;
