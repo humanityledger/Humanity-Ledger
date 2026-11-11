@@ -367,7 +367,6 @@ class PrivateWallet {
       }
 
       this.set({ phase: 'ready', step: undefined });
-      await this.registerChatPeers().catch(() => 0);
       await this.refreshQuietly();
     } catch (err: any) {
       // Say where it stopped; the raw error goes to the console for support.
@@ -576,7 +575,6 @@ class PrivateWallet {
           this.stopPoll();
           if (await this.deployAccount()) {
             this.set({ phase: 'ready', step: undefined });
-            await this.registerChatPeers().catch(() => 0);
             await this.refreshQuietly();
           }
         } else if (state.plan !== 'wait-claim') {
