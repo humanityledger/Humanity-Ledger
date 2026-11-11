@@ -148,7 +148,7 @@ This playbook defines the response procedures for the four principal incident cl
 | Step | Action | Owner | Target Time |
 |---|---|---|---|
 | 1 | Confirm against the primary source (status page, disclosure post). Record version affected and Aztec's guidance. | Protocol Lead | T+1h |
-| 2 | Stop new value: set `NEXT_PUBLIC_AZTEC_ALPHA_ENABLED=false` and redeploy. This is a build-time flag: tabs already open keep the old bundle until reloaded, so step 3 is not optional. | Engineer | T+2h |
+| 2 | Stop new value: set `AZTEC_VALUE_MODE=exits-only` on the server (Railway variable, no code change). Open tabs obey it at their next action: every new payment, shield and agreement asks `/api/aztec/value-mode` right before it moves money. Claim, refund, cancel, withdraw, accepting a received invitation and unshielding to your own address keep working. Use `NEXT_PUBLIC_AZTEC_ALPHA_ENABLED=false` only to switch the wallet off entirely (this also removes exits). | Engineer | T+30min |
 | 3 | Publish the in-app notice (template 5.3) and the same text on /docs/status. | Protocol Lead | T+2h |
 | 4 | Keep exits open: claim, refund, cancel and withdraw on existing agreements must stay reachable for the affected network. Do not remove its node URL or class IDs from the build until open agreements are settled or past their deadlines. | Engineer | T+4h |
 | 5 | If the fix is a new rollup: follow docs/AZTEC_UPGRADE_MIGRATION.md. | Engineer | per upgrade timeline |
@@ -162,7 +162,7 @@ This playbook defines the response procedures for the four principal incident cl
 
 ### Open gaps (not implemented)
 
-- No exits-only mode: `alphaEnabled=false` hides the whole private wallet, including claim/refund on agreements already open. Step 4 currently requires shipping a build with value entry points removed by hand.
+- Exits-only mode stops the interface, not the capability: a modified client can still call the contracts directly. Fee Juice bridging stays open, since exits need fees.
 - No automated watch on the Aztec status page.
 - This playbook has not been rehearsed.
 

@@ -27,7 +27,7 @@ Applies whenever Aztec ships a new rollup (as V5 → V6 "Tierra" did). A new ver
 ## Value on the old version
 
 - Notes and agreements on the old rollup do not move. Each party settles there (claim, refund, cancel, withdraw) and, if Aztec provides a bridge or migration path for tokens, uses that. Ledger Chat does not migrate funds.
-- Keep a build that can reach the old rollup for exits until every agreement opened through the app is past its deadline. Today this needs a manual build (see "Open gaps" in INCIDENT_RESPONSE.md, class 5).
+- Set `AZTEC_VALUE_MODE=exits-only` while the old rollup is still the configured one, and keep that build reachable until every agreement opened through the app is past its deadline.
 - Tell users before the switch: what to settle, by when, and that funds left on a version Aztec has declared affected are at risk.
 
 ## Acceptance for "migrated"
