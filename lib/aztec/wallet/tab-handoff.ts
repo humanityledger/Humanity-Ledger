@@ -124,3 +124,10 @@ export const BUSY_ELSEWHERE_MESSAGE =
 /** Shown when the page was put in the back/forward cache and its wallet closed to free the locks. */
 export const PAUSED_MESSAGE =
   'Your private wallet was closed while this page was in the background, so another tab can use it. Tap Try again to open it here. Nothing was sent.';
+
+/** Shown when the wallet was closed after a long time in the background, to give its memory back. */
+export const IDLE_CLOSED_MESSAGE =
+  'Your private wallet was closed after a while in the background, to free your device\'s memory. Tap Try again to open it. Nothing was sent.';
+
+/** How long a hidden tab keeps an idle private wallet open (its node and prover hold a lot of memory). */
+export const IDLE_CLOSE_MS = 10 * 60_000;

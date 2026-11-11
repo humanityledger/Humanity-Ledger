@@ -33,7 +33,7 @@ import { loadLocalActivity, mergeActivity, upsertActivity, type Activity, type A
 import { assertFeeChoice, identifyNode } from '../fees';
 import { valueActionsRunning } from '../single-flight';
 import { walletNodeClientOptions, isTransientNodeError } from './node-fetch';
-import { BUSY_ELSEWHERE_MESSAGE, HANDED_OFF_MESSAGE, PAUSED_MESSAGE, createTabHandoff, isStoreBusyError } from './tab-handoff';
+import { BUSY_ELSEWHERE_MESSAGE, HANDED_OFF_MESSAGE, IDLE_CLOSED_MESSAGE, IDLE_CLOSE_MS, PAUSED_MESSAGE, createTabHandoff, isStoreBusyError } from './tab-handoff';
 import { assertNewValueAllowed, EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '../value-mode';
 import { BINDING_SCHEME, bindingStatement, sdkBindingCrypto, verifyAddressProof, type AddressProof } from '../peer-binding';
 import {
@@ -237,6 +237,20 @@ class PrivateWallet {
       if ((ev as PageTransitionEvent).persisted && this.stores && !this.transacting) {
         void this.release(PAUSED_MESSAGE);
       }
+    });
+    // The in-browser node and prover hold a lot of memory. A tab left in the background with an
+    // idle wallet gives it back after IDLE_CLOSE_MS; never during a payment, a proof, or while
+    // waiting for Fee Juice to arrive (that wait finishes the account by itself).
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    document.addEventListener('visibilitychange', () => {
+      if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+      if (document.visibilityState !== 'hidden') return;
+      idleTimer = setTimeout(() => {
+        idleTimer = null;
+        if (document.visibilityState === 'hidden' && this.stores && !this.transacting && this.snapshot.phase === 'ready') {
+          void this.release(IDLE_CLOSED_MESSAGE);
+        }
+      }, IDLE_CLOSE_MS);
     });
   }
 
@@ -1050,7 +1064,7 @@ export function humanError(err: any): string {
     return humanError(reasons.find((r) => !isTransientNodeError(r)) ?? reasons[0]);
   }
   const msg = String(err?.shortMessage || err?.message || err || 'Unknown error');
-  if (msg === HANDED_OFF_MESSAGE || msg === BUSY_ELSEWHERE_MESSAGE || msg === PAUSED_MESSAGE) return msg;
+  if (msg === HANDED_OFF_MESSAGE || msg === BUSY_ELSEWHERE_MESSAGE || msg === PAUSED_MESSAGE || msg === IDLE_CLOSED_MESSAGE) return msg;
   if (/user (rejected|denied)|rejected the request|denied message signature/i.test(msg)) return 'You declined the signature in your wallet.';
   if (msg === EXITS_ONLY_MESSAGE || msg === VALUE_MODE_UNCONFIRMED_MESSAGE || msg === UNCONFIRMED_MESSAGE) return msg;
   // Encrypted store (lib/aztec/wallet/store.ts): the wallet did not open; nothing was read or sent.

@@ -69,6 +69,7 @@ jobs:
           test/unit/auth/qr-link-e2e.test.ts
           test/unit/chat/value-handoff.test.ts
           test/unit/chat/stickers.test.ts
+          test/unit/chat/calls.test.ts
           test/unit/studio
           test/unit/studio-store-sanitize.test.ts
       - name: Unit Tests (security)

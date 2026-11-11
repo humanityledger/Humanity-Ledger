@@ -13,7 +13,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Loader2, Search } from 'lucide-react';
-import { EmojiStyle, Theme, type EmojiClickData } from 'emoji-picker-react';
+// Types only: importing the enums would pull the whole picker (and its emoji data) into the chat
+// bundle; it is loaded with next/dynamic when the picker opens.
+import type { EmojiClickData, EmojiStyle, Theme } from 'emoji-picker-react';
 import { LEDGER_STICKERS, stickerMessage } from '@/lib/chat/stickers';
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false, loading: () => <Spinner /> });
@@ -89,8 +91,8 @@ function EmojiTab({ onEmoji }: { onEmoji: (e: string) => void }) {
     <div className="ledger-emoji flex-1 min-h-0 px-1.5 pb-1.5">
       <EmojiPicker
         onEmojiClick={(d: EmojiClickData) => onEmoji(d.emoji)}
-        emojiStyle={EmojiStyle.NATIVE}
-        theme={Theme.LIGHT}
+        emojiStyle={'native' as unknown as EmojiStyle}
+        theme={'light' as unknown as Theme}
         width="100%"
         height="100%"
         lazyLoadEmojis
