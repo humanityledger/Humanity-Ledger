@@ -39,3 +39,17 @@ describe('TuringShieldGate with the PIN screen off', () => {
     expect(src).toMatch(/if \(!mounted \|\| \(!cleared && !settingPin && !pinLockEnabled\(\)\)\) \{/);
   });
 });
+
+/**
+ * The optional app lock inside the chat (Settings → biometric_lock, off by default) must not render its
+ * PIN screen when it is off. It used to show for the first render of every visit.
+ */
+describe('LedgerChat app lock', () => {
+  it('renders the lock screen only while the app lock is on', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const src = fs.readFileSync(path.resolve(__dirname, '../../../components/terminal/LedgerChatV2.tsx'), 'utf8');
+    expect(src).toMatch(/if \(ledgerSettings\?\.biometric_lock && !isBiometricallyUnlocked\) \{/);
+    expect(src).not.toMatch(/\n\s*if \(!isBiometricallyUnlocked\) \{/);
+  });
+});

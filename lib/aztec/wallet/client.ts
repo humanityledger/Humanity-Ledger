@@ -362,7 +362,10 @@ class PrivateWallet {
       this.set({ phase: 'ready', step: undefined });
       await this.refreshQuietly();
     } catch (err: any) {
-      this.set({ phase: 'error', step: undefined, error: humanError(err) });
+      // Say where it stopped; the raw error goes to the console for support.
+      const where = this.snapshot.step;
+      console.error('[private wallet] open failed', where ? `at "${where}"` : '', err);
+      this.set({ phase: 'error', step: undefined, error: where ? `${humanError(err)} (Step: ${where}.)` : humanError(err) });
       throw err;
     }
   }
@@ -908,7 +911,11 @@ export function humanError(err: any): string {
   if (/tx dropped|invalid tx|transaction .*rejected|rejected by (the )?node|reverted/i.test(msg)) return 'The Aztec node rejected the transaction. Nothing changed. Try again in a minute.';
   if (/Balance too low|not enough|insufficient/i.test(msg)) return 'Your balance is too low for this amount.';
   if (/timeout/i.test(msg)) return 'The network took too long to confirm. It may still go through; check again in a minute.';
-  if (/Failed to fetch|fetch failed|NetworkError|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(msg)) return `Could not reach ${networkLabel()}. Check your connection and try again.`;
+  if (/Failed to fetch|fetch failed|NetworkError|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(msg)) {
+    // Name the service when the error does; a browser extension or firewall blocking one host looks the same as no connection.
+    const host = msg.match(/https?:\/\/([a-z0-9.-]+)/i)?.[1];
+    return `Could not reach ${host ?? networkLabel()}. Check your connection, and that no extension or firewall blocks it, then try again. (${msg.slice(0, 120)})`;
+  }
   if (/internal error/i.test(msg)) return 'Your wallet reported an internal signing error. Try switching networks or restarting your wallet.';
   return msg.length > 220 ? msg.slice(0, 220) + '…' : msg;
 }
