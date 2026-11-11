@@ -17,7 +17,6 @@ import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMT
 import { QrScanner } from '@/components/terminal/QrScanner';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { PadlockLoader, isWalletInitError } from '@/components/terminal/PadlockLoader';
-import { StudioErrorBoundary } from '@/components/studio/StudioErrorBoundary';
 import { HLLogo } from '@/components/shared/HLLogo';
 import { TuringShieldGate } from '@/components/auth/TuringShieldGate';
 import { CreateGroupModal } from '../chat/CreateGroupModal';
@@ -86,6 +85,7 @@ import { usePushNotifications } from '@/lib/push/usePushNotifications';
 import { LedgerCommunitiesTab } from '@/components/chat/LedgerCommunitiesTab';
 import { CommunityView } from '@/components/chat/CommunityView';
 import { getSelfLink, remoteSign, RemoteSignError } from '@/lib/link/channel';
+import { ExpressionPicker, type ExpressionTab } from '@/components/chat/ExpressionPicker';
 import { LinkedDeviceApprover } from '@/components/link/LinkedDeviceApprover';
 import { LedgerSettingsFull } from '@/components/chat/LedgerSettingsFull';
 import { LottieSendButton } from '@/components/chat/LottieSendButton';
@@ -271,6 +271,7 @@ export const formatMessagePreview = (content: string): string => {
   if (cleanContent.startsWith('[LOCATION]')) return 'Location';
   if (cleanContent.startsWith('[ATTACHMENT')) return 'Attachment';
   if (cleanContent.startsWith('[GIF]')) return 'GIF';
+  if (cleanContent.startsWith('__STICKER__')) return 'Sticker';
   if (cleanContent.startsWith('__POLL__')) return 'Poll';
   if (cleanContent.startsWith('__PAYMENT__')) return 'Payment';
   if (isSystemSignal(cleanContent)) {
@@ -317,7 +318,7 @@ export const parseMessageText = (text: string, isMe: boolean) => {
   });
 };
 
-import { playSendSound, playReceiveSound } from '../../lib/utils/sounds';
+import { playReceiveSound } from '../../lib/utils/sounds';
 import { MessageBubble } from '../chat/MessageBubble';
 import { PinPrompt } from '@/components/chat/pin/PinPrompt';
 import { IncomingCallScreen, OutgoingCallScreen, AudioCallStage, CallControls } from '@/components/chat/call/CallScreens';
@@ -327,7 +328,6 @@ import { shortAddress as formatAddress } from '@/lib/ui/format';
 
 // Ledger Studio (AI workspace). Loaded only when opened; never sees encrypted
 // chats unless the person sends something there themselves.
-const LedgerStudio = dynamic(() => import('@/components/studio/LedgerStudio').then(m => ({ default: m.LedgerStudio })), { ssr: false });
 const STUDIO_PREFIX = /^(?:@studio|\/studio)(?:\s+|$)/i;
 
 
@@ -841,7 +841,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // Telegram-style features
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [studioOpen, setStudioOpen] = useState<{ prompt?: string } | null>(null);
+  // Ledger Studio opens on its own page (/studio). The full-screen overlay it used to open in
+  // could end up under the chat's own layers and showed nothing; a page cannot.
+  const openStudio = useCallback((prompt?: string) => {
+    const q = prompt ? `?q=${encodeURIComponent(prompt.slice(0, 8000))}` : '';
+    window.location.assign(`/studio${q}`);
+  }, []);
   const [showVault, setShowVault] = useState(false);
   const [showScheduleCall, setShowScheduleCall] = useState(false);
 
@@ -1045,17 +1050,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [searchIndex, setSearchIndex] = useState(0); // current match index
   const [forwardMsg, setForwardMsg] = useState<any | null>(null); // message to forward
   const [scheduledAt, setScheduledAt] = useState<Date | null>(null); // scheduled send time
-  const [showGifPicker, setShowGifPicker] = useState(false); // GIF picker
+  // Emojis, stickers and GIFs (components/chat/ExpressionPicker.tsx).
+  const [expression, setExpression] = useState<ExpressionTab | null>(null);
   const [showAppDrawer, setShowAppDrawer] = useState(false); // iMessage style + menu
   const [liveLocationWatchId, setLiveLocationWatchId] = useState<number | null>(null); // watchPosition ID for live location
   const [isLiveLocationActive, setIsLiveLocationActive] = useState(false); // whether live location is broadcasting
-  const [gifSearch, setGifSearch] = useState(''); // GIF search query — start empty so user types first
   // A conversation the user locked: opening it asks for the PIN first.
   const [lockedChatPeer, setLockedChatPeer] = useState<string | null>(null);
   // The overflow menu in the conversation header.
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [showSidebarMore, setShowSidebarMore] = useState(false);
-  const [gifResults, setGifResults] = useState<string[]>([]); // GIF URLs
   const [linkPreview, setLinkPreview] = useState<{ url: string, title: string, description: string, image?: string } | null>(null);
 
   // ─── WebRTC Call State Machine ───────────────────────────────────────────────
@@ -3338,7 +3342,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       signMessage: async (msg: string | Uint8Array) => {
         // A computer linked by QR has no wallet: its phone signs, after the person approves there
         // (lib/link/channel.ts). XMTP asks this once, to register this computer's installation.
-        const linked = !connector && !isLocalSystemWallet && address ? getSelfLink(address) : null;
+        const linked = !connector && address ? getSelfLink(address) : null;
         if (linked) {
           const text = typeof msg === 'string' ? msg : new TextDecoder().decode(msg as Uint8Array);
           setIsWaitingForSignature(true);
@@ -5099,7 +5103,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         }
       }
 
-      if (!isSignal && !isReaction) if (ledgerSettings?.notification_sound !== false) { playSendSound(); };
+      // No sound when you send (it was found intrusive); incoming messages still chime if enabled.
       triggerHaptic(ledgerSettings?.haptics_intensity ?? 0);
 
       // If device is offline, also save to localStorage outbox as backup
@@ -5226,28 +5230,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     return () => clearTimeout(t);
   }, [inputText, detectLinkPreview]);
 
-  // ─── Hito 4: GIF Search (Proxy via internal API) ────────────────────────────────
-  const searchGifs = useCallback(async (q: string) => {
-    if (!q.trim()) { setGifResults([]); return; }
-    try {
-      const res = await fetch(`/api/gif/search?q=${encodeURIComponent(q)}`);
-      if (!res.ok) {
-        setGifResults([]);
-        return;
-      }
-      const data = await res.json();
-      const urls = (data.results || []).map((r: any) => r.media_formats?.gif?.url || r.media_formats?.tinygif?.url).filter(Boolean);
-      setGifResults(urls);
-    } catch { 
-      setGifResults([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    const t = setTimeout(() => searchGifs(gifSearch), 500);
-    return () => clearTimeout(t);
-  }, [gifSearch, searchGifs]);
-
   // ─── Hito 4: Scheduled Messages ──────────────────────────────────────────
   const resetFileInputs = (e?: React.ChangeEvent<HTMLInputElement>) => {
     try { if (e) e.target.value = ''; } catch {}
@@ -5338,7 +5320,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (studioCmd) {
       const q = inputText.trim().slice(studioCmd[0].length);
       setInputText('');
-      setStudioOpen({ prompt: q || undefined });
+      openStudio(q || undefined);
       return;
     }
     setSendAnimKey(k => k + 1);
@@ -5716,7 +5698,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             <div className="flex items-center gap-0.5 shrink-0">
               <button
                 type="button"
-                onClick={() => setStudioOpen({})}
+                onClick={() => openStudio()}
                 className="w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c]"
                 title="Ledger Studio"
                 aria-label="Open Ledger Studio"
@@ -6460,41 +6442,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   <button type="button" onClick={() => setBurnTimer(null)} className="px-3 h-8 rounded-full text-[13px] font-medium text-[#c53030] hover:bg-[#fed7d7]">Turn off</button>
                 </div>
               )}
-              {/* Hito 4: GIF Picker */}
-              {showGifPicker && (
-                <div className="bg-white border-t border-[#e4e7ec] p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="relative flex-1">
-                      <Search size={15} strokeWidth={1.9} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3a9b4]" aria-hidden="true" />
-                      <input
-                        autoFocus
-                        value={gifSearch}
-                        onChange={e => setGifSearch(e.target.value)}
-                        placeholder="Search GIFs"
-                        aria-label="Search GIFs"
-                        className="w-full h-9 bg-[#f2f4f7] rounded-xl pl-9 pr-3 text-[14px] outline-none text-[#15171c] placeholder:text-[#a3a9b4]"
-                      />
-                    </div>
-                    <button type="button" onClick={() => setShowGifPicker(false)} className="w-8 h-8 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#475061]" aria-label="Close GIFs">
-                      <X size={16} strokeWidth={1.9} />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto">
-                    {gifResults.length === 0 ? (
-                      <p className="col-span-3 text-center text-[13px] text-[#727a88] py-4">{gifSearch ? 'No GIFs found' : 'Type to search for a GIF'}</p>
-                    ) : gifResults.map((url, i) => (
-                      <button key={i} onClick={() => {
-                        executeSend(`[GIF]${url}`);
-                        setShowGifPicker(false);
-                        setGifSearch('');
-                        setGifResults([]);
-                      }} className="aspect-video bg-[#eff1f4] rounded-lg overflow-hidden hover:opacity-90 transition-opacity">
-                        <img src={url} alt="gif" className="w-full h-full object-cover" loading="lazy" />
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-[#a3a9b4] text-right mt-1.5">Powered by Tenor</p>
-                </div>
+              {/* Emojis, stickers and GIFs */}
+              {expression && (
+                <ExpressionPicker
+                  initialTab={expression}
+                  onClose={() => setExpression(null)}
+                  onEmoji={(e) => {
+                    setInputText(prev => (prev + e).slice(0, 1000));
+                    requestAnimationFrame(() => (inputRef.current as any)?.focus?.());
+                  }}
+                  onSend={(content) => executeSend(content)}
+                />
               )}
               {inputText === '/' && (
                 <div className="absolute bottom-[72px] left-3 mb-2 bg-white border border-[#e4e7ec] shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] rounded-2xl w-[280px] overflow-hidden z-50" role="menu" aria-label="Commands">
@@ -6503,8 +6461,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     {[
                       { cmd: '/pay', label: 'Send a payment', icon: <CreditCard size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setShowWalletTransfer(true); } },
                       { cmd: '/poll', label: 'Create a poll', icon: <ListChecks size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setShowPollCreator(true); } },
-                      { cmd: '/gif', label: 'Search GIFs', icon: <ImageIcon size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setShowGifPicker(true); } },
-                      { cmd: '/studio', label: 'Ask Ledger Studio (AI)', icon: <StudioIcon size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setStudioOpen({}); } },
+                      { cmd: '/gif', label: 'Search GIFs', icon: <ImageIcon size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setExpression('gif'); } },
+                      { cmd: '/studio', label: 'Ask Ledger Studio (AI)', icon: <StudioIcon size={17} strokeWidth={1.8} />, run: () => { setInputText(''); openStudio(); } },
                       { cmd: '/location', label: 'Share your location', icon: <MapPin size={17} strokeWidth={1.8} />, run: () => {
                           setInputText('');
                           if (navigator.geolocation) {
@@ -6658,6 +6616,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         </div>
                       ) : (
                         <>
+                          <button
+                            type="button"
+                            data-expression-toggle=""
+                            onClick={() => setExpression(x => (x ? null : 'emoji'))}
+                            aria-label="Emojis, stickers and GIFs"
+                            aria-expanded={!!expression}
+                            className={`ml-1.5 mb-[3px] self-end w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-colors ${expression ? 'bg-[#e9ecf0] text-[#15171c]' : 'text-[#475061] hover:bg-[#e9ecf0]'}`}
+                          >
+                            <Smile size={21} strokeWidth={1.8} />
+                          </button>
                           <textarea
                             ref={inputRef as any}
                             value={inputText}
@@ -7253,7 +7221,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    // Never hand an invitation's secrets or an attachment key to Ledger Studio (a server-side model).
                    const body = carriesSecret(contextMenu.content) ? '' : contextMenu.content.replace(/^\[.*?\]/, '').replace(/^__REPLY__.*?__::/, '').replace(/^__BURN_\d+__::/, '').trim();
                    setContextMenu(null);
-                   setStudioOpen({ prompt: body ? `> ${body.slice(0, 6000).split('\n').join('\n> ')}\n\n` : undefined });
+                   openStudio(body ? `> ${body.slice(0, 6000).split('\n').join('\n> ')}\n\n` : undefined);
                  }} className={item}>
                    <StudioIcon size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Ask Ledger Studio
                  </button>
@@ -7408,16 +7376,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
          </div>,
          document.body
        ) : null}
-
-        {/* Ledger Studio, full screen over the chat */}
-        {studioOpen && effectiveAddress && typeof document !== 'undefined' && createPortal(
-          <div className="fixed inset-0 z-[600] bg-white" data-ledger-studio="">
-            <StudioErrorBoundary wallet={effectiveAddress} onExit={() => setStudioOpen(null)}>
-              <LedgerStudio key={effectiveAddress.toLowerCase()} wallet={effectiveAddress} initialPrompt={studioOpen.prompt} onExit={() => setStudioOpen(null)} />
-            </StudioErrorBoundary>
-          </div>,
-          document.body
-        )}
 
         {/* Forward a message */}
         {forwardMsg && (

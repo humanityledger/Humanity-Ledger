@@ -1,5 +1,6 @@
 "use client";
 
+import { stickerLabel, stickerSrc } from '@/lib/chat/stickers';
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
 import {
@@ -510,14 +511,30 @@ GroupCallBubble.displayName = 'GroupCallBubble';
 
 // ─── Sticker ─────────────────────────────────────────────────────────────────
 // A plain div with a CSS animation: no nested Framer Motion scale (iOS blur bug).
-const StickerBubble = React.memo(({ content }: { content: string }) => (
+const StickerBubble = React.memo(({ content }: { content: string }) => {
+  // Ledger Chat's own stickers (lib/chat/stickers.ts): an image from this site only.
+  const src = stickerSrc(content);
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={stickerLabel(content) ?? 'Sticker'}
+        width={148}
+        height={148}
+        draggable={false}
+        className="block w-[148px] h-[148px] select-none opacity-0 animate-[stickerPop_0.4s_cubic-bezier(0.34,1.56,0.64,1)_forwards]"
+      />
+    );
+  }
+  return (
   <div
     className="text-[64px] leading-none select-none cursor-default opacity-0 animate-[stickerPop_0.4s_cubic-bezier(0.34,1.56,0.64,1)_forwards]"
     style={{ filter: 'drop-shadow(0 4px 12px rgba(16,24,40,0.15))' }}
   >
     {content.replace('__STICKER__', '')}
   </div>
-));
+  );
+});
 StickerBubble.displayName = 'StickerBubble';
 
 // ─── Quick reactions (Disabled: native phone emojis only) ──────────────────
