@@ -53,6 +53,13 @@ import {
 
 /** How many claim secrets are derived (and scanned when recovering deposits). */
 const CLAIM_SECRETS = 16;
+/**
+ * The claim secret reserved for Fee Juice a contact pays for you (sponsored deposits,
+ * feeRequestLink). Your own deposits never use it, so a sponsor's deposit and yours can
+ * never share a secret. Several sponsored deposits may share it: each is a separate L1->L2
+ * message, consumed once, and tracked by message hash (CONSUMED_HASHES_KEY).
+ */
+export const SPONSOR_SECRET_INDEX = CLAIM_SECRETS - 1;
 
 
 export type WalletPhase = 'idle' | 'signing' | 'starting' | 'needs-fee-juice' | 'deploying' | 'ready' | 'error';
@@ -438,6 +445,12 @@ class PrivateWallet {
   private dropClaim(c: FeeJuiceClaim) {
     const me = this.me.toString();
     saveClaims(me, loadClaims(me).filter((x) => x.messageHash.toLowerCase() !== c.messageHash.toLowerCase()));
+    if (c.secretIndex === SPONSOR_SECRET_INDEX) {
+      // Reusable index: remember the deposit itself, not the index.
+      const hashes = consumedHashes(me);
+      try { localStorage.setItem(CONSUMED_HASHES_KEY(me), JSON.stringify([...hashes, c.messageHash.toLowerCase()].slice(-200))); } catch {}
+      return;
+    }
     const used = consumedIndexes(me);
     if (!used.includes(c.secretIndex)) {
       try { localStorage.setItem(CONSUMED_KEY(me), JSON.stringify([...used, c.secretIndex])); } catch {}
@@ -497,8 +510,8 @@ class PrivateWallet {
     const units = typeof amount === 'bigint' ? amount : parseUnits(amount, 18);
     const me = this.me.toString();
     const pending = loadClaims(me);
-    const index = nextSecretIndex(pending, consumedIndexes(me));
-    if (index >= this.claimSecrets.length) throw new Error('Too many unclaimed Fee Juice deposits. Wait for the pending ones to arrive.');
+    const index = nextSecretIndex(pending, [...consumedIndexes(me), SPONSOR_SECRET_INDEX]);
+    if (index >= SPONSOR_SECRET_INDEX) throw new Error('Too many unclaimed Fee Juice deposits. Wait for the pending ones to arrive.');
     const secretHash = (await this.sdk.computeSecretHash(new this.sdk.Fr(this.claimSecrets[index]))).toString();
     const claim = await bridgeOnL1(l1, { network: 'mainnet', recipient: me, amount: units, secretHash, secretIndex: index }, onStep);
     saveClaims(me, mergeClaims(loadClaims(me), [claim]));
@@ -524,9 +537,30 @@ class PrivateWallet {
       secretHashForIndex: async (i) => (await sdk.computeSecretHash(new sdk.Fr(this.claimSecrets[i]))).toString(),
     });
     const used = new Set(consumedIndexes(me));
-    saveClaims(me, mergeClaims(loadClaims(me), found.filter((c) => !used.has(c.secretIndex))));
-    await this.refreshFeeJuice();
-    return found.length;
+    const usedHashes = new Set(consumedHashes(me));
+    // The sponsor index is reused across deposits from contacts: those are filtered by message hash.
+    const fresh = found.filter((c) => (c.secretIndex === SPONSOR_SECRET_INDEX ? !usedHashes.has(c.messageHash.toLowerCase()) : !used.has(c.secretIndex)));
+    saveClaims(me, mergeClaims(loadClaims(me), fresh));
+    const state = await this.refreshFeeJuice();
+    // A deposit found for an account still waiting: finish setup as soon as it can be claimed.
+    if (this.snapshot.phase === 'needs-fee-juice' && (state.plan === 'claim' || state.plan === 'wait-claim')) this.pollClaims();
+    return fresh.length;
+  }
+
+  /**
+   * A link a contact can open to pay this account's network fees (Fee Juice) from their own
+   * Ethereum wallet: it carries this account's Aztec address and the hash of the reserved
+   * claim secret, nothing secret. The deposit is found again with recoverFeeJuiceClaims, on
+   * any device, because the secret is derived from this account's wallet signature.
+   */
+  async feeRequestLink(origin = typeof window !== 'undefined' ? window.location.origin : 'https://ledgerchat.org'): Promise<string> {
+    if (AZTEC_WALLET_CONFIG.network !== 'mainnet') throw new Error('Fee Juice is only needed on Aztec Alpha.');
+    if (!this.me || !this.sdk) throw new Error('Open your private wallet first.');
+    const secretHash = (await this.sdk.computeSecretHash(new this.sdk.Fr(this.claimSecrets[SPONSOR_SECRET_INDEX]))).toString();
+    const u = new URL('/fees', origin);
+    u.searchParams.set('to', this.me.toString());
+    u.searchParams.set('h', secretHash);
+    return u.toString();
   }
 
   /** While a deposit is on its way, checks every 15 s and finishes setup when it can be claimed. */
@@ -867,6 +901,16 @@ class PrivateWallet {
 }
 
 const CONSUMED_KEY = (me: string) => `hl.aztec.feejuice.consumed.${me.toLowerCase()}`;
+const CONSUMED_HASHES_KEY = (me: string) => `hl.aztec.feejuice.consumed-msgs.${me.toLowerCase()}`;
+
+function consumedHashes(me: string): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(CONSUMED_HASHES_KEY(me)) || '[]');
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 /** Claim secret indexes already used by a consumed deposit, so they are never reused. */
 function consumedIndexes(me: string): number[] {

@@ -37,6 +37,7 @@ import type { Activity } from '@/lib/aztec/wallet/history';
 
 // Fee Juice (Aztec Alpha only): wagmi-heavy, so loaded on demand.
 const FeeJuiceStation = dynamic(() => import('@/components/zk/ZkBridgePortal').then((m) => m.FeeJuiceStation), { ssr: false });
+const FeeRequestBox = dynamic(() => import('@/components/zk/FeeSponsor').then((m) => m.FeeRequestBox), { ssr: false });
 
 const QrScanner = dynamic(() => import('@/components/terminal/QrScanner').then((m) => m.QrScanner), { ssr: false });
 
@@ -178,6 +179,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
               Bridge AZTEC from your Ethereum wallet here; your account is created automatically when it arrives.
             </p>
             <FeeJuiceStation userAddress={address} />
+            <FeeRequestBox />
           </div>
         ) : !ready ? (
           <Gate
