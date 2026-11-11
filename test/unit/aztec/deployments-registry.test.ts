@@ -99,3 +99,54 @@ describe('deployments/aztec-mainnet.json', () => {
     });
   }
 });
+
+// deployments/aztec-mainnet.json, tokens: the private tokens the wallet may list
+// on Alpha. The live preflight confirms each one on the node; these checks are
+// the offline half (shape, naming, and the class of the trusted Token artifact).
+describe('deployments/aztec-mainnet.json tokens', () => {
+  const mainnet = JSON.parse(fs.readFileSync(path.join(root, 'deployments/aztec-mainnet.json'), 'utf8'));
+  const tokens = (mainnet.tokens ?? []) as Array<{
+    key: string; symbol: string; name: string; decimals: number; address: string; admin: string;
+    artifact: string; classId: string | null; deployTx: string; deployBlock: number; status: string;
+  }>;
+  const HEX32 = /^0x[0-9a-f]{64}$/;
+  // Symbols of real assets: an operator token on mainnet must never look like one of them.
+  const RESERVED = ['USDC', 'USDT', 'DAI', 'ETH', 'WETH', 'BTC', 'WBTC', 'LUSD', 'EURC', 'AZTEC'];
+
+  it('records each token once, in a wallet slot, with 32-byte addresses and its deploy transaction', async () => {
+    const { TOKEN_ORDER } = await import('@/lib/aztec/wallet/config');
+    expect(new Set(tokens.map((t) => t.key)).size).toBe(tokens.length);
+    expect(new Set(tokens.map((t) => t.address)).size).toBe(tokens.length);
+    for (const t of tokens) {
+      expect(TOKEN_ORDER, t.symbol).toContain(t.key);
+      expect(t.address, t.symbol).toMatch(HEX32);
+      expect(t.admin, t.symbol).toMatch(HEX32);
+      expect(t.deployTx, t.symbol).toMatch(HEX32);
+      // 0 = not yet confirmed; the preflight prints the real block, which is then recorded.
+      expect(Number.isInteger(t.deployBlock) && t.deployBlock >= 0, t.symbol).toBe(true);
+      if (t.deployBlock === 0) expect(t.status, t.symbol).toBe('pending-preflight');
+      expect(Number.isInteger(t.decimals) && t.decimals >= 0 && t.decimals <= 36, t.symbol).toBe(true);
+    }
+  });
+
+  it('never names an operator token like a real asset', () => {
+    for (const t of tokens) {
+      expect(t.symbol.trim().length, t.key).toBeGreaterThan(0);
+      expect(RESERVED, t.symbol).not.toContain(t.symbol.toUpperCase());
+      // The Token contract stores the name as a 31-byte compressed string.
+      expect(new TextEncoder().encode(t.name).length, t.symbol).toBeLessThanOrEqual(31);
+    }
+  });
+
+  it('a recorded class ID is the class of the trusted Token artifact (token-check.ts)', async () => {
+    const { getContractClassFromArtifact } = await import('@aztec-labs/stdlib/contract');
+    const { TokenContractArtifact } = (await import('@aztec-labs/noir-contracts.js/Token')) as any;
+    const trusted = (await getContractClassFromArtifact(TokenContractArtifact)).id.toString();
+    console.log(`trusted Token class (noir-contracts.js 6.0.0): ${trusted}`);
+    for (const t of tokens) {
+      expect(t.artifact, t.symbol).toBe('@aztec-labs/noir-contracts.js/Token');
+      if (t.classId !== null) expect(t.classId, t.symbol).toBe(trusted);
+      else expect(t.status, t.symbol).toBe('pending-preflight');
+    }
+  });
+});

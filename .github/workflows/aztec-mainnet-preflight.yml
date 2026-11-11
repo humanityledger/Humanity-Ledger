@@ -1,7 +1,8 @@
 # Read-only checks against Aztec Alpha (mainnet): the node is the network
 # this build is pinned to, there is no sponsored fee payer, whether our
 # committed classes are published, and every instance in
-# deployments/aztec-mainnet.json. No keys, no transactions, no value moved.
+# deployments/aztec-mainnet.json, and every recorded token (deploy transaction,
+# block, checkTokenInstance). No keys, no transactions, no value moved.
 
 name: Aztec mainnet preflight
 
@@ -15,6 +16,7 @@ on:
       - 'deployments/aztec-mainnet.json'
       - 'lib/aztec/fees.ts'
       - 'lib/aztec/sequencer/networks.ts'
+      - 'lib/aztec/token-check.ts'
       - 'contracts/aztec/*/target/**'
       - 'test/live/aztec-mainnet-preflight.live.test.ts'
       - '.github/workflows/aztec-mainnet-preflight.yml'
