@@ -553,16 +553,33 @@ class PrivateWallet {
   /** Deploys LedgerSponsor from this private wallet; returns its address. */
   async deployLedgerSponsor(): Promise<string> {
     const ctx = this.agreementContext();
+    const sdk = this.sdk!;
     const m = await import('./ledger-sponsor');
-    const [artifact, { Contract }, args] = await Promise.all([m.sponsorArtifact(), import('@aztec-labs/aztec.js/contracts'), m.sponsorDeployArgs()]);
-    const { fee } = await this.resolveFee();
-    const deploy = (Contract as any).deploy(ctx.wallet, artifact, [
-      this.sdk!.Fr.fromString(args.xHi), this.sdk!.Fr.fromString(args.xLo), this.sdk!.Fr.fromString(args.yHi), this.sdk!.Fr.fromString(args.yLo), m.SPONSOR_MAX_FEE,
+    const [artifact, { Contract, DeployMethod }, { randomField }, args] = await Promise.all([
+      m.sponsorArtifact(),
+      import('@aztec-labs/aztec.js/contracts'),
+      import('../random'),
+      m.sponsorDeployArgs(),
     ]);
-    const instance = await deploy.getInstance();
-    const id = `sponsor-deploy-${instance.address.toString()}`;
-    await this.sendAndWait(() => deploy.send({ from: ctx.me, fee, wait: this.sdk!.NO_WAIT }), id, 'deploy');
-    return instance.address.toString();
+    const ctorArgs = [sdk.Fr.fromString(args.xHi), sdk.Fr.fromString(args.xLo), sdk.Fr.fromString(args.yHi), sdk.Fr.fromString(args.yLo), m.SPONSOR_MAX_FEE];
+    // Universal deployment (no deployer in the address), the same pattern as the agreement contracts:
+    // the address is computed here first, so it is known even if confirmation is slow.
+    const salt = randomField();
+    const expected = await sdk.getContractInstanceFromInstantiationParams(artifact, {
+      constructorArgs: ctorArgs,
+      salt,
+      deployer: sdk.AztecAddress.ZERO,
+    });
+    const address = expected.address.toString();
+    try { localStorage.setItem('hl:aztec-sponsor-deployed', address); } catch { /* not kept */ }
+    const deployment = (DeployMethod as any).create(
+      ctx.wallet,
+      { artifact, args: ctorArgs, postDeployCtor: (instance: any, w: any) => (Contract as any).at(instance.address, artifact, w) },
+      { salt, universalDeploy: true },
+    );
+    const { fee } = await this.resolveFee();
+    await this.sendAndWait(() => deployment.send({ from: ctx.me, fee, wait: sdk.NO_WAIT }), `sponsor-deploy-${address}`, 'deploy');
+    return address;
   }
 
   /** Bridges AZTEC from the operator's Ethereum wallet to the sponsor's address (L1 deposit). */
