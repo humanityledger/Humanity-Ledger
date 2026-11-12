@@ -141,6 +141,11 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
 
   const held = typeof aztecUnits === 'bigint' ? aztecUnits : 0n;
   const tooMuch = units !== null && units > held;
+  // A deposit is claimed whole by one transaction, which must cover its maximum fee: below this, the
+  // account cannot be created with it (lib/aztec/fee-juice.ts maxFeeFor). AZTEC and Fee Juice are 1:1.
+  const minDeposit = fj?.minForTx && fj.minForTx > 0n ? fj.minForTx : 0n;
+  const minWhole = minDeposit > 0n ? ((minDeposit + 10n ** 18n - 1n) / 10n ** 18n).toString() : null;
+  const tooSmall = units !== null && minDeposit > 0n && state.phase === 'needs-fee-juice' && units < minDeposit;
   const wrongChain = isConnected && chainId !== MAINNET_CHAIN_ID;
   const busy = step !== null && step !== 'deposited';
 
@@ -225,6 +230,13 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
           />
         </div>
         {tooMuch && <p className="mt-1.5 text-[13px] text-[#FF3B30]">That is more AZTEC than your Ethereum wallet holds.</p>}
+        {minWhole && state.phase === 'needs-fee-juice' && (
+          <p className={`mt-1.5 text-[14px] leading-snug ${tooSmall ? 'text-[#FF3B30]' : 'text-[#475467]'}`}>
+            Add at least <strong>{minWhole} AZTEC</strong> in one deposit: creating your account must be able to cover its maximum
+            network fee. Only the gas used is charged; the rest stays as Fee Juice for your next payments. The Ethereum fee for the
+            deposit is the same whatever the amount.
+          </p>
+        )}
       </div>
 
       {!isConnected ? (
@@ -246,7 +258,7 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
         </label>
         <button
           type="button"
-          disabled={!units || tooMuch || busy || !walletClient || !ackPublic}
+          disabled={!units || tooMuch || tooSmall || busy || !walletClient || !ackPublic}
           onClick={bridge}
           className="w-full min-h-[44px] rounded-2xl bg-[#15171C] text-white text-[14px] font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
         >
@@ -330,6 +342,7 @@ function planLabel(plan: string): string {
   if (plan === 'claim') return 'Arrived deposit';
   if (plan === 'balance') return 'Your Fee Juice';
   if (plan === 'wait-claim') return 'Waiting for deposit';
+  if (plan === 'top-up') return 'Add more Fee Juice';
   return 'Add Fee Juice';
 }
 

@@ -22,6 +22,7 @@ const PLAN_TEXT: Record<string, string> = {
   claim: 'A bridged deposit is ready; the next transaction claims it and pays the fee.',
   'wait-claim': 'Your Fee Juice is still arriving from Ethereum. Transactions wait until it lands.',
   bridge: 'No Fee Juice. Bridge AZTEC from Ethereum before sending anything.',
+  'top-up': 'Your Fee Juice does not cover a transaction’s maximum fee yet. Add more in one deposit.',
 };
 
 export function PrivateWalletStatus({ address }: { address: string }) {
