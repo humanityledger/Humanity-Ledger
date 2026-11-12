@@ -375,3 +375,33 @@ function ClaimRow({ claim, ready }: { claim: FeeJuiceClaim; ready: boolean }) {
     </li>
   );
 }
+
+/**
+ * What the account holds on Ethereum (read-only): ETH for gas and AZTEC to bridge as Fee Juice.
+ * Works on a computer linked to the phone too: the account address is the session address.
+ */
+export function EthereumHoldings({ userAddress }: { userAddress: string }) {
+  const { address: evm } = useAccount();
+  const pin = pinnedFeeJuice('mainnet');
+  const who = (evm ?? (/^0x[a-fA-F0-9]{40}$/.test(userAddress) ? userAddress : undefined)) as `0x${string}` | undefined;
+  const { data: eth } = useBalance({ address: who, chainId: MAINNET_CHAIN_ID, query: { enabled: !!who } });
+  const { data: units } = useReadContract({
+    address: pin.token as `0x${string}`, abi: ERC20_ABI, functionName: 'balanceOf',
+    args: who ? [who] : undefined, chainId: MAINNET_CHAIN_ID, query: { enabled: !!who },
+  });
+  const { data: dec } = useReadContract({ address: pin.token as `0x${string}`, abi: ERC20_ABI, functionName: 'decimals', chainId: MAINNET_CHAIN_ID });
+  const rows: [string, string][] = [
+    ['ETH', eth ? Number(eth.formatted).toFixed(5) : '…'],
+    ['AZTEC', units === undefined || dec === undefined ? '…' : Number(formatUnits(units as bigint, Number(dec))).toLocaleString(undefined, { maximumFractionDigits: 4 })],
+  ];
+  return (
+    <>
+      {rows.map(([k, v]) => (
+        <div key={k} className="flex items-baseline justify-between py-3 border-t border-[#eef0f3] first:border-t-0">
+          <span className="text-[14px] text-[#5b6170]">{k}</span>
+          <span className="text-[15px] font-semibold tabular-nums">{v}</span>
+        </div>
+      ))}
+    </>
+  );
+}

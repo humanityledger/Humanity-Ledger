@@ -41,7 +41,7 @@ describe('ZkWalletPanel on Aztec Alpha', () => {
     expect(panel).toMatch(/<FeeJuiceStation userAddress=\{address\} \/>/);
   });
   it('shows the Fee Juice balance and a way to add more once the wallet is open', () => {
-    expect(panel).toMatch(/Fee Juice for network fees/);
+    expect(panel).toMatch(/<Section title="Network fees" action={{ label: 'Add', onClick: () => setSheet('fees') }}>/);
     expect(panel).toMatch(/sheet === 'fees' && <FeeJuiceStation/);
   });
 });
