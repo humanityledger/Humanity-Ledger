@@ -8,7 +8,7 @@ import { RemoteLottie } from "@/components/ui/RemoteLottie";
 import { HeroMap } from "./HeroMap";
 import { SiteFooter } from "./SiteFooter";
 import { Figure } from "@/components/docs/v2/Figures";
-import { ImmersiveField } from "@/components/immersive/ImmersiveField";
+import { GlyphField } from "@/components/immersive/GlyphField";
 import { SiteNav } from "@/components/immersive/SiteNav";
 import { PhoneShowcase, phoneShowcaseStyles } from "./PhoneShowcase";
 import { FilmSection } from "./FilmSection";
@@ -372,7 +372,7 @@ export function HumanityLanding() {
 
   return (
     <div className={s.page}>
-      <ImmersiveField variant="page" />
+      <GlyphField />
       <SiteNav />
 
       <main className={`${s.wrap} ${s.stack}`}>
