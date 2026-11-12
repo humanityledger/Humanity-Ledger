@@ -515,6 +515,7 @@ class PrivateWallet {
               : state.plan === 'top-up'
                 ? `Your Fee Juice arrived, but creating the account needs up to ${fmtAztec(state.minForTx)} AZTEC of Fee Juice (only the gas used is charged, the rest stays yours). Add at least ${fmtAztec(state.minForTx)} AZTEC in one deposit. You can already receive payments at your address.`
                 : 'You can already receive private payments at your address. To send, your account needs Fee Juice: bridge AZTEC from your Ethereum wallet.',
+          ...(this.sponsorIssue ? { error: this.sponsorIssue } : {}),
         });
         if (state.plan === 'wait-claim') this.pollClaims();
         return false;
@@ -545,8 +546,12 @@ class PrivateWallet {
     if (AZTEC_WALLET_CONFIG.network !== 'mainnet' || !this.wallet || !this.sdk) return null;
     const m = await import('./ledger-sponsor');
     if (!m.ledgerSponsorAddress()) return null;
-    return m.sponsoredFee({ sdk: this.sdk, wallet: this.wallet, node: this.node });
+    const fee = await m.sponsoredFee({ sdk: this.sdk, wallet: this.wallet, node: this.node });
+    this.sponsorIssue = fee ? '' : m.lastSponsorIssue;
+    return fee;
   }
+  /** Why the Ledger sponsor could not pay the last time it was tried (empty when it could or was not tried). */
+  private sponsorIssue = '';
 
   // ── Operator tools for the Ledger sponsor (signed by the operator's own wallets) ──
 

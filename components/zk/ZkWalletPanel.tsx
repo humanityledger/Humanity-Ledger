@@ -200,6 +200,13 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
               On {networkLabel()} every transaction, including the one that creates your account, pays its network fee in Fee Juice.
               Bridge AZTEC from your Ethereum wallet here; your account is created automatically when it arrives.
             </p>
+            {state.error && (
+              <div className="mx-5 mt-3 rounded-xl bg-[#fff4f4] border border-[#ffd6d6] px-3 py-2 text-[12.5px] text-[#b42318] break-words">
+                {state.error}
+                <button type="button" onClick={() => navigator.clipboard?.writeText(state.error || '').catch(() => {})} className="ml-2 underline">Copy details</button>
+                <button type="button" onClick={() => open().catch(() => {})} className="ml-2 underline">Try again</button>
+              </div>
+            )}
             <FeeJuiceStation userAddress={address} />
             <FeeRequestBox />
           </div>

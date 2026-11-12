@@ -57,19 +57,34 @@ export async function sponsorContract(ctx: Ctx, address: string) {
   return { addr, contract: (Contract as any).at(addr, artifact, ctx.wallet) };
 }
 
+/** Why the last sponsored attempt was not possible (shown to the user and in Copy details). */
+export let lastSponsorIssue = '';
+
 /**
  * A fee option paid by the sponsor for one transaction, or null when sponsorship is off, used up
- * for this account or for today, or the voucher cannot be used.
+ * for this account or for today, or the voucher cannot be used (the reason is kept in
+ * lastSponsorIssue and logged).
  */
 export async function sponsoredFee(ctx: Ctx): Promise<{ paymentMethod: any } | null> {
   const address = ledgerSponsorAddress();
+  lastSponsorIssue = '';
   if (!address) return null;
+  let stage = 'voucher';
   try {
     const res = await fetch('/api/aztec/sponsor', { method: 'POST', credentials: 'include' });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const j = await res.json().catch(() => null);
+      lastSponsorIssue = j?.message || `The sponsor did not answer (${res.status}).`;
+      return null;
+    }
     const v = await res.json();
-    if (String(v.sponsor || '').toLowerCase() !== address.toLowerCase()) return null;
+    if (String(v.sponsor || '').toLowerCase() !== address.toLowerCase()) {
+      lastSponsorIssue = 'The server and this page name different sponsors. Reload the page.';
+      return null;
+    }
+    stage = 'contract';
     const { addr, contract } = await sponsorContract(ctx, address);
+    stage = 'call';
     const call = contract.methods.sponsor(ctx.sdk.Fr.fromString(v.voucherId), BigInt(v.expiresAt), v.signerX, v.signerY, v.signature);
     return {
       paymentMethod: {
@@ -79,7 +94,9 @@ export async function sponsoredFee(ctx: Ctx): Promise<{ paymentMethod: any } | n
         getGasSettings: () => undefined,
       },
     };
-  } catch {
+  } catch (e: any) {
+    lastSponsorIssue = `Sponsored fee unavailable (${stage}): ${e?.message ?? String(e)}`;
+    console.warn('[ledger-sponsor]', lastSponsorIssue, e);
     return null;
   }
 }
