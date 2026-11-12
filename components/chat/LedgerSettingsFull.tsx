@@ -515,7 +515,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: '100%', opacity: 0 }}
       transition={{ type: 'spring', stiffness: 340, damping: 36 }}
-      className="absolute inset-0 z-[200] bg-[#f2f4f7] flex flex-col overflow-hidden"
+      className="absolute inset-0 z-[200] bg-[#f2f4f7] flex flex-col overflow-hidden md:rounded-[28px] lg:rounded-[32px] md:border md:border-black/[0.08] md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22),0_0_0_1px_rgba(16,24,40,0.06)]"
     >
       {/* ── Header ── */}
       <div

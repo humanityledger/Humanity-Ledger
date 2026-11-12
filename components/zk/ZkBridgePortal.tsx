@@ -84,14 +84,16 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
 
 /** Fee Juice for the private wallet on Aztec Alpha: balance, bridge from Ethereum, deposits on their way. Also shown inside the wallet panel. */
 export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
-  const { state, open, walletConnected, sameAccount } = useAztecWallet(userAddress);
+  const { state, open, walletConnected, sameAccount, linkedComputer } = useAztecWallet(userAddress);
   const { address: evm, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
   const publicClient = usePublicClient({ chainId: MAINNET_CHAIN_ID });
   const { data: walletClient } = useWalletClient({ chainId: MAINNET_CHAIN_ID });
   const pin = pinnedFeeJuice('mainnet');
-  const evmAddr = evm as `0x${string}` | undefined;
+  // On a computer linked to the phone no Ethereum wallet is connected here, but the account is the
+  // same address: read its balances (read-only, public RPC) instead of showing nothing.
+  const evmAddr = (evm ?? (linkedComputer && /^0x[a-fA-F0-9]{40}$/.test(userAddress) ? userAddress : undefined)) as `0x${string}` | undefined;
 
   const { data: eth } = useBalance({ address: evmAddr, chainId: MAINNET_CHAIN_ID, query: { enabled: !!evmAddr } });
   const { data: aztecUnits, refetch: refetchAztec } = useReadContract({
@@ -197,6 +199,11 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
         >
           {state.phase === 'signing' || state.phase === 'starting' ? state.step ?? 'Opening…' : 'Open private wallet'}
         </button>
+        {linkedComputer && (
+          <p className="text-[13px] text-[#475467] leading-relaxed">
+            This computer is linked to your phone. Opening the private wallet sends a request to your phone: open Ledger Chat there and tap Approve.
+          </p>
+        )}
         {state.error && <p className="text-[13px] text-[#FF3B30]">{state.error}</p>}
       </div>
     );
@@ -239,7 +246,12 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
         )}
       </div>
 
-      {!isConnected ? (
+      {!isConnected && linkedComputer ? (
+        <p className="text-[13.5px] text-[#475467] leading-relaxed">
+          This computer is linked to your phone, so it can read your balances but cannot sign on Ethereum. To add Fee Juice, open
+          Ledger Chat on your phone and deposit from there; it appears here once it lands.
+        </p>
+      ) : !isConnected ? (
         <p className="text-[13.5px] text-[#475467]">Connect the Ethereum wallet that holds your AZTEC.</p>
       ) : wrongChain ? (
         <button
@@ -361,5 +373,35 @@ function ClaimRow({ claim, ready }: { claim: FeeJuiceClaim; ready: boolean }) {
         {ready ? 'Ready, used by your next transaction' : 'Arriving on Aztec'}
       </span>
     </li>
+  );
+}
+
+/**
+ * What the account holds on Ethereum (read-only): ETH for gas and AZTEC to bridge as Fee Juice.
+ * Works on a computer linked to the phone too: the account address is the session address.
+ */
+export function EthereumHoldings({ userAddress }: { userAddress: string }) {
+  const { address: evm } = useAccount();
+  const pin = pinnedFeeJuice('mainnet');
+  const who = (evm ?? (/^0x[a-fA-F0-9]{40}$/.test(userAddress) ? userAddress : undefined)) as `0x${string}` | undefined;
+  const { data: eth } = useBalance({ address: who, chainId: MAINNET_CHAIN_ID, query: { enabled: !!who } });
+  const { data: units } = useReadContract({
+    address: pin.token as `0x${string}`, abi: ERC20_ABI, functionName: 'balanceOf',
+    args: who ? [who] : undefined, chainId: MAINNET_CHAIN_ID, query: { enabled: !!who },
+  });
+  const { data: dec } = useReadContract({ address: pin.token as `0x${string}`, abi: ERC20_ABI, functionName: 'decimals', chainId: MAINNET_CHAIN_ID });
+  const rows: [string, string][] = [
+    ['ETH', eth ? Number(eth.formatted).toFixed(5) : '…'],
+    ['AZTEC', units === undefined || dec === undefined ? '…' : Number(formatUnits(units as bigint, Number(dec))).toLocaleString(undefined, { maximumFractionDigits: 4 })],
+  ];
+  return (
+    <>
+      {rows.map(([k, v]) => (
+        <div key={k} className="flex items-baseline justify-between py-3 border-t border-[#eef0f3] first:border-t-0">
+          <span className="text-[14px] text-[#5b6170]">{k}</span>
+          <span className="text-[15px] font-semibold tabular-nums">{v}</span>
+        </div>
+      ))}
+    </>
   );
 }

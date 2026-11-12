@@ -106,5 +106,7 @@ export function useAztecWallet(sessionAddress: string) {
     open,
     walletConnected: isConnected || isLocalConnected || linkedComputer,
     sameAccount,
+    /** A computer linked to the phone by QR: it reads everything, and the phone approves each signature. */
+    linkedComputer,
   };
 }

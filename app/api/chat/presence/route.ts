@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { safeRedisGet, safeRedisSet } from '@/lib/redis';
-import { normalizeAudience, encodePresence, visibleLastActive } from '@/lib/chat/presencePolicy';
+import { normalizeAudience, encodePresence, visiblePresence, PRESENCE_TTL_S } from '@/lib/chat/presencePolicy';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,10 +22,16 @@ export async function POST(req: NextRequest) {
     const { peerAddress } = body;
     const callerAudience = normalizeAudience(body?.visibility);
 
-    // G-004: Store presence in Redis with 120s TTL (eliminates Postgres write bottleneck).
-    // The caller's "Last seen" choice travels with every heartbeat.
+    // G-004: presence lives in Redis only (no Postgres writes). The caller's "Last seen" choice
+    // travels with every heartbeat. `state`:
+    //   active     — a window in the foreground: online now (default, older clients send nothing)
+    //   background — a window in the background reading a chat: does not refresh the caller
+    //   leaving    — the window went to the background or closed: offline now, last seen = now
     const now = Date.now();
-    await safeRedisSet(`presence:${callerAddress}`, encodePresence(now, callerAudience), 'EX', 120);
+    const state = body?.state === 'background' || body?.state === 'leaving' ? body.state : 'active';
+    if (state !== 'background') {
+      await safeRedisSet(`presence:${callerAddress}`, encodePresence(now, callerAudience, state === 'leaving' ? 'off' : 'on'), 'EX', PRESENCE_TTL_S);
+    }
 
     // Fetch peer presence if requested
     if (peerAddress && /^0x[a-fA-F0-9]{40}$/.test(peerAddress)) {
@@ -53,12 +59,10 @@ export async function POST(req: NextRequest) {
 
       // Check Redis for peer presence
       const peerActiveStr = await safeRedisGet(`presence:${normalizedPeer}`);
-      const lastActiveAt = visibleLastActive(peerActiveStr, callerAudience);
-
-      return NextResponse.json({ lastActiveAt });
+      return NextResponse.json(visiblePresence(peerActiveStr, callerAudience, now));
     }
 
-    return NextResponse.json({ success: true, lastActiveAt: now });
+    return NextResponse.json({ success: true });
   } catch (e) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

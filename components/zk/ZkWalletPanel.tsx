@@ -24,8 +24,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import {
-  ArrowDownToLine, ArrowUpFromLine, Send, QrCode, RefreshCw, X, ExternalLink, Copy, Check,
-  Droplets, Lock, Loader2, AlertTriangle, ScanLine, UserPlus, ChevronDown, ChevronUp, Layers, Clock,
+  ArrowDownToLine, ArrowUpFromLine, Send, X, ExternalLink, Copy, Check,
+  Droplets, Loader2, AlertTriangle, ScanLine, UserPlus, ChevronDown, ChevronUp, Layers, Clock,
 } from 'lucide-react';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
 import { decodePaymentRequest, encodePaymentRequest, humanError, type TokenBalance } from '@/lib/aztec/wallet/client';
@@ -37,6 +37,7 @@ import type { Activity } from '@/lib/aztec/wallet/history';
 
 // Fee Juice (Aztec Alpha only): wagmi-heavy, so loaded on demand.
 const FeeJuiceStation = dynamic(() => import('@/components/zk/ZkBridgePortal').then((m) => m.FeeJuiceStation), { ssr: false });
+const EthereumHoldings = dynamic(() => import('@/components/zk/ZkBridgePortal').then((m) => m.EthereumHoldings), { ssr: false });
 const FeeRequestBox = dynamic(() => import('@/components/zk/FeeSponsor').then((m) => m.FeeRequestBox), { ssr: false });
 
 const QrScanner = dynamic(() => import('@/components/terminal/QrScanner').then((m) => m.QrScanner), { ssr: false });
@@ -69,7 +70,7 @@ const short = (s?: string, n = 6) => (s ? `${s.slice(0, n + 2)}…${s.slice(-n)}
 /* -------------------------------------------------------------------------- */
 
 export function ZkWalletPanel({ address, onClose, className, initialSheet = null, onPaymentSent }: ZkWalletPanelProps) {
-  const { state, wallet, open, walletConnected, sameAccount } = useAztecWallet(address);
+  const { state, wallet, open, walletConnected, sameAccount, linkedComputer } = useAztecWallet(address);
   const [sheet, setSheet] = useState<Sheet>(initialSheet);
   const [refreshing, setRefreshing] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
@@ -124,47 +125,68 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
       transition={{ type: 'spring', stiffness: 320, damping: 30 }}
       className={`relative flex flex-col h-full bg-[#F4F5F7] text-[#15171c] ${className ?? ''}`}
     >
-      {/* Header */}
-      <div className="flex-shrink-0 bg-white px-5 pt-5 pb-4 border-b border-black/[0.06]">
+      {/* Header: the network in plain words, then the balance as the one thing to read */}
+      <div className="flex-shrink-0 bg-white px-6 pt-6 pb-5 border-b border-[#eceef2]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[16px] font-semibold tracking-tight">Private wallet</div>
-            <div className="mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-black/45">
-              {networkLabel()} · {ALPHA ? 'real funds, not audited' : 'tokens have no value'}
+            <div className="text-[17px] font-semibold tracking-[-0.015em]">Private wallet</div>
+            <div className="mt-1 inline-flex items-center gap-1.5 text-[12.5px] text-[#5b6170]">
+              <span className={`w-1.5 h-1.5 rounded-full ${ready ? 'bg-[#1f9d55]' : 'bg-[#c3c8d0]'}`} aria-hidden="true" />
+              {ALPHA ? 'Aztec Alpha on Ethereum mainnet' : networkLabel()}
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
-            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 transition-colors"
+            className="h-9 px-4 shrink-0 rounded-full text-[13px] font-medium text-[#5b6170] hover:bg-[#f2f4f7] hover:text-[#0b0c0e] transition-colors"
           >
-            <X size={16} />
+            Close
           </button>
         </div>
 
         {ready && state.aztecAddress && (
-          <div className="mt-4 rounded-2xl border border-black/[0.08] p-4">
+          <div className="mt-6">
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-[12px] font-semibold text-black/50">
-                <Lock size={12} strokeWidth={2.4} /> Private balance
-              </span>
+              <span className="text-[12.5px] font-medium text-[#8a909c]">Private balance</span>
               <button
                 type="button"
                 onClick={handleRefresh}
                 disabled={refreshing || state.busy}
-                className="flex items-center gap-1.5 text-[12px] font-semibold text-black/70 bg-black/5 hover:bg-black/10 px-3 py-1 rounded-full transition-colors disabled:opacity-50"
+                className="text-[12.5px] font-medium text-[#5b6170] hover:text-[#0b0c0e] disabled:opacity-50 transition-colors"
               >
-                <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
-                {refreshing ? 'Syncing' : 'Sync'}
+                {refreshing ? 'Syncing…' : 'Sync'}
               </button>
             </div>
-            <div className="mt-2 space-y-1.5">
-              {state.balances.map((b) => (
-                <BalanceRow key={b.key} b={b} />
-              ))}
+            {state.balances.length === 0 ? (
+              <div className="mt-1 text-[34px] font-semibold tracking-[-0.03em] tabular-nums text-[#c3c8d0]">0</div>
+            ) : (
+              <>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="text-[38px] leading-none font-semibold tracking-[-0.035em] tabular-nums">
+                    {formatUnits(state.balances[0].privateUnits, state.balances[0].decimals)}
+                  </span>
+                  <span className="text-[15px] font-medium text-[#5b6170]">{state.balances[0].symbol}</span>
+                </div>
+                {state.balances[0].publicUnits > 0n && (
+                  <p className="mt-1.5 text-[12.5px] text-[#727a88] tabular-nums">
+                    {formatUnits(state.balances[0].publicUnits, state.balances[0].decimals)} public, not yet shielded
+                  </p>
+                )}
+                {state.balances.length > 1 && (
+                  <div className="mt-4 space-y-2">
+                    {state.balances.slice(1).map((b) => <BalanceRow key={b.key} b={b} />)}
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {hasPrivateTokens() && <TextAction primary label="Send" onClick={() => setSheet('send')} />}
+              <TextAction primary={!hasPrivateTokens()} label="Receive" onClick={() => setSheet('receive')} />
+              {ALPHA && <TextAction label="Add funds" onClick={() => setSheet('fees')} />}
+              {hasPrivateTokens() && <TextAction label="Shield" onClick={() => setSheet('shield')} />}
+              {hasPrivateTokens() && <TextAction label="Unshield" onClick={() => setSheet('unshield')} />}
             </div>
-            <CopyLine label="Your Aztec address" value={state.aztecAddress} />
           </div>
         )}
       </div>
@@ -190,6 +212,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
             configured={isWalletConfigured()}
             walletConnected={walletConnected}
             sameAccount={sameAccount}
+            linkedComputer={linkedComputer}
             hasAddress={/^0x[0-9a-fA-F]{40}$/.test(address)}
             onOpen={handleOpen}
           />
@@ -201,41 +224,41 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                 <span>{state.error}</span>
               </div>
             )}
+            {!hasPrivateTokens() && (
+              <p role="status" className="rounded-2xl bg-white border border-[#eceef2] px-4 py-3 text-[13px] leading-relaxed text-[#5b6170]">
+                {NO_PRIVATE_TOKENS_MESSAGE}
+              </p>
+            )}
+
             {ALPHA && (
-              <button
-                type="button"
-                onClick={() => setSheet('fees')}
-                className="w-full flex items-center justify-between gap-3 rounded-2xl bg-white border border-black/[0.06] px-4 py-3 text-left hover:border-black/20 transition-colors"
-              >
-                <span className="min-w-0">
-                  <span className="block text-[12px] font-semibold text-black/50">Fee Juice for network fees</span>
-                  <span className="block text-[14px] font-semibold tabular-nums">
-                    {state.feeJuice ? formatUnits(state.feeJuice.balance, 18, 4) : '…'}
-                    {state.feeJuice && state.feeJuice.claims.length > 0 && (
-                      <span className="ml-2 text-[11.5px] font-medium text-black/45">+ {state.feeJuice.claims.length} on the way</span>
-                    )}
-                  </span>
-                </span>
-                <span className="shrink-0 text-[12.5px] font-semibold text-black/70 bg-black/5 px-3 py-1 rounded-full">Add</span>
-              </button>
+              <Section title="Network fees" action={{ label: 'Add', onClick: () => setSheet('fees') }}>
+                <Row k="Fee Juice" v={state.feeJuice ? formatUnits(state.feeJuice.balance, 18, 4) : '…'} />
+                {state.feeJuice && state.feeJuice.claims.length > 0 && (
+                  <Row
+                    k="Deposits on the way"
+                    v={`${state.feeJuice.claims.length} (${state.feeJuice.claims.filter((c) => c.ready).length} ready)`}
+                  />
+                )}
+                {state.feeJuice && state.feeJuice.minForTx > 0n && (
+                  <Row k="Needed per transaction" v={`${formatUnits(state.feeJuice.minForTx, 18, 2)} at most`} />
+                )}
+                <Row k="Next fee paid from" v={state.feeJuice ? planLabel(state.feeJuice.plan) : '…'} />
+              </Section>
             )}
-            {hasPrivateTokens() ? (
-              <div className="grid grid-cols-4 gap-2">
-                <ActionButton icon={ArrowDownToLine} label="Shield" sub="Public → private" onClick={() => setSheet('shield')} />
-                <ActionButton icon={ArrowUpFromLine} label="Unshield" sub="Private → public" onClick={() => setSheet('unshield')} />
-                <ActionButton icon={Send} label="Send" sub="Private" onClick={() => setSheet('send')} />
-                <ActionButton icon={QrCode} label="Receive" sub="QR code" onClick={() => setSheet('receive')} />
-              </div>
-            ) : (
-              <>
-                <p role="status" className="rounded-2xl bg-white border border-black/[0.05] px-4 py-3 text-[13px] leading-relaxed text-black/60">
-                  {NO_PRIVATE_TOKENS_MESSAGE}
-                </p>
-                <div className="grid grid-cols-1 gap-2">
-                  <ActionButton icon={QrCode} label="Receive" sub="QR code" onClick={() => setSheet('receive')} />
-                </div>
-              </>
+
+            {ALPHA && (
+              <Section title="On Ethereum">
+                <EthereumHoldings userAddress={address} />
+              </Section>
             )}
+
+            <Section title="Account">
+              <CopyRow k="Aztec address" v={state.aztecAddress ?? ''} />
+              <CopyRow k="Ethereum address" v={address} />
+              <Row k="Network" v={ALPHA ? 'Aztec Alpha, settles on Ethereum' : networkLabel()} />
+              <Row k="Proofs" v="Made on this device" />
+              {linkedComputer && <Row k="Signing" v="Approved on your phone" />}
+            </Section>
 
             {AZTEC_WALLET_CONFIG.faucet && <Faucet disabled={state.busy} />}
 
@@ -318,6 +341,69 @@ function fmt(a: Activity) {
 
 /* --------------------------------------------------------------- pieces */
 
+/** How the next transaction pays (same words as the Fee Juice screen). */
+function planLabel(plan: string): string {
+  if (plan === 'claim') return 'Arrived deposit';
+  if (plan === 'balance') return 'Your Fee Juice';
+  if (plan === 'wait-claim') return 'Waiting for deposit';
+  if (plan === 'top-up') return 'Add more Fee Juice';
+  if (plan === 'sponsored') return 'Sponsored';
+  return 'Add Fee Juice';
+}
+
+function TextAction({ label, onClick, primary }: { label: string; onClick: () => void; primary?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`h-11 rounded-full text-[14px] font-semibold tracking-[-0.01em] transition-[background-color,transform] active:scale-[0.98] ${
+        primary ? 'bg-[#0b0c0e] text-white hover:bg-[#23262d]' : 'bg-[#f2f4f7] text-[#0b0c0e] hover:bg-[#e8ebef]'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function Section({ title, action, children }: { title: string; action?: { label: string; onClick: () => void }; children: React.ReactNode }) {
+  return (
+    <section className="bg-white rounded-2xl border border-[#eceef2] px-4 pt-3.5 pb-1">
+      <div className="flex items-center justify-between pb-1">
+        <h3 className="text-[12.5px] font-medium text-[#8a909c]">{title}</h3>
+        {action && (
+          <button type="button" onClick={action.onClick} className="text-[13px] font-semibold text-[#0b0c0e] hover:opacity-70">
+            {action.label}
+          </button>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Row({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-3 border-t border-[#eef0f3] first-of-type:border-t-0">
+      <span className="text-[14px] text-[#5b6170] shrink-0">{k}</span>
+      <span className="text-[14px] font-medium text-right tabular-nums text-[#0b0c0e] min-w-0 truncate">{v}</span>
+    </div>
+  );
+}
+
+function CopyRow({ k, v }: { k: string; v: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => { navigator.clipboard?.writeText(v).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 1600); }}
+      className="w-full flex items-baseline justify-between gap-4 py-3 border-t border-[#eef0f3] first-of-type:border-t-0 text-left"
+    >
+      <span className="text-[14px] text-[#5b6170] shrink-0">{k}</span>
+      <span className="text-[13px] font-mono text-[#0b0c0e] truncate">{copied ? 'Copied' : short(v, 6)}</span>
+    </button>
+  );
+}
+
 function BalanceRow({ b }: { b: TokenBalance }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
@@ -355,22 +441,6 @@ function CopyLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ActionButton({ icon: Icon, label, sub, onClick }: { icon: any; label: string; sub: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl bg-white border border-black/[0.06] hover:border-black/20 active:scale-95 transition-all"
-    >
-      <span className="w-10 h-10 rounded-full flex items-center justify-center text-white" style={{ background: INK }}>
-        <Icon size={18} strokeWidth={2.2} />
-      </span>
-      <span className="text-[12px] font-semibold leading-tight">{label}</span>
-      <span className="text-[10.5px] text-black/45 leading-none text-center">{sub}</span>
-    </button>
-  );
-}
-
 function Gate(props: {
   phase: string;
   step?: string;
@@ -380,6 +450,8 @@ function Gate(props: {
   walletConnected: boolean;
   sameAccount: boolean;
   hasAddress: boolean;
+  /** A computer linked to the phone by QR: the phone approves the signature. */
+  linkedComputer?: boolean;
   onOpen: () => void;
 }) {
   const working = props.phase === 'signing' || props.phase === 'starting' || props.phase === 'deploying';
@@ -387,11 +459,22 @@ function Gate(props: {
   if (!props.configured) {
     body = <p>The private wallet has not been set up on this server yet.</p>;
   } else if (!props.hasAddress) {
-    body = <p>The private wallet needs an Ethereum wallet. You signed in with email; link a wallet to use it.</p>;
+    body = <p>The private wallet needs the Ethereum wallet you sign in with. Sign in with your wallet to use it.</p>;
   } else if (!props.walletConnected) {
     body = <p>Connect the wallet you signed in with. Its signature creates the keys of your private wallet.</p>;
   } else if (!props.sameAccount) {
     body = <p>The connected wallet is a different account from the one you signed in with. Switch accounts in your wallet.</p>;
+  } else if (props.linkedComputer) {
+    body = (
+      <>
+        <p>
+          This computer is linked to your phone, and your phone holds the wallet. When you tap Open, your phone receives a
+          request: open Ledger Chat on your phone and tap <strong>Approve</strong>. It signs a message, free and with no
+          transaction, and the keys of your private wallet are then created in this browser.
+        </p>
+        <p className="mt-2">Keep Ledger Chat open on your phone until this computer shows your wallet.</p>
+      </>
+    );
   } else {
     body = (
       <>
