@@ -33,7 +33,10 @@ export async function POST(req: NextRequest) {
   if (last && last !== 'TIMEOUT') {
     try {
       const v = JSON.parse(last);
-      if (v.sponsor === address() && v.expiresAt - Math.floor(Date.now() / 1000) > 120) return NextResponse.json(v);
+      // The client lists vouchers it already put into a transaction; those are never handed back.
+      const body = await req.json().catch(() => ({}));
+      const used: string[] = Array.isArray(body?.used) ? body.used.map(String).slice(0, 20) : [];
+      if (v.sponsor === address() && v.expiresAt - Math.floor(Date.now() / 1000) > 120 && !used.includes(v.voucherId)) return NextResponse.json(v);
     } catch { /* issue a new one */ }
   }
   const mine = await checkRateLimit(`w:${wallet}`, { max: perWallet, windowSec: 10 * 365 * 86400, prefix: 'aztec-sponsor' });

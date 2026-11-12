@@ -57,6 +57,14 @@ export async function sponsorContract(ctx: Ctx, address: string) {
   return { addr, contract: (Contract as any).at(addr, artifact, ctx.wallet) };
 }
 
+const USED_KEY = 'hl:aztec-sponsor-used';
+function usedVouchers(): string[] {
+  try { return JSON.parse(sessionStorage.getItem(USED_KEY) || '[]'); } catch { return []; }
+}
+function markVoucherUsed(id: string) {
+  try { sessionStorage.setItem(USED_KEY, JSON.stringify([...usedVouchers(), id].slice(-20))); } catch { /* nothing kept */ }
+}
+
 /** Why the last sponsored attempt was not possible (shown to the user and in Copy details). */
 export let lastSponsorIssue = '';
 
@@ -71,7 +79,12 @@ export async function sponsoredFee(ctx: Ctx): Promise<{ paymentMethod: any } | n
   if (!address) return null;
   let stage = 'voucher';
   try {
-    const res = await fetch('/api/aztec/sponsor', { method: 'POST', credentials: 'include' });
+    const res = await fetch('/api/aztec/sponsor', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ used: usedVouchers() }),
+    });
     if (!res.ok) {
       const j = await res.json().catch(() => null);
       lastSponsorIssue = j?.message || `The sponsor did not answer (${res.status}).`;
@@ -90,7 +103,8 @@ export async function sponsoredFee(ctx: Ctx): Promise<{ paymentMethod: any } | n
       paymentMethod: {
         getAsset: async () => { throw new Error('This fee is paid by the Ledger sponsor in Fee Juice.'); },
         getFeePayer: async () => addr,
-        getExecutionPayload: async () => call.request(),
+        // Once a voucher goes into a transaction it is never asked back from the server.
+        getExecutionPayload: async () => { markVoucherUsed(v.voucherId); return call.request(); },
         getGasSettings: () => undefined,
       },
     };
