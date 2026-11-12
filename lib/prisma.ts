@@ -151,7 +151,6 @@ type SystemPrismaClient = PrismaClient & {
   verificationCode: VerificationCodeDelegate;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { normalizeDatabaseUrl, describeDatabaseUrl } = require('./db/url.js') as {
     normalizeDatabaseUrl: (raw: string | undefined) => string | undefined;
     describeDatabaseUrl: (raw: string | undefined) => { ok: boolean; repaired?: boolean; problem?: string; host?: string };
