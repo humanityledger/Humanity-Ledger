@@ -319,8 +319,15 @@ function newNonce(): string {
   return btoa(id);
 }
 
+/**
+ * connect-src includes `data:`: the Aztec cryptography library (bb.js 6.0.0) loads its WebAssembly with
+ * fetch() of a `data:application/gzip;base64,…` URL. Without it the browser blocked that fetch and the
+ * private wallet could never start ("Failed to fetch" in Chrome, "Load failed" in Safari, at
+ * "Initializing encrypted storage", 3 times for the 3 protocol contracts registered there). A data:
+ * URL carries its content inline: fetching one reaches no server, so this opens no exfiltration path.
+ */
 export function buildCsp(nonce: string, isDev = process.env.NODE_ENV === 'development'): string {
-  return `default-src 'self'; script-src 'self' 'nonce-${nonce}' ${isDev ? "'unsafe-eval' " : ""}'wasm-unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:${isDev ? ' ws: http:' : ''}; media-src 'self' blob: mediastream:; frame-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';`;
+  return `default-src 'self'; script-src 'self' 'nonce-${nonce}' ${isDev ? "'unsafe-eval' " : ""}'wasm-unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob: data:${isDev ? ' ws: http:' : ''}; media-src 'self' blob: mediastream:; frame-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';`;
 }
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {

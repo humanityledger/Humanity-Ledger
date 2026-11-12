@@ -5,7 +5,6 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { normalizeDatabaseUrl, describeDatabaseUrl } = require('../../../lib/db/url.js');
 
 const GOOD = 'postgresql://user:secret@pgbouncer.railway.internal:6432/railway';
