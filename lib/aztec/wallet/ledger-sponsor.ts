@@ -49,7 +49,7 @@ interface Ctx { sdk: any; wallet: any; node: any }
 /** Registers the deployed sponsor with this wallet and returns a contract handle. */
 export async function sponsorContract(ctx: Ctx, address: string) {
   const [artifact, { Contract }] = await Promise.all([sponsorArtifact(), import('@aztec-labs/aztec.js/contracts')]);
-  const addr = ctx.sdk.AztecAddress.fromString(address);
+  const addr = ctx.sdk.AztecAddress.fromStringUnsafe(address);
   const instance = await ctx.node.getContract(addr);
   if (!instance) throw new Error('The Ledger sponsor is not deployed at the configured address.');
   // Registration recomputes the class from the artifact: a different contract at that address is refused.

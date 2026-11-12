@@ -623,7 +623,7 @@ class PrivateWallet {
   /** Fee Juice the sponsor holds (base units). */
   async sponsorBalance(sponsor: string): Promise<bigint> {
     if (!this.sdk) throw new Error('Open your private wallet first.');
-    return this.sdk.getFeeJuiceBalance(this.sdk.AztecAddress.fromString(sponsor), this.node);
+    return this.sdk.getFeeJuiceBalance(this.sdk.AztecAddress.fromStringUnsafe(sponsor), this.node);
   }
 
   private claimMethod(c: FeeJuiceClaim) {
