@@ -133,6 +133,8 @@ export function blockText(b: Block): string {
       return b.caption;
     case "person":
       return `${b.name}. ${b.role}`;
+    case "gallery":
+      return b.items.map((i) => `${i.caption}.`).join(" ");
     default:
       return "";
   }

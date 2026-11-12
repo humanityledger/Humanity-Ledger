@@ -12,6 +12,7 @@ import { GlyphField } from "@/components/immersive/GlyphField";
 import { SiteNav } from "@/components/immersive/SiteNav";
 import { PhoneShowcase, phoneShowcaseStyles } from "./PhoneShowcase";
 import { FilmSection } from "./FilmSection";
+import { AztecSection, BrandBar, DesktopTour, LiveActivities, ScaleSection } from "./Showcase";
 import s from "./Landing.module.css";
 
 /**
@@ -379,6 +380,7 @@ export function HumanityLanding() {
         {/* Hero */}
         <section className={`${s.card} ${s.open} ${s.hero}`} aria-labelledby="hero-title">
           <div>
+            <BrandBar />
             <h1 id="hero-title" className={s.h1}>
               The private messenger <em>you completely control.</em>
             </h1>
@@ -410,6 +412,9 @@ export function HumanityLanding() {
             <HeroMap className={s.heroMap} />
           </div>
         </section>
+
+        {/* Ledger Chat on a computer: a pinned tour driven by the scroll */}
+        <DesktopTour />
 
         {/* 30-second film – between hero and feature pillars */}
         <FilmSection />
@@ -454,6 +459,9 @@ export function HumanityLanding() {
           </div>
           <PhoneShowcase />
         </section>
+
+        {/* Live Activities: the Dynamic Island, morphing as you scroll */}
+        <LiveActivities />
         {/* Why Ledger Chat: plain comparison, facts only */}
         <section id="why" data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="why-title">
           <div className={s.sectionHead}>
@@ -550,11 +558,14 @@ export function HumanityLanding() {
           </div>
         </section>
 
+        {/* Aztec Network, in Aztec's own palette */}
+        <AztecSection />
+
         {/* Payments */}
         <section id="payments" data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="pay-title">
           <div className={s.split}>
             <div>
-              <p className={s.eyebrow}>Aztec Network and zk.money</p>
+              <p className={s.eyebrow}>Private payments</p>
               <h2 id="pay-title" className={s.h2}>
                 Confidential payments, <em>powered by Aztec.</em>
               </h2>
@@ -675,6 +686,9 @@ export function HumanityLanding() {
             ))}
           </ul>
         </section>
+
+        {/* Built for billions */}
+        <ScaleSection />
 
         {/* Experience */}
         <section data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="exp-title">
