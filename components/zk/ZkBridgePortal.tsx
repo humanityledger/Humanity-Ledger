@@ -351,7 +351,7 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
  */
 function SponsorOperator({ publicClient, walletClient }: { publicClient: any; walletClient: any }) {
   const configured = ledgerSponsorAddress();
-  const [deployed, setDeployed] = useState<string>('');
+  const [deployed, setDeployed] = useState<string>(() => { try { return localStorage.getItem('hl:aztec-sponsor-deployed') || ''; } catch { return ''; } });
   const [amount, setAmount] = useState('40');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
