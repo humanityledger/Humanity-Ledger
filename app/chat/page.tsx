@@ -2,7 +2,7 @@
 import dynamic from 'next/dynamic';
 import { TuringShieldGate } from '@/components/auth/TuringShieldGate';
 import { ChatEngineProvider } from '@/context/ChatEngineProvider';
-import { ImmersiveField } from '@/components/immersive/ImmersiveField';
+import { GlyphField } from '@/components/immersive/GlyphField';
 
 function ChatLoading() {
   return (
@@ -37,17 +37,24 @@ export default function ChatPage() {
   return (
     <TuringShieldGate>
       <ChatEngineProvider>
-        {/* On desktop screens Ledger Chat floats as an elegant rounded card
-            over the living ImmersiveField wallpaper with a wide 5 cm (~100-140px)
-            interactive perimeter where the cursor lights up dots in blue;
-            on mobile phones it fills the display completely. */}
+        {/* On desktop Ledger Chat floats as a rounded card over GlyphField: a quiet field of
+            characters that sets AZTEC very large and lights up under the cursor. On phones the
+            chat fills the screen and the field is off. */}
         <div
           data-chat-page="true"
           className="relative flex flex-col w-full h-full flex-1 min-h-0 overflow-hidden bg-white md:bg-transparent md:p-[50px] lg:p-[75px] xl:p-[95px] 2xl:p-[120px]"
           style={{ height: '100%', minHeight: '100%', flex: '1 1 0%' }}
         >
           <div className="hidden md:block">
-            <ImmersiveField variant="app" />
+            <GlyphField />
+            <a
+              href="https://aztec.network"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="fixed left-6 bottom-5 z-[1] text-[12px] font-medium tracking-[0.12em] text-[#15171c]/45 hover:text-[#15171c] transition-colors"
+            >
+              BUILT ON AZTEC
+            </a>
           </div>
           <div className="relative z-[1] flex flex-col w-full h-full flex-1 min-h-0 max-w-[1360px] max-h-[calc(100vh-140px)] mx-auto my-auto shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22)]">
             <LedgerChat forceAutoInit={true} />
