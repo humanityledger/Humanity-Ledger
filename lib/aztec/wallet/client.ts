@@ -503,7 +503,10 @@ class PrivateWallet {
     let consumed: FeeJuiceClaim | undefined;
     if (AZTEC_WALLET_CONFIG.network === 'mainnet') {
       const state = await this.refreshFeeJuice();
-      if (state.plan !== 'claim') {
+      const sponsored = state.plan !== 'claim' ? await this.trySponsor() : null;
+      if (sponsored) {
+        fee = sponsored;
+      } else if (state.plan !== 'claim') {
         this.set({
           phase: 'needs-fee-juice',
           step:
@@ -515,11 +518,12 @@ class PrivateWallet {
         });
         if (state.plan === 'wait-claim') this.pollClaims();
         return false;
+      } else {
+        const plan = feePlan({ network: 'mainnet', hasSponsor: false, feeJuiceBalance: state.balance, minBalance: state.minForTx > 0n ? state.minForTx : 1n, claims: state.claims });
+        const ready = (plan as { claim: FeeJuiceClaim }).claim;
+        fee = { paymentMethod: this.claimMethod(ready) };
+        consumed = ready;
       }
-      const plan = feePlan({ network: 'mainnet', hasSponsor: false, feeJuiceBalance: state.balance, minBalance: state.minForTx > 0n ? state.minForTx : 1n, claims: state.claims });
-      const ready = (plan as { claim: FeeJuiceClaim }).claim;
-      fee = { paymentMethod: this.claimMethod(ready) };
-      consumed = ready;
     }
     this.set({ phase: 'deploying', step: `Creating your private account on ${networkLabel()}. The first proof can take a minute.` });
     const id = `deploy-${this.me.toString()}`;
@@ -535,6 +539,68 @@ class PrivateWallet {
   }
 
   /* ------------------------------------------------------------- Fee Juice */
+
+  /** A fee paid by the Ledger sponsor (lib/aztec/wallet/ledger-sponsor.ts), or null. Alpha only. */
+  private async trySponsor(): Promise<any | null> {
+    if (AZTEC_WALLET_CONFIG.network !== 'mainnet' || !this.wallet || !this.sdk) return null;
+    const m = await import('./ledger-sponsor');
+    if (!m.ledgerSponsorAddress()) return null;
+    return m.sponsoredFee({ sdk: this.sdk, wallet: this.wallet, node: this.node });
+  }
+
+  // ── Operator tools for the Ledger sponsor (signed by the operator's own wallets) ──
+
+  /** Deploys LedgerSponsor from this private wallet; returns its address. */
+  async deployLedgerSponsor(): Promise<string> {
+    const ctx = this.agreementContext();
+    const m = await import('./ledger-sponsor');
+    const [artifact, { Contract }, args] = await Promise.all([m.sponsorArtifact(), import('@aztec-labs/aztec.js/contracts'), m.sponsorDeployArgs()]);
+    const { fee } = await this.resolveFee();
+    const deploy = (Contract as any).deploy(ctx.wallet, artifact, [
+      this.sdk!.Fr.fromString(args.xHi), this.sdk!.Fr.fromString(args.xLo), this.sdk!.Fr.fromString(args.yHi), this.sdk!.Fr.fromString(args.yLo), m.SPONSOR_MAX_FEE,
+    ]);
+    const instance = await deploy.getInstance();
+    const id = `sponsor-deploy-${instance.address.toString()}`;
+    await this.sendAndWait(() => deploy.send({ from: ctx.me, fee, wait: this.sdk!.NO_WAIT }), id, 'deploy');
+    return instance.address.toString();
+  }
+
+  /** Bridges AZTEC from the operator's Ethereum wallet to the sponsor's address (L1 deposit). */
+  async bridgeToSponsor(l1: L1Clients, sponsor: string, amount: string, onStep?: (step: BridgeStep, l1TxHash?: string) => void) {
+    if (!this.sdk) throw new Error('Open your private wallet first.');
+    await this.assertNodeStillPinned();
+    const m = await import('./ledger-sponsor');
+    const secret = this.sdk.Fr.random();
+    const secretHash = (await this.sdk.computeSecretHash(secret)).toString();
+    const claim = await bridgeOnL1(l1, { network: 'mainnet', recipient: sponsor, amount: parseUnits(amount, 18), secretHash, secretIndex: -1 }, onStep);
+    m.saveFundings([...m.loadFundings(), { sponsor, secret: secret.toString(), claimAmount: String(claim.claimAmount), messageHash: claim.messageHash, messageLeafIndex: String(claim.messageLeafIndex), l1TxHash: claim.l1TxHash }]);
+  }
+
+  /** Claims every arrived deposit into the sponsor. Returns how many were claimed and how many still travel. */
+  async claimIntoSponsor(): Promise<{ claimed: number; waiting: number }> {
+    const ctx = this.agreementContext();
+    const m = await import('./ledger-sponsor');
+    const list = m.loadFundings();
+    let claimed = 0, waiting = 0;
+    for (const f of list) {
+      if (f.claimed) continue;
+      if (!(await this.sdk!.isL1ToL2MessageReady(this.node, this.sdk!.Fr.fromString(f.messageHash)))) { waiting++; continue; }
+      const { contract } = await m.sponsorContract({ sdk: this.sdk, wallet: ctx.wallet, node: this.node }, f.sponsor);
+      const { fee } = await this.resolveFee();
+      const call = contract.methods.fund(BigInt(f.claimAmount), this.sdk!.Fr.fromString(f.secret), BigInt(f.messageLeafIndex));
+      await this.sendAndWait(() => call.send({ from: ctx.me, fee, wait: this.sdk!.NO_WAIT }), `sponsor-fund-${f.messageHash}`, 'deploy');
+      f.claimed = true;
+      m.saveFundings(list);
+      claimed++;
+    }
+    return { claimed, waiting };
+  }
+
+  /** Fee Juice the sponsor holds (base units). */
+  async sponsorBalance(sponsor: string): Promise<bigint> {
+    if (!this.sdk) throw new Error('Open your private wallet first.');
+    return this.sdk.getFeeJuiceBalance(this.sdk.AztecAddress.fromString(sponsor), this.node);
+  }
 
   private claimMethod(c: FeeJuiceClaim) {
     const sdk = this.sdk!;
@@ -600,6 +666,8 @@ class PrivateWallet {
       return { fee: { paymentMethod: this.claimMethod(c) }, consumes: c };
     }
     if (state.plan === 'balance') return { fee: undefined };
+    const sponsored = await this.trySponsor();
+    if (sponsored) return { fee: sponsored };
     throw new Error(
       state.plan === 'wait-claim'
         ? 'Your Fee Juice is still arriving from Ethereum. Try again in a few minutes.'

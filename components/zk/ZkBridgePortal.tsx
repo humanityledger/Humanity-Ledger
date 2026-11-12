@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
 import { getPrivateWallet, humanError } from '@/lib/aztec/wallet/client';
+import { isSponsorAdmin, ledgerSponsorAddress } from '@/lib/aztec/wallet/ledger-sponsor';
 import { ERC20_ABI, l1ClientsFromViem, pinnedFeeJuice, type BridgeStep, type FeeJuiceClaim } from '@/lib/aztec/fee-juice';
 
 interface ZkBridgePortalProps {
@@ -337,6 +338,67 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
           The bridge is one way: Fee Juice can only pay Aztec fees and cannot be sent back to Ethereum. Add only what you expect to spend on fees.
         </p>
       </div>
+
+      {isSponsorAdmin(evm ?? userAddress) && <SponsorOperator publicClient={publicClient} walletClient={walletClient} />}
+    </div>
+  );
+}
+
+/**
+ * Operator tools for the Ledger sponsor (P1), shown only to NEXT_PUBLIC_AZTEC_SPONSOR_ADMIN. Every
+ * step is signed by the operator: the deploy and the claim by their private wallet, the deposit by
+ * their Ethereum wallet. Works from a phone; no terminal.
+ */
+function SponsorOperator({ publicClient, walletClient }: { publicClient: any; walletClient: any }) {
+  const configured = ledgerSponsorAddress();
+  const [deployed, setDeployed] = useState<string>('');
+  const [amount, setAmount] = useState('40');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [balance, setBalance] = useState<bigint | null>(null);
+  const target = configured || deployed;
+  const run = async (label: string, fn: () => Promise<string | void>) => {
+    if (busy) return;
+    setBusy(true); setMsg(label);
+    try { const out = await fn(); setMsg(out || 'Done.'); } catch (e) { setMsg(humanError(e)); } finally { setBusy(false); }
+  };
+  useEffect(() => {
+    if (!target) return;
+    getPrivateWallet().sponsorBalance(target).then(setBalance).catch(() => setBalance(null));
+  }, [target, msg]);
+  return (
+    <div className="rounded-2xl border border-[#15171C] px-4 py-4 space-y-3">
+      <div>
+        <p className="text-[14px] font-semibold text-[#15171C]">Ledger sponsor</p>
+        <p className="text-[12.5px] text-[#475467] leading-relaxed mt-1">
+          Pays account creation and the first transactions of people without Fee Juice, a few per account and up to a daily limit. You deploy it and fund it from here; every step is signed by your own wallets.
+        </p>
+      </div>
+      {!target ? (
+        <button type="button" disabled={busy} onClick={() => run('Deploying the sponsor from your private wallet…', async () => {
+          const a = await getPrivateWallet().deployLedgerSponsor();
+          setDeployed(a);
+          return 'Deployed. Last step: set NEXT_PUBLIC_AZTEC_SPONSOR to this address in Railway and redeploy.';
+        })} className="h-11 w-full rounded-full bg-[#15171C] text-white text-[14px] font-semibold disabled:opacity-40">Deploy the sponsor</button>
+      ) : (
+        <>
+          <button type="button" onClick={() => navigator.clipboard?.writeText(target).catch(() => {})} className="w-full text-left text-[12.5px] font-mono text-[#15171C] break-all">{target}</button>
+          {!configured && <p className="text-[12.5px] text-[#475467]">Not active yet: set <strong>NEXT_PUBLIC_AZTEC_SPONSOR</strong> to this address in Railway, then redeploy.</p>}
+          <p className="text-[13px] text-[#15171C]">Fee Juice in the sponsor: <strong>{balance === null ? '…' : formatUnits(balance, 18)}</strong></p>
+          <div className="flex gap-2">
+            <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} className="h-11 flex-1 rounded-xl border border-[#E4E7EC] px-3 text-[14px]" aria-label="AZTEC to add to the sponsor" />
+            <button type="button" disabled={busy || !walletClient || !publicClient} onClick={() => run('Confirm the deposit in your Ethereum wallet…', async () => {
+              await getPrivateWallet().bridgeToSponsor(l1ClientsFromViem(publicClient, walletClient), target, amount);
+              return 'Deposited on Ethereum. When it arrives (a few minutes), tap Claim into the sponsor.';
+            })} className="h-11 px-4 rounded-full bg-[#15171C] text-white text-[14px] font-semibold disabled:opacity-40">Add AZTEC</button>
+          </div>
+          <button type="button" disabled={busy} onClick={() => run('Claiming arrived deposits into the sponsor…', async () => {
+            const r = await getPrivateWallet().claimIntoSponsor();
+            return r.claimed ? `Claimed ${r.claimed} deposit${r.claimed > 1 ? 's' : ''}.${r.waiting ? ` ${r.waiting} still on the way.` : ''}` : r.waiting ? 'The deposit is still on its way. Try again in a few minutes.' : 'Nothing to claim.';
+          })} className="h-11 w-full rounded-full border border-[#E4E7EC] text-[14px] font-semibold disabled:opacity-40">Claim into the sponsor</button>
+        </>
+      )}
+      {msg && <p className="text-[12.5px] text-[#475467]" role="status">{msg}</p>}
     </div>
   );
 }
