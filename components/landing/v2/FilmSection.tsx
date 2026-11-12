@@ -11,7 +11,6 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
-import { Pause, Play } from "lucide-react";
 import { DeviceFrame, type IslandState } from "./DeviceFrame";
 import {
   AgreementChatScreen,
@@ -186,7 +185,6 @@ export function FilmSection() {
           <div className={s.controls}>
             {!reduced && (
               <button type="button" className={s.play} onClick={() => setPlaying((v) => !v)} aria-pressed={!playing}>
-                {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
                 {playing ? "Pause" : "Play"}
               </button>
             )}
