@@ -570,7 +570,9 @@ class PrivateWallet {
     if (!this.sdk) throw new Error('Open your private wallet first.');
     await this.assertNodeStillPinned();
     const m = await import('./ledger-sponsor');
-    const secret = this.sdk.Fr.random();
+    // A fresh secret for this deposit (31 random bytes: always a valid field element).
+    const rnd = crypto.getRandomValues(new Uint8Array(31));
+    const secret = new this.sdk.Fr(BigInt('0x' + Array.from(rnd, (b) => b.toString(16).padStart(2, '0')).join('')));
     const secretHash = (await this.sdk.computeSecretHash(secret)).toString();
     const claim = await bridgeOnL1(l1, { network: 'mainnet', recipient: sponsor, amount: parseUnits(amount, 18), secretHash, secretIndex: -1 }, onStep);
     m.saveFundings([...m.loadFundings(), { sponsor, secret: secret.toString(), claimAmount: String(claim.claimAmount), messageHash: claim.messageHash, messageLeafIndex: String(claim.messageLeafIndex), l1TxHash: claim.l1TxHash }]);
