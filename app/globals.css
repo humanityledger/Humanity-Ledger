@@ -321,9 +321,20 @@ body:has([data-page="chat"]) {
    input, textarea, select {
      font-size: 16px !important;
      touch-action: manipulation;
+   }
+   /* Native look removed from text fields only. On checkboxes and radios it made them invisible on
+      iPhone, so consent boxes (e.g. the Fee Juice deposit acknowledgement) could not be seen or
+      checked and their buttons stayed disabled. */
+   input:not([type="checkbox"]):not([type="radio"]), textarea, select {
      -webkit-appearance: none;
      -moz-appearance: none;
      appearance: none;
+   }
+   input[type="checkbox"], input[type="radio"] {
+     width: 20px;
+     height: 20px;
+     flex-shrink: 0;
+     accent-color: #15171c;
    }
  
    /* === GLOBAL GPU LAYER HINTS ===
