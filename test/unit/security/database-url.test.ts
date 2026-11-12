@@ -41,3 +41,25 @@ describe('DATABASE_URL', () => {
     expect(pre).toMatch(/process\.env\[key\] = normalizeDatabaseUrl\(raw\);/);
   });
 });
+
+describe('migrations never go through PgBouncer', () => {
+  const { isPoolerUrl, directUrlFor, isTransientDbError } = require('../../../lib/db/url.js');
+  const pooled = 'postgresql://u:p@pgbouncer.railway.internal:5432/railway?pgbouncer=true';
+  it('recognises the pooler and builds the direct URL with the same credentials', () => {
+    expect(isPoolerUrl(pooled)).toBe(true);
+    expect(isPoolerUrl('postgresql://u:p@postgres.railway.internal:5432/railway')).toBe(false);
+    expect(directUrlFor(pooled, 'postgres.railway.internal')).toBe('postgresql://u:p@postgres.railway.internal:5432/railway');
+  });
+  it('the pre-deploy picks a direct host or disables the advisory lock, never waits on PgBouncer', () => {
+    const src = require('fs').readFileSync(require('path').join(process.cwd(), 'scripts/railway-pre-deploy.js'), 'utf8');
+    expect(src).toMatch(/await pickMigrationConnection\(\);/);
+    expect(src).toMatch(/PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK = '1'/);
+  });
+  it('retries reads only after connection errors', () => {
+    expect(isTransientDbError({ message: 'Error in PostgreSQL connection: Error { kind: Closed, cause: None }' })).toBe(true);
+    expect(isTransientDbError({ code: 'P1017' })).toBe(true);
+    expect(isTransientDbError({ code: 'P2002' })).toBe(false);
+    const prismaSrc = require('fs').readFileSync(require('path').join(process.cwd(), 'lib/prisma.ts'), 'utf8');
+    expect(prismaSrc).toMatch(/if \(!READS\.has\(operation\) \|\| !isTransientDbError\(err\)\) throw err;/);
+  });
+});

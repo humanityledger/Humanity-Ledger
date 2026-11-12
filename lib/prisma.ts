@@ -151,8 +151,9 @@ type SystemPrismaClient = PrismaClient & {
   verificationCode: VerificationCodeDelegate;
 };
 
-const { normalizeDatabaseUrl, describeDatabaseUrl } = require('./db/url.js') as {
+const { normalizeDatabaseUrl, describeDatabaseUrl, isTransientDbError } = require('./db/url.js') as {
     normalizeDatabaseUrl: (raw: string | undefined) => string | undefined;
+    isTransientDbError: (err: unknown) => boolean;
     describeDatabaseUrl: (raw: string | undefined) => { ok: boolean; repaired?: boolean; problem?: string; host?: string };
 };
 
@@ -233,7 +234,25 @@ function createPrismaClient(): PrismaClient {
         });
     }
 
-    return client;
+    // A pooled connection closed by PgBouncer or a Postgres restart surfaced to users as an empty
+    // list or a 500 ("Error in PostgreSQL connection: Closed"). Reads run once more on a fresh
+    // connection after 150 ms; writes never repeat, so nothing is applied twice.
+    const READS = new Set(['findUnique', 'findUniqueOrThrow', 'findFirst', 'findFirstOrThrow', 'findMany', 'count', 'aggregate', 'groupBy']);
+    return client.$extends({
+        query: {
+            $allModels: {
+                async $allOperations({ operation, args, query }: { operation: string; args: unknown; query: (a: unknown) => Promise<unknown> }) {
+                    try {
+                        return await query(args);
+                    } catch (err) {
+                        if (!READS.has(operation) || !isTransientDbError(err)) throw err;
+                        await new Promise((r) => setTimeout(r, 150));
+                        return query(args);
+                    }
+                },
+            },
+        },
+    }) as unknown as PrismaClient;
 }
 
 export const prisma = (globalForPrisma.prisma ?? createPrismaClient()) as unknown as SystemPrismaClient;
