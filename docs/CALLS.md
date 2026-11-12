@@ -53,8 +53,23 @@ networks, and what "Hide my IP address in calls" relies on. Set ONE option, as s
 | Fixed credentials | `TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL` |
 
 Credentials live 6 h; browsers fetch new ones 15 min before they expire, so long sessions keep
-working TURN. Without any of these, calls use a free public relay as last resort, which is not
-reliable.
+working TURN.
+
+**Without any of these there is no relay at all.** The public `openrelayproject` relay that used to
+be the fallback no longer allocates (every URL answers error 701, checked from ledgerchat.org on
+12 Nov 2026), so it was removed: browsers get STUN only. Two people on the same network, or behind
+friendly routers, still connect directly; a phone on a mobile carrier usually does not. Such a call
+now stays on "Connecting" and ends after 20 s with "The call couldn't connect through this
+network" instead of a running clock over silence. The browser console says
+`No TURN relay configured` when this is the reason.
+
+Cloudflare Realtime TURN, step by step (free tier: 1,000 GB a month):
+
+1. dash.cloudflare.com → Realtime → TURN Server → Create. Name it `ledger-chat`.
+2. Copy the **Turn Token ID** and the **API Token** shown once.
+3. Railway → humanity-ledger → Variables: `CLOUDFLARE_TURN_KEY_ID` = the token ID,
+   `CLOUDFLARE_TURN_API_TOKEN` = the API token. Deploy.
+4. Check: signed in, `/api/calls/ice` answers `"source":"cloudflare"`.
 
 ### Own signalling server (optional, recommended)
 

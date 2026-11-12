@@ -326,6 +326,8 @@ import { callConstraints, callVideo, CALL_AUDIO, tuneOpusSdp, tuneSenders, loadI
 import { finishCallMetrics, markFirstAudio, markSetup, sampleHeap, startCallMetrics, type CallMetrics } from '@/lib/calls/metrics';
 import { DISCONNECTED_GRACE_MS, RESUME_ATTEMPT_MS, RESUME_DEADLINE_MS, acceptResume, glareKeepsMine, isResumeMeta, resumeDelay, shouldDialResume } from '@/lib/calls/resume';
 /** Opus tuned for speech on every offer and answer (lib/calls/media.ts). */
+/** How long an answered call may look for a network path before it is reported as failed. */
+const ICE_CONNECT_MS = 20_000;
 const CALL_SDP = { sdpTransform: (sdp: string) => tuneOpusSdp(sdp) };
 import { Archive, ArchiveRestore, ChevronLeft, ChevronUp, ChevronDown, MessageSquare, Plus, ArrowUp, WifiOff, Pin, Check, ScanQrCode, Camera, FileText, Sticker, ListChecks, CreditCard, Receipt, Waves, Navigation, Timer, Info, LoaderCircle, Minimize2, Mail, ShieldCheck, Reply, Forward, Pencil, Flag, MessagesSquare, Globe } from 'lucide-react';
 import { Sparkles as StudioIcon, MoreHorizontal, SquarePen, Palette, BellOff } from 'lucide-react';
@@ -1991,6 +1993,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // ICE servers from the server (short-lived TURN credentials) while PeerJS loads.
     Promise.all([import('peerjs'), loadIceConfig()]).then(([peerjsModule, ice]) => {
       const iceServers = ice.iceServers;
+      ownTurnRef.current = ice.own;
+      if (!ice.own) console.warn('[Call] No TURN relay configured (/api/calls/ice source: none): calls between strict NATs or mobile carriers cannot connect. See docs/CALLS.md.');
       if (destroyed) return; // component unmounted before import resolved
       const Peer = (peerjsModule as any).default?.Peer || (peerjsModule as any).Peer || (peerjsModule as any).default;
 
@@ -2203,6 +2207,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           if (destroyed || peer.destroyed) return;
           const next = await loadIceConfig();
           if (destroyed || peer.destroyed) return;
+          ownTurnRef.current = next.own;
           try { (peer as any).options.config = { ...(peer as any).options.config, iceServers: next.iceServers }; } catch {}
           refreshIce(next.refreshInMs);
         }, inMs);
@@ -2413,20 +2418,65 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       }
       watchIceRef.current(conn);
       setRemoteStream(rStream);
-      setCallState('active');
       stopRingtone();
-      if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
       if (remoteVideoRef.current) remoteVideoRef.current.srcObject = rStream;
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = rStream;
         // Call audio always plays (never gated on a notification setting).
         playRemoteAudio();
       }
-      markSetup(callMetricsRef.current);
+      goLiveWhenConnectedRef.current(conn);
       void tuneSenders(conn.peerConnection);
     });
     conn.on('close', () => endCallIfCurrentRef.current(conn));
     conn.on('error', () => endCallIfCurrentRef.current(conn));
+  };
+  // ── "Connected" means media flows ─────────────────────────────────────────────
+  // PeerJS hands over the other person's stream as soon as the answer arrives, BEFORE the two
+  // devices have found a network path (ICE). Showing the call as connected at that point gave a
+  // running clock over silence and a black video whenever no path exists (no TURN relay, strict
+  // NAT, mobile carrier). The call is "active" only once ICE connects; until then the call screen
+  // says "Connecting…", and if no path is found it ends with a clear message instead.
+  const ownTurnRef = useRef(false);
+  const connectFailedRef = useRef<() => void>(() => {});
+  connectFailedRef.current = () => {
+    if (callStateRef.current !== 'connecting') return;
+    console.warn('[Call] No network path to the other device (ICE).', ownTurnRef.current ? 'TURN relay was offered.' : 'No TURN relay configured.');
+    toast.error("The call couldn't connect through this network. Try again, or switch one side to Wi-Fi or mobile data.", { duration: 7000 });
+    executeSendRef.current?.('__CALL_HANGUP__').catch(() => {});
+    performEndCallRef.current();
+  };
+  const goLiveWhenConnectedRef = useRef<(conn: any) => void>(() => {});
+  goLiveWhenConnectedRef.current = (conn: any) => {
+    if (callStateRef.current === 'active') return; // a resume of a running call: nothing to wait for
+    const pc: RTCPeerConnection | undefined = conn?.peerConnection;
+    const up = () => !!pc && (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed' || pc.connectionState === 'connected');
+    const live = () => {
+      if (callStateRef.current === 'active' || callStateRef.current === 'idle') return;
+      const cur = activeConnectionRef.current;
+      if (cur && cur !== conn) return;
+      if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
+      setCallState('active');
+      markSetup(callMetricsRef.current);
+      playRemoteAudio();
+    };
+    if (!pc || up()) { live(); return; }
+    setCallState('connecting');
+    const onChange = () => {
+      if (up()) {
+        pc.removeEventListener('iceconnectionstatechange', onChange);
+        pc.removeEventListener('connectionstatechange', onChange);
+        live();
+      } else if (pc.iceConnectionState === 'failed' || pc.connectionState === 'failed') {
+        connectFailedRef.current();
+      }
+    };
+    pc.addEventListener('iceconnectionstatechange', onChange);
+    pc.addEventListener('connectionstatechange', onChange);
+    if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
+    callTimeoutRef.current = setTimeout(() => {
+      if (callStateRef.current === 'connecting' && !up()) connectFailedRef.current();
+    }, ICE_CONNECT_MS);
   };
   // ── Keeping the call alive (lib/calls/resume.ts) ──────────────────────────────
   // The remote peer id of the call and our own id when it connected: a resume goes to the
@@ -2621,6 +2671,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // The connection of a running call dropped (network change, ICE failed): recover. A hang-up
     // arrives as __CALL_HANGUP__ over XMTP and ends the call; the recovery has a deadline anyway.
     if (active === conn && callStateRef.current === 'active') { beginReconnectRef.current(); return; }
+    // Answered, but no network path was ever found (PeerJS closes on ICE "failed"): say so.
+    if (callStateRef.current === 'connecting') { connectFailedRef.current(); return; }
     performEndCallRef.current();
   };
 
@@ -6941,11 +6993,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           ),
           document.body
         ) : (
-          <div className={`fixed inset-0 w-full h-full flex flex-col ${callType === 'video' ? 'bg-[#0f1115]' : 'bg-[#f7f8fa]'}`} style={{ zIndex: 200000, touchAction: 'none' }}>
+          <div className={`fixed inset-0 w-full h-full flex flex-col ${callType === 'video' && callState === 'active' ? 'bg-[#0f1115]' : 'bg-[#f7f8fa]'}`} style={{ zIndex: 200000, touchAction: 'none' }}>
 
             {/* Background: the other person's video, or their name and picture for a voice call */}
             <div className="absolute inset-0">
-              {callType === 'video' && remoteHasVideo ? (
+              {callType === 'video' && remoteHasVideo && callState === 'active' ? (
                 <video
                   ref={el => { if (el && el.srcObject !== remoteStream) el.srcObject = remoteStream; }}
                   autoPlay playsInline muted className="w-full h-full object-cover"
@@ -6954,7 +7006,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <AudioCallStage
                   peerName={activePeer ? getDisplayName(activePeer) : 'Unknown'}
                   peerAddress={activePeer}
-                  connected={!!remoteStream}
+                  connected={callState === 'active' && !!remoteStream}
                   startedAt={callStartedAt}
                   poorConnection={networkQuality === 'poor'}
                   reconnecting={callReconnecting}
@@ -7008,7 +7060,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             )}
 
             {/* Video needs a soft shade behind the top bar and controls to stay readable */}
-            {callType === 'video' && remoteStream && (
+            {callType === 'video' && remoteStream && callState === 'active' && (
               <>
                 <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black/50 to-transparent pointer-events-none z-20" />
                 <div className="absolute bottom-0 inset-x-0 h-44 bg-gradient-to-t from-black/55 to-transparent pointer-events-none z-20" />
@@ -7017,7 +7069,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
             {/* Top bar */}
             {(() => {
-              const dark = callType === 'video' && !!remoteStream;
+              const dark = callType === 'video' && !!remoteStream && callState === 'active';
               const btn = dark
                 ? 'w-11 h-11 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-white backdrop-blur-md transition-colors'
                 : 'w-11 h-11 flex items-center justify-center rounded-full bg-white hover:bg-[#eff1f4] text-[#15171c] border border-[#e4e7ec] shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition-colors';

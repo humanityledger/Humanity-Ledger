@@ -58,6 +58,6 @@
 1. **Estado de ZK Sequencer y Prover:**
    - La red Aztec Mainnet v5.0.1 requiere sincronización con nodos RPC externos. Si `AZTEC_NODE_URL` no está presente, los endpoints responden con estado `disabled` o `DEMO`. No se utiliza `Math.random` para simular bloques.
 2. **WebRTC TURN Relay:**
-   - Cuando `NEXT_PUBLIC_TURN_URLS` no está presente en el despliegue, el cliente utiliza el relay público `openrelay.metered.ca` con credenciales comunitarias públicas como contingencia. En entornos de producción empresarial, debe definirse un servidor coturn propio para privacidad estricta de llamadas.
+   - Cuando no hay TURN configurado (`/api/calls/ice` responde `source: none`), el cliente usa solo STUN. El relay público `openrelay.metered.ca` se retiró: sus credenciales comunitarias dejaron de asignar relays. Para que las llamadas conecten detrás de operadores móviles hay que configurar Cloudflare Realtime TURN o un coturn propio (ver `docs/CALLS.md`).
 3. **Claves de Cifrado y JWT:**
    - Al desplegar cambios mayores de seguridad, se recomienda rotar `JWT_SECRET` y las claves EdDSA en el proveedor de hosting (Railway/Vercel) para invalidar cualquier sesión previa activa.
