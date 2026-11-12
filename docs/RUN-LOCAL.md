@@ -99,4 +99,15 @@ GROQ_TPM_LIMIT=8000              # optional: tokens per minute per model of your
 STUDIO_FREE_DAILY_GLOBAL_USD=0.5 # optional: daily ceiling for all Free wallets together, in units of 1M tokens
 ```
 
+Optional, for independence from any one provider and for billing:
+
+```
+STUDIO_LLM_BASE_URL=http://vllm.railway.internal:8000/v1  # self-hosted OpenAI-compatible server (vLLM, SGLang, Ollama, llama.cpp) serving the same model ids; replaces Groq
+STUDIO_LLM_API_KEY=...           # its key, if it needs one (none needed otherwise)
+STUDIO_FOUNDER_WALLETS=0x...,0x...  # wallets with Studio Pro for life, no allowance limits
+STRIPE_PRICE_STUDIO_PRO=price_... # the Stripe price for Pro: $20 USD, recurring monthly
+```
+
+Users can also bring their own key (Settings, Plan and usage): Groq, OpenRouter or Together AI. The key stays in their browser, is sent only with their Studio requests, is never stored on the server, and their Studio allowance is not charged.
+
 `npm run studio:check` checks the key and the models without using any quota. The free tier allows about 8,000 tokens per minute per model, shared by everyone: each call is sized to fit (the oldest messages of a long chat are left out of that call, and the person is told), and when a model is busy Studio answers with another one. Web search, MCP connectors, the code sandbox and reading images or PDFs are not available on Groq, so Studio does not offer them.

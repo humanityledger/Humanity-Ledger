@@ -16,6 +16,8 @@ import { BUILTIN_SKILLS, MAX_SKILL_CHARS, type StudioSkill } from '@/lib/studio/
 import { STUDIO_LANGUAGES, type StudioLanguage } from '@/lib/studio/protocol';
 import { formatUnits, normalizeModel, STUDIO_MODELS, STUDIO_PLANS, planAllowsModel, type StudioModelId } from '@/lib/studio/models';
 import { uid } from '@/lib/studio/store';
+import { readByok, writeByok } from '@/lib/studio/byok';
+import type { StudioStrings } from '@/lib/studio/i18n';
 
 export type SettingsTab = 'general' | 'code' | 'skills' | 'usage' | 'data';
 
@@ -29,6 +31,37 @@ const label = 'block text-[13px] font-medium text-[#15171c] mb-1.5';
 const hint = 'text-[12.5px] text-[#727a88] mt-1';
 const primary = 'h-10 px-4 rounded-xl bg-[#15171c] text-white text-[13.5px] font-medium disabled:opacity-40';
 const ghost = 'h-10 px-4 rounded-xl border border-[#e4e7ec] text-[13.5px] text-[#15171c] hover:bg-[#f2f4f7] disabled:opacity-40';
+
+/** Bring your own key (server side: lib/studio/client.ts byokFromHeaders). */
+function ByokPanel({ t }: { t: StudioStrings }) {
+  const [saved, setSaved] = useState(() => readByok());
+  const [provider, setProvider] = useState(saved?.provider ?? 'groq');
+  const [key, setKey] = useState('');
+  return (
+    <div className="p-4 rounded-2xl border border-[#e4e7ec] space-y-3">
+      <p className="text-[15px] font-semibold text-[#15171c]">{t.byokTitle}</p>
+      <p className="text-[12.5px] text-[#727a88] leading-relaxed">{t.byokBody}</p>
+      {saved ? (
+        <>
+          <p className="text-[13px] text-[#15171c]">{t.byokActive} ({saved.provider})</p>
+          <button type="button" className="h-10 px-4 rounded-xl border border-[#e4e7ec] text-[13.5px]" onClick={() => { writeByok(null); setSaved(null); }}>{t.byokClear}</button>
+        </>
+      ) : (
+        <div className="grid sm:grid-cols-[150px_1fr_auto] gap-2">
+          <label className="sr-only" htmlFor="byok-provider">{t.byokProvider}</label>
+          <select id="byok-provider" value={provider} onChange={(e) => setProvider(e.target.value)} className="h-10 px-3 rounded-xl border border-[#e4e7ec] text-[13.5px] bg-white">
+            <option value="groq">Groq</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="together">Together AI</option>
+          </select>
+          <label className="sr-only" htmlFor="byok-key">{t.byokKey}</label>
+          <input id="byok-key" type="password" autoComplete="off" spellCheck={false} placeholder={t.byokKey} value={key} onChange={(e) => setKey(e.target.value.trim())} className="h-10 px-3 rounded-xl border border-[#e4e7ec] text-[13.5px]" />
+          <button type="button" disabled={key.length < 16} className="h-10 px-4 rounded-xl bg-[#15171c] text-white text-[13.5px] font-medium disabled:opacity-40" onClick={() => { const v = { provider, key }; writeByok(v); setSaved(v); setKey(''); }}>{t.byokSave}</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Bar({ value, max }: { value: number; max: number }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
@@ -311,6 +344,7 @@ export function StudioSettings({ api, initialTab = 'general', onClose }: { api: 
                       <button type="button" className={ghost} disabled={busy || !usage.checkoutAvailable} onClick={() => checkout('portal')}>{t.manageBilling}</button>
                     )}
                     {checkoutMsg && <p className="text-[12.5px] text-[#4a505c]">{checkoutMsg}</p>}
+                    <ByokPanel t={t} />
                   </>
                 )}
               </div>
