@@ -21,13 +21,18 @@ mod test;
 pub contract LedgerSponsor {
     use aztec::{
         macros::{functions::{external, initializer}, storage::storage},
-        protocol::hash::poseidon2_hash_with_separator,
+        protocol::{
+            abis::function_selector::FunctionSelector, constants::FEE_JUICE_ADDRESS,
+            hash::poseidon2_hash_with_separator, traits::ToField,
+        },
         state_vars::PublicImmutable,
     };
     use crate::voucher::{halves, voucher_digest};
 
     global DOM_SEP__VOUCHER: u32 = 718293101;
     global MAX_TX_LIFETIME: u64 = 3600;
+    global FEE_JUICE_CLAIM_SELECTOR: FunctionSelector =
+        FunctionSelector::from_signature("claim((Field),u128,Field,Field)");
 
     #[storage]
     struct Storage<Context> {
@@ -50,6 +55,18 @@ pub contract LedgerSponsor {
         self.storage.y_hi.initialize(y_hi);
         self.storage.y_lo.initialize(y_lo);
         self.storage.max_fee.initialize(max_fee);
+    }
+
+    /// Claims Fee Juice bridged from Ethereum to this contract's address (FeeJuicePortal deposit with
+    /// this contract as recipient). Anyone holding the deposit's secret may call it; the Fee Juice can
+    /// only ever land on this contract.
+    #[external("private")]
+    fn fund(amount: u128, secret: Field, message_leaf_index: Field) {
+        let _ = self.context.call_private_function(
+            FEE_JUICE_ADDRESS,
+            FEE_JUICE_CLAIM_SELECTOR,
+            [self.context.this_address().to_field(), amount as Field, secret, message_leaf_index],
+        );
     }
 
     /// Called first in a transaction (setup phase). Pays its fee if the voucher is valid and unused.
