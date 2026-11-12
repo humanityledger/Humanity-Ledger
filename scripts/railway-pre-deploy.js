@@ -5,7 +5,7 @@
 
 const { execSync } = require('child_process');
 const { Client } = require('pg');
-const { normalizeDatabaseUrl, describeDatabaseUrl } = require('../lib/db/url.js');
+const { normalizeDatabaseUrl, describeDatabaseUrl, isPoolerUrl, directUrlFor } = require('../lib/db/url.js');
 
 // Paste errors in the Railway variables are repaired before Prisma reads them (the CLI below
 // inherits this environment); anything else is said in words, without the password.
@@ -122,7 +122,39 @@ async function resolveStuckMigrations(databaseUrl) {
   }
 }
 
+/**
+ * prisma migrate holds a session advisory lock (pg_advisory_lock). Through PgBouncer in transaction
+ * mode that lock can never be taken, so every deploy failed with P1002 after 10 s and no migration
+ * ran (12 Nov 2026, DATABASE_URL_UNPOOLED pointed at pgbouncer.railway.internal). When the migration
+ * URL is a pooler: use the direct Postgres host with the same credentials if it answers; otherwise run
+ * without the advisory lock, which is safe here because one pre-deploy runs at a time.
+ */
+async function pickMigrationConnection() {
+  const raw = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
+  if (!raw || !isPoolerUrl(raw)) return;
+  const hosts = (process.env.DATABASE_DIRECT_HOSTS || 'postgres.railway.internal').split(',').map((h) => h.trim()).filter(Boolean);
+  for (const host of hosts) {
+    const url = directUrlFor(raw, host);
+    for (const ssl of [{ rejectUnauthorized: false }, false]) {
+      const c = new Client({ connectionString: url, ssl, connectionTimeoutMillis: 5000 });
+      try {
+        await c.connect();
+        await c.query('SELECT 1');
+        await c.end().catch(() => {});
+        process.env.DATABASE_URL_UNPOOLED = url;
+        console.info(`[pre-deploy] Migrations use the database directly (${host}), not PgBouncer.`);
+        return;
+      } catch {
+        await c.end().catch(() => {});
+      }
+    }
+  }
+  process.env.PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK = '1';
+  console.warn('[pre-deploy] The migration URL is PgBouncer and no direct host answered; migrating without the advisory lock (one pre-deploy at a time). Set DATABASE_URL_UNPOOLED to ${{Postgres.DATABASE_URL}} in Railway.');
+}
+
 async function runCliMigrations() {
+  await pickMigrationConnection();
   // 1. Try prisma migrate resolve as an additional layer of defense
   try {
     console.log('[pre-deploy] Attempting Prisma CLI migrate resolve on 20260523000000_hpf_product_passport...');
