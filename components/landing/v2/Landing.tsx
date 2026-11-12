@@ -2,27 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  BadgeCheck,
-  Check,
-  Coins,
-  Copy,
-  Download,
-  Globe,
-  Info,
-  KeyRound,
-  Lock,
-  X,
-  Monitor,
-  Network,
-  Shield,
-  Smartphone,
-  Sparkles,
-  Users,
-  Wallet,
-} from "lucide-react";
 import { HLLogo } from "@/components/shared/HLLogo";
 import { AZTEC_WALLET_CONFIG, networkLabel } from "@/lib/aztec/wallet/config";
 import { RemoteLottie } from "@/components/ui/RemoteLottie";
@@ -65,7 +44,6 @@ function ChatVignette() {
       </div>
       <div className={s.vBody}>
         <span className={s.vNotice}>
-          <Lock size={12} strokeWidth={2} aria-hidden="true" />
           Messages are encrypted end to end
         </span>
         <div className={s.bubbleIn}>Did the advance for the project come through?</div>
@@ -113,31 +91,21 @@ function RouteVignette() {
     <div className={s.vignette}>
       <div className={s.route}>
         <div className={s.node}>
-          <span className={s.nodeIcon}>
-            <Smartphone size={22} strokeWidth={1.6} aria-hidden="true" />
-          </span>
           <span className={s.nodeLabel}>Your device</span>
           <span className={s.nodeHint}>Encrypts the message</span>
         </div>
         <span className={s.wire} aria-hidden="true" />
         <div className={s.node}>
-          <span className={s.nodeIcon}>
-            <Network size={22} strokeWidth={1.6} aria-hidden="true" />
-          </span>
           <span className={s.nodeLabel}>XMTP network</span>
           <span className={s.nodeHint}>Carries only ciphertext</span>
         </div>
         <span className={s.wire} aria-hidden="true" />
         <div className={s.node}>
-          <span className={s.nodeIcon}>
-            <Monitor size={22} strokeWidth={1.6} aria-hidden="true" />
-          </span>
           <span className={s.nodeLabel}>Their device</span>
           <span className={s.nodeHint}>Decrypts it</span>
         </div>
       </div>
       <div className={s.routeFoot}>
-        <Info size={14} strokeWidth={1.75} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
         <span>Community settings and a backup delivery path still run on our servers. The documentation lists exactly what they store.</span>
       </div>
     </div>
@@ -164,7 +132,6 @@ function ReceiptVignette() {
       <div className={s.receipt}>
         {reduce ? (
           <span className={s.receiptStatic} aria-hidden="true">
-            <Check size={30} strokeWidth={2.5} />
           </span>
         ) : (
           <div className={s.receiptAnim} aria-hidden="true">
@@ -196,21 +163,27 @@ function ReceiptVignette() {
 
 /* ── Content ───────────────────────────────────────────────────────────── */
 
+/** Facts only; each cell must stay true of each product today. */
+const WHY_ROWS: [string, string, string, string, string][] = [
+  ["Account", "Your Ethereum wallet", "Phone number", "Phone number", "Phone number"],
+  ["Direct messages encrypted by default", "Yes, MLS over XMTP", "Yes", "Yes", "Only in secret chats"],
+  ["Pay inside the chat, settled on Ethereum", "Yes, privately on Aztec", "No", "No", "No"],
+  ["Build a page or app by describing it", "Yes, Ledger Studio", "No", "No", "No"],
+  ["Source code", "Public", "Closed", "Public", "Public apps, closed server"],
+];
+
 const PILLARS = [
   {
-    icon: Lock,
     title: "Private by default.",
     text: "Every direct message is encrypted on your device before it travels. Only the person you are writing to holds the key to read it.",
     visual: <ChatVignette />,
   },
   {
-    icon: Wallet,
     title: "Your wallet is your identity.",
     text: "No phone number, no email and no password. You sign in with your wallet, and your account belongs to you alone.",
     visual: <SignatureVignette />,
   },
   {
-    icon: Network,
     title: "Carried by an open network.",
     text: "Messages travel over XMTP, an open messaging network, instead of a database we own. There is far less for anyone to breach, sell or watch.",
     visual: <RouteVignette />,
@@ -238,22 +211,18 @@ const STEPS = [
 
 const TILES = [
   {
-    icon: Users,
     title: "Communities",
     text: "Run large groups with free and paid channels, announcements, polls and revocable invite links. Paying a member opens a private chat with them, so the community server never sees it.",
   },
   {
-    icon: Coins,
     title: "Payments in the chat",
     text: "Send test USDC, DAI or ETH privately to the person you are talking to, once their Aztec address is verified.",
   },
   {
-    icon: Shield,
     title: "Private payments",
     text: "Shielded transfers on the Aztec network keep the amount and the recipient off the public ledger.",
   },
   {
-    icon: Smartphone,
     title: "Every device you use",
     text: "Use Ledger Chat on your phone and your computer. Link a new device by scanning a code.",
   },
@@ -294,14 +263,12 @@ function MarkCell({ v }: { v: Mark }) {
   if (v === "yes")
     return (
       <span className={`${s.cell} ${s.yes}`}>
-        <Check size={18} strokeWidth={2.25} aria-hidden="true" />
         <span className={s.srOnly}>Yes</span>
       </span>
     );
   if (v === "no")
     return (
       <span className={`${s.cell} ${s.no}`}>
-        <X size={17} strokeWidth={2} aria-hidden="true" />
         <span className={s.srOnly}>No</span>
       </span>
     );
@@ -310,17 +277,14 @@ function MarkCell({ v }: { v: Mark }) {
 
 const EXPERIENCE = [
   {
-    icon: KeyRound,
     title: "Lock it your way",
     text: "Turn on the app lock in Settings, so a borrowed laptop does not mean an open inbox.",
   },
   {
-    icon: Sparkles,
     title: "A calm interface",
     text: "Clear type, generous spacing and nothing competing with your conversations. No gas to calculate and no menus to decode.",
   },
   {
-    icon: BadgeCheck,
     title: "Cryptography you never have to see",
     text: "Zero knowledge proofs and end to end encryption run underneath an interface that feels like any messenger you already know.",
   },
@@ -425,7 +389,6 @@ export function HumanityLanding() {
             <div className={s.heroCtas}>
               <Link href="/chat" className={`${s.btn} ${s.btnLg} ${s.btnPrimary}`}>
                 Open Ledger Chat
-                <ArrowRight size={18} strokeWidth={2} aria-hidden="true" />
               </Link>
               <a href="#how-it-works" className={`${s.btn} ${s.btnLg} ${s.btnSecondary}`}>
                 How it works
@@ -433,15 +396,12 @@ export function HumanityLanding() {
             </div>
             <ul className={s.trust}>
               <li>
-                <Lock size={17} strokeWidth={1.9} aria-hidden="true" />
                 Encrypted end to end
               </li>
               <li>
-                <Smartphone size={17} strokeWidth={1.9} aria-hidden="true" />
                 No phone number needed
               </li>
               <li>
-                <Globe size={17} strokeWidth={1.9} aria-hidden="true" />
                 Works in your browser
               </li>
             </ul>
@@ -467,12 +427,9 @@ export function HumanityLanding() {
             </p>
           </div>
           <div className={s.pillars}>
-            {PILLARS.map(({ icon: Icon, title, text, visual }, i) => (
+            {PILLARS.map(({ title, text, visual }, i) => (
               <article key={title} className={s.pillar} style={{ ["--i" as string]: i } as React.CSSProperties}>
                 <div>
-                  <span className={s.pillarIcon} aria-hidden="true">
-                    <Icon size={20} strokeWidth={1.75} />
-                  </span>
                   <h3 className={s.pillarTitle}>{title}</h3>
                   <p className={s.body}>{text}</p>
                 </div>
@@ -490,12 +447,48 @@ export function HumanityLanding() {
               Messages, calls and payments. <em>One private place.</em>
             </h2>
             <p className={s.lead}>
-              A conversation with a private invoice, a voice call, a video call and a community, the way they look on
-              your phone. Keep scrolling to watch each one happen.
+              Eight moments of Ledger Chat between two people, the way they look on your phone: messages, a private
+              payment, the wallet, your own look, Ledger Studio, a voice call, a video call and a community. Keep
+              scrolling to watch each one happen.
             </p>
           </div>
           <PhoneShowcase />
         </section>
+        {/* Why Ledger Chat: plain comparison, facts only */}
+        <section id="why" data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="why-title">
+          <div className={s.sectionHead}>
+            <p className={s.eyebrow}>Why Ledger Chat</p>
+            <h2 id="why-title" className={s.h2}>
+              The messenger where <em>money moves like a message.</em>
+            </h2>
+            <p className={s.lead}>
+              WhatsApp, Signal and Telegram ask for your phone number and stop at the conversation. Ledger Chat starts
+              from your wallet, so paying someone is part of talking to them.
+            </p>
+          </div>
+          <div style={{ overflowX: "auto", marginTop: 8 }}>
+            <table style={{ width: "100%", minWidth: 640, borderCollapse: "collapse", fontSize: 15, lineHeight: 1.45 }}>
+              <thead>
+                <tr>
+                  {["", "Ledger Chat", "WhatsApp", "Signal", "Telegram"].map((h, i) => (
+                    <th key={h || "row"} scope="col" style={{ textAlign: "left", padding: "14px 16px", fontWeight: 600, color: i === 1 ? "#0b0c0e" : "#6b7280", borderBottom: "1px solid #e4e7ec" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {WHY_ROWS.map(([label, ...cells]) => (
+                  <tr key={label}>
+                    <th scope="row" style={{ textAlign: "left", padding: "16px", fontWeight: 500, color: "#5b6170", borderBottom: "1px solid #eef0f3", whiteSpace: "nowrap" }}>{label}</th>
+                    {cells.map((c, i) => (
+                      <td key={i} style={{ padding: "16px", borderBottom: "1px solid #eef0f3", color: i === 0 ? "#0b0c0e" : "#5b6170", fontWeight: i === 0 ? 600 : 400 }}>{c}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         {/* How it works */}
         <section id="how-it-works" data-glow className={`${s.card} ${s.reveal}`} aria-labelledby="steps-title">
           <div className={s.sectionHead}>
@@ -548,11 +541,8 @@ export function HumanityLanding() {
             </p>
           </div>
           <div className={s.tiles}>
-            {TILES.map(({ icon: Icon, title, text }) => (
+            {TILES.map(({ title, text }) => (
               <div key={title} className={s.tile} data-glow>
-                <span className={s.tileIcon} aria-hidden="true">
-                  <Icon size={19} strokeWidth={1.75} />
-                </span>
                 <h3 className={s.h3}>{title}</h3>
                 <p className={s.body}>{text}</p>
               </div>
@@ -584,7 +574,6 @@ export function HumanityLanding() {
                 ))}
               </ul>
               <div className={s.note}>
-                <Info size={17} strokeWidth={1.75} aria-hidden="true" />
                 <span>
                   Aztec is still in alpha. In August 2026 its developers reported a critical flaw in Alpha V5 and announced
                   a fix in V6, and our payment contracts have not been independently audited yet. Private payments are
@@ -618,7 +607,6 @@ export function HumanityLanding() {
               <div style={{ marginTop: 28 }}>
                 <Link href="/docs/zero-knowledge" className={s.textLink}>
                   How private payments work
-                  <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
                 </Link>
               </div>
             </div>
@@ -700,11 +688,8 @@ export function HumanityLanding() {
             </p>
           </div>
           <div className={s.tiles} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
-            {EXPERIENCE.map(({ icon: Icon, title, text }) => (
+            {EXPERIENCE.map(({ title, text }) => (
               <div key={title} className={s.tile} data-glow>
-                <span className={s.tileIcon} aria-hidden="true">
-                  <Icon size={19} strokeWidth={1.75} />
-                </span>
                 <h3 className={s.h3}>{title}</h3>
                 <p className={s.body}>{text}</p>
               </div>
@@ -725,7 +710,6 @@ export function HumanityLanding() {
           <ul className={s.checklist}>
             {CHECKLIST.map((c) => (
               <li key={c}>
-                <Check size={18} strokeWidth={2.25} aria-hidden="true" />
                 {c}
               </li>
             ))}
@@ -744,7 +728,6 @@ export function HumanityLanding() {
           </div>
           <div className={s.platforms}>
             <div className={s.platform}>
-              <Globe size={24} strokeWidth={1.6} aria-hidden="true" />
               <p className={s.platformStatus + " " + s.platformLive}>Available now</p>
               <h3 className={s.h3}>Web browser</h3>
               <p className={s.small}>Chrome, Edge, Firefox and Safari, on desktop and on mobile. Nothing to install.</p>
@@ -755,7 +738,6 @@ export function HumanityLanding() {
               </div>
             </div>
             <div className={s.platform}>
-              <Monitor size={24} strokeWidth={1.6} aria-hidden="true" />
               <p className={s.platformStatus + " " + s.platformLive}>Windows 10 / 11</p>
               <h3 className={s.h3}>Windows</h3>
               <p className={s.small}>
@@ -768,7 +750,6 @@ export function HumanityLanding() {
                   className={`${s.btn} ${s.btnSm} ${s.btnPrimary}`}
                   style={{ width: "100%", justifyContent: "center" }}
                 >
-                  <Download size={15} strokeWidth={2} aria-hidden="true" />
                   {pwaInstalled ? "Launch Desktop App" : "Install Desktop App"}
                 </button>
                 <button
@@ -809,7 +790,6 @@ export function HumanityLanding() {
                       onClick={handleCopySha}
                       style={{ marginTop: "6px", fontSize: "10px", cursor: "pointer", background: "none", border: "none", padding: 0, textDecoration: "underline", color: "var(--hl-ink-2)", display: "inline-flex", alignItems: "center", gap: "4px" }}
                     >
-                      <Copy size={11} strokeWidth={2} aria-hidden="true" />
                       {copiedSha ? "✓ Hash copied to clipboard" : "Copy SHA-256 fingerprint"}
                     </button>
                     <p style={{ marginTop: "8px", fontSize: "10px", color: "var(--hl-ink-3)" }}>
@@ -820,13 +800,11 @@ export function HumanityLanding() {
               </div>
             </div>
             <div className={s.platform}>
-              <Smartphone size={24} strokeWidth={1.6} aria-hidden="true" />
               <p className={s.platformStatus}>In development</p>
               <h3 className={s.h3}>iPhone</h3>
               <p className={s.small}>A native app for iOS 16 and later. Until it ships, Ledger Chat works in Safari.</p>
             </div>
             <div className={s.platform}>
-              <Smartphone size={24} strokeWidth={1.6} aria-hidden="true" />
               <p className={s.platformStatus}>In development</p>
               <h3 className={s.h3}>Android</h3>
               <p className={s.small}>A native app for Android 10 and later. Until it ships, Ledger Chat works in Chrome.</p>
@@ -845,7 +823,6 @@ export function HumanityLanding() {
             </div>
             <Link href="/docs/changelog" className={s.textLink}>
               Full changelog
-              <ArrowUpRight size={16} strokeWidth={2} aria-hidden="true" />
             </Link>
           </div>
           <ul className={s.updates}>

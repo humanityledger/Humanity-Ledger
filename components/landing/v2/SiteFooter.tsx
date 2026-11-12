@@ -1,6 +1,5 @@
 import React from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { HLLogo } from "@/components/shared/HLLogo";
 import { EXTERNAL_LINKS } from "@/lib/constants/links";
 import { LEGAL_ENTITY } from "@/lib/constants/legalEntity";
@@ -89,7 +88,6 @@ function FooterLinkItem({ link, className }: { link: FooterLink; className?: str
     return (
       <a href={link.href} target="_blank" rel="noopener noreferrer" className={className}>
         {link.label}
-        <ArrowUpRight size={12} strokeWidth={2} aria-hidden="true" className={s.ext} />
       </a>
     );
   }
@@ -114,7 +112,6 @@ export function SiteFooter() {
             <div className={s.ctas}>
               <Link href="/chat" className={`${s.btn} ${s.btnPrimary}`}>
                 Open Ledger Chat
-                <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
               </Link>
               <Link href="/docs/overview" className={`${s.btn} ${s.btnGhost}`}>
                 Read the documentation
