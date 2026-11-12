@@ -76,11 +76,15 @@ describe('call media', () => {
     await expect(tuneSenders(null)).resolves.toBeUndefined();
   });
 
-  it('uses the server\'s TURN first, keeps a public relay as backup, and falls back when offline', async () => {
+  it('uses the server\'s TURN first, then STUN, and falls back to STUN only (no dead public relay)', async () => {
     const ok = (body: any) => (async () => ({ ok: true, json: async () => body })) as any;
     const own = await loadIceServers(ok({ iceServers: [{ urls: ['turn:turn.example:3478'], username: 'u', credential: 'c' }, { urls: 'javascript:alert(1)' }] }));
     expect(own[0]).toEqual({ urls: ['turn:turn.example:3478'], username: 'u', credential: 'c' });
     expect(own).toHaveLength(2);
+    expect(own[1]).toBe(FALLBACK_ICE[0]);
+    // The shared openrelayproject credentials stopped allocating; never list them again.
+    expect(JSON.stringify(FALLBACK_ICE)).not.toMatch(/openrelay/);
+    expect(FALLBACK_ICE.every((s) => [s.urls].flat().every((u) => String(u).startsWith('stun:')))).toBe(true);
     expect(await loadIceServers(ok({ iceServers: [] }))).toBe(FALLBACK_ICE);
     expect(await loadIceServers((async () => { throw new TypeError('Load failed'); }) as any)).toBe(FALLBACK_ICE);
     // Few servers: each extra one slows candidate gathering.
@@ -108,8 +112,8 @@ describe('call media: loss resilience and long sessions', () => {
     expect(preferRed(out)).toBe(out);
     const noRed = 'm=audio 9 RTP 111\r\na=rtpmap:111 opus/48000/2\r\n';
     expect(preferRed(noRed)).toBe(noRed);
-    // tuneOpusSdp applies it too.
-    expect(tuneOpusSdp(RED_SDP)).toContain('m=audio 9 UDP/TLS/RTP/SAVPF 63 111 0');
+    // Calls no longer force RED first: the m-line order a browser offered is kept.
+    expect(tuneOpusSdp(RED_SDP)).toContain('m=audio 9 UDP/TLS/RTP/SAVPF 111 63 0');
   });
 
   it('refreshes TURN credentials before they expire', async () => {

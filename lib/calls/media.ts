@@ -7,9 +7,10 @@
  *     camera. All are `ideal` hints, so the single getUserMedia call (Android keeps the user
  *     gesture only for one) never fails on a device that cannot meet them.
  *   - Opus tuned for speech: in-band FEC (covers lost packets without retransmission delay), mono,
- *     32 kbps cap, 10 ms minimum packet time; RED (each packet also carries the previous one)
- *     preferred where both browsers have it, so a lost packet costs no audible gap. Applied to the
- *     SDP of every offer and answer.
+ *     32 kbps cap, 10 ms minimum packet time. Applied to the SDP of every offer and answer. RED
+ *     (preferRed) is no longer forced first: reordering payloads by hand is the one SDP change
+ *     here that touches what each browser sends, and Safari↔Chrome calls must work before
+ *     anything else. The browsers still negotiate RED by themselves where both want it.
  *   - sending: voice has the highest priority on the link; video and screen get bitrate caps, and a
  *     shared screen keeps its resolution (text stays readable) while a camera keeps its frame rate.
  *   - ICE: few servers (each extra one slows candidate gathering), our TURN first when configured.
@@ -51,7 +52,7 @@ export function tuneOpusSdp(sdp: string): string {
     const m = /^a=rtpmap:(\d+) opus\/48000/i.exec(l);
     if (m) opus.add(m[1]);
   }
-  if (!opus.size) return preferRed(sdp);
+  if (!opus.size) return sdp;
   const seen = new Set<string>();
   const out = lines.map((l) => {
     const m = /^a=fmtp:(\d+) (.*)$/.exec(l);
@@ -75,7 +76,7 @@ export function tuneOpusSdp(sdp: string): string {
       seen.add(m[1]);
     }
   }
-  return preferRed(result.join(eol));
+  return result.join(eol);
 }
 
 /**
@@ -144,14 +145,15 @@ export async function tuneSenders(pc: { getSenders: () => SenderLike[] } | null 
   );
 }
 
-/** Default ICE servers when the server gives none: two STUN, then the public relay as last resort. */
+/**
+ * ICE servers when the server has no TURN service: STUN only. The public "openrelayproject" relay
+ * used to be listed here; its shared credentials no longer allocate (checked from ledgerchat.org:
+ * error 701 on every URL), so it only slowed candidate gathering. Without TURN, two people behind
+ * strict NATs or mobile carriers cannot reach each other: /api/calls/ice says `source: 'none'` and
+ * the call screen reports it instead of staying silent.
+ */
 export const FALLBACK_ICE: RTCIceServer[] = [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
-  {
-    urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443?transport=tcp'],
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
 ];
 
 function cleanIce(list: unknown): RTCIceServer[] {
@@ -167,7 +169,7 @@ function cleanIce(list: unknown): RTCIceServer[] {
 
 /**
  * ICE servers for this account: short-lived TURN credentials from /api/calls/ice when the server
- * has a TURN service, else the fallback. Our TURN goes first; the public relay stays as backup.
+ * has a TURN service, else STUN only. Our TURN goes first, STUN after it.
  * `refreshInMs`: when to fetch again, before the credentials expire (PeerJS reads its config for
  * every new connection, so a long session keeps working TURN).
  */
@@ -180,7 +182,7 @@ export async function loadIceConfig(fetchImpl: typeof fetch = fetch): Promise<{ 
       if (own.length) {
         const ttl = Number(data?.ttl);
         const refreshInMs = Number.isFinite(ttl) && ttl > 0 ? Math.max(5 * 60_000, (ttl - 15 * 60) * 1000) : 60 * 60_000;
-        return { iceServers: [...own, FALLBACK_ICE[1]], refreshInMs, own: true };
+        return { iceServers: [...own, ...FALLBACK_ICE], refreshInMs, own: true };
       }
     }
   } catch {
