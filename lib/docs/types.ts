@@ -60,7 +60,24 @@ export type Block =
   | { t: "cards"; items: { title: string; text: string; href: string; icon: IconName; external?: boolean }[] }
   | { t: "status"; items: { label: string; state: FeatureState; text: string }[] }
   | { t: "figure"; kind: FigureKind; caption: string }
-  | { t: "person"; name: string; role: string; photo?: string; links: { label: string; href: string }[] };
+  | { t: "person"; name: string; role: string; photo?: string; links: { label: string; href: string }[] }
+  | { t: "gallery"; columns?: 1 | 2 | 3; items: GalleryItem[] };
+
+/** Background a gallery image is shown on. Logos need the surface they were drawn for. */
+export type GallerySurface = "plain" | "paper" | "ink";
+
+export interface GalleryItem {
+  /** Image shown on the page, under /public. */
+  src: string;
+  /** Intrinsic size of `src`, so the page does not jump while it loads. */
+  width: number;
+  height: number;
+  alt: string;
+  caption: string;
+  /** Full-resolution file offered for download, when it differs from `src`. */
+  download?: string;
+  surface?: GallerySurface;
+}
 
 export interface DocPage {
   /** Stable key. For /docs/* pages it is also the URL segment. */
