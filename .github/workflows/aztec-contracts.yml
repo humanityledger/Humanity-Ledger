@@ -73,6 +73,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add contracts/aztec/*/target/*.json
+          # Sources in deployments/aztec-pending-recompile.json keep their recorded artifact until the
+          # recompile is run on testnet and recorded (see that file); never refresh them here.
+          for src in $(node -e "for (const p of require('./deployments/aztec-pending-recompile.json').pending || []) console.log(p.source)"); do
+            crate=$(dirname "$(dirname "$src")")
+            git reset -q -- "$crate/target" || true
+            git checkout -- "$crate/target" 2>/dev/null || true
+          done
           if git diff --cached --quiet; then
             echo "Artifacts already match the sources."
           else
