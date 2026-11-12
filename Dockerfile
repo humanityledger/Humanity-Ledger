@@ -120,6 +120,8 @@ ARG NEXT_PUBLIC_AZTEC_VALUE_MODE
 ARG NEXT_PUBLIC_AZTEC_RPC_MAX_BATCH
 ARG NEXT_PUBLIC_AZTEC_SPONSORED_FPC
 ARG NEXT_PUBLIC_AZTEC_FAUCET
+ARG NEXT_PUBLIC_AZTEC_SPONSOR
+ARG NEXT_PUBLIC_AZTEC_SPONSOR_ADMIN
 # strict: a token or cap that does not match deployments/aztec-mainnet.json fails the build, so the
 # previous deployment keeps running. Every recorded token has been confirmed by the mainnet preflight.
 # Set AZTEC_ALPHA_CONFIG_CHECK=warn on the service only to diagnose, never as the normal state.
