@@ -69,7 +69,7 @@ const short = (s?: string, n = 6) => (s ? `${s.slice(0, n + 2)}…${s.slice(-n)}
 /* -------------------------------------------------------------------------- */
 
 export function ZkWalletPanel({ address, onClose, className, initialSheet = null, onPaymentSent }: ZkWalletPanelProps) {
-  const { state, wallet, open, walletConnected, sameAccount } = useAztecWallet(address);
+  const { state, wallet, open, walletConnected, sameAccount, linkedComputer } = useAztecWallet(address);
   const [sheet, setSheet] = useState<Sheet>(initialSheet);
   const [refreshing, setRefreshing] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
@@ -190,6 +190,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
             configured={isWalletConfigured()}
             walletConnected={walletConnected}
             sameAccount={sameAccount}
+            linkedComputer={linkedComputer}
             hasAddress={/^0x[0-9a-fA-F]{40}$/.test(address)}
             onOpen={handleOpen}
           />
@@ -380,6 +381,8 @@ function Gate(props: {
   walletConnected: boolean;
   sameAccount: boolean;
   hasAddress: boolean;
+  /** A computer linked to the phone by QR: the phone approves the signature. */
+  linkedComputer?: boolean;
   onOpen: () => void;
 }) {
   const working = props.phase === 'signing' || props.phase === 'starting' || props.phase === 'deploying';
@@ -387,11 +390,22 @@ function Gate(props: {
   if (!props.configured) {
     body = <p>The private wallet has not been set up on this server yet.</p>;
   } else if (!props.hasAddress) {
-    body = <p>The private wallet needs an Ethereum wallet. You signed in with email; link a wallet to use it.</p>;
+    body = <p>The private wallet needs the Ethereum wallet you sign in with. Sign in with your wallet to use it.</p>;
   } else if (!props.walletConnected) {
     body = <p>Connect the wallet you signed in with. Its signature creates the keys of your private wallet.</p>;
   } else if (!props.sameAccount) {
     body = <p>The connected wallet is a different account from the one you signed in with. Switch accounts in your wallet.</p>;
+  } else if (props.linkedComputer) {
+    body = (
+      <>
+        <p>
+          This computer is linked to your phone, and your phone holds the wallet. When you tap Open, your phone receives a
+          request: open Ledger Chat on your phone and tap <strong>Approve</strong>. It signs a message, free and with no
+          transaction, and the keys of your private wallet are then created in this browser.
+        </p>
+        <p className="mt-2">Keep Ledger Chat open on your phone until this computer shows your wallet.</p>
+      </>
+    );
   } else {
     body = (
       <>

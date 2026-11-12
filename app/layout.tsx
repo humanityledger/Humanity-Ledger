@@ -327,6 +327,19 @@ export default async function RootLayout({
       <head>
         <meta charSet="utf-8" />
         {/* Proper viewport already handled by Next.js `viewport` export above */}
+        {/* Wallet in-app browsers (MetaMask, Trust, Coinbase, Rainbow, OKX, Phantom…) draw pages larger
+            than Safari or Chrome on the same phone, so Ledger Chat looked zoomed in. There the page
+            is laid out ~10% wider and shown at 0.9, which matches what the phone's own browser shows.
+            Pinch zoom stays available (WCAG 1.4.4). Runs now and again once Next's viewport tag exists. */}
+        <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `(function(){try{
+var ua=navigator.userAgent||'';var mobile=/iPhone|iPad|iPod|Android/i.test(ua);
+var named=/MetaMaskMobile|TrustWallet|Trust\\/|CoinbaseWallet|CoinbaseBrowser|Rainbow|OKApp|Phantom|imToken|TokenPocket|BitKeep|Bitget|Zerion|BinanceWeb3|Rabby|SafePal|Uniswap/i.test(ua);
+if(!mobile||!(named||window.ethereum))return;
+document.documentElement.setAttribute('data-wallet-browser','1');
+var c='width=device-width, initial-scale=0.9, viewport-fit=cover, interactive-widget=resizes-content';
+function set(){var m=document.querySelectorAll('meta[name="viewport"]');if(!m.length){var n=document.createElement('meta');n.name='viewport';n.content=c;document.head.appendChild(n);return}for(var i=0;i<m.length;i++)m[i].setAttribute('content',c)}
+set();document.addEventListener('DOMContentLoaded',set,{once:true});
+}catch(e){}})();` }} />
         <meta name="apple-mobile-web-app-capable" content="yes" />
 
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
