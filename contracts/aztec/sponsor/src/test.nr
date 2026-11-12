@@ -34,16 +34,12 @@ unconstrained fn digest_matches_the_server_bytes() {
     assert(d[31] == 0xb0);
 }
 
-#[test]
-unconstrained fn a_valid_voucher_is_accepted() {
+// TXE runs a test call in the revertible phase, so the fee-payer election itself cannot succeed
+// here (in a real transaction the fee payment call runs first, in setup). Reaching that assertion
+// proves every check before it passed: expiry, signer, signature, fee cap and the voucher nullifier.
+#[test(should_fail_with = "fee payer must be elected during the setup phase")]
+unconstrained fn a_valid_voucher_passes_every_check_up_to_the_fee_payer_election() {
     let (env, user, sponsor) = setup();
-    env.call_private(user, LedgerSponsor::at(sponsor).sponsor(1, FUTURE, SIGNER_X, SIGNER_Y, SIG_V1));
-}
-
-#[test(should_fail)]
-unconstrained fn a_voucher_cannot_be_used_twice() {
-    let (env, user, sponsor) = setup();
-    env.call_private(user, LedgerSponsor::at(sponsor).sponsor(1, FUTURE, SIGNER_X, SIGNER_Y, SIG_V1));
     env.call_private(user, LedgerSponsor::at(sponsor).sponsor(1, FUTURE, SIGNER_X, SIGNER_Y, SIG_V1));
 }
 
