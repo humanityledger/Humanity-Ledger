@@ -17,12 +17,13 @@ import { securityModel, audits, bugBounty } from "./pages/security";
 import { developers } from "./pages/developers";
 import { about, blog, contact, status, BLOG_POSTS } from "./pages/company";
 import { brand } from "./pages/brand";
+import { guide } from "./pages/guide";
 import { changelog } from "./pages/changelog";
 import { legalNotice, terms, privacy, cookies, contentPolicy, disclaimer } from "./pages/legal";
 
 export const NAV: NavGroup[] = [
   { title: "Getting started", pages: [overview, quickstart, identity, pin] },
-  { title: "Ledger Chat", pages: [messaging, routing, communities, calls, payments, devices] },
+  { title: "Ledger Chat", pages: [guide, messaging, routing, communities, calls, payments, devices] },
   { title: "Protocol", pages: [architecture, ecosystem, cryptography, zeroKnowledge, whitepaper] },
   { title: "Security", pages: [securityModel, audits, bugBounty] },
   { title: "Developers", pages: [developers] },

@@ -285,6 +285,9 @@ export async function getXMTPClient(
         codecs: [],
         dbEncryptionKey,
         appVersion: 'LedgerNetwork-Privacy-Node/1.0.0-obfuscated',
+        // The SDK logs every MLS step at "info": thousands of console lines per
+        // session, each one work for the main thread. Warnings and errors only.
+        loggingLevel: 'warn',
       }),
       createTimeout,
     ]).finally(() => clearInterval(watchdog)) as Client;
@@ -706,7 +709,16 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
     // Using the existing DM object from listDms() gives us reliable message access.
     let dm: any = null;
     const selfInboxId = (client as any).inboxId ?? '';
+    // Fast path: the peer's inbox, then the DM with that inbox, straight from
+    // the local database. The scan below resolved the peer of every DM on
+    // every open, which grew with the number of conversations.
     try {
+      const peerInboxId = await client.findInboxIdByIdentifier(identifier);
+      if (peerInboxId) dm = (await client.conversations.getDmByInboxId(peerInboxId)) ?? null;
+    } catch (fastErr) {
+      console.warn('[XMTP] getDmByInboxId failed, scanning DMs', fastErr);
+    }
+    if (!dm) try {
       const dms: any[] = await client.conversations.listDms();
       for (const d of dms) {
         const peerAddr = await extractPeerAddress(d, selfInboxId, (client as any).accountAddress, client).catch(() => null);

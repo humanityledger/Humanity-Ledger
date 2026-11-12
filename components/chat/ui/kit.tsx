@@ -153,6 +153,7 @@ export function Sheet({
             role="dialog"
             aria-modal="true"
             aria-labelledby={id}
+            data-sheet=""
             initial={{ y: 24, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 24, opacity: 0 }}

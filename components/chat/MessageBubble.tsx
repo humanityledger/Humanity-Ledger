@@ -19,6 +19,8 @@ import { PREMIUM_STICKERS, RenderPremiumSticker } from './StickerPicker';
 import { useLinkPreview, extractFirstUrl, LinkPreviewCard } from './LedgerLinkPreview';
 import dynamic from 'next/dynamic';
 import { isAgreementMessage } from '@/lib/aztec/agreement-message';
+import { parseMeeting } from '@/lib/chat/meeting';
+import { MeetingCard } from './MeetingCard';
 import { parseAttachmentMessage } from '@/lib/chat/remote-attachment';
 import { RemoteAttachmentBubble } from './RemoteAttachmentBubble';
 
@@ -635,6 +637,8 @@ export const MessageBubble = React.memo(({
   // Encrypted voice notes, photos, videos and files (lib/chat/remote-attachment.ts).
   // The message carries the decryption key: it is never shown as text.
   const remoteAttachment = isAgreement ? null : parseAttachmentMessage(content);
+  // Scheduled calls (lib/chat/meeting.ts).
+  const meeting = isAgreement ? null : parseMeeting(content);
   const isPremium    = content.startsWith('[PREMIUM:') || content.startsWith('__STICKER__[PREMIUM:');
   const isSticker    = content.startsWith('__STICKER__') && !isPremium;
   const isAudio      = content.startsWith('__AUDIO__');
@@ -829,6 +833,8 @@ export const MessageBubble = React.memo(({
 
             {isAgreement ? (
               <AgreementCard raw={content} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={msg.senderInboxId} selfInboxId={clientInboxId} />
+            ) : meeting ? (
+              <MeetingCard invite={meeting} isMe={isMe} />
             ) : remoteAttachment ? (
               <RemoteAttachmentBubble att={remoteAttachment} isMe={isMe} onOpenLightbox={onOpenLightbox} />
             ) : isSticker ? (

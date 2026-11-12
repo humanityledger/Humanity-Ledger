@@ -57,7 +57,7 @@ export const architecture: DocPage = {
         ["Resend", "Sending sign in codes by email", "Your email address and the code."],
         ["Cloudflare Turnstile", "Stopping automated email sign ups", "Browser signals used to tell people from bots."],
         ["Cloudflare R2", "Storing attachments", "The files you attach."],
-        ["PeerJS, Google STUN, OpenRelay TURN", "Setting up and relaying calls", "Connection details and, for relayed calls, encrypted media."],
+        ["PeerJS, Google STUN, a TURN relay service", "Setting up and relaying calls", "Connection details and, for relayed calls, encrypted media."],
         ["Public blockchain RPC providers", "Reading balances and sending transactions", "Your address and the transactions you send."],
       ],
     },
@@ -316,7 +316,7 @@ export const whitepaper: DocPage = {
     { t: "h2", text: "5. Calls", id: "calls" },
     {
       t: "p",
-      text: "Calls use WebRTC. Session descriptions and candidates are exchanged through the public PeerJS signalling service. Connectivity uses Google STUN servers and, when a direct path is unavailable, the public OpenRelay TURN service. Media is encrypted with DTLS-SRTP negotiated between the browsers, so neither signalling nor relays can decode it. A setting forces relay only connections, which prevents the remote party from learning the user's IP address.",
+      text: "Calls use WebRTC. Session descriptions and candidates are exchanged through the public PeerJS signalling service. Connectivity uses Google STUN servers and, when a direct path is unavailable, a TURN relay with short lived credentials from the server, when one is configured. The public OpenRelay service is no longer used. Media is encrypted with DTLS-SRTP negotiated between the browsers, so neither signalling nor relays can decode it. A setting forces relay only connections, which prevents the remote party from learning the user's IP address.",
     },
     { t: "h2", text: "6. Payments", id: "payments" },
     {

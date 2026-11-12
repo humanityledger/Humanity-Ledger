@@ -67,6 +67,7 @@ const BurnTimerSheet = dynamic(() => import('@/components/chat/BurnTimerSheet').
 const NativeCryptoSendModal = dynamic(() => import('@/components/chat/NativeCryptoSendModal').then(m => m.NativeCryptoSendModal), { ssr: false });
 const SendTipModal = dynamic(() => import('@/components/chat/SendTipModal').then(m => m.SendTipModal), { ssr: false });
 const ScheduleMessageSheet = dynamic(() => import('@/components/chat/ScheduleMessageSheet').then(m => m.ScheduleMessageSheet), { ssr: false });
+const ScheduleMeetingSheet = dynamic(() => import('@/components/chat/ScheduleMeetingSheet').then(m => m.ScheduleMeetingSheet), { ssr: false });
 const InChatSearch = dynamic(() => import('@/components/chat/InChatSearch').then(m => m.InChatSearch), { ssr: false });
 const LedgerCallsTab = dynamic(() => import('@/components/chat/LedgerCallsTab').then(m => m.LedgerCallsTab), { ssr: false });
 const LedgerCommunitiesTab = dynamic(() => import('@/components/chat/LedgerCommunitiesTab').then(m => m.LedgerCommunitiesTab), { ssr: false });
@@ -202,7 +203,8 @@ export const isSystemSignal = (content: any): boolean => {
  * formatMessagePreview(): never copied, quoted in a reply or notified as text.
  */
 /** What may be stored or shown as a conversation's last message: never the text of a secret-bearing message. */
-const lastMessageOf = (content: string): string => (carriesSecret(content) ? formatMessagePreview(content) : content);
+// Scheduled-call invitations are stored as their label too: the list keeps only the first 30 characters, which would cut the JSON.
+const lastMessageOf = (content: string): string => (carriesSecret(content) || (typeof content === 'string' && content.includes('__MEETING__::')) ? formatMessagePreview(content) : content);
 
 const carriesSecret = (content: unknown): boolean => {
   if (typeof content !== 'string') return false;
@@ -258,6 +260,9 @@ export const formatMessagePreview = (content: string): string => {
   // Encrypted attachments carry their decryption key: never preview or notify their text.
   const remoteAttachment = parseAttachmentMessage(cleanContent);
   if (remoteAttachment) return attachmentPreview(remoteAttachment);
+  // Scheduled calls: a short label, never the JSON.
+  const meeting = parseMeeting(cleanContent);
+  if (meeting) return meetingPreview(meeting);
 
   // Handle system messages and metadata
   if (cleanContent.startsWith(CALL_LOG_PREFIX)) {
@@ -330,7 +335,9 @@ import { DISCONNECTED_GRACE_MS, RESUME_ATTEMPT_MS, RESUME_DEADLINE_MS, acceptRes
 const ICE_CONNECT_MS = 20_000;
 const CALL_SDP = { sdpTransform: (sdp: string) => tuneOpusSdp(sdp) };
 import { Archive, ArchiveRestore, ChevronLeft, ChevronUp, ChevronDown, MessageSquare, Plus, ArrowUp, WifiOff, Pin, Check, ScanQrCode, Camera, FileText, Sticker, ListChecks, CreditCard, Receipt, Waves, Navigation, Timer, Info, LoaderCircle, Minimize2, Mail, ShieldCheck, Reply, Forward, Pencil, Flag, MessagesSquare, Globe } from 'lucide-react';
-import { Sparkles as StudioIcon, MoreHorizontal, SquarePen, Palette, BellOff } from 'lucide-react';
+import { Sparkles as StudioIcon, MoreHorizontal, SquarePen, Palette, BellOff, Keyboard, CalendarClock, CalendarPlus } from 'lucide-react';
+import { MEETING_JOIN_EVENT, MEETINGS_EVENT, loadMeetings, meetingPreview, parseMeeting, rememberMeeting, upcomingMeetings, type StoredMeeting } from '@/lib/chat/meeting';
+import { SCHEDULED_EVENT, addScheduled, describeSendTime, dueScheduled, loadScheduled, markAttempt, removeScheduled, scheduleTimeError, scheduledForPeer, type ScheduledMessage } from '@/lib/chat/scheduled';
 import { shortAddress as formatAddress } from '@/lib/ui/format';
 
 // Ledger Studio (AI workspace). Loaded only when opened; never sees encrypted
@@ -615,6 +622,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, [isMounted, address, client]);
 
   const [conversations, setConversations] = useState<ConversationMeta[]>([]);
+  // Read by effects that must not re-run whenever the list changes.
+  const conversationsRef = useRef<ConversationMeta[]>([]);
+  conversationsRef.current = conversations;
   const [activePeer, setActivePeer] = useState<string | null>(null);
   const [activeCommunity, setActiveCommunity] = useState<string | null>(null);
   const [localContacts, setLocalContacts] = useState<LocalContact[]>([]);
@@ -1058,6 +1068,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [searchIndex, setSearchIndex] = useState(0); // current match index
   const [forwardMsg, setForwardMsg] = useState<any | null>(null); // message to forward
   const [scheduledAt, setScheduledAt] = useState<Date | null>(null); // scheduled send time
+  // Messages waiting to be sent later (lib/chat/scheduled.ts) and scheduled calls (lib/chat/meeting.ts).
+  const [scheduledList, setScheduledList] = useState<ScheduledMessage[]>([]);
+  const [showMeetingSheet, setShowMeetingSheet] = useState(false);
+  const [meetings, setMeetings] = useState<StoredMeeting[]>([]);
   // Emojis, stickers and GIFs (components/chat/ExpressionPicker.tsx).
   const [expression, setExpression] = useState<ExpressionTab | null>(null);
   const [showAppDrawer, setShowAppDrawer] = useState(false); // iMessage style + menu
@@ -1178,7 +1192,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       // Auditor Fix: Stop rogue timeouts and active streams on unmount
       if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
       if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
+      // Leaving the chat mid-recording discards the note: stop() alone would send it.
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        isRecordingCancelledRef.current = true;
+        mediaRecorderRef.current.stop();
+      }
     };
   }, []);
 
@@ -2948,6 +2966,160 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
     startCall(type, targetPeerOverride);
   };
+  const handleStartCallRef = useRef(handleStartCall);
+  handleStartCallRef.current = handleStartCall;
+
+  // ── Panels: Escape closes the top one, and the header menu opens one at a time ──
+  const closeChatPanels = useCallback(() => {
+    setShowContactInfo(false);
+    setShowWallpaperPicker(false);
+    setShowThemePicker(false);
+    setShowSaveContactModal(false);
+    setShowZkWallet(false);
+    setShowScanner(false);
+    setShowSavedModal(false);
+    setShowShortcutsModal(false);
+    setShowEncryptionInfo(false);
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      // Sheets from the chat kit close themselves.
+      if (document.querySelector('[data-sheet]')) return;
+      const layers: [boolean, () => void][] = [
+        [showSaveContactModal, () => setShowSaveContactModal(false)],
+        [showShortcutsModal, () => setShowShortcutsModal(false)],
+        [showSavedModal, () => setShowSavedModal(false)],
+        [showScanner, () => setShowScanner(false)],
+        [showEncryptionInfo, () => setShowEncryptionInfo(false)],
+        [showThemePicker, () => setShowThemePicker(false)],
+        [showWallpaperPicker, () => setShowWallpaperPicker(false)],
+        [showContactInfo, () => setShowContactInfo(false)],
+        [showZkWallet, () => setShowZkWallet(false)],
+        [showHeaderMenu, () => setShowHeaderMenu(false)],
+        [showAppDrawer, () => setShowAppDrawer(false)],
+      ];
+      const top = layers.find(([open]) => open);
+      if (top) top[1]();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showSaveContactModal, showShortcutsModal, showSavedModal, showScanner, showEncryptionInfo, showThemePicker, showWallpaperPicker, showContactInfo, showZkWallet, showHeaderMenu, showAppDrawer]);
+
+  // ── Scheduled messages ───────────────────────────────────────────────────
+  // Kept on this device with the chat they belong to (lib/chat/scheduled.ts).
+  useEffect(() => {
+    if (!address) { setScheduledList([]); return; }
+    setScheduledList(loadScheduled(address));
+    const onUpdate = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (d?.owner === address.toLowerCase() && Array.isArray(d.list)) setScheduledList(d.list);
+    };
+    window.addEventListener(SCHEDULED_EVENT, onUpdate);
+    return () => window.removeEventListener(SCHEDULED_EVENT, onUpdate);
+  }, [address]);
+
+  // Sends what is due to the chat each message was written in, whichever chat is open.
+  const sendingScheduledRef = useRef(false);
+  useEffect(() => {
+    if (!client || !address) return;
+    const tick = async () => {
+      if (sendingScheduledRef.current || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+      const due = dueScheduled(loadScheduled(address));
+      if (!due.length) return;
+      sendingScheduledRef.current = true;
+      try {
+        for (const m of due) {
+          try {
+            await sendMessage(client, m.peer, m.content, address);
+            removeScheduled(address, m.id);
+          } catch {
+            const left = markAttempt(address, m.id).find((x) => x.id === m.id);
+            if ((left?.attempts ?? 0) === 3) toast.error(`A scheduled message to ${getDisplayName(m.peer)} has not gone yet. Ledger Chat keeps trying.`);
+          }
+        }
+      } finally {
+        sendingScheduledRef.current = false;
+      }
+    };
+    tick();
+    const id = setInterval(tick, 15_000);
+    const wake = () => { if (document.visibilityState === 'visible') tick(); };
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('online', wake);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', wake);
+      window.removeEventListener('online', wake);
+    };
+  }, [client, address, getDisplayName]);
+
+  // ── Scheduled calls ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!address) { setMeetings([]); return; }
+    const load = () => setMeetings(upcomingMeetings(loadMeetings(address)));
+    load();
+    window.addEventListener(MEETINGS_EVENT, load);
+    const id = setInterval(load, 60_000);
+    return () => { window.removeEventListener(MEETINGS_EVENT, load); clearInterval(id); };
+  }, [address]);
+
+  // Join on a card in the open chat starts an ordinary call with that person.
+  useEffect(() => {
+    const onJoin = (e: Event) => {
+      const kind = (e as CustomEvent).detail?.kind === 'voice' ? 'audio' : 'video';
+      handleStartCallRef.current(kind);
+    };
+    window.addEventListener(MEETING_JOIN_EVENT, onJoin);
+    return () => window.removeEventListener(MEETING_JOIN_EVENT, onJoin);
+  }, []);
+
+  // Remember the scheduled calls in the open chat, for the Calls tab and the reminder.
+  useEffect(() => {
+    if (!address || !activePeer) return;
+    const conv = `dm-${activePeer.toLowerCase()}`;
+    const selfId = client?.inboxId;
+    for (const m of messages) {
+      if (m.conversationId !== conv || typeof m.content !== 'string') continue;
+      const at = m.content.indexOf('__MEETING__::');
+      if (at < 0) continue;
+      const invite = parseMeeting(m.content.slice(at));
+      if (invite) rememberMeeting(address, activePeer, invite, !!selfId && m.senderInboxId === selfId);
+    }
+  }, [messages, activePeer, address, client]);
+
+  // A reminder when a scheduled call starts, with Join, once per call on this device.
+  useEffect(() => {
+    if (!address) return;
+    const check = () => {
+      const now = Date.now();
+      for (const m of meetings) {
+        const startsIn = m.invite.startsAt - now;
+        if (startsIn > 60_000 || startsIn < -5 * 60_000) continue;
+        const key = `ledger_meeting_reminded_${m.invite.id}`;
+        try {
+          if (localStorage.getItem(key)) continue;
+          localStorage.setItem(key, '1');
+        } catch { /* storage blocked: remind anyway */ }
+        toast(m.invite.title, {
+          description: `${m.invite.kind === 'video' ? 'Video' : 'Voice'} call with ${getDisplayName(m.peer)} is starting.`,
+          duration: 60_000,
+          action: {
+            label: 'Join',
+            onClick: () => {
+              setActiveCommunity(null);
+              setSidebarTab('chats');
+              setShowList(false);
+              handleStartCallRef.current(m.invite.kind === 'video' ? 'video' : 'audio', m.peer);
+            },
+          },
+        });
+      }
+    };
+    check();
+    const id = setInterval(check, 20_000);
+    return () => clearInterval(id);
+  }, [meetings, address, getDisplayName]);
 
   const handleAnswerCall = async () => {
     answerCall();
@@ -3358,6 +3530,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     try { mediaRecorderRef.current.stop(); } catch {}
     if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
   }, [isRecording]);
+
+  // A voice note belongs to the chat it was recorded in. Opening another chat
+  // while recording discards it, so it can never be sent to the wrong person.
+  const recordingPeerRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isRecording) {
+      if (recordingPeerRef.current === null) recordingPeerRef.current = activePeer;
+      else if (recordingPeerRef.current !== activePeer) {
+        cancelRecording();
+        toast.info('Voice message discarded: you opened another chat.');
+      }
+    } else {
+      recordingPeerRef.current = null;
+    }
+  }, [isRecording, activePeer, cancelRecording]);
 
   // Draft Loading on Peer Switch
   useEffect(() => {
@@ -4597,6 +4784,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         // [2] Fetch fresh from XMTP network
         let raw = await getMessages(client, activePeer);
         if (cancelled) return;
+        // Right after sign-in XMTP is still syncing its groups, and the first
+        // read of a chat that has history can come back empty. Showing "Say
+        // hello" then, and the real messages half a minute later, looked like
+        // lost history. When the list already shows a last message for this
+        // chat, keep the loader up and ask again a few times first.
+        if (isInitial && raw.length === 0 && conversationsRef.current.some((c) => c.peerAddress.toLowerCase() === activePeer.toLowerCase() && !!c.lastMessage)) {
+          for (const wait of [1500, 3000, 6000, 10000]) {
+            await new Promise((r) => setTimeout(r, wait));
+            if (cancelled) return;
+            raw = await getMessages(client, activePeer);
+            if (cancelled) return;
+            if (raw.length > 0) break;
+          }
+        }
         console.log(`[XMTP fetchHistorical] raw msgs from network: ${raw.length} for peer ${activePeer.slice(0,10)}`);
         (window as any).__xmtp_raw_count = raw.length;
         (window as any).__xmtp_peer = activePeer;
@@ -5076,9 +5277,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // plain-text offline outbox. Unlike agreements they may be replied to and
     // keep the chat's disappearing timer.
     const isAttachmentMsg = isAttachmentMessage(content);
-    const isOpaqueMsg = isAgreementMsg || isAttachmentMsg;
+    // Scheduled-call invitations are structured too: sent exactly as built.
+    const isMeetingMsg = parseMeeting(content) !== null;
+    const isOpaqueMsg = isAgreementMsg || isAttachmentMsg || isMeetingMsg;
     if (isOpaqueMsg && isOffline) {
-      toast.error(isAgreementMsg ? 'You are offline. Agreements are only sent while connected.' : 'You are offline. Attachments are only sent while connected.');
+      toast.error(isAgreementMsg ? 'You are offline. Agreements are only sent while connected.' : isMeetingMsg ? 'You are offline. Invitations are only sent while connected.' : 'You are offline. Attachments are only sent while connected.');
       return false;
     }
     const moderationFlag = isOpaqueMsg ? null : moderateContent(content);
@@ -5505,20 +5708,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     setInputText('');
     setLinkPreview(null);
     if (scheduledAt) {
-      const delayMs = scheduledAt.getTime() - Date.now();
+      // Stored with this chat and sent from this device at that time
+      // (lib/chat/scheduled.ts). A time that has already passed sends now.
+      const sendAt = scheduledAt.getTime();
       setScheduledAt(null);
-      if (delayMs > 0) {
-        setTimeout(() => executeSendRef.current?.(txt), delayMs);
-        // Show a local optimistic placeholder for the scheduled message
-        const schedId = `sched_${Date.now()}`;
-        setMessages(prev => [...prev, {
-          id: schedId,
-          senderInboxId: client?.inboxId ?? '',
-          content: txt,
-          sentAtNs: scheduledAt.getTime(),
-          conversationId: `dm-${activePeer?.toLowerCase()}`,
-          status: 'scheduled',
-        }]);
+      if (sendAt > Date.now() + 30_000 && address && activePeer) {
+        try {
+          addScheduled(address, { peer: activePeer, content: txt, sendAt });
+          toast.success(`Scheduled for ${describeSendTime(sendAt).toLowerCase()}`, {
+            description: 'It is sent from this device. If Ledger Chat is closed then, it goes the next time you open it.',
+          });
+        } catch {
+          toast.error('Could not schedule this message');
+        }
         return;
       }
     }
@@ -6131,7 +6333,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 timestamp: c.timestamp
               }))}
               myAddress={address || ''}
-              contacts={localContacts.map(c => ({ peerAddress: c.peerAddress, name: c.name }))}
+              // Saved contacts and everyone you already have a chat with.
+              contacts={(() => {
+                const seen = new Set<string>();
+                const out: { peerAddress: string; name?: string }[] = [];
+                for (const c of localContacts) { const k = c.peerAddress.toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push({ peerAddress: c.peerAddress, name: c.name }); } }
+                for (const c of conversations) { const k = c.peerAddress.toLowerCase(); if (/^0x[0-9a-f]{40}$/.test(k) && !seen.has(k)) { seen.add(k); const n = getDisplayName(c.peerAddress); out.push({ peerAddress: c.peerAddress, name: /^0x[0-9a-f]{4}/i.test(n) ? undefined : n }); } }
+                return out;
+              })()}
+              upcoming={meetings}
+              onJoinMeeting={(m) => { setActiveCommunity(null); setSidebarTab('chats'); setShowList(false); handleStartCall(m.invite.kind === 'video' ? 'video' : 'audio', m.peer); }}
+              onScheduleCall={(addr) => { setActiveCommunity(null); setActivePeer(addr); setSidebarTab('chats'); setShowList(false); setShowMeetingSheet(true); }}
               onStartCall={(addr, type) => { setSidebarTab('chats'); setShowList(false); handleStartCall(type, addr); }}
               onOpenChat={(addr) => { setActiveCommunity(null); setActivePeer(addr); setSidebarTab('chats'); setShowList(false); }}
               onNew={() => {}}
@@ -6231,7 +6443,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         if (d.toDateString() === now.toDateString()) return `Last seen today at ${t}`;
                         if (d.toDateString() === yest.toDateString()) return `Last seen yesterday at ${t}`;
                         return `Last seen ${d.toLocaleDateString([], { day: 'numeric', month: 'short' })}`;
-                      })() : shortAddr(activePeer!)}
+                      })() : /^0x[0-9a-f]{4}/i.test(getDisplayName(activePeer!)) ? 'Tap for contact info' : shortAddr(activePeer!)}
                     </span>
                   </div>
                 </button>
@@ -6265,19 +6477,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           { label: 'Search in chat', icon: <Search size={17} strokeWidth={1.8} />, onClick: () => { setShowSearch(true); setSearchQuery(''); setSearchIndex(0); } },
                           { label: 'Wallpaper', icon: <ImageIcon size={17} strokeWidth={1.8} />, onClick: () => setShowWallpaperPicker(true) },
                           { label: 'Appearance', icon: <Palette size={17} strokeWidth={1.8} />, onClick: () => setShowThemePicker(true) },
-                          { label: 'Save contact', icon: <UserPlus size={17} strokeWidth={1.8} />, onClick: () => { setSaveContactName(getDisplayName(activePeer!)); setShowSaveContactModal(true); } },
+                          { label: 'Save contact', icon: <UserPlus size={17} strokeWidth={1.8} />, onClick: () => { const n = getDisplayName(activePeer!); setSaveContactName(/^0x[0-9a-f]{4}/i.test(n) ? '' : n); setShowSaveContactModal(true); } },
                           { label: isSecretChat ? 'Turn off secret chat' : 'Secret chat', icon: <Flame size={17} strokeWidth={1.8} />, onClick: () => setIsSecretChat(!isSecretChat) },
                           { label: 'Private wallet', icon: <ShieldCheck size={17} strokeWidth={1.8} />, onClick: () => setShowZkWallet(v => !v) },
                           { label: 'Scan a code', icon: <ScanQrCode size={17} strokeWidth={1.8} />, onClick: () => setShowScanner(true) },
                           { label: 'Saved messages', icon: <Bookmark size={17} strokeWidth={1.8} />, onClick: () => setShowSavedModal(true) },
-                          { label: 'Keyboard shortcuts', icon: <Clock size={17} strokeWidth={1.8} />, onClick: () => setShowShortcutsModal(true) },
+                          { label: 'Keyboard shortcuts', icon: <Keyboard size={17} strokeWidth={1.8} />, onClick: () => setShowShortcutsModal(true) },
                           { label: 'Clear chat', icon: <Trash2 size={17} strokeWidth={1.8} className="text-[#e5484d]" />, onClick: () => setShowClearConfirm(true), danger: true },
                         ].map((item: any) => (
                           <button
                             key={item.label}
                             type="button"
                             role="menuitem"
-                            onClick={() => { setShowHeaderMenu(false); item.onClick(); }}
+                            onClick={() => { setShowHeaderMenu(false); closeChatPanels(); item.onClick(); }}
                             className={`w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[14.5px] transition-colors text-left ${item.danger ? 'text-[#e5484d] hover:bg-[#fff0f0]' : 'text-[#15171c] hover:bg-[#f2f4f7]'}`}
                           >
                             <span className={item.danger ? 'text-[#e5484d]' : 'text-[#475061]'}>{item.icon}</span>
@@ -6407,7 +6619,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   // __PAYMENT__ messages ARE rendered (as PaymentBubble) — do NOT filter them out
                   if (c.startsWith('__TYPING__')) return false;
                   return true;
-                });
+                })
+                  // Messages waiting to be sent later, at the end of the thread.
+                  .filter(m => !(typeof m.id === 'string' && m.id.startsWith('sched_')))
+                  .concat(scheduledForPeer(scheduledList, activePeer).map(sm => ({ id: sm.id, senderInboxId: client?.inboxId ?? '', content: sm.content, sentAtNs: sm.sendAt, conversationId: convId, status: 'scheduled' })));
                 if (filteredMsgs.length === 0) {
                   if (isFetchingChat) {
                     return (
@@ -6587,11 +6802,31 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <div className="mx-3 mt-2 pl-3 pr-1.5 h-10 bg-[#f7f8fa] border border-[#e4e7ec] rounded-xl flex items-center justify-between">
                   <span className="flex items-center gap-2 text-[13.5px] text-[#15171c]">
                     <Clock size={15} strokeWidth={1.9} className="text-[#475061]" aria-hidden="true" />
-                    Sends at {scheduledAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    Sends {describeSendTime(scheduledAt.getTime()).toLowerCase()}
                   </span>
                   <button type="button" onClick={() => setScheduledAt(null)} className="px-3 h-8 rounded-full text-[13px] font-medium text-[#475061] hover:bg-[#eff1f4]">Cancel</button>
                 </div>
               )}
+              {/* Messages scheduled in this chat, each one can be cancelled */}
+              {!scheduledAt && address && (() => {
+                const mine = scheduledForPeer(scheduledList, activePeer);
+                if (!mine.length) return null;
+                return (
+                  <div className="mx-3 mt-2 pl-3 pr-1.5 py-1 bg-[#f7f8fa] border border-[#e4e7ec] rounded-xl flex flex-col" aria-label="Scheduled messages">
+                    {mine.slice(0, 3).map(m => (
+                      <div key={m.id} className="flex items-center justify-between gap-2 min-h-9">
+                        <span className="flex items-center gap-2 min-w-0 text-[13.5px] text-[#15171c]">
+                          <CalendarClock size={15} strokeWidth={1.9} className="text-[#475061] shrink-0" aria-hidden="true" />
+                          <span className="shrink-0 font-medium">{describeSendTime(m.sendAt)}</span>
+                          <span className="truncate text-[#727a88]">{formatMessagePreview(m.content)}</span>
+                        </span>
+                        <button type="button" onClick={() => removeScheduled(address, m.id)} className="px-3 h-8 rounded-full text-[13px] font-medium text-[#475061] hover:bg-[#eff1f4] shrink-0" aria-label={`Cancel the message scheduled for ${describeSendTime(m.sendAt)}`}>Cancel</button>
+                      </div>
+                    ))}
+                    {mine.length > 3 && <p className="text-[12.5px] text-[#727a88] pb-1.5">And {mine.length - 3} more</p>}
+                  </div>
+                );
+              })()}
               {/* Disappearing messages indicator */}
               {burnTimer && !isSecretChat && (
                 <div className="mx-3 mt-2 pl-3 pr-1.5 h-10 bg-[#fff5f5] border border-[#fed7d7] rounded-xl flex items-center justify-between">
@@ -6621,6 +6856,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     {[
                       { cmd: '/pay', label: 'Send a payment', icon: <CreditCard size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setShowWalletTransfer(true); } },
                       { cmd: '/poll', label: 'Create a poll', icon: <ListChecks size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setShowPollCreator(true); } },
+                      { cmd: '/meet', label: 'Schedule a call', icon: <CalendarPlus size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setShowMeetingSheet(true); } },
+                      { cmd: '/schedule', label: 'Schedule a message', icon: <CalendarClock size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setShowScheduleSheet(true); } },
                       { cmd: '/gif', label: 'Search GIFs', icon: <ImageIcon size={17} strokeWidth={1.8} />, run: () => { setInputText(''); setExpression('gif'); } },
                       { cmd: '/studio', label: 'Ask Ledger Studio (AI)', icon: <StudioIcon size={17} strokeWidth={1.8} />, run: () => { setInputText(''); openStudio(); } },
                       { cmd: '/location', label: 'Share your location', icon: <MapPin size={17} strokeWidth={1.8} />, run: () => {
@@ -6668,10 +6905,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             // ── Media ──────────────────────────────────────────────
                             { id: 'camera',    color: '#FF3B30', iconPath: <Camera size={19} strokeWidth={1.8} />,  label: 'Camera',        sublabel: 'Take a photo or video', onClick: () => { cameraRef.current?.click(); setShowAppDrawer(false); } },
                             { id: 'gallery',   color: '#5856D6', iconPath: <ImageIcon size={19} strokeWidth={1.8} />,   label: 'Photos and videos', sublabel: 'Choose from your library',   onClick: () => { galleryRef.current?.click(); setShowAppDrawer(false); } },
-                            { id: 'attach',    color: '#34C759', iconPath: <FileText size={19} strokeWidth={1.8} />,  label: 'Document',       sublabel: 'Any file up to 1 MB',    onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'attach',    color: '#34C759', iconPath: <FileText size={19} strokeWidth={1.8} />,  label: 'Document',       sublabel: 'Any file up to 20 MB',    onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
 
                             // ── Interactive ──────────────────────────────────────────
                             { id: 'poll',      color: '#10B981', iconPath: <ListChecks size={19} strokeWidth={1.8} />,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
+                            { id: 'meeting',   color: '#15171c', iconPath: <CalendarPlus size={19} strokeWidth={1.8} />, label: 'Schedule a call', sublabel: 'Voice or video, at a set time', onClick: () => { setShowMeetingSheet(true); setShowAppDrawer(false); } },
+                            { id: 'schedule',  color: '#15171c', iconPath: <CalendarClock size={19} strokeWidth={1.8} />, label: 'Schedule a message', sublabel: 'Write now, send later', onClick: () => { setShowScheduleSheet(true); setShowAppDrawer(false); } },
                             // ── Crypto & Aztec Private Payments ──────────────────────────
                             { id: 'zkmoney',   color: '#1C1C1E', iconPath: <ShieldCheck size={19} strokeWidth={1.8} />, label: 'Private payment', sublabel: networkLabel(), onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
                             { id: 'agreement', color: '#1C1C1E', iconPath: <Waves size={19} strokeWidth={1.8} />, label: 'Private agreement', sublabel: `Escrow or payment stream, ${networkLabel()}`, onClick: () => { setShowAgreementComposer(true); setShowAppDrawer(false); } },
@@ -7352,6 +7591,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
              const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
              const posX = Math.max(12, Math.min(contextMenu.x, vw - 264));
              const posY = Math.max(12, Math.min(contextMenu.y, vh - 520));
+             // A message waiting to be sent later has one action: cancel it.
+             if (typeof contextMenu.id === 'string' && contextMenu.id.startsWith('sched_')) {
+               return (
+                 <div role="menu" aria-label="Scheduled message" className="absolute bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_16px_48px_-8px_rgba(16,24,40,0.28)] p-1.5 min-w-[248px]" style={{ top: posY, left: posX, zIndex: 100000 }} onClick={e => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); setContextMenu(null); } }}>
+                   <button role="menuitem" type="button" autoFocus onClick={() => { if (address) removeScheduled(address, contextMenu.id); setContextMenu(null); toast.success('Scheduled message cancelled'); }} className="w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[14.5px] text-[#e5484d] hover:bg-[#fff0f0] text-left">
+                     <Trash2 size={16} strokeWidth={1.8} /> Cancel scheduled message
+                   </button>
+                 </div>
+               );
+             }
              return (
                <div
                  role="menu"
@@ -7920,6 +8169,24 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             onSchedule={(date) => {
               setScheduledAt(date);
               toast.success(`Scheduled for ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+            }}
+          />
+        )}
+
+        {/* ── Scheduled call sheet ── */}
+        {activePeer && (
+          <ScheduleMeetingSheet
+            open={showMeetingSheet}
+            onClose={() => setShowMeetingSheet(false)}
+            peerName={getDisplayName(activePeer)}
+            onSend={async (text) => {
+              const ok = executeSendRef.current ? await executeSendRef.current(text) : false;
+              if (ok && address) {
+                const invite = parseMeeting(text);
+                if (invite) rememberMeeting(address, activePeer, invite, true);
+                toast.success('Invitation sent');
+              }
+              return ok;
             }}
           />
         )}
