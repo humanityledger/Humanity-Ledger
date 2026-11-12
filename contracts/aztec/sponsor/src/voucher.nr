@@ -18,7 +18,7 @@ pub fn voucher_digest(voucher_id: Field, expires_at: u64) -> [u8; 32] {
         msg[16 + i] = id[i];
     }
     for i in 0..8 {
-        let shift: u8 = ((7 - i) * 8) as u8;
+        let shift: u64 = ((7 - i) * 8) as u64;
         msg[48 + i] = ((expires_at >> shift) & 0xff) as u8;
     }
     sha256::digest(msg)
