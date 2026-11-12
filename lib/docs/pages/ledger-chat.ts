@@ -163,7 +163,7 @@ export const calls: DocPage = {
   label: "Voice and video calls",
   summary: "How calls connect, how they are encrypted, and what they reveal about your network.",
   keywords: ["call", "voice", "video", "webrtc", "ip address", "turn", "stun", "relay", "group call", "microphone", "camera"],
-  updated: "2026-10-21",
+  updated: "2026-11-12",
   blocks: [
     {
       t: "p",
@@ -180,7 +180,7 @@ export const calls: DocPage = {
       items: [
         { title: "Signalling", text: "The two browsers exchange connection details through the public PeerJS signalling service. It sees an identifier for each side and when the call is set up, not the audio or video." },
         { title: "Finding a route", text: "Each browser asks a STUN server, operated by Google, for its public network address so the two can try to connect directly." },
-        { title: "Direct or relayed", text: "If a direct connection is not possible, for example behind a strict company network, the call is relayed through the public OpenRelay TURN service. The relay passes encrypted packets and cannot decode them." },
+        { title: "Direct or relayed", text: "If a direct connection is not possible, for example on a mobile network or behind a strict company network, the call needs a relay (a TURN server). Ledger Chat uses its own relay service when it is switched on; the public relay it used before no longer works and was removed. The relay passes encrypted packets and cannot decode them. Until the relay is switched on, calls between two networks that both block direct connections may not connect." },
       ],
     },
     { t: "h2", text: "Your IP address" },

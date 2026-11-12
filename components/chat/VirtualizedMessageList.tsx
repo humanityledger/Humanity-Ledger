@@ -103,7 +103,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
     <div 
       ref={scrollRef}
       onScroll={handleScroll}
-      className="flex-1 overflow-y-auto overscroll-contain flex flex-col p-4 space-y-2"
+      className="flex-1 overflow-y-auto overscroll-contain flex flex-col px-3 py-4 sm:px-5 lg:px-8 space-y-2"
       style={{ WebkitOverflowScrolling: 'touch' }}
     >
       {isLoadingMore && (
