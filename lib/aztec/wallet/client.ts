@@ -42,6 +42,7 @@ import {
   agreementFeeCheck,
   bridgeFeeJuice as bridgeOnL1,
   feePlan,
+  maxFeeFor,
   loadClaims,
   mergeClaims,
   nextSecretIndex,
@@ -74,6 +75,8 @@ export interface FeeJuiceState {
   claims: { claim: FeeJuiceClaim; ready: boolean }[];
   /** How the next transaction will pay. */
   plan: FeePlan['kind'];
+  /** Fee Juice a transaction must be able to cover (its maximum fee), 0 if unknown. */
+  minForTx: bigint;
 }
 
 export interface TokenBalance {
@@ -299,7 +302,9 @@ class PrivateWallet {
       this.set({ step: 'Closing the private wallet in your other Ledger Chat tab' });
       const answer = await this.handoff.requestRelease();
       if (answer === 'busy') throw new Error(BUSY_ELSEWHERE_MESSAGE);
-      if (answer === 'none') throw err;
+      // 'none': no other tab holds it. The lock is most likely this page's own, from a wallet just
+      // closed after a failed step (Safari lets go of OPFS handles late), so the retries below still
+      // apply. Seen on iPhone with a single tab, 12 Nov 2026.
       // The other tab closed its stores; its locks can take a moment to be let go.
       let last: unknown = err;
       for (let i = 0; i < 8; i++) {
@@ -504,12 +509,15 @@ class PrivateWallet {
           step:
             state.plan === 'wait-claim'
               ? 'Your Fee Juice is on its way from Ethereum. Your account is created as soon as it arrives (usually a few minutes).'
-              : 'Your private account needs Fee Juice to be created. Bridge AZTEC from your Ethereum wallet to continue.',
+              : state.plan === 'top-up'
+                ? `Your Fee Juice arrived, but creating the account needs up to ${fmtAztec(state.minForTx)} AZTEC of Fee Juice (only the gas used is charged, the rest stays yours). Add at least ${fmtAztec(state.minForTx)} AZTEC in one deposit. You can already receive payments at your address.`
+                : 'You can already receive private payments at your address. To send, your account needs Fee Juice: bridge AZTEC from your Ethereum wallet.',
         });
         if (state.plan === 'wait-claim') this.pollClaims();
         return false;
       }
-      const ready = state.claims.find((c) => c.ready)!.claim;
+      const plan = feePlan({ network: 'mainnet', hasSponsor: false, feeJuiceBalance: state.balance, minBalance: state.minForTx > 0n ? state.minForTx : 1n, claims: state.claims });
+      const ready = (plan as { claim: FeeJuiceClaim }).claim;
       fee = { paymentMethod: this.claimMethod(ready) };
       consumed = ready;
     }
@@ -565,8 +573,12 @@ class PrivateWallet {
         ready: await sdk.isL1ToL2MessageReady(this.node, sdk.Fr.fromHexString(claim.messageHash)).catch(() => false),
       })),
     );
-    const plan = feePlan({ network: 'mainnet', hasSponsor: false, feeJuiceBalance: balance, minBalance: 1n, claims }).kind;
-    const state: FeeJuiceState = { balance, claims, plan };
+    const minForTx = await this.node
+      .getCurrentMinFees()
+      .then((f: any) => maxFeeFor({ feePerL2Gas: BigInt(f.feePerL2Gas.toString()), feePerDaGas: BigInt(f.feePerDaGas.toString()) }))
+      .catch(() => 0n);
+    const plan = feePlan({ network: 'mainnet', hasSponsor: false, feeJuiceBalance: balance, minBalance: minForTx > 0n ? minForTx : 1n, claims }).kind;
+    const state: FeeJuiceState = { balance, claims, plan, minForTx };
     this.set({ feeJuice: state });
     return state;
   }
@@ -583,14 +595,17 @@ class PrivateWallet {
     await this.assertNodeStillPinned();
     const state = await this.refreshFeeJuice();
     if (state.plan === 'claim') {
-      const c = state.claims.find((x) => x.ready)!.claim;
+      const plan = feePlan({ network: 'mainnet', hasSponsor: false, feeJuiceBalance: state.balance, minBalance: state.minForTx > 0n ? state.minForTx : 1n, claims: state.claims });
+      const c = (plan as { claim: FeeJuiceClaim }).claim;
       return { fee: { paymentMethod: this.claimMethod(c) }, consumes: c };
     }
     if (state.plan === 'balance') return { fee: undefined };
     throw new Error(
       state.plan === 'wait-claim'
         ? 'Your Fee Juice is still arriving from Ethereum. Try again in a few minutes.'
-        : 'You have no Fee Juice to pay the network fee. Bridge AZTEC from your Ethereum wallet first.',
+        : state.plan === 'top-up'
+          ? `Your Fee Juice does not cover the network fee right now (up to ${fmtAztec(state.minForTx)} AZTEC; only the gas used is charged). Add Fee Juice, then try again. Nothing was sent.`
+          : 'You have no Fee Juice to pay the network fee. Bridge AZTEC from your Ethereum wallet first.',
     );
   }
 
@@ -1087,6 +1102,12 @@ export function isConfirmationTimeout(err: any): boolean {
   return /timeout|timed out|took too long/i.test(String(err?.name ?? '') + ' ' + String(err?.message ?? err ?? ''));
 }
 
+/** Fee Juice base units (18 decimals) as whole AZTEC, rounded up: "21". */
+export function fmtAztec(units: bigint): string {
+  const one = 10n ** 18n;
+  return ((units + one - 1n) / one).toString();
+}
+
 /** Said once the wallet is open but a token could not be loaded. */
 export function tokenIssuesMessage(issues: string[]): string {
   return `Your wallet is open, but ${issues.join('; ')}. Payments in that token are off until it loads: tap Sync to try again.`;
@@ -1094,7 +1115,9 @@ export function tokenIssuesMessage(issues: string[]): string {
 
 /** Step and raw error, for "Copy details" (never keys: errors of the SDK and the node carry none). */
 export function errorDetailFor(step: string | undefined, err: any): string {
-  const raw = String(err?.stack || err?.message || err || 'Unknown error');
+  // Safari stacks carry no message ("deployAccount@…:1660:28" only): keep both.
+  const message = `${err?.name ?? 'Error'}: ${err?.message ?? String(err)}`;
+  const raw = err?.stack && !String(err.stack).includes(String(err?.message ?? '')) ? `${message}\n${err.stack}` : String(err?.stack || message);
   const causes = Array.isArray(err?.errors) ? ` | causes: ${err.errors.map((e: any) => String(e?.message ?? e)).join(' | ')}` : '';
   return `Ledger Chat private wallet · ${AZTEC_WALLET_CONFIG.network} · step: ${step ?? 'unknown'} · ${new Date().toISOString()}\n${raw}${causes}`.slice(0, 2000);
 }
