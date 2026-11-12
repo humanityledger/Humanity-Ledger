@@ -14,7 +14,6 @@ export const RETIRED_API_ROUTES: readonly string[] = [
   // Email sign-in removed on 2026-11-11: the only way in is a wallet (SIWE) or a linked phone.
   '/api/auth/send-code',
   '/api/auth/verify-code',
-  '/api/auth/check-email',
   '/api/admin/heartbeat',
   '/api/admin/launch-checklist',
   '/api/admin/logout',
