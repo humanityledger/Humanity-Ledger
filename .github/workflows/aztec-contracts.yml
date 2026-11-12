@@ -90,7 +90,13 @@ jobs:
 
       - name: Fail on main or PRs if artifacts are stale
         if: always() && steps.compile.outcome == 'success' && (github.event_name != 'push' || !startsWith(github.ref, 'refs/heads/claude/'))
-        run: git diff --exit-code -- contracts/aztec
+        run: |
+          # Sources pending recompile (deployments/aztec-pending-recompile.json) are expected to differ.
+          excludes=""
+          for src in $(node -e "for (const p of require('./deployments/aztec-pending-recompile.json').pending || []) console.log(p.source)"); do
+            excludes="$excludes :(exclude)$(dirname "$(dirname "$src")")/target"
+          done
+          git diff --exit-code -- contracts/aztec $excludes
 
       # TXE tests (src/test.nr of each contract). They deploy compiled
       # artifacts, including ../test_token, so they run after every crate has
