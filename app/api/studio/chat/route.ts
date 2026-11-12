@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createStudioClient, serverDefaultModel, studioApiKey, studioTpmLimit } from '@/lib/studio/client';
+import { BYOK_TPM_LIMIT, byokFromHeaders, createStudioClient, serverDefaultModel, studioApiKey, studioTpmLimit } from '@/lib/studio/client';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { chatRequestSchema, encodeEvent, MAX_REQUEST_BYTES, type StudioEvent } from '@/lib/studio/protocol';
-import { affordableOutputTokens, isStudioModel, planAllowsModel, promptCostUsd, STUDIO_MODELS, worstCaseFirstCallUsd } from '@/lib/studio/models';
+import { UNLIMITED_PRO, affordableOutputTokens, isStudioModel, planAllowsModel, promptCostUsd, STUDIO_MODELS, worstCaseFirstCallUsd } from '@/lib/studio/models';
 import { acquireTurnLock, readUsage, recordUsage, releaseFreeCapacity, releaseTurnLock, reserveFreeCapacity, resolvePlan, type FreeReservation } from '@/lib/studio/metering';
 import { AgentError, describeApiError, MIN_OUTPUT_TOKENS, runAgent, type AgentResult } from '@/lib/studio/agent';
 import { checkRateLimit, getClientIP } from '@/lib/security/rateLimiter';
@@ -38,7 +38,9 @@ export async function POST(req: NextRequest) {
   if (auth.errorResponse) return auth.errorResponse;
   const wallet = auth.walletAddress;
 
-  const apiKey = studioApiKey();
+  // Bring your own key: the user's provider pays, Studio's allowance is not touched.
+  const byok = byokFromHeaders(req.headers);
+  const apiKey = byok?.key ?? studioApiKey();
   if (!apiKey) return json(503, { error: 'NOT_CONFIGURED', message: 'Ledger Studio is not configured on this server yet: the operator needs to set GROQ_API_KEY.' });
 
   if (!(req.headers.get('content-type') || '').toLowerCase().startsWith('application/json')) {
@@ -70,7 +72,7 @@ export async function POST(req: NextRequest) {
   request.connectors = undefined;
   request.tools = undefined;
 
-  const plan = await resolvePlan(wallet);
+  const plan = byok ? UNLIMITED_PRO : await resolvePlan(wallet);
   // Unknown ids (for example a claude-* model saved before the migration) fall back to the server default.
   const model = isStudioModel(request.model) ? request.model : serverDefaultModel();
   if (!planAllowsModel(plan.id, model)) {
@@ -85,7 +87,8 @@ export async function POST(req: NextRequest) {
 
   const estimated = estimateInputTokens(request);
   // What one call can actually send: each call is fitted to the per-minute limit.
-  const perCallPrompt = Math.min(estimated, studioTpmLimit());
+  const tpmLimit = byok ? BYOK_TPM_LIMIT : studioTpmLimit();
+  const perCallPrompt = Math.min(estimated, tpmLimit);
   if (estimated > plan.maxInputTokens) {
     return json(413, {
       error: 'CONTEXT_TOO_LARGE',
@@ -140,7 +143,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const client = createStudioClient(apiKey, { timeout: TURN_DEADLINE_MS });
+  const client = createStudioClient(apiKey, byok ? { timeout: TURN_DEADLINE_MS, baseUrl: byok.baseUrl, tpmLimit } : { timeout: TURN_DEADLINE_MS });
   const abort = new AbortController();
   req.signal.addEventListener('abort', () => abort.abort());
 
@@ -155,7 +158,8 @@ export async function POST(req: NextRequest) {
       const record = async (r: AgentResult) => {
         const u = r.usage;
         const tokens = u.input_tokens + u.output_tokens + u.cache_creation_input_tokens + u.cache_read_input_tokens;
-        await recordUsage(wallet, r.costUsd, tokens, u.webSearches, plan.id);
+        // With the user's own key nothing is charged to their Studio allowance.
+        await recordUsage(wallet, byok ? 0 : r.costUsd, tokens, u.webSearches, plan.id);
         emit({
           type: 'usage',
           inputTokens: u.input_tokens + u.cache_creation_input_tokens + u.cache_read_input_tokens,

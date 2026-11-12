@@ -7,6 +7,7 @@
  * subagents and checkpoints to rewind). The AI runs on Groq (server side).
  */
 
+import { byokHeaders } from '@/lib/studio/byok';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createStudioStore, uid, DEFAULT_PREFS, workspaceIdFor,
@@ -716,7 +717,7 @@ export function useStudio(wallet: string) {
       const res = await fetch('/api/studio/chat', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...byokHeaders() },
         body: JSON.stringify(payload),
         signal: ctrl.signal,
       });

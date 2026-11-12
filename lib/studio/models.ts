@@ -138,9 +138,29 @@ export const STUDIO_PLANS: Record<StudioPlanId, StudioPlan> = {
   pro: {
     id: 'pro', label: 'Pro', dailyBudgetUsd: 0.15, monthlyBudgetUsd: 2,
     maxWebSearchesPerRequest: 0, maxWebFetchesPerRequest: 0, maxFetchContentTokens: 0, requestsPerHourPerIp: 120,
-    maxConnectors: 0, maxFileMb: 20, maxInputTokens: 300_000, priceLabel: '20 € / mes',
+    maxConnectors: 0, maxFileMb: 20, maxInputTokens: 300_000, priceLabel: '$20 / month',
   },
 };
+
+/**
+ * Pro without allowance limits: the founder's wallets (STUDIO_FOUNDER_WALLETS, checked in
+ * metering.resolvePlan) and anyone using their own provider key (BYOK). The id stays 'pro' so
+ * every Pro check applies unchanged.
+ */
+export const UNLIMITED_PRO: StudioPlan = {
+  ...STUDIO_PLANS.pro,
+  label: 'Pro, no limits',
+  dailyBudgetUsd: 1_000_000,
+  monthlyBudgetUsd: 1_000_000,
+  requestsPerHourPerIp: 2_000,
+  priceLabel: 'Free for life',
+};
+
+/** Server only (the variable is not public). Wallets with lifetime, no-cost Studio access (comma-separated addresses, set in the server environment). */
+export function isFounderWallet(wallet: string): boolean {
+  const list = (process.env.STUDIO_FOUNDER_WALLETS || '').toLowerCase().split(',').map((a) => a.trim()).filter(Boolean);
+  return list.includes(wallet.toLowerCase());
+}
 
 /** Reasoning efforts per plan (Groq `reasoning_effort`: low, medium, high). */
 export const PLAN_EFFORTS: Record<StudioPlanId, readonly string[]> = {

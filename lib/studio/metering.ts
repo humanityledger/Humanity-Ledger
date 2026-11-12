@@ -20,7 +20,8 @@
 import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { redisClient, safeRedisGet, safeRedisSet } from '@/lib/redis/client';
-import { STUDIO_PLANS, type StudioPlan, type StudioPlanId } from './models';
+import { STUDIO_PLANS, UNLIMITED_PRO, isFounderWallet, type StudioPlan, type StudioPlanId } from './models';
+export { isFounderWallet } from './models';
 
 /** Tiers that include Studio Pro. */
 const PRO_TIERS = new Set(['STUDIO_PRO', 'FULL_NODE', 'ARCHIVE_PROVER', 'PRO', 'ENTERPRISE']);
@@ -50,6 +51,7 @@ export function tierFromCache(raw: string | null | undefined): string | null {
 
 export async function resolvePlan(wallet: string): Promise<StudioPlan> {
   const w = wallet.toLowerCase();
+  if (isFounderWallet(w)) return UNLIMITED_PRO;
   const cached = tierFromCache(await safeRedisGet(`tier:${w}`));
   if (cached) return STUDIO_PLANS[planForTier(cached)];
   try {
