@@ -2,6 +2,43 @@
 
 **Date:** 5 November 2026, updated 10 and 11 November 2026. **Status (11 November):** one contract of ours is on Aztec Alpha, the operator's token HLC (below); no escrow or stream is. Production runs on Alpha since #41 (until then the Dockerfile declared no `ARG`, so every build used the test network defaults). The private wallet's storage bug (#43) and its dead ends are fixed in code; the first real end-to-end run is still to be recorded. The wallet refuses a node that settles on Ethereum mainnet (`assertNetworkAllowed`) unless the build carries **both** `NEXT_PUBLIC_AZTEC_NETWORK=alpha` and `NEXT_PUBLIC_AZTEC_ALPHA_ENABLED=true`.
 
+## State on 12 November 2026: what stands between Ledger Chat and an unqualified "live on mainnet"
+
+Production runs on Aztec Alpha (Ethereum mainnet, chain 1) and HLC is confirmed on the node (below). Since 11 November, in code: CSP for the prover WASM (#58), Fee Juice minimum from live node fees and top-up plan (#59), calls active only when ICE connects (#60), true presence and linked-computer wallet (#61), migrations that bypass PgBouncer and read retries (#63). What remains is listed with its owner. **Nothing below can be closed by code alone in this repository today.**
+
+| # | Remaining | Why it matters | Owner | How it is closed |
+| --- | --- | --- | --- | --- |
+| R1 | First real run on Alpha | No transaction hash yet proves a private payment from Ledger Chat on mainnet | Stefan | Runbook below; record hashes in this file |
+| R2 | Public and legal texts | `lib/docs/pages/legal.ts` and `protocol.ts` say the wallet is test-network only and will not touch real value before an audit; production does | Stefan with counsel | Decide the wording; agents do not edit legal text |
+| R3 | TURN relay | Calls between different networks cannot connect (`/api/calls/ice` answers `source: none`) | Stefan | `CLOUDFLARE_TURN_KEY_ID`, `CLOUDFLARE_TURN_API_TOKEN` in Railway (`docs/CALLS.md`) |
+| R4 | Zero-balance onboarding | A new account needs about 28 AZTEC of Fee Juice before its first transaction | Decision, then build | Proposal P1 below |
+| R5 | A dollar-denominated token | HLC is issued by the operator, uncapped and unbacked; nobody holds it as money | Decision, then build | Proposal P2 below |
+| R6 | Agreements (escrow, streams) on Alpha | Off: artifacts must be recompiled with the deposit and creation nullifiers and run on testnet first | Engineer with the Aztec toolchain, then Stefan deploys | `deployments/aztec-pending-recompile.json`; G5 |
+| R7 | External audit | G8 open; no claim of audited contracts may be made | Stefan | Engage an auditor; record the report under `audit` |
+| R8 | Two-browser G7 run | Peer address proof verified only in tests | Stefan + one tester | `docs/chat/G6_SESSION_CHECKLIST.md` |
+| R9 | `DATABASE_URL_UNPOOLED` | #63 works around it; the correct value is the direct database | Stefan | `${{Postgres.DATABASE_URL}}` in Railway |
+
+### Runbook for R1 (one browser, smallest amounts)
+
+1. Production on the merged main; sign in with the wallet that will hold the account.
+2. Private wallet, Add funds: the screen shows the minimum Fee Juice computed from the node; bridge exactly that amount of AZTEC once (earlier small deposits are added automatically).
+3. Wait for the deposit to be ready (the panel shows "ready"); open the wallet: the account deploys by claiming in the same transaction. Copy the transaction hash from the activity list.
+4. From the admin account, send 1 HLC to the new account's Aztec address; confirm it appears as private balance.
+5. In a DM with a second account whose address is verified (G7), send 0.10 HLC; confirm on the second device.
+6. Record in this file: date, the three transaction hashes, L2 blocks, browser and device. Only then may public material say that private payments run on mainnet.
+
+### What zk.money (Aztec Labs) does that Ledger Chat does not, from its public review
+
+Source: the L2BEAT privacy review of zk.money (v5 page, archived after v6 became canonical). zk.money brings dollars to Aztec through **its own L1 portal** (DAI, with USDC and USDT swapped to DAI on Curve) that credits private notes through the Inbox, and **sponsors users' L2 fees with a claim fee-paying contract funded by a 0.1 DAI charge on deposits and withdrawals**; names resolve through an onchain registry; per-payment and daily caps apply. There is no canonical, issuer-backed private stablecoin on Alpha to plug into: each application that wants dollars runs its own portal.
+
+### Proposal P1: sponsored onboarding (needs approval before any code)
+
+A Noir fee-paying contract owned by Humanity Ledger that pays only (a) account deployment and (b) the first N private transfers of an account, with a per-account and per-day ceiling; funded by Humanity Ledger's Fee Juice and, once P2 exists, by a small fixed charge on deposits (the zk.money model). Needs the Aztec toolchain (`aztec-nargo`), testnet first, then a recorded deployment and audit scope added to G8.
+
+### Proposal P2: a dollar portal (needs approval before any code)
+
+An L1 portal for one dollar token (DAI or USDC) and a matching L2 token minted only by Inbox messages from that portal, per-deposit and daily caps, withdrawals through the Outbox. This is a bridge holding user funds: it is not deployed without an external audit.
+
 ## State on 11 November 2026
 
 | Item | State | Evidence |
