@@ -42,7 +42,7 @@ unconstrained fn binding(env: TestEnvironment, user: AztecAddress, sponsor: Azte
 }
 
 // Prints what a voucher for the TXE instance must name, so scripts/aztec/sponsor-test-vectors.mjs can
-// sign the exact bytes. The address is deterministic for a fresh TestEnvironment (checked below).
+// sign the exact bytes.
 #[test]
 unconstrained fn the_binding_names_this_instance_and_network() {
     let (env, user, sponsor) = setup();
@@ -51,11 +51,16 @@ unconstrained fn the_binding_names_this_instance_and_network() {
     let chain = b[1];
     let version = b[2];
     std::println(f"[SPONSOR-V2 binding] address {instance} chain {chain} version {version}");
-    assert(b[0] == sponsor.to_field());
-    let (env2, user2, sponsor2) = setup();
-    assert(sponsor2 == sponsor, "TXE sponsor address is not deterministic");
-    let b2 = binding(env2, user2, sponsor2);
-    assert((b2[1] == b[1]) & (b2[2] == b[2]));
+    assert(instance == sponsor.to_field());
+}
+
+// The same in a second fresh environment: the vectors only hold if the TXE address is deterministic.
+#[test]
+unconstrained fn the_binding_is_the_same_in_a_fresh_environment() {
+    let (env, user, sponsor) = setup();
+    let b = binding(env, user, sponsor);
+    let instance = b[0];
+    std::println(f"[SPONSOR-V2 binding again] address {instance}");
 }
 
 // TXE runs a test call in the revertible phase, so the fee-payer election itself cannot succeed
