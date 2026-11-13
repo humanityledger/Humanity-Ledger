@@ -26,14 +26,14 @@ function Toggle({ label, enabled, onChange, danger = false }: { label: string; e
       <button
         type="button"
         onClick={() => onChange(!enabled)}
-        className={`w-[46px] h-[26px] rounded-full p-0.5 transition-colors duration-200 ease-in-out relative ${
+        className={`w-[46px] h-[26px] rounded-full p-0.5 transition-colors duration-150 ease-in-out relative ${
           enabled ? (danger ? 'bg-red-500' : 'bg-[#15171c]') : 'bg-black/10'
         }`}
       >
         <motion.div
           animate={{ x: enabled ? 20 : 0 }}
-          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-          className="w-[22px] h-[22px] bg-white rounded-full shadow-xs"
+          transition={{ duration: 0.15, ease: 'easeOut' }}
+          className="w-[22px] h-[22px] bg-white rounded-full"
         />
       </button>
     </div>
@@ -75,7 +75,7 @@ function ChannelManagement({ community, myAddress, onChannelSelect, onUpdate }: 
   };
 
   return (
-    <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/[0.06] space-y-4">
+    <div className="bg-white rounded-2xl p-6 border border-[#E4E7EC] space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#727a88]">Channels</h3>
@@ -92,13 +92,13 @@ function ChannelManagement({ community, myAddress, onChannelSelect, onUpdate }: 
       <AnimatePresence>
         {showAdd && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <div className="bg-[#f2f4f7] rounded-2xl p-4 space-y-3 border border-black/[0.04]">
+            <div className="bg-[#f2f4f7] rounded-2xl p-4 space-y-3 border border-[#E4E7EC]">
               <input
                 type="text"
                 placeholder="Channel Name (e.g. general, announcements)"
                 value={form.name}
                 onChange={e => setForm({...form, name: e.target.value.toLowerCase().replace(/\s+/g, '-')})}
-                className="w-full px-4 py-2.5 rounded-xl bg-white border border-black/[0.06] outline-none focus:border-[#15171c] text-[14px] text-[#15171c]"
+                className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4E7EC] outline-none focus:border-[#15171c] text-[14px] text-[#15171c]"
               />
               <Toggle label="Paid Channel (Token Gated)" enabled={form.isPaid} onChange={v => setForm({...form, isPaid: v})} />
               {form.isPaid && (
@@ -108,12 +108,12 @@ function ChannelManagement({ community, myAddress, onChannelSelect, onUpdate }: 
                     placeholder="Price"
                     value={form.price}
                     onChange={e => setForm({...form, price: e.target.value})}
-                    className="w-1/2 px-4 py-2.5 rounded-xl bg-white border border-black/[0.06] outline-none text-[14px] text-[#15171c]"
+                    className="w-1/2 px-4 py-2.5 rounded-xl bg-white border border-[#E4E7EC] outline-none text-[14px] text-[#15171c]"
                   />
                   <select
                     value={form.currency}
                     onChange={e => setForm({...form, currency: e.target.value})}
-                    className="w-1/2 px-4 py-2.5 rounded-xl bg-white border border-black/[0.06] outline-none text-[14px] text-[#15171c]"
+                    className="w-1/2 px-4 py-2.5 rounded-xl bg-white border border-[#E4E7EC] outline-none text-[14px] text-[#15171c]"
                   >
                     <option value="USDC">USDC</option>
                     <option value="USDT">USDT</option>
@@ -124,7 +124,7 @@ function ChannelManagement({ community, myAddress, onChannelSelect, onUpdate }: 
               <button
                 onClick={handleAdd}
                 disabled={loading || !form.name.trim()}
-                className="w-full py-2.5 bg-[#15171c] hover:bg-black text-white text-xs font-semibold rounded-xl disabled:opacity-40 shadow-sm transition-all active:scale-95"
+                className="w-full py-2.5 bg-[#15171c] hover:bg-black text-white text-xs font-semibold rounded-xl disabled:opacity-40 transition-colors"
               >
                 {loading ? 'Creating...' : 'Create Channel'}
               </button>
@@ -137,7 +137,7 @@ function ChannelManagement({ community, myAddress, onChannelSelect, onUpdate }: 
         {channels.map((c: any) => (
           <div key={c.id} className="flex items-center justify-between p-3.5 bg-[#f2f4f7] rounded-2xl hover:bg-[#eaeef3] transition-colors group">
             <div className="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onClick={() => onChannelSelect?.(c.id)}>
-              <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-[#15171c] shrink-0 border border-black/[0.04]">
+              <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-[#15171c] shrink-0 border border-[#E4E7EC]">
                 {c.isPaid ? <Lock size={14} /> : <Hash size={14} />}
               </div>
               <div className="min-w-0 flex-1">
@@ -148,7 +148,7 @@ function ChannelManagement({ community, myAddress, onChannelSelect, onUpdate }: 
             {c.name !== 'general' && (
               <button
                 onClick={() => handleDelete(c.id)}
-                className="p-2 text-[#727a88] hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-red-50"
+                className="p-2 text-[#727a88] hover:text-red-600 opacity-0 group-hover:opacity-100 transition-colors rounded-lg hover:bg-red-50"
                 title="Delete channel"
               >
                 <Trash2 size={15} />
@@ -224,9 +224,9 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
     <div className="max-w-3xl mx-auto px-4 py-5 pb-28 space-y-6">
       
       {/* ── PROFILE & GROUP PREVIEW CARD ── */}
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/[0.06]">
+      <div className="bg-white rounded-2xl p-6 border border-[#E4E7EC]">
         <div className="flex flex-col md:flex-row gap-5 items-start">
-          <div className="w-20 h-20 rounded-2xl bg-[#15171c] text-white font-bold text-3xl flex items-center justify-center shrink-0 shadow-sm">
+          <div className="w-20 h-20 rounded-2xl bg-[#15171c] text-white font-bold text-3xl flex items-center justify-center shrink-0">
             {profile.name.slice(0, 2).toUpperCase()}
           </div>
           <div className="flex-1 w-full min-w-0">
@@ -235,21 +235,21 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
                 <input
                   value={profile.name}
                   onChange={e => setProfile({...profile, name: e.target.value})}
-                  className="w-full px-4 py-2.5 rounded-xl border border-black/[0.08] text-[15px] font-bold text-[#15171c] outline-none focus:border-[#15171c]"
+                  className="w-full px-4 py-2.5 rounded-xl border border-[#E4E7EC] text-[15px] font-bold text-[#15171c] outline-none focus:border-[#15171c]"
                   placeholder="Community Name"
                 />
                 <textarea
                   value={profile.description}
                   onChange={e => setProfile({...profile, description: e.target.value})}
                   rows={3}
-                  className="w-full px-4 py-2.5 rounded-xl border border-black/[0.08] text-[13px] text-[#15171c] outline-none focus:border-[#15171c] resize-none"
+                  className="w-full px-4 py-2.5 rounded-xl border border-[#E4E7EC] text-[13px] text-[#15171c] outline-none focus:border-[#15171c] resize-none"
                   placeholder="Description (optional)"
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={handleSaveProfile}
                     disabled={savingProfile}
-                    className="px-4 py-2 bg-[#15171c] hover:bg-black text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all shadow-sm"
+                    className="px-4 py-2 bg-[#15171c] hover:bg-black text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors"
                   >
                     {savingProfile ? 'Saving...' : <><Save size={14} /> Save</>}
                   </button>
@@ -283,7 +283,7 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
                   )}
                 </div>
 
-                <div className="flex items-center gap-6 mt-5 pt-4 border-t border-black/[0.04]">
+                <div className="flex items-center gap-6 mt-5 pt-4 border-t border-[#E4E7EC]">
                   <div>
                     <span className="text-[18px] font-bold font-mono text-[#15171c] block">
                       {community.members?.length || community.membersCount || 1}
@@ -317,7 +317,7 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
           { icon: MessageSquare, label: 'Posts', val: community?.postsCount ?? 0 },
           { icon: Award, label: 'Access', val: community?.isPrivate ? 'Private' : 'Public' },
         ].map((s, i) => (
-          <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-black/[0.06] flex flex-col items-center text-center space-y-1">
+          <div key={i} className="bg-white rounded-2xl p-4 border border-[#E4E7EC] flex flex-col items-center text-center space-y-1">
             <div className="w-9 h-9 rounded-xl bg-[#f2f4f7] flex items-center justify-center text-[#15171c] mb-1">
               <s.icon size={16} />
             </div>
@@ -328,14 +328,14 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
       </div>
 
       {/* ── INVITE LINK ── */}
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/[0.06] space-y-4">
+      <div className="bg-white rounded-2xl p-6 border border-[#E4E7EC] space-y-4">
         <div>
           <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#727a88]">Invite Link</h3>
           <p className="text-[13px] text-[#727a88]">Share this link or QR code to invite members</p>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-4">
           <div
-            className="w-24 h-24 rounded-2xl bg-white border border-black/[0.08] flex items-center justify-center shrink-0 p-2 shadow-xs cursor-pointer hover:border-black/20 transition-all"
+            className="w-24 h-24 rounded-2xl bg-white border border-[#E4E7EC] flex items-center justify-center shrink-0 p-2 cursor-pointer hover:border-black/20 transition-colors"
             onClick={copyInvite}
             title="Click to copy invite"
           >
@@ -346,11 +346,11 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
               <input
                 readOnly
                 value={communityInviteUrl(community?.joinCode) || ''}
-                className="flex-1 px-4 py-2.5 bg-[#f2f4f7] rounded-xl text-[13px] font-mono text-[#15171c] outline-none border border-black/[0.04]"
+                className="flex-1 px-4 py-2.5 bg-[#f2f4f7] rounded-xl text-[13px] font-mono text-[#15171c] outline-none border border-[#E4E7EC]"
               />
               <button
                 onClick={copyInvite}
-                className="px-5 py-2.5 bg-[#15171c] hover:bg-black text-white text-xs font-semibold rounded-xl transition-all shadow-sm shrink-0 active:scale-95"
+                className="px-5 py-2.5 bg-[#15171c] hover:bg-black text-white text-xs font-semibold rounded-xl transition-colors shrink-0"
               >
                 Copy
               </button>
@@ -364,7 +364,7 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
 
       {/* ── PERMISSIONS ── */}
       {isAdmin && (
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/[0.06] space-y-4">
+        <div className="bg-white rounded-2xl p-6 border border-[#E4E7EC] space-y-4">
           <div>
             <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#727a88]">Member Permissions</h3>
             <p className="text-[13px] text-[#727a88]">Control what sovereign accounts can do in this group</p>
@@ -398,8 +398,8 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
                   key={opt.v}
                   type="button"
                   onClick={() => updatePerms({slowModeSeconds: opt.v})}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${
-                    perms.slowModeSeconds === opt.v ? 'bg-[#15171c] text-white shadow-sm' : 'bg-[#f2f4f7] text-[#727a88] hover:text-[#15171c]'
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-colors ${
+                    perms.slowModeSeconds === opt.v ? 'bg-[#15171c] text-white' : 'bg-[#f2f4f7] text-[#727a88] hover:text-[#15171c]'
                   }`}
                 >
                   {opt.l}
@@ -412,14 +412,14 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
 
       {/* ── PRIVACY ── */}
       {isAdmin && (
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/[0.06] space-y-4">
+        <div className="bg-white rounded-2xl p-6 border border-[#E4E7EC] space-y-4">
           <div>
             <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#727a88]">Privacy & Discovery</h3>
             <p className="text-[13px] text-[#727a88]">Set group visibility across the protocol</p>
           </div>
-          <div className="bg-[#f2f4f7] rounded-2xl p-4 border border-black/[0.03]">
+          <div className="bg-[#f2f4f7] rounded-2xl p-4 border border-[#E4E7EC]">
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-[#15171c] shrink-0 border border-black/[0.04]">
+              <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-[#15171c] shrink-0 border border-[#E4E7EC]">
                 {community.isPrivate ? <Lock size={15} /> : <Globe size={15} />}
               </div>
               <div>
@@ -449,7 +449,7 @@ export function CommunitySettingsPanel({ community, myAddress, onChannelSelect, 
 
       {/* ── DANGER ZONE ── */}
       {community.ownerAddress?.toLowerCase() === myAddress.toLowerCase() && (
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-red-100 space-y-3">
+        <div className="bg-white rounded-2xl p-6 border border-red-100 space-y-3">
           <h3 className="text-[11px] font-semibold uppercase tracking-wider text-red-600">Danger Zone</h3>
           <p className="text-[13px] text-[#727a88] leading-relaxed">
             Deleting this community will permanently remove all channels, posts, messages, and vaults. This action cannot be undone.

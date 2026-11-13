@@ -70,7 +70,7 @@ function PostCard({ post, myAddress, onEdit, onLike, localLikes }: PostCardProps
     <motion.article
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-3xl shadow-sm border border-black/[0.05] overflow-hidden group"
+      className="bg-white rounded-2xl border border-[#E4E7EC] overflow-hidden group"
     >
       {/* Header */}
       <div className="px-6 pt-5 pb-3">
@@ -84,7 +84,7 @@ function PostCard({ post, myAddress, onEdit, onLike, localLikes }: PostCardProps
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-3 bg-[#f7f8fa] border-t border-black/[0.04] flex items-center gap-3">
+      <div className="px-6 py-3 bg-[#f7f8fa] border-t border-[#E4E7EC] flex items-center gap-3">
         {/* Author avatar */}
         <div
           className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[12px] font-semibold shrink-0"
@@ -109,7 +109,7 @@ function PostCard({ post, myAddress, onEdit, onLike, localLikes }: PostCardProps
           )}
           <button
             onClick={() => onLike?.(post.id)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all active:scale-90 ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-colors ${
               liked ? 'bg-red-50 text-[#d93036]' : 'text-black/30 hover:text-red-400 hover:bg-red-50'
             }`}
           >
@@ -348,7 +348,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
     <div className="flex-1 flex flex-col h-full bg-[#f2f4f7] overflow-hidden min-h-0">
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
-      <div className="h-[64px] px-3 md:px-5 border-b border-black/[0.07] flex items-center justify-between bg-white shrink-0 sticky top-0 z-30 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
+      <div className="h-[64px] px-3 md:px-5 border-b border-[#E4E7EC] flex items-center justify-between bg-white shrink-0 sticky top-0 z-30 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
         {/* Left: back + identity (tapping name/avatar opens info panel) */}
         <div className="flex items-center gap-2.5">
           <button
@@ -365,7 +365,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
             title="View group info"
           >
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-sm shadow-sm shrink-0"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0"
               style={{ backgroundColor: avatarColor }}
             >
               {community?.name?.slice(0,2).toUpperCase() || 'C'}
@@ -373,7 +373,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
 
             <div className="min-w-0 text-left">
               {loadingCommunity ? (
-                <div className="h-4 w-28 bg-black/8 rounded-lg animate-pulse mb-1" />
+                <div className="h-4 w-28 bg-black/8 rounded-lg mb-1" />
               ) : (
                 <p className="text-[15px] font-semibold text-[#15171c] leading-tight flex items-center gap-1.5 truncate max-w-[180px]">
                   {community?.name || 'Community'}
@@ -398,9 +398,9 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
                   activeTab === tab
-                    ? 'bg-white text-[#15171c] shadow-sm'
+                    ? 'bg-white text-[#15171c]'
                     : 'text-black/40 hover:text-black/60'
                 }`}
               >
@@ -426,7 +426,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                     initial={{ opacity: 0, scale: 0.9, y: -4 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    className="absolute right-0 top-full mt-1 w-56 bg-white rounded-2xl shadow-2xl border border-black/5 py-1.5 z-50"
+                    className="absolute right-0 top-full mt-1 w-56 bg-white rounded-2xl shadow-sm border border-[#E4E7EC] py-1.5 z-50"
                   >
                     {/* Conversation */}
                     {[
@@ -439,7 +439,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                       </button>
                     ))}
 
-                    <div className="my-1 border-t border-black/[0.05]" role="separator" />
+                    <div className="my-1 border-t border-[#E4E7EC]" role="separator" />
 
                     {/* Community. Group calls, the treasury and mute are left out on
                         purpose: the call route does not exist yet, the treasury is a
@@ -480,7 +480,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
           type="button"
           onClick={() => setActiveTab('posts')}
           className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors shrink-0 ${
-            activeTab === 'posts' ? 'bg-[#15171c] text-white shadow-sm' : 'text-[#475061] hover:bg-[#f2f4f7]'
+            activeTab === 'posts' ? 'bg-[#15171c] text-white' : 'text-[#475061] hover:bg-[#f2f4f7]'
           }`}
         >
           Posts
@@ -489,7 +489,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
           type="button"
           onClick={() => setActiveTab('chat')}
           className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors shrink-0 ${
-            activeTab === 'chat' ? 'bg-[#15171c] text-white shadow-sm' : 'text-[#475061] hover:bg-[#f2f4f7]'
+            activeTab === 'chat' ? 'bg-[#15171c] text-white' : 'text-[#475061] hover:bg-[#f2f4f7]'
           }`}
         >
           Chat & Channels
@@ -519,7 +519,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
           type="button"
           onClick={() => setActiveTab('governance')}
           className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors shrink-0 ${
-            activeTab === 'governance' ? 'bg-[#15171c] text-white shadow-sm' : 'text-[#475061] hover:bg-[#f2f4f7]'
+            activeTab === 'governance' ? 'bg-[#15171c] text-white' : 'text-[#475061] hover:bg-[#f2f4f7]'
           }`}
         >
           Governance
@@ -529,7 +529,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
             type="button"
             onClick={() => setActiveTab('analytics')}
             className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors shrink-0 ${
-              activeTab === 'analytics' ? 'bg-[#15171c] text-white shadow-sm' : 'text-[#475061] hover:bg-[#f2f4f7]'
+              activeTab === 'analytics' ? 'bg-[#15171c] text-white' : 'text-[#475061] hover:bg-[#f2f4f7]'
             }`}
           >
             Analytics
@@ -539,7 +539,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
           type="button"
           onClick={() => setActiveTab('settings')}
           className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors shrink-0 ${
-            activeTab === 'settings' ? 'bg-[#15171c] text-white shadow-sm' : 'text-[#475061] hover:bg-[#f2f4f7]'
+            activeTab === 'settings' ? 'bg-[#15171c] text-white' : 'text-[#475061] hover:bg-[#f2f4f7]'
           }`}
         >
           Community Settings
@@ -561,11 +561,11 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
             >
               <div className="max-w-3xl mx-auto px-4 py-5 pb-28">
                 {/* ── QUICK POST CREATOR CARD ── */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-black/[0.06] mb-5">
+                <div className="bg-white rounded-2xl p-4 border border-[#E4E7EC] mb-5">
                   {!showInlineForm ? (
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 shadow-sm"
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0"
                         style={{ backgroundColor: myAddress ? getAvatarColor(myAddress) : '#15171c' }}
                       >
                         {(myAddress || '0x??').slice(2, 4).toUpperCase()}
@@ -573,14 +573,14 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                       <button
                         type="button"
                         onClick={() => setShowInlineForm(true)}
-                        className="flex-1 bg-[#f2f4f7] hover:bg-[#e9edef] text-left px-4 py-2.5 rounded-full text-[14px] text-[#727a88] transition-all border border-black/[0.04]"
+                        className="flex-1 bg-[#f2f4f7] hover:bg-[#e9edef] text-left px-4 py-2.5 rounded-full text-[14px] text-[#727a88] transition-colors border border-[#E4E7EC]"
                       >
                         Share an update with the community...
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowInlineForm(true)}
-                        className="px-4 py-2 bg-[#15171c] hover:bg-black text-white rounded-full text-[13px] font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
+                        className="px-4 py-2 bg-[#15171c] hover:bg-black text-white rounded-full text-[13px] font-semibold transition-colors flex items-center gap-1.5 shrink-0"
                       >
                         <Edit size={14} />
                         <span className="hidden sm:inline">Post</span>
@@ -588,7 +588,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between border-b border-black/[0.05] pb-2">
+                      <div className="flex items-center justify-between border-b border-[#E4E7EC] pb-2">
                         <span className="text-[13px] font-semibold text-[#15171c]">New Post</span>
                         <div className="flex items-center gap-2">
                           <button
@@ -633,7 +633,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                           type="button"
                           disabled={isPostingInline || !inlineBody.trim()}
                           onClick={handlePublishInline}
-                          className="px-5 py-2 bg-[#15171c] hover:bg-black disabled:opacity-50 text-white rounded-xl text-[13px] font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
+                          className="px-5 py-2 bg-[#15171c] hover:bg-black disabled:opacity-50 text-white rounded-xl text-[13px] font-semibold transition-colors flex items-center gap-1.5"
                         >
                           {isPostingInline ? 'Posting…' : 'Publish Now'}
                         </button>
@@ -646,7 +646,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                   // Skeleton loaders
                   <div className="space-y-5">
                     {[1,2,3].map(i => (
-                      <div key={i} className="bg-white rounded-3xl p-6 border border-black/5 animate-pulse">
+                      <div key={i} className="bg-white rounded-2xl p-6 border border-[#E4E7EC]">
                         <div className="h-5 bg-black/5 rounded-xl w-3/4 mb-3" />
                         <div className="h-3 bg-black/5 rounded-xl w-full mb-2" />
                         <div className="h-3 bg-black/5 rounded-xl w-5/6 mb-2" />
@@ -656,7 +656,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                   </div>
                 ) : posts.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 text-center">
-                    <div className="w-20 h-20 rounded-3xl bg-black/5 flex items-center justify-center mb-5">
+                    <div className="w-20 h-20 rounded-2xl bg-black/5 flex items-center justify-center mb-5">
                       <FileText size={36} className="text-[#15171c]" />
                     </div>
                     <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">No posts yet</h3>
@@ -688,10 +688,8 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
 
               {/* FAB */}
               <motion.button
-                whileHover={{ scale: 1.06 }}
-                whileTap={{ scale: 0.94 }}
                 onClick={() => { setEditingPost(null); setShowEditor(true); }}
-                className="fixed bottom-6 right-6 w-14 h-14 bg-[#15171c] text-white rounded-full flex items-center justify-center shadow-2xl shadow-black/30 z-20 hover:bg-black"
+                className="fixed bottom-6 right-6 w-14 h-14 bg-[#15171c] text-white rounded-full flex items-center justify-center shadow-sm z-20 hover:bg-black"
               >
                 <Edit size={22} />
               </motion.button>
@@ -709,13 +707,13 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
             >
               {/* Channel sidebar — only show if community has multiple channels */}
               {community?.channels && community.channels.length > 1 && (
-                <div className="hidden md:flex w-[200px] shrink-0 bg-white border-r border-black/5 flex-col py-3 overflow-y-auto">
+                <div className="hidden md:flex w-[200px] shrink-0 bg-white border-r border-[#E4E7EC] flex-col py-3 overflow-y-auto">
                   <p className="text-[12px] font-semibold text-black/25 px-4 mb-2">Channels</p>
                   {community.channels.map((ch: any) => (
                     <button
                       key={ch.id}
                       onClick={() => setActiveChannelId(ch.id)}
-                      className={`flex items-center gap-2.5 px-4 py-2.5 text-left transition-all group ${
+                      className={`flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors group ${
                         activeChannelId === ch.id
                           ? 'bg-black/5 text-[#15171c]'
                           : 'text-black/40 hover:bg-black/[0.03] hover:text-black/70'
@@ -724,7 +722,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                       {ch.isPaid ? <Lock size={13} className="shrink-0" /> : <Hash size={13} className="shrink-0" />}
                       <span className="text-[13px] font-semibold truncate">{ch.name}</span>
                       {ch.isPaid && (
-                        <span className="ml-auto text-[12px] font-semibold bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-md">Paid</span>
+                        <span className="ml-auto text-[11px] font-medium border border-[#E4E7EC] text-[#475061] px-1.5 py-0.5 rounded-md">Paid</span>
                       )}
                     </button>
                   ))}
@@ -825,8 +823,8 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                   onCommunityUpdate={fetchCommunity}
                 />
               ) : (
-                <div className="flex items-center justify-center h-40">
-                  <div className="w-6 h-6 border-2 border-[#1C7AFF]/30 border-t-[#1C7AFF] rounded-full animate-spin" />
+                <div className="h-40 flex items-center justify-center">
+                  <p className=" text-center text-[13px] text-[#727A88]" role="status">Loading…</p>
                 </div>
               )}
             </motion.div>
@@ -897,16 +895,16 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
       <AnimatePresence>
         {showInfoPanel && community && (
           <>
-            <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm" onClick={() => setShowInfoPanel(false)} />
+            <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowInfoPanel(false)} />
             <motion.div
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
-              transition={{ type: 'spring', stiffness: 340, damping: 36 }}
-              className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-[#f2f4f7] flex flex-col shadow-2xl"
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-[#f2f4f7] flex flex-col shadow-sm"
             >
               {/* Header */}
-              <div className="h-[64px] px-4 border-b border-black/[0.07] flex items-center gap-3 bg-white shrink-0">
+              <div className="h-[64px] px-4 border-b border-[#E4E7EC] flex items-center gap-3 bg-white shrink-0">
                 <button onClick={() => setShowInfoPanel(false)} className="p-2 rounded-xl hover:bg-black/5 text-black/40 transition-colors">
                   <ChevronLeft size={22} />
                 </button>
@@ -915,9 +913,9 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
 
               <div className="flex-1 overflow-y-auto">
                 {/* Avatar + Name block */}
-                <div className="bg-white px-6 pt-8 pb-6 flex flex-col items-center gap-3 border-b border-black/[0.05]">
+                <div className="bg-white px-6 pt-8 pb-6 flex flex-col items-center gap-3 border-b border-[#E4E7EC]">
                   <div
-                    className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-sm"
+                    className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold"
                     style={{ backgroundColor: avatarColor }}
                   >
                     {community.name?.slice(0,2).toUpperCase() || 'C'}
