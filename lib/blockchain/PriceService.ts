@@ -8,6 +8,14 @@ import { LRUCache } from 'lru-cache';
  * Legendary PriceService
  * Centralised high-performance pricing engine with multi-source fallback.
  */
+export interface PriceQuote {
+  price: number;
+  change24h: number;
+}
+
+/** Absent key = no price known. Never a zero placeholder. */
+export type PriceMap = Partial<Record<string, PriceQuote>>;
+
 export class PriceService {
   private static cache = new LRUCache<string, any>({
     max: 2000,
@@ -46,26 +54,23 @@ export class PriceService {
   /**
    * Get prices for a batch of tokens across multiple chains
    */
-  public static async getBulkPrices(tokens: { symbol: string, address?: string, chainId?: number }[]) {
+  /**
+   * Prices for a batch of tokens. A symbol is present ONLY when a source returned a positive
+   * price for it (or a real configured fallback exists): a missing price is absent, never
+   * `{ price: 0 }`, so a consumer cannot show 0 as if it were the market price (F-09).
+   */
+  public static async getBulkPrices(tokens: { symbol: string, address?: string, chainId?: number }[]): Promise<PriceMap> {
     if (!tokens || tokens.length === 0) return {};
 
-    const result: Record<string, { price: number, change24h: number }> = {};
-    const symbols = Array.from(new Set(tokens.map(t => t.symbol.toUpperCase())));
-    
-    //  [STEEL DOME] Pre-populate with fallbacks for safety
-    try {
-      symbols.forEach(sym => {
-        if (!sym) return;
-        const fallback = STEEL_DOME_FALLBACKS[sym];
-        if (fallback) {
-          result[sym] = { price: fallback, change24h: 0 };
-        } else {
-          result[sym] = { price: 0, change24h: 0 };
-        }
-      });
-    } catch (e: any) {
-      console.error('[PriceService] Crash in fallback loop:', e.message);
-      throw e;
+    const result: PriceMap = {};
+    const symbols = Array.from(new Set(tokens.map(t => t.symbol.toUpperCase()).filter(Boolean)));
+
+    // Only a known, positive fallback is pre-filled; anything else stays absent.
+    for (const sym of symbols) {
+      const fallback = STEEL_DOME_FALLBACKS[sym];
+      if (typeof fallback === 'number' && Number.isFinite(fallback) && fallback > 0) {
+        result[sym] = { price: fallback, change24h: 0 };
+      }
     }
 
     // 1. Fetch symbols from CoinGecko simple price (Majors/Known symbols)
@@ -85,7 +90,7 @@ export class PriceService {
     }
 
     // 2. For missing prices or non-majors, try DexScreener (Best for Base/L2 tokens)
-    const missing = tokens.filter(t => t.address && (!result[t.symbol.toUpperCase()] || result[t.symbol.toUpperCase()].price === 0));
+    const missing = tokens.filter(t => t.address && !result[t.symbol.toUpperCase()]);
     
     if (missing.length > 0) {
       console.log(`[PriceService] Attempting DexScreener fallback for ${missing.length} tokens...`);

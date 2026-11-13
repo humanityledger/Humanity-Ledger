@@ -10,6 +10,7 @@ export async function GET() {
         
         const prices: Record<string, { price: number; change: number }> = {};
         for (const [sym, data] of Object.entries(rawPrices)) {
+            if (!data) continue; // no price known: absent, never 0
             prices[sym] = {
                 price: data.price,
                 change: data.change24h || 0

@@ -590,13 +590,17 @@ class WalletAnalyticsService {
       
       let inflow = 0;
       let outflow = 0;
+      const unpricedAssets = new Set<string>();
       const senders: Record<string, { amount: number; count: number }> = {};
       const receivers: Record<string, { amount: number; count: number }> = {};
 
       transfers.forEach((t: any) => {
         const valRaw = parseFloat(t.value) || 0;
         const assetSym = (t.asset || 'ETH').toUpperCase();
-        const price = assetPrices[assetSym]?.price || (assetSym === 'USDC' || assetSym === 'USDT' || assetSym === 'DAI' ? 1 : 2500); 
+        // No invented price (it used to assume $2,500 for any unknown asset): unpriced
+        // transfers are left out of the USD totals and listed.
+        const price = assetPrices[assetSym]?.price;
+        if (typeof price !== 'number') { unpricedAssets.add(assetSym); return; }
         const valUsd = valRaw * price;
         
         if (t.direction === 'IN') {
@@ -618,6 +622,7 @@ class WalletAnalyticsService {
         period,
         inflow,
         outflow,
+        unpricedAssets: Array.from(unpricedAssets),
         topSenders: Object.entries(senders)
           .map(([addr, stats]) => ({ address: addr, ...stats }))
           .sort((a, b) => b.amount - a.amount)
@@ -628,12 +633,12 @@ class WalletAnalyticsService {
           .slice(0, 5),
         recentTransfers: transfers.map((t: any) => {
             const assetSym = (t.asset || 'ETH').toUpperCase();
-            const price = assetPrices[assetSym]?.price || (assetSym === 'USDC' || assetSym === 'USDT' || assetSym === 'DAI' ? 1 : 2500);
+            const price = assetPrices[assetSym]?.price;
             return {
                 hash: t.hash,
                 timestamp: t.timestamp || new Date().toISOString(),
                 amount: parseFloat(t.value) || 0,
-                valueUsd: (parseFloat(t.value) || 0) * price, 
+                valueUsd: typeof price === 'number' ? (parseFloat(t.value) || 0) * price : null,
                 type: t.direction,
                 from: t.from,
                 to: t.to,
