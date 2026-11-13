@@ -1,10 +1,16 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { buildAtlas, buildTile, CELL_H, CELL_W, drawCell, fontReady, hash, type Atlas } from "./glyphs";
 
 /**
- * A quiet field of typeset characters (I, T, 7, Z) behind the page, in the manner of aztec.network:
- * empty at rest, characters appear under the cursor.
+ * The typeset field behind the page, in the manner of aztec.network (components/immersive/glyphs.ts):
+ * light serif characters, from a dot to the letters of AZTEC, densest under the cursor.
+ *
+ *   - Under the cursor (desktop, fine pointer): a lens of characters anchored to the page, so they
+ *     flow through it while you scroll, up or down, and swell briefly with the scroll's speed.
+ *   - At rest (`ambient`, every device): one tile of soft clusters is drawn once and handed to CSS
+ *     as --hl-glyph-tile; sections that carry it scroll it with the page, with no work per frame.
  *
  * With `logo`, the official Aztec wordmark is placed small and centred below the element marked
  * data-glyph-anchor (the chat card), linking to aztec.network. It is the SVG Aztec supplies on
@@ -12,14 +18,11 @@ import React, { useEffect, useRef, useState } from "react";
  * narrower than 60px, with clear space that the cursor field keeps out of. Aztec's brand rules ask
  * for the marks to stay unchanged, so the wordmark is never redrawn in characters.
  *
- * Cost: while the pointer moves only the cells around it are redrawn, and the loop stops when it
- * rests. The field is off on touch screens, narrow screens and with reduced motion; the wordmark is
- * not, because it is a link and not an animation.
+ * Cost: the lens redraws only the cells inside its radius, from a pre-drawn atlas, and its loop
+ * stops when the pointer and the page rest. Off on touch screens, narrow screens and with reduced
+ * motion (the ambient tile stays: it is a still image).
  */
-const CELL = 14;
-const FONT = (px: number) => `600 ${px}px "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace`;
-const RAMP = ["·", ":", "I", "T", "7", "Z"];
-const RADIUS = 200;
+const RADIUS = 190;
 const INK = "21,23,28";
 /** Official wordmark, aztec.network/brand: 619.137 by 142.58. */
 const WORDMARK = "/brand/aztec/aztec-wordmark-ink.svg";
@@ -42,7 +45,7 @@ function logoBox(): LogoBox | null {
   return { x: r.left + r.width / 2 - w / 2, y: r.bottom + space / 2 - h / 2, w, h };
 }
 
-export function GlyphField({ logo = false }: { logo?: boolean }) {
+export function GlyphField({ logo = false, ambient = false }: { logo?: boolean; ambient?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [box, setBox] = useState<LogoBox | null>(null);
   const boxRef = useRef<LogoBox | null>(null);
@@ -71,7 +74,34 @@ export function GlyphField({ logo = false }: { logo?: boolean }) {
     };
   }, [logo]);
 
-  // The field.
+  // At rest: one tile of the field for CSS (--hl-glyph-tile), drawn once the serif has loaded.
+  useEffect(() => {
+    if (!ambient) return;
+    let url = "";
+    let cancelled = false;
+    const root = document.documentElement;
+    fontReady().then(() => {
+      if (cancelled) return;
+      const scale = Math.min(2, window.devicePixelRatio || 1);
+      const tile = buildTile(buildAtlas(INK, 0.38, scale));
+      tile.toBlob((blob) => {
+        if (!blob || cancelled) return;
+        url = URL.createObjectURL(blob);
+        root.style.setProperty("--hl-glyph-tile", `url("${url}")`);
+        root.style.setProperty("--hl-glyph-w", `${tile.width / scale}px`);
+        root.style.setProperty("--hl-glyph-h", `${tile.height / scale}px`);
+        root.dataset.glyphs = "ready";
+      }, "image/png");
+    });
+    return () => {
+      cancelled = true;
+      root.style.removeProperty("--hl-glyph-tile");
+      delete root.dataset.glyphs;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [ambient]);
+
+  // Under the cursor: the lens.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -84,76 +114,103 @@ export function GlyphField({ logo = false }: { logo?: boolean }) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    // 1.5 is as sharp as the eye resolves 14px glyphs behind text, at half the pixels of 2x.
+    const dpr = Math.min(1.5, window.devicePixelRatio || 1);
+    let atlas: Atlas | null = null;
     let w = 0, h = 0;
     const pointer = { x: -1e4, y: -1e4 };
-    const lens = { x: -1e4, y: -1e4, k: 0 };
-    let raf = 0, idle = 0, on = false;
-
-    const pick = (v: number) => RAMP[Math.max(0, Math.min(RAMP.length - 1, Math.round(v * (RAMP.length - 1))))];
-    // Stable pseudo-random per cell, so the field does not flicker.
-    const hash = (c: number, r: number) => { const x = Math.sin(c * 127.1 + r * 311.7) * 43758.5453; return x - Math.floor(x); };
+    const lens = { x: -1e4, y: -1e4, k: 0, swell: 0 };
+    // The scroll position is read in the scroll event, never inside the frame: reading it there,
+    // after other scenes have written their styles, would force a layout.
+    let scrollY = window.scrollY;
+    let raf = 0, idle = 0, on = false, lastScroll = scrollY;
+    // What the last frame drew, so only that box is cleared (never the whole screen).
+    let dirty: { x: number; y: number; w: number; h: number } | null = null;
 
     function paint() {
-      ctx!.clearRect(0, 0, w, h);
-      if (lens.k < 0.01) return;
-      ctx!.font = FONT(10);
-      ctx!.textAlign = "center";
-      ctx!.textBaseline = "middle";
-      // Keep the field out of the wordmark's clear space.
+      if (dirty) ctx!.clearRect(dirty.x, dirty.y, dirty.w, dirty.h);
+      dirty = null;
+      if (!atlas || lens.k < 0.01) return;
+      const radius = RADIUS * (1 + lens.swell * 0.2);
+      // Cells are anchored to the page: scrolling moves them through the lens.
+      const sy = scrollY;
+      const off = sy % CELL_H;
+      const row0 = Math.floor(sy / CELL_H);
       const b = boxRef.current;
       const pad = b ? b.h * 0.75 : 0;
-      const c0 = Math.max(0, Math.floor((lens.x - RADIUS) / CELL)), c1 = Math.ceil((lens.x + RADIUS) / CELL);
-      const r0 = Math.max(0, Math.floor((lens.y - RADIUS) / CELL)), r1 = Math.ceil((lens.y + RADIUS) / CELL);
-      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
-        const x = c * CELL + CELL / 2, y = r * CELL + CELL / 2;
-        if (b && x > b.x - pad && x < b.x + b.w + pad && y > b.y - pad && y < b.y + b.h + pad) continue;
-        const d = Math.hypot(x - lens.x, y - lens.y);
-        if (d > RADIUS) continue;
-        const f = (1 - d / RADIUS) ** 1.6 * lens.k;
-        const n = hash(c, r);
-        if (n > 0.35 + f) continue; // sparse at the edge, dense at the centre
-        ctx!.fillStyle = `rgba(${INK},${0.05 + f * 0.3})`;
-        ctx!.fillText(pick(f * 0.9 + n * 0.25), x, y);
+      const c0 = Math.max(0, Math.floor((lens.x - radius) / CELL_W)), c1 = Math.ceil((lens.x + radius) / CELL_W);
+      const r0 = Math.max(-1, Math.floor((lens.y - radius + off) / CELL_H)), r1 = Math.ceil((lens.y + radius + off) / CELL_H);
+      for (let r = r0; r <= r1; r++) {
+        const y = r * CELL_H - off;
+        for (let c = c0; c <= c1; c++) {
+          const x = c * CELL_W;
+          const cx = x + CELL_W / 2, cy = y + CELL_H / 2;
+          if (b && cx > b.x - pad && cx < b.x + b.w + pad && cy > b.y - pad && cy < b.y + b.h + pad) continue;
+          const d = Math.hypot(cx - lens.x, cy - lens.y);
+          if (d > radius) continue;
+          const f = (1 - d / radius) ** 1.4 * lens.k;
+          const n = hash(c, r + row0);
+          if (n > 0.3 + f) continue; // sparse at the edge, dense at the centre
+          drawCell(ctx!, atlas, f * 0.95 + n * 0.12, 0.12 + f * 0.88, x, y);
+        }
       }
+      dirty = { x: c0 * CELL_W - 1, y: r0 * CELL_H - off - 1, w: (c1 - c0 + 1) * CELL_W + 2, h: (r1 - r0 + 1) * CELL_H + 2 };
     }
 
     function resize() {
       w = window.innerWidth; h = window.innerHeight;
       canvas!.width = Math.round(w * dpr); canvas!.height = Math.round(h * dpr);
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+      dirty = null; // resizing cleared the canvas
       paint();
     }
 
     function tick() {
-      lens.x += (pointer.x - lens.x) * 0.2;
-      lens.y += (pointer.y - lens.y) * 0.2;
-      lens.k += ((on ? 1 : 0) - lens.k) * 0.12;
+      lens.x += (pointer.x - lens.x) * 0.22;
+      lens.y += (pointer.y - lens.y) * 0.22;
+      lens.k += ((on ? 1 : 0) - lens.k) * 0.14;
+      // Scroll speed swells the lens for a moment, in either direction.
+      const sy = scrollY;
+      const v = Math.abs(sy - lastScroll);
+      lastScroll = sy;
+      lens.swell += (Math.min(1, v / 36) - lens.swell) * (v > 0 ? 0.3 : 0.08);
       paint();
-      const moving = Math.abs(pointer.x - lens.x) + Math.abs(pointer.y - lens.y) > 0.5 || Math.abs((on ? 1 : 0) - lens.k) > 0.01;
+      const moving = v > 0 || Math.abs(pointer.x - lens.x) + Math.abs(pointer.y - lens.y) > 0.5 ||
+        Math.abs((on ? 1 : 0) - lens.k) > 0.01 || lens.swell > 0.01;
       idle = moving ? 0 : idle + 1;
       raf = idle > 8 ? 0 : requestAnimationFrame(tick);
     }
-    const wake = () => { if (!raf && !document.hidden) raf = requestAnimationFrame(tick); };
+    const wake = () => { if (!raf && !document.hidden) { idle = 0; raf = requestAnimationFrame(tick); } };
     const onMove = (e: PointerEvent) => {
       pointer.x = e.clientX; pointer.y = e.clientY;
       if (!on) { lens.x = pointer.x; lens.y = pointer.y; }
       on = true; wake();
     };
     const onLeave = () => { on = false; wake(); };
+    const onScroll = () => { scrollY = window.scrollY; if (on) wake(); };
+
+    let cancelled = false;
+    fontReady().then(() => {
+      if (cancelled) return;
+      atlas = buildAtlas(INK, 0.34, dpr);
+      wake();
+    });
 
     resize();
     let t: ReturnType<typeof setTimeout> | null = null;
     const onResize = () => { if (t) clearTimeout(t); t = setTimeout(resize, 120); };
     window.addEventListener("resize", onResize);
     window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     document.documentElement.addEventListener("pointerleave", onLeave);
     window.addEventListener("blur", onLeave);
     return () => {
+      cancelled = true;
       cancelAnimationFrame(raf);
       if (t) clearTimeout(t);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("scroll", onScroll);
       document.documentElement.removeEventListener("pointerleave", onLeave);
       window.removeEventListener("blur", onLeave);
     };
