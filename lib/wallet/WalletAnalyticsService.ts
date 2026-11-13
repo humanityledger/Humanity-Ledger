@@ -91,13 +91,15 @@ export interface FlowAnalysis {
   period: '24h' | '7d' | '30d';
   inflow: number;
   outflow: number;
+  /** Assets whose transfers were left out of the USD totals because no price was known. */
+  unpricedAssets?: string[];
   topSenders: { address: string; amount: number; count: number }[];
   topReceivers: { address: string; amount: number; count: number }[];
   recentTransfers: {
     hash: string;
     timestamp: string;
     amount: number;
-    valueUsd: number;
+    valueUsd: number | null;
     type: 'IN' | 'OUT';
     from: string;
     to: string;

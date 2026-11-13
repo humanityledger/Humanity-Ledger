@@ -91,9 +91,8 @@ export async function discoverTokens(
                 const lowerAddr = t.contractAddress.toLowerCase();
                 if (!priceMap[lowerAddr] || priceMap[lowerAddr].price === 0) {
                     const symbol = metadataResults[index]?.symbol;
-                    if (symbol && symbolPriceMap[symbol.toUpperCase()]) {
-                        priceMap[lowerAddr] = symbolPriceMap[symbol.toUpperCase()];
-                    }
+                    const quote = symbol ? symbolPriceMap[symbol.toUpperCase()] : undefined;
+                    if (quote) priceMap[lowerAddr] = quote;
                 }
             });
         }

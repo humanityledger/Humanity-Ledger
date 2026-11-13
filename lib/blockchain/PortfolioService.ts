@@ -954,7 +954,7 @@ export class PortfolioService {
 
       
       // 3. Identify missing prices and attempt contract-based fallback
-      const missingTokens = tokens.filter(t => t.address && t.chainId && (!symbolPrices[t.symbol] || symbolPrices[t.symbol].price === 0));
+      const missingTokens = tokens.filter(t => t.address && t.chainId && !symbolPrices[t.symbol]?.price);
       const contractPriceMap: Record<string, any> = {};
 
       if (missingTokens.length > 0) {
@@ -988,14 +988,14 @@ export class PortfolioService {
         let basePriceData = { price: 0, change24h: 0 };
 
         if (!t.address || t.address === 'native') {
-            basePriceData = (symbolPrice?.price > 0) ? symbolPrice : { price: 0, change24h: 0 };
+            if (symbolPrice && symbolPrice.price > 0) basePriceData = symbolPrice;
         } else {
             // It's a token with an address
             if (contractPrice && contractPrice.price > 0) {
                 basePriceData = contractPrice;
             } 
             //  SYMBOL GUARD: Only fallback for verified majors
-            else if (VERIFIED_MAJORS.includes(symbol) && symbolPrice?.price > 0) {
+            else if (VERIFIED_MAJORS.includes(symbol) && symbolPrice && symbolPrice.price > 0) {
                 basePriceData = symbolPrice;
             }
         }
