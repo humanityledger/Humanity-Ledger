@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
