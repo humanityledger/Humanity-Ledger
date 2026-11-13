@@ -122,7 +122,7 @@ export const brand: DocPage = {
           download: "/brand/ledger-chat/ledger-chat-chats.png",
           width: 2880,
           height: 1800,
-          alt: "Ledger Chat on desktop: the chat list, a conversation with a private payment of 48 AZTEC, and the contact panel with safety glyphs",
+          alt: "Ledger Chat on desktop: the chat list, a conversation with a private payment of 48 HLC, and the contact panel with safety glyphs",
           caption: "Chats. A conversation with a private payment, a voice note and the live call pill.",
         },
         {

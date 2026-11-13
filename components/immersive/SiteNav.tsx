@@ -33,9 +33,9 @@ export const SITE_NAV: NavGroup[] = [
     label: "Product",
     items: [
       { label: "Ledger Chat", href: "/chat", hint: "The private messenger, in your browser" },
-      { label: "How it works", href: "/#how-it-works", hint: "From wallet to first message" },
-      { label: "Private payments", href: "/#payments", hint: "Shielded transfers on Aztec" },
-      { label: "Download", href: "/#download", hint: "Phone and desktop" },
+      { label: "How it works", href: "/docs/guide", hint: "From wallet to first message" },
+      { label: "Private payments", href: "/#aztec", hint: "Settled privately on Aztec" },
+      { label: "On your phone", href: "/#in-your-hand", hint: "Messages, calls and payments" },
       { label: "Network status", href: "/docs/status", hint: "What is up right now" },
     ],
   },
@@ -125,8 +125,8 @@ export function SiteNav({ groups = SITE_NAV }: { groups?: NavGroup[] }) {
   return (
     <div className={s.shell}>
       <header className={`${s.bar} hl-glass ${scrolled ? s.barScrolled : ""}`}>
-        <Link href="/" className={s.brand} aria-label="Humanity Ledger home">
-          <HLLogo size={30} />
+        <Link href="/" className={s.brand} aria-label="Ledger Chat home">
+          <HLLogo size={30} label="Ledger Chat" />
         </Link>
 
         <nav
@@ -198,7 +198,7 @@ export function SiteNav({ groups = SITE_NAV }: { groups?: NavGroup[] }) {
         <div className={s.sheetBackdrop} onClick={closeSheet}>
           <div role="dialog" aria-modal="true" aria-label="Menu" className={`${s.sheet} hl-glass`} onClick={(e) => e.stopPropagation()}>
             <div className={s.sheetHead}>
-              <HLLogo size={28} />
+              <HLLogo size={28} label="Ledger Chat" />
               <button type="button" className={s.menuBtn} aria-label="Close menu" onClick={closeSheet} autoFocus>
                 <Close size={19} strokeWidth={1.9} />
               </button>

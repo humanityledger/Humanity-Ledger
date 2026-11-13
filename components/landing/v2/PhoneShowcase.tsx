@@ -31,6 +31,7 @@ import {
   type ScreenProps,
 } from "./phoneScreens";
 import { DeviceFrame, type IslandState } from "./DeviceFrame";
+import { networkLabel } from "@/lib/aztec/wallet/config";
 import s from "./PhoneShowcase.module.css";
 
 interface Phone {
@@ -50,7 +51,7 @@ const PHONES: Phone[] = [
     id: "messages",
     label: "Messages",
     title: "Your wallet is your account.",
-    text: "No phone number and no email. Direct messages are end-to-end encrypted with MLS over XMTP and kept on your device.",
+    text: "No phone number. Direct messages are end-to-end encrypted with MLS over XMTP.",
     Screen: ChatScreen,
     island: "secure",
   },
@@ -58,7 +59,7 @@ const PHONES: Phone[] = [
     id: "chat",
     label: "Payments",
     title: "Send money like a message.",
-    text: "A private invoice is paid from your Aztec wallet without leaving the conversation. Amount and recipient stay off the public ledger. Live on Aztec Alpha, which settles on Ethereum mainnet.",
+    text: `Paid from your Aztec wallet inside the conversation, on ${networkLabel()}.`,
     Screen: InvoiceChatScreen,
     island: "secure",
   },
@@ -66,7 +67,7 @@ const PHONES: Phone[] = [
     id: "wallet",
     label: "Private wallet",
     title: "Everything you need to pay, on one screen.",
-    text: "Balance, network fees, what you hold on Ethereum and your recent payments. Proofs are made on your own device; the keys never leave it.",
+    text: "Balance, fees and payments. Proofs are made on your device; the keys never leave it.",
     Screen: WalletScreen,
     island: "idle",
   },
@@ -82,7 +83,7 @@ const PHONES: Phone[] = [
     id: "studio",
     label: "Ledger Studio",
     title: "Build it where you talk.",
-    text: "Describe a page, a menu or a small app in plain words, and Ledger Studio builds it, ready to share in a chat.",
+    text: "Describe a page or a small app, and share it in a chat.",
     Screen: StudioScreen,
     island: "idle",
   },
@@ -90,7 +91,7 @@ const PHONES: Phone[] = [
     id: "voice",
     label: "Voice calls",
     title: "Call straight from the chat.",
-    text: "Voice calls connect device to device over WebRTC and are encrypted in transit with DTLS-SRTP. No phone number is involved at any point.",
+    text: "Device to device over WebRTC, encrypted in transit with DTLS-SRTP.",
     Screen: VoiceCallScreen,
     island: "call",
     clock: [3, 99],
@@ -99,7 +100,7 @@ const PHONES: Phone[] = [
     id: "video",
     label: "Video calls",
     title: "Face to face, without your IP address.",
-    text: "Video calls use the same encrypted connection. Turn on Hide my IP address and calls go through a relay, so the other person never sees your IP address.",
+    text: "Turn on Hide my IP address and calls go through a relay.",
     Screen: VideoCallScreen,
     island: "video",
   },
@@ -107,7 +108,7 @@ const PHONES: Phone[] = [
     id: "communities",
     label: "Communities",
     title: "Channels, pinned posts and votes.",
-    text: "Topic channels, pinned announcements and proposals with one vote per wallet. Community posts are kept on Humanity Ledger's servers so new members can read the history; direct messages are the end-to-end encrypted part.",
+    text: "One vote per wallet. Community posts live on our servers, so new members can read them.",
     Screen: CommunitiesScreen,
     island: "idle",
   },

@@ -3,20 +3,23 @@ import Link from "next/link";
 import { HLLogo } from "@/components/shared/HLLogo";
 import { EXTERNAL_LINKS } from "@/lib/constants/links";
 import { LEGAL_ENTITY } from "@/lib/constants/legalEntity";
+import { AZTEC_WALLET_CONFIG } from "@/lib/aztec/wallet/config";
 import s from "./SiteFooter.module.css";
 
 /**
  * SiteFooter — the footer for every public page.
  *
  * Built like an editorial colophon: a display line and the two actions that
- * matter, five columns of links, the Humanity Ledger wordmark set very large
- * over the living background, and a bottom bar with the legal links. The
- * fine print about the product's real stage stays, because the footer is
+ * matter, five columns of links, "Ledger Chat" set very large over the
+ * living background, the credit line, and a bottom bar with the legal links.
+ * The fine print about the product's real stage stays, because the footer is
  * where careful readers look for exactly that.
  *
- * "Built on Aztec" is a text link to aztec.network. The Aztec logo is not
- * drawn here: it belongs to the Aztec Foundation and is used only from their
- * official brand files, under their brand terms (aztec.network/brand).
+ * The credit says who makes Ledger Chat and what it is built on, and nothing
+ * more: Humanity Ledger makes it (as "Corp." only once a company exists, see
+ * lib/constants/legalEntity.ts), and it runs on Aztec Network, which does not
+ * make, endorse or operate it. "Aztec Network" is a text link to
+ * aztec.network; the Aztec logo is not drawn here.
  */
 
 interface FooterLink {
@@ -30,9 +33,9 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
     title: "Product",
     links: [
       { label: "Ledger Chat", href: "/chat" },
-      { label: "How it works", href: "/#how-it-works" },
-      { label: "Private payments", href: "/#payments" },
-      { label: "Download", href: "/#download" },
+      { label: "How it works", href: "/docs/guide" },
+      { label: "Private payments", href: "/#aztec" },
+      { label: "Get started", href: "/#start" },
       { label: "Network status", href: "/docs/status" },
     ],
   },
@@ -99,12 +102,17 @@ function FooterLinkItem({ link, className }: { link: FooterLink; className?: str
   );
 }
 
-export function SiteFooter() {
+/** Who makes Ledger Chat: the company once one is incorporated, the trading name until then. */
+const MAKER = LEGAL_ENTITY.kind === "company" ? LEGAL_ENTITY.name : LEGAL_ENTITY.tradingName;
+const ALPHA_LIVE = AZTEC_WALLET_CONFIG.network === "mainnet" && AZTEC_WALLET_CONFIG.alphaEnabled;
+
+/** `lead`: the closing line and its two buttons. Off where the page above already ends with them. */
+export function SiteFooter({ lead = true }: { lead?: boolean }) {
   return (
     <footer className={s.footer}>
       <div className={s.wrap}>
-        <div className={s.top}>
-          <div className={s.lead}>
+        <div className={`${s.top} ${lead ? "" : s.topSolo}`}>
+          {lead && <div className={s.lead}>
             <p className={`${s.display} hl-display`}>
               Talk freely.
               <br />
@@ -118,7 +126,7 @@ export function SiteFooter() {
                 Read the documentation
               </Link>
             </div>
-          </div>
+          </div>}
 
           <div className={s.cols}>
             {COLUMNS.map((col) => (
@@ -141,12 +149,19 @@ export function SiteFooter() {
       <div className={s.mark} aria-hidden="true">
         <div className={s.markGlow} />
         <span className={`${s.markWord} hl-display`}>
-          Humanity <em>Ledger</em>
+          Ledger <em>Chat</em>
         </span>
       </div>
 
       <div className={s.wrap}>
         <div className={s.bottom}>
+          <p className={s.credit}>
+            <span>Ledger Chat</span>, made by {MAKER}. Built on{" "}
+            <a href={EXTERNAL_LINKS.aztec} target="_blank" rel="noopener noreferrer">
+              Aztec Network
+            </a>
+            .
+          </p>
           <div className={s.bottomRow}>
             <span className={s.copy}>
               <HLLogo size={20} variant="mark" />© 2026 {LEGAL_ENTITY.tradingName}
@@ -159,8 +174,10 @@ export function SiteFooter() {
           </div>
           <p className={s.fine}>
             Ledger Chat is in early access. Our contracts have not been independently audited, and private payments run
-            only on the Aztec test network with tokens that have no value. Please do not rely on the service to protect
-            information or funds you cannot afford to lose.
+            {ALPHA_LIVE
+              ? " on Aztec Alpha with real funds and a cap per payment. "
+              : " only on the Aztec test network with tokens that have no value. "}
+            Please do not rely on the service to protect information or funds you cannot afford to lose.
           </p>
           <p className={s.fine}>
             {LEGAL_ENTITY.name}, trading as {LEGAL_ENTITY.tradingName}. Not a bank, broker, exchange or financial

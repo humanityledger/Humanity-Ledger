@@ -293,7 +293,7 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
         </span>
         <span className={s.day}>Today</span>
         <div className={`${s.msgIn} ${s.in}`}>
-          I paid for dinner. Your share is 42 USDC.<span className={s.time}>21:04</span>
+          I paid for dinner. Your share is 42 HLC.<span className={s.time}>21:04</span>
         </div>
         <div className={`${s.msgOut} ${at(p, 0.1)}`}>
           Send me a private invoice and I will pay it here.
@@ -322,7 +322,7 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
           <div className={s.invDivider} />
           <div className={s.invTotalRow}>
             <span>Total</span>
-            <span className={`${s.invTotalVal} ${s.num}`}>42.00 USDC</span>
+            <span className={`${s.invTotalVal} ${s.num}`}>42.00 HLC</span>
           </div>
           <div className={s.invFooterRow}>
             <span className={s.invDue}>Aztec Alpha · mainnet</span>
@@ -413,7 +413,7 @@ export function AgreementChatScreen({ p }: ScreenProps) {
           <div className={s.invDivider} />
           <div className={s.invTotalRow}>
             <span>Amount</span>
-            <span className={`${s.invTotalVal} ${s.num}`}>300.00 USDC</span>
+            <span className={`${s.invTotalVal} ${s.num}`}>300.00 HLC</span>
           </div>
           <div className={s.invFooterRow}>
             <span className={s.invDue}>Aztec Alpha · mainnet</span>
