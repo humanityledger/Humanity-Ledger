@@ -4,7 +4,7 @@ Agents cannot close these from the repository. Each line says who closes it and 
 
 | # | Item | Why it matters | Owner | How it is closed |
 | --- | --- | --- | --- | --- |
-| P-01 | XMTP local database key in plaintext `localStorage` (`lib/xmtp/client.ts:244-260`, finding F-01, critical) | Any script on the origin can read the key that encrypts the local message database | Stefan (decision), then agent | Choose the migration: derive the key from a wallet signature (HKDF, as the Aztec account secret) or wrap it with a non-extractable WebCrypto key in IndexedDB. Either way the existing local database must be re-encrypted or users get a new XMTP installation; decide which, then the agent implements it with a migration test |
+| P-01 | ~~XMTP local database key in plaintext `localStorage`~~ | Closed on `feat/security-phase2`: derived from a wallet signature; legacy keys wrapped, not replaced | — | One extra signature per page load (and one phone approval on a linked computer); smart-contract wallets that do not return a 65-byte signature are refused with an explanation |
 | P-02 | Recompile and deploy PrivateEscrow, PaymentStream | Agreements stay refused on Alpha; no fee mechanism can exist without them | Stefan | `docs/CONTRACT_DEPLOY_CHECKLIST.md` §1–3 |
 | P-03 | Deploy LedgerSponsor, set `NEXT_PUBLIC_AZTEC_SPONSOR` | New accounts need about 28 AZTEC of Fee Juice before their first transaction | Stefan | Checklist §4 |
 | P-04 | Provider keys in `NEXT_PUBLIC_*` (Pimlico, Alchemy, CoinGecko, 1inch, MoonPay, NewsAPI, PeerJS; F-07) | Reusable by anyone from the browser bundle | Stefan | Restrict each key to ledgerchat.org in the provider console and rotate; then an agent moves paid calls behind server routes |

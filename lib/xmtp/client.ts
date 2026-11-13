@@ -28,6 +28,7 @@ if (typeof window !== 'undefined' && !window.Buffer) {
 }
 
 import { Client, type XmtpEnv } from '@xmtp/browser-sdk';
+import { resolveDbKey } from './db-key';
 
 //  Type definitions matching the pinned browser-sdk 
 type IdentifierKind = 'Ethereum';
@@ -41,6 +42,8 @@ const XMTP_ENV: XmtpEnv =
 
 //  Singleton client registry (one client per lowercase address) 
 const clientRegistry = new Map<string, Client>();
+/** Local database keys for this tab only (lib/xmtp/db-key.ts): memory, never storage. */
+const dbKeyCache = new Map<string, Uint8Array>();
 
 // InboxId → Ethereum address cache (populated during message stream/fetch)
 // [AUDIT FIX] Bounded to 1000 entries to prevent unbounded memory growth in long sessions.
@@ -222,7 +225,13 @@ export async function getXMTPClient(
   wagmiSigner: {
     getAddress: () => Promise<string>;
     signMessage: (message: string | Uint8Array) => Promise<string>;
-  }
+  },
+  hooks?: {
+    /** About to ask for the signature that unlocks the local message database. */
+    onDbKeyRequest?: () => void;
+    /** A plaintext key from an earlier version was encrypted and removed. */
+    onLegacyKeyMigrated?: () => void;
+  },
 ): Promise<Client> {
   const address = (await wagmiSigner.getAddress()).toLowerCase();
 
@@ -239,27 +248,23 @@ export async function getXMTPClient(
     signMessage: async (m) => { signing++; try { return await wagmiSigner.signMessage(m); } finally { signing--; } },
   });
 
-  //  Retrieve or Generate Local DB Encryption Key 
-  // Passing this key prevents XMTP from prompting a signature on every reload
-  const storageKey = `ledger_xmtp_db_key_${address}`;
-  let dbKeyHex: string | null = null;
-  try {
-    dbKeyHex = localStorage.getItem(storageKey);
-  } catch (e) {
-    console.warn('[XMTP] localStorage access denied (private mode?). Regenerating key in memory.');
+  //  Local database key (F-01): derived from a wallet signature, never stored in plaintext.
+  // One signature per page load; the key stays in memory for this tab (dbKeyCache).
+  let dbEncryptionKey = dbKeyCache.get(address);
+  if (!dbEncryptionKey) {
+    hooks?.onDbKeyRequest?.();
+    const resolved = await resolveDbKey(address, async (m) => {
+      signing++;
+      try {
+        return await wagmiSigner.signMessage(m);
+      } finally {
+        signing--;
+      }
+    });
+    dbEncryptionKey = resolved.key;
+    dbKeyCache.set(address, dbEncryptionKey);
+    if (resolved.migrated) hooks?.onLegacyKeyMigrated?.();
   }
-
-  if (!dbKeyHex) {
-    const keyBytes = new Uint8Array(32);
-    crypto.getRandomValues(keyBytes);
-    dbKeyHex = Buffer.from(keyBytes).toString('hex');
-    try {
-      localStorage.setItem(storageKey, dbKeyHex);
-    } catch (e) {
-      // Ignore setItem error in private mode
-    }
-  }
-  const dbEncryptionKey = new Uint8Array(Buffer.from(dbKeyHex, 'hex'));
 
   let client: Client;
   try {
@@ -368,6 +373,9 @@ export async function revokeXMTPInstallations(
 /** Remove a client from the registry (call on wallet disconnect) */
 export function destroyXMTPClient(address: string): void {
   clientRegistry.delete(address.toLowerCase());
+  const key = dbKeyCache.get(address.toLowerCase());
+  if (key) key.fill(0);
+  dbKeyCache.delete(address.toLowerCase());
   // [AUDIT FIX] Clear the inbox-id→address cache on client destroy so stale entries
   // from the previous wallet don't pollute a new session (e.g. after wallet switch).
   inboxIdToAddressCache.clear();
