@@ -2,6 +2,7 @@
 "use client";
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { parseValueHandoff, VALUE_HANDOFF_EVENT, type ValueHandoff } from '@/lib/chat/value-handoff';
 import { createPortal } from 'react-dom';
 import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Smile, Paperclip, BarChart2, Wallet, Flame, Heart, Image as ImageIcon, Map as MapIcon, Bot } from 'lucide-react';
@@ -67,6 +68,7 @@ const BurnTimerSheet = dynamic(() => import('@/components/chat/BurnTimerSheet').
 const NativeCryptoSendModal = dynamic(() => import('@/components/chat/NativeCryptoSendModal').then(m => m.NativeCryptoSendModal), { ssr: false });
 const SendTipModal = dynamic(() => import('@/components/chat/SendTipModal').then(m => m.SendTipModal), { ssr: false });
 const ScheduleMessageSheet = dynamic(() => import('@/components/chat/ScheduleMessageSheet').then(m => m.ScheduleMessageSheet), { ssr: false });
+const ChatDetailsPanel = dynamic(() => import('@/components/chat/ChatDetailsPanel').then(m => m.ChatDetailsPanel), { ssr: false });
 const ScheduleMeetingSheet = dynamic(() => import('@/components/chat/ScheduleMeetingSheet').then(m => m.ScheduleMeetingSheet), { ssr: false });
 const InChatSearch = dynamic(() => import('@/components/chat/InChatSearch').then(m => m.InChatSearch), { ssr: false });
 const LedgerCallsTab = dynamic(() => import('@/components/chat/LedgerCallsTab').then(m => m.LedgerCallsTab), { ssr: false });
@@ -335,7 +337,7 @@ import { DISCONNECTED_GRACE_MS, RESUME_ATTEMPT_MS, RESUME_DEADLINE_MS, acceptRes
 const ICE_CONNECT_MS = 20_000;
 const CALL_SDP = { sdpTransform: (sdp: string) => tuneOpusSdp(sdp) };
 import { Archive, ArchiveRestore, ChevronLeft, ChevronUp, ChevronDown, MessageSquare, Plus, ArrowUp, WifiOff, Pin, Check, ScanQrCode, Camera, FileText, Sticker, ListChecks, CreditCard, Receipt, Waves, Navigation, Timer, Info, LoaderCircle, Minimize2, Mail, ShieldCheck, Reply, Forward, Pencil, Flag, MessagesSquare, Globe } from 'lucide-react';
-import { Sparkles as StudioIcon, MoreHorizontal, SquarePen, Palette, BellOff, Keyboard, CalendarClock, CalendarPlus } from 'lucide-react';
+import { Sparkles as StudioIcon, MoreHorizontal, SquarePen, Palette, BellOff, Keyboard, CalendarClock, CalendarPlus, CircleDot } from 'lucide-react';
 import { MEETING_JOIN_EVENT, MEETINGS_EVENT, loadMeetings, meetingPreview, parseMeeting, rememberMeeting, upcomingMeetings, type StoredMeeting } from '@/lib/chat/meeting';
 import { SCHEDULED_EVENT, addScheduled, describeSendTime, dueScheduled, loadScheduled, markAttempt, removeScheduled, scheduleTimeError, scheduledForPeer, type ScheduledMessage } from '@/lib/chat/scheduled';
 import { shortAddress as formatAddress } from '@/lib/ui/format';
@@ -1082,6 +1084,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // The overflow menu in the conversation header.
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [showSidebarMore, setShowSidebarMore] = useState(false);
+  // Chat list filter chips (All, Unread, Groups, Payments).
+  const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'groups' | 'payments'>('all');
   const [linkPreview, setLinkPreview] = useState<{ url: string, title: string, description: string, image?: string } | null>(null);
 
   // ─── WebRTC Call State Machine ───────────────────────────────────────────────
@@ -6032,14 +6036,97 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       background: '#ffffff',
       fontFamily,
     }}>
+      {/* ── Rail: the app's sections on wide screens (phones keep the tab bar) ── */}
+      <nav aria-label="Ledger Chat" className="hidden md:flex w-[76px] shrink-0 flex-col items-center gap-1.5 border-r border-black/[0.08] bg-white py-5">
+        <Link href="/" aria-label="Humanity Ledger home" className="mb-4 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]">
+          <HLLogo variant="mark" size={40} />
+        </Link>
+        {([
+          { id: 'chats', label: 'Chats', icon: <MessageSquare size={21} strokeWidth={1.8} />, badge: conversations.reduce((n, c) => n + (c.unreadCount || 0), 0) },
+          { id: 'calls', label: 'Calls', icon: <Phone size={21} strokeWidth={1.8} />, badge: 0 },
+          { id: 'updates', label: 'Updates', icon: <CircleDot size={21} strokeWidth={1.8} />, badge: 0 },
+          { id: 'communities', label: 'Communities', icon: <Users size={21} strokeWidth={1.8} />, badge: 0 },
+        ] as const).map((t) => {
+          const on = (t.id === 'chats' ? sidebarTab === 'chats' || sidebarTab === 'contacts' : sidebarTab === t.id);
+          return (
+            <button
+              key={t.id}
+              type="button"
+              aria-label={t.badge ? `${t.label}, ${t.badge} unread` : t.label}
+              title={t.label}
+              aria-current={on ? 'page' : undefined}
+              onClick={() => {
+                if (t.id === 'communities') { setSidebarTab('communities'); setActivePeer(null); }
+                else { setSidebarTab(t.id); setActiveCommunity(null); }
+                setShowList(true);
+              }}
+              className={`relative w-12 h-12 rounded-[14px] flex items-center justify-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c] ${on ? 'bg-[#15171c] text-white' : 'text-[#5b606b] hover:bg-[#f2f4f7] hover:text-[#15171c]'}`}
+            >
+              {t.icon}
+              {t.badge > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#2456e6] text-white text-[10.5px] font-bold leading-[18px] text-center tabular-nums ring-2 ring-white" aria-hidden="true">
+                  {t.badge > 99 ? '99+' : t.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+        <span className="w-7 h-px bg-[#e6e8ec] my-2.5" aria-hidden="true" />
+        <button type="button" onClick={() => setShowZkWallet(true)} aria-label="Private wallet" title="Private wallet" className="w-12 h-12 rounded-[14px] flex items-center justify-center text-[#5b606b] hover:bg-[#f2f4f7] hover:text-[#15171c] transition-colors">
+          <Wallet size={21} strokeWidth={1.8} />
+        </button>
+        <button type="button" onClick={() => openStudio()} aria-label="Ledger Studio" title="Ledger Studio" className="w-12 h-12 rounded-[14px] flex items-center justify-center text-[#5b606b] hover:bg-[#f2f4f7] hover:text-[#15171c] transition-colors">
+          <StudioIcon size={21} strokeWidth={1.8} />
+        </button>
+        <div className="flex-1" />
+        <button type="button" onClick={() => setShowFullSettings(true)} aria-label="Settings" title="Settings" className="w-12 h-12 rounded-[14px] flex items-center justify-center text-[#5b606b] hover:bg-[#f2f4f7] hover:text-[#15171c] transition-colors">
+          <Settings size={21} strokeWidth={1.8} />
+        </button>
+        <button type="button" onClick={() => setShowFullSettings(true)} aria-label="Your profile" title={effectiveAddress || 'Your profile'} className="relative mt-1 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]">
+          <Avatar address={effectiveAddress} isMe={true} size={40} />
+          <span className="absolute -right-px -bottom-px w-[11px] h-[11px] rounded-full bg-[#12a150] border-2 border-white" aria-hidden="true" />
+        </button>
+      </nav>
+
       {/*  Sidebar: Conversation List — fixed width on desktop, full screen on mobile when no chat is active  */}
       <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'hidden md:flex' : 'flex') : (showList ? 'flex' : 'hidden md:flex')} w-full md:w-80 lg:w-96 flex-col border-r border-black/[0.08] bg-white shrink-0 h-full overflow-hidden`}>
 
         {/* ── Sidebar Header ── */}
-        <div className="px-4 py-3 border-b border-[#e4e7ec] bg-white flex flex-col gap-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}>
+        <div className="px-4 py-3 md:px-5 md:pt-5 md:pb-3 border-b md:border-b-0 border-[#e4e7ec] bg-white flex flex-col gap-3 md:gap-4" style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}>
+          {/* Wide screens: the section's name and its actions (identity and Studio live in the rail). */}
+          <div className="hidden md:flex items-center justify-between gap-3 pt-2">
+            <h1 className="text-[26px] font-bold tracking-[-0.03em] text-[#15171c]">
+              {sidebarTab === 'calls' ? 'Calls' : sidebarTab === 'updates' ? 'Updates' : sidebarTab === 'communities' ? 'Communities' : 'Chats'}
+            </h1>
+            {(sidebarTab === 'chats' || sidebarTab === 'contacts') && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowContactRequests(true)}
+                  className="relative w-10 h-10 rounded-xl border border-[#e6e8ec] bg-white hover:bg-[#f7f8fa] flex items-center justify-center text-[#15171c] transition-colors"
+                  title="Contact requests"
+                  aria-label={pendingRequestCount > 0 ? `Contact requests, ${pendingRequestCount} new` : 'Contact requests'}
+                >
+                  <Bell size={17} strokeWidth={1.8} />
+                  {pendingRequestCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#e5484d] text-white text-[10px] font-semibold leading-4 text-center tabular-nums ring-2 ring-white" aria-hidden="true">
+                      {pendingRequestCount > 9 ? '9+' : pendingRequestCount}
+                    </span>
+                  )}
+                </button>
+                <button type="button" onClick={() => setShowCreateGroup(true)} className="w-10 h-10 rounded-xl border border-[#e6e8ec] bg-white hover:bg-[#f7f8fa] flex items-center justify-center text-[#15171c] transition-colors" title="New group" aria-label="New group">
+                  <UserPlus size={17} strokeWidth={1.8} />
+                </button>
+                <button type="button" onClick={() => document.getElementById('ledger-new-chat-input')?.focus()} className="w-10 h-10 rounded-xl bg-[#15171c] hover:bg-[#2b2f38] flex items-center justify-center text-white transition-colors" title="New chat" aria-label="New chat">
+                  <Plus size={18} strokeWidth={2} />
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Top row: identity on the left, three actions on the right. Everything
               else lives in the "More" menu so the name never gets squeezed. */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex md:hidden items-center justify-between gap-2">
             <button
               type="button"
               className="flex items-center gap-2.5 min-w-0 flex-1 rounded-xl -ml-1 px-1 py-1 hover:bg-[#f2f4f7] transition-colors text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c]"
@@ -6141,12 +6228,30 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               value={peerInput}
               onChange={e => setPeerInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleStartConversation()}
-              className="w-full h-10 bg-[#f2f4f7] rounded-xl pl-9 pr-3 text-[15px] text-[#15171c] placeholder:text-[#a3a9b4] border border-transparent focus:outline-none focus:bg-white focus:border-[#d0d5dd] transition-colors"
+              className="w-full h-10 md:h-11 bg-[#f2f4f7] rounded-xl md:rounded-[14px] pl-9 pr-3 text-[15px] text-[#15171c] placeholder:text-[#8b909a] border border-transparent focus:outline-none focus:bg-white focus:border-[#d0d5dd] transition-colors"
             />
           </div>
+
+          {/* Filters for the chat list */}
+          {(sidebarTab === 'chats' || sidebarTab === 'contacts') && conversations.length > 0 && (
+            <div role="group" aria-label="Filter chats" className="flex gap-1.5 flex-wrap">
+              {([['all', 'All'], ['unread', 'Unread'], ['groups', 'Groups'], ['payments', 'Payments']] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={chatFilter === id}
+                  onClick={() => setChatFilter(id)}
+                  className={`h-8 px-3 rounded-full text-[13px] transition-colors ${chatFilter === id ? 'bg-[#15171c] text-white font-semibold' : 'bg-white border border-[#e6e8ec] text-[#15171c] font-medium hover:bg-[#f7f8fa]'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* ── Crystal Glass NavBar ── */}
+        {/* ── Crystal Glass NavBar (phones; the rail replaces it on wide screens) ── */}
+        <div className="md:hidden">
         <CrystalNavBar
           activeTab={(['chats','calls','contacts'].includes(sidebarTab) ? sidebarTab === 'chats' || sidebarTab === 'contacts' ? 'chats' : 'calls' : sidebarTab) as NavTab}
           onTabChange={(tab: NavTab) => {
@@ -6159,6 +6264,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             chats: conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
           }}
         />
+        </div>
 
         <div className="flex-1 overflow-y-auto flex flex-col bg-white">
 
@@ -6214,23 +6320,47 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   </div>
                 </div>
               ) : (
-            conversations
-              .filter(conv => conv.peerAddress?.toLowerCase() !== address?.toLowerCase())
-              .filter(conv => showArchived ? archivedPeers.has(conv.peerAddress.toLowerCase()) : !archivedPeers.has(conv.peerAddress.toLowerCase()))
-              .sort((a, b) => {
-                const aPin = pinnedPeers.has(a.peerAddress.toLowerCase()) ? 1 : 0;
-                const bPin = pinnedPeers.has(b.peerAddress.toLowerCase()) ? 1 : 0;
-                return bPin - aPin;
-              })
-              .map((conv, i) => {
+            (() => {
+              const PAY = ['__PAYMENT__', '__ZK_MONEY_PAYMENT__', '__ZK_INVOICE__', '__ZK_TIP__', '__TIP__', '__ZK_STREAM__'];
+              const isPaymentChat = (c: ConversationMeta) => {
+                const raw = c.lastMessage || '';
+                const inner = raw.startsWith('__') && raw.includes('__::') ? raw.split('__::').pop() || '' : raw;
+                return PAY.some(p => inner.startsWith(p)) || /^(Payment|Private payment|Invoice|Private tip|Payment stream|Escrow|Private agreement)/i.test(formatMessagePreview(raw).replace(/^[^A-Za-z]+/, ''));
+              };
+              const list = conversations
+                .filter(conv => conv.peerAddress?.toLowerCase() !== address?.toLowerCase())
+                .filter(conv => showArchived ? archivedPeers.has(conv.peerAddress.toLowerCase()) : !archivedPeers.has(conv.peerAddress.toLowerCase()))
+                .filter(conv => chatFilter === 'all' ? true
+                  : chatFilter === 'unread' ? (conv.unreadCount || 0) > 0
+                  : chatFilter === 'groups' ? !/^0x[0-9a-f]{40}$/i.test(conv.peerAddress)
+                  : isPaymentChat(conv))
+                .sort((a, b) => {
+                  const aPin = pinnedPeers.has(a.peerAddress.toLowerCase()) ? 1 : 0;
+                  const bPin = pinnedPeers.has(b.peerAddress.toLowerCase()) ? 1 : 0;
+                  return bPin - aPin;
+                });
+              if (list.length === 0) {
+                return (
+                  <p className="px-6 py-10 text-center text-[14px] text-[#727a88]">
+                    {chatFilter === 'unread' ? 'You are all caught up.' : chatFilter === 'groups' ? 'No group chats yet.' : chatFilter === 'payments' ? 'No chats with a recent payment.' : 'No chats here.'}
+                  </p>
+                );
+              }
+              const anyPinned = list.some(c => pinnedPeers.has(c.peerAddress.toLowerCase()));
+              return list.map((conv, i) => {
               const isActive = activePeer?.toLowerCase() === conv.peerAddress.toLowerCase();
+              const pinnedHere = pinnedPeers.has(conv.peerAddress.toLowerCase());
+              const sectionLabel = !anyPinned ? null : i === 0 && pinnedHere ? 'Pinned' : (!pinnedHere && (i === 0 || pinnedPeers.has(list[i - 1].peerAddress.toLowerCase()))) ? 'Chats' : null;
               const contactName = resolveContactName(effectiveAddress, conv.peerAddress);
               const displayLabel = contactName || shortAddr(conv.peerAddress);
               const isPinned = pinnedPeers.has(conv.peerAddress.toLowerCase());
               const isMuted = mutedPeers.has(conv.peerAddress.toLowerCase());
               return (
+                <React.Fragment key={conv.peerAddress}>
+                {sectionLabel && (
+                  <p className="px-5 pt-3 pb-1.5 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-[#5b606b]">{sectionLabel}</p>
+                )}
                 <SwipeableConversationRow
-                  key={conv.peerAddress}
                   peerAddress={conv.peerAddress}
                   displayName={displayLabel}
                   isPinned={isPinned}
@@ -6250,7 +6380,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       }
                       setActiveCommunity(null); setActivePeer(conv.peerAddress); setShowList(false);
                     }}
-                    className={`w-full text-left px-4 py-3 transition-colors ${isActive ? 'bg-[#f2f4f7]' : 'hover:bg-[#f7f8fa]'}`}
+                    className={`w-full md:w-[calc(100%-20px)] md:mx-2.5 text-left px-4 py-3 md:px-3 md:py-2.5 md:rounded-2xl transition-colors ${isActive ? 'bg-[#f1f2f4]' : 'hover:bg-[#f7f8fa]'}`}
                   >
                     <div className="flex items-center gap-3 w-full">
                       <div className="relative shrink-0">
@@ -6267,7 +6397,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             {isPinned && <Pin size={12} strokeWidth={2} className="text-[#a3a9b4] shrink-0 rotate-45" aria-label="Pinned" />}
                           </div>
                           {conv.lastMessage && (
-                            <span className={`text-[12px] shrink-0 tabular-nums ${conv.unreadCount && !isMuted ? 'text-[#1f9d55] font-medium' : 'text-[#a3a9b4]'}`}>
+                            <span className={`text-[12px] shrink-0 tabular-nums font-medium ${conv.unreadCount && !isMuted ? 'text-[#2456e6]' : 'text-[#5b606b]'}`}>
                               {(() => {
                                 const t = (conv as any).lastMessageTime;
                                 if (!t) return '';
@@ -6298,10 +6428,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                           }
                           return preview ? (
                             <div className="flex items-center justify-between gap-2">
-                              <p className="text-[14px] text-[#727a88] truncate">{preview}</p>
+                              <p className="text-[14px] text-[#5b606b] truncate">{preview}</p>
                               {conv.unreadCount && conv.unreadCount > 0 && !isMuted ? (
-                                <div className="min-w-[20px] h-5 bg-[#1f9d55] rounded-full flex items-center justify-center px-1.5 shrink-0" aria-label={`${conv.unreadCount} unread`}>
-                                  <span className="text-[11px] font-semibold text-white tabular-nums">
+                                <div className="min-w-[20px] h-5 bg-[#2456e6] rounded-full flex items-center justify-center px-1.5 shrink-0" aria-label={`${conv.unreadCount} unread`}>
+                                  <span className="text-[11px] font-bold text-white tabular-nums">
                                     {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                                   </span>
                                 </div>
@@ -6313,8 +6443,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     </div>
                   </button>
                 </SwipeableConversationRow>
+                </React.Fragment>
               );
-            })
+            });
+            })()
           )}
             </>
           )}
@@ -6411,21 +6543,23 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             </div>
           )
         ) : activePeer ? (
-          <>
-            <div className="h-16 pl-2 pr-3 md:pl-4 border-b border-[#e4e7ec] flex items-center justify-between gap-2 bg-white shrink-0 z-30">
+          // The conversation, and on wide screens its details column (ChatDetailsPanel).
+          <div className="flex flex-1 min-h-0 min-w-0 w-full">
+          <div className="relative flex flex-col flex-1 min-h-0 min-w-0">
+            <div className="h-[72px] pl-2 pr-3 md:pl-5 md:pr-5 border-b border-[#e6e8ec] flex items-center justify-between gap-2 bg-white shrink-0 z-30">
               <div className="flex items-center gap-1 min-w-0">
                 <button type="button" onClick={() => setShowList(true)} className="md:hidden w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c]" aria-label="Back to chats">
                   <ChevronLeft size={22} strokeWidth={1.9} />
                 </button>
                 <button type="button" onClick={() => setShowContactInfo(true)} className="flex items-center gap-3 min-w-0 rounded-xl px-1.5 py-1 hover:bg-[#f2f4f7] transition-colors text-left" aria-label={`Contact info for ${getDisplayName(activePeer!)}`}>
                   <div className="relative shrink-0">
-                    <Avatar address={activePeer!} size={38} />
+                    <Avatar address={activePeer!} size={42} />
                     {peerStatus.status === 'online' && (
-                      <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white bg-[#1f9d55]" aria-hidden="true" />
+                      <span className="absolute bottom-0 right-0 w-[11px] h-[11px] rounded-full border-2 border-white bg-[#12a150]" aria-hidden="true" />
                     )}
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[15px] font-semibold text-[#15171c] flex items-center gap-1.5 truncate">
+                    <span className="text-[16px] font-semibold tracking-[-0.01em] text-[#15171c] flex items-center gap-1.5 truncate">
                       <span className="truncate">{getDisplayName(activePeer!)}</span>
                       {ledgerSettings?.disappearing_messages && ledgerSettings?.disappearing_messages !== 'off' && (
                         <Timer size={13} strokeWidth={2} className="text-[#727a88] shrink-0" aria-label="Disappearing messages on" />
@@ -6434,8 +6568,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         <Flame size={13} strokeWidth={2} className="text-[#c0362c] shrink-0" aria-label="Secret chat on" />
                       )}
                     </span>
-                    <span className={`text-[12.5px] truncate ${peerStatus.isTyping || peerStatus.status === 'online' ? 'text-[#1f9d55]' : 'text-[#727a88]'}`}>
-                      {peerStatus.isTyping ? 'Typing' : peerStatus.status === 'online' ? 'Online' : peerStatus.lastSeen ? (() => {
+                    <span className={`text-[13px] font-medium truncate ${peerStatus.isTyping || peerStatus.status === 'online' ? 'text-[#12804a]' : 'text-[#5b606b] font-normal'}`}>
+                      {peerStatus.isTyping ? 'typing…' : peerStatus.status === 'online' ? 'Active now' : peerStatus.lastSeen ? (() => {
                         const d = new Date(peerStatus.lastSeen);
                         const now = new Date();
                         const yest = new Date(now); yest.setDate(yest.getDate() - 1);
@@ -6449,18 +6583,24 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 </button>
               </div>
 
-              <div className="flex items-center gap-0.5 shrink-0">
-                <button type="button" onClick={() => handleStartCall('video')} className="w-10 h-10 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Video call" aria-label="Video call">
-                  <Video size={20} strokeWidth={1.8} />
-                </button>
-                <button type="button" onClick={() => handleStartCall('audio')} className="w-10 h-10 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Voice call" aria-label="Voice call">
+              {/* Voice and video in bordered squares, then Pay; round icons on phones. */}
+              <div className="flex items-center gap-0.5 md:gap-2 shrink-0">
+                <button type="button" onClick={() => handleStartCall('audio')} className="w-10 h-10 md:w-[42px] md:h-[42px] rounded-full md:rounded-xl md:border md:border-[#e6e8ec] bg-white hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Voice call" aria-label="Voice call">
                   <Phone size={19} strokeWidth={1.8} />
                 </button>
+                <button type="button" onClick={() => handleStartCall('video')} className="w-10 h-10 md:w-[42px] md:h-[42px] rounded-full md:rounded-xl md:border md:border-[#e6e8ec] bg-white hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Video call" aria-label="Video call">
+                  <Video size={20} strokeWidth={1.8} />
+                </button>
+                {ledgerSettings?.payments_enabled !== false && (
+                  <button type="button" onClick={() => setShowZkModal(true)} className="hidden lg:flex h-[42px] px-4 rounded-xl bg-[#15171c] hover:bg-[#2b2f38] text-white text-[14px] font-semibold items-center gap-2 transition-colors" title={`Private payment on ${networkLabel()}`} aria-label="Send a private payment">
+                    <Wallet size={17} strokeWidth={1.8} aria-hidden="true" /> Pay
+                  </button>
+                )}
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setShowHeaderMenu(v => !v)}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-[#15171c] transition-colors ${showHeaderMenu ? 'bg-[#eff1f4]' : 'hover:bg-[#f2f4f7]'}`}
+                    className={`w-10 h-10 md:w-[42px] md:h-[42px] rounded-full md:rounded-xl md:border md:border-[#e6e8ec] flex items-center justify-center text-[#15171c] transition-colors ${showHeaderMenu ? 'bg-[#eff1f4]' : 'bg-white hover:bg-[#f2f4f7]'}`}
                     title="More"
                     aria-label="More options"
                     aria-haspopup="menu"
@@ -6560,7 +6700,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             />
 
             {/* Dynamic Chat Background */}
-            <div data-chat-theme={isSecretChat ? 'default' : chatTheme.id} className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f7f8fa]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={{ ...(isSecretChat ? {} : chatThemeStyle(chatTheme)), ...(isSecretChat ? {} : (activePeer && convWallpapers[activePeer.toLowerCase()] ? { background: convWallpapers[activePeer.toLowerCase()] } : chatTheme.id !== 'default' ? { background: chatTheme.canvas } : bgStyle)), fontFamily, fontSize: `${fontSizePx}px`, ...(ledgerSettings?.anti_screenshot && screenShielded ? { filter: 'blur(18px)', transition: 'filter 120ms ease' } : { transition: 'filter 160ms ease' }) }}>
+            <div data-chat-theme={isSecretChat ? 'default' : chatTheme.id} className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f4f5f7]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={{ ...(isSecretChat ? {} : chatThemeStyle(chatTheme)), ...(isSecretChat ? {} : (activePeer && convWallpapers[activePeer.toLowerCase()] ? { background: convWallpapers[activePeer.toLowerCase()] } : chatTheme.id !== 'default' ? { background: chatTheme.canvas } : bgStyle)), fontFamily, fontSize: `${fontSizePx}px`, ...(ledgerSettings?.anti_screenshot && screenShielded ? { filter: 'blur(18px)', transition: 'filter 120ms ease' } : { transition: 'filter 160ms ease' }) }}>
               {/* Matrix Rain Effect Layer */}
               {chatBackground === 'matrix' && (
                 <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,255,0,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -6571,11 +6711,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <span>Confidential</span>
               </div>
               
-              {/* E2E Encrypted Badge */}
-              <div className="flex justify-center pt-3 pb-1 px-4">
-                <button type="button" onClick={() => setShowEncryptionInfo(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#e4e7ec] text-[12.5px] text-[#727a88] text-center hover:bg-[#f2f4f7] transition-colors">
-                  <Lock size={12} strokeWidth={2.2} aria-hidden="true" />
-                  Messages are end to end encrypted. Tap for details
+              {/* End-to-end encryption notice */}
+              <div className="flex justify-center pt-4 pb-1 px-4">
+                <button type="button" onClick={() => setShowEncryptionInfo(true)} className="max-w-[460px] flex items-start gap-2.5 px-4 py-3 rounded-[14px] bg-white border border-[#e6e8ec] text-[13px] leading-[1.5] text-[#4a4f59] text-left hover:bg-[#fafbfc] transition-colors">
+                  <Lock size={15} strokeWidth={1.9} className="text-[#15171c] shrink-0 mt-[2px]" aria-hidden="true" />
+                  <span>
+                    Messages, calls and payments in this chat are end-to-end encrypted.{ledgerSettings?.payments_enabled !== false ? ' Payments settle privately on Aztec.' : ''}{' '}
+                    <span className="text-[#15171c] font-medium underline underline-offset-2">Details</span>
+                  </span>
                 </button>
               </div>
 
@@ -6972,21 +7115,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
                   {/* ── Main input row ── */}
                   <div
-                    className="flex items-end gap-2 px-3 pt-2 w-full relative z-40 bg-white"
+                    className="flex items-end gap-2 px-3 pt-2 w-full relative z-40 bg-white md:bg-transparent md:gap-2.5 md:px-6 md:pt-3"
                     style={{ paddingBottom: 'max(12px, calc(0.5rem + env(safe-area-inset-bottom, 0px)))' }}
                   >
                     <button
                       type="button"
                       onClick={() => setShowAppDrawer(d => !d)}
-                      className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all duration-200 mb-[3px] ${showAppDrawer ? 'bg-[#15171c] text-white rotate-45' : 'text-[#475061] hover:bg-[#f2f4f7]'}`}
+                      className={`w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-full md:rounded-2xl flex items-center justify-center transition-colors duration-200 mb-[3px] md:mb-0 ${showAppDrawer ? 'bg-[#15171c] text-white md:border md:border-[#15171c]' : 'text-[#475061] hover:bg-[#f2f4f7] md:bg-white md:border md:border-[#e6e8ec] md:text-[#15171c]'}`}
                       aria-label={showAppDrawer ? 'Close attachments' : 'Attach'}
                       aria-expanded={showAppDrawer}
                     >
-                      <Plus size={22} strokeWidth={1.9} />
+                      <Plus size={22} strokeWidth={1.9} className={`transition-transform duration-200 ${showAppDrawer ? 'rotate-45' : ''}`} />
                     </button>
 
                     {/* The message field */}
-                    <div className="flex-1 bg-[#f2f4f7] rounded-[22px] flex items-end relative border border-transparent focus-within:bg-white focus-within:border-[#d0d5dd] min-h-[44px] max-h-[136px] transition-colors">
+                    <div className="flex-1 bg-[#f2f4f7] rounded-[22px] flex items-end relative border border-transparent focus-within:bg-white focus-within:border-[#d0d5dd] min-h-[44px] max-h-[136px] transition-colors md:bg-white md:border-[#e6e8ec] md:rounded-2xl md:min-h-[48px] md:focus-within:border-[#b8bdc7]">
                       {isRecording ? (
                         <div className="flex-1 flex items-center justify-between pl-4 pr-1.5 h-[44px]">
                           <div className="flex items-center gap-2" role="status">
@@ -7071,6 +7214,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                               {1000 - inputText.length}
                             </span>
                           )}
+                          {/* On wide screens the microphone sits inside the field, beside a separate send button. */}
+                          {!inputText.trim() && (
+                            <button
+                              type="button"
+                              onClick={startRecording}
+                              className="hidden md:flex mr-1.5 mb-[6px] self-end w-9 h-9 shrink-0 rounded-xl items-center justify-center text-[#5b606b] hover:bg-[#f2f4f7] transition-colors"
+                              aria-label="Record a voice message"
+                              title="Record a voice message"
+                            >
+                              <Mic size={19} strokeWidth={1.8} />
+                            </button>
+                          )}
                         </>
                       )}
                     </div>
@@ -7083,20 +7238,40 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         onTrigger={() => {}}
                       />
                     ) : !isRecording ? (
-                      <button
-                        type="button"
-                        onClick={startRecording}
-                        className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-colors text-[#475061] hover:bg-[#f2f4f7] active:scale-95 mb-[2px]"
-                        aria-label="Record a voice message"
-                      >
-                        <Mic size={21} strokeWidth={1.8} />
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={startRecording}
+                          className="md:hidden w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-colors text-[#475061] hover:bg-[#f2f4f7] active:scale-95 mb-[2px]"
+                          aria-label="Record a voice message"
+                        >
+                          <Mic size={21} strokeWidth={1.8} />
+                        </button>
+                        <LottieSendButton disabled className="hidden md:flex" />
+                      </>
                     ) : null}
                   </div>
                 </form>
 
             </div>
-          </>
+          </div>
+          {sidebarTab === 'chats' && (
+            <ChatDetailsPanel
+              key={activePeer.toLowerCase()}
+              peerAddress={activePeer}
+              peerName={getDisplayName(activePeer)}
+              peerInboxId={activePeerInboxIdRef.current}
+              client={client}
+              messages={messages.filter((m: any) => m.conversationId === `dm-${activePeer.toLowerCase()}`)}
+              isMuted={mutedPeers.has(activePeer.toLowerCase())}
+              disappearing={(() => { try { const t = localStorage.getItem('ledger_disappearing_' + activePeer.toLowerCase()); return ({ '24h': 'after 24 hours', '7d': 'after 7 days', '90d': 'after 90 days' } as Record<string, string>)[t || ''] ?? null; } catch { return null; } })()}
+              onCall={(type) => handleStartCall(type)}
+              onPay={() => setShowZkModal(true)}
+              onToggleMute={() => toggleMute(activePeer)}
+              onMore={() => setShowContactInfo(true)}
+            />
+          )}
+          </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center bg-[#f7f8fa] relative overflow-y-auto p-6 md:p-12">
             <div className="w-full max-w-md flex flex-col items-center text-center">
@@ -7217,17 +7392,27 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </div>
             </motion.div>
           ) : (
+            // The call keeps living in a black pill at the top, like the Dynamic Island.
             <button
               type="button"
               onClick={() => setIsCallMinimized(false)}
-              className="fixed top-0 left-0 w-full z-[100000] bg-[#1f9d55] text-white px-4 py-2 flex items-center justify-between shadow-sm"
-              style={{ paddingTop: 'max(8px, env(safe-area-inset-top, 8px))' }}
+              aria-label={`Return to the call with ${activePeer ? getDisplayName(activePeer) : 'your contact'}`}
+              className="fixed left-1/2 -translate-x-1/2 z-[100000] h-10 max-w-[calc(100vw-24px)] pl-2.5 pr-2 rounded-full bg-[#0b0c0f] text-white flex items-center gap-3 shadow-[0_10px_30px_rgba(11,12,15,0.22)] active:scale-[0.98] transition-transform"
+              style={{ top: 'max(10px, calc(env(safe-area-inset-top, 0px) + 6px))' }}
             >
-              <span className="flex items-center gap-2 text-[14px] font-medium">
-                <Phone size={15} strokeWidth={2} aria-hidden="true" />
-                {callReconnecting ? 'Reconnecting…' : `Return to call with ${activePeer ? getDisplayName(activePeer) : 'your contact'}`}
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${callReconnecting ? 'bg-[#f59e0b]' : 'bg-[#12a150]'}`} aria-hidden="true">
+                <Phone size={13} strokeWidth={2.2} />
               </span>
-              <span className="text-[14px] font-medium tabular-nums"><CallClock startedAt={callStartedAt} /></span>
+              <span className="text-[13px] font-semibold truncate max-w-[160px]">
+                {callReconnecting ? 'Reconnecting…' : activePeer ? getDisplayName(activePeer) : 'Call'}
+              </span>
+              <span className="font-mono text-[12px] text-[#b9bdc6] tabular-nums shrink-0"><CallClock startedAt={callStartedAt} /></span>
+              <span className="flex items-center gap-[2px] h-4 shrink-0" aria-hidden="true">
+                {[8, 14, 10, 16, 7].map((h, i) => (
+                  <span key={i} className="w-[3px] rounded-sm bg-[#5fd38d] animate-pulse" style={{ height: h, animationDelay: `${i * 0.15}s` }} />
+                ))}
+              </span>
+              <span className="h-7 px-3 rounded-full bg-white text-[#0b0c0f] text-[12px] font-bold flex items-center shrink-0">Return</span>
             </button>
           ),
           document.body
