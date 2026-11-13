@@ -8,6 +8,7 @@ import { GlyphField } from "@/components/immersive/GlyphField";
 import { SiteNav } from "@/components/immersive/SiteNav";
 import { PhoneShowcase, phoneShowcaseStyles } from "./PhoneShowcase";
 import { AztecSection, DesktopTour, LiveActivities } from "./Showcase";
+import { DevicesSection, StackSection, TokenSection } from "./ProtocolSections";
 import s from "./Landing.module.css";
 import st from "./Story.module.css";
 
@@ -146,6 +147,21 @@ export function HumanityLanding() {
           <LiveActivities />
 
           <AztecSection />
+
+          {/* How the layers fit: Ledger Chat, XMTP with MLS, Aztec Alpha, Ethereum. */}
+          <section id="stack" className={s.card} aria-labelledby="stack-title">
+            <StackSection />
+          </section>
+
+          {/* Computer, iPhone, Android. */}
+          <section id="devices" className={s.card} aria-labelledby="devices-title">
+            <DevicesSection />
+          </section>
+
+          {/* HLC: the plan, its distribution and its launch conditions, from lib/protocol/tokenomics.ts. */}
+          <section id="hlc" className={s.card} aria-labelledby="hlc-title">
+            <TokenSection />
+          </section>
 
           {/* Close. */}
           <section id="start" className={st.closing} aria-labelledby="closing-title">

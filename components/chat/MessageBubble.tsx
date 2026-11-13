@@ -1,5 +1,6 @@
 "use client";
 
+import { revealMessage } from '@/lib/chat/reveal-message';
 import { sendStatusLabel } from '@/lib/chat/optimistic-send';
 import { stickerLabel, stickerSrc } from '@/lib/chat/stickers';
 import React, { useState, useRef, useEffect } from 'react';
@@ -690,11 +691,10 @@ export const MessageBubble = React.memo(({
   const jumpToReply = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!replyMsg?.id) return;
-    const el = document.getElementById(`msg-${replyMsg.id}`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.classList.add('ring-2', 'ring-[#15171c]/15', 'rounded-2xl', 'transition-all', 'duration-300');
-    setTimeout(() => el.classList.remove('ring-2', 'ring-[#15171c]/15', 'rounded-2xl', 'transition-all', 'duration-300'), 1500);
+    revealMessage(replyMsg.id, (el) => {
+      el.classList.add('ring-2', 'ring-[#15171c]/15', 'rounded-2xl', 'transition-all', 'duration-300');
+      setTimeout(() => el.classList.remove('ring-2', 'ring-[#15171c]/15', 'rounded-2xl', 'transition-all', 'duration-300'), 1500);
+    });
   };
 
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);

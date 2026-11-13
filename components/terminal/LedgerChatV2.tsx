@@ -46,6 +46,7 @@ import { LedgerChatSettings, useLedgerSettings } from './LedgerChatSettings';
 import { useSettingsEffect, playMessageSound, playKeyboardClick, getChatBgStyle } from '@/lib/hooks/useSettingsEffect';
 import '@/app/ledger-chat-settings.css';
 import { VirtualizedMessageList } from '@/components/chat/VirtualizedMessageList';
+import { revealMessage } from '@/lib/chat/reveal-message';
 import { CrystalNavBar, NavTab } from '@/components/chat/CrystalNavBar';
 import SwipeableConversationRow from '@/components/chat/SwipeableConversationRow';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
@@ -6620,10 +6621,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   open={showSearch}
                   messages={allMsgs.map(m => ({ id: m.id, content: typeof m.content === 'string' ? m.content : '' }))}
                   onClose={() => { setShowSearch(false); setSearchQuery(''); }}
-                  onNavigate={(msgId) => {
-                    const el = document.getElementById(`msg-${msgId}`);
-                    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }}
+                  onNavigate={(msgId) => revealMessage(msgId)}
                 />
               );
             })()}
@@ -6631,8 +6629,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             {/* Phase 3: Pinned Message Banner */}
             {pinnedMessageId && (
               <div className="bg-white border-b border-[#e4e7ec] pl-4 pr-2 h-12 flex items-center gap-3 cursor-pointer hover:bg-[#f7f8fa] transition-colors z-20 shrink-0" onClick={() => {
-                const el = document.getElementById(`msg-${pinnedMessageId}`);
-                el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                revealMessage(pinnedMessageId);
               }}>
                 <Pin size={16} strokeWidth={1.9} className="text-[#475061] shrink-0" aria-hidden="true" />
                 <div className="flex-1 min-w-0 flex flex-col">
@@ -6818,7 +6815,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             </div>
 
             <div
-              className="relative shrink-0 bg-white border-t border-[#e4e7ec] z-10"
+              className="sticky bottom-0 shrink-0 bg-white border-t border-[#e4e7ec] z-10"
               style={{ paddingBottom: `max(8px, env(safe-area-inset-bottom, 0px))` }}
             >
               {/*  Alpha Network Banner — real funds warning, only on Aztec Alpha  */}
@@ -8453,10 +8450,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           onClose={() => setShowSavedModal(false)}
           savedMessages={savedMessages}
           onRemove={(id) => toggleSaveMessage(id, '')}
-          onJumpToMessage={(id) => {
-            const el = document.getElementById(`msg-${id}`);
-            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }}
+          onJumpToMessage={(id) => revealMessage(id)}
         />
       )}
 

@@ -38,6 +38,7 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
       { label: "Get started", href: "/#start" },
       { label: "Network status", href: "/docs/status" },
       { label: "Protocol metrics", href: "/protocol" },
+      { label: "HLC token", href: "/#hlc" },
     ],
   },
   {

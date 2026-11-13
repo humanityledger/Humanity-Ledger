@@ -1,0 +1,607 @@
+/* Landing: the stack, the devices and HLC. Flat surfaces, 1px rules, one motion moment (the
+   supply ledger fills as it scrolls into view; transform and opacity only, reduced motion respected). */
+
+.section {
+  --ink: #15171c;
+  --ink-2: #475467;
+  --ink-3: #727a88;
+  --rule: #e4e7ec;
+  --band: #f7f8fa;
+  /* Allocation slots: categorical order, validated for colour vision deficiency; every mark
+     also carries a direct label and the table below repeats the figures. */
+  --c-community: #2a78d6;
+  --c-fair: #eb6834;
+  --c-treasury: #1baf7a;
+  --c-team: #eda100;
+}
+
+.lead {
+  margin: 20px 0 0;
+  max-width: 62ch;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* ── The stack: a cross-section, app on top, Ethereum at the bottom ── */
+
+.stack {
+  margin: 48px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+
+.layer {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 1fr minmax(120px, auto);
+  gap: 24px;
+  align-items: baseline;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.layerName {
+  margin: 0;
+  font-family: var(--hl-font-display);
+  font-size: 28px;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.layerText {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.layerFact {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-3);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Devices ── */
+
+.devices {
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.device {
+  padding: 24px;
+  border: 1px solid var(--rule);
+  border-radius: 20px;
+  background: #ffffff;
+}
+
+.deviceFrame {
+  margin: 0 auto 24px;
+  border: 1.5px solid var(--ink);
+  background: var(--band);
+}
+
+.screenLine {
+  display: block;
+  height: 6px;
+  margin: 10px 10px 0;
+  border-radius: 3px;
+  background: var(--rule);
+}
+
+.screenLine:nth-child(2) {
+  width: 60%;
+}
+
+.screenLine:nth-child(3) {
+  width: 40%;
+  margin-left: auto;
+  background: #c7d7f5;
+}
+
+.frameDesktop {
+  width: 100%;
+  max-width: 220px;
+  aspect-ratio: 16 / 10;
+  border-radius: 10px;
+}
+
+.framePhone {
+  width: 72px;
+  aspect-ratio: 9 / 19.5;
+  border-radius: 16px;
+}
+
+.deviceName {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.deviceStatus {
+  margin: 6px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.dotLive,
+.dotLater {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  flex: none;
+}
+
+.dotLive {
+  background: #166534;
+}
+
+.dotLater {
+  background: #a3a9b4;
+}
+
+.deviceText {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* ── HLC ── */
+
+.supply {
+  margin: 0;
+  font-family: var(--hl-font-display);
+  font-weight: 400;
+  font-size: clamp(48px, 11vw, 148px);
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.supplyHead {
+  max-width: none;
+}
+
+.supplyHead > p {
+  max-width: 62ch;
+}
+
+.supplyUnit {
+  display: block;
+  margin-top: 12px;
+  font-family: var(--hl-font);
+  font-size: 18px;
+  line-height: 1.45;
+  letter-spacing: 0;
+  white-space: normal;
+  color: var(--ink-2);
+}
+
+.notice {
+  margin: 28px 0 0;
+  padding: 14px 16px;
+  max-width: 72ch;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--band);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.ledgerWrap {
+  margin-top: 48px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  gap: 40px;
+  align-items: start;
+}
+
+/* 1,000 cells, one per million HLC. 50 × 20 on wide screens, 25 × 40 on phones. */
+.ledger {
+  display: grid;
+  grid-template-columns: repeat(50, minmax(0, 1fr));
+  gap: 2px;
+  view-timeline-name: --ledger;
+}
+
+.cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: var(--c);
+}
+
+.legend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendItem {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.legendItem:first-child {
+  border-top: 1px solid var(--rule);
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--c);
+  transform: translateY(1px);
+}
+
+.legendName {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.legendTerms {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.legendShare {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.legendAmount {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.subhead {
+  margin: 64px 0 0;
+  font-family: var(--hl-font-display);
+  font-weight: 400;
+  font-size: clamp(28px, 3.4vw, 40px);
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.subLead {
+  margin: 12px 0 0;
+  max-width: 62ch;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* Value flow: a real sequence, so it is numbered. */
+.flow {
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  counter-reset: step;
+}
+
+.flowStep {
+  counter-increment: step;
+  padding: 20px;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.flowStep::before {
+  content: counter(step);
+  display: block;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.flowTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.flowText {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.locks {
+  margin: 20px 0 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.lock {
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+}
+
+.lockWeight {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.lockName {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+/* Vesting chart */
+.chart {
+  position: relative;
+  margin-top: 28px;
+  max-width: 880px;
+}
+
+.chartSvg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  touch-action: pan-y;
+}
+
+.tooltip {
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: #ffffff;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
+}
+
+.tableToggle {
+  margin-top: 12px;
+  min-height: 44px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.table {
+  margin-top: 8px;
+  width: 100%;
+  max-width: 520px;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+}
+
+.table td:last-child,
+.table th:last-child {
+  text-align: right;
+}
+
+/* Launch conditions */
+.conditions {
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+
+.condition {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: baseline;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.conditionLabel {
+  margin: 0;
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.conditionEvidence {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.met,
+.unmet {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.met {
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.unmet {
+  color: var(--ink-2);
+  background: var(--band);
+  border: 1px solid var(--rule);
+}
+
+/* Live figures from /api/protocol/metrics */
+.live {
+  margin-top: 48px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 0;
+  border: 1px solid var(--rule);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.liveItem {
+  padding: 18px 20px;
+  border-right: 1px solid var(--rule);
+  min-width: 0;
+}
+
+.liveLabel {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.liveValue {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.liveLink {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.liveSkeleton {
+  display: block;
+  margin-top: 8px;
+  height: 18px;
+  width: 70%;
+  border-radius: 6px;
+  background: #eff1f4;
+}
+
+@media (max-width: 980px) {
+  .ledgerWrap {
+    grid-template-columns: 1fr;
+  }
+  .live {
+    grid-template-columns: 1fr 1fr;
+  }
+  .liveItem:nth-child(2) {
+    border-right: 0;
+  }
+  .liveItem {
+    border-bottom: 1px solid var(--rule);
+  }
+}
+
+@media (max-width: 760px) {
+  .layer {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .layerFact {
+    text-align: left;
+  }
+  .lead {
+    font-size: 16px;
+  }
+  .devices,
+  .flow {
+    grid-template-columns: 1fr;
+  }
+  .locks {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ledger {
+    grid-template-columns: repeat(25, minmax(0, 1fr));
+  }
+  .live {
+    grid-template-columns: 1fr;
+  }
+  .liveItem {
+    border-right: 0;
+  }
+}
+
+/* The one motion moment: cells settle into place as the ledger crosses the screen. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .cell {
+      animation: ledgerFill linear both;
+      animation-timeline: --ledger;
+      animation-range: entry 10% cover calc(25% + var(--p) * 25%);
+    }
+  }
+}
+
+@keyframes ledgerFill {
+  from {
+    opacity: 0.12;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
