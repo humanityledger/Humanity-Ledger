@@ -45,6 +45,7 @@ import { ConnectView, type ConnectStage, type WalletOption } from "@/components/
 
 import { safeReturnPath } from "@/lib/security/safeRedirect";
 import { withSignTimeout } from "@/lib/auth/sign-timeout";
+import { classifySignError, SIGN_MESSAGES } from "@/lib/auth/sign-error";
 import { purgeLegacyHandshakeSecrets } from "@/lib/scan/sessionHandshake";
 import { setSelfLink } from "@/lib/link/channel";
 import { ONE_CLICK_AUTH } from "@/config/appkit";
@@ -154,6 +155,8 @@ export default function ConnectPage() {
   // Each signature attempt gets an id; a result from an older, abandoned attempt is never used.
   const signAttemptRef = useRef(0);
   const signingStartTimeRef = useRef(0);
+  // True while a wallet signature request is awaiting an answer (the user may be in the wallet app).
+  const signPendingRef = useRef(false);
 
   const effectiveIsConnected = mounted && isConnected && !readDisconnectGuard();
 
@@ -527,20 +530,23 @@ export default function ConnectPage() {
         for (let attempt = 0; attempt < 5; attempt++) {
           try {
             // "expired" is not retried: the user gets "Try again" and a fresh nonce.
-            signature = await withSignTimeout(signMessageAsync({ message }), SIGN_TIMEOUT_MS);
+            // The tab may be suspended while the user is in the wallet app. The same request keeps
+            // being awaited when the tab returns (visibilitychange does not abandon it); only the
+            // timeout ends it.
+            signPendingRef.current = true;
+            try {
+              signature = await withSignTimeout(signMessageAsync({ message }), SIGN_TIMEOUT_MS);
+            } finally {
+              signPendingRef.current = false;
+            }
             if (stale()) return; // a newer attempt or a redirect took over
             if (signature) break;
           } catch (e: unknown) {
             if (stale()) return;
             const errMsg = ((e as { message?: string })?.message || "").toLowerCase();
-            const isUserDecline =
-              errMsg.includes("rejected") ||
-              errMsg.includes("denied") ||
-              errMsg.includes("user rejected") ||
-              errMsg.includes("cancel");
 
-            if (isUserDecline) {
-              throw e; // User explicitly cancelled, do not retry
+            if (classifySignError(e) === "declined") {
+              throw e; // User explicitly cancelled (code 4001 / rejected / denied), do not retry
             }
 
             const isRecoverable =
@@ -570,6 +576,11 @@ export default function ConnectPage() {
                 setMobileDeepLink(mobileDeepLink);
               }
               await new Promise((r) => setTimeout(r, 3000));
+              // Do not send a new request to a wallet the user is still looking at.
+              while (!stale() && document.visibilityState !== "visible") {
+                await new Promise((r) => setTimeout(r, 500));
+              }
+              if (stale()) return;
               continue;
             }
             throw e;
@@ -610,14 +621,8 @@ export default function ConnectPage() {
         signingRef.current = false;
       } catch (e: unknown) {
         if (stale()) return;
-        const m = (e as { message?: string })?.message?.toLowerCase() ?? "";
-        if (m.includes("rejected") || m.includes("denied") || m.includes("cancel") || m.includes("user rejected")) {
-          setSignError("You declined the signature in your wallet. Nothing was charged and nothing was sent.");
-        } else if (m.includes("timeout") || m.includes("timed out") || m.includes("expired")) {
-          setSignError("The signature request timed out. Please tap 'Try again' and approve the request in your wallet.");
-        } else {
-          setSignError("Connection interrupted while waiting for wallet. Please tap 'Try again'.");
-        }
+        console.warn("[SIWE] signature did not complete:", (e as { message?: string })?.message);
+        setSignError(SIGN_MESSAGES[classifySignError(e)]);
         setAuthStatus("failed");
         signingRef.current = false;
       }
@@ -659,8 +664,11 @@ export default function ConnectPage() {
         }
       } catch {}
 
-      // 2. If stuck in failed state or hung in verifying after tab background restore, enable auto-retry if still connected
-      if (effectiveIsConnected && (authStatus === "failed" || (authStatus === "verifying" && Date.now() - signingStartTimeRef.current > 15_000))) {
+      // 2. If stuck in failed state or hung in verifying (before a signature was requested) after tab
+      //    background restore, enable auto-retry if still connected. A pending signature request is
+      //    never abandoned here: the user is returning from the wallet and the same request is still
+      //    awaited until its timeout. A failed attempt is restarted only by the "Try again" button.
+      if (effectiveIsConnected && authStatus === "verifying" && !signPendingRef.current && Date.now() - signingStartTimeRef.current > 15_000) {
         signAttemptRef.current++; // abandon the hung request before a new one is made
         signingRef.current = false;
         setSignError(null);
