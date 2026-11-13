@@ -884,6 +884,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showTipModal, setShowTipModal] = useState(false);
   const [showZkModal, setShowZkModal] = useState(false);
   const [showZkWallet, setShowZkWallet] = useState(false);
+  const [zkWalletInitialSheet, setZkWalletInitialSheet] = useState<'shield' | 'unshield' | 'send' | 'receive' | null>(null);
   const [showZkStreamModal, setShowZkStreamModal] = useState(false);
   const [showAgreementComposer, setShowAgreementComposer] = useState(false);
   const [showZkInvoiceModal, setShowZkInvoiceModal] = useState(false);
@@ -6024,6 +6025,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               </div>
 
               <div className="flex items-center gap-0.5 shrink-0">
+                {/* Pay quick action — opens Private Wallet send sheet directed at the active peer */}
+                <button
+                  type="button"
+                  onClick={() => { setZkWalletInitialSheet('send'); setShowZkWallet(true); }}
+                  className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#1C1C1E] text-white text-[12px] font-semibold hover:bg-black transition-colors mr-1"
+                  title="Send private payment"
+                  aria-label="Send private payment"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                  Pay
+                </button>
                 <button type="button" onClick={() => handleStartCall('video')} className="w-10 h-10 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Video call" aria-label="Video call">
                   <Video size={20} strokeWidth={1.8} />
                 </button>
@@ -7623,8 +7635,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
            >
              <ZkWalletPanel
                address={address || ''}
-               onClose={() => setShowZkWallet(false)}
-               onSend={() => { setShowZkWallet(false); setShowZkModal(true); }}
+               onClose={() => { setShowZkWallet(false); setZkWalletInitialSheet(null); }}
+               initialSheet={zkWalletInitialSheet}
+               onPaymentSent={() => { setShowZkWallet(false); setZkWalletInitialSheet(null); setShowZkModal(true); }}
              />
            </motion.div>
          )}
@@ -7849,6 +7862,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     </TuringShieldGate>
   );
 }
+
 
 
 
