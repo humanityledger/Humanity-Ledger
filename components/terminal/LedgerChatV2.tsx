@@ -6592,7 +6592,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   <Video size={20} strokeWidth={1.8} />
                 </button>
                 {ledgerSettings?.payments_enabled !== false && (
-                  <button type="button" onClick={() => setShowZkModal(true)} className="hidden md:flex h-[42px] px-4 rounded-xl bg-[#15171c] hover:bg-[#2b2f38] text-white text-[14px] font-semibold items-center gap-2 transition-colors" title={`Private payment on ${networkLabel()}`} aria-label="Send a private payment">
+                  <button type="button" onClick={() => setShowZkModal(true)} className="hidden lg:flex h-[42px] px-4 rounded-xl bg-[#15171c] hover:bg-[#2b2f38] text-white text-[14px] font-semibold items-center gap-2 transition-colors" title={`Private payment on ${networkLabel()}`} aria-label="Send a private payment">
                     <Wallet size={17} strokeWidth={1.8} aria-hidden="true" /> Pay
                   </button>
                 )}
@@ -7257,13 +7257,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           </div>
           {sidebarTab === 'chats' && (
             <ChatDetailsPanel
+              key={activePeer.toLowerCase()}
               peerAddress={activePeer}
               peerName={getDisplayName(activePeer)}
               peerInboxId={activePeerInboxIdRef.current}
               client={client}
               messages={messages.filter((m: any) => m.conversationId === `dm-${activePeer.toLowerCase()}`)}
               isMuted={mutedPeers.has(activePeer.toLowerCase())}
-              disappearing={(() => { try { const t = localStorage.getItem('ledger_disappearing_' + activePeer.toLowerCase()); return t && t !== 'off' ? t : null; } catch { return null; } })()}
+              disappearing={(() => { try { const t = localStorage.getItem('ledger_disappearing_' + activePeer.toLowerCase()); return ({ '24h': 'after 24 hours', '7d': 'after 7 days', '90d': 'after 90 days' } as Record<string, string>)[t || ''] ?? null; } catch { return null; } })()}
               onCall={(type) => handleStartCall(type)}
               onPay={() => setShowZkModal(true)}
               onToggleMute={() => toggleMute(activePeer)}

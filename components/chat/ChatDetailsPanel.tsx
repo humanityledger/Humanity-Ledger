@@ -70,22 +70,29 @@ export function ChatDetailsPanel({
 
   useEffect(() => {
     setGlyphs(null);
-    if (!client || !selfInboxId || !peerInboxId) {
+    if (!client || !selfInboxId) {
       setGlyphState('unavailable');
       return;
     }
-    const key = [selfInboxId, peerInboxId].sort().join('|');
-    const cached = glyphCache.get(key);
-    if (cached) {
-      setGlyphs(cached);
-      setGlyphState('ready');
-    } else {
-      setGlyphState('loading');
-    }
+    setGlyphState('loading');
     let live = true;
+    let cached: string[] | undefined;
     (async () => {
       try {
-        const states: any[] = await client.preferences.inboxStateFromInboxIds([selfInboxId, peerInboxId], true);
+        // The peer's inbox is looked up from this chat's own address, never taken
+        // from shared state that may still hold the previous chat's inbox.
+        let peerId: string | undefined;
+        try {
+          peerId = (await client.findInboxIdByIdentifier({ identifier: peerAddress.toLowerCase(), identifierKind: 'Ethereum' })) || undefined;
+        } catch { /* fall back to the inbox seen in this chat's messages */ }
+        if (!peerId) peerId = peerInboxId || undefined;
+        if (!live) return;
+        if (!peerId) { setGlyphState('unavailable'); return; }
+        const key = [selfInboxId, peerId].sort().join('|');
+        cached = glyphCache.get(key);
+        if (cached) { setGlyphs(cached); setGlyphState('ready'); }
+        const states: any[] = await client.preferences.inboxStateFromInboxIds([selfInboxId, peerId], true);
+        if (!states.some((st) => String(st.inboxId) === peerId)) throw new Error('peer inbox missing');
         const devices: InboxDevices[] = states.map((s) => ({
           inboxId: String(s.inboxId),
           installationIds: (s.installations || []).map((i: any) => String(i.id)),
@@ -104,7 +111,7 @@ export function ChatDetailsPanel({
     return () => {
       live = false;
     };
-  }, [client, selfInboxId, peerInboxId]);
+  }, [client, selfInboxId, peerAddress, peerInboxId]);
 
   const actions = [
     { label: 'Call', dot: '#12a150', icon: <Phone size={15} strokeWidth={1.9} aria-hidden="true" />, onClick: () => onCall('audio') },
