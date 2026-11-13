@@ -4,7 +4,7 @@
 use crate::LedgerSponsor;
 use crate::voucher::voucher_digest;
 use aztec::{
-    protocol::address::AztecAddress,
+    protocol::{address::AztecAddress, traits::ToField},
     test::helpers::test_environment::{ExecuteUtilityOptions, TestEnvironment},
 };
 
@@ -47,7 +47,10 @@ unconstrained fn binding(env: TestEnvironment, user: AztecAddress, sponsor: Azte
 unconstrained fn the_binding_names_this_instance_and_network() {
     let (env, user, sponsor) = setup();
     let b = binding(env, user, sponsor);
-    std::println(f"[SPONSOR-V2 binding] address {b[0]} chain {b[1]} version {b[2]} user {user}");
+    let instance = b[0];
+    let chain = b[1];
+    let version = b[2];
+    std::println(f"[SPONSOR-V2 binding] address {instance} chain {chain} version {version}");
     assert(b[0] == sponsor.to_field());
     let (env2, user2, sponsor2) = setup();
     assert(sponsor2 == sponsor, "TXE sponsor address is not deterministic");

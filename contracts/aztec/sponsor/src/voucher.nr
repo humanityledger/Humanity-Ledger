@@ -15,8 +15,8 @@
 
 pub global TAG: [u8; 16] = [0x48, 0x4c, 0x2d, 0x53, 0x50, 0x4f, 0x4e, 0x53, 0x4f, 0x52, 0x2d, 0x56, 0x32, 0, 0, 0];
 
-pub fn voucher_digest(contract: Field, chain_id: Field, version: Field, voucher_id: Field, expires_at: u64) -> [u8; 32] {
-    let c: [u8; 32] = contract.to_be_bytes();
+pub fn voucher_digest(instance: Field, chain_id: Field, version: Field, voucher_id: Field, expires_at: u64) -> [u8; 32] {
+    let c: [u8; 32] = instance.to_be_bytes();
     let ch: [u8; 32] = chain_id.to_be_bytes();
     let v: [u8; 32] = version.to_be_bytes();
     let id: [u8; 32] = voucher_id.to_be_bytes();
