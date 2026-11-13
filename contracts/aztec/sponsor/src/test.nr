@@ -3,7 +3,10 @@
 
 use crate::LedgerSponsor;
 use crate::voucher::voucher_digest;
-use aztec::{protocol::address::AztecAddress, test::helpers::test_environment::TestEnvironment};
+use aztec::{
+    protocol::address::AztecAddress,
+    test::helpers::test_environment::{ExecuteUtilityOptions, TestEnvironment},
+};
 
 global SIGNER_X: [u8; 32] = [0x4f, 0x35, 0x5b, 0xdc, 0xb7, 0xcc, 0x0a, 0xf7, 0x28, 0xef, 0x3c, 0xce, 0xb9, 0x61, 0x5d, 0x90, 0x68, 0x4b, 0xb5, 0xb2, 0xca, 0x5f, 0x85, 0x9a, 0xb0, 0xf0, 0xb7, 0x04, 0x07, 0x58, 0x71, 0xaa];
 global SIGNER_Y: [u8; 32] = [0x38, 0x5b, 0x6b, 0x1b, 0x8e, 0xad, 0x80, 0x9c, 0xa6, 0x74, 0x54, 0xd9, 0x68, 0x3f, 0xcf, 0x2b, 0xa0, 0x34, 0x56, 0xd6, 0xfe, 0x2c, 0x4a, 0xbe, 0x2b, 0x07, 0xf0, 0xfb, 0xdb, 0xb2, 0xf1, 0xc1];
@@ -27,11 +30,29 @@ unconstrained fn setup() -> (TestEnvironment, AztecAddress, AztecAddress) {
 
 #[test]
 unconstrained fn digest_matches_the_server_bytes() {
-    let d = voucher_digest(1, FUTURE);
-    // sha256("HL-SPONSOR-V1\0\0\0" || 0x00..01 || 4102444800 as u64 BE), computed with Node.
-    assert(d[0] == 0xc9);
-    assert(d[1] == 0x82);
-    assert(d[31] == 0xb0);
+    // sha256("HL-SPONSOR-V2\0\0\0" || 0x..1234 || 1 || 2070860440 || 1 || 4102444800 as u64 BE), computed with Node.
+    let d = voucher_digest(0x1234, 1, 2070860440, 1, FUTURE);
+    assert(d[0] == 0xdd);
+    assert(d[1] == 0xea);
+    assert(d[31] == 0x9d);
+}
+
+unconstrained fn binding(env: TestEnvironment, user: AztecAddress, sponsor: AztecAddress) -> [Field; 3] {
+    env.execute_utility_opts(ExecuteUtilityOptions::new().with_from(user), LedgerSponsor::at(sponsor).voucher_binding())
+}
+
+// Prints what a voucher for the TXE instance must name, so scripts/aztec/sponsor-test-vectors.mjs can
+// sign the exact bytes. The address is deterministic for a fresh TestEnvironment (checked below).
+#[test]
+unconstrained fn the_binding_names_this_instance_and_network() {
+    let (env, user, sponsor) = setup();
+    let b = binding(env, user, sponsor);
+    std::println(f"[SPONSOR-V2 binding] address {b[0]} chain {b[1]} version {b[2]} user {user}");
+    assert(b[0] == sponsor.to_field());
+    let (env2, user2, sponsor2) = setup();
+    assert(sponsor2 == sponsor, "TXE sponsor address is not deterministic");
+    let b2 = binding(env2, user2, sponsor2);
+    assert((b2[1] == b[1]) & (b2[2] == b[2]));
 }
 
 // TXE runs a test call in the revertible phase, so the fee-payer election itself cannot succeed
