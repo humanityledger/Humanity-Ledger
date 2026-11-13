@@ -182,10 +182,6 @@
   border-radius: 4px;
 }
 
-.ext {
-  opacity: 0.5;
-}
-
 /* The wordmark. Set in the display face across the whole width; the light
    behind it is the same blue as the living field. */
 .mark {
@@ -285,4 +281,36 @@
   line-height: 1.6;
   color: var(--hl-ink-3);
   text-wrap: pretty;
+}
+
+/* "Ledger Chat, made by Humanity Ledger. Built on Aztec Network." */
+.credit {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--hl-ink-2);
+}
+
+.credit span {
+  font-weight: 600;
+  color: var(--hl-ink);
+}
+
+.credit a {
+  color: var(--hl-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgba(16, 24, 40, 0.25);
+  text-underline-offset: 3px;
+}
+
+.credit a:hover {
+  text-decoration-color: currentColor;
+}
+
+/* Without the closing line, the link columns take the whole width. */
+@media (min-width: 1000px) {
+  .top.topSolo {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

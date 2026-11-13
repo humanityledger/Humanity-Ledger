@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { HLLogo } from "@/components/shared/HLLogo";
+import { AZTEC_WALLET_CONFIG, networkLabel } from "@/lib/aztec/wallet/config";
 import landing from "./Landing.module.css";
 import s from "./Showcase.module.css";
 
 /**
- * The new landing scenes: the brand bar in the hero, the desktop tour, Live
- * Activities, the Aztec Network section and the scale section.
+ * The landing's scenes: the desktop tour, Live Activities and the Aztec
+ * Network section.
  *
  * Motion rules for all of them:
  *   - Scenes are driven by the scroll position, never by a one-off trigger,
@@ -134,47 +134,31 @@ function scrollToChapter(track: HTMLElement | null, stage: HTMLElement | null, i
   el.scrollTo({ top: el.scrollTop + delta, behavior: reduce ? "auto" : "smooth" });
 }
 
-/* ── Brand bar ─────────────────────────────────────────────────────────── */
-
-/** Humanity Ledger, then "Private payments on" and Aztec's wordmark, well apart. */
-export function BrandBar() {
-  return (
-    <div className={s.brandBar}>
-      <HLLogo size={30} />
-      <span className={s.brandRule} aria-hidden="true" />
-      <a href={AZTEC_URL} target="_blank" rel="noopener noreferrer" className={s.brandAztec}>
-        <span className={s.brandLabel}>Private payments on</span>
-        <img src={AZTEC_WORDMARK_INK} alt="Aztec Network" width={92} height={21} className={s.brandWordmark} />
-      </a>
-    </div>
-  );
-}
-
 /* ── Desktop tour ──────────────────────────────────────────────────────── */
 
 const DESKTOP = [
   {
     id: "chats",
     title: "Chats",
-    text: "Conversations, voice notes and private payments in one thread. A live call stays pinned above it as you keep writing.",
-    alt: "Ledger Chat on desktop. The chat list, a conversation with Maya with a private payment of 48 AZTEC, a voice note, and the contact panel with safety glyphs.",
+    text: "Messages, voice notes and private payments in one thread.",
+    alt: "Ledger Chat on desktop. The chat list, a conversation with Maya with a private payment of 48 HLC, a voice note, and the contact panel with safety glyphs.",
   },
   {
     id: "calls",
     title: "Calls",
-    text: "Voice and video calls, encrypted end to end and connected directly between the two devices whenever the network allows.",
+    text: "Voice and video, device to device whenever the network allows.",
     alt: "Ledger Chat on desktop. Call history on the left and an encrypted direct video call with Leo.",
   },
   {
     id: "updates",
     title: "Updates",
-    text: "Status that disappears after a day, and posts you send to the circle you choose: contacts, close friends, or everyone.",
+    text: "Status for a day. Posts for the circle you choose.",
     alt: "Ledger Chat on desktop. Status updates, a post composer with an audience picker, a poll and the feed.",
   },
   {
     id: "communities",
     title: "Communities",
-    text: "Channels, live voice rooms, announcements from admins and roles for members, with guidelines everyone accepts on the way in.",
+    text: "Channels, voice rooms and announcements, with roles.",
     alt: "Ledger Chat on desktop. A community with channels, a live voice room, a pinned announcement and the member list.",
   },
 ] as const;
@@ -300,14 +284,10 @@ export function DesktopTour() {
   return (
     <section id="desktop" data-glow className={`${landing.card} ${s.tourCard}`} aria-labelledby="desktop-title">
       <div className={landing.sectionHead}>
-        <p className={landing.eyebrow}>Ledger Chat on your computer</p>
+        <p className={landing.eyebrow}>On your computer</p>
         <h2 id="desktop-title" className={landing.h2}>
           Every conversation. <em>One calm window.</em>
         </h2>
-        <p className={landing.lead}>
-          Chats, calls, updates and communities, side by side on a large screen, with the same privacy as on your
-          phone.
-        </p>
       </div>
 
       {scrub ? (
@@ -407,31 +387,31 @@ const ISLAND: IslandState[] = [
     id: "call",
     kind: "compact",
     title: "A call that follows you",
-    text: "Leave the call screen and the call stays around the camera, with its timer and a live voice level.",
+    text: "The call stays around the camera, with its timer.",
   },
   {
     id: "incoming",
     kind: "expanded",
     title: "Answer from anywhere",
-    text: "An incoming call opens the island with the caller's name and two clear choices.",
+    text: "The caller's name and two clear choices.",
   },
   {
     id: "proving",
     kind: "expanded",
     title: "A payment, proved on your phone",
-    text: "Sending privately takes a few seconds of proving on the device. The island shows each step until it settles.",
+    text: "Proved on the phone, step by step, until it settles.",
   },
   {
     id: "received",
     kind: "expanded",
     title: "Money arrives quietly",
-    text: "A payment received shows who sent it and the amount, and nothing about the conversation it came from.",
+    text: "Who sent it and how much. Nothing more.",
   },
   {
     id: "both",
     kind: "minimal",
     title: "Two at once",
-    text: "A call and a payment at the same time split into two small shapes, each one a tap away.",
+    text: "A call and a payment, side by side.",
   },
 ];
 
@@ -659,14 +639,11 @@ export function LiveActivities() {
   return (
     <section ref={rootRef} id="live-activities" className={`${landing.card} ${s.liveCard}`} aria-labelledby="live-title">
       <div className={`${landing.sectionHead} ${s.liveHead}`}>
-        <p className={`${landing.eyebrow} ${s.liveEyebrow}`}>Live Activities on iPhone</p>
+        <p className={`${landing.eyebrow} ${s.liveEyebrow}`}>Live Activities</p>
         <h2 id="live-title" className={`${landing.h2} ${s.liveH2}`}>
-          Calls and payments, <em>alive around the camera.</em>
+          Alive <em>around the camera.</em>
         </h2>
-        <p className={`${landing.lead} ${s.liveLead}`}>
-          Ledger Chat keeps what is happening in the Dynamic Island while you use the rest of your phone. Names and
-          amounts only. Message text never appears there.
-        </p>
+        <p className={`${landing.lead} ${s.liveLead}`}>Names and amounts only. Never the text of a message.</p>
       </div>
 
       {reduce ? (
@@ -701,12 +678,7 @@ export function LiveActivities() {
         </div>
       )}
 
-      <ul className={s.liveRules}>
-        <li>Never the text of a message. Only names and amounts.</li>
-        <li>Amounts hide while the screen is shared or recorded.</li>
-        <li>On a computer, the same pill floats at the top of the conversation.</li>
-      </ul>
-      <p className={s.liveNote}>A design for the native iPhone app, which is in development. Today Ledger Chat runs in Safari.</p>
+      <p className={s.liveNote}>A design for the native iPhone app, in development. Today Ledger Chat runs in Safari.</p>
     </section>
   );
 }
@@ -716,15 +688,15 @@ export function LiveActivities() {
 const AZTEC_FACTS = [
   {
     k: "Proved on your device",
-    v: "Each payment is turned into a zero knowledge proof on your own phone or computer before it leaves.",
+    v: "A zero knowledge proof, made before the payment leaves.",
   },
   {
     k: "Private notes",
-    v: "Balances live as encrypted notes. The amount and the person you paid stay off the public record.",
+    v: "Balances are encrypted notes, not public numbers.",
   },
   {
     k: "Settled on Ethereum",
-    v: "Aztec is an Ethereum layer 2 run by permissionless sequencers and provers, not by us.",
+    v: "Run by permissionless sequencers and provers, not by us.",
   },
 ];
 
@@ -758,12 +730,10 @@ export function AztecSection() {
         <div className={s.aztecCopy}>
           <p className={s.aztecLabel}>Aztec Network</p>
           <h2 id="aztec-title" className={s.aztecH2}>
-            Freedom to pay, <em>unseen.</em>
+            Paid privately. <em>Settled on Aztec.</em>
           </h2>
           <p className={s.aztecLead}>
-            Private payments in Ledger Chat settle on Aztec Network, the privacy layer 2 for Ethereum. You see a
-            payment in the conversation. The public ledger sees that a transaction happened, and not who paid whom or
-            how much.
+            The privacy layer 2 for Ethereum. The amount and the recipient stay off the public ledger.
           </p>
           <dl className={s.aztecFacts}>
             {AZTEC_FACTS.map((f) => (
@@ -782,113 +752,19 @@ export function AztecSection() {
               Aztec supplies them.
             </p>
           </div>
+          <p className={s.aztecRisk}>
+            {networkLabel()}
+            {AZTEC_WALLET_CONFIG.network === "mainnet" ? ", real funds with a cap per payment. " : ", tokens with no value. "}
+            Aztec is still in alpha. In August 2026 its developers reported a critical flaw in Alpha V5 and announced a
+            fix in V6, and our payment contracts have not been independently audited yet. Private payments are
+            experimental: only use amounts you are comfortable losing.
+          </p>
         </div>
         <div ref={panelRef} className={s.aztecPanel}>
           <span className={s.aztecTexture} aria-hidden="true" />
           <img src={AZTEC_SYMBOL} alt="Aztec symbol" width={207} height={207} className={s.aztecSymbol} />
         </div>
       </div>
-    </section>
-  );
-}
-
-/* ── Built for billions ────────────────────────────────────────────────── */
-
-const SCALE = [
-  {
-    title: "The work happens on each device",
-    text: "Encryption and payment proofs run on the phone or computer of the person using them. As more people join, that work spreads across their devices instead of piling up on one server.",
-  },
-  {
-    title: "Open networks carry it",
-    text: "Messages travel over XMTP and payments settle on Aztec, networks run by many independent operators rather than by one company.",
-  },
-  {
-    title: "No phone number, no bank account",
-    text: "A wallet made in the browser is enough to start. Nobody has to approve an account, and sponsored fees mean a newcomer does not need tokens first.",
-  },
-  {
-    title: "Light enough for any phone",
-    text: "Ledger Chat runs in the browser with nothing to install, so it reaches the phones people already own, wherever they are.",
-  },
-];
-
-const SCALE_TARGET = 4_000_000_000;
-const fmtCount = (n: number) => Math.round(n).toLocaleString("en-US");
-
-export function ScaleSection() {
-  const rootRef = useRef<HTMLElement>(null);
-  const numRef = useRef<HTMLSpanElement>(null);
-  const reduce = useReducedMotion();
-
-  // The figure counts up as the section rises into view, and back down when you scroll back.
-  useEffect(() => {
-    const root = rootRef.current;
-    const num = numRef.current;
-    if (!root || !num) return;
-    if (reduce) {
-      num.textContent = fmtCount(SCALE_TARGET);
-      return;
-    }
-    let raf = 0;
-    let near = false;
-    const frame = () => {
-      raf = 0;
-      const r = root.getBoundingClientRect();
-      // innerHeight and the box are both in visual pixels, also under the page zoom.
-      const vh = window.innerHeight;
-      const p = clamp((vh - r.top) / (vh * 0.75));
-      const eased = 1 - Math.pow(1 - p, 3);
-      num.textContent = fmtCount(SCALE_TARGET * eased);
-    };
-    const onScroll = () => {
-      if (near && !raf) raf = requestAnimationFrame(frame);
-    };
-    const io =
-      typeof IntersectionObserver !== "undefined"
-        ? new IntersectionObserver(([e]) => {
-            near = e.isIntersecting;
-            if (near) onScroll();
-          }, { rootMargin: "100px 0px" })
-        : null;
-    if (io) io.observe(root);
-    else near = true;
-    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
-    window.addEventListener("resize", onScroll, { passive: true });
-    frame();
-    return () => {
-      io?.disconnect();
-      window.removeEventListener("scroll", onScroll, { capture: true });
-      window.removeEventListener("resize", onScroll);
-      if (raf) cancelAnimationFrame(raf);
-    };
-  }, [reduce]);
-
-  return (
-    <section ref={rootRef} id="scale" data-glow className={`${landing.card} ${landing.reveal} ${s.scaleCard}`} aria-labelledby="scale-title">
-      <div className={s.scaleTop}>
-        <p className={landing.eyebrow}>Built for billions</p>
-        <p className={s.scaleFigure} aria-hidden="true">
-          <span ref={numRef}>{fmtCount(SCALE_TARGET)}</span>
-        </p>
-        <h2 id="scale-title" className={landing.h2}>
-          Private messages and payments <em>for four billion people.</em>
-        </h2>
-        <p className={landing.lead}>
-          That is the scale Humanity Ledger is designed for: everyone with a phone and a browser. It is a design target,
-          not a user count, and Ledger Chat has not been tested at that scale yet. These are the choices that make it
-          reachable.
-        </p>
-      </div>
-      <ol className={s.scaleGrid}>
-        {SCALE.map((x, i) => (
-          <li key={x.title} className={s.scaleItem} data-glow>
-            <span className={s.scaleNum}>{String(i + 1).padStart(2, "0")}</span>
-            <h3 className={landing.h3}>{x.title}</h3>
-            <p className={landing.body}>{x.text}</p>
-          </li>
-        ))}
-      </ol>
     </section>
   );
 }
