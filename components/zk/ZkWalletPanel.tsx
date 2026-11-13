@@ -34,6 +34,7 @@ import {
 } from '@/lib/aztec/wallet/config';
 import { formatUnits } from '@/lib/aztec/wallet/amounts';
 import type { Activity } from '@/lib/aztec/wallet/history';
+import { AlphaInfoBox } from '@/components/zk/AlphaNetworkBanner';
 
 // Fee Juice (Aztec Alpha only): wagmi-heavy, so loaded on demand.
 const FeeJuiceStation = dynamic(() => import('@/components/zk/ZkBridgePortal').then((m) => m.FeeJuiceStation), { ssr: false });
@@ -193,6 +194,8 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4">
+        {/* Alpha info box — only shown on Aztec Alpha, reminds users of unaudited status */}
+        <AlphaInfoBox />
         {!ready && state.phase === 'needs-fee-juice' ? (
           <div className="bg-white rounded-2xl border border-black/[0.06] overflow-hidden">
             <div className="px-5 pt-5 text-[14px] font-semibold">Add Fee Juice to create your private account</div>

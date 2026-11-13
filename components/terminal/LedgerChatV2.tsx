@@ -82,6 +82,7 @@ const ZkInvoiceModal = dynamic(() => import('@/components/zk/ZkInvoiceModal').th
 import { encodeStreamPayload } from '@/lib/zk/zkStreaming';
 import { agreementMessageKind, agreementPreview, isAgreementMessage } from '@/lib/aztec/agreement-message';
 import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
+import { AlphaNetworkBanner } from '@/components/zk/AlphaNetworkBanner';
 import { attachmentPreview, isAttachmentMessage, parseAttachmentMessage } from '@/lib/chat/remote-attachment';
 import { prepareAttachmentMessage, AttachmentError } from '@/lib/chat/send-attachment';
 const AgreementComposer = dynamic(() => import('@/components/chat/AgreementComposer').then(m => m.AgreementComposer), { ssr: false });
@@ -6815,6 +6816,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               className="relative shrink-0 bg-white border-t border-[#e4e7ec] z-10"
               style={{ paddingBottom: `max(8px, env(safe-area-inset-bottom, 0px))` }}
             >
+              {/*  Alpha Network Banner — real funds warning, only on Aztec Alpha  */}
+              <AlphaNetworkBanner variant="strip" />
               {/*  Offline Banner  */}
               {isOffline && (
                 <div className="flex items-center justify-center gap-2 px-4 h-9 bg-[#fdf5e6] border-b border-[#f1dcb0] text-[13px] text-[#8f5b00]" role="status">
