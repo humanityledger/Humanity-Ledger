@@ -19,16 +19,14 @@ import { Fr } from '@aztec-labs/aztec.js/fields';
 import { getFeeJuiceBalance } from '@aztec-labs/aztec.js/utils';
 
 /**
- * AztecAddress from the subpath export, or, where a test runner loads that subpath through its
- * CommonJS build (vitest did: "AztecAddress.fromString is not a function"), from the package root
- * or stdlib. Same class in every case; only how the module is resolved differs.
+ * The owner as an AztecAddress. SDK v6 has no AztecAddress.fromString (CI printed its statics:
+ * fromStringUnsafe, fromBuffer, fromFields, ...): fromStringUnsafe parses the hex without the curve
+ * check, which a storage slot computation does not need.
  */
-async function toAztecAddress(owner) {
-  const candidates = [AztecAddress, AztecAddress?.default, AztecAddress?.AztecAddress];
-  try { candidates.push((await import('@aztec-labs/aztec.js')).AztecAddress); } catch {}
-  try { candidates.push((await import('@aztec-labs/stdlib/aztec-address')).AztecAddress); } catch {}
-  for (const C of candidates) if (C && typeof C.fromString === 'function') return C.fromString(owner);
-  throw new Error('AztecAddress.fromString is not available from @aztec-labs/aztec.js');
+function toAztecAddress(owner) {
+  if (typeof AztecAddress.fromStringUnsafe === 'function') return AztecAddress.fromStringUnsafe(owner);
+  if (typeof AztecAddress.fromString === 'function') return AztecAddress.fromString(owner);
+  throw new Error(`no AztecAddress parser (statics: ${Object.getOwnPropertyNames(AztecAddress).slice(0, 12).join(',')})`);
 }
 
 export async function captureFeeJuiceRead(owner) {
@@ -43,7 +41,7 @@ export async function captureFeeJuiceRead(owner) {
       },
     },
   );
-  await getFeeJuiceBalance(await toAztecAddress(owner), node);
+  await getFeeJuiceBalance(toAztecAddress(owner), node);
   const read = calls.find((c) => c.method === 'getPublicStorageAt');
   if (!read || calls.length !== 1) throw new Error(`expected one getPublicStorageAt call, got ${calls.map((c) => c.method).join(', ')}`);
   const [block, contract, slot] = read.args;
