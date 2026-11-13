@@ -1,5 +1,6 @@
 "use client";
 
+import { sendStatusLabel } from '@/lib/chat/optimistic-send';
 import { stickerLabel, stickerSrc } from '@/lib/chat/stickers';
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
@@ -1051,10 +1052,12 @@ export const MessageBubble = React.memo(({
             {isMe && !msg.failed && (
               <span
                 className={msg.status === 'read' && readReceipts ? 'msg-read text-[#15171c]' : 'msg-tick text-[#a3a9b4]'}
-                aria-label={msg.status === 'scheduled' ? 'Scheduled' : msg.status === 'read' && readReceipts ? 'Read' : msg.status === 'delivered' ? 'Delivered' : 'Sent'}
+                role="img"
+                aria-label={sendStatusLabel(msg.status, { readReceipts })}
+                title={sendStatusLabel(msg.status, { readReceipts })}
               >
-                {msg.status === 'scheduled'
-                  ? <Clock size={12} strokeWidth={2} />
+                {msg.status === 'scheduled' || msg.status === 'sending'
+                  ? <Clock size={12} strokeWidth={2} className={msg.status === 'sending' ? 'opacity-70' : undefined} />
                   : (msg.status === 'read' || msg.status === 'delivered') && readReceipts
                     ? <CheckCheck size={14} strokeWidth={2} />
                     : <Check size={14} strokeWidth={2} />}
