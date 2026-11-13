@@ -21,7 +21,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ArrowRight, CheckCircle2, Clock, ExternalLink, Fuel, Loader2, RefreshCw, ShieldCheck, X } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCircle2, Clock, ExternalLink, Fuel, Loader2, RefreshCw, X } from 'lucide-react';
 import { useAccount, useBalance, useChainId, usePublicClient, useReadContract, useSwitchChain, useWalletClient } from 'wagmi';
 import { formatUnits, parseUnits } from 'viem';
 import { toast } from 'sonner';
@@ -57,8 +57,8 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
     <div className={`bg-white rounded-3xl border border-[#E4E7EC] shadow-sm overflow-hidden flex flex-col ${className}`}>
       <div className="px-5 py-4 flex items-center justify-between border-b border-[#E4E7EC] bg-[#F7F8FA]">
         <div className="flex items-center gap-3">
-          <span className="w-9 h-9 rounded-2xl bg-[#5200FF]/10 text-[#5200FF] flex items-center justify-center" aria-hidden="true">
-            <Fuel size={18} strokeWidth={2.2} />
+          <span className="w-9 h-9 rounded-xl bg-[#F7F8FA] border border-[#E4E7EC] text-[#15171C] flex items-center justify-center" aria-hidden="true">
+            <Fuel size={18} strokeWidth={1.75} />
           </span>
           <div>
             <h2 className="text-[15px] font-semibold text-[#15171C] leading-tight">Network fees</h2>
@@ -213,7 +213,7 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
   return (
     <div className="p-5 space-y-4">
       {state.phase === 'needs-fee-juice' && (
-        <div className="rounded-2xl bg-[#F1EBFF] text-[#3B00B8] px-4 py-3 text-[13.5px] leading-relaxed">{state.step}</div>
+        <div className="rounded-xl border border-[#FFD6D6] bg-[#FFF4F4] px-4 py-3 text-[13.5px] leading-relaxed text-[#B42318]">{state.step}</div>
       )}
 
       <dl className="grid grid-cols-2 gap-3">
@@ -324,12 +324,9 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
         )}
       </div>
 
-      <div className="rounded-2xl border border-[#E4E7EC] px-4 py-3 text-[12.5px] leading-relaxed text-[#475467] space-y-1.5">
-        <p className="flex items-start gap-2">
-          <ShieldCheck size={14} className="mt-0.5 shrink-0 text-[#10B981]" />
-          <span>
-            <strong className="text-[#15171C]">What stays private:</strong> the amounts, senders and recipients of your private payments, and your private balances.
-          </span>
+      <div className="rounded-xl border border-[#E4E7EC] bg-[#F7F8FA] px-4 py-3.5 text-[12.5px] leading-relaxed text-[#475467] space-y-2">
+        <p>
+          <strong className="text-[#15171C] font-semibold">What stays private:</strong> the amounts, senders and recipients of your private payments, and your private balances.
         </p>
         <p>
           <strong className="text-[#15171C]">What is public:</strong> the deposit on Ethereum (your Ethereum address, the amount and your Aztec address), and the fact that your Aztec account pays each network fee. Someone watching can link your Aztec transactions to each other and to this deposit.

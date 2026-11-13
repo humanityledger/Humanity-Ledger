@@ -16,7 +16,7 @@
  */
 
 import React, { useState } from 'react';
-import { AlertTriangle, X, ExternalLink, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, X, ExternalLink } from 'lucide-react';
 import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 
 /** True at build time when Alpha is active. Zero cost when false. */
@@ -162,21 +162,16 @@ export function NetworkStatusPill({ className = '' }: { className?: string }) {
 export function AlphaInfoBox({ className = '' }: { className?: string }) {
   if (!ALPHA) return null;
   return (
-    <div className={`rounded-2xl border border-[#E0E7FF] bg-[#F5F3FF] px-4 py-3 ${className}`}>
-      <div className="flex items-start gap-2.5">
-        <ShieldCheck size={15} strokeWidth={2} className="mt-0.5 shrink-0 text-[#5200FF]" />
-        <div>
-          <p className="text-[12.5px] font-semibold text-[#3730A3] leading-snug">
-            Aztec Alpha · Ethereum mainnet
-          </p>
-          <ul className="mt-1.5 space-y-1 text-[11.5px] text-[#4338CA] leading-relaxed list-none">
-            <li>• Fees paid in Fee Juice (bridged AZTEC from L1)</li>
-            <li>• Private transfers are proven on your device</li>
-            <li>• Protocol not yet externally audited — keep amounts small</li>
-            <li>• Transactions are irreversible on Ethereum mainnet</li>
-          </ul>
-        </div>
-      </div>
+    <div className={`rounded-xl border border-[#E4E7EC] bg-[#F7F8FA] px-4 py-3.5 ${className}`}>
+      <p className="text-[13px] font-semibold text-[#15171C] leading-snug">
+        Aztec Alpha · Ethereum mainnet
+      </p>
+      <ul className="mt-2 space-y-1.5 text-[12.5px] text-[#475467] leading-relaxed list-none">
+        <li>Fees paid in Fee Juice (bridged AZTEC from L1)</li>
+        <li>Private transfers are proven on your device</li>
+        <li className="text-[#92400E] font-medium">Protocol not yet externally audited — keep amounts small</li>
+        <li>Transactions are irreversible on Ethereum mainnet</li>
+      </ul>
     </div>
   );
 }

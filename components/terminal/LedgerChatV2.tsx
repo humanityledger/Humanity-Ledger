@@ -1436,22 +1436,27 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   // Phase 4: Archive/Unarchive a conversation (persisted to localStorage)
   const toggleArchive = (peer: string) => {
+    const key = peer.toLowerCase();
+    const isArchived = archivedPeers.has(key);
     setArchivedPeers(prev => {
       const next = new Set(prev);
-      if (next.has(peer.toLowerCase())) {
-        next.delete(peer.toLowerCase());
-        toast.success('Moved to your inbox');
+      if (isArchived) {
+        next.delete(key);
       } else {
-        next.add(peer.toLowerCase());
-        toast.success('Archived');
+        next.add(key);
       }
       if (address) {
-        const p = peer.toLowerCase();
-        setSynced(address, { [`archived:${p}`]: next.has(p) ? true : null }); // all devices
+        setSynced(address, { [`archived:${key}`]: next.has(key) ? true : null }); // all devices
       }
       try { localStorage.setItem(`ledger_archived_${address}`, JSON.stringify([...next])); } catch {}
       return next;
     });
+    if (isArchived) {
+      toast.success('Moved to your inbox');
+      setShowArchived(false);
+    } else {
+      toast.success('Archived');
+    }
     setSidebarMenu(null);
   };
 
