@@ -10,16 +10,17 @@ import {
   Send, Zap, Lock, ChevronRight, Copy, Check
 } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  AZTEC_TESTNET_IMAGE,
-  AZTEC_TESTNET_VERSION,
-  AZTEC_MAINNET_VERSION,
-  AZTEC_GOVERNANCE_PROPOSER_PAYLOAD,
-  AZTEC_ROLLUP_DEPLOY_BLOCK,
-  AZTEC_NETHERMIND_VERSION,
-  AZTEC_MAINNET_RPC,
-  AZTEC_EXPLORER
-} from '@/lib/zk/zkMoney';
+
+const AZTEC_NETWORK_METADATA = {
+  testnetImage: 'azteclabs/aztec:6.0.0-rc.3',
+  testnetVersion: 'v6.0.0-rc.3',
+  mainnetVersion: 'v6.0.0-rc.3',
+  governanceProposerPayload: '0x68396cde7891ADCC65F11e8A5Cec1898AF6AD970',
+  rollupDeployBlock: 25428902,
+  nethermindVersion: '2.0.0',
+  explorer: 'https://aztecscan.xyz',
+  rpc: process.env.NEXT_PUBLIC_AZTEC_RPC_URL || 'https://aztec-connect-testnet-eth-host.aztec.network:8080',
+} as const;
 
 interface ZkSequencerDashboardProps {
   userAddress?: string;
@@ -64,7 +65,7 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
   };
 
   const handleCopyPayload = () => {
-    navigator.clipboard.writeText(AZTEC_GOVERNANCE_PROPOSER_PAYLOAD);
+    navigator.clipboard.writeText(AZTEC_NETWORK_METADATA.governanceProposerPayload);
     setCopiedPayload(true);
     toast.success('Dirección del Proposer Payload copiada');
     setTimeout(() => setCopiedPayload(false), 2000);
@@ -80,7 +81,7 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-[17px] font-bold text-white">Aztec Sequencer & Node Operations</h2>
+              <h2 className="text-[17px] font-bold text-white">Aztec Sequencer &amp; Node Operations</h2>
               <span className="text-[10px] font-black uppercase tracking-wider bg-[#1C1C1E]/20 text-[#FFFFFF] px-2 py-0.5 rounded-full border border-[#1C1C1E]/30">
                 Rollup v6 Active
               </span>
@@ -99,7 +100,7 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
                 activeNetwork === 'testnet' ? 'bg-[#1C1C1E] text-white shadow' : 'text-white/60 hover:text-white'
               }`}
             >
-              Testnet ({AZTEC_TESTNET_VERSION})
+              Testnet ({AZTEC_NETWORK_METADATA.testnetVersion})
             </button>
             <button
               type="button"
@@ -108,7 +109,7 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
                 activeNetwork === 'mainnet' ? 'bg-[#1C1C1E] text-white shadow' : 'text-white/60 hover:text-white'
               }`}
             >
-              Mainnet ({AZTEC_MAINNET_VERSION})
+              Mainnet ({AZTEC_NETWORK_METADATA.mainnetVersion})
             </button>
           </div>
 
@@ -138,7 +139,7 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
                   </span>
                 </div>
                 <p className="text-[12px] text-emerald-800/80 mt-0.5 leading-relaxed">
-                  Imagen recomendada: <code className="bg-emerald-100 font-mono font-bold px-1.5 py-0.5 rounded text-emerald-900">{AZTEC_TESTNET_IMAGE}</code>.
+                  Imagen recomendada: <code className="bg-emerald-100 font-mono font-bold px-1.5 py-0.5 rounded text-emerald-900">{AZTEC_NETWORK_METADATA.testnetImage}</code>.
                   Los nodos no actualizados antes de las 10:00 UTC serán penalizados (slashed) por el sequencer.
                 </p>
               </div>
@@ -161,9 +162,9 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-[14px]">Nethermind v{AZTEC_NETHERMIND_VERSION} Operativo en Mainnet</h4>
+                  <h4 className="font-bold text-[14px]">Nethermind v{AZTEC_NETWORK_METADATA.nethermindVersion} Operativo en Mainnet</h4>
                   <span className="text-[10px] font-black uppercase bg-amber-200/80 text-amber-800 px-2 py-0.5 rounded-full">
-                    Rollup Block #{AZTEC_ROLLUP_DEPLOY_BLOCK}
+                    Rollup Block #{AZTEC_NETWORK_METADATA.rollupDeployBlock}
                   </span>
                 </div>
                 <p className="text-[12px] text-amber-800/80 mt-0.5 leading-relaxed">
@@ -206,7 +207,7 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-black/40">GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS</p>
               <p className="font-mono text-[13px] font-bold text-[#1C1C1E] truncate mt-0.5">
-                {AZTEC_GOVERNANCE_PROPOSER_PAYLOAD}
+                {AZTEC_NETWORK_METADATA.governanceProposerPayload}
               </p>
             </div>
             <button

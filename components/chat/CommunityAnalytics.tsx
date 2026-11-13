@@ -19,7 +19,7 @@ import {
   Shield
 } from 'lucide-react';
 import { getCommunityStats, ZkCommunityStats } from '@/lib/zk/zkCommunityPayments';
-import { getCommunityTreasury, ZkCommunityTreasury } from '@/lib/zk/zkMoney';
+// getCommunityTreasury removed — on-chain treasury not yet deployed; treasury shows null/pending state.
 import { ZkCommunityAnalytics } from '@/components/zk/ZkCommunityAnalytics';
 
 interface MemberItem {
@@ -60,7 +60,8 @@ export default function CommunityAnalytics({ communityId, community: initialComm
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [zkStats, setZkStats] = useState<ZkCommunityStats | null>(null);
-  const [zkTreasury, setZkTreasury] = useState<ZkCommunityTreasury | null>(null);
+  // zkTreasury: on-chain treasury not yet deployed; always null until community escrow contract deploys
+  const [zkTreasury] = useState<null>(null);
   const [searchMember, setSearchMember] = useState('');
 
   const targetId = communityId || initialCommunity?.id;
@@ -83,7 +84,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
     } finally {
       if (targetId) {
         setZkStats(getCommunityStats(targetId));
-        setZkTreasury(getCommunityTreasury(targetId));
+        // zkTreasury: on-chain treasury pending contract deployment — stays null
       }
       setLoading(false);
       setIsRefreshing(false);

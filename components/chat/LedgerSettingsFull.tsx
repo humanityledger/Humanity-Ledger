@@ -16,8 +16,7 @@ import { toast } from 'sonner';
 import { useLedgerSettings } from '../terminal/LedgerChatSettings';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
-import { getShieldedBalances, resolveZkTag, registerZkTag, validateZkHandle, syncBalanceFromAztec, getZkTransactionHistory, clearZkTransactionHistory, ZkShieldedBalance, AZTEC_MAINNET_RPC } from '@/lib/zk/zkMoney';
-import { deriveAztecKeySet } from '@/lib/zk/aztecPxe';
+
 import { ZkPrivacyScore } from '@/components/zk/ZkPrivacyScore';
 import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
 import { ZkSettingsPanel } from '@/components/zk/ZkSettingsPanel';
@@ -389,21 +388,23 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
   const [showZkSettingsPanel, setShowZkSettingsPanel] = useState<boolean>(false);
 
-  const [zkBalances, setZkBalances] = useState<ZkShieldedBalance>(() => getShieldedBalances(myAddress));
-  const [currentZkTag, setCurrentZkTag] = useState(() => resolveZkTag(myAddress));
+  /* TODO: use real wallet balances from getPrivateWallet().getState().balances */
+  const [zkBalances, setZkBalances] = useState<any[]>([]);
+  const [currentZkTag, setCurrentZkTag] = useState(() => {
+    // zk handle stored locally (not on-chain); resolveZkTag removed — read direct from localStorage
+    try { return localStorage.getItem(`zkTag_${myAddress}`) || `zk:${myAddress.slice(2, 8).toLowerCase()}`; } catch { return ''; }
+  });
   const [editingZkTag, setEditingZkTag] = useState(false);
   const [newZkTag, setNewZkTag] = useState('');
   const [showZkShieldModal, setShowZkShieldModal] = useState(false);
   const [zkShieldMode, setZkShieldMode] = useState<'shield' | 'unshield'>('shield');
   const [isSyncingAztec, setIsSyncingAztec] = useState(false);
 
-  // Sync zk.money balances
+  // balance sync now handled by ZkWalletPanel
   useEffect(() => {
-    if (myAddress) {
-      setZkBalances(getShieldedBalances(myAddress));
-    }
     const onBalanceUpdate = () => {
-      if (myAddress) setZkBalances(getShieldedBalances(myAddress));
+      /* TODO: use real wallet balances from getPrivateWallet().getState().balances */
+      setZkBalances([]);
     };
     window.addEventListener('ledger_zk_balance_updated', onBalanceUpdate);
     return () => window.removeEventListener('ledger_zk_balance_updated', onBalanceUpdate);
@@ -1187,12 +1188,17 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                           type="button"
                           onClick={() => {
                             const fullTag = `zk:${newZkTag}`;
-                            const validation = validateZkHandle(fullTag);
-                            if (!validation.valid) {
-                              toast.error(validation.error || 'Invalid handle');
+                            // Basic local validation (validateZkHandle removed — was zk.money simulation)
+                            if (!newZkTag || newZkTag.length < 3) {
+                              toast.error('Handle must be at least 3 characters');
                               return;
                             }
-                            registerZkTag(myAddress, fullTag);
+                            if (!/^[a-z0-9_.\\-]+$/.test(newZkTag)) {
+                              toast.error('Only lowercase letters, numbers, _ . - allowed');
+                              return;
+                            }
+                            // Store locally (registerZkTag removed — was zk.money simulation)
+                            try { localStorage.setItem(`zkTag_${myAddress}`, fullTag); } catch {}
                             setCurrentZkTag(fullTag);
                             setEditingZkTag(false);
                             toast.success(`Handle saved: ${fullTag}`);
@@ -1621,7 +1627,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
             onClose={() => setShowZkShieldModal(false)}
             onSuccess={() => {
               setShowZkShieldModal(false);
-              setZkBalances(getShieldedBalances(myAddress));
+              // Balance refresh is handled by ZkWalletPanel's real wallet subscription
+              setZkBalances([]);
             }}
           />
         )}

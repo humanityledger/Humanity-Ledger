@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Lock, TrendingUp, Activity, Users, Globe,
-  Zap, Clock, ExternalLink, BarChart3, ArrowUpRight,
-  RefreshCw, CheckCircle, Shield
+  Lock, TrendingUp, Activity, Users,
+  Zap, Clock, BarChart3,
+  RefreshCw, Shield
 } from 'lucide-react';
-import { getShieldedBalances, getZkTransactionHistory, calculatePrivacyScore } from '@/lib/zk/zkMoney';
 import { getCommunityTips, getOpenBounties, getCommunityStats } from '@/lib/zk/zkCommunityPayments';
-import { getCommunityTreasury } from '@/lib/zk/zkMoney';
+// getCommunityTreasury removed — on-chain treasury not yet deployed; treasury shows null/pending state.
+// getShieldedBalances, calculatePrivacyScore, getZkTransactionHistory removed — on-chain indexer pending.
 
 interface ZkCommunityAnalyticsProps {
   communityId: string;
@@ -19,18 +19,17 @@ interface ZkCommunityAnalyticsProps {
 export function ZkCommunityAnalytics({ communityId, communityName = 'Community', className = '' }: ZkCommunityAnalyticsProps) {
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Load data
+  // Load data from localStorage-based community payments (tips, bounties, stats)
   const tips = useMemo(() => getCommunityTips(communityId), [communityId, refreshKey]);
   const bounties = useMemo(() => getOpenBounties(communityId), [communityId, refreshKey]);
   const stats = useMemo(() => getCommunityStats(communityId), [communityId, refreshKey]);
-  const treasury = useMemo(() => getCommunityTreasury(communityId), [communityId, refreshKey]);
+  // treasury: null — on-chain treasury not yet deployed; will be wired when escrow contract deploys
+  const treasury = null;
 
   useEffect(() => {
     const handler = () => setRefreshKey(k => k + 1);
-    window.addEventListener('ledger_zk_treasury_updated', handler);
     window.addEventListener('ledger_zk_payment_sent', handler);
     return () => {
-      window.removeEventListener('ledger_zk_treasury_updated', handler);
       window.removeEventListener('ledger_zk_payment_sent', handler);
     };
   }, []);
@@ -63,7 +62,7 @@ export function ZkCommunityAnalytics({ communityId, communityName = 'Community',
             </div>
             <div>
               <div className="text-[15px] font-bold text-white leading-tight">Aztec Shielded Vault Analytics</div>
-              <div className="text-[11px] text-white/50">{communityName} · Powered by zk.money</div>
+              <div className="text-[11px] text-white/50">{communityName} · Aztec Network</div>
             </div>
           </div>
           <button
@@ -75,31 +74,24 @@ export function ZkCommunityAnalytics({ communityId, communityName = 'Community',
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {[
-            { token: 'zkDAI', amount: (treasury.balance as any).dai || (treasury.balance as any).DAI || '0' },
-            { token: 'zkUSDC', amount: (treasury.balance as any).usdc || (treasury.balance as any).USDC || '0' },
-            { token: 'zkETH', amount: (treasury.balance as any).eth || (treasury.balance as any).ETH || '0' },
-          ].map(({ token, amount }) => (
-            <div key={token} className="bg-white/5 border border-white/10 rounded-2xl p-4">
-              <div className="text-[10px] text-white/50 font-semibold uppercase tracking-wider flex items-center gap-1">
-                <Lock size={9} /> {token}
-              </div>
-              <div className="text-[20px] font-bold font-mono text-white mt-1">
-                {parseFloat(String(amount || '0')).toFixed(token === 'zkETH' ? 4 : 2)}
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Treasury balances — pending on-chain deployment */}
+        {treasury === null ? (
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+            <div className="text-[13px] font-semibold text-white/60">On-chain treasury not yet deployed</div>
+            <div className="text-[11px] text-white/30 mt-1">(on-chain indexer pending)</div>
+          </div>
+        ) : null}
 
         <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 gap-4 text-xs font-mono">
           <div>
             <span className="text-white/40">Total Inflow:</span>
-            <span className="text-white font-bold ml-1.5">{parseFloat(String(treasury.totalInflow || '0')).toFixed(2)} DAI</span>
+            {/* -- (on-chain indexer pending) */}
+            <span className="text-white font-bold ml-1.5">--</span>
           </div>
           <div>
             <span className="text-white/40">Total Outflow:</span>
-            <span className="text-white/90 font-bold ml-1.5">{parseFloat(String(treasury.totalOutflow || '0')).toFixed(2)} DAI</span>
+            {/* -- (on-chain indexer pending) */}
+            <span className="text-white/90 font-bold ml-1.5">--</span>
           </div>
         </div>
       </div>
@@ -131,7 +123,7 @@ export function ZkCommunityAnalytics({ communityId, communityName = 'Community',
             <h3 className="text-[14px] font-bold text-[#15171c]">7-Day Private Tip Volume</h3>
           </div>
           <span className="text-[11px] text-[#15171c] font-semibold bg-[#f2f4f7] px-2.5 py-0.5 rounded-full border border-black/[0.04]">
-            zk.money Protected
+            Aztec Protected
           </span>
         </div>
 
@@ -208,7 +200,7 @@ export function ZkCommunityAnalytics({ communityId, communityName = 'Community',
       {/* ── Privacy badge ── */}
       <div className="flex items-center justify-center gap-2 py-2 text-[12px] text-[#727a88]">
         <Shield size={13} className="text-[#15171c]" />
-        <span>End-to-end privacy via Aztec Network zk.money</span>
+        <span>End-to-end privacy via Aztec Network</span>
       </div>
     </div>
   );
