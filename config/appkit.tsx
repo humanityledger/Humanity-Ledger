@@ -131,12 +131,10 @@ export const wagmiAdapter = new WagmiAdapter({
         // on iPhone the page waited on one pairing while the wallet was handed the other, so it stayed on
         // "Continue in MetaMask" forever.
     ],
-    // EIP-6963 multi-injected provider discovery MUST be disabled on mobile.
-    // iOS Safari has no injected window.ethereum, so enabling this causes wagmi
-    // to race against an empty provider set and prevents WalletConnect from being
-    // selected as the default connector. This breaks MetaMask and all other
-    // wallet apps on iPhone / iPad / Android Chrome.
-    multiInjectedProviderDiscovery: false,
+    // EIP-6963 multi-injected provider discovery is enabled on desktop so multiple
+    // installed browser extensions (MetaMask, Phantom, Rabby, Coinbase) are all discovered
+    // without conflicting. Disabled on phone browsers where window.ethereum is absent.
+    multiInjectedProviderDiscovery: typeof window !== 'undefined' ? !isPhoneBrowserWithoutWallet() : false,
 })
 
 export const config = wagmiAdapter.wagmiConfig
