@@ -1,3 +1,4 @@
+import { knownPrice, knownUsd, priceStatus, sumKnown, valueOrNull } from '@/lib/pricing/known-price';
 import { ethers } from 'ethers';
 import { ChainId } from './BlockchainService';
 import { resolveENSName, isValidENSName } from '../wallet/ens';
@@ -132,7 +133,7 @@ export class PortfolioService {
         const nativePriceMap = await PriceService.getBulkPrices([{
           symbol: nativeSymbol, address: 'native', chainId
         }]).catch(() => ({} as Record<string, any>));
-        const price = nativePriceMap[nativeSymbol.toUpperCase()]?.price || 0;
+        const price = knownPrice(nativePriceMap[nativeSymbol.toUpperCase()]?.price);
         const nativeToken = {
           address: 'native',
           contractAddress: 'native',
@@ -144,7 +145,8 @@ export class PortfolioService {
           decimals: 18,
           logo: null,
           price,
-          valueUsd: nativeBalanceFormatted * price,
+          valueUsd: valueOrNull(nativeBalanceFormatted, price),
+          priceStatus: priceStatus(price),
           change24h: 0,
           chainId,
           sector: 'Layer 1',
@@ -159,10 +161,10 @@ export class PortfolioService {
           // Determine symbol
           const symbol = (chainId === ChainId.WORLDCHAIN && t.address.toLowerCase() === '0x2cfc85d8e48f8eab294be644d9e25c3030863003') ? 'WLD' : 'UNK';
           
-          let tokenPrice = 0;
+          let tokenPrice: number | null = null;
           try {
               const pData = await PriceService.getBulkPrices([{ symbol, address: t.address, chainId }]);
-              tokenPrice = pData[symbol]?.price || 0;
+              tokenPrice = knownPrice(pData[symbol]?.price);
           } catch (e) {}
 
           return {
@@ -176,7 +178,8 @@ export class PortfolioService {
             decimals,
             logo: null,
             price: tokenPrice,
-            valueUsd: bal * tokenPrice,
+            valueUsd: valueOrNull(bal, tokenPrice),
+            priceStatus: priceStatus(tokenPrice),
             change24h: 0,
             chainId,
             sector: 'Token',
@@ -185,14 +188,17 @@ export class PortfolioService {
         }));
 
         const finalTokens = [nativeToken, ...enrichedTokens.filter((t: any) => t !== null)];
-        const totalValue = finalTokens.reduce((acc, t) => acc + (t?.valueUsd || 0), 0);
+        const sum = sumKnown(finalTokens, (t) => t?.valueUsd);
+        const totalValue = sum.total;
 
         return {
           chainId,
           address,
           nativeBalance: rpcResult.nativeBalance,
-          nativeValueUsd: nativeBalanceFormatted * price,
+          nativeValueUsd: valueOrNull(nativeBalanceFormatted, price),
           totalValueUsd: totalValue,
+          totalIsPartial: sum.partial,
+          unpricedCount: sum.unpriced,
           tokens: finalTokens,
         };
       } catch (rpcError: any) {
@@ -262,10 +268,10 @@ export class PortfolioService {
           const decimals = parseInt(t.decimals || '18', 10);
           const balRaw = t.balance ? ethers.formatUnits(t.balance, decimals) : (t.balance_formatted || '0');
           const balance = parseFloat(balRaw);
-          let price = parseFloat(t.usd_price || '0');
+          let price = knownPrice(t.usd_price);
           
           //  [SENIOR FALLBACK] If Moralis doesn't have the price (common on World Chain/L2) or TIMEOUTS, use PriceService
-          if (price === 0) {
+          if (price === null) {
               const symbol = t.symbol || 'UNK';
               try {
                 const manualPrices = await PriceService.getBulkPrices([{
@@ -273,13 +279,13 @@ export class PortfolioService {
                     address: t.token_address,
                     chainId
                 }]);
-                price = manualPrices[symbol.toUpperCase()]?.price || 0;
+                price = knownPrice(manualPrices[symbol.toUpperCase()]?.price);
               } catch (e) {
                 console.warn(`[Portfolio-Price-Fallback] Failed for ${symbol}:`, e);
               }
           }
 
-          const valueUsd = balance * price;
+          const valueUsd = valueOrNull(balance, price);
           
           return {
             address: t.token_address,
@@ -293,6 +299,7 @@ export class PortfolioService {
             logo: t.thumbnail || t.logo || null,
             price,
             valueUsd,
+            priceStatus: priceStatus(price),
             change24h: parseFloat(t.usd_price_24hr_percent_change || '0'),
             chainId,
             sector: getSectorForSymbol(t.symbol || ''),
@@ -301,12 +308,12 @@ export class PortfolioService {
         }));
 
       // Calculate native USD value using Moralis Total Net Worth as primary source of truth for pricing
-      let nativeValueUsd = 0;
+      let nativeValueUsd: number | null = nativeBalanceFormatted === 0 ? 0 : null;
       const chainsArray = Array.isArray(netWorthData?.chains) ? netWorthData.chains : [];
       const chainNetWorth = chainsArray.find((c: any) => c && c.chain === chain);
       
       if (chainNetWorth) {
-          nativeValueUsd = parseFloat(chainNetWorth.native_balance_usd || '0');
+          nativeValueUsd = knownUsd(chainNetWorth.native_balance_usd);
       } else {
         try {
           const nativePrice = await PriceService.getBulkPrices([{
@@ -314,7 +321,7 @@ export class PortfolioService {
             address: 'native',
             chainId: chainId as number
           }]);
-          nativeValueUsd = nativeBalanceFormatted * (nativePrice[nativeSymbol.toUpperCase()]?.price || 0);
+          nativeValueUsd = valueOrNull(nativeBalanceFormatted, knownPrice(nativePrice[nativeSymbol.toUpperCase()]?.price));
         } catch (e) {
           console.warn('[Portfolio-Moralis] Failed to get native price:', e);
         }
@@ -322,7 +329,7 @@ export class PortfolioService {
 
       // Add native token — guard against division by zero on empty wallets
       if (nativeBalanceFormatted >= 0) {
-        const nativePrice = nativeBalanceFormatted > 0 ? (nativeValueUsd / nativeBalanceFormatted) : 0;
+        const nativePrice = nativeBalanceFormatted > 0 && nativeValueUsd !== null ? knownPrice(nativeValueUsd / nativeBalanceFormatted) : null;
         enrichedTokens.unshift({
           address: 'native',
           contractAddress: 'native',
@@ -335,6 +342,7 @@ export class PortfolioService {
           logo: null,
           price: nativePrice,
           valueUsd: nativeValueUsd,
+          priceStatus: priceStatus(nativePrice),
           change24h: 0,
           chainId,
           sector: 'Layer 1',
@@ -342,10 +350,11 @@ export class PortfolioService {
         });
       }
 
-      const calculatedTotal = enrichedTokens.reduce((acc: number, t: any) => acc + (isNaN(t?.valueUsd) ? 0 : (t?.valueUsd || 0)), 0);
-      const totalValueUsd = (chainNetWorth && parseFloat(chainNetWorth.networth_usd || '0') > calculatedTotal)
-        ? parseFloat(chainNetWorth.networth_usd || '0')
-        : calculatedTotal;
+      const known = sumKnown(enrichedTokens, (t: any) => t?.valueUsd);
+      const calculatedTotal = known.total;
+      const providerTotal = chainNetWorth ? knownUsd(chainNetWorth.networth_usd) : null;
+      const totalValueUsd = providerTotal !== null && providerTotal > calculatedTotal ? providerTotal : calculatedTotal;
+      const totalIsPartial = known.partial;
 
       console.log(`[Portfolio-Moralis] ${chain}: ${enrichedTokens.length} tokens, $${safeToFixed(totalValueUsd, 2)}`);
 
@@ -355,6 +364,7 @@ export class PortfolioService {
         nativeBalance: nativeBalance.toString(),
         nativeValueUsd,
         totalValueUsd,
+        totalIsPartial,
         tokens: enrichedTokens
       };
 
@@ -396,14 +406,14 @@ export class PortfolioService {
               // Use PriceService for valuation
               const symbol = (chainId === ChainId.WORLDCHAIN && t.address.toLowerCase() === '0x2cfc85d8e48f8eab294be644d9e25c3030863003') ? 'WLD' : 'UNK';
               
-              let price = 0;
+              let price: number | null = null;
               try {
                   const priceData = await PriceService.getBulkPrices([{
                       symbol,
                       address: t.address,
                       chainId
                   }]);
-                  price = priceData[symbol]?.price || 0;
+                  price = knownPrice(priceData[symbol]?.price);
               } catch (e) {
                   console.warn(`[Portfolio-Fallback-Price] Failed for ${symbol}:`, e);
               }
@@ -419,7 +429,8 @@ export class PortfolioService {
                   decimals,
                   logo: symbol === ("AUTH" as any) ? 'https://assets.coingecko.com/coins/images/31069/small/identity.jpeg' : null,
                   price,
-                  valueUsd: bal * price,
+                  valueUsd: valueOrNull(bal, price),
+                  priceStatus: priceStatus(price),
                   chainId,
                   sector: symbol === ("AUTH" as any) ? 'DeFi' : 'Unknown',
                   isUnknown: symbol === 'UNK'
@@ -435,7 +446,7 @@ export class PortfolioService {
                   address: 'native',
                   chainId
               }]);
-              const price = nativePrice[nativeSymbol.toUpperCase()]?.price || 0;
+              const price = knownPrice(nativePrice[nativeSymbol.toUpperCase()]?.price);
 
               filteredTokens.unshift({
                   address: 'native',
@@ -448,7 +459,8 @@ export class PortfolioService {
                   decimals: 18,
                   logo: null,
                   price,
-                  valueUsd: nativeBalanceFormatted * price,
+                  valueUsd: valueOrNull(nativeBalanceFormatted, price),
+                  priceStatus: priceStatus(price),
                   chainId,
                   sector: 'Layer 1',
                   isUnknown: false
@@ -459,8 +471,9 @@ export class PortfolioService {
               chainId, 
               address, 
               nativeBalance: rpcResult.nativeBalance, 
-              nativeValueUsd: filteredTokens.find(t => t?.address === 'native')?.valueUsd || 0, 
-              totalValueUsd: filteredTokens.reduce((acc, t) => acc + (t?.valueUsd || 0), 0), 
+              nativeValueUsd: filteredTokens.find(t => t?.address === 'native')?.valueUsd ?? null,
+              totalValueUsd: sumKnown(filteredTokens, (t) => t?.valueUsd).total,
+              totalIsPartial: sumKnown(filteredTokens, (t) => t?.valueUsd).partial,
               tokens: filteredTokens
           };
       } catch (fallbackError: any) {
@@ -498,12 +511,12 @@ export class PortfolioService {
     const sectorMap: Record<string, number> = {};
 
     tokens.forEach(t => {
-        const weight = t.valueUsd / totalValueUsd;
+        const weight = (t.valueUsd ?? 0) / totalValueUsd; // an unpriced token carries no weight
         hhi += (weight * 100) ** 2; // (Percentage)^2
 
         // Sector Allocation
         const sector = t.sector || 'Unclassified';
-        sectorMap[sector] = (sectorMap[sector] || 0) + t.valueUsd;
+        sectorMap[sector] = (sectorMap[sector] || 0) + (t.valueUsd ?? 0);
     });
 
     // Normalize HHI: 0 = Infinite Diversification, 10000 = Monopoly. 
@@ -525,7 +538,7 @@ export class PortfolioService {
 
     let weightedVol = 0;
     tokens.forEach(t => {
-        const weight = t.valueUsd / totalValueUsd;
+        const weight = (t.valueUsd ?? 0) / totalValueUsd; // an unpriced token carries no weight
         const vol = sectorVolMap[t.sector] || 0.80; // Default to High volatility for unknown
         weightedVol += weight * vol;
     });
@@ -558,7 +571,7 @@ export class PortfolioService {
 
     // 3. Stablecoin Buffer (+10 points if stables > 15%)
     const stables = tokens.filter(t => t.sector === 'Stablecoin');
-    const stableWeight = stables.reduce((acc, t) => acc + t.valueUsd, 0) / totalValueUsd;
+    const stableWeight = stables.reduce((acc, t) => acc + (t.valueUsd ?? 0), 0) / totalValueUsd;
     if (stableWeight > 0.15) score += 10;
 
     // 4. Diversification (+10 points if 5+ different sectors)
@@ -856,7 +869,7 @@ export class PortfolioService {
         seen.add(key);
         return true;
       })
-      .sort((a, b) => b.valueUsd - a.valueUsd);
+      .sort((a, b) => (b.valueUsd ?? -1) - (a.valueUsd ?? -1)); // unpriced tokens last
 
     // 4. Removed Phantom Exchange PnL to strictly enforce On-Chain data
     const totalValueUsd = validResults.reduce((acc, r) => acc + r.totalValueUsd, 0);
@@ -870,7 +883,7 @@ export class PortfolioService {
     let totalWeightedChange = 0;
     allTokens.forEach(t => {
       if (totalValueUsd > 0) {
-        totalWeightedChange += (t.change24h || 0) * (t.valueUsd / totalValueUsd);
+        totalWeightedChange += (t.change24h || 0) * ((t.valueUsd ?? 0) / totalValueUsd);
       }
     });
 
@@ -880,6 +893,8 @@ export class PortfolioService {
 
     const finalResult = {
       totalValueUsd,
+      // Some tokens had no price: the total covers only the priced ones, and says so.
+      totalIsPartial: validResults.some((r: any) => r.totalIsPartial === true) || allTokens.some((t: any) => t?.priceStatus === 'unavailable'),
       change24hPercent: totalWeightedChange,
       change24hUSD: totalValueUsd * (totalWeightedChange / 100),
       tokens: allTokens,
@@ -1001,14 +1016,17 @@ export class PortfolioService {
         }
         
         const livePrice = basePriceData.price;
-        // Steel Dome: If live price is 0, fallback to the original known price for resilience
-        const finalPrice = (livePrice > 0) ? livePrice : (t.price || 0);
+        // No live price: the last real price is kept and marked stale; with none, the value is unavailable.
+        const live = knownPrice(livePrice);
+        const finalPrice = live ?? knownPrice(t.price);
 
         return {
           symbol: t.symbol,
           price: finalPrice,
+          priceStatus: priceStatus(finalPrice),
+          priceStale: live === null && finalPrice !== null,
           change24h: basePriceData.change24h,
-          valueUsd: finalPrice * t.balance
+          valueUsd: valueOrNull(t.balance, finalPrice)
         };
       });
     } catch (e) {
