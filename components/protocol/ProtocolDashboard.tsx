@@ -175,7 +175,7 @@ export function ProtocolDashboard() {
             <section className="rounded-2xl border border-[#E4E7EC] bg-white px-5 py-4">
               <h2 className="text-[14px] font-semibold">Why some figures cannot be shown</h2>
               <p className="mt-1 text-[13px] leading-relaxed text-[#475467] max-w-prose">
-                Private transfers on Aztec hide amounts, senders and recipients from everyone, including Humanity Ledger. A
+                Private transfers on Aztec hide amounts and recipients from everyone, including Humanity Ledger; on Alpha the account paying the network fee is public. A
                 total of private volume can only exist if it is published as an aggregate; the protocol publishes none
                 today, so this page shows none.
               </p>

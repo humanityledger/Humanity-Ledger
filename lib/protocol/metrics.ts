@@ -228,7 +228,7 @@ export function buildMetrics(s: Snapshot): Metric[] {
     label: 'Total shielded volume',
     status: 'not-measurable',
     detail:
-      'Amounts, senders and recipients of private transfers are hidden by design. The protocol publishes no aggregate yet, so there is no figure to show.',
+      'Amounts and recipients of private transfers are hidden by design (on Alpha the account paying the network fee is public). The protocol publishes no aggregate yet, so there is no figure to show.',
     source: 'Aztec private state (by design)',
   });
   out.push({
