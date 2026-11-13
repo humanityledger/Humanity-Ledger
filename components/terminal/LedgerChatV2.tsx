@@ -7582,7 +7582,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 };
                 const toggle = ({ on, label, onToggle }: { on: boolean; label: string; onToggle: () => void }) => (
                   <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onToggle}
-                    className={`relative w-[46px] h-[28px] rounded-full transition-colors duration-200 shrink-0 ${on ? 'bg-[#15171c]' : 'bg-[#d4d8df]'}`}>
+                    className={`icon-btn relative w-[46px] h-[28px] rounded-full transition-colors duration-200 shrink-0 ${on ? 'bg-[#15171c]' : 'bg-[#d4d8df]'}`}>
                     <span className={`absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full shadow-sm transition-transform duration-200 ${on ? 'translate-x-[18px]' : 'translate-x-0'}`} />
                   </button>
                 );
