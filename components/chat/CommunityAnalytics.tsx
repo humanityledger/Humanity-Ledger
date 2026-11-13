@@ -61,7 +61,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [zkStats, setZkStats] = useState<ZkCommunityStats | null>(null);
   // zkTreasury: on-chain treasury not yet deployed; always null until community escrow contract deploys
-  const [zkTreasury] = useState<null>(null);
+  const zkTreasury: null = null;
   const [searchMember, setSearchMember] = useState('');
 
   const targetId = communityId || initialCommunity?.id;
@@ -287,7 +287,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                 <p className="text-[11px] font-semibold text-white/50 uppercase tracking-wider">Shielded DAI</p>
                 <p className="text-2xl font-bold font-mono text-white mt-1">
-                  {zkTreasury?.balance?.dai || '0.00'} <span className="text-xs font-semibold text-white/60">zkDAI</span>
+                  {'0.00'} <span className="text-xs font-semibold text-white/60">zkDAI</span>
                 </p>
               </div>
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">

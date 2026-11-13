@@ -81,7 +81,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
     // Load wallet snapshot
     try {
       const wallet = getPrivateWallet();
-      const snap = wallet.getState();
+      const snap = wallet.state;
       setWalletSnapshot(snap);
     } catch {
       setWalletSnapshot(null);
@@ -97,7 +97,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
     try {
       const wallet = getPrivateWallet();
       // Load initial state
-      setWalletSnapshot(wallet.getState());
+      setWalletSnapshot(wallet.state);
       // Subscribe to future changes
       unsubscribe = wallet.subscribe((snap: WalletSnapshot) => {
         setWalletSnapshot(snap);
@@ -119,7 +119,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
     setSyncing(true);
     try {
       const wallet = getPrivateWallet();
-      const snap = wallet.getState();
+      const snap = wallet.state;
       setWalletSnapshot(snap);
       await fetchNodeStatus();
     } finally {
@@ -355,7 +355,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                               <div>
                                 <div className="text-[12px] font-bold text-gray-900 capitalize">{tx.kind}</div>
                                 <div className="text-[10px] text-gray-400 font-mono">
-                                  {tx.timestamp ? new Date(tx.timestamp).toLocaleDateString() : '—'}
+                                  {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : '—'}
                                 </div>
                               </div>
                             </div>
