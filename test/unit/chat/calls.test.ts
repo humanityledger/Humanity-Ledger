@@ -181,7 +181,7 @@ describe('call resume: network changes and voice → video', () => {
     // Hanging up forgets the connection before closing it, so its close is not read as a loss.
     expect(chat).toMatch(/activeConnectionRef\.current = null;\s*callStateRef\.current = 'idle';\s*stopReconnectRef\.current\(\);/);
     // The deadline ends the call on both sides.
-    expect(chat).toMatch(/toast\.error\('The call lost its connection\.'\);\s*executeSendRef\.current\?\.\('__CALL_HANGUP__'\)/);
+    expect(chat).toMatch(/toast\.error\('The call lost its connection\.'\);\s*executeSendRef\.current\?\.\('__CALL_HANGUP__', \{ to: callPeerAddrRef\.current \|\| undefined \}\)/);
   });
 
   it('the signalling socket dropping during a call never destroys the peer (it would end the call)', () => {
@@ -253,7 +253,7 @@ describe('call screen and chat', () => {
   });
 
   it('accepts a shared screen only from the person in the call, and stops it with the call', () => {
-    expect(chat).toMatch(/connection\.metadata\?\.kind === 'screen'[\s\S]{0,200}callStateRef\.current === 'active' && current && connection\.peer === current\.peer/);
+    expect(chat).toMatch(/connection\.metadata\?\.kind === 'screen'[\s\S]{0,200}\(callStateRef\.current === 'active' \|\| callStateRef\.current === 'connecting'\) && current && connection\.peer === current\.peer/);
     expect(chat).toMatch(/livePeer\.call\(main\.peer, stream, \{ metadata: \{ kind: 'screen' \}/);
     expect(chat).toMatch(/const performEndCall = useCallback\(\(\) => \{\s*stopRingtone\(\);\s*stopScreenShareRef\.current\(\);/);
     expect(screens).toMatch(/\{onScreenShare && \(/); // voice calls too
