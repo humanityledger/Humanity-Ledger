@@ -48,10 +48,10 @@ export function SectionLabel({ children, className = '' }: { children: React.Rea
   return <p className={`px-4 pt-4 pb-1.5 text-[13px] font-medium text-[#727a88] ${className}`}>{children}</p>;
 }
 
-export function EmptyState({ icon, title, text, action }: { icon: React.ReactNode; title: string; text?: string; action?: React.ReactNode }) {
+export function EmptyState({ icon, title, text, action }: { icon?: React.ReactNode; title: string; text?: string; action?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center text-center px-8 py-14">
-      <span className="w-12 h-12 rounded-full bg-[#f2f4f7] text-[#4a505c] flex items-center justify-center mb-4" aria-hidden="true">{icon}</span>
+      {icon && <span className="w-12 h-12 rounded-full bg-[#f2f4f7] text-[#4a505c] flex items-center justify-center mb-4" aria-hidden="true">{icon}</span>}
       <p className="text-[15.5px] font-medium text-[#15171c]">{title}</p>
       {text && <p className="text-[14px] text-[#727a88] mt-1 leading-relaxed max-w-[280px]">{text}</p>}
       {action && <div className="mt-5">{action}</div>}

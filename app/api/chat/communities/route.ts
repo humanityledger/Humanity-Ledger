@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { randomBytes } from 'crypto';
 import {
-  createInMemoryCommunity,
   listInMemoryCommunities,
   getInMemoryCommunityBySlugOrId,
 } from '@/lib/communities/in-memory-communities';
@@ -110,47 +109,41 @@ export async function POST(req: NextRequest) {
     if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 });
     const description = clean(body?.description, MAX_DESCRIPTION);
 
-    const joinCode = generateJoinCode();
-
-    // Try DB first
-    try {
-      const community = await (prisma as any).community.create({
-        data: {
-          name,
-          description,
-          isPrivate: body?.isPrivate !== false,
-          ownerAddress: caller.toLowerCase(),
-          joinCode,
-          members: {
-            create: {
-              walletAddress: caller.toLowerCase(),
-              role: 'ADMIN',
+    // The database is the only place a community lives. When it cannot be written, nothing is
+    // created and the caller is told so: a copy kept in this server's memory used to be returned as
+    // created, then vanished on the next deploy or on another server, and its invite link answered
+    // "expired" because joining reads the database.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const joinCode = generateJoinCode();
+      try {
+        const community = await (prisma as any).community.create({
+          data: {
+            name,
+            description,
+            isPrivate: body?.isPrivate !== false,
+            ownerAddress: caller.toLowerCase(),
+            joinCode,
+            members: { create: { walletAddress: caller.toLowerCase(), role: 'ADMIN' } },
+            channels: {
+              create: [
+                { name: 'general', description: 'General discussion', isPaid: false, position: 0 },
+                { name: 'announcements', description: 'Announcements', isPaid: false, position: 1 },
+              ],
             },
+            permissions: { create: {} },
           },
-          channels: {
-            create: [
-              { name: 'general', description: 'General discussion', isPaid: false, position: 0 },
-              { name: 'announcements', description: 'Server announcements', isPaid: false, position: 1 },
-            ],
-          },
-          permissions: {
-            create: {},
-          },
-        },
-      });
-
-      return NextResponse.json({ community });
-    } catch {
-      // Standalone mode: save in memory
-      const memCommunity = createInMemoryCommunity({
-        name,
-        description,
-        isPrivate: body?.isPrivate !== false,
-        ownerAddress: caller,
-      });
-
-      return NextResponse.json({ community: memCommunity }, { status: 201 });
+        });
+        return NextResponse.json({ community }, { status: 201 });
+      } catch (e: any) {
+        if (e?.code === 'P2002' && attempt < 2) continue; // join code already taken: draw another
+        console.error('[chat/communities POST] not created:', e?.code || e?.message);
+        return NextResponse.json(
+          { error: 'Communities are unavailable right now. Nothing was created; try again in a minute.', code: 'STORE_UNAVAILABLE' },
+          { status: 503 },
+        );
+      }
     }
+    return NextResponse.json({ error: 'Could not create the community. Try again.', code: 'STORE_UNAVAILABLE' }, { status: 503 });
   } catch (error: any) {
     console.error('[chat/communities POST]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
