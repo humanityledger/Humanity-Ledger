@@ -72,11 +72,13 @@ describe('buildMetrics', () => {
   it('states the mainnet record as it is: no escrow, no fees, private volume not measurable', () => {
     const ms = buildMetrics(snapshot());
     expect(byId(ms, 'escrows')).toMatchObject({ status: 'not-deployed', value: '0' });
-    expect(byId(ms, 'protocol-fees')).toMatchObject({ status: 'not-deployed', value: '0' });
+    expect(byId(ms, 'protocol-fees')).toMatchObject({ status: 'not-deployed' });
+    expect(byId(ms, 'protocol-fees').value).toBeUndefined();
+    expect(byId(ms, 'protocol-fees').detail).toMatch(/Phase 0 pending/);
     expect(byId(ms, 'shielded-volume')).toMatchObject({ status: 'not-measurable' });
     expect(byId(ms, 'shielded-volume').value).toBeUndefined();
     expect(byId(ms, 'sponsor-pool')).toMatchObject({ status: 'not-deployed' });
-    expect(byId(ms, 'audit')).toMatchObject({ status: 'not-deployed', value: 'None' });
+    expect(byId(ms, 'audit')).toMatchObject({ status: 'not-deployed', value: 'None (Alpha)' });
     expect(byId(ms, 'contracts')).toMatchObject({ status: 'live', value: '1' });
   });
 
@@ -99,8 +101,8 @@ describe('buildMetrics', () => {
         token: { totalSupply: { error: 'the node did not answer' }, admin: { error: 'the node did not answer' } },
       }),
     );
-    expect(byId(ms, 'aztec-node')).toMatchObject({ status: 'unavailable' });
-    expect(byId(ms, 'aztec-node').value).toBeUndefined();
+    expect(byId(ms, 'aztec-node')).toMatchObject({ status: 'unavailable', value: 'Node not responding' });
+    expect(byId(ms, 'aztec-node').raw).toBeUndefined();
     expect(byId(ms, 'l1-pins').status).toBe('unavailable');
     expect(byId(ms, 'hlc-supply')).toMatchObject({ status: 'unavailable' });
     expect(byId(ms, 'hlc-supply').value).toBeUndefined();

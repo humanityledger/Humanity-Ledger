@@ -33,7 +33,7 @@ export const STATUS_LABEL: Record<MetricStatus, string> = {
   mismatch: 'Mismatch',
   unavailable: 'Not read',
   'not-deployed': 'Not deployed',
-  'not-measurable': 'Not measurable (ZK)',
+  'not-measurable': 'Private by design',
 };
 
 // ─── Parsing helpers ─────────────────────────────────────────────────────────
@@ -151,6 +151,7 @@ export function buildMetrics(s: Snapshot): Metric[] {
       group: 'network',
       label: 'Aztec Alpha node',
       status: 'unavailable',
+      value: 'Node not responding',
       detail: `The node did not answer (${s.node.error}). Every figure that depends on it is shown as not read.`,
       source: nodeSource,
     });
@@ -199,7 +200,7 @@ export function buildMetrics(s: Snapshot): Metric[] {
       group: 'network',
       label: 'External security audit',
       status: s.record.audit ? 'live' : 'not-deployed',
-      value: s.record.audit ? 'Recorded' : 'None',
+      value: s.record.audit ? 'Recorded' : 'None (Alpha)',
       detail: s.record.audit
         ? 'An audit report is recorded for the deployed contracts.'
         : 'No external audit is recorded. The client asks every user to acknowledge this before an agreement.',
@@ -235,10 +236,8 @@ export function buildMetrics(s: Snapshot): Metric[] {
     group: 'value',
     label: 'Protocol fees collected',
     status: 'not-deployed',
-    value: '0',
-    raw: '0',
     detail:
-      'No contract of ours charges a fee: the escrow and stream contracts take none. Protocol revenue is 0 in ETH and in USDC by construction.',
+      'Phase 0 pending: no fee mechanism is deployed. The escrow and stream contracts take no fee, so there is no protocol revenue in ETH or USDC to report.',
     source: 'contracts/aztec/escrow, contracts/aztec/streams (source)',
   });
 

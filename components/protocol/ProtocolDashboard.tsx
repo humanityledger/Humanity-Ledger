@@ -1,21 +1,11 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { Download, RefreshCw } from 'lucide-react';
 import { HLLogo } from '@/components/shared/HLLogo';
 import { STATUS_LABEL, type Metric, type MetricStatus } from '@/lib/protocol/metrics';
-
-interface Report {
-  schema: string;
-  generatedAt: string;
-  network: { name: string; l1ChainId: number; rollupVersion: number };
-  anchorBlock: number | null;
-  metrics: Metric[];
-  digest: string;
-}
-
-type LoadState = { kind: 'loading' } | { kind: 'ready'; report: Report } | { kind: 'error' };
+import { useProtocolReport } from './useProtocolReport';
 
 const GROUPS: ReadonlyArray<{ id: Metric['group']; title: string; note: string }> = [
   { id: 'network', title: 'Network', note: 'The Aztec node, the Ethereum pins and what is deployed.' },
@@ -25,16 +15,16 @@ const GROUPS: ReadonlyArray<{ id: Metric['group']; title: string; note: string }
 ];
 
 const DOT: Record<MetricStatus, string> = {
-  live: 'bg-[#1F9D55]',
+  live: 'bg-[#166534]',
   mismatch: 'bg-[#C0362C]',
   unavailable: 'bg-[#8F5B00]',
   'not-deployed': 'bg-[#A3A9B4]',
-  'not-measurable': 'bg-[#475061]',
+  'not-measurable': 'bg-[#475467]',
 };
 
 function StatusTag({ status }: { status: MetricStatus }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#475061] whitespace-nowrap">
+    <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#475467] whitespace-nowrap">
       <span className={`w-1.5 h-1.5 rounded-full ${DOT[status]}`} aria-hidden />
       {STATUS_LABEL[status]}
     </span>
@@ -49,7 +39,7 @@ function MetricRow({ m }: { m: Metric }) {
           <h3 className="text-[14px] font-medium text-[#15171C]">{m.label}</h3>
           <StatusTag status={m.status} />
         </div>
-        <p className="mt-1 text-[13px] leading-relaxed text-[#475061] max-w-prose break-words">{m.detail}</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-[#475467] max-w-prose break-words">{m.detail}</p>
         <p className="mt-1 text-[12px] text-[#727A88] break-words">Source: {m.source}</p>
       </div>
       <div className="sm:text-right sm:pt-0.5">
@@ -89,28 +79,7 @@ function formatTime(iso: string): string {
 }
 
 export function ProtocolDashboard() {
-  const [state, setState] = useState<LoadState>({ kind: 'loading' });
-  const [reading, setReading] = useState(false);
-
-  const load = useCallback(async () => {
-    setReading(true);
-    try {
-      const res = await fetch('/api/protocol/metrics', { cache: 'no-store' });
-      if (!res.ok) throw new Error(String(res.status));
-      const report = (await res.json()) as Report;
-      if (!Array.isArray(report?.metrics)) throw new Error('shape');
-      setState({ kind: 'ready', report });
-    } catch {
-      setState({ kind: 'error' });
-    } finally {
-      setReading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
+  const { state, reading, reload: load } = useProtocolReport();
   const report = state.kind === 'ready' ? state.report : null;
 
   return (
@@ -121,11 +90,11 @@ export function ProtocolDashboard() {
             <HLLogo size={24} theme="dark" />
             <span className="font-semibold text-[15px] tracking-tight">Ledger Chat</span>
             <span className="text-[15px] text-[#A3A9B4]">/</span>
-            <span className="text-[15px] text-[#475061]">Protocol</span>
+            <span className="text-[15px] text-[#475467]">Protocol</span>
           </Link>
           <Link
             href="/chat"
-            className="h-9 px-4 inline-flex items-center bg-[#15171C] hover:bg-[#2B2F38] text-white rounded-xl text-[13px] font-medium transition-colors duration-150 ease-out"
+            className="h-11 px-4 inline-flex items-center bg-[#15171C] hover:bg-[#2B2F38] text-white rounded-xl text-[13px] font-medium transition-colors duration-150 ease-out"
           >
             Open Ledger Chat
           </Link>
@@ -136,7 +105,7 @@ export function ProtocolDashboard() {
         <div className="max-w-5xl mx-auto px-6 py-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="max-w-2xl">
             <h1 className="text-[28px] font-semibold tracking-tight">Protocol metrics</h1>
-            <p className="mt-2 text-[14px] leading-relaxed text-[#475061]">
+            <p className="mt-2 text-[14px] leading-relaxed text-[#475467]">
               Aggregate figures for Ledger Chat on Aztec Alpha, the Aztec network that settles on Ethereum mainnet. Each
               figure is read from its source when this page loads, or marked as not read, not deployed, or not measurable
               because the data is private by design. Nothing is estimated.
@@ -153,7 +122,7 @@ export function ProtocolDashboard() {
             <button
               onClick={() => void load()}
               disabled={reading}
-              className="h-9 px-3 inline-flex items-center gap-1.5 bg-white border border-[#E4E7EC] rounded-xl text-[13px] font-medium hover:bg-[#F2F4F7] disabled:text-[#A3A9B4] transition-colors duration-150 ease-out"
+              className="h-11 px-4 inline-flex items-center gap-1.5 bg-white border border-[#E4E7EC] rounded-xl text-[13px] font-medium hover:bg-[#F2F4F7] disabled:text-[#A3A9B4] transition-colors duration-150 ease-out"
             >
               <RefreshCw size={14} strokeWidth={1.5} />
               {reading ? 'Reading…' : 'Read again'}
@@ -161,7 +130,7 @@ export function ProtocolDashboard() {
             <a
               href="/api/protocol/metrics?download=1"
               aria-disabled={!report}
-              className={`h-9 px-3 inline-flex items-center gap-1.5 rounded-xl text-[13px] font-medium transition-colors duration-150 ease-out ${
+              className={`h-11 px-4 inline-flex items-center gap-1.5 rounded-xl text-[13px] font-medium transition-colors duration-150 ease-out ${
                 report ? 'bg-[#15171C] hover:bg-[#2B2F38] text-white' : 'bg-[#EFF1F4] text-[#A3A9B4] pointer-events-none'
               }`}
             >
@@ -176,10 +145,11 @@ export function ProtocolDashboard() {
         {state.kind === 'loading' ? (
           <Skeleton />
         ) : state.kind === 'error' ? (
-          <section className="bg-white rounded-2xl border border-[#E4E7EC] p-5">
-            <h2 className="text-[14px] font-semibold">Metrics could not be read</h2>
-            <p className="mt-1 text-[13px] text-[#475061]">
-              The server did not answer. No figures are shown rather than figures that may be wrong.
+          <section role="alert" className="rounded-2xl border border-[#FFD6D6] bg-[#FFF4F4] p-5">
+            <h2 className="text-[14px] font-semibold text-[#B42318]">Metrics could not be read</h2>
+            <p className="mt-1 text-[13px] text-[#B42318]">
+              The server did not answer within 10 seconds. Every figure shows as — rather than a value that may be stale.
+              It is read again every 30 seconds.
             </p>
           </section>
         ) : (
@@ -204,7 +174,7 @@ export function ProtocolDashboard() {
 
             <section className="rounded-2xl border border-[#E4E7EC] bg-white px-5 py-4">
               <h2 className="text-[14px] font-semibold">Why some figures cannot be shown</h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-[#475061] max-w-prose">
+              <p className="mt-1 text-[13px] leading-relaxed text-[#475467] max-w-prose">
                 Private transfers on Aztec hide amounts, senders and recipients from everyone, including Humanity Ledger. A
                 total of private volume can only exist if it is published as an aggregate; the protocol publishes none
                 today, so this page shows none.

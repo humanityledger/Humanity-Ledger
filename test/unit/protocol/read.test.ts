@@ -28,9 +28,10 @@ describe('readSnapshot / buildReport', () => {
     expect(digestAlgorithm).toBe('sha256');
     expect(digest).toBe(createHash('sha256').update(canonicalJson(body)).digest('hex'));
     // No figure that depends on the node is shown.
-    for (const id of ['aztec-node', 'hlc-supply', 'hlc-admin']) {
+    for (const id of ['hlc-supply', 'hlc-admin']) {
       expect(report.metrics.find((m) => m.id === id)?.value).toBeUndefined();
     }
+    expect(report.metrics.find((m) => m.id === 'aztec-node')).toMatchObject({ status: 'unavailable', value: 'Node not responding' });
   });
 
   it('refuses a node that is not on Ethereum mainnet and does not read token storage from it', async () => {

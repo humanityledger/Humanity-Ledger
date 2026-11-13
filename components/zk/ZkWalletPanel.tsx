@@ -18,14 +18,14 @@
  */
 
 import Link from 'next/link';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import {
   ArrowDownToLine, ArrowUpFromLine, Send, X, ExternalLink, Copy, Check,
-  Droplets, Loader2, AlertTriangle, ScanLine, UserPlus, ChevronDown, ChevronUp, Layers, Clock,
+  Droplets, AlertTriangle, ScanLine, UserPlus, ChevronDown, ChevronUp, Layers, Clock,
 } from 'lucide-react';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
 import { decodePaymentRequest, encodePaymentRequest, humanError, type TokenBalance } from '@/lib/aztec/wallet/client';
@@ -40,6 +40,9 @@ import { AlphaInfoBox } from '@/components/zk/AlphaNetworkBanner';
 const FeeJuiceStation = dynamic(() => import('@/components/zk/ZkBridgePortal').then((m) => m.FeeJuiceStation), { ssr: false });
 const EthereumHoldings = dynamic(() => import('@/components/zk/ZkBridgePortal').then((m) => m.EthereumHoldings), { ssr: false });
 const FeeRequestBox = dynamic(() => import('@/components/zk/FeeSponsor').then((m) => m.FeeRequestBox), { ssr: false });
+
+// The Protocol tab is loaded only when opened (React.lazy): the wallet tab never pays for it.
+const ProtocolSummary = lazy(() => import('@/components/protocol/ProtocolSummary'));
 
 const QrScanner = dynamic(() => import('@/components/terminal/QrScanner').then((m) => m.QrScanner), { ssr: false });
 
@@ -75,6 +78,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
   const [sheet, setSheet] = useState<Sheet>(initialSheet);
   const [refreshing, setRefreshing] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [tab, setTab] = useState<'wallet' | 'protocol'>('wallet');
   const ready = state.phase === 'ready';
 
   const handleOpen = async () => {
@@ -123,7 +127,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
       initial={{ opacity: 0, x: 40 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 40 }}
-      transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+      transition={{ duration: 0.15, ease: 'easeOut' }}
       className={`relative flex flex-col h-full bg-[#F4F5F7] text-[#15171c] ${className ?? ''}`}
     >
       {/* Header: the network in plain words, then the balance as the one thing to read */}
@@ -192,8 +196,32 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
         )}
       </div>
 
+      {/* Tabs: the wallet, and a compact summary of /protocol from the same endpoint */}
+      <div role="tablist" aria-label="Private wallet sections" className="flex-shrink-0 flex gap-1 bg-white px-4 border-b border-[#E4E7EC]">
+        {(['wallet', 'protocol'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={tab === t}
+            onClick={() => setTab(t)}
+            className={`h-11 px-3 text-[13px] font-medium border-b-2 -mb-px transition-colors duration-150 ease-out ${
+              tab === t ? 'border-[#15171C] text-[#15171C]' : 'border-transparent text-[#727A88] hover:text-[#15171C]'
+            }`}
+          >
+            {t === 'wallet' ? 'Wallet' : 'Protocol'}
+          </button>
+        ))}
+      </div>
+
       {/* Body */}
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4">
+        {tab === 'protocol' ? (
+          <Suspense fallback={<div className="h-[340px] rounded-2xl bg-white border border-[#E4E7EC]" aria-busy="true" />}>
+            <ProtocolSummary />
+          </Suspense>
+        ) : (
+        <>
         {/* Alpha info box — only shown on Aztec Alpha, reminds users of unaudited status */}
         <AlphaInfoBox />
         {!ready && state.phase === 'needs-fee-juice' ? (
@@ -315,6 +343,8 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
               </Link>
             </p>
           </>
+        )}
+        </>
         )}
       </div>
 
@@ -534,7 +564,7 @@ function Gate(props: {
       )}
       {working ? (
         <div className="mt-4 flex items-center gap-2.5 rounded-xl bg-black/[0.04] px-3 py-3 text-[12.5px] text-black/70" aria-live="polite">
-          <Loader2 size={15} className="animate-spin shrink-0" />
+          <Clock size={15} strokeWidth={1.75} className="shrink-0" aria-hidden />
           <span>{props.step}</span>
         </div>
       ) : (
@@ -585,7 +615,7 @@ function Faucet({ disabled }: { disabled: boolean }) {
             onClick={() => run(t.key)}
             className="h-9 rounded-xl border border-black/10 text-[12px] font-semibold hover:bg-black/[0.04] disabled:opacity-40 flex items-center justify-center gap-1.5"
           >
-            {busy === t.key && <Loader2 size={12} className="animate-spin" />}+{FAUCET_AMOUNT[t.key]} {t.symbol}
+            {busy === t.key ? 'Adding…' : `+${FAUCET_AMOUNT[t.key]} ${t.symbol}`}
           </button>
         ))}
       </div>
@@ -632,7 +662,7 @@ function ActivityList({ items }: { items: Activity[] }) {
               <li key={a.id} className="flex items-center gap-3 px-4 py-3">
                 <span className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center shrink-0">
                   {a.status === 'proving' || a.status === 'pending' ? (
-                    <Loader2 size={14} className="animate-spin text-black/60" />
+                    <Clock size={14} strokeWidth={1.75} className="text-black/60" aria-label="In progress" />
                   ) : a.status === 'failed' ? (
                     <AlertTriangle size={14} className="text-[#c0362c]" />
                   ) : inbound ? (
@@ -692,7 +722,7 @@ function SheetFrame({ title, onClose, children }: { title: string; onClose: () =
         initial={{ y: 40 }}
         animate={{ y: 0 }}
         exit={{ y: 40 }}
-        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+        transition={{ duration: 0.15, ease: 'easeOut' }}
         className="relative max-h-[88%] overflow-y-auto rounded-t-3xl bg-white px-5 pt-4 pb-6"
       >
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-black/10" />
@@ -756,7 +786,7 @@ function SubmitButton({ busy, children, disabled }: { busy: boolean; children: R
       className="w-full h-12 rounded-xl text-white text-[14.5px] font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
       style={{ background: INK }}
     >
-      {busy && <Loader2 size={16} className="animate-spin" />}
+      {busy && <Clock size={16} strokeWidth={1.75} aria-hidden />}
       {children}
     </button>
   );
@@ -953,7 +983,7 @@ function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
             className="h-10 px-3.5 rounded-xl text-white text-[12.5px] font-semibold disabled:opacity-40"
             style={{ background: INK }}
           >
-            {adding ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
+            {adding ? 'Adding…' : 'Add'}
           </button>
         </div>
       </div>
