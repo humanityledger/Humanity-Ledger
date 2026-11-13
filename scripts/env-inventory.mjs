@@ -45,6 +45,11 @@ const PURPOSE = {
   NEXT_PUBLIC_APP_URL: 'Public origin of the app, used for CSRF origin checks and links.',
   CLOUDFLARE_TURN_KEY_ID: 'Cloudflare TURN key ID for calls across networks. Secret.',
   CLOUDFLARE_TURN_API_TOKEN: 'Cloudflare TURN API token. Secret.',
+  ALCHEMY_API_KEY: 'SERVER ONLY — never use NEXT_PUBLIC_ prefix. Read through lib/server/provider-keys.ts. Alchemy RPC key (server-side balance, gas and token reads).',
+  PIMLICO_API_KEY: 'SERVER ONLY — never use NEXT_PUBLIC_ prefix. Read through lib/server/provider-keys.ts. Pimlico bundler key (server-side account abstraction).',
+  COINGECKO_KEY: 'SERVER ONLY — never use NEXT_PUBLIC_ prefix. Read through lib/server/provider-keys.ts. CoinGecko demo/pro key for prices.',
+  ONEINCH_API_KEY: 'SERVER ONLY — never use NEXT_PUBLIC_ prefix. Read through lib/server/provider-keys.ts. 1inch API key.',
+  NEWS_API_KEY: 'SERVER ONLY — never use NEXT_PUBLIC_ prefix. Read through lib/server/provider-keys.ts. News API key (NEWSDATA_API_KEY takes precedence).',
 };
 
 function walk(dir, out = []) {
@@ -63,10 +68,11 @@ const files = [...DIRS.flatMap((d) => walk(join(ROOT, d))), ...FILES.map((f) => 
 const uses = new Map();
 for (const f of files) {
   const src = readFileSync(f, 'utf8');
-  for (const m of src.matchAll(/process\.env\.([A-Z][A-Z0-9_]*)/g)) {
+  for (const m of src.matchAll(/process\.env\.([A-Z][A-Z0-9_]*)|providerKey\('([A-Z][A-Z0-9_]*)'\)/g)) {
     const rel = relative(ROOT, f).replace(/\\/g, '/');
-    if (!uses.has(m[1])) uses.set(m[1], new Set());
-    uses.get(m[1]).add(rel);
+    const name = m[1] || m[2];
+    if (!uses.has(name)) uses.set(name, new Set());
+    uses.get(name).add(rel);
   }
 }
 for (const k of ['NODE_ENV', 'NEXT_RUNTIME', 'NEXT_PHASE', 'CI', 'VERCEL', 'VERCEL_ENV', 'PORT', 'HOSTNAME']) uses.delete(k);

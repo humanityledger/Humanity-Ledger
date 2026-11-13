@@ -16,7 +16,7 @@ export interface SearchResult {
         trustScore: number;
         EliteConfidence: number;
         momentum?: number;
-        impact?: 'LOW' | 'MEDIUM' | 'HIGH' | 'LEGENDARY';
+        impact?: 'LOW' | 'MEDIUM' | 'HIGH' | 'LEGENDARY' | 'UNKNOWN';
     };
 }
 
@@ -98,7 +98,9 @@ export class SearchAnalyticsService {
                 // Value analysis
                 const valueNative = parseFloat(ethers.formatEther(tx.value || '0'));
                 const priceMap = await PriceService.getBulkPrices([{ symbol: 'ETH' }]);
-                const valueUsd = valueNative * (priceMap['ETH']?.price || 2500);
+                // No invented price: without a quote the USD value is unknown (null).
+                const ethPrice = priceMap['ETH']?.price;
+                const valueUsd = typeof ethPrice === 'number' ? valueNative * ethPrice : null;
 
                 // Deep Forensic Reasoning for the Tx Initiator
                 const forensics = await aiService.analyzeAddressForensics(tx.from_address, {
@@ -122,7 +124,7 @@ export class SearchAnalyticsService {
                         riskScore: forensics.riskScore,
                         trustScore: 100 - forensics.riskScore,
                         EliteConfidence: forensics.isElite ? 90 : 20,
-                        impact: valueUsd > 100000 ? 'LEGENDARY' : valueUsd > 10000 ? 'HIGH' : 'MEDIUM'
+                        impact: valueUsd === null ? 'UNKNOWN' : valueUsd > 100000 ? 'LEGENDARY' : valueUsd > 10000 ? 'HIGH' : 'MEDIUM'
                     }
                 };
             }

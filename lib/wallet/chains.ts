@@ -2,6 +2,7 @@
  * Multi-Chain Support
  * Support for Ethereum, Polygon, Base, Arbitrum, Optimism, and more
  */
+import { providerKey } from '@/lib/server/provider-keys';
 
 import { Chain } from 'wagmi/chains';
 import { mainnet, polygon, base, arbitrum, optimism, polygonZkEvm, avalanche, bsc } from 'wagmi/chains';
@@ -33,7 +34,7 @@ export const SUPPORTED_CHAINS: Record<string, ChainConfig> = {
       decimals: 18,
     },
     rpcUrls: [
-      `https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+      `https://eth-mainnet.g.alchemy.com/v2/${providerKey('ALCHEMY_API_KEY')}`,
       'https://eth.llamarpc.com',
     ],
     blockExplorerUrl: 'https://etherscan.io',
@@ -49,7 +50,7 @@ export const SUPPORTED_CHAINS: Record<string, ChainConfig> = {
       decimals: 18,
     },
     rpcUrls: [
-      `https://polygon-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+      `https://polygon-mainnet.g.alchemy.com/v2/${providerKey('ALCHEMY_API_KEY')}`,
       'https://polygon-rpc.com',
     ],
     blockExplorerUrl: 'https://polygonscan.com',
@@ -81,7 +82,7 @@ export const SUPPORTED_CHAINS: Record<string, ChainConfig> = {
       decimals: 18,
     },
     rpcUrls: [
-      `https://arb-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+      `https://arb-mainnet.g.alchemy.com/v2/${providerKey('ALCHEMY_API_KEY')}`,
       'https://arb1.arbitrum.io/rpc',
     ],
     blockExplorerUrl: 'https://arbiscan.io',
@@ -97,7 +98,7 @@ export const SUPPORTED_CHAINS: Record<string, ChainConfig> = {
       decimals: 18,
     },
     rpcUrls: [
-      `https://opt-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+      `https://opt-mainnet.g.alchemy.com/v2/${providerKey('ALCHEMY_API_KEY')}`,
       'https://mainnet.optimism.io',
     ],
     blockExplorerUrl: 'https://optimistic.etherscan.io',

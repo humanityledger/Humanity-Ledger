@@ -1,3 +1,4 @@
+import { providerKey } from '@/lib/server/provider-keys';
 import { ethers } from 'ethers';
 import { getGbAllRpc } from './getblock-registry';
 
@@ -263,8 +264,8 @@ const PUBLIC_FALLBACKS: Record<string, string[]> = {
 
 function buildRpcPool(gbChain: string, alchemySuffix?: string): string[] {
   const gbUrls      = getGbAllRpc(gbChain as any);
-  const alchemyUrl  = alchemySuffix && process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
-    ? [`https://${alchemySuffix}.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`]
+  const alchemyUrl  = alchemySuffix && providerKey('ALCHEMY_API_KEY')
+    ? [`https://${alchemySuffix}.g.alchemy.com/v2/${providerKey('ALCHEMY_API_KEY')}`]
     : [];
   const pubFallback = PUBLIC_FALLBACKS[gbChain] ?? [];
   // Orden: GetBlock (todos los tokens activos) → Alchemy → Públicos
@@ -277,8 +278,8 @@ export const blockchainService = new BlockchainService([
     name: 'Ethereum Mainnet',
     rpcUrls: buildRpcPool('eth', 'eth-mainnet'),
     privateRpcUrl: 'https://rpc.flashbots.net',
-    bundlerUrl: process.env.NEXT_PUBLIC_PIMLICO_API_KEY
-      ? `https://api.pimlico.io/v2/1/rpc?apikey=${process.env.NEXT_PUBLIC_PIMLICO_API_KEY}`
+    bundlerUrl: providerKey('PIMLICO_API_KEY')
+      ? `https://api.pimlico.io/v2/1/rpc?apikey=${providerKey('PIMLICO_API_KEY')}`
       : undefined,
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     blockExplorer: 'https://etherscan.io',
@@ -287,8 +288,8 @@ export const blockchainService = new BlockchainService([
     chainId: ChainId.POLYGON,
     name: 'Polygon',
     rpcUrls: buildRpcPool('polygon', 'polygon-mainnet'),
-    bundlerUrl: process.env.NEXT_PUBLIC_PIMLICO_API_KEY
-      ? `https://api.pimlico.io/v2/137/rpc?apikey=${process.env.NEXT_PUBLIC_PIMLICO_API_KEY}`
+    bundlerUrl: providerKey('PIMLICO_API_KEY')
+      ? `https://api.pimlico.io/v2/137/rpc?apikey=${providerKey('PIMLICO_API_KEY')}`
       : undefined,
     nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
     blockExplorer: 'https://polygonscan.com',
@@ -297,8 +298,8 @@ export const blockchainService = new BlockchainService([
     chainId: ChainId.ARBITRUM,
     name: 'Arbitrum One',
     rpcUrls: buildRpcPool('arb', 'arb-mainnet'),
-    bundlerUrl: process.env.NEXT_PUBLIC_PIMLICO_API_KEY
-      ? `https://api.pimlico.io/v2/42161/rpc?apikey=${process.env.NEXT_PUBLIC_PIMLICO_API_KEY}`
+    bundlerUrl: providerKey('PIMLICO_API_KEY')
+      ? `https://api.pimlico.io/v2/42161/rpc?apikey=${providerKey('PIMLICO_API_KEY')}`
       : undefined,
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     blockExplorer: 'https://arbiscan.io',
@@ -307,8 +308,8 @@ export const blockchainService = new BlockchainService([
     chainId: ChainId.BASE,
     name: 'Base',
     rpcUrls: buildRpcPool('base', 'base-mainnet'),
-    bundlerUrl: process.env.NEXT_PUBLIC_PIMLICO_API_KEY
-      ? `https://api.pimlico.io/v2/8453/rpc?apikey=${process.env.NEXT_PUBLIC_PIMLICO_API_KEY}`
+    bundlerUrl: providerKey('PIMLICO_API_KEY')
+      ? `https://api.pimlico.io/v2/8453/rpc?apikey=${providerKey('PIMLICO_API_KEY')}`
       : undefined,
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     blockExplorer: 'https://basescan.org',
@@ -317,8 +318,8 @@ export const blockchainService = new BlockchainService([
     chainId: ChainId.OPTIMISM,
     name: 'Optimism',
     rpcUrls: buildRpcPool('op', 'opt-mainnet'),
-    bundlerUrl: process.env.NEXT_PUBLIC_PIMLICO_API_KEY
-      ? `https://api.pimlico.io/v2/10/rpc?apikey=${process.env.NEXT_PUBLIC_PIMLICO_API_KEY}`
+    bundlerUrl: providerKey('PIMLICO_API_KEY')
+      ? `https://api.pimlico.io/v2/10/rpc?apikey=${providerKey('PIMLICO_API_KEY')}`
       : undefined,
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     blockExplorer: 'https://optimistic.etherscan.io',
@@ -327,8 +328,8 @@ export const blockchainService = new BlockchainService([
     chainId: ChainId.AVALANCHE,
     name: 'Avalanche',
     rpcUrls: buildRpcPool('avax'),
-    bundlerUrl: process.env.NEXT_PUBLIC_PIMLICO_API_KEY
-      ? `https://api.pimlico.io/v2/43114/rpc?apikey=${process.env.NEXT_PUBLIC_PIMLICO_API_KEY}`
+    bundlerUrl: providerKey('PIMLICO_API_KEY')
+      ? `https://api.pimlico.io/v2/43114/rpc?apikey=${providerKey('PIMLICO_API_KEY')}`
       : undefined,
     nativeCurrency: { name: 'AVAX', symbol: 'AVAX', decimals: 18 },
     blockExplorer: 'https://snowtrace.io',
@@ -337,8 +338,8 @@ export const blockchainService = new BlockchainService([
     chainId: ChainId.BSC,
     name: 'BNB Smart Chain',
     rpcUrls: buildRpcPool('bsc'),
-    bundlerUrl: process.env.NEXT_PUBLIC_PIMLICO_API_KEY
-      ? `https://api.pimlico.io/v2/56/rpc?apikey=${process.env.NEXT_PUBLIC_PIMLICO_API_KEY}`
+    bundlerUrl: providerKey('PIMLICO_API_KEY')
+      ? `https://api.pimlico.io/v2/56/rpc?apikey=${providerKey('PIMLICO_API_KEY')}`
       : undefined,
     nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
     blockExplorer: 'https://bscscan.com',
@@ -347,8 +348,8 @@ export const blockchainService = new BlockchainService([
     chainId: ChainId.WORLDCHAIN,
     name: 'World Chain',
     rpcUrls: buildRpcPool('world'),
-    bundlerUrl: process.env.NEXT_PUBLIC_PIMLICO_API_KEY
-      ? `https://api.pimlico.io/v2/480/rpc?apikey=${process.env.NEXT_PUBLIC_PIMLICO_API_KEY}`
+    bundlerUrl: providerKey('PIMLICO_API_KEY')
+      ? `https://api.pimlico.io/v2/480/rpc?apikey=${providerKey('PIMLICO_API_KEY')}`
       : undefined,
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     blockExplorer: 'https://worldscan.org',

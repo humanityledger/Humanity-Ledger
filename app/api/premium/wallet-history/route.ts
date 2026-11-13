@@ -54,7 +54,8 @@ export async function GET(req: NextRequest) {
             .reduce((acc, tx) => {
                 const valRaw = parseFloat(String(tx.value || '0'));
                 const assetSym = (tx.asset || 'ETH').toUpperCase();
-                const price = assetPrices[assetSym]?.price || (assetSym === 'USDC' || assetSym === 'USDT' || assetSym === 'DAI' ? 1 : 2500);
+                const price = assetPrices[assetSym]?.price;
+                if (typeof price !== 'number') return acc; // no invented price: unpriced transfers are left out
                 const valUsd = valRaw * price;
                 
                 if (tx.direction === 'OUT') return acc - valUsd; // Sent

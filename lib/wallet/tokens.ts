@@ -1,3 +1,4 @@
+import { providerKey } from '@/lib/server/provider-keys';
 import { alchemyClient } from './alchemy-client';
 import { getChainById } from '../chains';
 import { getRealTimePrice, getPriceWithChange } from '../priceHelper';
@@ -90,9 +91,8 @@ export async function discoverTokens(
                 const lowerAddr = t.contractAddress.toLowerCase();
                 if (!priceMap[lowerAddr] || priceMap[lowerAddr].price === 0) {
                     const symbol = metadataResults[index]?.symbol;
-                    if (symbol && symbolPriceMap[symbol.toUpperCase()]) {
-                        priceMap[lowerAddr] = symbolPriceMap[symbol.toUpperCase()];
-                    }
+                    const quote = symbol ? symbolPriceMap[symbol.toUpperCase()] : undefined;
+                    if (quote) priceMap[lowerAddr] = quote;
                 }
             });
         }
@@ -153,7 +153,7 @@ export async function getTokenPricesBatch(chainId: number, tokenAddresses: strin
       `https://api.coingecko.com/api/v3/simple/token_price/${platform}?contract_addresses=${addressString}&vs_currencies=usd&include_24hr_change=true`,
       {
         headers: {
-          'x-cg-demo-api-key': process.env.NEXT_PUBLIC_COINGECKO_KEY || '',
+          'x-cg-demo-api-key': providerKey('COINGECKO_KEY') || '',
         },
       }
     );
@@ -289,7 +289,7 @@ export async function getTokenPrice(chainId: number, tokenAddress: string): Prom
       `https://api.coingecko.com/api/v3/simple/token_price/${platform}?contract_addresses=${tokenAddress}&vs_currencies=usd&include_24hr_change=true`,
       {
         headers: {
-          'x-cg-demo-api-key': process.env.NEXT_PUBLIC_COINGECKO_KEY || '',
+          'x-cg-demo-api-key': providerKey('COINGECKO_KEY') || '',
         },
       }
     );
@@ -370,7 +370,7 @@ export async function searchTokens(
       `https://api.1inch.dev/token/v1.2/${chainId}/search?query=${encodeURIComponent(query)}&limit=${limit}`,
       {
         headers: {
-          'Authorization': `Bearer ${(process.env.ONEINCH_API_KEY || process.env.NEXT_PUBLIC_1INCH_API_KEY)}`,
+          'Authorization': `Bearer ${providerKey('ONEINCH_API_KEY')}`,
         },
       }
     );
@@ -502,11 +502,11 @@ export async function getTokenBalance(
  */
 function getRPCUrl(chainId: number): string {
   const rpcUrls: Record<number, string> = {
-    1: `https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
-    137: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+    1: `https://eth-mainnet.g.alchemy.com/v2/${providerKey('ALCHEMY_API_KEY')}`,
+    137: `https://polygon-mainnet.g.alchemy.com/v2/${providerKey('ALCHEMY_API_KEY')}`,
     8453: 'https://mainnet.base.org',
-    42161: `https://arb-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
-    10: `https://opt-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+    42161: `https://arb-mainnet.g.alchemy.com/v2/${providerKey('ALCHEMY_API_KEY')}`,
+    10: `https://opt-mainnet.g.alchemy.com/v2/${providerKey('ALCHEMY_API_KEY')}`,
   };
 
   return rpcUrls[chainId] || rpcUrls[1];

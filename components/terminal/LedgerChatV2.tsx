@@ -3705,7 +3705,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         //  Step 1: Use standard wagmi signer (defined above, outside try)
 
         //  Step 2: Initialize client (Direct Execution) 
-        const realClient = await getXMTPClient(wagmiSigner);
+        const realClient = await getXMTPClient(wagmiSigner, {
+          onDbKeyRequest: () =>
+            toast.message('Unlock your messages on this device', {
+              description: 'Your wallet will ask for a signature. It encrypts the copy of your messages kept in this browser and is never sent to any server.',
+            }),
+          onLegacyKeyMigrated: () =>
+            toast.success('Message database secured', {
+              description: 'Its key is now encrypted with your signature instead of being stored in plain text. Your history is kept.',
+            }),
+        });
         setClient(realClient);
         if (typeof window !== 'undefined') (window as any)._active_ledger_client = { address };
         
@@ -3741,6 +3750,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         // "…on your phone" / "Your phone…": a linked computer's request was declined or timed out (lib/link/channel.ts).
         const isReject = err?.code === 4001 || errorMsg.toLowerCase().includes('reject') || errorMsg.toLowerCase().includes('deny')
           || /on your phone|your phone did not|unlinked from your phone|not linked to your phone/i.test(errorMsg);
+
+        // The local database key could not be derived or did not match (lib/xmtp/db-key.ts):
+        // retrying would only ask for the same signature again, so stop and say why.
+        if (err?.name === 'XmtpDbKeyError' && !isReject) {
+          setInitError(errorMsg);
+          setIsInitializing(false);
+          initInFlight.current = false;
+          return;
+        }
 
         // Immediately stop retrying if user actively rejected the prompt
         if (isReject) {

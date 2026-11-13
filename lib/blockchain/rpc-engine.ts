@@ -1,9 +1,10 @@
+import { providerKey } from '@/lib/server/provider-keys';
 import { createPublicClient, http, fallback, PublicClient } from 'viem';
 import { mainnet, bsc, optimism, base, polygon, arbitrum, avalanche } from 'viem/chains';
 import { getGbAllRpc, getGbWss } from './getblock-registry';
 
 //  ALCHEMY FALLBACK KEY 
-const ALCHEMY_KEY = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || 'demo';
+const ALCHEMY_KEY = providerKey('ALCHEMY_API_KEY') || 'demo';
 
 //  CUSTOM CHAIN DEFS 
 

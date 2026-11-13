@@ -26,6 +26,7 @@ import {
   parseSafeInt,
   storageSlot,
   type ProtocolReportBody,
+  type RecordedSponsor,
   type RecordedToken,
   type Snapshot,
 } from './metrics';
@@ -94,11 +95,20 @@ function recordedTokens(raw: any): RecordedToken[] {
     }));
 }
 
+/** deployments/aztec-mainnet.json → sponsoredFpc: null, an address (legacy), or the full record. */
+export function recordedSponsor(v: unknown): RecordedSponsor | null {
+  if (typeof v === 'string') return HEX32.test(v) ? { address: v.toLowerCase(), feeJuiceContract: null, feeJuiceBalanceSlot: null } : null;
+  const o = v as { address?: unknown; feeJuiceContract?: unknown; feeJuiceBalanceSlot?: unknown } | null;
+  if (!o || typeof o !== 'object' || typeof o.address !== 'string' || !HEX32.test(o.address)) return null;
+  const hexOrNull = (x: unknown) => (typeof x === 'string' && HEX32.test(x) ? x.toLowerCase() : null);
+  return { address: o.address.toLowerCase(), feeJuiceContract: hexOrNull(o.feeJuiceContract), feeJuiceBalanceSlot: hexOrNull(o.feeJuiceBalanceSlot) };
+}
+
 function readRecord(): Snapshot['record'] {
   const raw: any = mainnetRecord;
   const authorized = authorizedMainnetRecord(raw, { l1ChainId: PINS.l1ChainId, rollupVersion: PINS.rollupVersion });
   if (!authorized) return undefined;
-  const sponsor = typeof raw?.sponsoredFpc === 'string' && HEX32.test(raw.sponsoredFpc) ? raw.sponsoredFpc.toLowerCase() : null;
+  const sponsor = recordedSponsor(raw?.sponsoredFpc);
   return {
     contracts: (authorized.contracts as ReadonlyArray<{ name: string }>).map((c) => c.name),
     tokens: recordedTokens(raw),
@@ -221,12 +231,29 @@ export async function readSnapshot(): Promise<Snapshot> {
     }
   }
 
+  // Sponsor Fee Juice (P-12): only with the slot and contract recorded at deployment, from a node
+  // that matches the pins, at the block just read. No slot is computed on the server.
+  let sponsorBalance: Snapshot['sponsor']['balance'];
+  const sp = record?.sponsoredFpc;
+  if (sp) {
+    if (!sp.feeJuiceContract || !sp.feeJuiceBalanceSlot) {
+      sponsorBalance = { error: 'the Fee Juice balance slot is not recorded (scripts/aztec/fee-juice-slot.mjs)' };
+    } else if (!nodeResult.ok) {
+      sponsorBalance = { error: 'the node did not answer' };
+    } else if (nodeResult.drift.length) {
+      sponsorBalance = { error: 'the node differs from the pins' };
+    } else {
+      const v = await readPublicField(url, nodeResult.blockNumber, sp.feeJuiceContract, BigInt(sp.feeJuiceBalanceSlot));
+      sponsorBalance = typeof v === 'bigint' && v >= 2n ** 128n ? { error: 'value wider than u128' } : v;
+    }
+  }
+
   return {
     nodeHost,
     node: nodeResult,
     record,
     token,
-    sponsor: { configuredAddress: sponsorAddress, requests24h },
+    sponsor: { balance: sponsorBalance, configuredAddress: sponsorAddress, requests24h },
     pins: {
       l1ChainId: PINS.l1ChainId,
       rollup: PINS.l1.rollup,

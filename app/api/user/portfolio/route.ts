@@ -29,39 +29,37 @@ export async function GET(req: NextRequest) {
         ];
         const realPrices = await PriceService.getBulkPrices(assetQueries);
 
-        // Compute USD values with Real Oracle Data
-        const ethPriceData = realPrices['ETH'] || { price: 2300 };
-        const ethUsd = ethBalance * ethPriceData.price;
-        
-        const tokenList = tokens.map(t => {
-            const pData = realPrices[t.symbol.toUpperCase()] || { price: 0 };
-            const usdValue = t.balance * pData.price;
-            return {
-                symbol:       t.symbol,
-                name:         t.symbol,
-                balance:      t.balance,
-                usdPrice:     pData.price,
-                usdValue,
-                change24h:    (pData as any).change24h || 0,
-                portfolioPct: 0,
-                chain:        'ethereum',
-            };
-        });
-
-        // ETH native position
-        const ethPosition = {
-            symbol: 'ETH', name: 'Ethereum',
-            balance: ethBalance, usdPrice: ethPriceData.price, usdValue: ethUsd,
-            change24h: (ethPriceData as any).change24h || 0, portfolioPct: 0, chain: 'ethereum',
+        // USD values only where a price was read. No invented price (this used to assume
+        // $2,300 for ETH and $0 for any other token): unpriced positions have usdValue null.
+        type Position = {
+            symbol: string; name: string; balance: number;
+            usdPrice: number | null; usdValue: number | null; change24h: number | null;
+            portfolioPct: number | null; chain: string;
         };
+        const position = (symbol: string, name: string, balance: number): Position => {
+            const q = realPrices[symbol.toUpperCase()];
+            return {
+                symbol, name, balance,
+                usdPrice: q ? q.price : null,
+                usdValue: q ? balance * q.price : null,
+                change24h: q ? q.change24h : null,
+                portfolioPct: null,
+                chain: 'ethereum',
+            };
+        };
+        const ethPosition = position('ETH', 'Ethereum', ethBalance);
+        const tokenList = tokens.map(t => position(t.symbol, t.symbol, t.balance));
 
-        const all = [ethPosition, ...tokenList].filter(t => t.usdValue > 1 || t.symbol === 'ETH');
-        const totalUsd = all.reduce((s, t) => s + t.usdValue, 0);
-        all.forEach(t => { t.portfolioPct = totalUsd > 0 ? (t.usdValue / totalUsd) * 100 : 0; });
+        const all = [ethPosition, ...tokenList].filter(t => t.symbol === 'ETH' || t.balance > 0);
+        const priced = all.filter(t => t.usdValue !== null);
+        const totalUsd = priced.reduce((s, t) => s + (t.usdValue as number), 0);
+        priced.forEach(t => { t.portfolioPct = totalUsd > 0 ? ((t.usdValue as number) / totalUsd) * 100 : null; });
 
         return NextResponse.json({
             address,
             totalUsd,
+            totalIsPartial: priced.length < all.length,
+            unpriced: all.filter(t => t.usdValue === null).map(t => t.symbol),
             tokens: all,
             source: 'getblock_ep1_onchain',
             fetchedAt: new Date().toISOString(),
@@ -69,13 +67,7 @@ export async function GET(req: NextRequest) {
 
     } catch (error: any) {
         console.error('[Portfolio EP1 Error]', error?.message);
-        // Graceful fallback  return empty portfolio, not a crash
-        return NextResponse.json({
-            address: '',
-            totalUsd: 0,
-            tokens: [],
-            source: 'error_fallback',
-            error: 'RPC unavailable',
-        }, { status: 200 });
+        // Fail closed: an outage is an error, never an empty portfolio worth $0.
+        return NextResponse.json({ error: 'Portfolio could not be read.' }, { status: 503 });
     }
 }
