@@ -1,0 +1,11 @@
+{
+  "$comment": "Migrations that a later baseline replaces. The pre-deploy marks each as applied (never runs it) once its supersededBy migration is applied, and only while migration.sql still has this sha256. Add an entry only after reviewing that the baseline creates everything the schema still uses from it.",
+  "migrations": [
+    {
+      "name": "20260128062035_init_railway_production",
+      "supersededBy": "0_init",
+      "sha256": "713e95ec5fa5f114dfae480b3ba3ad203909f833738a032c84b8da581d38925a",
+      "reason": "Initial schema of an earlier data model. 0_init creates User, IntelItem, MarketProposal, ProposalVote and UserMetrics; the other eight tables and its eight enums are not in prisma/schema.prisma. Running it fails with 42P07 (relation User already exists), which blocked every later migration (P3018, 13 Nov 2026)."
+    }
+  ]
+}
