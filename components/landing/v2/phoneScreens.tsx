@@ -24,15 +24,14 @@ import {
   Lock,
   Mic,
   MicOff,
+  MonitorUp,
   Phone,
   PhoneOff,
   Plus,
   RefreshCw,
   SendHorizontal,
-  ShieldCheck,
   Users,
   Video,
-  Volume2,
 } from "lucide-react";
 import s from "./PhoneShowcase.module.css";
 
@@ -189,9 +188,9 @@ export function VoiceCallScreen({ p, active }: ScreenProps) {
         </span>
         <span className={s.ctl}>
           <span className={s.ctlBtn}>
-            <Volume2 size={26} />
+            <MonitorUp size={26} />
           </span>
-          Speaker
+          Share
         </span>
         <span className={s.ctl}>
           <span className={s.ctlBtn}>
@@ -233,7 +232,7 @@ export function VideoCallScreen({ p, active }: ScreenProps) {
             <Lock size={12} strokeWidth={2.4} /> Encrypted
           </span>
           <span className={`${s.chip} ${at(p, 0.35)}`}>
-            <ShieldCheck size={12} strokeWidth={2.4} /> IP hidden, call relayed
+            <Lock size={12} strokeWidth={2.4} /> IP hidden, call relayed
           </span>
         </span>
       </div>
@@ -305,7 +304,7 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
         <div className={`${s.ledgerInvoiceCard} ${at(p, 0.24)}`}>
           <div className={s.invTop}>
             <span className={s.invDocTag}>
-              <ShieldCheck size={14} strokeWidth={2.2} />
+              <Lock size={14} strokeWidth={2.2} />
               Private invoice
             </span>
             <span className={`${s.invStatusTag} ${paid ? s.invStatusPaid : proving ? s.invStatusProving : s.invStatusUnpaid}`}>
@@ -396,7 +395,7 @@ export function AgreementChatScreen({ p }: ScreenProps) {
         <div className={`${s.ledgerInvoiceCard} ${at(p, 0.18)}`}>
           <div className={s.invTop}>
             <span className={s.invDocTag}>
-              <ShieldCheck size={14} strokeWidth={2.2} />
+              <Lock size={14} strokeWidth={2.2} />
               Private agreement
             </span>
             <span className={`${s.invStatusTag} ${released || locked ? s.invStatusPaid : proving ? s.invStatusProving : s.invStatusUnpaid}`}>

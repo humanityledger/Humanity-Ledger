@@ -89,7 +89,7 @@ export const metadata = {
   applicationName: 'Ledger Chat',
 
   // Every claim here must also be true in the documentation (CLAUDE.md §1).
-  description: 'Humanity Ledger builds Ledger Chat: a messenger where your Ethereum wallet is your account. Direct messages are encrypted on your device with MLS through XMTP, payments are signed in your own wallet, and private payments run on the Aztec test network. Early access.',
+  description: 'Humanity Ledger builds Ledger Chat: a messenger where your Ethereum wallet is your account. Direct messages are encrypted on your device with MLS through XMTP, payments are signed in your own wallet, and private payments run on Aztec Network.',
 
   keywords: [
 
@@ -174,7 +174,7 @@ export const metadata = {
 
     title: 'Humanity Ledger | Ledger Chat',
 
-    description: 'A messenger where your wallet is your account. Encrypted direct messages, communities, calls and payments you sign yourself. Early access.',
+    description: 'A messenger where your wallet is your account. Encrypted direct messages, communities, calls and payments you sign yourself.',
 
     url: 'https://ledgerchat.org',
 
@@ -208,7 +208,7 @@ export const metadata = {
 
     title: 'Humanity Ledger | Ledger Chat',
 
-    description: 'A messenger where your wallet is your account. Encrypted direct messages, communities, calls and payments you sign yourself. Early access.',
+    description: 'A messenger where your wallet is your account. Encrypted direct messages, communities, calls and payments you sign yourself.',
 
     images: ['/logo-mark.png'],
 
@@ -295,7 +295,7 @@ export default async function RootLayout({
         "operatingSystem": "Web browser",
         "url": "https://ledgerchat.org/chat",
         "publisher": { "@id": "https://ledgerchat.org/#organization" },
-        "description": "The private messenger where your wallet is your account. Early access.",
+        "description": "The private messenger where your wallet is your account.",
         "featureList": [
           "Sign in with Ethereum (EIP-4361)",
           "Direct messages encrypted with MLS through XMTP",

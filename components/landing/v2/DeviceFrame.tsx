@@ -189,6 +189,12 @@ export function DeviceFrame({
 }: DeviceFrameProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [k, setK] = useState<number | null>(null);
+  // Decided after mount, so the server and the first client render agree (transform), and the switch
+  // to zoom is an ordinary update. Every current engine supports zoom (Chrome, Edge, Safari, Firefox 126+).
+  const [zoomOk, setZoomOk] = useState(false);
+  useEffect(() => {
+    setZoomOk(typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("zoom", "2"));
+  }, []);
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const id = (n: string) => `${n}-${uid}`;
 
@@ -223,7 +229,15 @@ export function DeviceFrame({
         className={s.canvas}
         data-finish={finish}
         data-ready={k !== null ? "1" : undefined}
-        style={{ width: CANVAS_W, height: CANVAS_H, transform: `translate(-50%, -50%) scale(${k ?? 0.5})` }}
+        // CSS zoom lays the phone out at its real size, so text and vectors are drawn sharp at any
+        // scale. A transform scale was rasterized once and stretched: blurry on Retina Macs, iPhone and
+        // Android, worst inside the scroll scenes (will-change layers). The transform stays as the
+        // fallback for a browser without zoom.
+        style={
+          zoomOk && k !== null
+            ? { width: CANVAS_W, height: CANVAS_H, zoom: k, marginLeft: -CANVAS_W / 2, marginTop: -CANVAS_H / 2 }
+            : { width: CANVAS_W, height: CANVAS_H, transform: `translate(-50%, -50%) scale(${k ?? 0.5})` }
+        }
       >
         {/* Body: shadow, buttons, titanium band, black bezel. */}
         <svg className={s.body} width={CANVAS_W} height={CANVAS_H} viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} aria-hidden="true">

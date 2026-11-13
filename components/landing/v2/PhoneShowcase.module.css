@@ -208,7 +208,6 @@
   width: var(--tw);
   height: var(--th);
   margin: calc(var(--th) / -2) 0 0 calc(var(--tw) / -2);
-  will-change: transform, opacity;
   transform-style: flat;
 }
 
@@ -227,7 +226,6 @@
     0 18px 40px -24px rgba(16, 24, 40, 0.35),
     0 0 0 1px rgba(16, 24, 40, 0.06);
   isolation: isolate;
-  transform: translateZ(0);
 }
 
 .track[data-mode="scroll"] .photo {
