@@ -69,6 +69,14 @@ pub contract LedgerSponsor {
         );
     }
 
+    /// The instance, chain id and rollup version a voucher for this contract must name. Runs in the
+    /// caller's PXE and is never proven: the server and the tests read it to build the exact bytes
+    /// they sign; it authorises nothing.
+    #[external("utility")]
+    unconstrained fn voucher_binding() -> [Field; 3] {
+        [self.context.this_address().to_field(), self.context.chain_id(), self.context.version()]
+    }
+
     /// Called first in a transaction (setup phase). Pays its fee if the voucher is valid and unused.
     #[external("private")]
     fn sponsor(voucher_id: Field, expires_at: u64, signer_x: [u8; 32], signer_y: [u8; 32], signature: [u8; 64]) {
@@ -83,7 +91,14 @@ pub contract LedgerSponsor {
                 & (y_hi == self.storage.y_hi.read()) & (y_lo == self.storage.y_lo.read()),
             "LedgerSponsor: unknown signer",
         );
-        let digest = voucher_digest(voucher_id, expires_at);
+        // V2: the digest names this instance, the chain and the rollup version (voucher.nr).
+        let digest = voucher_digest(
+            self.context.this_address().to_field(),
+            self.context.chain_id(),
+            self.context.version(),
+            voucher_id,
+            expires_at,
+        );
         assert(
             std::ecdsa_secp256k1::verify_signature(signer_x, signer_y, signature, digest),
             "LedgerSponsor: bad signature",

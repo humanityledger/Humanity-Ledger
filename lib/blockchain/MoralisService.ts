@@ -14,6 +14,7 @@
  *  - Leaves >1.1B CUs of headroom for spikes. Well within limits.
  */
 
+import { knownPrice, valueOrNull } from '@/lib/pricing/known-price';
 import { safeRedisGet, safeRedisSet } from '../redis/client';
 import { safeJsonParse } from '../utils/json';
 import { PriceService } from './PriceService';
@@ -200,21 +201,31 @@ export class MoralisService {
       const chains: MoralisChain[] = ['eth', 'polygon', 'arbitrum', 'base', 'bsc'];
       let totalUsd = 0;
       const chainDetails: any[] = [];
+      const unpricedChains: string[] = [];
 
       await Promise.allSettled(chains.map(async (chain) => {
         try {
           const { balance } = await this.getNativeBalance(address, chain);
           const symbol = ({ eth: 'ETH', polygon: 'MATIC', arbitrum: 'ETH', base: 'ETH', bsc: 'BNB', avalanche: 'AVAX', optimism: 'ETH' } as Record<string, string>)[chain] || 'ETH';
           const prices = await PriceService.getBulkPrices([{ symbol, address: '', chainId: 1 }]).catch(() => ({}));
-          const price = (prices as any)[symbol]?.price ?? 0;
-          const usdValue = parseFloat(balance) * price;
-          totalUsd += usdValue;
-          chainDetails.push({ chain, balance, native_balance_formatted: balance, chain_id: chain, usd_value: usdValue.toFixed(2) });
+          // F-09b: no price means the chain's value is unknown, not 0 (lib/pricing/known-price.ts).
+          const usdValue = valueOrNull(parseFloat(balance), knownPrice((prices as any)[symbol]?.price));
+          if (usdValue === null) unpricedChains.push(chain);
+          else totalUsd += usdValue;
+          chainDetails.push({
+            chain, balance, native_balance_formatted: balance, chain_id: chain,
+            usd_value: usdValue === null ? null : usdValue.toFixed(2),
+            native_balance_usd: usdValue === null ? null : usdValue.toFixed(2),
+            networth_usd: usdValue === null ? null : usdValue.toFixed(2),
+            price_status: usdValue === null ? 'unavailable' : 'priced',
+          });
         } catch { /* skip chain if error */ }
       }));
 
       return {
         total_networth_usd: totalUsd.toFixed(2),
+        total_is_partial: unpricedChains.length > 0,
+        unpriced_chains: unpricedChains,
         chains: chainDetails,
       };
     });
@@ -294,12 +305,13 @@ export class MoralisService {
   async getTokenPrice(address: string, chain: MoralisChain) {
     try {
       const prices = await PriceService.getBulkPrices([{ symbol: 'UNK', address, chainId: 1 }]);
-      return { usdPrice: (prices as any)['UNK']?.price || 0 };
-    } catch { return { usdPrice: 0 }; }
+      return { usdPrice: knownPrice((prices as any)['UNK']?.price) };
+    } catch { return { usdPrice: null }; }
   }
 
+  /** No batch price source is wired here: every price is reported unavailable, never 0. */
   async getMultipleTokenPrices(tokens: Array<{ address: string; chain: MoralisChain }>) {
-    return tokens.map(t => ({ tokenAddress: t.address, usdPrice: 0 }));
+    return tokens.map(t => ({ tokenAddress: t.address, usdPrice: null as number | null, priceStatus: 'unavailable' as const }));
   }
 
   getChainName(chainId: number): MoralisChain {
