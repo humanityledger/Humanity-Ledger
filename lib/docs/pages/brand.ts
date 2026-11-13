@@ -7,7 +7,7 @@ export const brand: DocPage = {
   title: "Brand & Design System",
   summary: "The visual identity, typography, color palette, and interface standards governing Humanity Ledger and Ledger Chat.",
   keywords: ["brand", "typography", "design system", "colors", "logo", "identity", "screenshots", "press kit", "aztec logo", "live activities", "dynamic island", "ui guidelines"],
-  updated: "2026-11-12",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",
@@ -23,7 +23,7 @@ export const brand: DocPage = {
         },
         {
           term: "Native Mobile Parity",
-          text: "Mobile experiences must match or exceed the tactile responsiveness of native iOS applications. Interstitial states, haptic feedback triggers, and safe-area boundaries are strictly respected.",
+          text: "Mobile experiences must match or exceed the tactile responsiveness of native iOS applications. Interstitial states, haptic feedback triggers, and safe area boundaries are strictly respected.",
         },
         {
           term: "Zero Custody, Zero Pretense",
@@ -34,14 +34,14 @@ export const brand: DocPage = {
     { t: "h2", text: "Typography system" },
     {
       t: "p",
-      text: "Our typographic hierarchy relies on variable-weight geometric sans-serif typefaces with optical alignment and tabular numerals for cryptographic addresses and balances.",
+      text: "Our typographic hierarchy relies on variable weight geometric sans serif typefaces with optical alignment and tabular numerals for cryptographic addresses and balances.",
     },
     {
       t: "table",
       head: ["Role", "Font Family", "Weight", "Tracking", "Usage"],
       strongFirst: true,
       rows: [
-        ["Display / Headlines", "Inter Display, -apple-system", "600 (Semi-Bold)", "-0.02em", "Landing page headers, sheet titles"],
+        ["Display / Headlines", "Inter Display, -apple-system", "600 (Semibold)", "-0.02em", "Landing page headers, sheet titles"],
         ["Body Text", "Inter, system-ui, sans-serif", "400 (Regular) / 450", "-0.01em", "Documentation, chat bubbles, descriptions"],
         ["Technical / Monospace", "JetBrains Mono, SF Mono, Menlo", "500 (Medium)", "0em", "Addresses (0x...), transaction hashes, proofs, code blocks"],
         ["Financial Figures", "Inter (tabular-nums)", "500 (Medium)", "-0.01em", "Token amounts, invoices, transaction counters"],
@@ -50,18 +50,18 @@ export const brand: DocPage = {
     { t: "h2", text: "Color palette" },
     {
       t: "p",
-      text: "The palette is calibrated for high-contrast accessibility (WCAG AAA for text) in both stark light and sovereign dark modes.",
+      text: "The palette is calibrated for high contrast accessibility (WCAG AAA for text) in both stark light and sovereign dark modes.",
     },
     {
       t: "table",
       head: ["Token Name", "Hex Value", "Role", "Description"],
       strongFirst: true,
       rows: [
-        ["--hl-onyx-primary", "#15171C", "Primary Text / Dark Surface", "Deep soot-black anchoring text and sovereign navigation bars."],
+        ["--hl-onyx-primary", "#15171C", "Primary Text / Dark Surface", "Deep soot black anchoring text and sovereign navigation bars."],
         ["--hl-aztec-violet", "#5200FF", "Cryptographic Accent", "Accent for proofs and verified states. Used sparingly, never for large surfaces."],
-        ["--hl-slate-bg", "#F7F8FA", "Base Canvas (Light)", "Subtle cool-tinted paper background avoiding clinical pure-white fatigue."],
-        ["--hl-border-subtle", "#E4E7EC", "Structural Borders", "Single-pixel delineations separating cards and chat panels."],
-        ["--hl-shield-emerald", "#10B981", "Private State / Success", "Unbroken end-to-end encryption indicator and confirmed proof state."],
+        ["--hl-slate-bg", "#F7F8FA", "Base Canvas (Light)", "Subtle cool tinted paper background avoiding clinical pure white fatigue."],
+        ["--hl-border-subtle", "#E4E7EC", "Structural Borders", "Single pixel delineations separating cards and chat panels."],
+        ["--hl-shield-emerald", "#10B981", "Private State / Success", "Unbroken end to end encryption indicator and confirmed proof state."],
         ["--hl-burn-vermilion", "#FF3B30", "Revocation / Timers", "Destructive actions, revoked payloads, and disappearing message intervals."],
       ],
     },
@@ -268,7 +268,7 @@ export const brand: DocPage = {
     { t: "h2", text: "Mobile interface benchmarks" },
     {
       t: "p",
-      text: "Ledger Chat mobile interfaces are engineered against Signal and Apple Human Interface Guidelines: 44pt minimum touch targets, dynamic bottom safe-area insets, fluid gesture dismissals, and seamless WalletConnect relay handshakes that never lock users out of their active Safari sessions.",
+      text: "Ledger Chat mobile interfaces are engineered against Signal and Apple Human Interface Guidelines: 44pt minimum touch targets, dynamic bottom safe area insets, fluid gesture dismissals, and seamless WalletConnect relay handshakes that never lock users out of their active Safari sessions.",
     },
   ],
 };

@@ -7,7 +7,7 @@ export const architecture: DocPage = {
   title: "Architecture overview",
   summary: "The parts that make up Humanity Ledger, where each one runs, and what each one can see.",
   keywords: ["architecture", "system", "design", "diagram", "stack", "infrastructure", "servers", "components", "trust", "boundary"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",
@@ -84,7 +84,7 @@ export const cryptography: DocPage = {
   title: "Encryption in use",
   summary: "Every cryptographic mechanism in the product, where it applies, and where none applies yet.",
   keywords: ["crypto", "cryptography", "encryption", "keys", "cipher", "mls", "tls", "argon2", "argon2id", "signature", "jwt", "dtls", "srtp", "hmac"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",
@@ -104,7 +104,7 @@ export const cryptography: DocPage = {
         ["Your PIN", "Argon2id ([RFC 9106](https://www.rfc-editor.org/rfc/rfc9106))", "With a salt per account and a secret held only by the server."],
         ["Community invite links", "HMAC-SHA256", "So a link cannot be forged or altered."],
         ["Private payments wallet key", "HKDF-SHA256 over an EIP-712 wallet signature", "Computed in your browser. The derived secret is never sent to our servers."],
-        ["Private payments", "Zero knowledge proofs on Aztec, written in Noir", "Aztec test network only. See [Private payments on Aztec](/docs/zero-knowledge)."],
+        ["Private payments", "Zero knowledge proofs on Aztec, written in Noir", "Aztec Alpha, which settles on Ethereum mainnet, with a cap per payment. The contracts are not audited yet. See [Private payments on Aztec](/docs/zero-knowledge)."],
       ],
     },
     { t: "h2", text: "Where encryption does not apply yet" },
@@ -135,7 +135,7 @@ export const zeroKnowledge: DocPage = {
   label: "Private payments on Aztec",
   summary: "How the private payments wallet works, what it hides, what it does not, and why it runs on a test network.",
   keywords: ["zk", "zero knowledge", "aztec", "shielded", "private payment", "proof", "noir", "notes", "nullifier", "shield", "unshield", "send", "receive", "qr", "testnet", "privacy", "wallet", "escrow", "stream", "agreement"],
-  updated: "2026-11-11",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "hint",
@@ -244,7 +244,7 @@ export const whitepaper: DocPage = {
   title: "The Humanity Ledger platform paper",
   summary: "A technical description of the platform: its design goals, each subsystem, the threat model and the open problems.",
   keywords: ["whitepaper", "paper", "yellow paper", "technical", "specification", "design", "threat model", "research"],
-  updated: "2026-11-11",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "hint",
@@ -282,7 +282,7 @@ export const whitepaper: DocPage = {
     { t: "h3", text: "2.1 Linked devices", id: "linked-devices" },
     {
       t: "p",
-      text: "A computer is used the way WhatsApp Web or Signal Desktop is: it becomes a linked device of the phone that holds the account, and it never receives the wallet. The computer generates an ephemeral P-256 key pair and shows its public key in a QR code that expires after four minutes. The signed-in phone scans it, shows a description of the computer taken from its own request (for example Chrome on macOS) and links nothing until the person confirms. It then encrypts to the computer's key, through ECDH and HKDF-SHA256, a random claim code, a device identifier and a fresh 256-bit channel key. The server keeps only that ciphertext and the SHA-256 of the claim; it mints the computer's session and releases it, in HttpOnly cookies, only to the browser that opened the code and proves it decrypted the claim.",
+      text: "A computer is used the way WhatsApp Web or Signal Desktop is: it becomes a linked device of the phone that holds the account, and it never receives the wallet. The computer generates an ephemeral P-256 key pair and shows its public key in a QR code that expires after four minutes. The signed in phone scans it, shows a description of the computer taken from its own request (for example Chrome on macOS) and links nothing until the person confirms. It then encrypts to the computer's key, through ECDH and HKDF-SHA256, a random claim code, a device identifier and a fresh 256-bit channel key. The server keeps only that ciphertext and the SHA-256 of the claim; it mints the computer's session and releases it, in HttpOnly cookies, only to the browser that opened the code and proves it decrypted the claim.",
     },
     {
       t: "p",
@@ -326,11 +326,11 @@ export const whitepaper: DocPage = {
     { t: "h2", text: "7. Private payments", id: "private-payments" },
     {
       t: "p",
-      text: "The private wallet runs on Aztec Alpha, the Aztec network that settles on Ethereum mainnet, with Aztec's standard token contract and the operator's token HLC. The client derives the secret of a Schnorr account contract from an EIP-712 signature by the user's wallet using HKDF-SHA256, so the same wallet always recovers the same account and the server never holds a spending key. A Private eXecution Environment runs in the browser with encrypted storage, decrypts the user's notes and generates proofs on the device. Before any step that moves value the client re-reads the node's identity (L1 chain, rollup version and address, Fee Juice portal and token) and refuses a node that differs from the pins compiled into the build.",
+      text: "The private wallet runs on Aztec Alpha, the Aztec network that settles on Ethereum mainnet, with Aztec's standard token contract and the operator's token HLC. The client derives the secret of a Schnorr account contract from an EIP-712 signature by the user's wallet using HKDF-SHA256, so the same wallet always recovers the same account and the server never holds a spending key. A Private eXecution Environment runs in the browser with encrypted storage, decrypts the user's notes and generates proofs on the device. Before any step that moves value the client rereads the node's identity (L1 chain, rollup version and address, Fee Juice portal and token) and refuses a node that differs from the pins compiled into the build.",
     },
     {
       t: "p",
-      text: "A payment from a direct message goes only to the Aztec address the peer announced in that conversation with a Schnorr signature by its account key, which the client re-verifies every time value moves. Amounts are capped per token by the operator, and the sender acknowledges that the contracts are unaudited and that the fee payer is public. The transfer calls `transfer_private_to_private`: the amount and the recipient stay private. The receiver's wallet registers every chat contact with a pinned address as a known sender, so the new note is discovered on its next sync without any manual step.",
+      text: "A payment from a direct message goes only to the Aztec address the peer announced in that conversation with a Schnorr signature by its account key, which the client reverifies every time value moves. Amounts are capped per token by the operator, and the sender acknowledges that the contracts are unaudited and that the fee payer is public. The transfer calls `transfer_private_to_private`: the amount and the recipient stay private. The receiver's wallet registers every chat contact with a pinned address as a known sender, so the new note is discovered on its next sync without any manual step.",
     },
     { t: "figure", kind: "private-payment", caption: "Figure 3. A private payment between two people in a direct message." },
     { t: "h3", text: "7.1 Fees", id: "fees" },
@@ -345,7 +345,7 @@ export const whitepaper: DocPage = {
     { t: "h2", text: "8. Ledger Studio", id: "studio" },
     {
       t: "p",
-      text: "Ledger Studio, the AI workspace, runs on open-weight models (GPT-OSS 120B and 20B, Qwen) served by Groq at no cost to users. Conversations are stored on the user's device and sent with each turn; the server keeps none of them. It checks the session, the plan and an allowance counted in tokens, then fits each call to the provider's limit of 8,000 tokens per minute by leaving out the oldest messages first and telling the user. A model that is busy falls back to another. Studio is not end to end encrypted: what is sent to it is processed by the provider.",
+      text: "Ledger Studio, the AI workspace, runs on open weight models (GPT-OSS 120B and 20B, Qwen) served by Groq at no cost to users. Conversations are stored on the user's device and sent with each turn; the server keeps none of them. It checks the session, the plan and an allowance counted in tokens, then fits each call to the provider's limit of 8,000 tokens per minute by leaving out the oldest messages first and telling the user. A model that is busy falls back to another. Studio is not end to end encrypted: what is sent to it is processed by the provider.",
     },
     { t: "figure", kind: "studio-path", caption: "Figure 4. One Studio turn, from the browser to the model and back." },
     { t: "h2", text: "9. Device protection", id: "pin" },
@@ -382,7 +382,7 @@ export const whitepaper: DocPage = {
         "An independent audit of the contracts and a penetration test of the application.",
         "Self hosted call signalling, so that call setup does not depend on a public service.",
         "A private fee payer on Aztec, so that a user's transactions cannot be linked to each other through the public fee payer.",
-        "Post-quantum key exchange for linked devices and messages, for example hybrid ML-KEM, once MLS and the browser support it.",
+        "Post quantum key exchange for linked devices and messages, for example hybrid ML-KEM, once MLS and the browser support it.",
       ],
     },
     { t: "h2", text: "References", id: "references" },
@@ -408,7 +408,7 @@ export const ecosystem: DocPage = {
   title: "Ecosystem and source code",
   summary: "Every part of Humanity Ledger, how ready it is, and where its code lives.",
   keywords: ["open source", "source code", "github", "ecosystem", "components", "status", "public goods", "map"],
-  updated: "2026-11-11",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",
@@ -419,12 +419,12 @@ export const ecosystem: DocPage = {
     {
       t: "cards",
       items: [
-        { title: "Linked devices", text: "QR linking and the end-to-end signing channel between phone and computer.", href: "https://github.com/humanityledger/Humanity-Ledger/blob/main/lib/auth/linkedDevices.ts", icon: "smartphone", external: true },
+        { title: "Linked devices", text: "QR linking and the end to end signing channel between phone and computer.", href: "https://github.com/humanityledger/Humanity-Ledger/blob/main/lib/auth/linkedDevices.ts", icon: "smartphone", external: true },
         { title: "Messaging client", text: "XMTP client, MLS conversations and delivery.", href: "https://github.com/humanityledger/Humanity-Ledger/tree/main/lib/xmtp", icon: "message", external: true },
         { title: "Private wallet", text: "Aztec account, proofs on the device, Fee Juice and network pins.", href: "https://github.com/humanityledger/Humanity-Ledger/tree/main/lib/aztec", icon: "wallet", external: true },
         { title: "Circuits and contracts", text: "Noir circuits and Aztec contracts for agreements, with their verification keys.", href: "https://github.com/humanityledger/Humanity-Ledger/tree/main/circuits", icon: "code", external: true },
         { title: "Ledger Studio", text: "Agent loop, Groq client and token metering.", href: "https://github.com/humanityledger/Humanity-Ledger/tree/main/lib/studio", icon: "server", external: true },
-        { title: "Security tests", text: "Adversarial, invariant and end-to-end protocol tests run on every change.", href: "https://github.com/humanityledger/Humanity-Ledger/tree/main/test", icon: "shield", external: true },
+        { title: "Security tests", text: "Adversarial, invariant and end to end protocol tests run on every change.", href: "https://github.com/humanityledger/Humanity-Ledger/tree/main/test", icon: "shield", external: true },
       ],
     },
     { t: "h2", text: "Licence", id: "licence" },

@@ -913,8 +913,10 @@
 
 .aztecWordmarkLink {
   display: block;
-  /* Clear space. */
+  /* Clear space. The mark sits on the right of the line, after the disclaimer. */
   padding: 12px 0;
+  order: 2;
+  margin-left: auto;
 }
 
 .aztecWordmarkLink img {
@@ -924,6 +926,7 @@
 }
 
 .aztecDisclaimer {
+  order: 1;
   max-width: 400px;
   margin: 0;
   font-size: 12.5px;

@@ -239,9 +239,11 @@ describe('call screen and chat', () => {
   it('plays the other person through ONE always-mounted audio element; every video is muted', () => {
     expect(chat.match(/ref=\{remoteAudioRef\}/g)).toHaveLength(1);
     expect(chat).not.toMatch(/muted=\{false\}/);
-    const remoteVideos = chat.match(/<video\s+ref=\{el => \{ if \(el && el\.srcObject !== (remoteStream|remoteScreen)\)[^>]*>/g) ?? [];
+    const remoteVideos = chat.match(/<video\s+ref=\{el => attachVideo\(el, (remoteStream|remoteScreen)\)\}[^>]*>/g) ?? [];
     expect(remoteVideos.length).toBeGreaterThanOrEqual(3);
     for (const v of remoteVideos) expect(v).toMatch(/\bmuted\b/);
+    // attachVideo mutes again in code, whatever the markup says.
+    expect(chat).toMatch(/function attachVideo\(el: HTMLVideoElement \| null, stream: MediaStream \| null\) \{[\s\S]{0,200}el\.muted = true;/);
   });
 
   it('tunes every offer and answer, and wires every call connection the same way', () => {

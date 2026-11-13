@@ -85,10 +85,6 @@ export function HumanityLanding() {
         <section className={st.hero} aria-labelledby="hero-title">
           <div className={st.heroField} aria-hidden="true" />
           <div className={st.heroInner}>
-            <p className={st.badge}>
-              <span className={st.badgeDot} aria-hidden="true" />
-              Early access
-            </p>
             <h1 id="hero-title" className={st.heroTitle}>
               <span className={st.heroLine}>Talk freely.</span>
               <span className={`${st.heroLine} ${st.heroLine2}`}>

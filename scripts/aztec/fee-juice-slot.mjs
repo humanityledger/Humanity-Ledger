@@ -18,6 +18,19 @@ import { AztecAddress } from '@aztec-labs/aztec.js/addresses';
 import { Fr } from '@aztec-labs/aztec.js/fields';
 import { getFeeJuiceBalance } from '@aztec-labs/aztec.js/utils';
 
+/**
+ * AztecAddress from the subpath export, or, where a test runner loads that subpath through its
+ * CommonJS build (vitest did: "AztecAddress.fromString is not a function"), from the package root
+ * or stdlib. Same class in every case; only how the module is resolved differs.
+ */
+async function toAztecAddress(owner) {
+  const candidates = [AztecAddress, AztecAddress?.default, AztecAddress?.AztecAddress];
+  try { candidates.push((await import('@aztec-labs/aztec.js')).AztecAddress); } catch {}
+  try { candidates.push((await import('@aztec-labs/stdlib/aztec-address')).AztecAddress); } catch {}
+  for (const C of candidates) if (C && typeof C.fromString === 'function') return C.fromString(owner);
+  throw new Error('AztecAddress.fromString is not available from @aztec-labs/aztec.js');
+}
+
 export async function captureFeeJuiceRead(owner) {
   const calls = [];
   const node = new Proxy(
@@ -30,7 +43,7 @@ export async function captureFeeJuiceRead(owner) {
       },
     },
   );
-  await getFeeJuiceBalance(AztecAddress.fromString(owner), node);
+  await getFeeJuiceBalance(await toAztecAddress(owner), node);
   const read = calls.find((c) => c.method === 'getPublicStorageAt');
   if (!read || calls.length !== 1) throw new Error(`expected one getPublicStorageAt call, got ${calls.map((c) => c.method).join(', ')}`);
   const [block, contract, slot] = read.args;

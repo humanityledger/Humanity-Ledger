@@ -38,8 +38,11 @@ describe('/connect never redirects on local hints alone', () => {
     expect(src).toMatch(/if \(!hasCookie && !hasLocal\) return;[\s\S]{0,600}await hasServerSession\(\)[\s\S]{0,300}clearLocalSessionMarkers\(\)/);
     expect(src).not.toMatch(/if \(hasCookie \|\| hasLocal\) \{\s*setLinked\(true\);/);
   });
-  it('starts no WalletConnect pairing of its own on a phone browser (AppKit does)', () => {
-    expect(src).not.toMatch(/display_uri/);
+  it('runs one WalletConnect pairing at a time on a phone browser', () => {
+    // A named wallet button starts its own pairing (to open that wallet from the tap); the AppKit
+    // sheet ("Other wallets") drops it first, so two pairings never compete for one wallet.
+    expect(src).toMatch(/wcPairingCleanupRef\.current\?\.\(\);\s*setPendingWallet\(\{ id: w\.id/);
+    expect(src).toMatch(/if \(wcPairingCleanupRef\.current\) \{\s*wcPairingCleanupRef\.current\(\);[\s\S]{0,120}openAppKitSafe\(\);/);
     expect(src).not.toMatch(/connect\(\{ connector: wcConnector \}\)/);
   });
 });
