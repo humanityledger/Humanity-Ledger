@@ -1,3 +1,4 @@
+import { providerKey } from '@/lib/server/provider-keys';
 
 export interface NewsArticle {
     id: string;
@@ -17,7 +18,7 @@ export interface NewsArticle {
 export class NewsDataService {
     private static readonly BASE_URL = "https://newsdata.io/api/1/news";
     // Check all possible variable names the user might have set
-    private static readonly API_KEY = process.env.NEWSDATA_API_KEY || process.env.NEXT_PUBLIC_NEWS_API_KEY || process.env.NEWS_API_KEY;
+    private static readonly API_KEY = process.env.NEWSDATA_API_KEY || providerKey('NEWS_API_KEY');
 
     // CONSTANTS
     private static readonly TARGET_LIMIT = 50;

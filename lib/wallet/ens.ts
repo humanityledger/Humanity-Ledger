@@ -1,8 +1,9 @@
+import { providerKey } from '@/lib/server/provider-keys';
 import { createPublicClient, http } from 'viem';
 import { mainnet } from 'viem/chains';
 import { normalize } from 'viem/ens';
 
-const apiKey = process.env.NEXT_PUBLIC_ALCHEMY_ID || process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || process.env.ALCHEMY_API_KEY;
+const apiKey = providerKey('ALCHEMY_API_KEY');
 
 const publicClient = createPublicClient({
   chain: mainnet,

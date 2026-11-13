@@ -1,3 +1,4 @@
+import { providerKey } from '@/lib/server/provider-keys';
 import { safeJsonParse } from '../utils/json';
 import { alchemyClient } from '../wallet/alchemy-client';
 import { getBulkPricesWithChange, STEEL_DOME_FALLBACKS } from '../priceHelper';
@@ -114,7 +115,7 @@ export class PriceService {
   }
 
   private static getApiKey(): string {
-    return process.env.NEXT_PUBLIC_COINGECKO_KEY || process.env.COINGECKO_KEY || '';
+    return providerKey('COINGECKO_KEY') || '';
   }
 
   private static async fetchCoinGeckoMarkets() {

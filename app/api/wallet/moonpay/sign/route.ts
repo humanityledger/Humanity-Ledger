@@ -47,10 +47,13 @@ export async function POST(req: NextRequest) {
     const queryString = `?${params.toString()}`;
     const urlToSign = `${baseUrl}${queryString}`;
 
-    // If no secret key, return the unsigned URL (works in sandbox mode without signature)
+    // Fail closed: a live key needs a signed URL, or the wallet address in it could be swapped.
+    // Only the sandbox accepts an unsigned URL.
     if (!secretKey) {
-      console.warn('[MoonPay] No MOONPAY_SECRET_KEY configured — returning unsigned URL (sandbox only).');
-      return NextResponse.json({ url: urlToSign, sandbox: isSandbox });
+      if (!isSandbox) {
+        return NextResponse.json({ error: 'MoonPay signing is not configured (MOONPAY_SECRET_KEY).' }, { status: 503 });
+      }
+      return NextResponse.json({ url: urlToSign, sandbox: true });
     }
 
     // HMAC SHA256 — MoonPay signs only the query string portion (including the leading '?')
@@ -64,6 +67,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: signedUrl, sandbox: isSandbox });
   } catch (error: any) {
     console.error('[MoonPay API] Signature generation failed:', error);
-    return NextResponse.json({ error: 'Signature generation failed: ' + error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Signature generation failed.' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@
  * Gas Optimization Service (EIP-1559)
  * Provides gas estimation with slow/normal/fast options
  */
+import { providerKey } from '@/lib/server/provider-keys';
 
 import { getChainById } from '@/lib/chains';
 
@@ -142,11 +143,11 @@ async function getPriorityFees(chainId: number): Promise<{
  */
 export function getRPCUrl(chainId: number): string {
   const rpcUrls: Record<number, string> = {
-    1: `https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
-    137: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+    1: `https://eth-mainnet.g.alchemy.com/v2/${providerKey('ALCHEMY_API_KEY')}`,
+    137: `https://polygon-mainnet.g.alchemy.com/v2/${providerKey('ALCHEMY_API_KEY')}`,
     8453: 'https://mainnet.base.org',
-    42161: `https://arb-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
-    10: `https://opt-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+    42161: `https://arb-mainnet.g.alchemy.com/v2/${providerKey('ALCHEMY_API_KEY')}`,
+    10: `https://opt-mainnet.g.alchemy.com/v2/${providerKey('ALCHEMY_API_KEY')}`,
   };
   return rpcUrls[chainId] || rpcUrls[1];
 }

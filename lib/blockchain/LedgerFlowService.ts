@@ -1,3 +1,4 @@
+import { providerKey } from '@/lib/server/provider-keys';
 /**
  * LedgerFlowService.ts
  * Real-time on-chain ledger transaction monitoring via Alchemy Asset Transfers API.
@@ -9,7 +10,7 @@
 
 import { Alchemy, Network, AssetTransfersCategory, SortingOrder } from 'alchemy-sdk';
 
-const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY || process.env.NEXT_PUBLIC_ALCHEMY_ID || '';
+const ALCHEMY_KEY = providerKey('ALCHEMY_API_KEY') || '';
 
 // Labelled known sovereign wallets
 const KNOWN_WALLETS: Record<string, string> = {

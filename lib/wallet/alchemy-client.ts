@@ -1,3 +1,4 @@
+import { providerKey } from '@/lib/server/provider-keys';
 import { LRUCache } from 'lru-cache';
 
 /**
@@ -6,7 +7,7 @@ import { LRUCache } from 'lru-cache';
  */
 class AlchemyClient {
   private get apiKey(): string {
-    return process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || process.env.ALCHEMY_API_KEY || '';
+    return providerKey('ALCHEMY_API_KEY') || '';
   }
 
   private metadataCache = new LRUCache<string, any>({

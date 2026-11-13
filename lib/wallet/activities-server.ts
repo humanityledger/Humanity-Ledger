@@ -2,6 +2,7 @@
  * Enriched History Service
  * Fetch real on-chain transactions across multiple chains using Alchemy
  */
+import { providerKey } from '@/lib/server/provider-keys';
 
 import { matchNewsToMarket } from '@/lib/utils/news-matcher';
 
@@ -62,7 +63,7 @@ async function safeAlchemyFetch(url: string, body: any) {
 }
 
 async function fetchAlchemyTransfers(address: string, chainId: number): Promise<AlchemyTransfer[]> {
-  const apiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
+  const apiKey = providerKey('ALCHEMY_API_KEY');
   const networkMap: Record<number, string> = {
     1: 'eth-mainnet',
     10: 'opt-mainnet',
