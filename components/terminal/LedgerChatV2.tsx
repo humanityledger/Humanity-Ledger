@@ -2,6 +2,7 @@
 "use client";
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { parseValueHandoff, VALUE_HANDOFF_EVENT, type ValueHandoff } from '@/lib/chat/value-handoff';
 import { createPortal } from 'react-dom';
 import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Smile, Paperclip, BarChart2, Wallet, Flame, Heart, Image as ImageIcon, Map as MapIcon, Bot } from 'lucide-react';
@@ -6037,9 +6038,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }}>
       {/* ── Rail: the app's sections on wide screens (phones keep the tab bar) ── */}
       <nav aria-label="Ledger Chat" className="hidden md:flex w-[76px] shrink-0 flex-col items-center gap-1.5 border-r border-black/[0.08] bg-white py-5">
-        <a href="/" aria-label="Humanity Ledger home" className="mb-4 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]">
+        <Link href="/" aria-label="Humanity Ledger home" className="mb-4 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]">
           <HLLogo variant="mark" size={40} />
-        </a>
+        </Link>
         {([
           { id: 'chats', label: 'Chats', icon: <MessageSquare size={21} strokeWidth={1.8} />, badge: conversations.reduce((n, c) => n + (c.unreadCount || 0), 0) },
           { id: 'calls', label: 'Calls', icon: <Phone size={21} strokeWidth={1.8} />, badge: 0 },
