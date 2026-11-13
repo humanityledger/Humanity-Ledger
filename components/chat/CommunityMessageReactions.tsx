@@ -101,10 +101,10 @@ export function MessageReactionBar({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => toggleReaction(r.emoji)}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[12px] transition-all active:scale-90 ${
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[12px] transition-colors ${
               r.mine
                 ? 'bg-[#2754d6]/10 border-[#2754d6]/40 text-[#2754d6]'
-                : 'bg-white border-black/10 text-[#1C1C1E] hover:bg-[#F2F2F7]'
+                : 'bg-white border-[#E4E7EC] text-[#1C1C1E] hover:bg-[#F2F2F7]'
             } ${loading === r.emoji ? 'opacity-50' : ''}`}
           >
             <span>{r.emoji}</span>
@@ -178,22 +178,22 @@ export function PinnedMessagesPanel({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9990] bg-black/40 backdrop-blur-sm flex items-center justify-end"
+      className="fixed inset-0 z-[9990] bg-black/40 flex items-center justify-end"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
-        transition={{ type: 'spring', stiffness: 340, damping: 34 }}
-        className="h-full w-full max-w-[380px] bg-white flex flex-col shadow-2xl"
+        transition={{ duration: 0.15, ease: 'easeOut' }}
+        className="h-full w-full max-w-[380px] bg-white flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="h-[64px] px-5 border-b border-black/5 flex items-center justify-between shrink-0">
+        <div className="h-[64px] px-5 border-b border-[#E4E7EC] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
-              <Pin size={18} className="text-amber-500" />
+            <div className="w-9 h-9 rounded-xl bg-[#F2F4F7] flex items-center justify-center">
+              <Pin size={18} strokeWidth={1.5} className="text-[#15171C]" />
             </div>
             <div>
               <p className="text-[15px] font-bold text-[#1C1C1E]">Pinned Messages</p>
@@ -208,14 +208,10 @@ export function PinnedMessagesPanel({
         {/* Content */}
         <div className="flex-1 overflow-y-auto py-3">
           {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="w-7 h-7 border-2 border-[#2754d6] border-t-transparent rounded-full animate-spin" />
-            </div>
+            <p className="py-16 text-center text-[13px] text-[#727A88]" role="status">Loading…</p>
           ) : pins.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center px-8">
-              <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center mb-4">
-                <Pin size={28} className="text-amber-400" />
-              </div>
+              <Pin size={20} strokeWidth={1.5} className="text-[#A3A9B4] mb-3" />
               <p className="text-[15px] font-bold text-[#1C1C1E]">No pinned messages</p>
               <p className="text-[13px] text-black/40 mt-1">Right-click any message to pin it</p>
             </div>
@@ -227,10 +223,10 @@ export function PinnedMessagesPanel({
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  className="bg-[#FAFAFA] rounded-2xl p-4 border border-black/5 group relative"
+                  className="bg-[#FAFAFA] rounded-2xl p-4 border border-[#E4E7EC] group relative"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#2754d6]/15 flex items-center justify-center text-[10px] font-black text-[#2754d6] shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-[#2754d6]/15 flex items-center justify-center text-[10px] font-semibold text-[#2754d6] shrink-0">
                       {(pin.authorAddress || '??').slice(2, 4).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -243,7 +239,7 @@ export function PinnedMessagesPanel({
                       <p className="text-[13px] text-[#1C1C1E] leading-relaxed line-clamp-3">{preview(pin.content)}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-3 pt-2 border-t border-black/5">
+                  <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[#E4E7EC]">
                     <button
                       onClick={() => { onJumpTo(pin.id); onClose(); }}
                       className="flex items-center gap-1.5 text-[12px] font-bold text-[#2754d6] hover:text-[#128C7E] transition-colors"
@@ -378,18 +374,18 @@ export function MessageSearchPanel({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9990] bg-black/40 backdrop-blur-sm flex flex-col items-center justify-start pt-12 px-4"
+      className="fixed inset-0 z-[9990] bg-black/40 flex flex-col items-center justify-start pt-12 px-4"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
         initial={{ scale: 0.94, opacity: 0, y: -20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.94, opacity: 0 }}
-        className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+        className="w-full max-w-lg bg-white rounded-2xl overflow-hidden flex flex-col max-h-[80vh]"
         onClick={e => e.stopPropagation()}
       >
         {/* Search header */}
-        <div className="px-4 py-3 border-b border-black/5 flex items-center gap-3">
+        <div className="px-4 py-3 border-b border-[#E4E7EC] flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center text-black/40">
             <Search size={16} />
           </div>
@@ -413,9 +409,7 @@ export function MessageSearchPanel({
         {/* Results */}
         <div className="flex-1 overflow-y-auto">
           {loading && (
-            <div className="flex items-center justify-center py-10">
-              <div className="w-6 h-6 border-2 border-[#2754d6] border-t-transparent rounded-full animate-spin" />
-            </div>
+            <p className="py-10 text-center text-[13px] text-[#727A88]" role="status">Searching…</p>
           )}
           {!loading && searched && results.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -433,9 +427,9 @@ export function MessageSearchPanel({
                 <button
                   key={msg.id}
                   onClick={() => { onSelect(msg); onClose(); }}
-                  className="w-full px-4 py-3 flex items-start gap-3 hover:bg-[#F2F2F7] transition-colors text-left border-b border-black/[0.04] last:border-0"
+                  className="w-full px-4 py-3 flex items-start gap-3 hover:bg-[#F2F2F7] transition-colors text-left border-b border-[#E4E7EC] last:border-0"
                 >
-                  <div className="w-8 h-8 rounded-full bg-[#2754d6]/15 flex items-center justify-center text-[10px] font-black text-[#2754d6] shrink-0 mt-0.5">
+                  <div className="w-8 h-8 rounded-full bg-[#2754d6]/15 flex items-center justify-center text-[10px] font-semibold text-[#2754d6] shrink-0 mt-0.5">
                     {(msg.authorAddress || '??').slice(2, 4).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">

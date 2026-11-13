@@ -17,9 +17,8 @@ export default function CommunityRedirectPage() {
   }, [params, router]);
 
   return (
-    <div className="min-h-screen bg-[#F6F7F9] flex flex-col items-center justify-center gap-4">
-      <div className="w-10 h-10 border-4 border-black/10 border-t-[#25D366] rounded-full animate-spin"></div>
-      <p className="text-[13px] font-bold text-black/50 uppercase tracking-widest">Opening Community...</p>
+    <div className="min-h-screen bg-[#F7F8FA] flex items-center justify-center">
+      <p className="text-[13px] text-[#727A88]" role="status">Opening community…</p>
     </div>
   );
 }

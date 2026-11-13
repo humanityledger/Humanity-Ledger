@@ -228,7 +228,7 @@ export function AppFrame({ communityId, appId, version, title, onRuntimeError, o
           />
           {!loaded && (
             <div className="absolute inset-0 flex items-center justify-center bg-[var(--hl-bg)]" aria-hidden>
-              <div className="w-5 h-5 rounded-full border-2 border-[var(--hl-border)] border-t-[var(--hl-ink)] animate-spin motion-reduce:animate-none" />
+              <span className="text-[13px] text-[var(--hl-ink-3)]">Loading…</span>
             </div>
           )}
         </>

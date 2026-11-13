@@ -3,7 +3,7 @@ import React, {
   useState, useEffect, useRef, useCallback, useMemo
 } from 'react';
 import dynamic from 'next/dynamic';
-import { Send, Plus, MapPin, CircleDollarSign, BarChart2, Image as ImgIcon, Mic, Hash, CheckCircle, X, Reply, Play, Pause, Pin, Search, Users, ChevronDown, Film, MoreVertical, Copy, Trash2, ThumbsUp, Heart, Laugh, AlertCircle, Lock, Volume2, Globe, Shield, ExternalLink, Check } from 'lucide-react';
+import { Send, Plus, MapPin, CircleDollarSign, BarChart2, Image as ImgIcon, Mic, Hash, CheckCircle, X, Reply, Play, Pause, Pin, Search, Users, ChevronDown, Film, MoreVertical, Copy, Trash2, ThumbsUp, Heart, Laugh, AlertCircle, Lock, Volume2, Globe, Shield, ExternalLink, Check, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { NativeCryptoSendModal } from './NativeCryptoSendModal';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
@@ -180,7 +180,7 @@ function VoiceRecorder({ onSend, onCancel }: { onSend: (b64: string) => void; on
   };
 
   return (
-    <div className="flex-1 flex items-center justify-between gap-3 px-3 py-1 bg-white rounded-lg border border-black/[0.04] shadow-sm min-h-[42px]">
+    <div className="flex-1 flex items-center justify-between gap-3 px-3 py-1 bg-white rounded-lg border border-[#E4E7EC] min-h-[42px]">
       <div className="flex items-center gap-2.5">
         <button
           type="button"
@@ -190,7 +190,7 @@ function VoiceRecorder({ onSend, onCancel }: { onSend: (b64: string) => void; on
         >
           <Trash2 size={18} />
         </button>
-        <div className="w-2.5 h-2.5 rounded-full bg-[#ea4335] animate-pulse" />
+        <div className="w-2.5 h-2.5 rounded-full bg-[#ea4335]" />
         <span className="text-[14px] font-mono font-bold text-[#111b21]">{fmt2(secs)}</span>
       </div>
 
@@ -201,7 +201,7 @@ function VoiceRecorder({ onSend, onCancel }: { onSend: (b64: string) => void; on
           return (
             <div
               key={idx}
-              className="w-1 bg-[#1C1C1E] rounded-full transition-all duration-75"
+              className="w-1 bg-[#1C1C1E] rounded-full transition-colors duration-75"
               style={{ height: `${mod}%` }}
             />
           );
@@ -211,7 +211,7 @@ function VoiceRecorder({ onSend, onCancel }: { onSend: (b64: string) => void; on
       <button
         type="button"
         onClick={handleFinish}
-        className="w-9 h-9 bg-[#1C1C1E] text-white rounded-full flex items-center justify-center shadow hover:bg-black active:scale-95 transition-all shrink-0"
+        className="w-9 h-9 bg-[#1C1C1E] text-white rounded-full flex items-center justify-center shadow hover:bg-black transition-colors shrink-0"
         title="Send voice note"
       >
         <Send size={15} className="-ml-0.5" />
@@ -283,7 +283,7 @@ function AudioPlayer({ src, mine }: { src: string; mine: boolean }) {
       <button
         type="button"
         onClick={toggle}
-        className="w-9 h-9 rounded-full bg-[#1C1C1E] text-white flex items-center justify-center shrink-0 transition-transform active:scale-90 shadow-sm hover:bg-black"
+        className="w-9 h-9 rounded-full bg-[#1C1C1E] text-white flex items-center justify-center shrink-0 transition-transform hover:bg-black"
       >
         {playing ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
       </button>
@@ -339,10 +339,10 @@ function PollBubble({ content, mine }: { content: string; mine: boolean }) {
             <button
               key={i}
               onClick={() => { setVoted(i); setVotes(prev => prev.map((v, j) => j === i ? v + 1 : v)); }}
-              className={`relative w-full text-left text-[12px] font-semibold px-3 py-2 rounded-xl overflow-hidden transition-all ${isVoted ? 'text-[#1C1C1E] font-bold' : 'text-[#1C1C1E]/70'}`}
+              className={`relative w-full text-left text-[12px] font-semibold px-3 py-2 rounded-xl overflow-hidden transition-colors ${isVoted ? 'text-[#1C1C1E] font-bold' : 'text-[#1C1C1E]/70'}`}
             >
               <div
-                className={`absolute inset-y-0 left-0 rounded-xl transition-all ${isVoted ? 'bg-black/10' : 'bg-black/5'}`}
+                className={`absolute inset-y-0 left-0 rounded-xl transition-colors ${isVoted ? 'bg-black/10' : 'bg-black/5'}`}
                 style={{ width: `${voted !== null ? pct : 0}%` }}
               />
               <div className="relative flex justify-between">
@@ -364,12 +364,12 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     try {
       const d = JSON.parse(content.replace('__PAYMENT__::', ''));
       return (
-        <div className={`flex items-center gap-3 rounded-2xl px-4 py-3 min-w-[220px] ${mine ? 'bg-white/15 border border-white/20' : 'bg-black/5 border border-black/10'}`}>
+        <div className={`flex items-center gap-3 rounded-2xl px-4 py-3 min-w-[220px] ${mine ? 'bg-white/15 border border-white/20' : 'bg-black/5 border border-[#E4E7EC]'}`}>
           <div className="w-9 h-9 rounded-full bg-black/10 flex items-center justify-center shrink-0">
             <CircleDollarSign size={18} className="text-[#1C1C1E]" />
           </div>
           <div>
-            <p className={`text-[13px] font-black ${mine ? 'text-white' : 'text-[#1C1C1E]'}`}>{d.amount} {d.token}</p>
+            <p className={`text-[13px] font-semibold ${mine ? 'text-white' : 'text-[#1C1C1E]'}`}>{d.amount} {d.token}</p>
             <a href={`https://etherscan.io/tx/${d.txHash}`} target="_blank" rel="noopener noreferrer"
               className="text-[11px] text-[#1C1C1E] font-medium hover:underline">View on Etherscan ↗</a>
           </div>
@@ -397,7 +397,7 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     if (sep !== -1) {
       const mime = rest.substring(0, sep);
       const data = rest.substring(sep + 4);
-      if (mime.startsWith('image/')) return <img src={data} alt="attachment" className="max-w-[260px] rounded-xl border border-black/5" loading="lazy" />;
+      if (mime.startsWith('image/')) return <img src={data} alt="attachment" className="max-w-[260px] rounded-xl border border-[#E4E7EC]" loading="lazy" />;
       if (mime.startsWith('video/')) return <video src={data} controls className="max-w-[260px] rounded-xl" />;
     }
   }
@@ -410,15 +410,15 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     const payment = parseZkPaymentPayload(content);
     if (payment) {
       return (
-        <div className="min-w-[240px] max-w-[280px] p-3 rounded-2xl bg-[#1C1C1E] text-white shadow-md border border-black/10 my-1">
+        <div className="min-w-[240px] max-w-[280px] p-3 rounded-2xl bg-[#1C1C1E] text-white border border-[#E4E7EC] my-1">
           <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/10">
             <div className="flex items-center gap-1.5">
-              <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center shadow-sm">
+              <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center">
                 <Lock size={13} className="text-white" />
               </div>
               <span className="text-[12px] font-bold text-white tracking-tight">zk.money</span>
             </div>
-            <span className="text-[9px] font-black uppercase tracking-wider bg-white/10 text-white/90 px-2 py-0.5 rounded-full border border-white/15">
+            <span className="text-[9px] font-semibold uppercase tracking-wider bg-white/10 text-white/90 px-2 py-0.5 rounded-full border border-white/15">
               Shielded Note
             </span>
           </div>
@@ -472,16 +472,16 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     const tip = parseTipPayload(content);
     if (tip) {
       return (
-        <div className="min-w-[220px] max-w-[280px] p-3 rounded-2xl bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] text-white shadow-md border border-black/10 my-1 space-y-1.5">
+        <div className="min-w-[220px] max-w-[280px] p-3 rounded-2xl bg-white text-[#15171C] border border-[#E4E7EC] my-1 space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#1C1C1E]">Shielded Tip</span>
-            <span className="text-[9px] font-mono text-white/50 bg-white/10 px-1.5 py-0.5 rounded-full">Aztec</span>
+            <span className="text-[12px] font-medium text-[#727A88]">Tip</span>
+            <span className="text-[11px] text-[#727A88]">Not verified on-chain</span>
           </div>
-          <div className="text-[20px] font-black text-white">
-            +{tip.amount} <span className="text-[13px] text-[#1C1C1E]">zk{tip.token}</span>
+          <div className="text-[18px] font-semibold tabular-nums">
+            +{tip.amount} <span className="text-[13px] font-medium text-[#475061]">{tip.token}</span>
           </div>
-          <div className="text-[11px] text-white/70 font-mono">{tip.senderTag} → {tip.recipientTag}</div>
-          {tip.message && <div className="text-[11px] italic text-white/80 bg-white/5 p-2 rounded-xl">"{tip.message}"</div>}
+          <div className="text-[12px] text-[#727A88] font-mono truncate">{tip.senderTag} → {tip.recipientTag}</div>
+          {tip.message && <div className="text-[13px] text-[#475061] bg-[#F7F8FA] p-2 rounded-xl">{tip.message}</div>}
         </div>
       );
     }
@@ -491,7 +491,7 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     const bounty = parseBountyPayload(content);
     if (bounty) {
       return (
-        <div className="min-w-[240px] max-w-[300px] p-3.5 rounded-2xl bg-white border border-black/10 shadow-sm my-1 space-y-2">
+        <div className="min-w-[240px] max-w-[300px] p-3.5 rounded-2xl bg-white border border-[#E4E7EC] my-1 space-y-2">
           <div className="flex justify-between items-start">
             <div>
               <span className="text-[9px] font-bold uppercase tracking-wider bg-black/5 text-[#1C1C1E] px-2 py-0.5 rounded-full">
@@ -499,7 +499,7 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
               </span>
               <h4 className="font-bold text-gray-900 text-[13px] mt-1">{bounty.title}</h4>
             </div>
-            <div className="text-right font-black text-[#1C1C1E] text-[15px]">
+            <div className="text-right font-semibold text-[#1C1C1E] text-[15px]">
               {bounty.reward} <span className="text-[10px] text-gray-400">zk{bounty.token}</span>
             </div>
           </div>
@@ -805,7 +805,7 @@ export function CommunityChatView({
     <div className="relative flex-1 flex flex-col w-full bg-[#efeae2] overflow-hidden min-h-0">
 
       {/* ── CHANNEL HEADER ── */}
-      <div className="px-4 py-2.5 bg-white border-b border-black/[0.06] flex items-center gap-2 shrink-0 sticky top-0 z-20">
+      <div className="px-4 py-2.5 bg-white border-b border-[#E4E7EC] flex items-center gap-2 shrink-0 sticky top-0 z-20">
         <Hash size={14} className="text-black/30 shrink-0" />
         <span className="text-[13px] font-bold text-[#1C1C1E]/70 flex-1 min-w-0 truncate">
           {communityName || 'Channel'}
@@ -831,7 +831,7 @@ export function CommunityChatView({
       <AnimatePresence>
         {showSearch && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden bg-white border-b border-black/[0.06] shrink-0">
+            className="overflow-hidden bg-white border-b border-[#E4E7EC] shrink-0">
             <div className="px-4 py-2 flex items-center gap-2">
               <Search size={14} className="text-black/30 shrink-0" />
               <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
@@ -850,13 +850,13 @@ export function CommunityChatView({
         {pinnedMsgs.length > 0 && showPinnedBanner && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden shrink-0">
-            <div className="bg-amber-50 border-b border-amber-100 px-4 py-2 flex items-center gap-2">
-              <Pin size={12} className="text-amber-600 shrink-0" />
-              <span className="text-[11px] font-bold text-amber-700 flex-1 truncate">
+            <div className="bg-[#F7F8FA] border-b border-[#E4E7EC] px-4 py-2 flex items-center gap-2">
+              <Pin size={12} strokeWidth={1.75} className="text-[#475061] shrink-0" />
+              <span className="text-[12px] font-medium text-[#15171C] flex-1 truncate">
                 {pinnedMsgs[0]?.content?.slice(0,50)}…
               </span>
               <button onClick={() => setShowPinnedBanner(false)}
-                className="text-amber-400 hover:text-amber-600 ml-1 shrink-0">
+                className="text-[#727A88] hover:text-[#15171C] ml-1 shrink-0">
                 <X size={11}/>
               </button>
             </div>
@@ -876,7 +876,7 @@ export function CommunityChatView({
           {/* Empty state */}
           {displayMessages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="w-16 h-16 rounded-full bg-black/5 flex items-center justify-center mb-4 shadow-sm">
+              <div className="w-16 h-16 rounded-full bg-black/5 flex items-center justify-center mb-4">
                 <Send size={24} className="text-[#1C1C1E]" />
               </div>
               <p className="text-[16px] font-bold text-[#111b21]">
@@ -921,7 +921,7 @@ export function CommunityChatView({
                       .replace(/^system\.\.\.\s*/i, '');
                     return (
                       <div key={msg.id} className="w-full flex justify-center py-1.5 my-1">
-                        <span className="text-[11px] font-medium text-[#54656f] bg-white/90 backdrop-blur-sm shadow-sm rounded-full px-3.5 py-1 border border-black/[0.05] select-text">
+                        <span className="text-[11px] font-medium text-[#54656f] bg-white rounded-full px-3.5 py-1 border border-[#E4E7EC] select-text">
                           {displayTxt}
                         </span>
                       </div>
@@ -940,7 +940,7 @@ export function CommunityChatView({
                       {/* Avatar — only show for first message in group */}
                       <div className={`w-7 shrink-0 ${me ? 'hidden' : ''}`}>
                         {isFirst ? (
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-black shadow-sm"
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-semibold"
                             style={{ background: avatarColor(msg.authorAddress || '0x00') }}>
                             {(msg.authorAddress || '??').slice(2,4).toUpperCase()}
                           </div>
@@ -959,7 +959,7 @@ export function CommunityChatView({
 
                         <div className="relative">
                           {/* Bubble (WhatsApp Desktop Parity) */}
-                          <div className={`relative px-3.5 py-2 select-text shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] border border-black/[0.03]
+                          <div className={`relative px-3.5 py-2 select-text shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] border border-[#E4E7EC]
                             ${me
                               ? `bg-[#d9fdd3] text-[#111b21] ${msg.isOptimistic ? 'opacity-70' : ''}`
                               : 'bg-white text-[#111b21]'
@@ -977,7 +977,7 @@ export function CommunityChatView({
                                 {new Date(msg.createdAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}
                               </span>
                               {me && msg.isOptimistic && (
-                                <div className="w-2.5 h-2.5 border-[1.5px] border-black/30 border-t-[#1C1C1E] rounded-full animate-spin" />
+                                <Clock size={11} strokeWidth={1.75} className="text-[#667781]" aria-label="Sending" />
                               )}
                               {me && !msg.isOptimistic && (
                                 /* Posted to the server. Community posts have no read receipts,
@@ -990,11 +990,11 @@ export function CommunityChatView({
                           {/* Hover actions */}
                           <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ${me ? '-left-12' : '-right-12'}`}>
                             <button onClick={() => setReplyTo(msg)}
-                              className="w-6 h-6 rounded-full bg-white shadow border border-black/8 flex items-center justify-center text-black/40 hover:text-black/70 transition-colors">
+                              className="w-6 h-6 rounded-full bg-white shadow border border-[#E4E7EC] flex items-center justify-center text-black/40 hover:text-black/70 transition-colors">
                               <Reply size={11}/>
                             </button>
                             <button onClick={() => setContextMenu({ msg, x: 0, y: 0 })}
-                              className="w-6 h-6 rounded-full bg-white shadow border border-black/8 flex items-center justify-center text-black/40 hover:text-black/70 transition-colors">
+                              className="w-6 h-6 rounded-full bg-white shadow border border-[#E4E7EC] flex items-center justify-center text-black/40 hover:text-black/70 transition-colors">
                               <MoreVertical size={11}/>
                             </button>
                           </div>
@@ -1005,7 +1005,7 @@ export function CommunityChatView({
                           <div className={`flex flex-wrap gap-1 mt-1 ${me ? 'justify-end' : 'justify-start'}`}>
                             {Object.entries(myReactions).filter(([,on]) => on).map(([emoji]) => (
                               <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
-                                className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/5 border border-black/10 text-[11px] font-semibold text-[#1C1C1E] hover:bg-black/10 transition-colors active:scale-95">
+                                className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/5 border border-[#E4E7EC] text-[11px] font-semibold text-[#1C1C1E] hover:bg-black/10 transition-colors">
                                 <span>{emoji}</span>
                                 <span className="text-[#1C1C1E]">1</span>
                               </button>
@@ -1031,9 +1031,9 @@ export function CommunityChatView({
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
             className="absolute bottom-[80px] right-4 z-20 flex items-center gap-2">
             <button onClick={() => scrollToBottom(true)}
-              className="flex items-center gap-1.5 bg-white shadow-lg border border-black/8 rounded-full pl-3 pr-2.5 py-1.5 text-[12px] font-bold text-[#1C1C1E] hover:bg-[#1C1C1E] hover:text-white hover:border-transparent transition-all">
+              className="flex items-center gap-1.5 bg-white border border-[#E4E7EC] rounded-full pl-3 pr-2.5 py-1.5 text-[12px] font-bold text-[#1C1C1E] hover:bg-[#1C1C1E] hover:text-white hover:border-transparent transition-colors">
               {unreadCount > 0 && (
-                <span className="bg-[#1C1C1E] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none -ml-1 mr-0.5">
+                <span className="bg-[#1C1C1E] text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none -ml-1 mr-0.5">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -1067,7 +1067,7 @@ export function CommunityChatView({
                 const i = items.indexOf(document.activeElement as HTMLElement);
                 items[e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length]?.focus();
               }}
-              className="bg-white/98 backdrop-blur-xl rounded-2xl shadow-2xl border border-black/8 py-1.5 w-56 overflow-hidden">
+              className="bg-white rounded-2xl border border-[#E4E7EC] py-1.5 w-56 overflow-hidden">
               {[
                 { label: 'Reply', icon: Reply, fn: () => { setReplyTo(contextMenu.msg); setContextMenu(null); } },
                 { label: 'Copy text', icon: Copy, fn: () => { navigator.clipboard.writeText(contextMenu.msg.content); toast.success('Copied to clipboard'); setContextMenu(null); } },
@@ -1107,7 +1107,7 @@ export function CommunityChatView({
       <AnimatePresence>
         {replyTo && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            className="px-4 py-2.5 bg-black/[0.02] border-t border-black/5 flex items-center gap-3 shrink-0">
+            className="px-4 py-2.5 bg-black/[0.02] border-t border-[#E4E7EC] flex items-center gap-3 shrink-0">
             <div className="w-0.5 h-8 bg-[#1C1C1E] rounded-full shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-bold text-[#1C1C1E]">Replying to {addr(replyTo.authorAddress)}</p>
@@ -1130,18 +1130,18 @@ export function CommunityChatView({
         <AnimatePresence>
           {showAppDrawer && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-2">
-              <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 p-3 bg-white rounded-2xl shadow-md border border-black/[0.04]">
+              <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 p-3 bg-white rounded-2xl border border-[#E4E7EC]">
                 {[
                   // Community posts are stored on our server: private payments, agreements and invoices are never posted here.
-                  { icon: Lock, label: 'Private pay', color: 'bg-[#1C1C1E]', fn: () => { setShowAppDrawer(false); toast("Private payments and agreements happen in a direct chat. Press and hold a member's message, then choose Send private payment.", { duration: 6000 }); } },
-                  { icon: ImgIcon, label: 'Photo/Video', color: 'bg-[#FF9500]', fn: () => fileInputRef.current?.click() },
-                  { icon: CircleDollarSign, label: 'Crypto Send', color: 'bg-[#1C1C1E]', fn: () => { setCryptoRecipient(''); setShowRecipientSheet(true); } },
-                  { icon: MapPin, label: 'Location', color: 'bg-[#3A3A3C]', fn: sendLocation },
-                  { icon: BarChart2, label: 'Poll', color: 'bg-purple-500', fn: () => setShowPollCreator(true) },
+                  { icon: Lock, label: 'Private pay', color: '', fn: () => { setShowAppDrawer(false); toast("Private payments and agreements happen in a direct chat. Press and hold a member's message, then choose Send private payment.", { duration: 6000 }); } },
+                  { icon: ImgIcon, label: 'Photo/Video', color: '', fn: () => fileInputRef.current?.click() },
+                  { icon: CircleDollarSign, label: 'Crypto Send', color: '', fn: () => { setCryptoRecipient(''); setShowRecipientSheet(true); } },
+                  { icon: MapPin, label: 'Location', color: '', fn: sendLocation },
+                  { icon: BarChart2, label: 'Poll', color: '', fn: () => setShowPollCreator(true) },
                 ].map(({ icon: Icon, label, color, fn }) => (
                   <button key={label} onClick={() => { fn(); setShowAppDrawer(false); }}
                     className="flex flex-col items-center gap-1.5 group">
-                    <div className={`w-11 h-11 ${color} text-white rounded-2xl flex items-center justify-center shadow-sm group-active:scale-90 transition-transform`}>
+                    <div className={`w-11 h-11 ${color} bg-white border border-[#E4E7EC] text-[#15171C] group-hover:bg-[#F2F4F7] rounded-xl flex items-center justify-center transition-colors duration-150 ease-out`}>
                       <Icon size={20}/>
                     </div>
                     <span className="text-[11px] font-semibold text-[#111b21]/70">{label}</span>
@@ -1166,14 +1166,14 @@ export function CommunityChatView({
               <button
                 type="button"
                 onClick={() => setShowAppDrawer(v => !v)}
-                className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-[#54656f] hover:bg-black/5 hover:text-[#111b21] transition-all active:scale-95 mb-0.5 ${showAppDrawer ? 'rotate-45 text-[#1C1C1E]' : ''}`}
+                className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-[#54656f] hover:bg-black/5 hover:text-[#111b21] transition-colors mb-0.5 ${showAppDrawer ? 'rotate-45 text-[#1C1C1E]' : ''}`}
                 title="Adjuntar"
               >
                 <Plus size={22} />
               </button>
 
               {/* Rounded White Text Box (Ergonomic on iOS & Android — min font-size 16px prevents browser zoom) */}
-              <div className="flex-1 bg-white rounded-[24px] shadow-[0_1px_1px_rgba(11,20,26,0.1)] border border-black/[0.06] focus-within:border-black/30 min-h-[46px] max-h-[140px] flex items-center px-4 overflow-hidden transition-colors">
+              <div className="flex-1 bg-white rounded-[24px] border border-[#E4E7EC] focus-within:border-black/30 min-h-[46px] max-h-[140px] flex items-center px-4 overflow-hidden transition-colors">
                 <textarea
                   ref={textareaRef}
                   value={input}
@@ -1191,7 +1191,7 @@ export function CommunityChatView({
                 <button
                   type="button"
                   onClick={() => setRecordingVoice(true)}
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-[#54656f] hover:bg-black/5 hover:text-[#111b21] active:scale-95 transition-all shrink-0 mb-0.5"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-[#54656f] hover:bg-black/5 hover:text-[#111b21] transition-colors shrink-0 mb-0.5"
                   title="Grabar mensaje de voz"
                 >
                   <Mic size={22} />
@@ -1200,11 +1200,11 @@ export function CommunityChatView({
                 <button
                   type="submit"
                   disabled={sending}
-                  className="w-10 h-10 bg-[#1C1C1E] text-white rounded-full flex items-center justify-center shadow-sm hover:bg-black active:scale-95 transition-all shrink-0 disabled:opacity-40 mb-0.5"
+                  className="w-10 h-10 bg-[#1C1C1E] text-white rounded-full flex items-center justify-center hover:bg-black transition-colors shrink-0 disabled:opacity-40 mb-0.5"
                   title="Enviar"
                 >
                   {sending ? (
-                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-white" aria-label="Sending" />
                   ) : (
                     <Send size={18} className="-ml-0.5" />
                   )}
@@ -1219,14 +1219,14 @@ export function CommunityChatView({
       <AnimatePresence>
         {showRecipientSheet && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end"
+            className="fixed inset-0 z-50 bg-black/50 flex items-end"
             onClick={e => { if (e.target === e.currentTarget) setShowRecipientSheet(false); }}>
             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 340, damping: 34 }}
-              className="w-full bg-white rounded-t-3xl p-6 flex flex-col gap-4 shadow-2xl"
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="w-full bg-white rounded-t-3xl p-6 flex flex-col gap-4"
               onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between">
-                <h3 className="text-[18px] font-black text-[#1C1C1E]">Send Crypto</h3>
+                <h3 className="text-[18px] font-semibold text-[#1C1C1E]">Send Crypto</h3>
                 <button onClick={() => setShowRecipientSheet(false)} className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center text-black/40 hover:text-black">
                   <X size={16}/>
                 </button>
@@ -1234,10 +1234,10 @@ export function CommunityChatView({
               <p className="text-[13px] text-black/50">Enter the recipient wallet address</p>
               <input value={cryptoRecipient} onChange={e => setCryptoRecipient(e.target.value)}
                 placeholder="0x..." autoFocus autoComplete="off" spellCheck={false}
-                className="w-full px-4 py-3 rounded-2xl border border-black/10 text-[15px] font-mono outline-none focus:border-black/30 focus:ring-2 focus:ring-black/10 transition-all" />
+                className="w-full px-4 py-3 rounded-2xl border border-[#E4E7EC] text-[15px] font-mono outline-none focus:border-black/30 focus:ring-2 focus:ring-black/10 transition-colors" />
               <button disabled={!/^0x[0-9a-fA-F]{40}$/.test(cryptoRecipient.trim())}
                 onClick={() => { setShowRecipientSheet(false); setShowCryptoModal(true); }}
-                className="w-full py-3.5 bg-[#1C1C1E] disabled:bg-[#1C1C1E]/40 text-white font-bold rounded-2xl transition-all active:scale-[0.98]">
+                className="w-full py-3.5 bg-[#1C1C1E] disabled:bg-[#1C1C1E]/40 text-white font-bold rounded-2xl transition-colors">
                 Continue
               </button>
             </motion.div>
@@ -1262,24 +1262,24 @@ export function CommunityChatView({
       <AnimatePresence>
         {showPollCreator && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
             onClick={e => { if (e.target === e.currentTarget) setShowPollCreator(false); }}>
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl flex flex-col gap-4"
+              className="w-full max-w-sm bg-white rounded-2xl p-6 flex flex-col gap-4"
               onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between">
-                <h3 className="text-[17px] font-black text-[#1C1C1E]">Create Poll</h3>
+                <h3 className="text-[17px] font-semibold text-[#1C1C1E]">Create Poll</h3>
                 <button onClick={() => setShowPollCreator(false)} className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center text-black/40"><X size={16}/></button>
               </div>
               <input type="text" placeholder="Ask a question..." value={pollQuestion} autoFocus
                 onChange={e => setPollQuestion(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl border border-black/10 text-[14px] outline-none focus:border-black/30 focus:ring-2 focus:ring-black/10" />
+                className="w-full px-4 py-3 rounded-2xl border border-[#E4E7EC] text-[14px] outline-none focus:border-black/30 focus:ring-2 focus:ring-black/10" />
               <div className="flex flex-col gap-2">
                 {pollOptions.map((opt, i) => (
                   <div key={i} className="flex gap-2">
                     <input type="text" placeholder={`Option ${i + 1}`} value={opt}
                       onChange={e => setPollOptions(prev => prev.map((o, j) => j === i ? e.target.value : o))}
-                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-black/10 text-[13px] outline-none focus:border-black/30" />
+                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#E4E7EC] text-[13px] outline-none focus:border-black/30" />
                     {pollOptions.length > 2 && (
                       <button onClick={() => setPollOptions(prev => prev.filter((_, j) => j !== i))}
                         className="text-black/30 hover:text-red-500 transition-colors"><X size={14}/></button>
@@ -1299,7 +1299,7 @@ export function CommunityChatView({
                 executeSend(`__POLL__poll_${Date.now()}__::${pollQuestion.trim()}__::${validOpts.join('|')}`);
                 setShowPollCreator(false); setPollQuestion(''); setPollOptions(['', '']);
               }}
-                className="w-full py-3.5 bg-[#1C1C1E] text-white font-bold rounded-2xl hover:bg-black transition-colors active:scale-[0.98]">
+                className="w-full py-3.5 bg-[#1C1C1E] text-white font-bold rounded-2xl hover:bg-black transition-colors">
                 Send Poll
               </button>
             </motion.div>
@@ -1316,14 +1316,14 @@ export function CommunityChatView({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowZkWallet(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[500]"
+              className="fixed inset-0 bg-black/40 z-[500]"
             />
             <motion.div
               initial={{ opacity: 0, x: '100%' }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: '100%' }}
-              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-              className="fixed inset-y-0 right-0 w-full sm:w-[380px] z-[501] shadow-2xl overflow-hidden"
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="fixed inset-y-0 right-0 w-full sm:w-[380px] z-[501] shadow-sm overflow-hidden"
             >
               <ZkWalletPanel
                 address={myAddress}

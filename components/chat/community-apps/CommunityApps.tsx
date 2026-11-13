@@ -210,7 +210,7 @@ export function CommunityApps({ communityId, communityName }: CommunityAppsProps
         <div className="flex-1 min-h-0 overflow-y-auto pb-6">
           {!data && !loadError && (
             <div className="px-4 space-y-3" aria-hidden>
-              {[0, 1, 2].map(i => <div key={i} className="h-12 rounded-[var(--hl-radius)] bg-[var(--hl-bg-muted)] animate-pulse motion-reduce:animate-none" />)}
+              {[0, 1, 2].map(i => <div key={i} className="h-12 rounded-[var(--hl-radius)] bg-[var(--hl-bg-muted)] motion-reduce:animate-none" />)}
             </div>
           )}
           {loadError && !data && (
@@ -389,9 +389,7 @@ function NewApp({ base, lang, data, busy, onBack, onTemplate, onCreated }: {
                   </button>
                 </div>
                 {running && (
-                  <div className="h-[2px] overflow-hidden bg-[var(--hl-bg-muted)]" aria-hidden>
-                    <div className="h-full w-1/3 bg-[var(--hl-ink)] animate-[hl-indeterminate_1.4s_ease-in-out_infinite] motion-reduce:animate-none" />
-                  </div>
+                  <p className="text-[12px] text-[var(--hl-ink-3)]" role="status">Writing the app. This can take a minute.</p>
                 )}
               </div>
 
@@ -663,7 +661,7 @@ function CodeSheet({ code, title, version, onClose }: { code: string; title: str
         aria-modal="true"
         aria-label={`Source of ${title}`}
         onClick={e => e.stopPropagation()}
-        className="w-full md:max-w-3xl max-h-[85vh] flex flex-col bg-[var(--hl-bg)] rounded-t-[var(--hl-radius-xl)] md:rounded-[var(--hl-radius-xl)] shadow-[var(--hl-shadow-lg)] overflow-hidden"
+        className="w-full md:max-w-3xl max-h-[85vh] flex flex-col bg-[var(--hl-bg)] rounded-t-[var(--hl-radius-xl)] md:rounded-[var(--hl-radius-xl)] shadow-[var(--hl-shadow-sm)] overflow-hidden"
       >
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-[var(--hl-border)]">
           <div className="min-w-0">

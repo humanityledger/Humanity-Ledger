@@ -28,15 +28,15 @@ interface CommunityMemberPanelProps {
 const truncateAddr = (a: string) => a ? `${a.slice(0, 6)}...${a.slice(-4)}` : 'Unknown';
 
 const getAvatarColor = (addr: string) => {
-  const colors = ['#2754d6', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55', '#10B981'];
+  const colors = ['#15171C', '#2B2F38', '#475061', '#5E6676', '#727A88'];
   const num = parseInt(addr?.slice(2, 6) || '0', 16);
   return colors[num % colors.length];
 };
 
 const ROLE_BADGES = {
-  OWNER: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Owner', icon: Crown },
-  ADMIN: { bg: 'bg-[#2754d6]/15', text: 'text-[#2754d6]', label: 'Admin', icon: Award },
-  MODERATOR: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Mod', icon: Award },
+  OWNER: { bg: 'bg-[#15171C]', text: 'text-white', label: 'Owner', icon: Crown },
+  ADMIN: { bg: 'bg-[#EFF1F4]', text: 'text-[#15171C]', label: 'Admin', icon: Award },
+  MODERATOR: { bg: 'bg-[#EFF1F4]', text: 'text-[#475061]', label: 'Mod', icon: Award },
   MEMBER: { bg: 'bg-black/5', text: 'text-black/50', label: 'Member', icon: null },
   BANNED: { bg: 'bg-red-100', text: 'text-red-700', label: 'Banned', icon: Ban },
 };
@@ -66,12 +66,12 @@ function MemberRow({
     <div className="flex items-center gap-3 p-3 hover:bg-[#F2F2F7] rounded-2xl transition-colors group relative">
       {/* Avatar */}
       <div 
-        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-black shrink-0 relative"
+        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-semibold shrink-0 relative"
         style={{ backgroundColor: getAvatarColor(member.address) }}
       >
         {member.address?.slice(2, 4).toUpperCase()}
         {member.role === 'OWNER' && (
-          <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-white rounded-full p-0.5 border-2 border-white">
+          <div className="absolute -bottom-1 -right-1 bg-[#15171C] text-white rounded-full p-0.5 border-2 border-white">
             <Crown size={10} />
           </div>
         )}
@@ -83,7 +83,7 @@ function MemberRow({
           <span className="text-[14px] font-bold text-[#1C1C1E] font-mono truncate">
             {truncateAddr(member.address)}
           </span>
-          {isMe && <span className="bg-[#2754d6]/10 text-[#2754d6] text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md">You</span>}
+          {isMe && <span className="bg-[#2754d6]/10 text-[#2754d6] text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-md">You</span>}
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md flex items-center gap-1 ${badge.bg} ${badge.text}`}>
@@ -115,7 +115,7 @@ function MemberRow({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-1 w-48 bg-white rounded-2xl shadow-xl border border-black/5 py-1.5 z-50 overflow-hidden"
+                  className="absolute right-0 top-full mt-1 w-48 bg-white rounded-2xl shadow-sm border border-[#E4E7EC] py-1.5 z-50 overflow-hidden"
                 >
                   <button onClick={() => { onAction('MESSAGE', member.address); setShowMenu(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#F2F2F7] transition-colors">
                     <MessageCircle size={15} className="text-black/40" />
@@ -133,7 +133,7 @@ function MemberRow({
                       )}
                       {member.role === 'ADMIN' && myRole === 'OWNER' && (
                         <button onClick={() => { onAction('DEMOTE_MEMBER', member.address); setShowMenu(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#F2F2F7] transition-colors">
-                          <Lock size={15} className="text-orange-500" />
+                          <Lock size={15} strokeWidth={1.75} className="text-[#475061]" />
                           <span className="text-[13px] font-semibold text-[#1C1C1E]">Demote to Member</span>
                         </button>
                       )}
@@ -228,7 +228,6 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
   // Real Native Stats
   const totalMembers = members.filter(m => m.role !== 'BANNED').length;
   const adminCount = members.filter(m => m.role === 'ADMIN' || m.role === 'OWNER').length;
-  const activeToday = totalMembers;
 
   // Filters
   const filteredMembers = useMemo(() => {
@@ -302,20 +301,20 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
       <motion.div 
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9990] flex justify-end"
+        className="fixed inset-0 bg-black/40 z-[9990] flex justify-end"
       >
         {/* Panel */}
         <motion.div
           initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          transition={{ duration: 0.15, ease: 'easeOut' }}
           onClick={e => e.stopPropagation()}
-          className="w-full max-w-[400px] h-full bg-white shadow-2xl flex flex-col"
+          className="w-full max-w-[400px] h-full bg-white flex flex-col"
         >
           {/* Header */}
-          <div className="h-[72px] px-5 flex items-center justify-between border-b border-black/5 shrink-0 bg-white">
+          <div className="h-[72px] px-5 flex items-center justify-between border-b border-[#E4E7EC] shrink-0 bg-white">
             <div className="flex items-center gap-3">
               <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-inner"
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-lg shadow-inner"
                 style={{ backgroundColor: getAvatarColor(community?.id || 'a') }}
               >
                 {community?.name?.slice(0, 2).toUpperCase() || 'C'}
@@ -330,27 +329,17 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
             </button>
           </div>
 
-          {/* Stats Row */}
-          <div className="px-5 py-4 grid grid-cols-3 gap-2 border-b border-black/5 shrink-0 bg-[#FAFAFA]">
-            <div className="bg-white p-3 rounded-2xl border border-black/[0.04] flex flex-col items-center justify-center text-center">
-              <Users size={18} className="text-[#2754d6] mb-1" />
-              <span className="text-[16px] font-black text-[#1C1C1E]">{totalMembers}</span>
-              <span className="text-[9px] font-bold uppercase text-black/30">Total</span>
+          {/* Stats Row: only counts the server returned. There is no presence data for communities. */}
+          <dl className="px-5 py-3 grid grid-cols-2 border-b border-[#E4E7EC] shrink-0">
+            <div>
+              <dt className="text-[12px] text-[#727A88]">Members</dt>
+              <dd className="text-[18px] font-semibold text-[#15171C] tabular-nums">{totalMembers}</dd>
             </div>
-            <div className="bg-white p-3 rounded-2xl border border-black/[0.04] flex flex-col items-center justify-center text-center">
-              <Award size={18} className="text-[#2754d6] mb-1" />
-              <span className="text-[16px] font-black text-[#1C1C1E]">{adminCount}</span>
-              <span className="text-[9px] font-bold uppercase text-black/30">Admins</span>
+            <div>
+              <dt className="text-[12px] text-[#727A88]">Owners and admins</dt>
+              <dd className="text-[18px] font-semibold text-[#15171C] tabular-nums">{adminCount}</dd>
             </div>
-            <div className="bg-white p-3 rounded-2xl border border-black/[0.04] flex flex-col items-center justify-center text-center relative">
-              <div className="w-2 h-2 rounded-full bg-[#2754d6] absolute top-3 right-3 animate-pulse" />
-              <div className="relative">
-                <Users size={18} className="text-[#2754d6] mb-1" />
-              </div>
-              <span className="text-[16px] font-black text-[#1C1C1E]">{activeToday}</span>
-              <span className="text-[9px] font-bold uppercase text-black/30">Active</span>
-            </div>
-          </div>
+          </dl>
 
           {/* Search */}
           <div className="px-5 py-3 shrink-0">
@@ -361,13 +350,13 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
                 placeholder="Search by 0x address..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 bg-[#F2F2F7] rounded-xl text-[14px] font-medium outline-none focus:ring-2 focus:ring-[#2754d6]/20 transition-all placeholder:text-black/30"
+                className="w-full pl-9 pr-4 py-2.5 bg-[#F2F2F7] rounded-xl text-[14px] font-medium outline-none focus:ring-2 focus:ring-[#2754d6]/20 transition-colors placeholder:text-black/30"
               />
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex items-center px-5 gap-4 border-b border-black/5 shrink-0">
+          <div className="flex items-center px-5 gap-4 border-b border-[#E4E7EC] shrink-0">
             {[
               { id: 'ALL', label: 'All Members' },
               { id: 'ADMINS', label: 'Admins' },
@@ -411,17 +400,17 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
 
           {/* Invite Section */}
           {(myRole === 'OWNER' || myRole === 'ADMIN') && (
-            <div className="p-5 border-t border-black/5 bg-[#FAFAFA] shrink-0">
-              <p className="text-[11px] font-black uppercase text-black/30 mb-2">Invite Link</p>
+            <div className="p-5 border-t border-[#E4E7EC] bg-[#FAFAFA] shrink-0">
+              <p className="text-[11px] font-semibold uppercase text-black/30 mb-2">Invite Link</p>
               <div className="flex items-center gap-2">
-                <div className="flex-1 bg-white border border-black/10 rounded-xl px-3 py-2.5 flex items-center overflow-hidden">
+                <div className="flex-1 bg-white border border-[#E4E7EC] rounded-xl px-3 py-2.5 flex items-center overflow-hidden">
                   <span className="text-[13px] font-mono text-black/50 truncate">
                     {(communityInviteUrl(community?.joinCode) || 'No invite link yet').replace(/^https?:\/\//, '')}
                   </span>
                 </div>
                 <button 
                   onClick={copyInvite}
-                  className="w-10 h-10 rounded-xl bg-[#2754d6] text-white flex items-center justify-center hover:bg-[#128C7E] transition-colors shrink-0 shadow-sm"
+                  className="w-10 h-10 rounded-xl bg-[#2754d6] text-white flex items-center justify-center hover:bg-[#128C7E] transition-colors shrink-0"
                 >
                   <Link size={16} />
                 </button>

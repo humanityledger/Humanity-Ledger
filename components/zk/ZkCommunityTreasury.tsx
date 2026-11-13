@@ -3,7 +3,7 @@
 import { isZkEnabled } from '@/lib/features/zk';
 
 import React from 'react';
-import { Shield, Lock } from 'lucide-react';
+import { Landmark } from 'lucide-react';
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -16,39 +16,36 @@ interface ZkCommunityTreasuryProps {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-function ZkCommunityTreasuryInner({
-  communityId,
-  communityName,
-}: ZkCommunityTreasuryProps) {
+/**
+ * The community treasury has no contract on any network yet, so this panel states that and
+ * nothing else: no balance, no placeholder figures.
+ */
+function ZkCommunityTreasuryInner({ communityId, communityName }: ZkCommunityTreasuryProps) {
   return (
-    <div className="space-y-5">
-      {/* ── Coming Soon Card ── */}
-      <div className="bg-[#15171c] rounded-3xl p-8 text-white border border-black/10 shadow-sm flex flex-col items-center justify-center gap-5 text-center min-h-[260px]">
-        <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center">
-          <Lock size={26} className="text-white" strokeWidth={2} />
+    <section className="bg-white rounded-2xl border border-[#E4E7EC]">
+      <header className="flex items-center gap-3 px-5 py-4 border-b border-[#E4E7EC]">
+        <Landmark size={18} strokeWidth={1.5} className="text-[#15171C] shrink-0" />
+        <div className="min-w-0">
+          <h2 className="text-[14px] font-semibold text-[#15171C]">Treasury</h2>
+          <p className="text-[13px] text-[#727A88] truncate">{communityName}</p>
         </div>
-        <div className="space-y-2">
-          <h2 className="text-xl font-bold text-white tracking-tight">
-            Community Treasury — coming soon
-          </h2>
-          <p className="text-[13px] text-white/60 max-w-sm leading-relaxed">
-            Multi-party treasury on Aztec will be available after the community
-            escrow contract is deployed to the network.
-          </p>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-left space-y-1 w-full max-w-xs">
-          <div className="text-[11px] text-white/40 font-semibold uppercase tracking-wider">Community</div>
-          <div className="text-[15px] font-bold text-white">{communityName}</div>
-          <div className="text-[11px] font-mono text-white/40 break-all">{communityId}</div>
-        </div>
+        <span className="ml-auto inline-flex items-center gap-1.5 text-[12px] font-medium text-[#475061]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#A3A9B4]" aria-hidden />
+          Not deployed
+        </span>
+      </header>
+      <div className="px-5 py-5 space-y-3">
+        <p className="text-[13px] leading-relaxed text-[#475061] max-w-prose">
+          No community treasury contract is deployed on Aztec Alpha or on the test network. This
+          community holds no funds through Ledger Chat. Balances will appear here only after a
+          treasury contract is deployed and recorded with its transaction hash.
+        </p>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px]">
+          <dt className="text-[#727A88]">Community ID</dt>
+          <dd className="font-mono text-[12px] text-[#15171C] break-all">{communityId}</dd>
+        </dl>
       </div>
-
-      {/* ── Footer Protocol Notice ── */}
-      <div className="flex items-center justify-center gap-2 py-3 text-[12px] text-[#727a88]">
-        <Shield size={13} className="text-[#15171c]" />
-        <span>Community treasury powered by Aztec Network zero-knowledge proofs.</span>
-      </div>
-    </div>
+    </section>
   );
 }
 

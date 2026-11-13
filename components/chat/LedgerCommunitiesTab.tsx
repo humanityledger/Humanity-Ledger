@@ -1,6 +1,6 @@
 'use client';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Link2, Users, Globe, Lock, ChevronRight, LoaderCircle } from 'lucide-react';
+import { Plus, Link2, Users, Globe, Lock, ChevronRight } from 'lucide-react';
 import { countLabel } from '@/lib/ui/format';
 import { toast } from 'sonner';
 import { SectionLabel, EmptyState, PrimaryButton, SecondaryButton, SearchField, Sheet, tintFor } from './ui/kit';
@@ -162,7 +162,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
               role="tab"
               aria-selected={view === id}
               onClick={() => setView(id)}
-              className={`flex-1 h-8 text-[14px] font-medium rounded-lg transition-colors ${view === id ? 'bg-white text-[#15171c] shadow-[0_1px_2px_rgba(16,24,40,0.08)]' : 'text-[#727a88] hover:text-[#15171c]'}`}
+              className={`flex-1 h-8 text-[14px] font-medium rounded-lg transition-colors ${view === id ? 'bg-white text-[#15171c]' : 'text-[#727a88] hover:text-[#15171c]'}`}
             >
               {label}
             </button>
@@ -184,8 +184,10 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
 
       {view === 'mine' ? (
         loading ? (
-          <div className="flex-1 flex items-center justify-center py-16 text-[#a3a9b4]" role="status" aria-label="Loading">
-            <LoaderCircle size={22} strokeWidth={1.8} className="animate-spin" />
+          <div className="flex-1 px-4 py-4 space-y-2" role="status" aria-label="Loading">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-14 rounded-xl bg-[#EFF1F4]" aria-hidden />
+            ))}
           </div>
         ) : communities.length === 0 ? (
           <EmptyState

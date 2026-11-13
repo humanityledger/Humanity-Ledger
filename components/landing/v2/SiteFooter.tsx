@@ -37,6 +37,7 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
       { label: "Private payments", href: "/#aztec" },
       { label: "Get started", href: "/#start" },
       { label: "Network status", href: "/docs/status" },
+      { label: "Protocol metrics", href: "/protocol" },
     ],
   },
   {
