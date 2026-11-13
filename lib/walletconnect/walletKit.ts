@@ -18,7 +18,7 @@ export async function createWeb3Wallet() {
 
     const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID 
       || process.env.NEXT_PUBLIC_WC_PROJECT_ID 
-      || 'c78f6e1e-1169-4640-8626-d9de982fa0ea';
+      || '47cce4049225582027fdeeecb2868ead'; // same fallback as next.config.js; a UUID is not a Reown project id
 
     const core = new Core({
         projectId,
