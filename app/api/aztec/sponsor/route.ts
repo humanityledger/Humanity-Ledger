@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
-import { signVoucher, sponsorLimits, sponsorPublicKey, VOUCHER_TTL_S } from '@/lib/aztec/sponsor-voucher';
+import { signVoucher, sponsorBinding, sponsorLimits, sponsorPublicKey, VOUCHER_TTL_S } from '@/lib/aztec/sponsor-voucher';
 import { safeRedisGet, safeRedisSet } from '@/lib/redis';
 
 export const runtime = 'nodejs';
@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
   if (!day.allowed) {
     return NextResponse.json({ error: 'DAILY_LIMIT', message: 'Sponsored fees are used up for today. Try again tomorrow or add Fee Juice.' }, { status: 429 });
   }
-  const voucher = signVoucher();
+  const binding = sponsorBinding();
+  const voucher = binding ? signVoucher(binding) : null;
   if (!voucher) return NextResponse.json({ error: 'NOT_CONFIGURED', message: 'Sponsored fees are not on yet.' }, { status: 503 });
   const body = { sponsor: address(), ...voucher };
   await safeRedisSet(lastKey, JSON.stringify(body), 'EX', VOUCHER_TTL_S);

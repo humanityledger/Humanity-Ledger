@@ -266,16 +266,12 @@ unconstrained fn escrow_view_reports_a_refunded_escrow_as_settled_to_the_recipie
 // ── Deposit nullifier: one deposit per (escrow_id, sender) ──────────────────
 // UNCOMPILED in the session that wrote it: run `aztec test` in CI.
 
-// TXE 6.0.0 does not raise when a private transaction repeats a nullifier: it logs that the
-// nullifier tree refused the insert and drops the transaction. The sequencer rejects such a
-// transaction outright. So these tests check the effect (no funds moved) instead of a revert.
-#[test]
-unconstrained fn second_deposit_with_the_same_escrow_id_moves_nothing() {
+#[test(should_fail)]
+unconstrained fn second_deposit_with_the_same_escrow_id_fails() {
     let s = setup();
     let _ = deposit(s, 1, 11);
-    // Fresh authwit nonce: what stops it is the deposit nullifier, not a reused authwit.
+    // Fresh authwit nonce: the failure is the deposit nullifier, not a reused authwit.
     let _ = deposit(s, 1, 12);
-    assert(balance(s.env, s.token, s.escrow) == AMOUNT, "a second deposit under the same id was applied");
 }
 
 #[test]
@@ -294,12 +290,11 @@ unconstrained fn distinct_escrow_ids_from_one_sender_still_work() {
 
 // Before the fix this deposit landed and its funds could never move: the
 // settlement nullifier of (1, sender, recipient) already existed.
-#[test]
+#[test(should_fail)]
 unconstrained fn the_same_escrow_id_cannot_be_reused_after_settlement() {
     let s = setup();
     let _ = deposit(s, 1, 11);
     claim(s, 1, CLAIM_SECRET);
     let _ = deposit(s, 1, 12);
-    assert(balance(s.env, s.token, s.escrow) == 0, "a settled escrow id was funded again");
 }
 

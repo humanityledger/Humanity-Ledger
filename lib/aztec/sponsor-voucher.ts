@@ -2,8 +2,10 @@
  * Server side of LedgerSponsor (contracts/aztec/sponsor): signs one-use vouchers so a signed-in user
  * with no Fee Juice gets a few transactions paid (account creation first). Server only.
  *
- * The digest must match contracts/aztec/sponsor/src/voucher.nr byte for byte:
- *   sha256("HL-SPONSOR-V1" + 3 zero bytes || voucher id, 32 bytes BE || expiry, u64 BE)
+ * The digest must match contracts/aztec/sponsor/src/voucher.nr byte for byte (V2):
+ *   sha256("HL-SPONSOR-V2" + 3 zero bytes || sponsor address || chain id || rollup version
+ *          || voucher id (each 32 bytes BE) || expiry, u64 BE)
+ * so a voucher pays on exactly one instance of one network (finding SP-5).
  * signed with ECDSA secp256k1, low-s, 64 bytes r || s.
  *
  * The key: AZTEC_SPONSOR_SIGNER_KEY (32-byte hex). On the test network only, it may be derived from
@@ -12,9 +14,10 @@
  */
 import 'server-only';
 import crypto from 'node:crypto';
+import { AZTEC_NETWORKS } from './sequencer/networks';
 
 const N = BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141');
-const TAG = Buffer.from('HL-SPONSOR-V1\0\0\0', 'latin1');
+const TAG = Buffer.from('HL-SPONSOR-V2\0\0\0', 'latin1');
 /** Field modulus of BN254: voucher ids must be below it. 31 random bytes always are. */
 const VOUCHER_BYTES = 31;
 export const VOUCHER_TTL_S = 15 * 60;
@@ -56,21 +59,41 @@ export function sponsorPublicKey(): SponsorPublicKey | null {
   return { x: hex(x), y: hex(y), xHi: hex(x.subarray(0, 16)), xLo: hex(x.subarray(16)), yHi: hex(y.subarray(0, 16)), yLo: hex(y.subarray(16)) };
 }
 
-export function voucherDigestBytes(voucherId: bigint, expiresAt: number): Buffer {
-  const id = Buffer.from(voucherId.toString(16).padStart(64, '0'), 'hex');
+/** What a voucher names besides its id and expiry: the sponsor instance and the network. */
+export interface VoucherBinding {
+  contract: bigint;
+  chainId: bigint;
+  version: bigint;
+}
+
+const be32 = (v: bigint) => Buffer.from(v.toString(16).padStart(64, '0'), 'hex');
+
+export function voucherDigestBytes(binding: VoucherBinding, voucherId: bigint, expiresAt: number): Buffer {
   const exp = Buffer.alloc(8);
   exp.writeBigUInt64BE(BigInt(expiresAt));
-  return Buffer.concat([TAG, id, exp]);
+  return Buffer.concat([TAG, be32(binding.contract), be32(binding.chainId), be32(binding.version), be32(voucherId), exp]);
+}
+
+/**
+ * The binding of the configured sponsor: NEXT_PUBLIC_AZTEC_SPONSOR, and the chain id and rollup
+ * version of the network this deployment runs on (lib/aztec/sequencer/networks.ts). Null when the
+ * address is not a 32-byte Aztec address: no voucher is signed without it.
+ */
+export function sponsorBinding(env: Record<string, string | undefined> = process.env): VoucherBinding | null {
+  const addr = (env.NEXT_PUBLIC_AZTEC_SPONSOR || '').trim();
+  if (!/^0x[0-9a-fA-F]{64}$/.test(addr)) return null;
+  const net = env.NEXT_PUBLIC_AZTEC_NETWORK === 'alpha' ? AZTEC_NETWORKS.mainnet : AZTEC_NETWORKS.testnet;
+  return { contract: BigInt(addr), chainId: BigInt(net.l1ChainId), version: BigInt(net.rollupVersion) };
 }
 
 /** Signs a fresh voucher, or null when no key is available. */
-export function signVoucher(nowS = Math.floor(Date.now() / 1000), voucherId?: bigint): Voucher | null {
+export function signVoucher(binding: VoucherBinding, nowS = Math.floor(Date.now() / 1000), voucherId?: bigint): Voucher | null {
   const priv = signerPrivateKey();
   if (!priv) return null;
   const { key, x, y } = keyObjects(priv);
   const id = voucherId ?? BigInt('0x' + crypto.randomBytes(VOUCHER_BYTES).toString('hex'));
   const expiresAt = nowS + VOUCHER_TTL_S;
-  const raw = crypto.sign('sha256', voucherDigestBytes(id, expiresAt), { key, dsaEncoding: 'ieee-p1363' });
+  const raw = crypto.sign('sha256', voucherDigestBytes(binding, id, expiresAt), { key, dsaEncoding: 'ieee-p1363' });
   const r = raw.subarray(0, 32);
   let s = BigInt('0x' + raw.subarray(32).toString('hex'));
   if (s > N / 2n) s = N - s; // Noir accepts low-s signatures only

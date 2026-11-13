@@ -252,14 +252,14 @@ export class PortfolioService {
             const decimals = parseInt(t.decimals || '18', 10);
             const balRaw = t.balance ? ethers.formatUnits(t.balance, decimals) : (t.balance_formatted || '0');
             const bal = parseFloat(balRaw);
-            const price = parseFloat(t.usd_price || '0');
+            // Spam filter only: an unpriced token is not valued here, it is just not shown when it
+            // looks like spam (a huge balance with no price, or a fake native token).
+            const unpriced = knownPrice(t.usd_price) === null;
             
-            // Show any real balance, regardless of USD pricing from Moralis, 
-            // BUT filter out obvious spam (massive balance with 0 price)
-            if (bal > 1000000 && price === 0) return false;
+            if (bal > 1000000 && unpriced) return false;
             
             // Filter out fake native tokens (e.g., ERC20 token named ETH with 0 price)
-            const isFakeNative = (t.symbol === 'ETH' || t.symbol === 'MATIC' || t.symbol === ("AUTH" as any) || t.symbol === 'BNB' || t.symbol === 'AVAX' || t.symbol === 'SOL') && price === 0 && t.token_address;
+            const isFakeNative = (t.symbol === 'ETH' || t.symbol === 'MATIC' || t.symbol === ("AUTH" as any) || t.symbol === 'BNB' || t.symbol === 'AVAX' || t.symbol === 'SOL') && unpriced && t.token_address;
             if (isFakeNative) return false;
 
             return bal > 0.000001;

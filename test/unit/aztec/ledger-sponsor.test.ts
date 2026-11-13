@@ -16,8 +16,8 @@ describe('Ledger sponsor (P1)', () => {
   });
 
   it('the server digest and the contract digest use the same layout', () => {
-    expect(read('contracts/aztec/sponsor/src/voucher.nr')).toMatch(/0x48, 0x4c, 0x2d, 0x53, 0x50, 0x4f, 0x4e, 0x53, 0x4f, 0x52, 0x2d, 0x56, 0x31, 0, 0, 0/);
-    expect(read('lib/aztec/sponsor-voucher.ts')).toContain("Buffer.from('HL-SPONSOR-V1\\0\\0\\0', 'latin1')");
+    expect(read('contracts/aztec/sponsor/src/voucher.nr')).toMatch(/0x48, 0x4c, 0x2d, 0x53, 0x50, 0x4f, 0x4e, 0x53, 0x4f, 0x52, 0x2d, 0x56, 0x32, 0, 0, 0/);
+    expect(read('lib/aztec/sponsor-voucher.ts')).toContain("Buffer.from('HL-SPONSOR-V2\\0\\0\\0', 'latin1')");
   });
 
   it('the wallet only falls back to the sponsor when the user has no usable Fee Juice', () => {

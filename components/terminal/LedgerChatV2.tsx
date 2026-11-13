@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -81,7 +80,7 @@ const ZkMoneyModal = dynamic(() => import('@/components/chat/ZkMoneyModal').then
 const ZkWalletPanel = dynamic(() => import('@/components/zk/ZkWalletPanel').then(m => m.ZkWalletPanel), { ssr: false });
 const ZkStreamManager = dynamic(() => import('@/components/zk/ZkStreamManager').then(m => m.ZkStreamManager), { ssr: false });
 const ZkInvoiceModal = dynamic(() => import('@/components/zk/ZkInvoiceModal').then(m => m.ZkInvoiceModal), { ssr: false });
-import { encodeStreamPayload } from '@/lib/zk/zkStreaming';
+import { encodeStreamPayload, type ZkPaymentStream } from '@/lib/zk/zkStreaming';
 import { agreementMessageKind, agreementPreview, isAgreementMessage } from '@/lib/aztec/agreement-message';
 import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 import { AlphaNetworkBanner } from '@/components/zk/AlphaNetworkBanner';
@@ -443,7 +442,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // Conversation wallpaper. Every option stays light and quiet so messages
   // keep their contrast; the default is the app's neutral background.
   const bgStyle = useMemo((): React.CSSProperties => {
-    switch (chatBackground) {
+    // Saved settings may hold wallpaper ids older than the current settings type.
+    switch (String(chatBackground)) {
       case 'minimal': return { background: '#ffffff' };
       case 'dots': return {
           backgroundColor: '#f7f8fa',
@@ -1907,7 +1907,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         const queueStr = localStorage.getItem(outboxKey);
         if (queueStr) {
           try {
-            const queue: string[] = JSON.parse(queueStr);
+            const queue: Array<string | { peer?: string; content?: string }> = JSON.parse(queueStr);
             if (queue.length > 0) {
               localStorage.removeItem(outboxKey);
               toast.info(`Back online. Sending ${queue.length} waiting message${queue.length > 1 ? 's' : ''}.`);
@@ -4649,7 +4649,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
               // Push notification when tab is hidden
               if (fromPeer && mappedMsg.senderInboxId !== (client as any)?.inboxId) {
-                push.notifyIfHidden(fromPeer, mappedContent || content);
+                if (msgConvPeer) push.notifyIfHidden(msgConvPeer, mappedContent || content);
               }
 
               setMessages(prev => {
@@ -4937,7 +4937,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               activeXmtpDmIdRef.current = foundDm.id;
               const memberIds = typeof foundDm.members === 'function' 
                 ? (await foundDm.members()).map((m: any) => m.inboxId) 
-                : (foundDm.memberInboxIds ?? []);
+                : ((foundDm as unknown as { memberInboxIds?: string[] }).memberInboxIds ?? []);
               const peerId = memberIds.find((id: string) => id !== selfId) ?? "";
               if (peerId) activePeerInboxIdRef.current = peerId;
             }
@@ -6362,7 +6362,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           {sidebarTab === 'updates' && (
             <LedgerUpdatesTab
               myAddress={address || ''}
-              myName={resolveContactName(address || '', address || '', localContacts)}
+              myName={resolveContactName(address || '', address || '') || ''}
               contacts={localContacts.map(c => ({ peerAddress: c.peerAddress, name: c.name }))}
               onOpenChat={(addr) => { setActiveCommunity(null); setActivePeer(addr); setSidebarTab('chats'); setShowList(false); }}
             />
@@ -6548,7 +6548,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 id: c.id,
                 peerAddress: c.peerAddress,
                 peerName: getDisplayName(c.peerAddress),
-                type: c.type,
+                type: c.type === 'video' ? ('video' as const) : ('voice' as const),
                 direction: c.direction,
                 missed: c.status === 'missed' || c.status === 'declined' || (c.durationSeconds === 0 && c.direction === 'incoming'),
                 duration: c.durationSeconds,
@@ -8426,7 +8426,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                defaultRecipient={activePeer}
                onClose={() => setShowZkStreamModal(false)}
                onStreamCreated={(stream) => {
-                 executeSend(encodeStreamPayload(stream));
+                 // ZkStreamManager hands back the stream it created (typed unknown at its boundary).
+                 executeSend(encodeStreamPayload(stream as ZkPaymentStream));
                  setShowZkStreamModal(false);
                  toast.success('Payment stream created');
                }}
@@ -8613,11 +8614,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       <ThemePickerSheet
         open={showThemePicker}
         currentThemeId={chatTheme.id}
-        currentBubbleStyle={bubbleStyle}
+        currentBubbleStyle={(['default', 'glass', 'brutalist', 'minimal'] as const).find((b) => b === bubbleStyle) ?? 'default'}
         onSelectTheme={(t: ChatTheme) => {
           updateBatch({ chat_theme: t.id });
         }}
-        onSelectBubbleStyle={(id: string) => { if (isBubbleStyleId(id)) updateBatch({ bubble_style: id }); }}
+        onSelectBubbleStyle={(id: string) => {
+          // Settings store four bubble styles; the picker may list more.
+          const style = (['default', 'glass', 'brutalist', 'minimal'] as const).find((b) => b === id);
+          if (style && isBubbleStyleId(id)) updateBatch({ bubble_style: style });
+        }}
         onClose={() => setShowThemePicker(false)}
         onOpenWallpaper={activePeer ? () => setShowWallpaperPicker(true) : undefined}
       />
