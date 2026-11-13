@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createHmac } from 'node:crypto';
+import { shapeIceServers } from '@/lib/calls/ice';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -40,8 +41,11 @@ export async function GET() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data?.iceServers) && data.iceServers.length) {
-          return NextResponse.json({ iceServers: data.iceServers, ttl: TTL_SECONDS, source: 'cloudflare' }, { headers });
+        // Cloudflare lists ~8 URLs (anycast, so already the nearest location). Trimmed to STUN plus
+        // one TURN URL per transport: each extra URL is one more allocation before the call connects.
+        const iceServers = shapeIceServers(data?.iceServers);
+        if (iceServers.length) {
+          return NextResponse.json({ iceServers, ttl: TTL_SECONDS, source: 'cloudflare' }, { headers });
         }
       }
     } catch {

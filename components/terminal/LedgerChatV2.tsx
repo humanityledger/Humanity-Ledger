@@ -330,7 +330,7 @@ import { MessageBubble } from '../chat/MessageBubble';
 import { PinPrompt } from '@/components/chat/pin/PinPrompt';
 import { IncomingCallScreen, OutgoingCallScreen, AudioCallStage, CallControls, CallClock } from '@/components/chat/call/CallScreens';
 import { callConstraints, callVideo, CALL_AUDIO, tuneOpusSdp, tuneSenders, loadIceConfig, peerServerOptions } from '@/lib/calls/media';
-import { finishCallMetrics, markFirstAudio, markSetup, sampleHeap, startCallMetrics, type CallMetrics } from '@/lib/calls/metrics';
+import { callMetricsDetail, callMetricsLabel, finishCallMetrics, markFirstAudio, markSetup, routeFromStats, sampleHeap, startCallMetrics, type CallMetrics, type CallRoute } from '@/lib/calls/metrics';
 import { DISCONNECTED_GRACE_MS, RESUME_ATTEMPT_MS, RESUME_DEADLINE_MS, acceptResume, glareKeepsMine, isResumeMeta, resumeDelay, shouldDialResume } from '@/lib/calls/resume';
 /** Opus tuned for speech on every offer and answer (lib/calls/media.ts). */
 /** How long an answered call may look for a network path before it is reported as failed. */
@@ -1174,7 +1174,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // ── Telegram/WhatsApp Parity States ──
   const [isCallMinimized, setIsCallMinimized] = useState(false);
   const [networkQuality, setNetworkQuality] = useState<'good' | 'poor' | 'disconnected'>('good');
-  const [callRoute, setCallRoute] = useState<{ kind: 'direct' | 'relay' | 'unknown'; rttMs: number | null }>({ kind: 'unknown', rttMs: null });
+  const [callRoute, setCallRoute] = useState<CallRoute>({ kind: 'unknown', path: null, rttMs: null });
+  // Setup time and first audio of the current call (lib/calls/metrics.ts), shown in the minimized call.
+  const [callTiming, setCallTiming] = useState<{ setupMs?: number; firstAudioMs?: number }>({});
 
   const myVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -2361,7 +2363,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   useEffect(() => {
     if (callState !== 'active' || !activeConnectionRef.current) {
       setNetworkQuality('good');
-      setCallRoute({ kind: 'unknown', rttMs: null });
+      setCallRoute({ kind: 'unknown', path: null, rttMs: null });
       return;
     }
     let stopped = false;
@@ -2372,28 +2374,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       try {
         const stats = await peerConn.getStats();
         let isPoor = peerConn.iceConnectionState === 'disconnected';
-        const candidates: Record<string, any> = {};
-        let selectedPair: any = null;
         stats.forEach((report: any) => {
-          if (report.type === 'local-candidate' || report.type === 'remote-candidate') candidates[report.id] = report;
-          if (report.type === 'candidate-pair' && report.state === 'succeeded' && (report.nominated || report.selected)) selectedPair = report;
           if (report.type === 'candidate-pair' && report.state === 'succeeded' && report.currentRoundTripTime > 0.4) isPoor = true;
           if (report.type === 'inbound-rtp' && report.packetsReceived > 0 && report.packetsLost / report.packetsReceived > 0.05) isPoor = true;
         });
         if (stopped) return;
         setNetworkQuality(isPoor ? 'poor' : 'good');
-        if (selectedPair) {
-          const l = candidates[selectedPair.localCandidateId];
-          const r = candidates[selectedPair.remoteCandidateId];
-          const relayed = l?.candidateType === 'relay' || r?.candidateType === 'relay';
-          const kind = l || r ? (relayed ? 'relay' : 'direct') : 'unknown';
-          // RTT in 20 ms steps: a jittery number would otherwise re-render on every check.
-          const rttMs = typeof selectedPair.currentRoundTripTime === 'number' ? Math.round(selectedPair.currentRoundTripTime * 50) * 20 : null;
-          const key = `${kind}:${rttMs}`;
+        // Selected candidate pair → direct (host / srflx / prflx) or relay, and the round trip.
+        const route = routeFromStats(stats);
+        if (route) {
+          const key = `${route.path}:${route.rttMs}`;
           if (key !== lastRoute) {
             lastRoute = key;
-            setCallRoute({ kind: kind as any, rttMs });
-            if (callMetricsRef.current) { callMetricsRef.current.route = kind as any; callMetricsRef.current.rttMs = rttMs; }
+            setCallRoute(route);
+            if (callMetricsRef.current) { callMetricsRef.current.route = route.kind; callMetricsRef.current.path = route.path ?? undefined; callMetricsRef.current.rttMs = route.rttMs; }
           }
         }
       } catch {}
@@ -2480,6 +2474,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
       setCallState('active');
       markSetup(callMetricsRef.current);
+      setCallTiming((t) => ({ ...t, setupMs: callMetricsRef.current?.setupMs }));
       playRemoteAudio();
     };
     if (!pc || up()) { live(); return; }
@@ -2518,7 +2513,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const el = remoteAudioRef.current;
     if (!el) return;
     // The voice actually playing is "first audio" (the element is the one always-mounted <audio>).
-    el.onplaying = () => markFirstAudio(callMetricsRef.current);
+    el.onplaying = () => {
+      markFirstAudio(callMetricsRef.current);
+      const firstAudioMs = callMetricsRef.current?.firstAudioMs;
+      setCallTiming((t) => (t.firstAudioMs === firstAudioMs ? t : { ...t, firstAudioMs }));
+    };
     el.play().then(() => setAudioBlocked(false)).catch((err: any) => {
       if (err?.name === 'NotAllowedError') setAudioBlocked(true);
       else console.warn('[Audio] play() failed:', err);
@@ -2708,6 +2707,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const targetPeer = targetPeerOverride || activePeer;
     if (!targetPeer) return;
     callMetricsRef.current = startCallMetrics('caller', type);
+    setCallTiming({});
     
     // Ensure state updates if called from history list
     if (targetPeerOverride && activePeer !== targetPeerOverride) {
@@ -2834,6 +2834,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // [ANDROID FIX] Use callStateRef.current instead of the stale React state closure.
     if (callStateRef.current !== 'ringing') return;
     callMetricsRef.current = startCallMetrics('callee', callTypeRef.current === 'video' ? 'video' : 'audio');
+    setCallTiming({});
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       toast.error('This browser cannot use your microphone or camera. Try a current version of Chrome, Edge, Firefox or Safari.');
       return;
@@ -7390,13 +7391,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               <div className="absolute top-2 left-2 bg-white/90 text-[#15171c] text-[12px] tabular-nums px-2 py-0.5 rounded-full font-medium">
                 <CallClock startedAt={callStartedAt} />
               </div>
+              {callMetricsLabel(callRoute, callTiming) && (
+                <div className="absolute bottom-2 left-2 right-2 bg-black/55 text-white text-[10px] tabular-nums px-2 py-0.5 rounded-full truncate text-center" title={callMetricsDetail(callRoute, callTiming)}>
+                  {callMetricsLabel(callRoute, callTiming)}
+                </div>
+              )}
             </motion.div>
           ) : (
             // The call keeps living in a black pill at the top, like the Dynamic Island.
             <button
               type="button"
               onClick={() => setIsCallMinimized(false)}
-              aria-label={`Return to the call with ${activePeer ? getDisplayName(activePeer) : 'your contact'}`}
+              aria-label={`Return to the call with ${activePeer ? getDisplayName(activePeer) : 'your contact'}${callMetricsDetail(callRoute, callTiming) ? '. ' + callMetricsDetail(callRoute, callTiming) : ''}`}
               className="fixed left-1/2 -translate-x-1/2 z-[100000] h-10 max-w-[calc(100vw-24px)] pl-2.5 pr-2 rounded-full bg-[#0b0c0f] text-white flex items-center gap-3 shadow-[0_10px_30px_rgba(11,12,15,0.22)] active:scale-[0.98] transition-transform"
               style={{ top: 'max(10px, calc(env(safe-area-inset-top, 0px) + 6px))' }}
             >
@@ -7407,6 +7413,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 {callReconnecting ? 'Reconnecting…' : activePeer ? getDisplayName(activePeer) : 'Call'}
               </span>
               <span className="font-mono text-[12px] text-[#b9bdc6] tabular-nums shrink-0"><CallClock startedAt={callStartedAt} /></span>
+              {/* Local measurements only (lib/calls/metrics.ts): route and time to connect. */}
+              {callMetricsLabel(callRoute, callTiming) && (
+                <span
+                  className="hidden min-[400px]:inline text-[11px] text-[#8b909b] tabular-nums shrink-0"
+                  title={callMetricsDetail(callRoute, callTiming)}
+                >
+                  {callMetricsLabel(callRoute, callTiming)}
+                </span>
+              )}
               <span className="flex items-center gap-[2px] h-4 shrink-0" aria-hidden="true">
                 {[8, 14, 10, 16, 7].map((h, i) => (
                   <span key={i} className="w-[3px] rounded-sm bg-[#5fd38d] animate-pulse" style={{ height: h, animationDelay: `${i * 0.15}s` }} />
