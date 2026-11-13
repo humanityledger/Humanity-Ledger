@@ -1,12 +1,21 @@
-// @ts-nocheck
 'use client';
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Heart, Sparkles, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
-import { useSendTransaction, useWriteContract, useAccount } from 'wagmi';
-import { parseEther, parseUnits } from 'viem';
+import React, { useRef, useState } from 'react';
+import { X, Heart } from 'lucide-react';
+import { useAccount, useSendTransaction, useWriteContract } from 'wagmi';
+import { isAddress, parseEther, parseUnits, type Address } from 'viem';
+import { mainnet } from 'viem/chains';
 import { toast } from 'sonner';
+
+/**
+ * Public tip in ETH or USDC on Ethereum mainnet, sent from the user's own wallet.
+ *
+ * Both tokens are pinned to chain 1: the USDC address below is the Ethereum mainnet contract,
+ * and on another chain the same address is not USDC (and "ETH" would be another chain's coin).
+ * wagmi refuses the transaction when the wallet is on another chain (chainId below), so a tip
+ * can never go to the wrong contract. Amounts are parsed to bigint base units; nothing is
+ * rounded through floating point.
+ */
 
 interface SendTipModalProps {
   open: boolean;
@@ -16,10 +25,15 @@ interface SendTipModalProps {
   onTipSent: (tipData: { amount: string; token: string; txHash: string; to: string }) => void;
 }
 
-const PRESETS = ['1', '5', '10', '25'];
+type TipToken = 'USDC' | 'ETH';
 
-// USDC contract on Ethereum / Base / Polygon
-const USDC_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+const PRESETS: Record<TipToken, readonly string[]> = {
+  USDC: ['1', '5', '10', '25'],
+  ETH: ['0.001', '0.005', '0.01', '0.025'],
+};
+
+/** USDC on Ethereum mainnet (chain 1) only. */
+const USDC_MAINNET: Address = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
 const ERC20_TRANSFER_ABI = [
   {
     name: 'transfer',
@@ -33,186 +47,182 @@ const ERC20_TRANSFER_ABI = [
   },
 ] as const;
 
-export function SendTipModal({
-  open,
-  onClose,
-  recipientAddress,
-  recipientName,
-  onTipSent,
-}: SendTipModalProps) {
-  const [token, setToken] = useState<'USDC' | 'ETH'>('USDC');
+/** Base units of the amount typed, or null when it is not a positive amount. */
+function toUnits(token: TipToken, amount: string): bigint | null {
+  const clean = amount.trim();
+  if (!/^\d+(\.\d+)?$/.test(clean)) return null;
+  try {
+    const units = token === 'ETH' ? parseEther(clean) : parseUnits(clean, 6);
+    return units > 0n ? units : null;
+  } catch {
+    return null;
+  }
+}
+
+export function SendTipModal({ open, onClose, recipientAddress, recipientName, onTipSent }: SendTipModalProps) {
+  const [token, setToken] = useState<TipToken>('USDC');
   const [amount, setAmount] = useState('5');
   const [isSending, setIsSending] = useState(false);
+  const inFlight = useRef(false);
 
-  const { isConnected } = useAccount();
+  const { isConnected, chainId } = useAccount();
   const { sendTransactionAsync } = useSendTransaction();
   const { writeContractAsync } = useWriteContract();
 
   if (!open) return null;
 
+  const recipientOk = isAddress(recipientAddress);
+  const units = toUnits(token, amount);
+
   const handleSendTip = async () => {
+    if (inFlight.current) return;
     if (!isConnected) {
-      toast.error('Connect your wallet first');
+      toast.error('Connect your wallet first.');
       return;
     }
-    if (!amount || parseFloat(amount) <= 0) {
-      toast.error('Enter a valid tip amount');
+    if (!recipientOk) {
+      toast.error('This recipient has no valid Ethereum address.');
+      return;
+    }
+    if (units === null) {
+      toast.error('Enter an amount greater than zero.');
+      return;
+    }
+    if (chainId !== mainnet.id) {
+      toast.error('Switch your wallet to Ethereum mainnet to send a tip.');
       return;
     }
 
+    inFlight.current = true;
+    setIsSending(true);
     try {
-      setIsSending(true);
-      let txHash = '';
+      const to = recipientAddress as Address;
+      const txHash =
+        token === 'ETH'
+          ? await sendTransactionAsync({ to, value: units, chainId: mainnet.id })
+          : await writeContractAsync({
+              address: USDC_MAINNET,
+              abi: ERC20_TRANSFER_ABI,
+              functionName: 'transfer',
+              args: [to, units],
+              chainId: mainnet.id,
+            });
 
-      if (token === 'ETH') {
-        const val = parseEther(amount);
-        const tx = await sendTransactionAsync({
-          to: recipientAddress as `0x${string}`,
-          value: val,
-        });
-        txHash = tx;
-      } else {
-        // USDC (6 decimals)
-        const units = parseUnits(amount, 6);
-        const tx = await writeContractAsync({
-          address: USDC_ADDRESS,
-          abi: ERC20_TRANSFER_ABI,
-          functionName: 'transfer',
-          args: [recipientAddress as `0x${string}`, units],
-        });
-        txHash = tx;
-      }
-
-      toast.success(`Sent ${amount} ${token} tip!`);
-      onTipSent({
-        amount,
-        token,
-        txHash,
-        to: recipientAddress,
-      });
+      toast.success(`Tip of ${amount} ${token} submitted.`);
+      onTipSent({ amount, token, txHash, to: recipientAddress });
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[SendTipModal]', err);
-      toast.error(err?.shortMessage || err?.message || 'Tip failed');
+      const e = err as { shortMessage?: string; message?: string };
+      toast.error(e?.shortMessage || e?.message || 'The tip was not sent.');
     } finally {
+      inFlight.current = false;
       setIsSending(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-black/10 space-y-5"
-      >
-        {/* Header */}
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="tip-title">
+      <div className="bg-white rounded-2xl max-w-sm w-full p-6 border border-[#E4E7EC] space-y-5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[#15171c]">
-            <Sparkles size={18} />
-            <span className="text-xs font-semibold">Creator Tip</span>
-          </div>
+          <h2 id="tip-title" className="text-[15px] font-semibold text-[#15171C]">
+            Send a tip
+          </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-black/5 text-black/40 transition-colors"
+            aria-label="Close"
+            className="w-11 h-11 -mr-2 rounded-xl flex items-center justify-center text-[#475467] hover:bg-[#F7F8FA] transition-colors duration-150 ease-out"
           >
-            <X size={18} />
+            <X size={18} strokeWidth={1.75} />
           </button>
         </div>
 
-        {/* Recipient Profile */}
-        <div className="flex items-center gap-3 p-3 bg-[#f2f4f7] rounded-2xl">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#15171c] to-emerald-400 flex items-center justify-center text-white font-semibold text-sm">
+        <div className="flex items-center gap-3 p-3 bg-[#F7F8FA] border border-[#E4E7EC] rounded-xl">
+          <div className="w-10 h-10 rounded-full bg-[#15171C] flex items-center justify-center text-white font-semibold text-[13px] shrink-0">
             {recipientName ? recipientName.slice(0, 2).toUpperCase() : 'W'}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-[#15171c] truncate">
-              {recipientName || 'Creator'}
-            </p>
-            <p className="text-[12.5px] tabular-nums text-black/40 truncate">
-              {recipientAddress}
-            </p>
+            <p className="text-[14px] font-semibold text-[#15171C] truncate">{recipientName || 'Recipient'}</p>
+            <p className="text-[12.5px] tabular-nums text-[#475467] truncate">{recipientAddress}</p>
           </div>
         </div>
 
-        {/* Token Selector */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setToken('USDC')}
-            className={`py-2.5 rounded-xl text-xs font-semibold transition-all border ${
-              token === 'USDC'
-                ? 'bg-[#eff1f4] text-[#15171c] border-[#15171c]'
-                : 'bg-[#f2f4f7] text-black/60 border-transparent hover:bg-black/5'
-            }`}
-          >
-            USDC (Stable)
-          </button>
-          <button
-            type="button"
-            onClick={() => setToken('ETH')}
-            className={`py-2.5 rounded-xl text-xs font-semibold transition-all border ${
-              token === 'ETH'
-                ? 'bg-[#eff1f4] text-[#15171c] border-[#15171c]'
-                : 'bg-[#f2f4f7] text-black/60 border-transparent hover:bg-black/5'
-            }`}
-          >
-            ETH (Native)
-          </button>
-        </div>
+        <p className="text-[12.5px] leading-relaxed text-[#475467]">
+          A public transfer on Ethereum mainnet from your wallet. It is not private and cannot be undone.
+        </p>
 
-        {/* Presets */}
-        <div className="grid grid-cols-4 gap-2">
-          {PRESETS.map((p) => (
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Token">
+          {(['USDC', 'ETH'] as const).map((t) => (
             <button
-              key={p}
+              key={t}
               type="button"
-              onClick={() => setAmount(p)}
-              className={`py-2 rounded-xl text-xs font-semibold transition-all ${
-                amount === p
-                  ? 'bg-black text-white'
-                  : 'bg-[#f2f4f7] text-black/60 hover:bg-black/5'
+              role="radio"
+              aria-checked={token === t}
+              onClick={() => {
+                setToken(t);
+                setAmount(PRESETS[t][1]);
+              }}
+              className={`min-h-[44px] rounded-xl text-[13px] font-semibold border transition-colors duration-150 ease-out ${
+                token === t ? 'bg-white text-[#15171C] border-[#15171C]' : 'bg-[#F7F8FA] text-[#475467] border-[#E4E7EC] hover:bg-white'
               }`}
             >
-              ${p}
+              {t}
             </button>
           ))}
         </div>
 
-        {/* Amount Input */}
-        <div>
-          <label className="text-[12.5px] font-semibold text-black/40 block mb-1">
-            Custom Amount ({token})
-          </label>
-          <input
-            type="number"
-            step="any"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            className="w-full px-4 py-3 bg-[#f2f4f7] rounded-xl outline-none text-base font-semibold text-[#15171c] focus:ring-2 focus:ring-[#15171c]/15"
-          />
+        <div className="grid grid-cols-4 gap-2">
+          {PRESETS[token].map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setAmount(p)}
+              className={`min-h-[44px] rounded-xl text-[12.5px] font-semibold tabular-nums transition-colors duration-150 ease-out ${
+                amount === p ? 'bg-[#15171C] text-white' : 'bg-[#F7F8FA] text-[#475467] hover:bg-[#EFF1F4]'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
         </div>
 
-        {/* Submit Button */}
+        <div>
+          <label htmlFor="tip-amount" className="text-[12.5px] font-semibold text-[#475467] block mb-1">
+            Amount in {token}
+          </label>
+          <input
+            id="tip-amount"
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder={PRESETS[token][0]}
+            className="w-full min-h-[44px] px-4 bg-white border border-[#E4E7EC] rounded-xl outline-none text-[16px] font-semibold tabular-nums text-[#15171C] focus:border-[#15171C]"
+          />
+          {amount.trim() !== '' && units === null && (
+            <p className="mt-1.5 text-[12.5px] text-[#B42318]" role="alert">
+              Enter an amount greater than zero, with a dot for decimals.
+            </p>
+          )}
+        </div>
+
         <button
           type="button"
           onClick={handleSendTip}
-          disabled={isSending}
-          className="w-full py-3.5 bg-[#15171c] hover:bg-[#15171c] text-white font-semibold rounded-2xl text-sm transition-transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-black/5 disabled:opacity-50"
+          disabled={isSending || units === null || !recipientOk}
+          className="w-full min-h-[48px] bg-[#15171C] text-white font-semibold rounded-xl text-[14px] flex items-center justify-center gap-2 disabled:opacity-50 transition-colors duration-150 ease-out"
         >
           {isSending ? (
-            <>
-              <Loader2 size={16} className="animate-spin" /> Confirming...
-            </>
+            'Confirm in your wallet…'
           ) : (
             <>
-              <Heart size={16} fill="currentColor" /> Send {amount} {token} Tip
+              <Heart size={16} strokeWidth={1.75} /> Send {amount || '0'} {token}
             </>
           )}
         </button>
-      </motion.div>
+      </div>
     </div>
   );
 }
