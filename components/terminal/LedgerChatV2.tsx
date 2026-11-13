@@ -25,6 +25,7 @@ import { useWalletStore } from '@/lib/store/wallet-store';
 import { useAztec } from '@/context/AztecContext';
 import { toast } from 'sonner';
 import { chatTextPx, DEFAULT_TEXT_SIZE_LEVEL } from '@/lib/chat/textSize';
+import { ChatCredit } from '@/components/chat/ChatCredit';
 import { loadBlockList, saveBlockList, BLOCK_LIST_EVENT } from '@/lib/chat/blockList';
 import { deriveCallLog, callLogMessages, decodeCallEntry, callEntryLabel, isCallSignal, CALL_LOG_PREFIX, type CallSignal } from '@/lib/chat/callLog';
 import { startDeviceSync, stopDeviceSync, handleDeviceSyncMessage, setSynced, getSynced, getDeviceStore, DEVICE_SYNC_EVENT, type DeviceSyncEventDetail } from '@/lib/sync/runtime';
@@ -1011,6 +1012,31 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (address) setSynced(address, { [`pinned:${key}`]: on ? true : null });
     toast.success(on ? 'Pinned' : 'Unpinned');
   }, [address, pinnedPeers]);
+
+  // Blocks a peer on this account (synced block list), closes their chat and says so.
+  const blockPeer = (peer: string) => {
+    if (!peer) return;
+    setShowContactInfo(false);
+    const next = new Set(blockedPeersRef.current);
+    next.add(peer.toLowerCase());
+    blockedPeersRef.current = next;
+    setBlockedPeers(next);
+    saveBlockList(Array.from(next)).catch(() => {});
+    setActivePeer(null);
+    toast.success(`${getDisplayName(peer)} is blocked`);
+  };
+
+  // Contact info: on screens wide enough for the details column it is already on screen, so the
+  // header and the menu bring it into view; narrower screens open the sheet.
+  const openContactInfo = () => {
+    const column = typeof document !== 'undefined' ? document.getElementById('chat-details-column') : null;
+    if (column && column.offsetParent !== null) {
+      column.scrollTo({ top: 0, behavior: 'smooth' });
+      column.focus({ preventScroll: true });
+      return;
+    }
+    setShowContactInfo(true);
+  };
 
   const toggleMute = useCallback((peer: string) => {
     const key = peer.toLowerCase();
@@ -5985,18 +6011,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             onVoiceCall={() => { setShowContactInfo(false); handleStartCall('audio', activePeer); }}
             onVideoCall={() => { setShowContactInfo(false); handleStartCall('video', activePeer); }}
             onSearch={() => { setShowContactInfo(false); setShowSearch(true); }}
-            onBlock={() => {
-              setShowContactInfo(false);
-              {
-                const next = new Set(blockedPeersRef.current);
-                next.add(activePeer.toLowerCase());
-                blockedPeersRef.current = next;
-                setBlockedPeers(next);
-                saveBlockList(Array.from(next)).catch(() => {});
-              }
-              setActivePeer(null);
-              toast.success(`${getDisplayName(activePeer)} is blocked`);
-            }}
+            onBlock={() => blockPeer(activePeer)}
+            isMuted={mutedPeers.has(activePeer.toLowerCase())}
+            onToggleMute={() => toggleMute(activePeer)}
           />
         )}
       </AnimatePresence>
@@ -6538,7 +6555,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <button type="button" onClick={() => setShowList(true)} className="md:hidden w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c]" aria-label="Back to chats">
                   <ChevronLeft size={22} strokeWidth={1.9} />
                 </button>
-                <button type="button" onClick={() => setShowContactInfo(true)} className="flex items-center gap-3 min-w-0 rounded-xl px-1.5 py-1 hover:bg-[#f2f4f7] transition-colors text-left" aria-label={`Contact info for ${getDisplayName(activePeer!)}`}>
+                <button type="button" onClick={openContactInfo} className="flex items-center gap-3 min-w-0 rounded-xl px-1.5 py-1 hover:bg-[#f2f4f7] transition-colors text-left" aria-label={`Contact info for ${getDisplayName(activePeer!)}`}>
                   <div className="relative shrink-0">
                     <Avatar address={activePeer!} size={42} />
                     {peerStatus.status === 'online' && (
@@ -6600,7 +6617,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       <div className="fixed inset-0 z-[150]" onClick={() => setShowHeaderMenu(false)} aria-hidden="true" />
                       <div role="menu" className="absolute right-0 top-11 z-[160] w-60 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] p-1.5">
                         {[
-                          { label: 'Contact info', icon: <Info size={17} strokeWidth={1.8} />, onClick: () => setShowContactInfo(true) },
+                          { label: 'Contact info', icon: <Info size={17} strokeWidth={1.8} />, onClick: openContactInfo },
                           { label: 'Search in chat', icon: <Search size={17} strokeWidth={1.8} />, onClick: () => { setShowSearch(true); setSearchQuery(''); setSearchIndex(0); } },
                           { label: 'Wallpaper', icon: <ImageIcon size={17} strokeWidth={1.8} />, onClick: () => setShowWallpaperPicker(true) },
                           { label: 'Appearance', icon: <Palette size={17} strokeWidth={1.8} />, onClick: () => setShowThemePicker(true) },
@@ -7242,17 +7259,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               peerInboxId={activePeerInboxIdRef.current}
               client={client}
               messages={messages.filter((m: any) => m.conversationId === `dm-${activePeer.toLowerCase()}`)}
+              myAddress={effectiveAddress || ''}
               isMuted={mutedPeers.has(activePeer.toLowerCase())}
-              disappearing={(() => { try { const t = localStorage.getItem('ledger_disappearing_' + activePeer.toLowerCase()); return ({ '24h': 'after 24 hours', '7d': 'after 7 days', '90d': 'after 90 days' } as Record<string, string>)[t || ''] ?? null; } catch { return null; } })()}
               onCall={(type) => handleStartCall(type)}
               onPay={() => setShowZkModal(true)}
               onToggleMute={() => toggleMute(activePeer)}
-              onMore={() => setShowContactInfo(true)}
+              onBlock={() => blockPeer(activePeer)}
+              onClearChat={() => setShowClearConfirm(true)}
             />
           )}
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center bg-[#f7f8fa] relative overflow-y-auto p-6 md:p-12">
+            <ChatCredit align="end" className="hidden md:flex absolute bottom-6 right-7 max-w-[340px]" />
             <div className="w-full max-w-md flex flex-col items-center text-center">
               <div className="w-16 h-16 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center text-[#15171c] mb-6">
                 <MessageSquare size={28} strokeWidth={1.6} aria-hidden="true" />
