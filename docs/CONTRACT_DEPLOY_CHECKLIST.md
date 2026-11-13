@@ -44,10 +44,9 @@ checks on every pull request.
 
 1. Deploy with the signer public key returned by `GET /api/aztec/sponsor` (`AZTEC_SPONSOR_*` server secrets set first)
    and a `max_fee` cap; fund it with Fee Juice through `fund`.
-2. Record it in `deployments/aztec-mainnet.json` → `sponsoredFpc`.
+2. Record it in `deployments/aztec-mainnet.json` → `sponsoredFpc` as `{ address, feeJuiceContract, feeJuiceBalanceSlot }`, the last two printed by `node --import ./scripts/aztec/register.mjs scripts/aztec/fee-juice-slot.mjs <address>`.
 3. Set `NEXT_PUBLIC_AZTEC_SPONSOR` in Railway and redeploy (it is read at build time).
-4. `/protocol` then shows the sponsor as recorded; its Fee Juice balance is read once the dashboard reads public
-   balances (follow-up in `docs/PENDING_STEFAN.md`).
+4. `/protocol` then shows the sponsor's Fee Juice balance, read from that slot at the anchored block.
 
 ## 5. Before raising caps or removing the "unaudited" acknowledgement
 

@@ -97,6 +97,16 @@ export interface RecordedToken {
   deployBlock: number;
 }
 
+export interface RecordedSponsor {
+  address: string;
+  /** Fee Juice protocol contract, as captured from the SDK (scripts/aztec/fee-juice-slot.mjs). */
+  feeJuiceContract: string | null;
+  /** Public storage slot of the sponsor's Fee Juice balance, captured from the SDK. */
+  feeJuiceBalanceSlot: string | null;
+}
+
+export const FEE_JUICE_DECIMALS = 18;
+
 export interface Snapshot {
   /** Host of the node that was read, for the "source" lines. */
   nodeHost: string;
@@ -109,7 +119,8 @@ export interface Snapshot {
     contracts: string[];
     tokens: RecordedToken[];
     audit: boolean;
-    sponsoredFpc: string | null;
+    /** LedgerSponsor as recorded at deployment, with where its Fee Juice balance lives. */
+    sponsoredFpc: RecordedSponsor | null;
   };
   /** Public storage reads of the recorded token, at node.blockNumber. */
   token?: {
@@ -117,6 +128,8 @@ export interface Snapshot {
     admin: bigint | { error: string };
   };
   sponsor: {
+    /** Fee Juice balance of the recorded sponsor at node.blockNumber (base units, 18 decimals). */
+    balance?: bigint | { error: string };
     /** NEXT_PUBLIC_AZTEC_SPONSOR, if set. */
     configuredAddress: string | null;
     /** Voucher requests that reached the daily limit check in the last 24 h. null: not read. */
@@ -316,14 +329,29 @@ export function buildMetrics(s: Snapshot): Metric[] {
         : 'No sponsor contract is deployed on Aztec Alpha, and Alpha has no canonical Sponsored FPC. New accounts pay their own Fee Juice.',
       source: RECORD,
     });
+  } else if (typeof s.sponsor.balance === 'bigint') {
+    out.push({
+      id: 'sponsor-pool',
+      group: 'onboarding',
+      label: 'Gas sponsorship pool (Fee Juice)',
+      status: 'live',
+      value: `${formatUnits(s.sponsor.balance, FEE_JUICE_DECIMALS, 4)} Fee Juice`,
+      raw: s.sponsor.balance.toString(),
+      detail: `Public Fee Juice balance of LedgerSponsor ${short(sponsorRecorded.address)}${
+        s.node.ok ? ` at L2 block ${s.node.blockNumber.toLocaleString('en-US')}` : ''
+      }. It pays network fees for new accounts within the per-wallet and daily limits.`,
+      source: `${nodeSource}, public storage of the Fee Juice contract`,
+    });
   } else {
     out.push({
       id: 'sponsor-pool',
       group: 'onboarding',
       label: 'Gas sponsorship pool (Fee Juice)',
       status: 'unavailable',
-      detail: `Sponsor ${short(sponsorRecorded)} is recorded; its Fee Juice balance is not read by this dashboard yet.`,
-      source: RECORD,
+      detail: `LedgerSponsor ${short(sponsorRecorded.address)} is recorded, but its balance was not read${
+        s.sponsor.balance ? `: ${s.sponsor.balance.error}` : ''
+      }. No figure is shown rather than one that may be wrong.`,
+      source: `${nodeSource}, public storage of the Fee Juice contract`,
     });
   }
   if (!s.sponsor.configuredAddress) {
