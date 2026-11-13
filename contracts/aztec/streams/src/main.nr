@@ -294,6 +294,14 @@ pub contract PaymentStream {
 
     // ─── Utility ─────────────────────────────────────────────────────────────
 
+    /// Whether `sender` has already created a stream under `salt` (SEC-S14). The node refuses a second
+    /// one, because its creation nullifier already exists; a client checks this first. Runs locally
+    /// and authorises nothing.
+    #[external("utility")]
+    unconstrained fn stream_exists(salt: Field, sender: AztecAddress) -> bool {
+        check_nullifier_exists(poseidon2_hash_with_separator([salt, sender.to_field()], DOM_SEP__STREAM_CREATE))
+    }
+
     #[external("public")]
     #[view]
     fn get_token() -> pub AztecAddress {

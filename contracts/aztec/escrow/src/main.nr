@@ -226,6 +226,14 @@ pub contract PrivateEscrow {
         );
     }
 
+    /// Whether `sender` has already funded `escrow_id`. The node refuses a second deposit under the same
+    /// (escrow_id, sender), because its deposit nullifier already exists; a client checks this first
+    /// so it never builds a transaction that cannot land. Runs locally and authorises nothing.
+    #[external("utility")]
+    unconstrained fn deposit_exists(escrow_id: Field, sender: AztecAddress) -> bool {
+        check_nullifier_exists(poseidon2_hash_with_separator([escrow_id, sender.to_field()], DOM_SEP__ESCROW_DEPOSIT))
+    }
+
     #[external("public")]
     #[view]
     fn get_token() -> pub AztecAddress {

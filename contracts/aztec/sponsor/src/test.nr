@@ -50,8 +50,8 @@ unconstrained fn the_binding_names_this_instance_and_network() {
     let instance = b[0];
     let chain = b[1];
     let version = b[2];
-    std::println(f"[SPONSOR-V2 binding] address {instance} chain {chain} version {version}");
-    assert(instance == sponsor.to_field());
+    // Pass 1b: reports the binding through a failing assertion (aztec test hides println).
+    assert(instance == 0, f"[SPONSOR-V2 binding] address {instance} chain {chain} version {version}");
 }
 
 // The same in a second fresh environment: the vectors only hold if the TXE address is deterministic.
@@ -60,7 +60,7 @@ unconstrained fn the_binding_is_the_same_in_a_fresh_environment() {
     let (env, user, sponsor) = setup();
     let b = binding(env, user, sponsor);
     let instance = b[0];
-    std::println(f"[SPONSOR-V2 binding again] address {instance}");
+    assert(instance == 0, f"[SPONSOR-V2 binding again] address {instance}");
 }
 
 // TXE runs a test call in the revertible phase, so the fee-payer election itself cannot succeed

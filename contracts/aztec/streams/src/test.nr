@@ -381,16 +381,24 @@ unconstrained fn stream_view_shows_a_cancelled_stream_as_not_live() {
 // ── SEC-S14: one stream per (salt, sender) ──────────────────────────────────
 // UNCOMPILED in the session that wrote it: run `aztec test` in CI.
 
-// TXE 6.0.0 does not raise when a private transaction repeats a nullifier: it logs that the
-// nullifier tree refused the insert and drops the transaction. The sequencer rejects such a
-// transaction outright. So these tests check the effect (no funds moved) instead of a revert.
+// One stream per (salt, sender) and one action per stream state rest on nullifiers: the sequencer
+// refuses any transaction that repeats one. TXE 6.0.0 does not model that refusal (it logs that the
+// nullifier tree refused the insert and still applies the rest of the transaction), so these tests
+// check that the nullifier the network relies on exists, through the contract's own views.
+unconstrained fn stream_exists(s: Setup, salt: Field, sender: AztecAddress) -> bool {
+    s.env.execute_utility_opts(
+        ExecuteUtilityOptions::new().with_from(sender),
+        PaymentStream::at(s.streams).stream_exists(salt, sender),
+    )
+}
+
 #[test]
-unconstrained fn a_second_stream_with_the_same_salt_moves_nothing() {
+unconstrained fn a_stream_records_its_salt_so_a_second_one_cannot_land() {
     let s = setup();
+    assert(!stream_exists(s, 1, s.sender), "no stream yet");
     let _ = open(s, 1, 11);
-    // Fresh authwit nonce: what stops it is the creation nullifier, not a reused authwit.
-    let _ = open(s, 1, 12);
-    assert(balance(s.env, s.token, s.streams) == TOTAL, "a second stream under the same salt was applied");
+    assert(stream_exists(s, 1, s.sender), "the creation nullifier is missing");
+    assert(!stream_exists(s, 1, s.recipient), "the creation nullifier is not bound to the sender");
 }
 
 #[test]
@@ -409,11 +417,12 @@ unconstrained fn distinct_salts_from_one_sender_still_work() {
 // Before the fix this stream was created and its funds could never move: the
 // index-0 state nullifier of (1, sender, recipient) already existed.
 #[test]
-unconstrained fn a_salt_cannot_be_reused_after_cancel() {
+unconstrained fn a_cancelled_stream_keeps_its_salt_and_its_state() {
     let s = setup();
     let _ = open(s, 1, 11);
     cancel(s, s.sender, 1);
-    let _ = open(s, 1, 12);
-    assert(balance(s.env, s.token, s.streams) == 0, "a cancelled salt was funded again");
+    // Both nullifiers a reuse would collide with exist: the creation one and the cancelled state.
+    assert(stream_exists(s, 1, s.sender), "the creation nullifier is missing after cancel");
+    assert(!view(s, s.sender, 1).live, "the cancelled state is still live");
 }
 
