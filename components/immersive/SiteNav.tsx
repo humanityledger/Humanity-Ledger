@@ -37,6 +37,7 @@ export const SITE_NAV: NavGroup[] = [
       { label: "Private payments", href: "/#aztec", hint: "Settled privately on Aztec" },
       { label: "On your phone", href: "/#in-your-hand", hint: "Messages, calls and payments" },
       { label: "Network status", href: "/docs/status", hint: "What is up right now" },
+      { label: "Protocol metrics", href: "/protocol", hint: "Live network figures, nothing estimated" },
     ],
   },
   {
