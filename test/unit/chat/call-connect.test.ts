@@ -21,8 +21,8 @@ describe('calls: active only once a network path exists', () => {
     expect(src).toMatch(/if \(callStateRef\.current === 'connecting'\) \{ connectFailedRef\.current\(\); return; \}/);
   });
 
-  it('shows the other person\'s video and the live clock only when the call is active', () => {
-    expect(src).toContain("callType === 'video' && remoteHasVideo && callState === 'active' ? (");
+  it('shows the other person\'s video once the call is active or its frames arrive, and the live clock only when active', () => {
+    expect(src).toContain("callType === 'video' && remoteHasVideo && (callState === 'active' || remoteVideoLive) ? (");
     expect(src).toContain("connected={callState === 'active' && !!remoteStream}");
   });
 });

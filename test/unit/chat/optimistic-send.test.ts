@@ -92,7 +92,7 @@ describe('send queue', () => {
 
 describe('chat wiring', () => {
   const chat = readFileSync(join(process.cwd(), 'components/terminal/LedgerChatV2.tsx'), 'utf8');
-  const send = chat.slice(chat.indexOf('const executeSend = async (content: string)'), chat.indexOf('executeSendRef.current = executeSend;'));
+  const send = chat.slice(chat.indexOf('const executeSend = async (content: string'), chat.indexOf('executeSendRef.current = executeSend;'));
 
   it('inserts the bubble before any network call and no longer locks the composer', () => {
     expect(send.indexOf('setMessages(prev => insertOptimistic(prev, optimisticMsg))')).toBeGreaterThan(-1);
