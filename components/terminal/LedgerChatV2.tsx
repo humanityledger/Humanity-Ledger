@@ -498,43 +498,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   
   // BIOMETRIC LOCK STATE
   const [isBiometricallyUnlocked, setIsBiometricallyUnlocked] = useState(false);
-  const [biometricChecking, setBiometricChecking] = useState(false);
-
-  useEffect(() => {
-    // App lock off: nothing to unlock. The lock screen is rendered only while the lock is on (below), so the
-    // state is left untouched here: a lock switched on later (settings arriving after the defaults) still engages.
-    if (!ledgerSettings?.biometric_lock) return;
-    // If already unlocked, do nothing
-    if (isBiometricallyUnlocked) return;
-
-    // Trigger biometric check
-    const checkBiometric = async () => {
-      setBiometricChecking(true);
-      try {
-        if (typeof window !== 'undefined' && window.PublicKeyCredential) {
-          // Hardware WebAuthn prompt for Secure Enclave identity verification
-          await navigator.credentials.get({
-            publicKey: {
-              challenge: new Uint8Array(32),
-              rpId: window.location.hostname,
-              userVerification: "preferred",
-              timeout: 60000
-            }
-          }).catch(() => {
-             // Fallback if user cancels or it fails
-          });
-        }
-        setIsBiometricallyUnlocked(true);
-      } catch (e) {
-        console.error("Biometric failed", e);
-      } finally {
-        setBiometricChecking(false);
-        // Fallback unlock after a timeout to prevent absolute lockouts during testing
-        setTimeout(() => setIsBiometricallyUnlocked(true), 2500);
-      }
-    };
-    checkBiometric();
-  }, [ledgerSettings?.biometric_lock, isBiometricallyUnlocked]);
+  // The app lock (Settings › Security) is the PIN screen below and nothing else. It used to
+  // unlock by itself: a WebAuthn prompt with a fixed challenge whose result was ignored, and a
+  // 2.5 s timer that opened the chat whatever happened, so the lock protected nothing.
   
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
@@ -5770,6 +5736,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         title="Ledger Chat is locked"
         subtitle="Enter your PIN to open your conversations."
         onUnlock={() => setIsBiometricallyUnlocked(true)}
+        // No PIN on this account: there is nothing to check, so the lock cannot protect it. Say
+        // so instead of leaving the person on a lock screen they cannot pass.
+        onNeedsSetup={() => {
+          setIsBiometricallyUnlocked(true);
+          toast.warning('The app lock needs a PIN', {
+            description: 'This account has no PIN, so the lock cannot protect it and Ledger Chat opened without one. You can turn the lock off in Settings › Security.',
+            duration: 9000,
+          });
+        }}
       />
     );
   }
