@@ -119,7 +119,7 @@ export function LedgerChatProfile({
                     <div>
                       <h3 className="text-[14px] font-semibold text-black">End-to-End Encrypted</h3>
                       <p className="text-[13px] text-black/60 mt-1 leading-relaxed">
-                        Messages and calls with this contact are secured by the XMTP protocol. No third party can read them.
+                        Messages with this contact are end-to-end encrypted with MLS over XMTP. Calls are encrypted between your devices with DTLS-SRTP.
                       </p>
                     </div>
                   </div>

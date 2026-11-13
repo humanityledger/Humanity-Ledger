@@ -224,10 +224,10 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 </motion.div>
                 
                 <h1 className="text-4xl md:text-5xl font-semibold mb-4 tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-black to-gray-600">
-                  Welcome to Ledger
+                  Welcome to Ledger Chat
                 </h1>
                 <p className="text-[16px] text-black/60 font-medium leading-relaxed mb-12 max-w-md mx-auto">
-                  A sovereign identity in a truly private network. End-to-end encrypted messaging powered by zero-knowledge architecture.
+                  Your wallet is your account. Direct messages are end-to-end encrypted with MLS over XMTP.
                 </p>
                 
                 <button

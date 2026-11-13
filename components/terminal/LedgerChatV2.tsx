@@ -6677,7 +6677,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <button type="button" onClick={() => setShowEncryptionInfo(true)} className="max-w-[460px] flex items-start gap-2.5 px-4 py-3 rounded-[14px] bg-white border border-[#e6e8ec] text-[13px] leading-[1.5] text-[#4a4f59] text-left hover:bg-[#fafbfc] transition-colors">
                   <Lock size={15} strokeWidth={1.9} className="text-[#15171c] shrink-0 mt-[2px]" aria-hidden="true" />
                   <span>
-                    Messages, calls and payments in this chat are end-to-end encrypted.{ledgerSettings?.payments_enabled !== false ? ' Payments settle privately on Aztec.' : ''}{' '}
+                    Messages in this chat are end-to-end encrypted, and calls are encrypted between your devices.{ledgerSettings?.payments_enabled !== false ? ' Payments settle privately on Aztec.' : ''}{' '}
                     <span className="text-[#15171c] font-medium underline underline-offset-2">Details</span>
                   </span>
                 </button>
@@ -7951,7 +7951,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                <div className="flex flex-col gap-0.5">
                  <dt className="text-[12px] font-semibold uppercase tracking-wider text-[#727a88]">Encryption protocol</dt>
                  <dd className="text-[#475061] leading-relaxed">
-                   End-to-end encrypted with MLS / DTLS via XMTP & Aztec Network. Zero metadata accessible outside of participants.
+                   End to end, with MLS over XMTP. The network still sees when messages are sent. Messages delivered by our server fallback are marked in the chat and are not end to end encrypted.
                  </dd>
                </div>
                <div className="flex flex-col gap-0.5">
