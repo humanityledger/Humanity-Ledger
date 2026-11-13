@@ -6,8 +6,8 @@
  *   sha256("HL-SPONSOR-V1" + 3 zero bytes || voucher id, 32 bytes BE || expiry, u64 BE)
  * signed with ECDSA secp256k1, low-s, 64 bytes r || s.
  *
- * The key: AZTEC_SPONSOR_SIGNER_KEY (32-byte hex) when set; otherwise derived from JWT_SECRET with
- * HMAC-SHA256 under its own label, so no new secret has to be created to start. Its public half is
+ * The key: AZTEC_SPONSOR_SIGNER_KEY (32-byte hex). On the test network only, it may be derived from
+ * JWT_SECRET with HMAC-SHA256 under its own label; on Alpha the explicit key is required. Its public half is
  * what the contract is deployed with; rotating it means deploying a new sponsor.
  */
 import 'server-only';
@@ -25,6 +25,12 @@ export interface Voucher { voucherId: string; expiresAt: number; signerX: number
 function signerPrivateKey(): Buffer | null {
   const explicit = (process.env.AZTEC_SPONSOR_SIGNER_KEY || '').trim().replace(/^0x/, '');
   if (/^[0-9a-fA-F]{64}$/.test(explicit)) return Buffer.from(explicit, 'hex');
+  // On Aztec Alpha (real funds) the key must be its own secret. Derived from JWT_SECRET it would let
+  // anyone holding the session secret mint vouchers, and rotating that secret would silently change
+  // the signer (every voucher then fails as "unknown signer"). The voucher digest does not name the
+  // contract instance (finding SP-5, docs/security/AUDIT_2026-11-13.md), so a key must also never be
+  // shared between a test deployment and a mainnet one.
+  if (process.env.NEXT_PUBLIC_AZTEC_NETWORK === 'alpha') return null;
   const secret = process.env.JWT_SECRET;
   if (!secret || secret.length < 16) return null;
   // Reduce into [1, n-1]: a 32-byte HMAC is almost always below n already.

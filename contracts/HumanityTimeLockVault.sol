@@ -15,9 +15,15 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * Security model:
  *   - Each user has an independent vault with their own backup wallet and timeout.
  *   - Multiple ERC-20 tokens can be deposited per vault.
- *   - executeDeadManSwitch sweeps ALL specified tokens atomically in a single call;
- *     isTriggered is set only after all transfers succeed, eliminating the
- *     multi-token lockout vulnerability (KupiaSec audit finding).
+ *   - The vault records every token it holds for an owner (at most MAX_TOKENS), and
+ *     executeDeadManSwitch sweeps all of them to the backup wallet. It used to sweep only
+ *     the tokens the caller listed and then refuse every later call, so anyone could fire
+ *     it with one token after the timeout and freeze the others for good (owner and backup
+ *     both locked out). After the trigger it may be called again: it sweeps what is left,
+ *     such as a token whose transfer failed the first time.
+ *   - Deposits credit what the vault actually received (balance difference), so a
+ *     fee-on-transfer token cannot credit more than it delivered and drain other owners'
+ *     balances of the same token.
  *   - CEI (Checks-Effects-Interactions) pattern strictly enforced:
  *     isTriggered is set before any external transfer call.
  *   - nonReentrant on all state-mutating external functions.
@@ -46,6 +52,13 @@ contract HumanityTimeLockVault is Ownable, ReentrancyGuard {
     /// @notice Deposited token balances: vaultOwner => token => balance.
     mapping(address => mapping(address => uint256)) public vaultBalances;
 
+    /// @notice Most distinct tokens one vault may hold: bounds the gas of a sweep.
+    uint256 public constant MAX_TOKENS = 32;
+
+    /// @dev Tokens ever deposited into each owner's vault, swept by executeDeadManSwitch.
+    mapping(address => address[]) private _vaultTokens;
+    mapping(address => mapping(address => bool)) private _isVaultToken;
+
     // -------------------------------------------------------------------------
     // EVENTS
     // -------------------------------------------------------------------------
@@ -72,8 +85,8 @@ contract HumanityTimeLockVault is Ownable, ReentrancyGuard {
     error TimeoutTooShort();
     error BackupCannotBeSelf();
     error InsufficientVaultBalance();
-    error NoTokensSpecified();
     error NoTokenBalancesFound();
+    error TooManyTokens();
 
     // -------------------------------------------------------------------------
     // CONSTRUCTOR
@@ -122,10 +135,25 @@ contract HumanityTimeLockVault is Ownable, ReentrancyGuard {
         if (vaults[msg.sender].lastHeartbeat == 0)         revert NoVault();
         if (vaults[msg.sender].isTriggered)                revert VaultAlreadyTriggered();
 
-        IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
-        vaultBalances[msg.sender][_tokenAddress] += _amount;
+        if (!_isVaultToken[msg.sender][_tokenAddress]) {
+            if (_vaultTokens[msg.sender].length >= MAX_TOKENS) revert TooManyTokens();
+            _isVaultToken[msg.sender][_tokenAddress] = true;
+            _vaultTokens[msg.sender].push(_tokenAddress);
+        }
 
-        emit TokenDeposited(msg.sender, _tokenAddress, _amount);
+        IERC20 token = IERC20(_tokenAddress);
+        uint256 before = token.balanceOf(address(this));
+        token.safeTransferFrom(msg.sender, address(this), _amount);
+        uint256 received = token.balanceOf(address(this)) - before;
+        if (received == 0) revert InvalidAmount();
+        vaultBalances[msg.sender][_tokenAddress] += received;
+
+        emit TokenDeposited(msg.sender, _tokenAddress, received);
+    }
+
+    /// @notice Tokens recorded in `_vaultOwner`'s vault (the ones a sweep moves).
+    function vaultTokens(address _vaultOwner) external view returns (address[] memory) {
+        return _vaultTokens[_vaultOwner];
     }
 
     /**
@@ -168,59 +196,54 @@ contract HumanityTimeLockVault is Ownable, ReentrancyGuard {
     // -------------------------------------------------------------------------
 
     /**
-     * @notice Execute the dead man's switch for a vault whose heartbeat has expired.
-     *         Sweeps ALL specified token balances to the backup wallet atomically.
-     *         Callable by anyone once the timeout has elapsed (MEV-protected because
-     *         the destination is fixed to the owner-configured backup wallet).
+     * @notice Execute the dead man's switch for a vault whose heartbeat has expired: every token
+     *         recorded in the vault goes to the owner-configured backup wallet. Callable by anyone
+     *         once the timeout has elapsed; the destination is fixed, so a caller gains nothing.
+     *         Callable again after the trigger to sweep what is left (a token whose transfer
+     *         failed the first time).
      *
-     * @dev    SECURITY: accepts an array of token addresses so that all deposited
-     *         tokens are transferred in a single transaction. isTriggered is set
-     *         BEFORE any external call (CEI). This eliminates the multi-token lockout
-     *         vulnerability where a single-token trigger permanently froze all other
-     *         deposited assets (KupiaSec audit finding, 2026-11).
-     *
-     * @param _vaultOwner    The vault owner whose switch to execute.
-     * @param _tokenAddresses All ERC-20 token addresses deposited in the vault.
-     *                        The caller MUST enumerate every token or funds remain
-     *                        claimable on a future call (which will revert due to
-     *                        isTriggered). Pass all deposited tokens in one call.
+     * @dev    CEI: the trigger and each balance are written before the external call. A token
+     *         whose transfer fails keeps its balance, so one bad token cannot block the others.
      */
-    function executeDeadManSwitch(
-        address   _vaultOwner,
-        address[] calldata _tokenAddresses
-    ) external nonReentrant {
-        // --- CHECKS ---
+    function executeDeadManSwitch(address _vaultOwner) external nonReentrant {
         VaultConfig storage config = vaults[_vaultOwner];
-        if (config.lastHeartbeat == 0)                                        revert NoVault();
-        if (config.isTriggered)                                               revert VaultAlreadyTriggered();
-        if (block.timestamp <= config.lastHeartbeat + config.deadManSwitchTimeout) revert TimeoutNotReached();
-        if (_tokenAddresses.length == 0)                                      revert NoTokensSpecified();
-
-        // --- EFFECTS (before all external calls — CEI) ---
-        config.isTriggered = true;
+        if (config.lastHeartbeat == 0) revert NoVault();
+        bool firstTrigger = !config.isTriggered;
+        if (firstTrigger) {
+            if (block.timestamp <= config.lastHeartbeat + config.deadManSwitchTimeout) revert TimeoutNotReached();
+            config.isTriggered = true;
+        }
 
         address backupWallet = config.backupWallet;
-        uint256 transferred  = 0;
+        address[] storage tokens = _vaultTokens[_vaultOwner];
+        uint256 transferred = 0;
 
-        // --- INTERACTIONS ---
-        for (uint256 i; i < _tokenAddresses.length; ) {
-            address tokenAddress = _tokenAddresses[i];
-            uint256 balance      = vaultBalances[_vaultOwner][tokenAddress];
-
+        for (uint256 i; i < tokens.length; ) {
+            address tokenAddress = tokens[i];
+            uint256 balance = vaultBalances[_vaultOwner][tokenAddress];
             if (balance > 0) {
-                // Zero balance before external call (extra reentrancy safety)
                 vaultBalances[_vaultOwner][tokenAddress] = 0;
-                IERC20(tokenAddress).safeTransfer(backupWallet, balance);
-                unchecked { ++transferred; }
+                if (_tryTransfer(tokenAddress, backupWallet, balance)) {
+                    unchecked { ++transferred; }
+                } else {
+                    vaultBalances[_vaultOwner][tokenAddress] = balance;
+                }
             }
-
             unchecked { ++i; }
         }
 
-        // Revert if no tokens had any balance — protects against griefing calls
-        // with valid-but-empty token lists.
-        if (transferred == 0) revert NoTokenBalancesFound();
+        // The first trigger fires even with nothing to move (the vault is then closed to the owner,
+        // which is what the timeout means); a later call that moves nothing is refused.
+        if (!firstTrigger && transferred == 0) revert NoTokenBalancesFound();
 
         emit DeadManSwitchTriggered(_vaultOwner, backupWallet, transferred);
+    }
+
+    /// @dev ERC-20 transfer that reports failure instead of reverting (tokens with or without a return value).
+    function _tryTransfer(address token, address to, uint256 amount) private returns (bool) {
+        (bool ok, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.transfer.selector, to, amount));
+        if (!ok) return false;
+        if (data.length == 0) return token.code.length > 0;
+        return data.length >= 32 && abi.decode(data, (bool));
     }
 }
