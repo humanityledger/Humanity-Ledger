@@ -16,10 +16,10 @@ const phone = (name: string, alt: string, caption: string): GalleryItem => ({
 });
 
 const desktop = (name: string, alt: string, caption: string): GalleryItem => ({
-  src: `/brand/ledger-chat/ledger-chat-${name}.webp`,
+  src: `/landing/desktop/${name}-2880.webp`,
   download: `/brand/ledger-chat/ledger-chat-${name}.png`,
-  width: 1600,
-  height: 1000,
+  width: 2880,
+  height: 1800,
   alt,
   caption,
 });

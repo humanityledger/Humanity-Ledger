@@ -182,7 +182,8 @@ const DESKTOP = [
 function shotSrc(id: string) {
   return {
     src: `/landing/desktop/${id}-1440.webp`,
-    srcSet: `/landing/desktop/${id}-1440.webp 1440w, /landing/desktop/${id}-2880.webp 2880w`,
+    // Up to four times the drawn size, so the text stays sharp when the page is zoomed in.
+    srcSet: [1440, 2880, 4320, 5760].map((w) => `/landing/desktop/${id}-${w}.webp ${w}w`).join(", "),
   };
 }
 
