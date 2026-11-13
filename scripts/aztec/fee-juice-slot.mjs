@@ -19,21 +19,14 @@ import { Fr } from '@aztec-labs/aztec.js/fields';
 import { getFeeJuiceBalance } from '@aztec-labs/aztec.js/utils';
 
 /**
- * AztecAddress from the subpath export, or, where a test runner loads that subpath through its
- * CommonJS build (vitest did: "AztecAddress.fromString is not a function"), from stdlib or
- * foundation. Same class in every case; only how the module is resolved differs.
+ * The owner as an AztecAddress. SDK v6 has no AztecAddress.fromString (CI printed its statics:
+ * fromStringUnsafe, fromBuffer, fromFields, ...): fromStringUnsafe parses the hex without the curve
+ * check, which a storage slot computation does not need.
  */
-async function toAztecAddress(owner) {
-  const candidates = [AztecAddress, AztecAddress?.default, AztecAddress?.AztecAddress];
-  // Variable specifiers: resolved at run time only, so a bundler's static analysis never fails on them.
-  for (const spec of ['@aztec-labs/stdlib/aztec-address', '@aztec-labs/foundation/aztec-address']) {
-    try { const m = await import(/* @vite-ignore */ spec); candidates.push(m.AztecAddress, m.default?.AztecAddress); } catch {}
-  }
-  for (const C of candidates) {
-    if (C && typeof C.fromString === 'function') return C.fromString(owner);
-    if (C && typeof C.fromField === 'function') return C.fromField(Fr.fromString(owner));
-  }
-  throw new Error(`AztecAddress.fromString is not available (typeof ${typeof AztecAddress}, keys ${Object.getOwnPropertyNames(AztecAddress ?? {}).slice(0, 12).join(',')})`);
+function toAztecAddress(owner) {
+  if (typeof AztecAddress.fromStringUnsafe === 'function') return AztecAddress.fromStringUnsafe(owner);
+  if (typeof AztecAddress.fromString === 'function') return AztecAddress.fromString(owner);
+  throw new Error(`no AztecAddress parser (statics: ${Object.getOwnPropertyNames(AztecAddress).slice(0, 12).join(',')})`);
 }
 
 export async function captureFeeJuiceRead(owner) {
@@ -48,7 +41,7 @@ export async function captureFeeJuiceRead(owner) {
       },
     },
   );
-  await getFeeJuiceBalance(await toAztecAddress(owner), node);
+  await getFeeJuiceBalance(toAztecAddress(owner), node);
   const read = calls.find((c) => c.method === 'getPublicStorageAt');
   if (!read || calls.length !== 1) throw new Error(`expected one getPublicStorageAt call, got ${calls.map((c) => c.method).join(', ')}`);
   const [block, contract, slot] = read.args;
