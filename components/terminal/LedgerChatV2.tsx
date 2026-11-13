@@ -8618,7 +8618,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         onSelectTheme={(t: ChatTheme) => {
           updateBatch({ chat_theme: t.id });
         }}
-        onSelectBubbleStyle={(id: string) => { if (isBubbleStyleId(id)) updateBatch({ bubble_style: id }); }}
+        onSelectBubbleStyle={(id: string) => {
+          // Settings store four bubble styles; the picker may list more.
+          const style = (['default', 'glass', 'brutalist', 'minimal'] as const).find((b) => b === id);
+          if (style && isBubbleStyleId(id)) updateBatch({ bubble_style: style });
+        }}
         onClose={() => setShowThemePicker(false)}
         onOpenWallpaper={activePeer ? () => setShowWallpaperPicker(true) : undefined}
       />
