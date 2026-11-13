@@ -7,6 +7,7 @@
  * Humanity Ledger × Aztec Network / Harry Bridge (Hazbobo)
  */
 
+import { assertLocalSimulationAllowed } from '@/lib/features/zk';
 import { formatZkTag, SupportedToken, getCommunityTreasury } from './zkMoney';
 
 // ─── Storage Keys ──────────────────────────────────────────────────────────────
@@ -98,7 +99,8 @@ function randomHex(bytes: number): string {
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     crypto.getRandomValues(arr);
   } else {
-    for (let i = 0; i < bytes; i++) arr[i] = Math.floor(Math.random() * 256);
+    // Fail closed: no CSPRNG, no identifier. Math.random is never a substitute.
+    throw new Error('No secure random source available.');
   }
   return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
 }
@@ -135,6 +137,8 @@ export function createChannelSubscription(params: {
   token: SupportedToken;
   durationDays?: number;
 }): ZkChannelSubscription {
+  // Local simulation only (fabricated txHash): refused in production and on Aztec Alpha.
+  assertLocalSimulationAllowed('Paid channel subscriptions');
   const durationMs = (params.durationDays ?? 30) * 86_400_000;
   const subscription: ZkChannelSubscription = {
     id: `sub_${randomHex(8)}`,
@@ -218,6 +222,8 @@ export function sendTip(params: {
   messageId?: string;
   message?: string;
 }): ZkTip {
+  // Local simulation only (fabricated txHash): refused in production and on Aztec Alpha.
+  assertLocalSimulationAllowed('Tips');
   const tip: ZkTip = {
     id: `tip_${randomHex(8)}`,
     senderTag:    formatZkTag(params.senderAddress),
@@ -357,6 +363,8 @@ export function createBounty(params: {
   daysUntilExpiry?: number;
   skills?: string[];
 }): ZkBounty {
+  // Local simulation only (fabricated txHash): refused in production and on Aztec Alpha.
+  assertLocalSimulationAllowed('Bounties');
   const bounty: ZkBounty = {
     id: `bounty_${randomHex(8)}`,
     communityId:  params.communityId,

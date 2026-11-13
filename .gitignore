@@ -174,3 +174,6 @@ _to_delete/
 .aztec-keyed.local.json
 
 .lighthouseci/
+
+# Generated, values empty (scripts/env-inventory.mjs): committed on purpose.
+!.env.example

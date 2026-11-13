@@ -278,8 +278,13 @@ export async function sendViaOnion(
 
 // ── Relay Self-Registration ────────────────────────────────────────────────────
 
-/** Relay node identity stored in sessionStorage (browser relay nodes) */
-const RELAY_KEY_STORAGE = 'ledger_onion_relay_identity';
+/**
+ * Relay node identity for this page load, kept in memory only. It used to be written to
+ * sessionStorage, which put the ECDH private key (JWK) where any script on the origin could read
+ * it. A reload now creates and registers a fresh identity.
+ */
+const LEGACY_RELAY_KEY_STORAGE = 'ledger_onion_relay_identity';
+let relayIdentity: { publicKeyJwk: JsonWebKey; privateKeyJwk: JsonWebKey } | null = null;
 
 /**
  * Registers the current browser session as an available relay node.
@@ -293,12 +298,9 @@ export async function registerAsRelay(
   relayBaseUrl:  string,
 ): Promise<void> {
   // Check if we already have a relay identity
-  let identity: { publicKeyJwk: JsonWebKey; privateKeyJwk: JsonWebKey } | null = null;
-
-  try {
-    const stored = sessionStorage.getItem(RELAY_KEY_STORAGE);
-    if (stored) identity = JSON.parse(stored);
-  } catch { /* ignore */ }
+  let identity = relayIdentity;
+  // Remove the private key a previous version left in sessionStorage.
+  try { sessionStorage.removeItem(LEGACY_RELAY_KEY_STORAGE); } catch { /* ignore */ }
 
   let pubKeyJwk: JsonWebKey;
   let privKeyJwk: JsonWebKey;
@@ -321,7 +323,7 @@ export async function registerAsRelay(
     pubKeyJwk = cleanPub;
 
     identity = { publicKeyJwk: cleanPub, privateKeyJwk: privKeyJwk };
-    try { sessionStorage.setItem(RELAY_KEY_STORAGE, JSON.stringify(identity)); } catch { /* ignore */ }
+    relayIdentity = identity;
   }
 
   // POST to relay registry

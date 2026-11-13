@@ -17,6 +17,8 @@
  * - Community treasury management
  */
 
+import { assertLocalSimulationAllowed } from '@/lib/features/zk';
+
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 // Aztec has no public mainnet; points to testnet/local RPC node
@@ -213,7 +215,8 @@ function randomHex(bytes: number): string {
       const nodeCrypto = require('crypto');
       return nodeCrypto.randomBytes(bytes).toString('hex');
     } catch {
-      for (let i = 0; i < bytes; i++) arr[i] = Math.floor(Math.random() * 256);
+      // Fail closed: no CSPRNG, no identifier. Math.random is never a substitute.
+      throw new Error('No secure random source available.');
     }
   }
   return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -562,9 +565,7 @@ export async function executeShieldedPayment(
   params: ZkPaymentParams,
   onProgress?: (step: string, progress: number) => void,
 ): Promise<ZkPaymentResult> {
-  if (process.env.NEXT_PUBLIC_ZK_MODE !== 'demo') {
-    throw new Error('Shielded payments require Aztec testnet PXE. Set NEXT_PUBLIC_ZK_MODE=demo for local testing.');
-  }
+  assertLocalSimulationAllowed('Simulated shielded payment');
 
   const { senderAddress, recipientTag, amount, token, memo } = params;
 
@@ -623,9 +624,7 @@ export async function executeShieldDeposit(
   params: ZkShieldParams,
   onProgress?: (step: string, pct: number) => void,
 ): Promise<{ noteId: string; txHash: string; aztecAddress: string }> {
-  if (process.env.NEXT_PUBLIC_ZK_MODE !== 'demo') {
-    throw new Error('Shield deposits require Aztec testnet PXE. Set NEXT_PUBLIC_ZK_MODE=demo for local testing.');
-  }
+  assertLocalSimulationAllowed('Simulated shield deposit');
 
   // Strict on-chain verification mandate: no simulated deposits permitted without valid L1 receipt
   if (!params.l1TxHash || !/^0x[0-9a-fA-F]{64}$/.test(params.l1TxHash)) {
@@ -660,9 +659,7 @@ export async function executeUnshield(
   params: ZkUnshieldParams,
   onProgress?: (step: string, pct: number) => void,
 ): Promise<{ l1TxHash: string; amount: string }> {
-  if (process.env.NEXT_PUBLIC_ZK_MODE !== 'demo') {
-    throw new Error('Unshield requires Aztec testnet PXE. Set NEXT_PUBLIC_ZK_MODE=demo for local testing.');
-  }
+  assertLocalSimulationAllowed('Simulated unshield');
 
   const steps = [
     { label: 'Generating unshield proof…',        pct: 20 },

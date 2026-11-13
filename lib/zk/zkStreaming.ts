@@ -8,6 +8,8 @@
  * - Real-time client-side ticker and withdrawal settlement
  */
 
+import { assertLocalSimulationAllowed } from '@/lib/features/zk';
+
 export interface ZkPaymentStream {
   id: string;
   senderTag: string;
@@ -155,9 +157,7 @@ export interface CreateStreamParams {
  * zkMoney.ts. The real stream contract is contracts/aztec/streams.
  */
 export function createShieldedStream(params: CreateStreamParams): ZkPaymentStream {
-  if (process.env.NEXT_PUBLIC_ZK_MODE !== 'demo') {
-    throw new Error('Payment streams are not available yet: the Aztec stream contract is not deployed.');
-  }
+  assertLocalSimulationAllowed('Payment streams');
   const deposit = parseFloat(params.depositAmount);
   const duration = Math.max(60, params.durationSeconds);
   const ratePerSec = (deposit / duration).toFixed(8);

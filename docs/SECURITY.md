@@ -56,8 +56,14 @@
 ## 3. Estado Real y Transparencia Técnica
 
 1. **Estado de ZK Sequencer y Prover:**
-   - La red Aztec Mainnet v5.0.1 requiere sincronización con nodos RPC externos. Si `AZTEC_NODE_URL` no está presente, los endpoints responden con estado `disabled` o `DEMO`. No se utiliza `Math.random` para simular bloques.
+   - Producción usa Aztec Alpha v6.0.0 (liquida en Ethereum mainnet) a través del nodo fijado en `lib/aztec/sequencer/networks.ts`. Si `AZTEC_NODE_URL` no está presente, los endpoints responden con estado `disabled` o `DEMO`. No se utiliza `Math.random` para simular bloques.
 2. **WebRTC TURN Relay:**
    - Cuando no hay TURN configurado (`/api/calls/ice` responde `source: none`), el cliente usa solo STUN. El relay público `openrelay.metered.ca` se retiró: sus credenciales comunitarias dejaron de asignar relays. Para que las llamadas conecten detrás de operadores móviles hay que configurar Cloudflare Realtime TURN o un coturn propio (ver `docs/CALLS.md`).
 3. **Claves de Cifrado y JWT:**
    - Al desplegar cambios mayores de seguridad, se recomienda rotar `JWT_SECRET` y las claves EdDSA en el proveedor de hosting (Railway/Vercel) para invalidar cualquier sesión previa activa.
+
+## 4. Inventario de auditorías y hallazgos
+
+- **Auditorías externas:** ninguna concluida. El inventario completo de documentos de seguridad, su estado y qué contrato cubren está en `audits/README.md`.
+- **Hallazgos del barrido del 13 nov 2026:** `docs/security/FINDINGS_2026-11-13.md` (severidad, archivo, línea, riesgo y corrección aplicada o pendiente).
+- **Pendientes que requieren al operador:** `docs/PENDING_STEFAN.md`.

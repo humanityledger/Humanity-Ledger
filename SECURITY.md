@@ -115,14 +115,14 @@ The threat model evaluates the protocol against sophisticated adversaries, inclu
 | **Private Key Extraction** | Malicious Node or Host Compromise | Non custodial architecture: private keys and IVK are generated via WebCrypto API; private material is never transmitted across the wire. Verified by PXE.1 through PXE.4. |
 | **Session Forgery and Replay** | Man in the Middle / Network Interceptor | Sign In With Ethereum (EIP-4361) sessions bound to cryptographically generated nonces and verified at Edge middleware (`HttpOnly; Secure; SameSite=Strict`). |
 | **Timing Side Channel Profiling** | Advanced Cryptanalyst | Constant time verification: Argon2id hashes, PIN comparisons, and authentication tokens evaluate via `crypto.timingSafeEqual`. |
-| **Supply Chain Dependency Injection** | Malicious Upstream Package | Strict version pinning, XMTP locked at 5.2.0 (verified by `test/pxe_boundary_security.test.ts` MLS.1), `engine-strict=true`, SLSA Level 3 CI provenance, and zero vulnerability status under `npm audit`. |
+| **Supply Chain Dependency Injection** | Malicious Upstream Package | Strict version pinning, XMTP locked at 5.2.0 (verified by `test/pxe_boundary_security.test.ts` MLS.1), `engine-strict=true`, SLSA Level 3 CI provenance, and `npm audit` on every pull request (13 Nov 2026: 0 critical, 0 high, 5 moderate in the pm2 → proxy-agent → basic-ftp chain; see `audits/README.md`). |
 | **Verification Key Substitution** | Malicious Deployer or Governance Attack | HASH_MISMATCH unconditionally blocks proof synthesis; 14 day on-chain timelock prevents stealth VK updates; verified by `test/vk_hash_mismatch.test.ts`. |
 | **Sybil Flooding and Denial of Service** | Botnet or Proxy Farms | Edge rate limiting (90 requests per minute per verified wallet) using Redis token buckets, coupled with proof of humanity screening. |
 | **Metadata and Traffic Analysis** | Passive ISP or Network Snooper | TURN relay encapsulation (`iceTransportPolicy: 'relay'`) masks peer IP addresses; RFC 9420 MLS encrypts payload trees. Residual risk: packet timing and lengths remain observable at the network layer. |
 | **Prototype Pollution** | Malicious Runtime Script | `window.hl` bridge surface is frozen via `Object.freeze`; bridge message parsing uses structural validation. Verified by `test/eaf_isolation.adversarial.test.ts` (P6.7, P6.8). |
 | **EAF Payload Resource Exhaustion** | Malicious Community App | Strict 8 KB payload ceiling enforced by `lib/security/eaf-guard.ts`; exact boundary test (8192 bytes accepted, 8193 bytes rejected) verified by P6.6. |
 | **Memory Residue and Forensics** | Physical Device Forensic Extraction | Explicit zeroization via `lib/security/zeroize.ts`; ephemeral Schnorr key zeroization verified by PXE.4; fuzz validated across 60,000 iterations. |
-| **North Korea APT / Supply Chain Attack** | State Sponsored Actor | Layered defense: SLSA provenance, dependency version pinning, `npm audit` zero vulnerabilities, CI forbidden-patterns enforcement, VK timelock governance, non custodial key architecture. No single compromised component enables fund extraction or key recovery. |
+| **North Korea APT / Supply Chain Attack** | State Sponsored Actor | Layered defense: SLSA provenance, dependency version pinning, `npm audit` in CI (no high or critical open on 13 Nov 2026), CI forbidden-patterns enforcement, VK timelock governance, non custodial key architecture. No single compromised component enables fund extraction or key recovery. |
 
 ---
 
@@ -217,7 +217,7 @@ The protocol will not pursue legal action against security researchers who condu
 
 1. **No Quantum Resistance:** BN254 (Aztec UltraHonk), secp256k1 (Ethereum), and Curve25519 (X25519) are not quantum resistant and are vulnerable to Shor's algorithm on cryptanalytically relevant quantum computers.
 2. **No Network Layer Traffic Analysis Immunity:** RFC 9420 MLS protects payload content and ratcheted key state. It does not conceal IP addresses, connection durations, or transmission frequencies.
-3. **Testnet Stage 1 Only:** The protocol is deployed in Aztec Testnet and Ethereum testnet environments. No external security audit has concluded. It is not production ready.
+3. **Aztec Alpha, unaudited:** Production runs on Aztec Alpha (settles on Ethereum mainnet) with per-payment caps. The only contract of ours deployed there is the HLC token; escrow, stream and sponsor contracts are not deployed. No external security audit has concluded (`audits/README.md`).
 4. **No Formal Machine Checked Verification:** Automated invariant verification and fuzzing batteries are operational. Formal mathematical proofs (Coq or Lean4) represent a future roadmap item, not a current property.
 
 ---

@@ -14,6 +14,26 @@ export const isZkTestnet = ZK_MODE === 'testnet';
 export const isZkMainnet = ZK_MODE === 'mainnet';
 
 /**
+ * Local simulations (lib/zk/zkMoney, zkStreaming, zkCommunityPayments) create notes, hashes and
+ * balances that never reach a network. They run only with NEXT_PUBLIC_ZK_MODE=demo, never in a
+ * production build and never on a build configured for Aztec Alpha (real funds), whatever the
+ * mode says. process.env is read directly so Next.js inlines the values in client bundles.
+ */
+export function isLocalSimulationAllowed(): boolean {
+  return (
+    process.env.NEXT_PUBLIC_ZK_MODE === 'demo' &&
+    process.env.NEXT_PUBLIC_AZTEC_NETWORK !== 'alpha' &&
+    process.env.NODE_ENV !== 'production'
+  );
+}
+
+export function assertLocalSimulationAllowed(feature: string): void {
+  if (!isLocalSimulationAllowed()) {
+    throw new Error(`${feature} is not available: it has no deployed contract, and local simulations never run in production or on Aztec Alpha.`);
+  }
+}
+
+/**
  * Throws if ZK transfers are not enabled.
  * Call this at the start of any ZK-related API handler.
  */
