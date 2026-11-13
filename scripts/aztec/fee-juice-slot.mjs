@@ -20,15 +20,20 @@ import { getFeeJuiceBalance } from '@aztec-labs/aztec.js/utils';
 
 /**
  * AztecAddress from the subpath export, or, where a test runner loads that subpath through its
- * CommonJS build (vitest did: "AztecAddress.fromString is not a function"), from the package root
- * or stdlib. Same class in every case; only how the module is resolved differs.
+ * CommonJS build (vitest did: "AztecAddress.fromString is not a function"), from stdlib or
+ * foundation. Same class in every case; only how the module is resolved differs.
  */
 async function toAztecAddress(owner) {
   const candidates = [AztecAddress, AztecAddress?.default, AztecAddress?.AztecAddress];
-  try { candidates.push((await import('@aztec-labs/aztec.js')).AztecAddress); } catch {}
-  try { candidates.push((await import('@aztec-labs/stdlib/aztec-address')).AztecAddress); } catch {}
-  for (const C of candidates) if (C && typeof C.fromString === 'function') return C.fromString(owner);
-  throw new Error('AztecAddress.fromString is not available from @aztec-labs/aztec.js');
+  // Variable specifiers: resolved at run time only, so a bundler's static analysis never fails on them.
+  for (const spec of ['@aztec-labs/stdlib/aztec-address', '@aztec-labs/foundation/aztec-address']) {
+    try { const m = await import(/* @vite-ignore */ spec); candidates.push(m.AztecAddress, m.default?.AztecAddress); } catch {}
+  }
+  for (const C of candidates) {
+    if (C && typeof C.fromString === 'function') return C.fromString(owner);
+    if (C && typeof C.fromField === 'function') return C.fromField(Fr.fromString(owner));
+  }
+  throw new Error(`AztecAddress.fromString is not available (typeof ${typeof AztecAddress}, keys ${Object.getOwnPropertyNames(AztecAddress ?? {}).slice(0, 12).join(',')})`);
 }
 
 export async function captureFeeJuiceRead(owner) {
